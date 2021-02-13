@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: accim
+Version: 0.0.11
+Summary: Transforms PMV-based into adaptive setpoint temperature EnergyPlus building energy models
+Home-page: UNKNOWN
+Author: Daniel Sánchez-García
+Author-email: dsanchez7@us.es
+License: MIT License
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Scientific/Engineering
+Description-Content-Type: text/markdown
