@@ -1,4 +1,4 @@
-Welcome to eppy's documentation!
+Welcome to accim's documentation!
 ======================================
 
 .. toctree::
