@@ -1,4 +1,4 @@
-#ACCIM
+# ACCIM
 
 ACCIM stands for Adaptive Comfort Control Implemented Model.
 
