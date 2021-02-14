@@ -8,7 +8,7 @@ Installation
 Stable release
 --------------
 
-To install eppy, run this command in your terminal:
+To install accim, run this command in your terminal:
 
 .. code-block:: console
 
