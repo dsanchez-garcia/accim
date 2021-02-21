@@ -9,9 +9,9 @@ Welcome to accim's documentation!
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-	 README
+   README
    installation
-	 how to use
+   how to use
 
 
 Indices and tables
