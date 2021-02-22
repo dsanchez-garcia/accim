@@ -4,11 +4,14 @@ How to use
 First steps
 -----------
 
-There has been developed 2 main branches of functions, which are: -
-MultipleZones: Work with multiple zones, add standard VRF systems for
-each zone and apply the adaptive setpoint temperatures. - SingleZone:
-Work with single thermal zones, keep the current HVAC systems and modify
-the current setpoint temperatures to adaptive setpoint temperatures.
+There has been developed 2 main branches of functions, which are:
+
+-  MultipleZones: Work with multiple zones, add standard VRF systems for
+   each zone and apply the adaptive setpoint temperatures.
+
+-  SingleZone: Work with single thermal zones, keep the current HVAC
+   systems and modify the current setpoint temperatures to adaptive
+   setpoint temperatures.
 
 Therefore, if you are going to use the MultipleZones functions, you're
 supposed to have one or multiple IDFs with fixed setpoint temperature,
