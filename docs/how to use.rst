@@ -202,23 +202,33 @@ entered:
 
 **TestModel\_Calculated\_pymod[AS\_EN16798[CA\_1[CM\_3[HM\_2[VC\_0[VO\_0.0[MT\_50.0[MW\_50.0[AT\_0.1**
 
-where: 'TestModel\_Calculated' is the name of the original IDF, which is
+where:
+- 'TestModel\_Calculated' is the name of the original IDF, which is
 copied with the suffix '\_pymod' so that the original file stays
-unmodified. AS refers to the Adaptive Standard, and it's followed by the
+unmodified.
+- AS refers to the Adaptive Standard, and it's followed by the
 adaptive thermal comfort applied (could be 'CTE', 'EN16798' or
-'ASHRAE55'). CA refers to the Category, which could be 1, 2 or 3 if AS
-is EN16798, or 80 or 90 if AS is ASHRAE55. CM refers to the Comfort
+'ASHRAE55').
+- CA refers to the Category, which could be 1, 2 or 3 if AS
+is EN16798, or 80 or 90 if AS is ASHRAE55.
+- CM refers to the Comfort
 Mode, which could be 0 (Static), 1 (OUT-CTE), 2 (OUT-SEN16798 or
-OUT-SASHRAE55), OR 3 (OUT-AEN16798 or OUT-AASHRAE55). HM refers to the
+OUT-SASHRAE55), OR 3 (OUT-AEN16798 or OUT-AASHRAE55).
+- HM refers to the
 HVAC Mode, which could be 0 (Full air conditioning), 1 (Naturally
-ventilated), or 2 (Mixed Mode). VC refers to the Ventilation Control,
+ventilated), or 2 (Mixed Mode).
+- VC refers to the Ventilation Control,
 which could be 0 (ventilates above neutral temperature), or 1
-(ventilates above upper comfort limit). VO refers to the Ventilation
+(ventilates above upper comfort limit).
+- VO refers to the Ventilation
 setpoint temperature offset, which could be any number, float or
-integer, positive or negative. MT refers to the Minimum Outdoor
+integer, positive or negative.
+- MT refers to the Minimum Outdoor
 Temperature offset, which could be any number, float or integer, but
-always positive number. MW refers to the Maximum Wind Speed, which could
-be any number, float or integer, but always positive number. AT refers
+always positive number.
+- MW refers to the Maximum Wind Speed, which could
+be any number, float or integer, but always positive number.
+- AT refers
 to the Adaptive Setpoint Temperature offset, which could be any number,
 float or integer, but always positive number. Please remember this
 number comes from a 3-stage process (refer to the explanation above).
