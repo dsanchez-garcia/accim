@@ -9,11 +9,11 @@ Welcome to accim's documentation!
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-   
-   README
+
+   readme
    installation
    how to use
-
+	 examples
 
 Indices and tables
 ==================
