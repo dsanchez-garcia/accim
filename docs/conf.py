@@ -18,8 +18,8 @@
 # -- Project information -----------------------------------------------------
 
 project = 'accim'
-copyright = '2021, Daniel Sanchez-Garcia'
-author = 'Daniel Sanchez-Garcia'
+copyright = '2021, Daniel Sánchez-García'
+author = 'Daniel Sánchez-García'
 
 
 # -- General configuration ---------------------------------------------------
