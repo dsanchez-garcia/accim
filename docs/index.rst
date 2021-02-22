@@ -13,7 +13,7 @@ Welcome to accim's documentation!
    readme
    installation
    how to use
-	 examples
+   examples
 
 Indices and tables
 ==================
