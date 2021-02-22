@@ -1,4 +1,4 @@
-HOW TO USE
+How to use
 ==========
 
 First steps
@@ -202,9 +202,11 @@ entered:
 
 **TestModel\_Calculated\_pymod[AS\_EN16798[CA\_1[CM\_3[HM\_2[VC\_0[VO\_0.0[MT\_50.0[MW\_50.0[AT\_0.1**
 
-where: - 'TestModel\_Calculated' is the name of the original IDF, which
-is copied with the suffix '\_pymod' so that the original file stays
-unmodified.
+where:
+
+-  'TestModel\_Calculated' is the name of the original IDF, which is
+   copied with the suffix '\_pymod' so that the original file stays
+   unmodified.
 
 -  AS refers to the Adaptive Standard, and it's followed by the adaptive
    thermal comfort applied (could be 'CTE', 'EN16798' or 'ASHRAE55').
