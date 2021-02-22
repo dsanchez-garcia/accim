@@ -6,9 +6,12 @@
 Welcome to accim's documentation!
 =================================
 
+Contents:
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption:
+   
    README
    installation
    how to use
