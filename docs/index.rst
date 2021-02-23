@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: docs/images/accim_logo_white_w-header_1280x640.png
+.. image:: images/accim_logo_nohatch_w-header.svg
   :width: 600
 
 Welcome to accim's documentation!
