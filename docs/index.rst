@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 .. image:: images/accim_logo_nohatch_w-header.svg
-  :width: 600
+  :width: 900
 
 Welcome to accim's documentation!
 =================================
