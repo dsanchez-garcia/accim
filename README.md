@@ -1,3 +1,15 @@
+![ACCIM Logo with header](/docs/images/accim_logo_black_w-header.jpg)
+
+
+# ACCIM
+
+.. image:: https://img.shields.io/pypi/v/accim.svg
+        :target: https://pypi.python.org/pypi/accim
+
+.. image:: https://readthedocs.org/projects/accim/badge/?version=master
+        :target: https://accim.readthedocs.io/en/master/?badge=master
+        :alt: Documentation Status
+
 ACCIM stands for Adaptive Comfort Control Implemented Model.
 
 In research terms, this is a proposal for a paradigm shift, from using fixed PMV-based to adaptive setpoint temperatures, based on adaptive thermal comfort algorithms and it has been widely studied and published on scientific research journals (for more information, refer to https://orcid.org/0000-0002-3080-0821).
