@@ -1,4 +1,5 @@
-![ACCIM Logo with header](/docs/images/accim_logo_black_w-header.jpg)
+
+![ACCIM Logo with header](docs/images/accim_logo_nohatch_w-header.svg)
 
 ACCIM stands for Adaptive Comfort Control Implemented Model.
 
@@ -7,3 +8,7 @@ In research terms, this is a proposal for a paradigm shift, from using fixed PMV
 In terms of code, this is a python package that transforms fixed setpoint temperature building energy models into adaptive setpoint temperature energy models by adding the Adaptive Comfort Control Implementation Script (ACCIS). This package has been developed to be used in EnergyPlus building energy performance simulations.
 
 The documentation is at: https://accim.readthedocs.io/en/master/
+
+### Credits
+
+It wouldn't have been possible to develop this python package without eppy, so thank you for such an awesome work.
