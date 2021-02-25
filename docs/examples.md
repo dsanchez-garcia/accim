@@ -1,5 +1,7 @@
 # Examples
 
+You can see some examples below with MultipleZones and SingleZone functions. All input and output IDFs are included within 'accim\sample files\' folder.
+
 ## MultipleZones functions
 
 Say you have an IDF in some folder, called 'TestModel_MultipleZone.idf'. So, let's run the functions to get the energy models with adaptive setpoint temperatures.
