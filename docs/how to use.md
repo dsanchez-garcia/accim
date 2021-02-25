@@ -65,11 +65,11 @@ In static mode, static (or PMV-based) setpoint temperatures are applied all the 
 
 So, below you can see a sample name of an IDF created by using ACCIM's MultipleZone functions. The package takes the original IDF file as a reference, saves a copy, run all the functions so that setpoint temperatures are transformed from static to adaptive, an changes its name based on the values previously entered:
 
-__TestModel_Calculated_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1__
+__TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1__
 
 where:
 
-- 'TestModel_Calculated' is the name of the original IDF, which is copied with the suffix '_pymod' so that the original file stays unmodified.
+- 'TestModel_MultipleZone' is the name of the original IDF, which is copied with the suffix '_pymod' so that the original file stays unmodified.
 
 - AS refers to the Adaptive Standard, and it's followed by the adaptive thermal comfort applied (could be 'CTE', 'EN16798' or 'ASHRAE55').
 
@@ -106,11 +106,11 @@ You can see these are the same inputs from MultipleZone functions, however, sinc
 
 So, below you can see a sample name of an IDF created by using ACCIM's SingleZone functions. The package takes the original IDF file as a reference, saves a copy, run all the functions so that setpoint temperatures are transformed from static to adaptive, an changes its name based on the values previously entered:
 
-__TestModel_Calculated_pymod[AS_EN16798[CA_1[CM_3[AT_0.1__
+__TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1__
 
 where (same as previously explained in MultipleZone functions):
 
-- 'TestModel_Calculated' is the name of the original IDF, which is copied with the suffix '_pymod' so that the original file stays unmodified.
+- 'TestModel_MultipleZone' is the name of the original IDF, which is copied with the suffix '_pymod' so that the original file stays unmodified.
 
 - AS refers to the Adaptive Standard, and it's followed by the adaptive thermal comfort applied (could be 'CTE', 'EN16798' or 'ASHRAE55').
 
