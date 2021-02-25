@@ -61,7 +61,7 @@ In static mode, static (or PMV-based) setpoint temperatures are applied all the 
 
 - ASTtol: stands for Adaptive Setpoint Temperature tolerance. It applies the number that you enter as a tolerance for the adaptive heating and cooling setpoint temperatures. The  original problem was that, if we assigned the adaptive setpoint straight to the comfort limit (i.e. you enter '0' for ASTtol), there were a few hours that fell outside the comfort zone because of the error in some decimals in the simulation of the operative temperature. Therefore, the original purpose of this feature is to control that all hours are comfortable hours (i.e. operative temperature falls within the comfort zone), and we can make that sure by considering a little tolerance of 0.10 °C. For example, say that adaptive cooling and heating setpoints are originally 29.5 and 21.5°C at some day; if you enter '1' for ASTtol, then the setpoints would be modified to 28.5 and 22.5°C (1°C below original cooling setpoint, and 1°C above original heating setpoint). The function will create a sequence of numbers based on the entered values. So, numbers must be entered in 3 stages: first, the start of the sequence; second, the end of the sequence, and third, the steps. So for example, if you enter '0' for the start, '1' for the end, and '0.25' for the steps, you would be getting ASTtol values of 0°C, 0.25°C, 0.5°C, 0.75°C and 1°C. If you don't enter any number, it'll be used '0.1' as the default value (as previously said, to make sure all hours are comfortable hours), and you would be getting only one variation of 0.1°C.
 
-So, below you can see a sample name of an IDF created by using ACCIM. The package takes the original IDF file as a reference, saves a copy, run all the functions so that setpoint temperatures are transformed from static to adaptive, an changes its name based on the values previously entered:
+So, below you can see a sample name of an IDF created by using ACCIM's MultipleZone functions. The package takes the original IDF file as a reference, saves a copy, run all the functions so that setpoint temperatures are transformed from static to adaptive, an changes its name based on the values previously entered:
 
 __TestModel_Calculated_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1__
 
@@ -87,4 +87,29 @@ where:
 - AT refers to the Adaptive Setpoint Temperature offset, which could be any number, float or integer, but always positive number. Please remember this number comes from a 3-stage process (refer to the explanation above).
 
 ### SingleZone functions
-WIP
+
+If you run any of the SingleZone functions, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs:
+
+- Adaptive Standard: same as explained above; please refer to MultipleZone functions.
+
+- Category: same as explained above; please refer to MultipleZone functions.
+
+- Comfort Mode: same as explained above; please refer to MultipleZone functions.
+
+- ASTtol: same as explained above; please refer to MultipleZone functions.
+
+You can see these are the same inputs from MultipleZone functions, however, since some of them were only necessary for Mixed Mode and SingleZone functions work only with Full air-conditioning mode, these are omitted in this branch.
+
+So, below you can see a sample name of an IDF created by using ACCIM's SingleZone functions. The package takes the original IDF file as a reference, saves a copy, run all the functions so that setpoint temperatures are transformed from static to adaptive, an changes its name based on the values previously entered:
+
+__TestModel_Calculated_pymod[AS_EN16798[CA_1[CM_3[AT_0.1__
+
+where (same as previously explained in MultipleZone functions):
+
+- 'TestModel_Calculated' is the name of the original IDF, which is copied with the suffix '_pymod' so that the original file stays unmodified.
+
+- AS refers to the Adaptive Standard, and it's followed by the adaptive thermal comfort applied (could be 'CTE', 'EN16798' or 'ASHRAE55').
+
+- CA refers to the Category, which could be 1, 2 or 3 if AS is EN16798, or 80 or 90 if AS is ASHRAE55.
+
+- CM refers to the Comfort Mode, which could be 0 (Static), 1 (OUT-CTE), 2 (OUT-SEN16798 or OUT-SASHRAE55), OR 3 (OUT-AEN16798 or OUT-AASHRAE55).
