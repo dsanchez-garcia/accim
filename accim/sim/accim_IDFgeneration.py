@@ -37,32 +37,32 @@ def inputdataSingleZone(self):
             self.ComfMod_List = list(int(num) for num in input("     Enter the Comfort Mode numbers separated by space: ").split())
 
     try:
-        self.ASTtol_value_from = float(input('Enter the ASTtol value from (if omited, will be 0.1): '))
+        self.ASTtol_value_from = float(input('Enter the ASTtol value from (if omitted, will be 0.1): '))
     except ValueError:
         self.ASTtol_value_from = float(0.1)
     while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
         try:
-            self.ASTtol_value_from = float(input('     Enter the ASTtol value from (if omited, will be 0.1): '))
+            self.ASTtol_value_from = float(input('     Enter the ASTtol value from (if omitted, will be 0.1): '))
         except ValueError:
             self.ASTtol_value_from = float(0.1)
 
     try:
-        self.ASTtol_value_to_input = float(input('Enter the ASTtol value to (if omited, will be 0.1): '))
+        self.ASTtol_value_to_input = float(input('Enter the ASTtol value to (if omitted, will be 0.1): '))
     except ValueError:
         self.ASTtol_value_to_input = float(0.1)
     while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
         try:
-            self.ASTtol_value_to_input = float(input('     Enter the ASTtol value to (if omited, will be 0.1): '))
+            self.ASTtol_value_to_input = float(input('     Enter the ASTtol value to (if omitted, will be 0.1): '))
         except ValueError:
             self.ASTtol_value_to_input = float(0.1)
 
     try:
-        self.ASTtol_value_steps = float(input('Enter the ASTtol value steps (if omited, will be 0.1): '))
+        self.ASTtol_value_steps = float(input('Enter the ASTtol value steps (if omitted, will be 0.1): '))
     except ValueError:
         self.ASTtol_value_steps = float(0.1)
     while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
         try:
-            self.ASTtol_value_steps = float(input('     Enter the ASTtol value steps (if omited, will be 0.1): '))
+            self.ASTtol_value_steps = float(input('     Enter the ASTtol value steps (if omitted, will be 0.1): '))
         except ValueError:
             self.ASTtol_value_steps = float(0.1)
 
@@ -126,57 +126,57 @@ def inputdataMultipleZone(self):
             print('          Ventilation Control numbers are not correct. Please enter the numbers again.')
             self.VentCtrl_List = list(int(num) for num in input("     Enter the Ventilation Control numbers separated by space: ").split())
 
-    self.VSToffset_List = list(float(num) for num in input("Enter the VSToffset numbers separated by space (if omited, will be 0): ").split())
+    self.VSToffset_List = list(float(num) for num in input("Enter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
     if len(self.VSToffset_List) == 0:
         self.VSToffset_List = [float(0)]
     while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
-        self.VSToffset_List = list(float(num) for num in input("     Enter the VSToffset numbers separated by space (if omited, will be 0): ").split())
+        self.VSToffset_List = list(float(num) for num in input("     Enter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
         if len(self.VSToffset_List) == 0:
             self.VSToffset_List = [float(0)]
 
-    self.MinOToffset_List = list(float(num) for num in input("Enter the MinOToffset numbers separated by space (if omited, will be 50): ").split())
+    self.MinOToffset_List = list(float(num) for num in input("Enter the MinOToffset numbers separated by space (if omitted, will be 50): ").split())
     if len(self.MinOToffset_List) == 0:
         self.MinOToffset_List = [float(50)]
     while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
-        self.MinOToffset_List = list(float(num) for num in input("     Enter the MinOToffset numbers separated by space (if omited, will be 50): ").split())
+        self.MinOToffset_List = list(float(num) for num in input("     Enter the MinOToffset numbers separated by space (if omitted, will be 50): ").split())
         if len(self.MinOToffset_List) == 0:
             self.MinOToffset_List = [float(50)]
 
-    self.MaxWindSpeed_List = list(float(num) for num in input("Enter the MaxWindSpeed numbers separated by space (if omited, will be 50): ").split())
+    self.MaxWindSpeed_List = list(float(num) for num in input("Enter the MaxWindSpeed numbers separated by space (if omitted, will be 50): ").split())
     if len(self.MaxWindSpeed_List) == 0:
         self.MaxWindSpeed_List = [float(50)]
     while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
-        self.MaxWindSpeed_List = list(float(num) for num in input("     Enter the MaxWindSpeed numbers separated by space (if omited, will be 50): ").split())
+        self.MaxWindSpeed_List = list(float(num) for num in input("     Enter the MaxWindSpeed numbers separated by space (if omitted, will be 50): ").split())
         if len(self.MaxWindSpeed_List) == 0:
             self.MaxWindSpeed_List = [float(50)]
 
     try:
-        self.ASTtol_value_from = float(input('Enter the ASTtol value from (if omited, will be 0.1): '))
+        self.ASTtol_value_from = float(input('Enter the ASTtol value from (if omitted, will be 0.1): '))
     except ValueError:
         self.ASTtol_value_from = float(0.1)
     while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
         try:
-            self.ASTtol_value_from = float(input('     Enter the ASTtol value from (if omited, will be 0.1): '))
+            self.ASTtol_value_from = float(input('     Enter the ASTtol value from (if omitted, will be 0.1): '))
         except ValueError:
             self.ASTtol_value_from = float(0.1)
 
     try:
-        self.ASTtol_value_to_input = float(input('Enter the ASTtol value to (if omited, will be 0.1): '))
+        self.ASTtol_value_to_input = float(input('Enter the ASTtol value to (if omitted, will be 0.1): '))
     except ValueError:
         self.ASTtol_value_to_input = float(0.1)
     while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
         try:
-            self.ASTtol_value_to_input = float(input('     Enter the ASTtol value to (if omited, will be 0.1): '))
+            self.ASTtol_value_to_input = float(input('     Enter the ASTtol value to (if omitted, will be 0.1): '))
         except ValueError:
             self.ASTtol_value_to_input = float(0.1)
 
     try:
-        self.ASTtol_value_steps = float(input('Enter the ASTtol value steps (if omited, will be 0.1): '))
+        self.ASTtol_value_steps = float(input('Enter the ASTtol value steps (if omitted, will be 0.1): '))
     except ValueError:
         self.ASTtol_value_steps = float(0.1)
     while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
         try:
-            self.ASTtol_value_steps = float(input('     Enter the ASTtol value steps (if omited, will be 0.1): '))
+            self.ASTtol_value_steps = float(input('     Enter the ASTtol value steps (if omitted, will be 0.1): '))
         except ValueError:
             self.ASTtol_value_steps = float(0.1)
 

@@ -37,6 +37,8 @@ Finally, you just need to run the function that suits your needs, for example:
 ```
 accis will show on the prompt command dialog all the objects it adds, and those that doesn't need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled 'Setting up the target IDFs'.
 
+Once you run the simulations, you might get some EnergyPlus warnings and severe errors. This is something I'm currently working on.
+
 ## Setting up the target IDFs
 ### MultipleZones functions
 

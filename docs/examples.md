@@ -23,17 +23,17 @@ Enter the HVAC Mode numbers separated by space (0 = Fully Air-conditioned; 1 = N
           Are you sure the numbers are correct? [y or [] / n]:
 Enter the Ventilation Control numbers separated by space (0 = Ventilates above neutral temperature; 1 = Ventilates above upper comfort limit): 0
           Are you sure the numbers are correct? [y or [] / n]:
-Enter the VSToffset numbers separated by space (if omited, will be 0):
+Enter the VSToffset numbers separated by space (if omitted, will be 0):
           Are you sure the numbers are correct? [y or [] / n]:
-Enter the MinOToffset numbers separated by space (if omited, will be 50):
+Enter the MinOToffset numbers separated by space (if omitted, will be 50):
           Are you sure the numbers are correct? [y or [] / n]:
-Enter the MaxWindSpeed numbers separated by space (if omited, will be 50):
+Enter the MaxWindSpeed numbers separated by space (if omitted, will be 50):
           Are you sure the numbers are correct? [y or [] / n]:
-Enter the ASTtol value from (if omited, will be 0.1):
+Enter the ASTtol value from (if omitted, will be 0.1):
           Are you sure the numbers are correct? [y or [] / n]:
-Enter the ASTtol value to (if omited, will be 0.1):
+Enter the ASTtol value to (if omitted, will be 0.1):
           Are you sure the numbers are correct? [y or [] / n]:
-Enter the ASTtol value steps (if omited, will be 0.1):
+Enter the ASTtol value steps (if omitted, will be 0.1):
           Are you sure the numbers are correct? [y or [] / n]:
 ```
 As you can see, we are going to use the EN16798-1, all categories (1, 2 and 3), Comfort Modes 0 (i.e. static) and 3 (i.e. adaptive, OUT-AEN16798), Mixed Mode, and we just went ahead with the remaining default values.
