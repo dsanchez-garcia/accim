@@ -49,8 +49,6 @@ Mode                 LastWriteTime         Length Name
 -a---l        25/02/2021     19:02         500044 TestModel_MultipleZone_pymod[AS_EN16798[CA_3[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
 -a---l        25/02/2021     19:02         500044 TestModel_MultipleZone_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
 ```
-Afterwards, you just need to run the simulation. In my opinion, The easiest and quickest way to do it is by using EP-Launch. Once you have run the simulations you need, you'll get the files you usually get when you run any simulation, including the hourly results on a CSV file. You can see in the image below the differences between using adaptive and static EN16798-1 setpoint temperatures (i.e. Category 3, Comfort Modes 0 and 3)
-
-![simulationResults](images\simulationResults_50.jpg)
+Afterwards, you just need to run the simulation. In my opinion, The easiest and quickest way to do it is by using EP-Launch. Once you have run the simulations you need, you'll get the files you usually get when you run any simulation, including the hourly results on a CSV file.
 
 ## SingleZone functions
