@@ -2,7 +2,7 @@
 
 ## MultipleZones functions
 
-Say you have an IDF in some folder, called 'TestModel_MultipleZone.idf'. So, let's run the functions to get the energy models with adaptive setpoint temperatures. Besides, we can run it with static setpoint temperatures to see the differences between these.
+Say you have an IDF in some folder, called 'TestModel_MultipleZone.idf'. So, let's run the functions to get the energy models with adaptive setpoint temperatures.
 
 ```
 >>> from accim.sim import accis
@@ -52,3 +52,35 @@ Mode                 LastWriteTime         Length Name
 Afterwards, you just need to run the simulation. In my opinion, The easiest and quickest way to do it is by using EP-Launch. Once you have run the simulations you need, you'll get the files you usually get when you run any simulation, including the hourly results on a CSV file.
 
 ## SingleZone functions
+
+In case of SingleZone functions, it's pretty much the same thing:
+
+```
+>>> from accim.sim import accis
+>>> dir(accis)
+['__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', 'addAccisMultipleZoneEp91', 'addAccisMultipleZoneEp94', 'addAccisMultipleZoneSimplifiedEp91', 'addAccisMultipleZoneSimplifiedEp94', 'addAccisMultipleZoneTimestepEp91', 'addAccisMultipleZoneTimestepEp94', 'addAccisSingleZoneEp91', 'addAccisSingleZoneEp94', 'addAccisSingleZoneSimplifiedEp91', 'addAccisSingleZoneSimplifiedEp94', 'addAccisSingleZoneTimestepEp91', 'addAccisSingleZoneTimestepEp94']
+>>> accis.addAccisSingleZoneEp94()
+```
+When we hit enter, it's going to add all the EnergyPlus objects needed, and afterwards ask us to enter the required information:
+```
+Enter the Adaptive Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55): 1
+          Are you sure the numbers are correct? [y or [] / n]:
+Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT): 3
+          Are you sure the numbers are correct? [y or [] / n]:
+Enter the Comfort Mode numbers separated by space (0 = Static; 1 = OUT-CTE; 2 = OUT-SEN16798/SASHRAE55; 3 = OUT-AEN16798/AASHRAE55): 3
+          Are you sure the numbers are correct? [y or [] / n]:
+Enter the ASTtol value from (if omitted, will be 0.1):
+          Are you sure the numbers are correct? [y or [] / n]:
+Enter the ASTtol value to (if omitted, will be 0.1):
+          Are you sure the numbers are correct? [y or [] / n]:
+Enter the ASTtol value steps (if omitted, will be 0.1):
+          Are you sure the numbers are correct? [y or [] / n]:
+```
+In this case, we just wanted to use EN16798-1, with Category 3 and Comfort Mode OUT-AEN16798.
+If you enter `exit()` to quit python and enter `dir` on windows command line, you'll be able to see the output IDFs accim has created:
+```
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---l        25/02/2021     20:18          76936 TestModel_SingleZone.idf
+-a---l        25/02/2021     20:20         114617 TestModel_SingleZone_pymod[AS_EN16798[CA_3[CM_3[AT_0.1.idf
+```
