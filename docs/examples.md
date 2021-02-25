@@ -51,6 +51,6 @@ Mode                 LastWriteTime         Length Name
 ```
 Afterwards, you just need to run the simulation. In my opinion, The easiest and quickest way to do it is by using EP-Launch. Once you have run the simulations you need, you'll get the files you usually get when you run any simulation, including the hourly results on a CSV file. You can see in the image below the differences between using adaptive and static EN16798-1 setpoint temperatures (i.e. Category 3, Comfort Modes 0 and 3)
 
-<img src="images\simulationResults.png" width="400">
+![simulationResults](images\simulationResults_50.jpg)
 
 ## SingleZone functions
