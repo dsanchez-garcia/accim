@@ -20,7 +20,7 @@ Mode                 LastWriteTime         Length Name
 -a---l        27/02/2021     15:01         114617 TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0.1.idf
 ```
 
-Since we don't want accim to simulate TestModel_SingleZone.idf, first of all, we should remove it from the folder.
+Since we don't want EnergyPlus to simulate TestModel_SingleZone.idf, first of all, we should remove it from the folder.
 
 ```
 >>> from accim.run import run
@@ -28,7 +28,7 @@ Since we don't want accim to simulate TestModel_SingleZone.idf, first of all, we
 ['IDF', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', 'make_eplaunch_options', 'os', 'removefiles', 'runEp94', 'runIDFs']
 >>> run.runEp94()
 ```
-`runEp94` will let you know the IDFs and EPWs that are going to be used in the simulations. Besides, it'll let you know the total number of simulations, and will ask for your confirmation, because you might start thousands of simulations by mistake.
+`runEp94()` will let you know the IDFs and EPWs that are going to be used in the simulations. Besides, it'll let you know the total number of simulations, and will ask for your confirmation, because you might start thousands of simulations by mistake.
 ```
 >>> run.runEp94()
 The IDFs we are going to run are: ['TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1.idf', 'TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0.1.idf']
