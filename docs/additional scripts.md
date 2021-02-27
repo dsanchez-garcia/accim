@@ -1,0 +1,93 @@
+# Additional scripts
+
+## Running ACCIM output IDFs
+
+This script has been created by eppy's development team (https://eppy.readthedocs.io/en/latest/runningeplus.html, specifically from section 'Running in parallel processes using Generators'), however I did some changes. Anyway, you probably should check out eppy package, since it's absolutely awesome.
+
+The main difference is that this one allows to run simulations with several EPW files. It takes all EPW files and IDF files located in the script folder, and runs them. So for example, say you have 2 no. IDFs (1.idf and 2.idf) and 2 no. EPW files (a.epw and b.epw). Then, this script will run the following simulations: 1[a; 1[b; 2[a; 2[b. The character '[' has been used as separator in order to not to be in conflict with other programs. Besides, there's a package within accim currently being developed (within folder data) in order to generate tables and graphs automatically.
+
+So, how to use it?
+
+Say you have already run any of the accis functions, and therefore you might have a folder with the following files:
+
+```
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---l        20/07/2019     12:42        1407718 Bilbao_2015.epw
+-a---l        20/07/2019     12:43        1408160 Bilbao_2016.epw
+-a----        27/02/2021     15:01         114617 TestModel_SingleZone.idf
+-a---l        27/02/2021     15:01         114617 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1.idf
+-a---l        27/02/2021     15:01         114617 TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0.1.idf
+```
+
+Since we don't want accim to simulate TestModel_SingleZone.idf, first of all, we should remove it from the folder.
+
+```
+>>> from accim.run import run
+>>> dir(run)
+['IDF', '__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', 'make_eplaunch_options', 'os', 'removefiles', 'runEp94', 'runIDFs']
+>>> run.runEp94()
+```
+`runEp94` will let you know the IDFs and EPWs that are going to be used in the simulations. Besides, it'll let you know the total number of simulations, and will ask for your confirmation, because you might start thousands of simulations by mistake.
+```
+>>> run.runEp94()
+The IDFs we are going to run are: ['TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1.idf', 'TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0.1.idf']
+ and the No. of IDFs is going to be 2
+The EPWs we are going to run are: ['Bilbao_2015.epw', 'Bilbao_2016.epw']
+ and the No. of EPWs is going to be 2
+Therefore, the simulations are going to be:
+TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1.idf[Bilbao_2015.epw
+TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1.idf[Bilbao_2016.epw
+TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0.1.idf[Bilbao_2015.epw
+TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0.1.idf[Bilbao_2016.epw
+ and the No. of simulations is going to be 4
+The number of simulations is going to be 4. Do you still want to proceed?[y or n]:y
+```
+
+Afterwards, you'll see the calculations progress if you use the windows prompt command, and you'll get an extensive list of simulation files, similar to this:
+
+```
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---l        20/07/2019     12:42        1407718 Bilbao_2015.epw
+-a---l        20/07/2019     12:43        1408160 Bilbao_2016.epw
+-a---l        27/02/2021     15:01         114617 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1.idf
+-a---l        27/02/2021     16:47           1721 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.audit
+-a---l        27/02/2021     16:47           9179 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.bnd
+-a---l        27/02/2021     16:47        2023160 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.csv
+-a---l        27/02/2021     16:47           6181 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.dxf
+-a---l        27/02/2021     16:47          30483 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.eio
+-a---l        27/02/2021     16:47             99 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.end
+-a---l        27/02/2021     16:47           5351 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.err
+-a---l        27/02/2021     16:47        2968770 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.eso
+-a---l        27/02/2021     16:47              0 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.mdd
+-a---l        27/02/2021     16:47          13352 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.mtd
+-a---l        27/02/2021     16:47              0 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.rdd
+-a---l        27/02/2021     16:47           1107 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.rvaudit
+-a---l        27/02/2021     16:47           2667 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.shd
+-a---l        27/02/2021     16:47          34187 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015Table.csv
+-a---l        27/02/2021     16:47         139585 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015Table.htm
+-a---l        27/02/2021     16:47           3421 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015Zsz.csv
+.
+.
+.
+```
+You might need to keep these in order to debug some error, or any other reason, but if you don't need to keep these except csv values with hourly results, you can run the `removefiles()` function:
+
+```
+>>> run.removefiles()
+```
+And now your working directory should look like this:
+```
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---l        20/07/2019     12:42        1407718 Bilbao_2015.epw
+-a---l        20/07/2019     12:43        1408160 Bilbao_2016.epw
+-a---l        27/02/2021     15:01         114617 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1.idf
+-a---l        27/02/2021     16:47        2023160 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2015.csv
+-a---l        27/02/2021     16:47        2017212 TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0[Bilbao_2016.csv
+-a---l        27/02/2021     15:01         114617 TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0.1.idf
+-a---l        27/02/2021     16:47        2023114 TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0[Bilbao_2015.csv
+-a---l        27/02/2021     16:47        2017070 TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0[Bilbao_2016.csv
+```
+As you can see, `removefiles()` removes everything except EPW files, IDFs, .py scripts and the hourly CSV values which contains the results of the simulations.

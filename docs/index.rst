@@ -17,6 +17,7 @@ Welcome to accim's documentation!
    installation
    how to use
    examples
+	 additional scripts
 
 Indices and tables
 ==================

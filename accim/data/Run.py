@@ -1,7 +1,7 @@
 def getEnergyConsumpTable():
-    from accim.data import Main
+    from accim.data import main
     
-    z=Main.Table()
+    z=main.Table()
     z.EnergyConsumptionTable()
 
 # getEnergyConsumpTable()
