@@ -24,16 +24,22 @@ And then, if you enter 'dir(accis)' it will return all the different functions a
 ```
 You can see the different functions. The name is composed by the following fields:
 
-__addAccis{MultipleZone or SingleZone}{Simplified, just empty or Timestep}{Ep91 or Ep94}__
+__addAccis{MultipleZone or SingleZone}{Simplified, Standard or Timestep}{Ep91 or Ep94}__
 
 where
 - MultipleZone or SingleZone refers to the type of functions as explained above
 - Simplified, Timestep or just empty refers to the simulation results: Simplified means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; if this field is just empty, it means that results will contain the full selection; and Timestep means that results are going to be the full selection in Timestep frequency, so this is only recommended for tests, or small number of simulations.
 - Ep91 or Ep94 refers to the IDF EnergyPlus version, which could be EnergyPlus 9.1.0 or EnergyPlus 9.4.0.
 
+Besides, you can see there's another function called just `addAccis()`, that takes as arguments if you want it to be MultipleZone or SingleZone, Simplified, Standard or Timestep, and Ep91 or Ep94. Therefore, the first argument takes 'multiplezone' or 'mz' for MultipleZones scripts, or 'singlezone' or 'sz' for SingleZone scripts; the second parameter takes 'simplified', 'standard' or 'timestep'; and the third one takes 'ep91' or 'ep94'. All of these three arguments must be strings. The usage of this function will be detailed below.
+
 Finally, you just need to run the function that suits your needs, for example:
 ```
 >>> accis.addAccisMultipleZoneEp94()
+```
+or, if you prefer:
+```
+>>> accis.addAccis('mz','standard','ep94')
 ```
 accis will show on the prompt command dialog all the objects it adds, and those that doesn't need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled 'Setting up the target IDFs'.
 
@@ -42,7 +48,26 @@ Once you run the simulations, you might get some EnergyPlus warnings and severe 
 ## Setting up the target IDFs
 ### MultipleZones functions
 
-If you run any of the MultipleZones functions, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs:
+If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)` or any of the MultipleZones functions, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also run accis by including the arguments in the function, whose usage would be for example:
+```
+>>> accis.addAccis('mz', #ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
+>>>                'standard', #Outputs: 'simplified', 'standard' or 'timestep'
+>>>                'ep94', # EP version: 'ep91' or 'ep94'
+>>>                [1], # Adaptive Standard
+>>>                [1], # Category
+>>>                [1], # Comfort Mode
+>>>                [2], # HVAC Mode
+>>>                [0], # Ventilation Control
+>>>                [0], # VSToffset
+>>>                [], # MinOToffset
+>>>                [], # MaxWindSpeed
+>>>                float, # ASTtol start
+>>>                float, # ASTtol end
+>>>                float # ASTtol steps
+>>>                )
+```
+
+Each argument is explained below:
 
 - Adaptive Standard: refers to the adaptive thermal comfort model to be applied. Enter 0 for CTE, 1 for EN16798-1 and 2 for ASHRAE 55. For example, if you enter '0 1 2', you'll get IDFs for all the models. If you don't enter any number, or if some of the numbers entered are not 0, 1 or 2, it'll ask you to enter the numbers again.
 
