@@ -48,25 +48,24 @@ Once you run the simulations, you might get some EnergyPlus warnings and severe 
 ## Setting up the target IDFs
 ### MultipleZones functions
 
-If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)` or any of the MultipleZones functions, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also run accis by including the arguments in the function, whose usage would be for example:
+If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)` or any of the MultipleZones functions, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
 ```
->>> accis.addAccis('mz', #ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
->>>                'standard', #Outputs: 'simplified', 'standard' or 'timestep'
->>>                'ep94', # EP version: 'ep91' or 'ep94'
->>>                [1], # Adaptive Standard
->>>                [1], # Category
->>>                [1], # Comfort Mode
->>>                [2], # HVAC Mode
->>>                [0], # Ventilation Control
->>>                [0], # VSToffset
->>>                [], # MinOToffset
->>>                [], # MaxWindSpeed
+>>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
+>>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
+>>>                str, # EP version: 'ep91' or 'ep94'
+>>>                list, # Adaptive Standard
+>>>                list, # Category
+>>>                list, # Comfort Mode
+>>>                list, # HVAC Mode
+>>>                list, # Ventilation Control
+>>>                list, # VSToffset
+>>>                list, # MinOToffset
+>>>                list, # MaxWindSpeed
 >>>                float, # ASTtol start
 >>>                float, # ASTtol end
 >>>                float # ASTtol steps
 >>>                )
 ```
-
 Each argument is explained below:
 
 - Adaptive Standard: refers to the adaptive thermal comfort model to be applied. Enter 0 for CTE, 1 for EN16798-1 and 2 for ASHRAE 55. For example, if you enter '0 1 2', you'll get IDFs for all the models. If you don't enter any number, or if some of the numbers entered are not 0, 1 or 2, it'll ask you to enter the numbers again.
