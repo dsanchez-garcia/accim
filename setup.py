@@ -7,11 +7,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
       name='accim',
-<<<<<<< HEAD
       version='0.1.2',
-=======
-      version='0.0.17',
->>>>>>> cee2368c1539a48608197068115dab068710da86
       description="Transforms PMV-based into adaptive setpoint temperature EnergyPlus building energy models",
       long_description=long_description,
       long_description_content_type='text/markdown',
