@@ -9,7 +9,11 @@ by addingthe Adaptive Comfort Control Implementation Script (ACCIS)
 
 def addAccisSingleZoneEp91():
     """Add SingleZone accis."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
@@ -46,7 +50,11 @@ def addAccisSingleZoneEp91():
 
 def addAccisSingleZoneEp94():
     """Add SingleZone accis."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     from os import listdir
 
@@ -84,7 +92,11 @@ def addAccisSingleZoneEp94():
 
 def addAccisSingleZoneTimestepEp91():
     """Add SingleZone accis with timestep output data frecuency."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     from os import listdir
 
@@ -123,7 +135,11 @@ def addAccisSingleZoneTimestepEp91():
 
 def addAccisSingleZoneTimestepEp94():
     """Add SingleZone accis with timestep output data frecuency."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     from os import listdir
 
@@ -162,7 +178,11 @@ def addAccisSingleZoneTimestepEp94():
 
 def addAccisSingleZoneSimplifiedEp91():
     """Add SingleZone accis with simplified outputs."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     from os import listdir
 
@@ -200,7 +220,11 @@ def addAccisSingleZoneSimplifiedEp91():
 
 def addAccisSingleZoneSimplifiedEp94():
     """Add SingleZone accis with simplified outputs."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     from os import listdir
 
@@ -238,7 +262,11 @@ def addAccisSingleZoneSimplifiedEp94():
 
 def addAccisMultipleZoneEp91():
     """Add MultipleZone accis."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     from os import listdir
 
@@ -281,7 +309,11 @@ def addAccisMultipleZoneEp91():
 
 def addAccisMultipleZoneEp94():
     """Add MultipleZone accis."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     from os import listdir
 
@@ -324,7 +356,11 @@ def addAccisMultipleZoneEp94():
 
 def addAccisMultipleZoneTimestepEp91():
     """Add MultipleZone accis with timestep output data frecuency."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     from os import listdir
 
@@ -368,7 +404,11 @@ def addAccisMultipleZoneTimestepEp91():
 
 def addAccisMultipleZoneTimestepEp94():
     """Add MultipleZone accis with timestep output data frecuency."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     from os import listdir
 
@@ -412,7 +452,11 @@ def addAccisMultipleZoneTimestepEp94():
 
 def addAccisMultipleZoneSimplifiedEp91():
     """Add MultipleZone accis with simplified output."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     from os import listdir
 
@@ -455,7 +499,11 @@ def addAccisMultipleZoneSimplifiedEp91():
 
 def addAccisMultipleZoneSimplifiedEp94():
     """Add MultipleZone accis with simplified output."""
+<<<<<<< HEAD
     import accim.sim.accim_Main as accim_Main
+=======
+    import sim.accim_Main as accim_Main
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     from os import listdir
 
@@ -494,6 +542,7 @@ def addAccisMultipleZoneSimplifiedEp94():
     z = accim_Main.accimobj()
     z.inputdataMultipleZone()
     z.genIDFMultipleZone()
+<<<<<<< HEAD
 
 
 def addAccis(
@@ -691,3 +740,5 @@ def addAccis(
                 NameSuffix
                 )
 
+=======
+>>>>>>> cee2368c1539a48608197068115dab068710da86

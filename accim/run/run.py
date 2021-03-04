@@ -30,6 +30,7 @@ def make_eplaunch_options(idf, epw):
     return options
 
 
+<<<<<<< HEAD
 def runEp94(IDFfilesPath=None, EPWfilesPath=None):
     """
     Run simulations in Energy Plus 9.4.0.
@@ -68,6 +69,15 @@ def runEp94(IDFfilesPath=None, EPWfilesPath=None):
         epwnames = [x for x in os.listdir() if x.endswith('.epw')]
     else:
         epwnames = [x for x in os.listdir(EPWfilesPath) if x.endswith('.epw')]
+=======
+def runEp94():
+    """Run simulations in Energy Plus 9.4.0."""
+    iddfile = "C:/EnergyPlusV9-4-0/Energy+.idd"
+    IDF.setiddname(iddfile)
+
+    idfnames = [x for x in os.listdir() if x.endswith('.idf')]
+    epwnames = [x for x in os.listdir() if x.endswith('.epw')]
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     print(f'The IDFs we are going to run are: {idfnames}')
     print(f' and the No. of IDFs is going to be {len(idfnames)}')
@@ -101,7 +111,11 @@ def runEp94(IDFfilesPath=None, EPWfilesPath=None):
 
     num_CPUs = 2
 
+<<<<<<< HEAD
     conf_run = input(f'The number of simulations is going to be {len(runs)}. Do you still want to proceed? [y or n]: ')
+=======
+    conf_run = input(f'The number of simulations is going to be {len(runs)}. Do you still want to proceed?[y or n]: ')
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 
     if conf_run == 'y':
         runIDFs(runs, num_CPUs)
