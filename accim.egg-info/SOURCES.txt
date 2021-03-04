@@ -1,9 +1,6 @@
 README.md
 README.rst
-<<<<<<< HEAD
 setup.cfg
-=======
->>>>>>> cee2368c1539a48608197068115dab068710da86
 setup.py
 accim/__init__.py
 accim.egg-info/PKG-INFO
@@ -11,31 +8,19 @@ accim.egg-info/SOURCES.txt
 accim.egg-info/dependency_links.txt
 accim.egg-info/requires.txt
 accim.egg-info/top_level.txt
-<<<<<<< HEAD
 accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2015.csv
 accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2018.csv
 accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2015.csv
 accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2018.csv
 accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2015.csv
 accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2018.csv
-=======
-accim/data/TestModel_Calculated_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2015.csv
-accim/data/TestModel_Calculated_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2018.csv
-accim/data/TestModel_Calculated_pymod[AS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2015.csv
-accim/data/TestModel_Calculated_pymod[AS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2018.csv
-accim/data/TestModel_Calculated_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2015.csv
-accim/data/TestModel_Calculated_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2018.csv
->>>>>>> cee2368c1539a48608197068115dab068710da86
 accim/data/__init__.py
 accim/data/main.py
 accim/data/run.py
 accim/run/__init__.py
 accim/run/run.py
 accim/sample files/TestModel_MultipleZone.idf
-<<<<<<< HEAD
 accim/sample files/TestModel_MultipleZone_V910.idf
-=======
->>>>>>> cee2368c1539a48608197068115dab068710da86
 accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
 accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
 accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_2[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
@@ -43,15 +28,10 @@ accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_2[CM_3[HM_2[VC_0[V
 accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_3[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
 accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
 accim/sample files/TestModel_SingleZone.idf
-<<<<<<< HEAD
 accim/sample files/TestModel_SingleZone_V890.idf
 accim/sample files/TestModel_SingleZone_pymod[AS_EN16798[CA_3[CM_3[AT_0.1.idf
 accim/sample files/__init__.py
 accim/sample files/script_usage.py
-=======
-accim/sample files/TestModel_SingleZone_pymod[AS_EN16798[CA_3[CM_3[AT_0.1.idf
-accim/sample files/__init__.py
->>>>>>> cee2368c1539a48608197068115dab068710da86
 accim/sim/__init__.py
 accim/sim/accim_Base.py
 accim/sim/accim_Base_EMS.py
