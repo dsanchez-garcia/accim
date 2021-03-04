@@ -1,6 +1,10 @@
 Metadata-Version: 2.1
 Name: accim
+<<<<<<< HEAD
 Version: 0.1.2
+=======
+Version: 0.0.17
+>>>>>>> cee2368c1539a48608197068115dab068710da86
 Summary: Transforms PMV-based into adaptive setpoint temperature EnergyPlus building energy models
 Home-page: https://github.com/dsanchez-garcia/accim
 Author: Daniel Sánchez-García
