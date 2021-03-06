@@ -24,16 +24,22 @@ And then, if you enter 'dir(accis)' it will return all the different functions a
 ```
 You can see the different functions. The name is composed by the following fields:
 
-__addAccis{MultipleZone or SingleZone}{Simplified, just empty or Timestep}{Ep91 or Ep94}__
+__addAccis{MultipleZone or SingleZone}{Simplified, Standard or Timestep}{Ep91 or Ep94}__
 
 where
 - MultipleZone or SingleZone refers to the type of functions as explained above
 - Simplified, Timestep or just empty refers to the simulation results: Simplified means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; if this field is just empty, it means that results will contain the full selection; and Timestep means that results are going to be the full selection in Timestep frequency, so this is only recommended for tests, or small number of simulations.
 - Ep91 or Ep94 refers to the IDF EnergyPlus version, which could be EnergyPlus 9.1.0 or EnergyPlus 9.4.0.
 
+Besides, you can see there's another function called just `addAccis()`, that takes as arguments if you want it to be MultipleZone or SingleZone, Simplified, Standard or Timestep, and Ep91 or Ep94. Therefore, the first argument takes 'multiplezone' or 'mz' for MultipleZones scripts, or 'singlezone' or 'sz' for SingleZone scripts; the second parameter takes 'simplified', 'standard' or 'timestep'; and the third one takes 'ep91' or 'ep94'. All of these three arguments must be strings. The usage of this function will be detailed below.
+
 Finally, you just need to run the function that suits your needs, for example:
 ```
 >>> accis.addAccisMultipleZoneEp94()
+```
+or, if you prefer:
+```
+>>> accis.addAccis('mz','standard','ep94')
 ```
 accis will show on the prompt command dialog all the objects it adds, and those that doesn't need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled 'Setting up the target IDFs'.
 
@@ -42,7 +48,45 @@ Once you run the simulations, you might get some EnergyPlus warnings and severe 
 ## Setting up the target IDFs
 ### MultipleZones functions
 
-If you run any of the MultipleZones functions, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs:
+If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)` or any of the MultipleZones functions, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
+```
+>>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
+>>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
+>>>                str, # EP version: 'ep91' or 'ep94'
+>>>                list, # Adaptive Standard
+>>>                list, # Category
+>>>                list, # Comfort Mode
+>>>                list, # HVAC Mode
+>>>                list, # Ventilation Control
+>>>                list, # VSToffset
+>>>                list, # MinOToffset
+>>>                list, # MaxWindSpeed
+>>>                float, # ASTtol start
+>>>                float, # ASTtol end
+>>>                float, # ASTtol steps
+>>>                str # NameSuffix: some text you might want to add at the end of the output IDF file name
+>>>                )
+```
+Some example of the usage could be:
+```
+>>> accis.addAccis('mz', # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
+>>>                'standard', # Outputs: 'simplified', 'standard' or 'timestep'
+>>>                'ep94', # EP version: 'ep91' or 'ep94'
+>>>                [0, 1, 2], # Adaptive Standard
+>>>                [1, 2, 3, 80, 90], # Category
+>>>                [0, 1, 2, 3], # Comfort Mode
+>>>                [0, 1, 2], # HVAC Mode
+>>>                [0, 1], # Ventilation Control
+>>>                [0, 1, 2], # VSToffset
+>>>                [0, 1, 2], # MinOToffset
+>>>                [10, 20, 30], # MaxWindSpeed
+>>>                0, # ASTtol start
+>>>                2, # ASTtol end
+>>>                0.25, # ASTtol steps
+>>>                'standard' # Name Suffix: for example, just in case you want to clarify the outputs
+>>>                )
+```
+Each argument is explained below:
 
 - Adaptive Standard: refers to the adaptive thermal comfort model to be applied. Enter 0 for CTE, 1 for EN16798-1 and 2 for ASHRAE 55. For example, if you enter '0 1 2', you'll get IDFs for all the models. If you don't enter any number, or if some of the numbers entered are not 0, 1 or 2, it'll ask you to enter the numbers again.
 
@@ -65,7 +109,7 @@ In static mode, static (or PMV-based) setpoint temperatures are applied all the 
 
 So, below you can see a sample name of an IDF created by using ACCIM's MultipleZone functions. The package takes the original IDF file as a reference, saves a copy, run all the functions so that setpoint temperatures are transformed from static to adaptive, an changes its name based on the values previously entered:
 
-__TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1__
+__TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[standard__
 
 where:
 
@@ -88,11 +132,41 @@ where:
 
 - AT refers to the Adaptive Setpoint Temperature offset, which could be any number, float or integer, but always positive number. Please remember this number comes from a 3-stage process (refer to the explanation above).
 
+- 'standard' is the suffix, which can be whatever you want. For example, this allows you to make a for loop with 'spandard', 'simplified' and 'timestep' and run the simulations with all type of outputs.
+
 If some inputs are not used or don't make sense, you'll be able to se an 'X' in the output IDF file. For example, if you use CTE as Adaptive Standard, then the inputs for Category and Comfort Mode (which are only for EN16798-1 and ASHRAE 55) are not used in the process, and the output IDF would contain in its name 'AS_CTE[CA_X[CM_X'. Another similar case occurs if you use Full air-conditioning HVAC Mode (i.e. enter '0' for HVAC Mode), where the output IDF would contain in its name '[HM_0[VC_X[VO_X[MT_X[MW_X'.
 
 ### SingleZone functions
 
-If you run any of the SingleZone functions, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs:
+Just as previously explained for MultipleZones scripts, if you run `accis.addAccis('sz', whateverOutputs, whateverEPversion)` or any of the SingleZone functions, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
+```
+>>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
+>>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
+>>>                str, # EP version: 'ep91' or 'ep94'
+>>>                list, # Adaptive Standard
+>>>                list, # Category
+>>>                list, # Comfort Mode
+>>>                float, # ASTtol start
+>>>                float, # ASTtol end
+>>>                float, # ASTtol steps
+>>>                str # NameSuffix: some text you might want to add at the end of the output IDF file name
+>>>                )
+```
+Some example of the usage could be:
+```
+>>> accis.addAccis('sz', # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
+>>>                'standard', # Outputs: 'simplified', 'standard' or 'timestep'
+>>>                'ep94', # EP version: 'ep91' or 'ep94'
+>>>                [0, 1, 2], # Adaptive Standard
+>>>                [1, 2, 3, 80, 90], # Category
+>>>                [0, 1, 2, 3], # Comfort Mode
+>>>                0, # ASTtol start
+>>>                2, # ASTtol end
+>>>                0.25, # ASTtol steps
+>>>                'standard' # Name Suffix: for example, just in case you want to clarify the outputs
+>>>                )
+```
+Each argument is explained below:
 
 - Adaptive Standard: same as explained above; please refer to MultipleZone functions.
 
@@ -106,7 +180,7 @@ You can see these are the same inputs from MultipleZone functions, however, sinc
 
 So, below you can see a sample name of an IDF created by using ACCIM's SingleZone functions. The package takes the original IDF file as a reference, saves a copy, run all the functions so that setpoint temperatures are transformed from static to adaptive, an changes its name based on the values previously entered:
 
-__TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1__
+__TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1[standard__
 
 where (same as previously explained in MultipleZone functions):
 
@@ -117,3 +191,5 @@ where (same as previously explained in MultipleZone functions):
 - CA refers to the Category, which could be 1, 2 or 3 if AS is EN16798, or 80 or 90 if AS is ASHRAE55.
 
 - CM refers to the Comfort Mode, which could be 0 (Static), 1 (OUT-CTE), 2 (OUT-SEN16798 or OUT-SASHRAE55), OR 3 (OUT-AEN16798 or OUT-AASHRAE55).
+
+- 'standard' is the suffix, which can be whatever you want. For example, this allows you to make a for loop with 'spandard', 'simplified' and 'timestep' and run the simulations with all type of outputs.

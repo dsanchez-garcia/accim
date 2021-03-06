@@ -30,6 +30,7 @@ def make_eplaunch_options(idf, epw):
     return options
 
 
+<<<<<<< HEAD
 def runEp94(IDFfilesPath=None, EPWfilesPath=None):
     """
     Run simulations in Energy Plus 9.4.0.
@@ -50,9 +51,9 @@ def runEp94(IDFfilesPath=None, EPWfilesPath=None):
     """
     iddfile = "C:/EnergyPlusV9-4-0/Energy+.idd"
     IDF.setiddname(iddfile)
-    
+
     runOnlyAccim = input('Do you want to run only ACCIM output IDFs? [y or n]: ')
-    
+
     if IDFfilesPath is None:
         if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
             idfnames = [x for x in os.listdir() if x.endswith('.idf') and '_pymod' in x]
@@ -63,11 +64,20 @@ def runEp94(IDFfilesPath=None, EPWfilesPath=None):
             idfnames = [x for x in os.listdir(IDFfilesPath) if x.endswith('.idf') and '_pymod' in x]
         else:
             idfnames = [x for x in os.listdir(IDFfilesPath) if x.endswith('.idf')]
-    
+
     if EPWfilesPath is None:
         epwnames = [x for x in os.listdir() if x.endswith('.epw')]
     else:
         epwnames = [x for x in os.listdir(EPWfilesPath) if x.endswith('.epw')]
+=======
+def runEp94():
+    """Run simulations in Energy Plus 9.4.0."""
+    iddfile = "C:/EnergyPlusV9-4-0/Energy+.idd"
+    IDF.setiddname(iddfile)
+
+    idfnames = [x for x in os.listdir() if x.endswith('.idf')]
+    epwnames = [x for x in os.listdir() if x.endswith('.epw')]
+>>>>>>> 09854edcb199c7192a63db8cce699257603f24dd
 
     print(f'The IDFs we are going to run are: {idfnames}')
     print(f' and the No. of IDFs is going to be {len(idfnames)}')
@@ -102,6 +112,7 @@ def runEp94(IDFfilesPath=None, EPWfilesPath=None):
     num_CPUs = 2
 
     conf_run = input(f'The number of simulations is going to be {len(runs)}. Do you still want to proceed? [y or n]: ')
+>>>>>>> 09854edcb199c7192a63db8cce699257603f24dd
 
     if conf_run == 'y':
         runIDFs(runs, num_CPUs)
@@ -123,4 +134,3 @@ def removefiles():
     csvlist = ([file for file in os.listdir() if file.endswith(csvextensions)])
     for file in csvlist:
         os.remove(file)
-

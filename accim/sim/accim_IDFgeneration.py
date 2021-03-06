@@ -207,12 +207,12 @@ def genIDFSingleZone(self,
         self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
     else:
         ASTtol_end = ASTtol_end_input + ASTtol_steps
-    
+
     if all(arguments):
         self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
     else:
         ASTtol_end = ASTtol_end_input + ASTtol_steps
-    
+
     if all(arguments):
         pass
     else:
