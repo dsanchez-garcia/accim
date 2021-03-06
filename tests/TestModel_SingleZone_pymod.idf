@@ -1943,7 +1943,7 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 WaterUse:Equipment,
     DHW Block1:Zone1,         !- Name
     DHW Block1:Zone1,         !- EndUse Subcategory
-    4.377728e-07,             !- Peak Flow Rate
+    4.37772839506173e-07,     !- Peak Flow Rate
     Office_OpenOff_Occ,       !- Flow Rate Fraction Schedule Name
     DHW Supply Temperature Block1:Zone1,    !- Target Temperature Schedule Name
     DHW Supply Temperature Block1:Zone1,    !- Hot Water Supply Temperature Schedule Name
