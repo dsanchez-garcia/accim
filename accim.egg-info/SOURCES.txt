@@ -1,5 +1,6 @@
 README.md
 README.rst
+setup.cfg
 setup.py
 accim/__init__.py
 accim.egg-info/PKG-INFO

@@ -7,22 +7,22 @@ class accimobj():
     from os import listdir
     import numpy
 
-    from sim.accim_IDFgeneration import inputdataSingleZone
-    from sim.accim_IDFgeneration import inputdataMultipleZone
-    from sim.accim_IDFgeneration import genIDFSingleZone
-    from sim.accim_IDFgeneration import genIDFMultipleZone
+    from accim.sim.accim_IDFgeneration import inputdataSingleZone
+    from accim.sim.accim_IDFgeneration import inputdataMultipleZone
+    from accim.sim.accim_IDFgeneration import genIDFSingleZone
+    from accim.sim.accim_IDFgeneration import genIDFMultipleZone
 
-    from sim.accim_Base import setComfFieldsPeople
-    from sim.accim_Base import addOpTempTherm
-    from sim.accim_Base import addBaseSchedules
-    from sim.accim_Base import setAvailSchOn
-    from sim.accim_Base import saveaccim
+    from accim.sim.accim_Base import setComfFieldsPeople
+    from accim.sim.accim_Base import addOpTempTherm
+    from accim.sim.accim_Base import addBaseSchedules
+    from accim.sim.accim_Base import setAvailSchOn
+    from accim.sim.accim_Base import saveaccim
 
-    from sim.accim_Base_EMS import addEMSProgramsBase
-    from sim.accim_Base_EMS import addEMSPCMBase
-    from sim.accim_Base_EMS import addEMSOutputVariableBase
-    from sim.accim_Base_EMS import addOutputVariablesTimestep
-    from sim.accim_Base_EMS import addSimplifiedOutputVariables
+    from accim.sim.accim_Base_EMS import addEMSProgramsBase
+    from accim.sim.accim_Base_EMS import addEMSPCMBase
+    from accim.sim.accim_Base_EMS import addEMSOutputVariableBase
+    from accim.sim.accim_Base_EMS import addOutputVariablesTimestep
+    from accim.sim.accim_Base_EMS import addSimplifiedOutputVariables
 
     pass
 
@@ -30,13 +30,13 @@ class accimobj():
 class accimobj_SingleZone_Ep91 (accimobj):
     """SingleZone accim object."""
 
-    from sim.accim_SingleZone import addForscriptSchSingleZone
+    from accim.sim.accim_SingleZone import addForscriptSchSingleZone
 
-    from sim.accim_SingleZone_EMS import addGlobVarListSingleZone
-    from sim.accim_SingleZone_EMS import addEMSSensorsSingleZone
-    from sim.accim_SingleZone_EMS import addEMSActuatorsSingleZone
-    from sim.accim_SingleZone_EMS import addEMSProgramsSingleZone
-    from sim.accim_SingleZone_EMS import addOutputVariablesSingleZone
+    from accim.sim.accim_SingleZone_EMS import addGlobVarListSingleZone
+    from accim.sim.accim_SingleZone_EMS import addEMSSensorsSingleZone
+    from accim.sim.accim_SingleZone_EMS import addEMSActuatorsSingleZone
+    from accim.sim.accim_SingleZone_EMS import addEMSProgramsSingleZone
+    from accim.sim.accim_SingleZone_EMS import addOutputVariablesSingleZone
 
     def __init__(self, filename_temp):
         from eppy import modeleditor
@@ -66,18 +66,18 @@ class accimobj_SingleZone_Ep91 (accimobj):
 class accimobj_MultipleZone_Ep91 (accimobj):
     """MultipleZone accim object."""
 
-    from sim.accim_MultipleZone import addMultipleZoneSch
-    from sim.accim_MultipleZone import addCurveObj
-    from sim.accim_MultipleZone import addDetHVACobjEp91
-    from sim.accim_MultipleZone import addForscriptSchMultipleZone
-    from sim.accim_MultipleZone import checkVentIsOn
+    from accim.sim.accim_MultipleZone import addMultipleZoneSch
+    from accim.sim.accim_MultipleZone import addCurveObj
+    from accim.sim.accim_MultipleZone import addDetHVACobjEp91
+    from accim.sim.accim_MultipleZone import addForscriptSchMultipleZone
+    from accim.sim.accim_MultipleZone import checkVentIsOn
 
-    from sim.accim_MultipleZone_EMS import addGlobVarListMultipleZone
-    from sim.accim_MultipleZone_EMS import addEMSSensorsMultipleZone
-    from sim.accim_MultipleZone_EMS import addEMSActuatorsMultipleZone
-    from sim.accim_MultipleZone_EMS import addEMSProgramsMultipleZone
-    from sim.accim_MultipleZone_EMS import addEMSOutputVariableMultipleZone
-    from sim.accim_MultipleZone_EMS import addOutputVariablesMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addGlobVarListMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addEMSSensorsMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addEMSActuatorsMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addEMSProgramsMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addEMSOutputVariableMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addOutputVariablesMultipleZone
 
     def __init__(self, filename_temp):
         from eppy import modeleditor
@@ -115,13 +115,13 @@ class accimobj_MultipleZone_Ep91 (accimobj):
 class accimobj_SingleZone_Ep94 (accimobj):
     """SingleZone accim object."""
 
-    from sim.accim_SingleZone import addForscriptSchSingleZone
+    from accim.sim.accim_SingleZone import addForscriptSchSingleZone
 
-    from sim.accim_SingleZone_EMS import addGlobVarListSingleZone
-    from sim.accim_SingleZone_EMS import addEMSSensorsSingleZone
-    from sim.accim_SingleZone_EMS import addEMSActuatorsSingleZone
-    from sim.accim_SingleZone_EMS import addEMSProgramsSingleZone
-    from sim.accim_SingleZone_EMS import addOutputVariablesSingleZone
+    from accim.sim.accim_SingleZone_EMS import addGlobVarListSingleZone
+    from accim.sim.accim_SingleZone_EMS import addEMSSensorsSingleZone
+    from accim.sim.accim_SingleZone_EMS import addEMSActuatorsSingleZone
+    from accim.sim.accim_SingleZone_EMS import addEMSProgramsSingleZone
+    from accim.sim.accim_SingleZone_EMS import addOutputVariablesSingleZone
 
     def __init__(self, filename_temp):
         from eppy import modeleditor
@@ -151,18 +151,18 @@ class accimobj_SingleZone_Ep94 (accimobj):
 class accimobj_MultipleZone_Ep94 (accimobj):
     """MultipleZone accim object."""
 
-    from sim.accim_MultipleZone import addMultipleZoneSch
-    from sim.accim_MultipleZone import addCurveObj
-    from sim.accim_MultipleZone import addDetHVACobjEp94
-    from sim.accim_MultipleZone import addForscriptSchMultipleZone
-    from sim.accim_MultipleZone import checkVentIsOn
+    from accim.sim.accim_MultipleZone import addMultipleZoneSch
+    from accim.sim.accim_MultipleZone import addCurveObj
+    from accim.sim.accim_MultipleZone import addDetHVACobjEp94
+    from accim.sim.accim_MultipleZone import addForscriptSchMultipleZone
+    from accim.sim.accim_MultipleZone import checkVentIsOn
 
-    from sim.accim_MultipleZone_EMS import addGlobVarListMultipleZone
-    from sim.accim_MultipleZone_EMS import addEMSSensorsMultipleZone
-    from sim.accim_MultipleZone_EMS import addEMSActuatorsMultipleZone
-    from sim.accim_MultipleZone_EMS import addEMSProgramsMultipleZone
-    from sim.accim_MultipleZone_EMS import addEMSOutputVariableMultipleZone
-    from sim.accim_MultipleZone_EMS import addOutputVariablesMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addGlobVarListMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addEMSSensorsMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addEMSActuatorsMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addEMSProgramsMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addEMSOutputVariableMultipleZone
+    from accim.sim.accim_MultipleZone_EMS import addOutputVariablesMultipleZone
 
     def __init__(self, filename_temp):
         from eppy import modeleditor
