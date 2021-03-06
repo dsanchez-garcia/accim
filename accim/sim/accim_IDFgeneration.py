@@ -66,7 +66,6 @@ def inputdataSingleZone(self):
         except ValueError:
             self.ASTtol_value_steps = float(0.1)
 
-    self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
 
 
 def inputdataMultipleZone(self):
@@ -180,16 +179,54 @@ def inputdataMultipleZone(self):
         except ValueError:
             self.ASTtol_value_steps = float(0.1)
 
-    self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
 
-
-def genIDFSingleZone(self):
+def genIDFSingleZone(self,
+                     AdapStand=None,
+                     CAT=None,
+                     ComfMod=None,
+                     ASTtol_start=0.1,
+                     ASTtol_end_input=0.1,
+                     ASTtol_steps=0.1,
+                     NameSuffix=''
+                     ):
     """Generate IDFs in SingleZone."""
     import os
     from os import listdir
     import numpy
     from eppy import modeleditor
     from eppy.modeleditor import IDF
+
+    arguments = (AdapStand is None,
+                 CAT is None,
+                 ComfMod is None,
+                 ASTtol_start == 0.1,
+                 ASTtol_end_input == 0.1,
+                 ASTtol_steps == 0.1)
+
+    if all(arguments):
+        self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
+    else:
+        ASTtol_end = ASTtol_end_input + ASTtol_steps
+    
+    if all(arguments):
+        self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
+    else:
+        ASTtol_end = ASTtol_end_input + ASTtol_steps
+    
+    if all(arguments):
+        pass
+    else:
+        self.AdapStand_List = AdapStand
+        self.CAT_List = CAT
+        self.ComfMod_List = ComfMod
+        self.ASTtol_value_from = ASTtol_start
+        self.ASTtol_value_to = ASTtol_end
+        self.ASTtol_value_steps = ASTtol_steps
+
+    if NameSuffix == '':
+        suffix = ''
+    else:
+        suffix = '[' + NameSuffix
 
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
     filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])
@@ -219,6 +256,7 @@ def genIDFSingleZone(self):
                         + '[CA_X'
                         + '[CM_X'
                         + '[AT_'+repr(ASTtol_value)
+                        + suffix
                         + '.idf'
                         )
             elif AdapStand_value == 1:
@@ -238,6 +276,7 @@ def genIDFSingleZone(self):
                                     + '[CA_'+repr(CAT_value)
                                     + '[CM_'+repr(ComfMod_value)
                                     + '[AT_'+repr(ASTtol_value)
+                                    + suffix
                                     + '.idf'
                                     )
             elif AdapStand_value == 2:
@@ -257,6 +296,7 @@ def genIDFSingleZone(self):
                                     + '[CA_'+repr(CAT_value)
                                     + '[CM_'+repr(ComfMod_value)
                                     + '[AT_'+repr(ASTtol_value)
+                                    + suffix
                                     + '.idf'
                                     )
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
@@ -266,13 +306,63 @@ def genIDFSingleZone(self):
     del SetInputData
 
 
-def genIDFMultipleZone(self):
+def genIDFMultipleZone(self,
+                       AdapStand=None,
+                       CAT=None,
+                       ComfMod=None,
+                       HVACmode=None,
+                       VentCtrl=None,
+                       VSToffset=0,
+                       MinOToffset=50,
+                       MaxWindSpeed=50,
+                       ASTtol_start=0.1,
+                       ASTtol_end_input=0.1,
+                       ASTtol_steps=0.1,
+                       NameSuffix=''
+                       ):
     """Generate IDFs in MultipleZone."""
     import os
     from os import listdir
     import numpy
     from eppy import modeleditor
     from eppy.modeleditor import IDF
+
+    arguments = (AdapStand is None,
+                 CAT is None,
+                 ComfMod is None,
+                 HVACmode is None,
+                 VentCtrl is None,
+                 VSToffset == 0,
+                 MinOToffset == 50,
+                 MaxWindSpeed == 50,
+                 ASTtol_start == 0.1,
+                 ASTtol_end_input == 0.1,
+                 ASTtol_steps == 0.1)
+
+    if all(arguments):
+        self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
+    else:
+        ASTtol_end = ASTtol_end_input + ASTtol_steps
+
+    if all(arguments):
+        pass
+    else:
+        self.AdapStand_List = AdapStand
+        self.CAT_List = CAT
+        self.ComfMod_List = ComfMod
+        self.HVACmode_List = HVACmode
+        self.VentCtrl_List = VentCtrl
+        self.VSToffset_List = VSToffset
+        self.MinOToffset_List = MinOToffset
+        self.MaxWindSpeed_List = MaxWindSpeed
+        self.ASTtol_value_from = ASTtol_start
+        self.ASTtol_value_to = ASTtol_end
+        self.ASTtol_value_steps = ASTtol_steps
+
+    if NameSuffix == '':
+        suffix = ''
+    else:
+        suffix = '[' + NameSuffix
 
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
     filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])
@@ -311,6 +401,7 @@ def genIDFMultipleZone(self):
                                 + '[MT_X'
                                 + '[MW_X'
                                 + '[AT_' + repr(ASTtol_value)
+                                + suffix
                                 + '.idf'
                                 )
                     else:
@@ -336,6 +427,7 @@ def genIDFMultipleZone(self):
                                                 + '[MT_' + repr(MinOToffset_value)
                                                 + '[MW_' + repr(MaxWindSpeed_value)
                                                 + '[AT_' + repr(ASTtol_value)
+                                                + suffix
                                                 + '.idf'
                                                 )
             elif AdapStand_value == 1:
@@ -363,6 +455,7 @@ def genIDFMultipleZone(self):
                                             + '[MT_X'
                                             + '[MW_X'
                                             + '[AT_' + repr(ASTtol_value)
+                                            + suffix
                                             + '.idf'
                                             )
                                 else:
@@ -388,6 +481,7 @@ def genIDFMultipleZone(self):
                                                             + '[MT_' + repr(MinOToffset_value)
                                                             + '[MW_' + repr(MaxWindSpeed_value)
                                                             + '[AT_' + repr(ASTtol_value)
+                                                            + suffix
                                                             + '.idf'
                                                             )
             elif AdapStand_value == 2:
@@ -415,6 +509,7 @@ def genIDFMultipleZone(self):
                                             + '[MT_X'
                                             + '[MW_X'
                                             + '[AT_' + repr(ASTtol_value)
+                                            + suffix
                                             + '.idf'
                                             )
                                 else:
@@ -440,10 +535,11 @@ def genIDFMultipleZone(self):
                                                             + '[MT_' + repr(MinOToffset_value)
                                                             + '[MW_' + repr(MaxWindSpeed_value)
                                                             + '[AT_' + repr(ASTtol_value)
+                                                            + suffix
                                                             + '.idf'
                                                             )
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
     for file in filelist_pymod:
         os.remove(file)
 
-    del SetInputData
+    # del SetInputData
