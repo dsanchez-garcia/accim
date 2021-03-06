@@ -30,37 +30,33 @@ def make_eplaunch_options(idf, epw):
     return options
 
 
-def runEp94():
+def runEp94(runOnlyAccim=None, confirmRun=None):
     """
     Run simulations in Energy Plus 9.4.0.
 
-    Parameters
-    ----------
-    IDFfilesPath : path, optional
-        DESCRIPTION. The default is None. If default, the path will be
-        where the script is being run.
-    EPWfilesPath : path, optional
-        DESCRIPTION. The default is None. If default, the path will be
-        where the script is being run.
-
-    Returns
-    -------
-    None.
-
+    :param runOnlyAccim: Default is None. Enter True to run only ACCIM output IDFs, or False to run all IDFs.
+    :param confirmRun: Default is None. Enter True to run all simulations regardless the no. of them,
+    or False to shut down all runs.
+    :return:
     """
     iddfile = "C:/EnergyPlusV9-4-0/Energy+.idd"
     IDF.setiddname(iddfile)
 
-    runOnlyAccim = input('Do you want to run only ACCIM output IDFs? [y or n]: ')
+    if runOnlyAccim is None:
+        runOnlyAccim = input('Do you want to run only ACCIM output IDFs? [y or n]: ')
+        if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
+            idfnames = [x for x in os.listdir() if x.endswith('.idf') and '_pymod' in x]
+        else:
+            idfnames = [x for x in os.listdir() if x.endswith('.idf')]
+    elif runOnlyAccim:
+        idfnames = [x for x in os.listdir() if x.endswith('.idf') and '_pymod' in x]
+    else:
+        idfnames = [x for x in os.listdir() if x.endswith('.idf')]
 
     epwnames = [x for x in os.listdir() if x.endswith('.epw')]
     epwnames_run = [x.split('.epw')[0] for x in os.listdir() if x.endswith('.epw')]
 
     # if IDFfilesPath is None:
-    if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
-        idfnames = [x for x in os.listdir() if x.endswith('.idf') and '_pymod' in x]
-    else:
-        idfnames = [x for x in os.listdir() if x.endswith('.idf')]
     # else:
     #     if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
     #         idfnames = [x for x in os.listdir(IDFfilesPath) if x.endswith('.idf') and '_pymod' in x]
@@ -101,9 +97,14 @@ def runEp94():
 
     num_CPUs = 2
 
-    conf_run = input(f'The number of simulations is going to be {len(runs)}. Do you still want to proceed? [y or n]: ')
-
-    if conf_run == 'y':
+    if confirmRun is None:
+        confirmRun = input(
+            f'The number of simulations is going to be {len(runs)}. Do you still want to proceed? [y or n]: ')
+        if confirmRun == 'y':
+            runIDFs(runs, num_CPUs)
+        else:
+            print('Run has been shut down')
+    elif confirmRun:
         runIDFs(runs, num_CPUs)
     else:
         print('Run has been shut down')
