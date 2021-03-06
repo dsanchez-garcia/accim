@@ -1,3 +1,5 @@
-/.spyproject/
-/.idea/
-/.pytest_cache/
+.spyproject/
+.idea/
+.pytest_cache/
+dist/
+*.egg-info/
