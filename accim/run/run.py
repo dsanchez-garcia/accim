@@ -4,7 +4,7 @@ Multiprocessing runs.
 using generators instead of a list
 when you are running a 100 files you have to use generators
 original script: https://eppy.readthedocs.io/en/latest/runningeplus.html
-slightly modified so that takes multiple epws located in the local folder
+slightly modified so that takes multiple EPWs located in the local folder
 """
 
 import os
@@ -30,7 +30,6 @@ def make_eplaunch_options(idf, epw):
     return options
 
 
-<<<<<<< HEAD
 def runEp94(IDFfilesPath=None, EPWfilesPath=None):
     """
     Run simulations in Energy Plus 9.4.0.
@@ -54,30 +53,26 @@ def runEp94(IDFfilesPath=None, EPWfilesPath=None):
 
     runOnlyAccim = input('Do you want to run only ACCIM output IDFs? [y or n]: ')
 
-    if IDFfilesPath is None:
-        if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
-            idfnames = [x for x in os.listdir() if x.endswith('.idf') and '_pymod' in x]
-        else:
-            idfnames = [x for x in os.listdir() if x.endswith('.idf')]
-    else:
-        if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
-            idfnames = [x for x in os.listdir(IDFfilesPath) if x.endswith('.idf') and '_pymod' in x]
-        else:
-            idfnames = [x for x in os.listdir(IDFfilesPath) if x.endswith('.idf')]
-
-    if EPWfilesPath is None:
-        epwnames = [x for x in os.listdir() if x.endswith('.epw')]
-    else:
-        epwnames = [x for x in os.listdir(EPWfilesPath) if x.endswith('.epw')]
-=======
-def runEp94():
-    """Run simulations in Energy Plus 9.4.0."""
-    iddfile = "C:/EnergyPlusV9-4-0/Energy+.idd"
-    IDF.setiddname(iddfile)
-
-    idfnames = [x for x in os.listdir() if x.endswith('.idf')]
     epwnames = [x for x in os.listdir() if x.endswith('.epw')]
->>>>>>> 09854edcb199c7192a63db8cce699257603f24dd
+    epwnames_run = [x.split('.epw')[0] for x in os.listdir() if x.endswith('.epw')]
+
+    # if IDFfilesPath is None:
+    if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
+        idfnames = [x for x in os.listdir() if x.endswith('.idf') and '_pymod' in x]
+    else:
+        idfnames = [x for x in os.listdir() if x.endswith('.idf')]
+    # else:
+    #     if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
+    #         idfnames = [x for x in os.listdir(IDFfilesPath) if x.endswith('.idf') and '_pymod' in x]
+    #     else:
+    #         idfnames = [x for x in os.listdir(IDFfilesPath) if x.endswith('.idf')]
+    #
+    # if EPWfilesPath is None:
+    #     epwnames = [x for x in os.listdir() if x.endswith('.epw')]
+    #     epwnames_run = [x.split('.epw')[0] for x in os.listdir() if x.endswith('.epw')]
+    # else:
+    #     epwnames = [x for x in os.listdir(EPWfilesPath) if x.endswith('.epw')]
+    #     epwnames_run = [x.split('.epw')[0] for x in os.listdir(EPWfilesPath) if x.endswith('.epw')]
 
     print(f'The IDFs we are going to run are: {idfnames}')
     print(f' and the No. of IDFs is going to be {len(idfnames)}')
@@ -94,12 +89,9 @@ def runEp94():
     print(f' and the No. of simulations is going to be {len(idfs)}')
     # print(idfs)
 
-    epwnames = [x.split('.epw')[0] for x in os.listdir() if x.endswith('.epw')]
-
-    # print('Therefore, the (idf, make_eplaunch_options(idf, epw)) objects are going to be:')
     runs = []
     for i in idfs:
-        for j in epwnames:
+        for j in epwnames_run:
             temprun = (i, make_eplaunch_options(i, j))
             if i.epw == j+'.epw':
                 # print(temprun)
@@ -107,12 +99,9 @@ def runEp94():
             else:
                 continue
 
-    # print(f' and the No. of (idf, make_eplaunch_options(idf, epw)) objects is going to be {len(runs)}')
-
     num_CPUs = 2
 
     conf_run = input(f'The number of simulations is going to be {len(runs)}. Do you still want to proceed? [y or n]: ')
->>>>>>> 09854edcb199c7192a63db8cce699257603f24dd
 
     if conf_run == 'y':
         runIDFs(runs, num_CPUs)
