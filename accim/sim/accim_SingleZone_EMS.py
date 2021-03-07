@@ -188,7 +188,6 @@ def addOutputVariablesSingleZone(self):
 
     outputvariablelist = ([program.Name for program in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']])
     outputlist = ([output.Variable_Name for output in self.idf1.idfobjects['Output:Variable']])
-    # todo check energy demand is correctly in results
     addittionaloutputs = [
         'Zone Thermostat Operative Temperature',
         'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
