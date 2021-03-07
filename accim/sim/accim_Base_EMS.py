@@ -543,6 +543,7 @@ def addSimplifiedOutputVariables(self):
         self.idf1.removeidfobject(firstoutput)
 
     # del EnvironmentalImpactFactorslist,firstEnvironmentalImpactFactor, outputmeterlist, firstoutputmeter, alloutputs, firstoutput
+    # todo add energy demand to simplified results
 
     addittionaloutputs = ['Zone Thermostat Operative Temperature',
                           'VRF Heat Pump Cooling Electricity Energy',

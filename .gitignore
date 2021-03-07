@@ -3,3 +3,4 @@
 .pytest_cache/
 dist/
 *.egg-info/
+tests_sim/
