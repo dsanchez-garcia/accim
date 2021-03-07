@@ -5,17 +5,12 @@ Created on Sun Feb 28 17:03:48 2021
 @author: Daniel
 """
 
-from eppy import modeleditor
-from eppy.modeleditor import IDF
 
 import pytest
 from accim.sim import accim_Main
 
-from accim.sim import accim_Base_EMS
-
 def test_addEMSProgramsBase():
     
-    from eppy import modeleditor
     from eppy.modeleditor import IDF
     
     iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
@@ -45,7 +40,6 @@ def test_addEMSProgramsBase():
     assert SetComfTemp[0].Program_Line_3 == 'elseif AdapStand == 2'
     assert SetComfTemp[0].Program_Line_4 == 'set ComfTemp = PMOT*0.31+17.8'
     assert SetComfTemp[0].Program_Line_5 == 'endif'
-
 
     print(SetComfTemp[0].Name)
     print(SetComfTemp[0].Program_Line_1)
