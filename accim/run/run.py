@@ -21,7 +21,7 @@ def make_eplaunch_options(idf, epw):
     fname = idf.idfname + '_' + epw
     options = {
         'ep_version': idfversionstr,  # runIDFs needs the version number
-        'output_prefix': os.path.basename(fname).split('.')[0]+'['+epw,
+        'output_prefix': os.path.basename(fname).split('.idf')[0]+'['+epw,
         'output_suffix': 'C',
         'output_directory': os.path.dirname(fname),
         'readvars': True,
@@ -80,7 +80,7 @@ def runEp94(runOnlyAccim=None, confirmRun=None):
     for i in idfnames:
         for j in epwnames:
             tempidf = IDF(i, j)
-            print(i + '[' + j)
+            print(i.split('.idf')[0] + '[' + j)
             idfs.append(tempidf)
     print(f' and the No. of simulations is going to be {len(idfs)}')
     # print(idfs)
