@@ -1,6 +1,5 @@
 README.md
 README.rst
-setup.cfg
 setup.py
 accim/__init__.py
 accim.egg-info/PKG-INFO
@@ -43,3 +42,10 @@ accim/sim/accim_SingleZone.py
 accim/sim/accim_SingleZone_EMS.py
 accim/sim/accis.py
 bin/accis.py
+tests/TestModel_SingleZone.idf
+tests/TestModel_SingleZone_pymod.idf
+tests/__init__.py
+tests/test_accim_Base_EMS.py
+tests/test_accim_Base_EMS_v01.py
+tests/test_accim_Base_EMS_v02.py
+tests/test_accim_Base_EMS_v03.py

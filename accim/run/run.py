@@ -4,7 +4,7 @@ Multiprocessing runs.
 using generators instead of a list
 when you are running a 100 files you have to use generators
 original script: https://eppy.readthedocs.io/en/latest/runningeplus.html
-slightly modified so that takes multiple epws located in the local folder
+slightly modified so that takes multiple EPWs located in the local folder
 """
 
 import os
@@ -21,7 +21,7 @@ def make_eplaunch_options(idf, epw):
     fname = idf.idfname + '_' + epw
     options = {
         'ep_version': idfversionstr,  # runIDFs needs the version number
-        'output_prefix': os.path.basename(fname).split('.')[0]+'['+epw,
+        'output_prefix': os.path.basename(fname).split('.idf')[0]+'['+epw,
         'output_suffix': 'C',
         'output_directory': os.path.dirname(fname),
         'readvars': True,
@@ -30,54 +30,45 @@ def make_eplaunch_options(idf, epw):
     return options
 
 
-<<<<<<< HEAD
-def runEp94(IDFfilesPath=None, EPWfilesPath=None):
+def runEp94(runOnlyAccim=None, confirmRun=None):
     """
     Run simulations in Energy Plus 9.4.0.
 
-    Parameters
-    ----------
-    IDFfilesPath : path, optional
-        DESCRIPTION. The default is None. If default, the path will be
-        where the script is being run.
-    EPWfilesPath : path, optional
-        DESCRIPTION. The default is None. If default, the path will be
-        where the script is being run.
-
-    Returns
-    -------
-    None.
-
+    :param runOnlyAccim: Default is None. Enter True to run only ACCIM output IDFs, or False to run all IDFs.
+    :param confirmRun: Default is None. Enter True to run all simulations regardless the no. of them,
+    or False to shut down all runs.
+    :return:
     """
     iddfile = "C:/EnergyPlusV9-4-0/Energy+.idd"
     IDF.setiddname(iddfile)
-    
-    runOnlyAccim = input('Do you want to run only ACCIM output IDFs? [y or n]: ')
-    
-    if IDFfilesPath is None:
+
+    if runOnlyAccim is None:
+        runOnlyAccim = input('Do you want to run only ACCIM output IDFs? [y or n]: ')
         if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
             idfnames = [x for x in os.listdir() if x.endswith('.idf') and '_pymod' in x]
         else:
             idfnames = [x for x in os.listdir() if x.endswith('.idf')]
+    elif runOnlyAccim:
+        idfnames = [x for x in os.listdir() if x.endswith('.idf') and '_pymod' in x]
     else:
-        if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
-            idfnames = [x for x in os.listdir(IDFfilesPath) if x.endswith('.idf') and '_pymod' in x]
-        else:
-            idfnames = [x for x in os.listdir(IDFfilesPath) if x.endswith('.idf')]
-    
-    if EPWfilesPath is None:
-        epwnames = [x for x in os.listdir() if x.endswith('.epw')]
-    else:
-        epwnames = [x for x in os.listdir(EPWfilesPath) if x.endswith('.epw')]
-=======
-def runEp94():
-    """Run simulations in Energy Plus 9.4.0."""
-    iddfile = "C:/EnergyPlusV9-4-0/Energy+.idd"
-    IDF.setiddname(iddfile)
+        idfnames = [x for x in os.listdir() if x.endswith('.idf')]
 
-    idfnames = [x for x in os.listdir() if x.endswith('.idf')]
     epwnames = [x for x in os.listdir() if x.endswith('.epw')]
->>>>>>> cee2368c1539a48608197068115dab068710da86
+    epwnames_run = [x.split('.epw')[0] for x in os.listdir() if x.endswith('.epw')]
+
+    # if IDFfilesPath is None:
+    # else:
+    #     if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
+    #         idfnames = [x for x in os.listdir(IDFfilesPath) if x.endswith('.idf') and '_pymod' in x]
+    #     else:
+    #         idfnames = [x for x in os.listdir(IDFfilesPath) if x.endswith('.idf')]
+    #
+    # if EPWfilesPath is None:
+    #     epwnames = [x for x in os.listdir() if x.endswith('.epw')]
+    #     epwnames_run = [x.split('.epw')[0] for x in os.listdir() if x.endswith('.epw')]
+    # else:
+    #     epwnames = [x for x in os.listdir(EPWfilesPath) if x.endswith('.epw')]
+    #     epwnames_run = [x.split('.epw')[0] for x in os.listdir(EPWfilesPath) if x.endswith('.epw')]
 
     print(f'The IDFs we are going to run are: {idfnames}')
     print(f' and the No. of IDFs is going to be {len(idfnames)}')
@@ -89,17 +80,14 @@ def runEp94():
     for i in idfnames:
         for j in epwnames:
             tempidf = IDF(i, j)
-            print(i + '[' + j)
+            print(i.split('.idf')[0] + '[' + j)
             idfs.append(tempidf)
     print(f' and the No. of simulations is going to be {len(idfs)}')
     # print(idfs)
 
-    epwnames = [x.split('.epw')[0] for x in os.listdir() if x.endswith('.epw')]
-
-    # print('Therefore, the (idf, make_eplaunch_options(idf, epw)) objects are going to be:')
     runs = []
     for i in idfs:
-        for j in epwnames:
+        for j in epwnames_run:
             temprun = (i, make_eplaunch_options(i, j))
             if i.epw == j+'.epw':
                 # print(temprun)
@@ -107,17 +95,16 @@ def runEp94():
             else:
                 continue
 
-    # print(f' and the No. of (idf, make_eplaunch_options(idf, epw)) objects is going to be {len(runs)}')
-
     num_CPUs = 2
 
-<<<<<<< HEAD
-    conf_run = input(f'The number of simulations is going to be {len(runs)}. Do you still want to proceed? [y or n]: ')
-=======
-    conf_run = input(f'The number of simulations is going to be {len(runs)}. Do you still want to proceed?[y or n]: ')
->>>>>>> cee2368c1539a48608197068115dab068710da86
-
-    if conf_run == 'y':
+    if confirmRun is None:
+        confirmRun = input(
+            f'The number of simulations is going to be {len(runs)}. Do you still want to proceed? [y or n]: ')
+        if confirmRun == 'y':
+            runIDFs(runs, num_CPUs)
+        else:
+            print('Run has been shut down')
+    elif confirmRun:
         runIDFs(runs, num_CPUs)
     else:
         print('Run has been shut down')
@@ -137,4 +124,3 @@ def removefiles():
     csvlist = ([file for file in os.listdir() if file.endswith(csvextensions)])
     for file in csvlist:
         os.remove(file)
-

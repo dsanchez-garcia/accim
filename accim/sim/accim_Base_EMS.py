@@ -546,7 +546,10 @@ def addSimplifiedOutputVariables(self):
 
     addittionaloutputs = ['Zone Thermostat Operative Temperature',
                           'VRF Heat Pump Cooling Electricity Energy',
-                          'VRF Heat Pump Heating Electricity Energy']
+                          'VRF Heat Pump Heating Electricity Energy',
+                          'Facility Total HVAC Electric Demand Power',
+                          'Facility Total HVAC Electricity Demand Rate'
+                          ]
 
     for addittionaloutput in addittionaloutputs:
         self.idf1.newidfobject(
