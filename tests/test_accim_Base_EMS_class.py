@@ -8,10 +8,8 @@ Created on Sun Feb 28 17:03:48 2021
 import pytest
 from accim.sim import accim_Main
 
-class tests_SingleZone():
-    pass
-
-    def __init__(self):
+class test_SingleZone:
+    def test_common(self):
         from eppy.modeleditor import IDF
 
         iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
@@ -47,5 +45,5 @@ class tests_SingleZone():
 
         # for zonename in self.zonenames:
 
-y = tests_SingleZone()
-y.test_addEMSProgramsBase()
+# y = tests_SingleZone()
+# y.test_addEMSProgramsBase()

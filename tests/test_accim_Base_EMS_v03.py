@@ -44,4 +44,4 @@ def test_addEMSProgramsBase():
     print(SetComfTemp[0].Name)
     print(SetComfTemp[0].Program_Line_1)
     
-test_addEMSProgramsBase()
+# test_addEMSProgramsBase()
