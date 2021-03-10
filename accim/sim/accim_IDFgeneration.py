@@ -230,16 +230,16 @@ def genIDFSingleZone(self,
 
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
     filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])
-    print(filelist_pymod)
-
+    # print(filelist_pymod)
+    # todo try to calculate the total number of output IDFs and ask the user for confirmation
     for file in filelist_pymod:
         filename = file
 
         fname1 = filename+'.idf'
-        print(fname1)
+        # print(fname1)
         idf1 = IDF(fname1)
 
-        print(filename)
+        # print(filename)
         SetInputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetInputData'])
         # Making IDFs: the output file path can not contain the following characters: & ^ , = % " \ / : * ? " < > |
         for AdapStand_value in self.AdapStand_List:
@@ -250,6 +250,7 @@ def genIDFSingleZone(self,
                 for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                     SetInputData[0].Program_Line_4 = 'set ACSTtol = '+repr(-ASTtol_value)
                     SetInputData[0].Program_Line_5 = 'set AHSTtol = '+repr(ASTtol_value)
+                    # todo print the name of each output IDF as it's saved for all cases only in verboseMode
                     idf1.savecopy(
                         filename
                         + '[AS_CTE'
@@ -366,16 +367,16 @@ def genIDFMultipleZone(self,
 
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
     filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])
-    print(filelist_pymod)
-
+    # print(filelist_pymod)
+    # todo try to calculate the total number of output IDFs and ask the user for confirmation
     for file in filelist_pymod:
         filename = file
 
         fname1 = filename+'.idf'
-        print(fname1)
+        # print(fname1)
         idf1 = IDF(fname1)
 
-        print(filename)
+        # print(filename)
 
         SetInputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetInputData'])
 
@@ -390,6 +391,7 @@ def genIDFMultipleZone(self,
                         for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                             SetInputData[0].Program_Line_5 = 'set ACSTtol = '+repr(-ASTtol_value)
                             SetInputData[0].Program_Line_6 = 'set AHSTtol = '+repr(ASTtol_value)
+                            # todo print the name of each output IDF as it's saved for all cases only in verboseMode
                             idf1.savecopy(
                                 filename
                                 + '[AS_CTE'
