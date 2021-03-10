@@ -45,7 +45,12 @@ bin/accis.py
 tests/TestModel_SingleZone.idf
 tests/TestModel_SingleZone_pymod.idf
 tests/__init__.py
-tests/test_accim_Base_EMS.py
-tests/test_accim_Base_EMS_v01.py
-tests/test_accim_Base_EMS_v02.py
-tests/test_accim_Base_EMS_v03.py
+tests/test_accim_Base_EMS_fixture.py
+tests/SS/__init__.py
+tests/SS/test_accim_Base_EMS.py
+tests/SS/test_accim_Base_EMS_fixture_v00.py
+tests/SS/test_accim_Base_EMS_fixture_v01.py
+tests/SS/test_accim_Base_EMS_v00.py
+tests/SS/test_accim_Base_EMS_v01.py
+tests/SS/test_accim_Base_EMS_v02.py
+tests/SS/test_accim_Base_EMS_v03.py
