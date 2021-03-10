@@ -43,7 +43,7 @@ def setComfFieldsPeople(self):
     del peoplelist, firstpeopleobject
 
 
-def addOpTempTherm(self):
+def addOpTempTherm(self, verboseMode : bool = True):
     """
     Amend ZoneControl:Thermostat:OperativeTemperature objects.
 
@@ -51,7 +51,8 @@ def addOpTempTherm(self):
     """
     for zonename_orig in self.zonenames_orig:
         if zonename_orig+' Thermostat' in [thermostat.Thermostat_Name for thermostat in self.idf1.idfobjects['ZoneControl:Thermostat:OperativeTemperature']]:
-            print(zonename_orig+' Thermostat already was in the model')
+            if verboseMode:
+                print(zonename_orig+' Thermostat already was in the model')
         else:
             self.idf1.newidfobject(
                 'ZoneControl:Thermostat:OperativeTemperature',
@@ -60,10 +61,11 @@ def addOpTempTherm(self):
                 Fixed_Radiative_Fraction='',
                 Radiative_Fraction_Schedule_Name='TypOperativeTempControlSch'
                 )
-            print(zonename_orig+' Thermostat has been added')
+            if verboseMode:
+                print(zonename_orig+' Thermostat has been added')
 
 
-def addBaseSchedules(self):
+def addBaseSchedules(self, verboseMode : bool = True):
     """
     Amend Schedule:Compact objects.
 
@@ -71,7 +73,8 @@ def addBaseSchedules(self):
     and add them in case these are not in the model
     """
     if "On" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
-        print("On Schedule already was in the model")
+        if verboseMode:
+            print("On Schedule already was in the model")
     else:
         self.idf1.newidfobject(
             'Schedule:Compact',
@@ -81,7 +84,8 @@ def addBaseSchedules(self):
             Field_2='For: AllDays',
             Field_3='Until: 24:00,1'
             )
-        print("On Schedule has been added")
+        if verboseMode:
+            print("On Schedule has been added")
 
 
 def setAvailSchOn(self):

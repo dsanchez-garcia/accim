@@ -497,21 +497,21 @@ def addAccisMultipleZoneSimplifiedEp94():
 
 
 def addAccis(
-        ScriptType='MultipleZones',
-        Outputs='Standard',
-        EnergyPlus_version='Ep94',
-        AdapStand=None,
-        CAT=None,
-        ComfMod=None,
-        HVACmode=None,
-        VentCtrl=None,
-        VSToffset=0,
-        MinOToffset=50,
-        MaxWindSpeed=50,
-        ASTtol_start=0.1,
-        ASTtol_end_input=0.1,
-        ASTtol_steps=0.1,
-        NameSuffix=''
+        ScriptType: str = 'MultipleZones',
+        Outputs: str = 'Standard',
+        EnergyPlus_version: str ='Ep94',
+        AdapStand: list[int] = None,
+        CAT: list[int] = None,
+        ComfMod: list[int] = None,
+        HVACmode: list[int] = None,
+        VentCtrl: list[int] = None,
+        VSToffset: list[float] = 0,
+        MinOToffset: list[float] = 50,
+        MaxWindSpeed: list[float] = 50,
+        ASTtol_start: float = 0.1,
+        ASTtol_end_input: float = 0.1,
+        ASTtol_steps: float = 0.1,
+        NameSuffix: str = ''
         ):
     """
     Add ACCIS based on arguments.
@@ -573,24 +573,7 @@ def addAccis(
     filelist = ([file.split('.idf')[0] for file in filelist])
 
     for file in filelist:
-        if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
-            if EnergyPlus_version.lower() == 'ep94':
-                z = accim_Main.accimobj_MultipleZone_Ep94(file)
-            elif EnergyPlus_version.lower() == 'ep91':
-                z = accim_Main.accimobj_MultipleZone_Ep91(file)
-            else:
-                raise ValueError("""EnergyPlus version not supported.\n
-                                 Only works for EnergyPlus 9.1 (enter Ep91) and
-                                 EnergyPlus 9.4 (enter Ep94) versions.""")
-        elif ScriptType.lower() == 'SingleZone'.lower() or ScriptType.lower() == 'sz':
-            if EnergyPlus_version.lower() == 'ep94':
-                z = accim_Main.accimobj_SingleZone_Ep94(file)
-            elif EnergyPlus_version.lower() == 'ep91':
-                z = accim_Main.accimobj_SingleZone_Ep91(file)
-            else:
-                raise ValueError("""EnergyPlus version not supported.\n
-                                 Only works for EnergyPlus 9.1 (enter Ep91) and
-                                 EnergyPlus 9.4 (enter Ep94) versions.""")
+        z = accim_Main.accimInstance(file, ScriptType, EnergyPlus_version)
 
         z.setComfFieldsPeople()
         z.addOpTempTherm()

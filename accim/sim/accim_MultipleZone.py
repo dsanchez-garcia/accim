@@ -1,7 +1,7 @@
 """Add EnergyPlus objects only for MultipleZone."""
 
 
-def addMultipleZoneSch(self):
+def addMultipleZoneSch(self, verboseMode: bool = True):
     """
     Amend Schedule:Compact objects for MultipleZone.
 
@@ -22,7 +22,8 @@ def addMultipleZoneSch(self):
     for i in addMultipleZoneSch_dict:
         if i in [schedule.Name for schedule
                  in self.idf1.idfobjects['Schedule:Compact']]:
-            print(i+" Schedule already was in the model")
+            if verboseMode:
+                print(i+" Schedule already was in the model")
         else:
             self.idf1.newidfobject('Schedule:Compact',
                                    Name=i,
@@ -30,10 +31,12 @@ def addMultipleZoneSch(self):
                                    Field_1='Through: 12/31',
                                    Field_2='For: AllDays',
                                    Field_3=addMultipleZoneSch_dict[i])
-            print(i+" Schedule has been added")
+            if verboseMode:
+                print(i+" Schedule has been added")
 
     if "VRF Heating Cooling (Northern Hemisphere)" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
-        print("VRF Heating Cooling (Northern Hemisphere) Schedule already was in the model")
+        if verboseMode:
+            print("VRF Heating Cooling (Northern Hemisphere) Schedule already was in the model")
     else:
         self.idf1.newidfobject(
             'Schedule:Compact',
@@ -48,16 +51,18 @@ def addMultipleZoneSch(self):
             Field_7='Through: 31 Dec',
             Field_8='For: AllDays',
             Field_9='Until: 24:00, 0')
-        print("VRF Heating Cooling (Northern Hemisphere) Schedule has been added")
+        if verboseMode:
+            print("VRF Heating Cooling (Northern Hemisphere) Schedule has been added")
 
 
-def addCurveObj(self):
+def addCurveObj(self, verboseMode: bool = True):
     """Add Curve Objects needed for MultipleZone to work."""
     # curvecubiclist=([i for i in self.idf1.idfobjects['Curve:Cubic']])
     # print(curvecubiclist)
 
     if 'DefaultFanEffRatioCurve' in [i.Name for i in self.idf1.idfobjects['Curve:Cubic']]:
-        print('DefaultFanEffRatioCurve Curve:Cubic Object already was in the model')
+        if verboseMode:
+            print('DefaultFanEffRatioCurve Curve:Cubic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Cubic',
@@ -73,10 +78,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='',
             Output_Unit_Type=''
             )
-        print("DefaultFanEffRatioCurve Curve:Cubic Object has been added")
+        if verboseMode:
+            print("DefaultFanEffRatioCurve Curve:Cubic Object has been added")
 
     if 'VRFTUCoolCapFT' in [i.Name for i in self.idf1.idfobjects['Curve:Cubic']]:
-        print('VRFTUCoolCapFT Curve:Cubic Object already was in the model')
+        if verboseMode:
+            print('VRFTUCoolCapFT Curve:Cubic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Cubic',
@@ -92,10 +99,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRFTUCoolCapFT Curve:Cubic Object has been added")
+        if verboseMode:
+            print("VRFTUCoolCapFT Curve:Cubic Object has been added")
 
     if 'VRFTUHeatCapFT' in [i.Name for i in self.idf1.idfobjects['Curve:Cubic']]:
-        print('VRFTUHeatCapFT Curve:Cubic Object already was in the model')
+        if verboseMode:
+            print('VRFTUHeatCapFT Curve:Cubic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Cubic',
@@ -111,10 +120,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRFTUHeatCapFT Curve:Cubic Object has been added")
+        if verboseMode:
+            print("VRFTUHeatCapFT Curve:Cubic Object has been added")
 
     if 'VRFCoolCapFTBoundary' in [i.Name for i in self.idf1.idfobjects['Curve:Cubic']]:
-        print('VRFCoolCapFTBoundary Curve:Cubic Object already was in the model')
+        if verboseMode:
+            print('VRFCoolCapFTBoundary Curve:Cubic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Cubic',
@@ -130,7 +141,8 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='Temperature',
             Output_Unit_Type=''
             )
-        print("VRFCoolCapFTBoundary Curve:Cubic Object has been added")
+        if verboseMode:
+            print("VRFCoolCapFTBoundary Curve:Cubic Object has been added")
 
     if 'VRFCoolEIRFTBoundary' in [i.Name for i in self.idf1.idfobjects['Curve:Cubic']]:
         print('VRFCoolEIRFTBoundary Curve:Cubic Object already was in the model')
@@ -149,10 +161,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='Temperature',
             Output_Unit_Type=''
             )
-        print("VRFCoolEIRFTBoundary Curve:Cubic Object has been added")
+        if verboseMode:
+            print("VRFCoolEIRFTBoundary Curve:Cubic Object has been added")
 
     if 'CoolingEIRLowPLR' in [i.Name for i in self.idf1.idfobjects['Curve:Cubic']]:
-        print('CoolingEIRLowPLR Curve:Cubic Object already was in the model')
+        if verboseMode:
+            print('CoolingEIRLowPLR Curve:Cubic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Cubic',
@@ -168,10 +182,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='Temperature',
             Output_Unit_Type='Capacity'
             )
-        print("CoolingEIRLowPLR Curve:Cubic Object has been added")
+        if verboseMode:
+            print("CoolingEIRLowPLR Curve:Cubic Object has been added")
 
     if 'VRFHeatCapFTBoundary' in [i.Name for i in self.idf1.idfobjects['Curve:Cubic']]:
-        print('VRFHeatCapFTBoundary Curve:Cubic Object already was in the model')
+        if verboseMode:
+            print('VRFHeatCapFTBoundary Curve:Cubic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Cubic',
@@ -187,10 +203,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='Temperature',
             Output_Unit_Type=''
             )
-        print("VRFHeatCapFTBoundary Curve:Cubic Object has been added")
+        if verboseMode:
+            print("VRFHeatCapFTBoundary Curve:Cubic Object has been added")
 
     if 'VRFHeatEIRFTBoundary' in [i.Name for i in self.idf1.idfobjects['Curve:Cubic']]:
-        print('VRFHeatEIRFTBoundary Curve:Cubic Object already was in the model')
+        if verboseMode:
+            print('VRFHeatEIRFTBoundary Curve:Cubic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Cubic',
@@ -206,10 +224,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='Temperature',
             Output_Unit_Type=''
             )
-        print("VRFHeatEIRFTBoundary Curve:Cubic Object has been added")
+        if verboseMode:
+            print("VRFHeatEIRFTBoundary Curve:Cubic Object has been added")
 
     if 'HeatingEIRLowPLR' in [i.Name for i in self.idf1.idfobjects['Curve:Cubic']]:
-        print('HeatingEIRLowPLR Curve:Cubic Object already was in the model')
+        if verboseMode:
+            print('HeatingEIRLowPLR Curve:Cubic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Cubic',
@@ -225,13 +245,15 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='Dimensionless',
             Output_Unit_Type='Dimensionless'
             )
-        print("HeatingEIRLowPLR Curve:Cubic Object has been added")
+        if verboseMode:
+            print("HeatingEIRLowPLR Curve:Cubic Object has been added")
 
     # curveexponentlist=[i for i in self.idf1.idfobjects['Curve:Exponent']]
     # print(curveexponentlist)
 
     if 'DefaultFanPowerRatioCurve' in [i.Name for i in self.idf1.idfobjects['Curve:Exponent']]:
-        print('DefaultFanPowerRatioCurve Curve:Exponent Object already was in the model')
+        if verboseMode:
+            print('DefaultFanPowerRatioCurve Curve:Exponent Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Exponent',
@@ -246,13 +268,15 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='',
             Output_Unit_Type=''
             )
-        print("DefaultFanPowerRatioCurve Curve:Exponent Object has been added")
+        if verboseMode:
+            print("DefaultFanPowerRatioCurve Curve:Exponent Object has been added")
 
     # curvebiquadraticlist=[i for i in self.idf1.idfobjects['Curve:Biquadratic']]
     # print(curvebiquadraticlist)
 
     if 'DXHtgCoilDefrostEIRFT' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('DXHtgCoilDefrostEIRFT Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('DXHtgCoilDefrostEIRFT Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -273,10 +297,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("DXHtgCoilDefrostEIRFT Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("DXHtgCoilDefrostEIRFT Curve:Biquadratic Object has been added")
 
     if 'VRFCoolCapFT' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRFCoolCapFT Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRFCoolCapFT Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -297,10 +323,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRFCoolCapFT Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRFCoolCapFT Curve:Biquadratic Object has been added")
 
     if 'VRFCoolCapFTHi' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRFCoolCapFTHi Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRFCoolCapFTHi Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -321,10 +349,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRFCoolCapFTHi Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRFCoolCapFTHi Curve:Biquadratic Object has been added")
 
     if 'VRFCoolEIRFT' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRFCoolEIRFT Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRFCoolEIRFT Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -345,10 +375,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRFCoolEIRFT Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRFCoolEIRFT Curve:Biquadratic Object has been added")
 
     if 'VRFCoolEIRFTHi' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRFCoolEIRFTHi Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRFCoolEIRFTHi Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -369,10 +401,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRFCoolEIRFTHi Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRFCoolEIRFTHi Curve:Biquadratic Object has been added")
 
     if 'VRFHeatCapFT' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRFHeatCapFT Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRFHeatCapFT Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -393,10 +427,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRFHeatCapFT Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRFHeatCapFT Curve:Biquadratic Object has been added")
 
     if 'VRFHeatCapFTHi' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRFHeatCapFTHi Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRFHeatCapFTHi Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -417,10 +453,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRFHeatCapFTHi Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRFHeatCapFTHi Curve:Biquadratic Object has been added")
 
     if 'VRFHeatEIRFT' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRFHeatEIRFT Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRFHeatEIRFT Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -441,10 +479,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRFHeatEIRFT Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRFHeatEIRFT Curve:Biquadratic Object has been added")
 
     if 'VRFHeatEIRFTHi' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRFHeatEIRFTHi Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRFHeatEIRFTHi Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -465,10 +505,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRFHeatEIRFTHi Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRFHeatEIRFTHi Curve:Biquadratic Object has been added")
 
     if 'CoolingLengthCorrectionFactor' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('CoolingLengthCorrectionFactor Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('CoolingLengthCorrectionFactor Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -489,10 +531,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("CoolingLengthCorrectionFactor Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("CoolingLengthCorrectionFactor Curve:Biquadratic Object has been added")
 
     if 'VRF Piping Correction Factor for Length in Heating Mode' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRF Piping Correction Factor for Length in Heating Mode Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRF Piping Correction Factor for Length in Heating Mode Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -513,10 +557,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Dimensionless',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRF Piping Correction Factor for Length in Heating Mode Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRF Piping Correction Factor for Length in Heating Mode Curve:Biquadratic Object has been added")
 
     if 'VRF Heat Recovery Cooling Capacity Modifier' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRF Heat Recovery Cooling Capacity Modifier Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRF Heat Recovery Cooling Capacity Modifier Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -537,10 +583,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRF Heat Recovery Cooling Capacity Modifier Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRF Heat Recovery Cooling Capacity Modifier Curve:Biquadratic Object has been added")
 
     if 'VRF Heat Recovery Cooling Energy Modifier' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRF Heat Recovery Cooling Energy Modifier Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRF Heat Recovery Cooling Energy Modifier Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -561,10 +609,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRF Heat Recovery Cooling Energy Modifier Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRF Heat Recovery Cooling Energy Modifier Curve:Biquadratic Object has been added")
 
     if 'VRF Heat Recovery Heating Capacity Modifier' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRF Heat Recovery Heating Capacity Modifier Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRF Heat Recovery Heating Capacity Modifier Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -585,10 +635,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRF Heat Recovery Heating Capacity Modifier Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRF Heat Recovery Heating Capacity Modifier Curve:Biquadratic Object has been added")
 
     if 'VRF Heat Recovery Heating Energy Modifier' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
-        print('VRF Heat Recovery Heating Energy Modifier Curve:Biquadratic Object already was in the model')
+        if verboseMode:
+            print('VRF Heat Recovery Heating Energy Modifier Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -609,13 +661,15 @@ def addCurveObj(self):
             Input_Unit_Type_for_Y='Temperature',
             Output_Unit_Type='Dimensionless'
             )
-        print("VRF Heat Recovery Heating Energy Modifier Curve:Biquadratic Object has been added")
+        if verboseMode:
+            print("VRF Heat Recovery Heating Energy Modifier Curve:Biquadratic Object has been added")
 
     # curvequadraticlist=[i for i in self.idf1.idfobjects['Curve:Quadratic']]
     # print(curvequadraticlist)
 
     if 'VRFACCoolCapFFF' in [i.Name for i in self.idf1.idfobjects['Curve:Quadratic']]:
-        print('VRFACCoolCapFFF Curve:Quadratic Object already was in the model')
+        if verboseMode:
+            print('VRFACCoolCapFFF Curve:Quadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Quadratic',
@@ -630,10 +684,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='',
             Output_Unit_Type=''
             )
-        print("VRFACCoolCapFFF Curve:Quadratic Object has been added")
+        if verboseMode:
+            print("VRFACCoolCapFFF Curve:Quadratic Object has been added")
 
     if 'CoolingEIRHiPLR' in [i.Name for i in self.idf1.idfobjects['Curve:Quadratic']]:
-        print('CoolingEIRHiPLR Curve:Quadratic Object already was in the model')
+        if verboseMode:
+            print('CoolingEIRHiPLR Curve:Quadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Quadratic',
@@ -648,10 +704,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='',
             Output_Unit_Type=''
             )
-        print("CoolingEIRHiPLR Curve:Quadratic Object has been added")
+        if verboseMode:
+            print("CoolingEIRHiPLR Curve:Quadratic Object has been added")
 
     if 'VRFCPLFFPLR' in [i.Name for i in self.idf1.idfobjects['Curve:Quadratic']]:
-        print('VRFCPLFFPLR Curve:Quadratic Object already was in the model')
+        if verboseMode:
+            print('VRFCPLFFPLR Curve:Quadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Quadratic',
@@ -666,10 +724,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='',
             Output_Unit_Type=''
             )
-        print("VRFCPLFFPLR Curve:Quadratic Object has been added")
+        if verboseMode:
+            print("VRFCPLFFPLR Curve:Quadratic Object has been added")
 
     if 'HeatingEIRHiPLR' in [i.Name for i in self.idf1.idfobjects['Curve:Quadratic']]:
-        print('HeatingEIRHiPLR Curve:Quadratic Object already was in the model')
+        if verboseMode:
+            print('HeatingEIRHiPLR Curve:Quadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Quadratic',
@@ -684,13 +744,15 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='',
             Output_Unit_Type=''
             )
-        print("HeatingEIRHiPLR Curve:Quadratic Object has been added")
+        if verboseMode:
+            print("HeatingEIRHiPLR Curve:Quadratic Object has been added")
 
     # curvelinearlist=[i for i in self.idf1.idfobjects['Curve:Linear']]
     # print(curvelinearlist)
 
     if 'CoolingCombRatio' in [i.Name for i in self.idf1.idfobjects['Curve:Linear']]:
-        print('CoolingCombRatio Curve:Linear Object already was in the model')
+        if verboseMode:
+            print('CoolingCombRatio Curve:Linear Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Linear',
@@ -704,10 +766,12 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='',
             Output_Unit_Type=''
             )
-        print("CoolingCombRatio Curve:Linear Object has been added")
+        if verboseMode:
+            print("CoolingCombRatio Curve:Linear Object has been added")
 
     if 'HeatingCombRatio' in [i.Name for i in self.idf1.idfobjects['Curve:Linear']]:
-        print('HeatingCombRatio Curve:Linear Object already was in the model')
+        if verboseMode:
+            print('HeatingCombRatio Curve:Linear Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Linear',
@@ -721,14 +785,16 @@ def addCurveObj(self):
             Input_Unit_Type_for_X='',
             Output_Unit_Type=''
             )
-        print("HeatingCombRatio Curve:Linear Object has been added")
+        if verboseMode:
+            print("HeatingCombRatio Curve:Linear Object has been added")
 
 
-def addDetHVACobjEp91(self):
+def addDetHVACobjEp91(self, verboseMode: bool = True):
     """Add Detailed HVAC objects for MultipleZone to work."""
     for zonename in self.zonenames_orig:
         if 'VRF Outdoor Unit_'+zonename in [i.Heat_Pump_Name for i in self.idf1.idfobjects['AirConditioner:VariableRefrigerantFlow']]:
-            print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object already was in the model')
+            if verboseMode:
+                print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object already was in the model')
         else:
             self.idf1.newidfobject(
                 'AirConditioner:VariableRefrigerantFlow',
@@ -814,7 +880,8 @@ def addDetHVACobjEp91(self):
                 Initial_Heat_Recovery_Heating_Energy_Fraction=1,
                 Heat_Recovery_Heating_Energy_Time_Constant=0
                 )
-            print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object has been added')
+            if verboseMode:
+                print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object has been added')
 
     outdoorairnodelistlist = [i for i in self.idf1.idfobjects['OutdoorAir:NodeList']]
     # print(outdoorairnodelistlist)
@@ -839,14 +906,16 @@ def addDetHVACobjEp91(self):
             'OutdoorAir:NodeList',
             Node_or_NodeList_Name_1='VRF Outdoor Unit_'+zonename+' Outdoor Air Node'
             )
-        print('VRF Outdoor Unit_'+zonename+' Outdoor Air Node Object has been added')
+        if verboseMode:
+            print('VRF Outdoor Unit_'+zonename+' Outdoor Air Node Object has been added')
 
         self.idf1.newidfobject(
             'ZoneTerminalUnitList',
             Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+zonename+' Zone List',
             Zone_Terminal_Unit_Name_1=zonename+' VRF Indoor Unit'
             )
-        print('VRF Outdoor Unit_'+zonename+' Zone List Object has been added')
+        if verboseMode:
+            print('VRF Outdoor Unit_'+zonename+' Zone List Object has been added')
 
     zonecontrolthermostatlist = [i for i in self.idf1.idfobjects['ZoneControl:Thermostat']]
     # print(zonecontrolthermostatlist)
@@ -907,7 +976,8 @@ def addDetHVACobjEp91(self):
             Dedicated_Outdoor_Air_Low_Setpoint_Temperature_for_Design='autosize',
             Dedicated_Outdoor_Air_High_Setpoint_Temperature_for_Design='autosize'
             )
-        print(zonename+' Sizing:Zone Object has been added')
+        if verboseMode:
+            print(zonename+' Sizing:Zone Object has been added')
 
     DesignSpecificationOutdoorAirList = [i for i in self.idf1.idfobjects['DesignSpecification:OutdoorAir']]
     # print(DesignSpecificationOutdoorAirList)
@@ -929,7 +999,8 @@ def addDetHVACobjEp91(self):
             Outdoor_Air_Flow_Air_Changes_per_Hour=0,
             Outdoor_Air_Schedule_Name='On 24/7'
             )
-        print(zonename+' Design Specification Outdoor Air Object has been added')
+        if verboseMode:
+            print(zonename+' Design Specification Outdoor Air Object has been added')
 
     DesignSpecificationZoneAirDistributionList = [i for i in self.idf1.idfobjects['DesignSpecification:ZoneAirDistribution']]
     # print(DesignSpecificationZoneAirDistributionList)
@@ -949,7 +1020,8 @@ def addDetHVACobjEp91(self):
             Zone_Air_Distribution_Effectiveness_Schedule_Name='',
             Zone_Secondary_Recirculation_Fraction=0
             )
-        print(zonename+' Design Specification Zone Air Distribution Object has been added')
+        if verboseMode:
+            print(zonename+' Design Specification Zone Air Distribution Object has been added')
 
     nodelistlist = [i for i in self.idf1.idfobjects['NodeList']]
     # print(nodelistlist)
@@ -971,7 +1043,8 @@ def addDetHVACobjEp91(self):
             Name=zonename+' Air Exhaust Node List',
             Node_1_Name=zonename+' VRF Indoor Unit Return'
             )
-        print(zonename+' Nodelist Objects has been added')
+        if verboseMode:
+            print(zonename+' Nodelist Objects has been added')
 
     ZoneHvacEquipmentConnectionsList = [i for i in self.idf1.idfobjects['ZoneHVAC:EquipmentConnections']]
     # print(ZoneHvacEquipmentConnectionsList)
@@ -992,7 +1065,8 @@ def addDetHVACobjEp91(self):
             Zone_Air_Node_Name=zonename+' Zone Air Node',
             Zone_Return_Air_Node_or_NodeList_Name=zonename+' Return Outlet'
             )
-        print(zonename+' ZoneHVAC:EquipmentConnections Objects has been added')
+        if verboseMode:
+            print(zonename+' ZoneHVAC:EquipmentConnections Objects has been added')
 
     ZoneHvacEquipmentListList = [i for i in self.idf1.idfobjects['ZoneHVAC:EquipmentList']]
     # print(ZoneHvacEquipmentListList)
@@ -1016,7 +1090,8 @@ def addDetHVACobjEp91(self):
             Zone_Equipment_1_Sequential_Cooling_Fraction='',
             Zone_Equipment_1_Sequential_Heating_Fraction=''
             )
-        print(zonename+' ZoneHVAC:EquipmentList Objects has been added')
+        if verboseMode:
+            print(zonename+' ZoneHVAC:EquipmentList Objects has been added')
 
     ZoneHvacTermUnitVRFlist = [i for i in self.idf1.idfobjects['ZoneHVAC:TerminalUnit:VariableRefrigerantFlow']]
     # print(ZoneHvacTermUnitVRFlist)
@@ -1056,7 +1131,8 @@ def addDetHVACobjEp91(self):
             Rated_Heating_Capacity_Sizing_Ratio='',
             Availability_Manager_List_Name=''
             )
-        print(zonename+' ZoneHVAC:TerminalUnit:VariableRefrigerantFlow Object has been added')
+        if verboseMode:
+            print(zonename+' ZoneHVAC:TerminalUnit:VariableRefrigerantFlow Object has been added')
 
     CoilCoolingDXVRFlist = [i for i in self.idf1.idfobjects['Coil:Cooling:DX:VariableRefrigerantFlow']]
     # print(CoilCoolingDXVRFlist)
@@ -1081,7 +1157,8 @@ def addDetHVACobjEp91(self):
             Coil_Air_Outlet_Node=zonename+' VRF Indoor Unit DX Cooling Coil Outlet',
             Name_of_Water_Storage_Tank_for_Condensate_Collection=''
             )
-        print(zonename+' Coil:Cooling:DX:VariableRefrigerantFlow Object has been added')
+        if verboseMode:
+            print(zonename+' Coil:Cooling:DX:VariableRefrigerantFlow Object has been added')
 
     CoilHeatingDXVRFlist = [i for i in self.idf1.idfobjects['Coil:Heating:DX:VariableRefrigerantFlow']]
     # print(CoilHeatingDXVRFlist)
@@ -1104,7 +1181,8 @@ def addDetHVACobjEp91(self):
             Heating_Capacity_Ratio_Modifier_Function_of_Temperature_Curve_Name='VRFTUHeatCapFT',
             Heating_Capacity_Modifier_Function_of_Flow_Fraction_Curve_Name='VRFACCoolCapFFF'
             )
-        print(zonename+' Coil:Heating:DX:VariableRefrigerantFlow Object has been added')
+        if verboseMode:
+            print(zonename+' Coil:Heating:DX:VariableRefrigerantFlow Object has been added')
 
     fanconstantvolumelist = [i for i in self.idf1.idfobjects['Fan:ConstantVolume']]
     # print(fanconstantvolumelist)
@@ -1129,14 +1207,16 @@ def addDetHVACobjEp91(self):
             Air_Outlet_Node_Name=zonename+' VRF Indoor Unit Supply Outlet',
             EndUse_Subcategory='General'
             )
-        print(zonename+' Fan:ConstantVolume Object has been added')
+        if verboseMode:
+            print(zonename+' Fan:ConstantVolume Object has been added')
 
 
-def addDetHVACobjEp94(self):
+def addDetHVACobjEp94(self, verboseMode: bool = True):
     """Add Detailed HVAC objects for MultipleZone to work."""
     for zonename in self.zonenames_orig:
         if 'VRF Outdoor Unit_'+zonename in [i.Heat_Pump_Name for i in self.idf1.idfobjects['AirConditioner:VariableRefrigerantFlow']]:
-            print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object already was in the model')
+            if verboseMode:
+                print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object already was in the model')
         else:
             self.idf1.newidfobject(
                 'AirConditioner:VariableRefrigerantFlow',
@@ -1222,7 +1302,8 @@ def addDetHVACobjEp94(self):
                 Initial_Heat_Recovery_Heating_Energy_Fraction=1,
                 Heat_Recovery_Heating_Energy_Time_Constant=0
                 )
-            print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object has been added')
+            if verboseMode:
+                print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object has been added')
 
     outdoorairnodelistlist = [i for i in self.idf1.idfobjects['OutdoorAir:NodeList']]
     # print(outdoorairnodelistlist)
@@ -1247,14 +1328,16 @@ def addDetHVACobjEp94(self):
             'OutdoorAir:NodeList',
             Node_or_NodeList_Name_1='VRF Outdoor Unit_'+zonename+' Outdoor Air Node'
             )
-        print('VRF Outdoor Unit_'+zonename+' Outdoor Air Node Object has been added')
+        if verboseMode:
+            print('VRF Outdoor Unit_'+zonename+' Outdoor Air Node Object has been added')
 
         self.idf1.newidfobject(
             'ZoneTerminalUnitList',
             Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+zonename+' Zone List',
             Zone_Terminal_Unit_Name_1=zonename+' VRF Indoor Unit'
             )
-        print('VRF Outdoor Unit_'+zonename+' Zone List Object has been added')
+        if verboseMode:
+            print('VRF Outdoor Unit_'+zonename+' Zone List Object has been added')
 
     zonecontrolthermostatlist = [i for i in self.idf1.idfobjects['ZoneControl:Thermostat']]
     # print(zonecontrolthermostatlist)
@@ -1315,7 +1398,8 @@ def addDetHVACobjEp94(self):
             Dedicated_Outdoor_Air_Low_Setpoint_Temperature_for_Design='autosize',
             Dedicated_Outdoor_Air_High_Setpoint_Temperature_for_Design='autosize'
             )
-        print(zonename+' Sizing:Zone Object has been added')
+        if verboseMode:
+            print(zonename+' Sizing:Zone Object has been added')
 
     DesignSpecificationOutdoorAirList = [i for i in self.idf1.idfobjects['DesignSpecification:OutdoorAir']]
     # print(DesignSpecificationOutdoorAirList)
@@ -1337,7 +1421,8 @@ def addDetHVACobjEp94(self):
             Outdoor_Air_Flow_Air_Changes_per_Hour=0,
             Outdoor_Air_Schedule_Name='On 24/7'
             )
-        print(zonename+' Design Specification Outdoor Air Object has been added')
+        if verboseMode:
+            print(zonename+' Design Specification Outdoor Air Object has been added')
 
     DesignSpecificationZoneAirDistributionList = [i for i in self.idf1.idfobjects['DesignSpecification:ZoneAirDistribution']]
     # print(DesignSpecificationZoneAirDistributionList)
@@ -1357,7 +1442,8 @@ def addDetHVACobjEp94(self):
             Zone_Air_Distribution_Effectiveness_Schedule_Name='',
             Zone_Secondary_Recirculation_Fraction=0
             )
-        print(zonename+' Design Specification Zone Air Distribution Object has been added')
+        if verboseMode:
+            print(zonename+' Design Specification Zone Air Distribution Object has been added')
 
     nodelistlist = [i for i in self.idf1.idfobjects['NodeList']]
     # print(nodelistlist)
@@ -1379,7 +1465,8 @@ def addDetHVACobjEp94(self):
             Name=zonename+' Air Exhaust Node List',
             Node_1_Name=zonename+' VRF Indoor Unit Return'
             )
-        print(zonename+' Nodelist Objects has been added')
+        if verboseMode:
+            print(zonename+' Nodelist Objects has been added')
 
     ZoneHvacEquipmentConnectionsList = [i for i in self.idf1.idfobjects['ZoneHVAC:EquipmentConnections']]
     # print(ZoneHvacEquipmentConnectionsList)
@@ -1400,7 +1487,8 @@ def addDetHVACobjEp94(self):
             Zone_Air_Node_Name=zonename+' Zone Air Node',
             Zone_Return_Air_Node_or_NodeList_Name=zonename+' Return Outlet'
             )
-        print(zonename+' ZoneHVAC:EquipmentConnections Objects has been added')
+        if verboseMode:
+            print(zonename+' ZoneHVAC:EquipmentConnections Objects has been added')
 
     ZoneHvacEquipmentListList = [i for i in self.idf1.idfobjects['ZoneHVAC:EquipmentList']]
     # print(ZoneHvacEquipmentListList)
@@ -1424,7 +1512,8 @@ def addDetHVACobjEp94(self):
             Zone_Equipment_1_Sequential_Cooling_Fraction_Schedule_Name='',
             Zone_Equipment_1_Sequential_Heating_Fraction_Schedule_Name=''
             )
-        print(zonename+' ZoneHVAC:EquipmentList Objects has been added')
+        if verboseMode:
+            print(zonename+' ZoneHVAC:EquipmentList Objects has been added')
 
     ZoneHvacTermUnitVRFlist = [i for i in self.idf1.idfobjects['ZoneHVAC:TerminalUnit:VariableRefrigerantFlow']]
     # print(ZoneHvacTermUnitVRFlist)
@@ -1464,7 +1553,8 @@ def addDetHVACobjEp94(self):
             Rated_Heating_Capacity_Sizing_Ratio='',
             Availability_Manager_List_Name=''
             )
-        print(zonename+' ZoneHVAC:TerminalUnit:VariableRefrigerantFlow Object has been added')
+        if verboseMode:
+            print(zonename+' ZoneHVAC:TerminalUnit:VariableRefrigerantFlow Object has been added')
 
     CoilCoolingDXVRFlist = [i for i in self.idf1.idfobjects['Coil:Cooling:DX:VariableRefrigerantFlow']]
     # print(CoilCoolingDXVRFlist)
@@ -1489,7 +1579,8 @@ def addDetHVACobjEp94(self):
             Coil_Air_Outlet_Node=zonename+' VRF Indoor Unit DX Cooling Coil Outlet',
             Name_of_Water_Storage_Tank_for_Condensate_Collection=''
             )
-        print(zonename+' Coil:Cooling:DX:VariableRefrigerantFlow Object has been added')
+        if verboseMode:
+            print(zonename+' Coil:Cooling:DX:VariableRefrigerantFlow Object has been added')
 
     CoilHeatingDXVRFlist = [i for i in self.idf1.idfobjects['Coil:Heating:DX:VariableRefrigerantFlow']]
     # print(CoilHeatingDXVRFlist)
@@ -1512,7 +1603,8 @@ def addDetHVACobjEp94(self):
             Heating_Capacity_Ratio_Modifier_Function_of_Temperature_Curve_Name='VRFTUHeatCapFT',
             Heating_Capacity_Modifier_Function_of_Flow_Fraction_Curve_Name='VRFACCoolCapFFF'
             )
-        print(zonename+' Coil:Heating:DX:VariableRefrigerantFlow Object has been added')
+        if verboseMode:
+            print(zonename+' Coil:Heating:DX:VariableRefrigerantFlow Object has been added')
 
     fanconstantvolumelist = [i for i in self.idf1.idfobjects['Fan:ConstantVolume']]
     # print(fanconstantvolumelist)
@@ -1537,14 +1629,16 @@ def addDetHVACobjEp94(self):
             Air_Outlet_Node_Name=zonename+' VRF Indoor Unit Supply Outlet',
             EndUse_Subcategory='General'
             )
-        print(zonename+' Fan:ConstantVolume Object has been added')
+        if verboseMode:
+            print(zonename+' Fan:ConstantVolume Object has been added')
 
 
-def addForscriptSchMultipleZone(self):
+def addForscriptSchMultipleZone(self, verboseMode: bool = True):
     """Add FORSCRIPT Schedules for each zone for MultipleZone."""
     for zonename in self.zonenames:
         if "FORSCRIPT_AHST_"+zonename in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
-            print('FORSCRIPT_AHST_'+zonename+' Schedule already was in the model')
+            if verboseMode:
+                print('FORSCRIPT_AHST_'+zonename+' Schedule already was in the model')
         else:
             self.idf1.newidfobject(
                 'Schedule:Compact',
@@ -1554,10 +1648,12 @@ def addForscriptSchMultipleZone(self):
                 Field_2='For: AllDays',
                 Field_3='Until: 24:00,20'
                 )
-            print('FORSCRIPT_AHST_'+zonename+' Schedule has been added')
+            if verboseMode:
+                print('FORSCRIPT_AHST_'+zonename+' Schedule has been added')
 
         if "FORSCRIPT_ACST_"+zonename in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
-            print('FORSCRIPT_ACST_'+zonename+' Schedule already was in the model')
+            if verboseMode:
+                print('FORSCRIPT_ACST_'+zonename+' Schedule already was in the model')
         else:
             self.idf1.newidfobject(
                 'Schedule:Compact',
@@ -1567,7 +1663,8 @@ def addForscriptSchMultipleZone(self):
                 Field_2='For: AllDays',
                 Field_3='Until: 24:00,24'
                 )
-            print('FORSCRIPT_ACST_'+zonename+' Schedule has been added')
+            if verboseMode:
+                print('FORSCRIPT_ACST_'+zonename+' Schedule has been added')
 
     # allschedules=([i for i in self.idf1.idfobjects['Schedule:Compact']])
     # print(allschedules)
@@ -1590,10 +1687,11 @@ def addForscriptSchMultipleZone(self):
             )
 
 
-def checkVentIsOn(self):
+def checkVentIsOn(self, verboseMode: bool = True):
     """Check ventilation settings."""
     if "Vent_SP_temp" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
-        print("Vent_SP_temp Schedule already was in the model")
+        if verboseMode:
+            print("Vent_SP_temp Schedule already was in the model")
     else:
         self.idf1.newidfobject(
             'Schedule:Compact',
@@ -1603,7 +1701,8 @@ def checkVentIsOn(self):
             Field_2='For: AllDays',
             Field_3='Until: 24:00,24'
             )
-        print("Vent_SP_temp Schedule has been added")
+        if verboseMode:
+            print("Vent_SP_temp Schedule has been added")
 
     windowlist = ([window for window in self.idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if window.Name.endswith('_Win')])
     # print(windowlist)

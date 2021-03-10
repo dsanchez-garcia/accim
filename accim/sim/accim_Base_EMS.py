@@ -1,17 +1,19 @@
 """Add EMS objects in common to both SingleZone and MultipleZone."""
 
 
-def addEMSProgramsBase(self):
+def addEMSProgramsBase(self, verboseMode: bool = True):
     """
     Add EMS programs for Base accim.
 
     Checks if some programs objects are already
     in the model, and otherwise adds them.
+    :param verboseMode:
     """
     programlist = ([program.Name for program in self.idf1.idfobjects['EnergyManagementSystem:Program']])
 
     if 'SetComfTemp' in programlist:
-        print('Not added - SetComfTemp Program')
+        if verboseMode:
+            print('Not added - SetComfTemp Program')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:Program',
@@ -22,12 +24,14 @@ def addEMSProgramsBase(self):
             Program_Line_4='set ComfTemp = PMOT*0.31+17.8',
             Program_Line_5='endif'
             )
-        print('Added - SetComfTemp Program')
+        if verboseMode:
+            print('Added - SetComfTemp Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetComfTemp'])
 
     for zonename in self.zonenames:
         if 'CountHours_'+zonename in programlist:
-            print('Not added - CountHours_'+zonename+' Program')
+            if verboseMode:
+                print('Not added - CountHours_'+zonename+' Program')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Program',
@@ -106,11 +110,13 @@ def addEMSProgramsBase(self):
                 Program_Line_72='endif',
                 Program_Line_73='endif'
                 )
-            print('Added - CountHours_'+zonename+' Program')
+            if verboseMode:
+                print('Added - CountHours_'+zonename+' Program')
     #        print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'CountHours_'+zonename])
 
     if 'SetAppLimits' in programlist:
-        print('Not added - SetAppLimits Program')
+        if verboseMode:
+            print('Not added - SetAppLimits Program')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:Program',
@@ -132,11 +138,13 @@ def addEMSProgramsBase(self):
             Program_Line_15='set AHSTall = 50',
             Program_Line_16='endif'
             )
-        print('Added - SetAppLimits Program')
+        if verboseMode:
+            print('Added - SetAppLimits Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetAppLimits'])
 
     if 'ApplyCAT' in programlist:
-        print('Not added - ApplyCAT Program')
+        if verboseMode:
+            print('Not added - ApplyCAT Program')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:Program',
@@ -162,11 +170,13 @@ def addEMSProgramsBase(self):
             Program_Line_19='endif',
             Program_Line_20='endif'
             )
-        print('Added - ApplyCAT Program')
+        if verboseMode:
+            print('Added - ApplyCAT Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'ApplyCAT'])
 
     if 'SetAST' in programlist:
-        print('Not added - SetAST Program')
+        if verboseMode:
+            print('Not added - SetAST Program')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:Program',
@@ -365,11 +375,13 @@ def addEMSProgramsBase(self):
             Program_Line_192='set AHST = AHSTaul*0.31+17.8+AHSToffset+AHSTtol',
             Program_Line_193='endif'
             )
-        print('Added - SetAST Program')
+        if verboseMode:
+            print('Added - SetAST Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetAST'])
 
     if 'SetASTnoTol' in programlist:
-        print('Not added - SetASTnoTol Program')
+        if verboseMode:
+            print('Not added - SetASTnoTol Program')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:Program',
@@ -377,12 +389,14 @@ def addEMSProgramsBase(self):
             Program_Line_1='set ACSTnoTol = ACST-ACSTtol',
             Program_Line_2='set AHSTnoTol = AHST-AHSTtol'
             )
-        print('Added - SetASTnoTol Program')
+        if verboseMode:
+            print('Added - SetASTnoTol Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetASTnoTol'])
 
     for zonename in self.zonenames:
         if 'CountHoursNoApp_'+zonename in programlist:
-            print('Not added - CountHoursNoApp_'+zonename+' Program')
+            if verboseMode:
+                print('Not added - CountHoursNoApp_'+zonename+' Program')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Program',
@@ -397,13 +411,14 @@ def addEMSProgramsBase(self):
                 Program_Line_8='set ComfHoursNoApp_'+zonename+' = 0',
                 Program_Line_9='endif'
                 )
-            print('Added - CountHoursNoApp_'+zonename+' Program')
+            if verboseMode:
+                print('Added - CountHoursNoApp_'+zonename+' Program')
     #        print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'CountHoursNoApp_'+zonename])
 
     del programlist
 
 
-def addEMSPCMBase(self):
+def addEMSPCMBase(self, verboseMode: bool = True):
     """
     Add EMS program calling managers for Base accim.
 
@@ -415,7 +430,8 @@ def addEMSPCMBase(self):
 
     for i in programlist:
         if i in pcmlist:
-            print('Not added - '+i+' Program Calling Manager')
+            if verboseMode:
+                print('Not added - '+i+' Program Calling Manager')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:ProgramCallingManager',
@@ -423,13 +439,14 @@ def addEMSPCMBase(self):
                 EnergyPlus_Model_Calling_Point="BeginTimestepBeforePredictor",
                 Program_Name_1=i
                 )
-            print('Added - '+i+' Program Calling Manager')
+            if verboseMode:
+                print('Added - '+i+' Program Calling Manager')
     #        print([program for program in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager'] if program.Name == i])
 
     del programlist, pcmlist
 
 
-def addEMSOutputVariableBase(self):
+def addEMSOutputVariableBase(self, verboseMode: bool = True):
     """Add EMS output variables for Base accim.
 
     Checks if some EMS output variables objects are already
@@ -447,7 +464,8 @@ def addEMSOutputVariableBase(self):
 
     for i in EMSOutputVariableComfTemp_dict:
         if i in outputvariablelist:
-            print('Not added - '+i+' Output Variable')
+            if verboseMode:
+                print('Not added - '+i+' Output Variable')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:OutputVariable',
@@ -458,7 +476,8 @@ def addEMSOutputVariableBase(self):
                 EMS_Program_or_Subroutine_Name='',
                 Units='C'
                 )
-            print('Added - '+i+' Output Variable')
+            if verboseMode:
+                print('Added - '+i+' Output Variable')
             # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i])
 
     EMSOutputVariableComfHours_dict = {
@@ -473,8 +492,9 @@ def addEMSOutputVariableBase(self):
     for i in EMSOutputVariableComfHours_dict:
         for zonename in self.zonenames:
             if i+'_'+zonename+' (summed)' in outputvariablelist:
-                print('Not added - '+i+'_'
-                      + zonename + ' (summed) Output Variable')
+                if verboseMode:
+                    print('Not added - '+i+'_'
+                          + zonename + ' (summed) Output Variable')
             else:
                 self.idf1.newidfobject(
                     'EnergyManagementSystem:OutputVariable',
@@ -486,14 +506,15 @@ def addEMSOutputVariableBase(self):
                     EMS_Program_or_Subroutine_Name='',
                     Units='H'
                     )
-                print('Added - '+i+'_'
-                      + zonename + ' (summed) Output Variable')
+                if verboseMode:
+                    print('Added - '+i+'_'
+                          + zonename + ' (summed) Output Variable')
                 # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i+'_'+zonename+' (summed)'])
 
     del outputvariablelist
 
 
-def addOutputVariablesTimestep(self):
+def addOutputVariablesTimestep(self, verboseMode: bool = True):
     """
     Add Output:Variable objects in timestep frequency.
 
@@ -513,14 +534,15 @@ def addOutputVariablesTimestep(self):
             Reporting_Frequency='Timestep',
             Schedule_Name=fulloutputlist[i].Schedule_Name
             )
-        print('Added - '+fulloutputlist[i].Variable_Name+' Output:Variable Timestep data')
+        if verboseMode:
+            print('Added - '+fulloutputlist[i].Variable_Name+' Output:Variable Timestep data')
 
     # print([output for output in self.idf1.idfobjects['Output:Variable'] if output.Reporting_Frequency == 'Timestep'])
 
     del fulloutputlist, outputlist
 
 
-def addSimplifiedOutputVariables(self):
+def addSimplifiedOutputVariables(self, verboseMode: bool = True):
     """
     Add simplified Output:Variable objects for accim.
 
@@ -559,6 +581,7 @@ def addSimplifiedOutputVariables(self):
             Reporting_Frequency='Hourly',
             Schedule_Name=''
             )
-        print('Added - '+addittionaloutput+' Output:Variable data')
+        if verboseMode:
+            print('Added - '+addittionaloutput+' Output:Variable data')
 
     del addittionaloutputs
