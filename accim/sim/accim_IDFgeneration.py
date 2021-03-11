@@ -187,7 +187,9 @@ def genIDFSingleZone(self,
                      ASTtol_start=0.1,
                      ASTtol_end_input=0.1,
                      ASTtol_steps=0.1,
-                     NameSuffix=''
+                     NameSuffix='',
+                     verboseMode: bool =True,
+                     confirmGen: bool =None
                      ):
     """Generate IDFs in SingleZone."""
     import os
@@ -208,11 +210,6 @@ def genIDFSingleZone(self,
     else:
         ASTtol_end = ASTtol_end_input + ASTtol_steps
 
-    # if all(arguments):
-    #     self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
-    # else:
-    #     ASTtol_end = ASTtol_end_input + ASTtol_steps
-
     if all(arguments):
         pass
     else:
@@ -231,47 +228,31 @@ def genIDFSingleZone(self,
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
     filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])
     # print(filelist_pymod)
-    # todo try to calculate the total number of output IDFs and ask the user for confirmation
+
+    outputlist = []
     for file in filelist_pymod:
         filename = file
-
-        fname1 = filename+'.idf'
-        # print(fname1)
-        idf1 = IDF(fname1)
-
-        # print(filename)
-        SetInputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetInputData'])
-        # Making IDFs: the output file path can not contain the following characters: & ^ , = % " \ / : * ? " < > |
         for AdapStand_value in self.AdapStand_List:
-            SetInputData[0].Program_Line_1 = 'set AdapStand  =  '+repr(AdapStand_value)
             if AdapStand_value == 0:
-                SetInputData[0].Program_Line_2 = 'set CAT = 1'
-                SetInputData[0].Program_Line_3 = 'set ComfMod = 0'
                 for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                    SetInputData[0].Program_Line_4 = 'set ACSTtol = '+repr(-ASTtol_value)
-                    SetInputData[0].Program_Line_5 = 'set AHSTtol = '+repr(ASTtol_value)
-                    # todo print the name of each output IDF as it's saved for all cases only in verboseMode
-                    idf1.savecopy(
-                        filename
-                        + '[AS_CTE'
-                        + '[CA_X'
-                        + '[CM_X'
-                        + '[AT_'+repr(ASTtol_value)
-                        + suffix
-                        + '.idf'
-                        )
+                    outputname = (
+                            filename
+                            + '[AS_CTE'
+                            + '[CA_X'
+                            + '[CM_X'
+                            + '[AT_' + repr(ASTtol_value)
+                            + suffix
+                            + '.idf'
+                    )
+                    outputlist.append(outputname)
             elif AdapStand_value == 1:
                 for CAT_value in self.CAT_List:
                     if CAT_value not in range(0, 4):
                         continue
                     else:
-                        SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
                         for ComfMod_value in self.ComfMod_List:
-                            SetInputData[0].Program_Line_3 = 'set ComfMod = '+repr(ComfMod_value)
                             for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                SetInputData[0].Program_Line_4 = 'set ACSTtol = '+repr(-ASTtol_value)
-                                SetInputData[0].Program_Line_5 = 'set AHSTtol = '+repr(ASTtol_value)
-                                idf1.savecopy(
+                                outputname = (
                                     filename
                                     + '[AS_EN16798'
                                     + '[CA_'+repr(CAT_value)
@@ -280,18 +261,15 @@ def genIDFSingleZone(self,
                                     + suffix
                                     + '.idf'
                                     )
+                                outputlist.append(outputname)
             elif AdapStand_value == 2:
                 for CAT_value in self.CAT_List:
                     if CAT_value not in range(80, 91, 10):
                         continue
                     else:
-                        SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
                         for ComfMod_value in self.ComfMod_List:
-                            SetInputData[0].Program_Line_3 = 'set ComfMod = '+repr(ComfMod_value)
                             for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                SetInputData[0].Program_Line_4 = 'set ACSTtol = '+repr(-ASTtol_value)
-                                SetInputData[0].Program_Line_5 = 'set AHSTtol = '+repr(ASTtol_value)
-                                idf1.savecopy(
+                                outputname = (
                                     filename
                                     + '[AS_ASHRAE55'
                                     + '[CA_'+repr(CAT_value)
@@ -300,11 +278,107 @@ def genIDFSingleZone(self,
                                     + suffix
                                     + '.idf'
                                     )
+                                outputlist.append(outputname)
+
+    if verboseMode:
+        print('The list of output IDFs is going to be:')
+        print(*outputlist, sep="\n")
+        print(f'And the total number of output IDFs is going to be {len(outputlist)}')
+
+    if confirmGen is None:
+        confirmGen = input('Do you still want to run ACCIS? [y/n]: ')
+        if confirmGen == 'y':
+            confirmGen = True
+        else:
+            confirmGen = False
+
+    if confirmGen == True:
+        for file in filelist_pymod:
+            filename = file
+
+            fname1 = filename+'.idf'
+            if verboseMode:
+                print(fname1)
+            idf1 = IDF(fname1)
+
+            # print(filename)
+            SetInputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetInputData'])
+            # Making IDFs: the output file path can not contain the following characters: & ^ , = % " \ / : * ? " < > |
+            for AdapStand_value in self.AdapStand_List:
+                SetInputData[0].Program_Line_1 = 'set AdapStand  =  '+repr(AdapStand_value)
+                if AdapStand_value == 0:
+                    SetInputData[0].Program_Line_2 = 'set CAT = 1'
+                    SetInputData[0].Program_Line_3 = 'set ComfMod = 0'
+                    for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                        SetInputData[0].Program_Line_4 = 'set ACSTtol = '+repr(-ASTtol_value)
+                        SetInputData[0].Program_Line_5 = 'set AHSTtol = '+repr(ASTtol_value)
+                        outputname = (
+                            filename
+                            + '[AS_CTE'
+                            + '[CA_X'
+                            + '[CM_X'
+                            + '[AT_' + repr(ASTtol_value)
+                            + suffix
+                            + '.idf'
+                        )
+                        if verboseMode:
+                            print(outputname)
+                        idf1.savecopy(outputname)
+                elif AdapStand_value == 1:
+                    for CAT_value in self.CAT_List:
+                        if CAT_value not in range(0, 4):
+                            continue
+                        else:
+                            SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
+                            for ComfMod_value in self.ComfMod_List:
+                                SetInputData[0].Program_Line_3 = 'set ComfMod = '+repr(ComfMod_value)
+                                for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                    SetInputData[0].Program_Line_4 = 'set ACSTtol = '+repr(-ASTtol_value)
+                                    SetInputData[0].Program_Line_5 = 'set AHSTtol = '+repr(ASTtol_value)
+                                    outputname = (
+                                        filename
+                                        + '[AS_EN16798'
+                                        + '[CA_'+repr(CAT_value)
+                                        + '[CM_'+repr(ComfMod_value)
+                                        + '[AT_'+repr(ASTtol_value)
+                                        + suffix
+                                        + '.idf'
+                                        )
+                                    if verboseMode:
+                                        print(outputname)
+                                    idf1.savecopy(outputname)
+                elif AdapStand_value == 2:
+                    for CAT_value in self.CAT_List:
+                        if CAT_value not in range(80, 91, 10):
+                            continue
+                        else:
+                            SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
+                            for ComfMod_value in self.ComfMod_List:
+                                SetInputData[0].Program_Line_3 = 'set ComfMod = '+repr(ComfMod_value)
+                                for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                    SetInputData[0].Program_Line_4 = 'set ACSTtol = '+repr(-ASTtol_value)
+                                    SetInputData[0].Program_Line_5 = 'set AHSTtol = '+repr(ASTtol_value)
+                                    outputname = (
+                                        filename
+                                        + '[AS_ASHRAE55'
+                                        + '[CA_'+repr(CAT_value)
+                                        + '[CM_'+repr(ComfMod_value)
+                                        + '[AT_'+repr(ASTtol_value)
+                                        + suffix
+                                        + '.idf'
+                                        )
+                                    if verboseMode:
+                                        print(outputname)
+                                    idf1.savecopy(outputname)
+    elif confirmGen == False:
+        if verboseMode:
+            print('IDF generation has been shut down')
+
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
     for file in filelist_pymod:
         os.remove(file)
 
-    del SetInputData
+    # del SetInputData
 
 
 def genIDFMultipleZone(self,
@@ -319,7 +393,9 @@ def genIDFMultipleZone(self,
                        ASTtol_start=0.1,
                        ASTtol_end_input=0.1,
                        ASTtol_steps=0.1,
-                       NameSuffix=''
+                       NameSuffix='',
+                       verboseMode: bool = True,
+                       confirmGen: bool = None
                        ):
     """Generate IDFs in MultipleZone."""
     import os
@@ -368,31 +444,16 @@ def genIDFMultipleZone(self,
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
     filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])
     # print(filelist_pymod)
-    # todo try to calculate the total number of output IDFs and ask the user for confirmation
+
+    outputlist = []
     for file in filelist_pymod:
         filename = file
-
-        fname1 = filename+'.idf'
-        # print(fname1)
-        idf1 = IDF(fname1)
-
-        # print(filename)
-
-        SetInputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetInputData'])
-
         for AdapStand_value in self.AdapStand_List:
-            SetInputData[0].Program_Line_1 = 'set AdapStand = '+repr(AdapStand_value)
             if AdapStand_value == 0:
-                SetInputData[0].Program_Line_2 = 'set CAT = 1'
-                SetInputData[0].Program_Line_3 = 'set ComfMod = 0'
                 for HVACmode_value in self.HVACmode_List:
-                    SetInputData[0].Program_Line_4 = 'set HVACmode = '+repr(HVACmode_value)
                     if HVACmode_value == 0:
                         for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                            SetInputData[0].Program_Line_5 = 'set ACSTtol = '+repr(-ASTtol_value)
-                            SetInputData[0].Program_Line_6 = 'set AHSTtol = '+repr(ASTtol_value)
-                            # todo print the name of each output IDF as it's saved for all cases only in verboseMode
-                            idf1.savecopy(
+                            outputname = (
                                 filename
                                 + '[AS_CTE'
                                 + '[CA_X'
@@ -406,19 +467,14 @@ def genIDFMultipleZone(self,
                                 + suffix
                                 + '.idf'
                                 )
+                            outputlist.append(outputname)
                     else:
                         for VentCtrl_value in self.VentCtrl_List:
-                            SetInputData[0].Program_Line_5 = 'set VentCtrl = '+repr(VentCtrl_value)
                             for VSToffset_value in self.VSToffset_List:
-                                SetInputData[0].Program_Line_6 = 'set VSToffset = '+repr(VSToffset_value)
                                 for MinOToffset_value in self.MinOToffset_List:
-                                    SetInputData[0].Program_Line_7 = 'set MinOToffset = '+repr(MinOToffset_value)
                                     for MaxWindSpeed_value in self.MaxWindSpeed_List:
-                                        SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = '+repr(MaxWindSpeed_value)
                                         for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                            SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
-                                            SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
-                                            idf1.savecopy(
+                                            outputname = (
                                                 filename
                                                 + '[AS_CTE'
                                                 + '[CA_X'
@@ -432,21 +488,17 @@ def genIDFMultipleZone(self,
                                                 + suffix
                                                 + '.idf'
                                                 )
+                                            outputlist.append(outputname)
             elif AdapStand_value == 1:
                 for CAT_value in self.CAT_List:
                     if CAT_value not in range(0, 4):
                         continue
                     else:
-                        SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
                         for ComfMod_value in self.ComfMod_List:
-                            SetInputData[0].Program_Line_3 = 'set ComfMod = '+repr(ComfMod_value)
                             for HVACmode_value in self.HVACmode_List:
-                                SetInputData[0].Program_Line_4 = 'set HVACmode = '+repr(HVACmode_value)
                                 if HVACmode_value == 0:
                                     for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                        SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
-                                        SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
-                                        idf1.savecopy(
+                                        outputname = (
                                             filename
                                             + '[AS_EN16798'
                                             + '[CA_' + repr(CAT_value)
@@ -460,19 +512,14 @@ def genIDFMultipleZone(self,
                                             + suffix
                                             + '.idf'
                                             )
+                                        outputlist.append(outputname)
                                 else:
                                     for VentCtrl_value in self.VentCtrl_List:
-                                        SetInputData[0].Program_Line_5 = 'set VentCtrl = '+repr(VentCtrl_value)
                                         for VSToffset_value in self.VSToffset_List:
-                                            SetInputData[0].Program_Line_6 = 'set VSToffset = '+repr(VSToffset_value)
                                             for MinOToffset_value in self.MinOToffset_List:
-                                                SetInputData[0].Program_Line_7 = 'set MinOToffset = '+repr(MinOToffset_value)
                                                 for MaxWindSpeed_value in self.MaxWindSpeed_List:
-                                                    SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = '+repr(MaxWindSpeed_value)
                                                     for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                                        SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
-                                                        SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
-                                                        idf1.savecopy(
+                                                        outputname = (
                                                             filename
                                                             + '[AS_EN16798'
                                                             + '[CA_' + repr(CAT_value)
@@ -486,21 +533,17 @@ def genIDFMultipleZone(self,
                                                             + suffix
                                                             + '.idf'
                                                             )
+                                                        outputlist.append(outputname)
             elif AdapStand_value == 2:
                 for CAT_value in self.CAT_List:
                     if CAT_value not in range(80, 91, 10):
                         continue
                     else:
-                        SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
                         for ComfMod_value in self.ComfMod_List:
-                            SetInputData[0].Program_Line_3 = 'set ComfMod = '+repr(ComfMod_value)
                             for HVACmode_value in self.HVACmode_List:
-                                SetInputData[0].Program_Line_4 = 'set HVACmode = '+repr(HVACmode_value)
                                 if HVACmode_value == 0:
                                     for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                        SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
-                                        SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
-                                        idf1.savecopy(
+                                        outputname = (
                                             filename
                                             + '[AS_EN16798'
                                             + '[CA_' + repr(CAT_value)
@@ -514,19 +557,14 @@ def genIDFMultipleZone(self,
                                             + suffix
                                             + '.idf'
                                             )
+                                        outputlist.append(outputname)
                                 else:
                                     for VentCtrl_value in self.VentCtrl_List:
-                                        SetInputData[0].Program_Line_5 = 'set VentCtrl = '+repr(VentCtrl_value)
                                         for VSToffset_value in self.VSToffset_List:
-                                            SetInputData[0].Program_Line_6 = 'set VSToffset = '+repr(VSToffset_value)
                                             for MinOToffset_value in self.MinOToffset_List:
-                                                SetInputData[0].Program_Line_7 = 'set MinOToffset = '+repr(MinOToffset_value)
                                                 for MaxWindSpeed_value in self.MaxWindSpeed_List:
-                                                    SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = '+repr(MaxWindSpeed_value)
                                                     for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                                        SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
-                                                        SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
-                                                        idf1.savecopy(
+                                                        outputname = (
                                                             filename
                                                             + '[AS_ASHRAE55'
                                                             + '[CA_' + repr(CAT_value)
@@ -540,6 +578,217 @@ def genIDFMultipleZone(self,
                                                             + suffix
                                                             + '.idf'
                                                             )
+                                                        outputlist.append(outputname)
+    if verboseMode:
+        print('The list of output IDFs is going to be:')
+        print(*outputlist, sep="\n")
+        print(f'And the total number of output IDFs is going to be {len(outputlist)}')
+
+    if confirmGen is None:
+        confirmGen = input('Do you still want to run ACCIS? [y/n]: ')
+        if confirmGen == 'y':
+            confirmGen = True
+        else:
+            confirmGen = False
+
+    if confirmGen == True:
+        for file in filelist_pymod:
+            filename = file
+
+            fname1 = filename+'.idf'
+            if verboseMode:
+                print(fname1)
+            idf1 = IDF(fname1)
+
+            # print(filename)
+
+            SetInputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetInputData'])
+
+            for AdapStand_value in self.AdapStand_List:
+                SetInputData[0].Program_Line_1 = 'set AdapStand = '+repr(AdapStand_value)
+                if AdapStand_value == 0:
+                    SetInputData[0].Program_Line_2 = 'set CAT = 1'
+                    SetInputData[0].Program_Line_3 = 'set ComfMod = 0'
+                    for HVACmode_value in self.HVACmode_List:
+                        SetInputData[0].Program_Line_4 = 'set HVACmode = '+repr(HVACmode_value)
+                        if HVACmode_value == 0:
+                            for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                SetInputData[0].Program_Line_5 = 'set ACSTtol = '+repr(-ASTtol_value)
+                                SetInputData[0].Program_Line_6 = 'set AHSTtol = '+repr(ASTtol_value)
+                                outputname = (
+                                    filename
+                                    + '[AS_CTE'
+                                    + '[CA_X'
+                                    + '[CM_X'
+                                    + '[HM_' + repr(HVACmode_value)
+                                    + '[VC_X'
+                                    + '[VO_X'
+                                    + '[MT_X'
+                                    + '[MW_X'
+                                    + '[AT_' + repr(ASTtol_value)
+                                    + suffix
+                                    + '.idf'
+                                    )
+                                if verboseMode:
+                                    print(outputname)
+                                idf1.savecopy(outputname)
+
+                        else:
+                            for VentCtrl_value in self.VentCtrl_List:
+                                SetInputData[0].Program_Line_5 = 'set VentCtrl = '+repr(VentCtrl_value)
+                                for VSToffset_value in self.VSToffset_List:
+                                    SetInputData[0].Program_Line_6 = 'set VSToffset = '+repr(VSToffset_value)
+                                    for MinOToffset_value in self.MinOToffset_List:
+                                        SetInputData[0].Program_Line_7 = 'set MinOToffset = '+repr(MinOToffset_value)
+                                        for MaxWindSpeed_value in self.MaxWindSpeed_List:
+                                            SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = '+repr(MaxWindSpeed_value)
+                                            for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                                SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
+                                                SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
+                                                outputname = (
+                                                    filename
+                                                    + '[AS_CTE'
+                                                    + '[CA_X'
+                                                    + '[CM_X'
+                                                    + '[HM_' + repr(HVACmode_value)
+                                                    + '[VC_' + repr(VentCtrl_value)
+                                                    + '[VO_' + repr(VSToffset_value)
+                                                    + '[MT_' + repr(MinOToffset_value)
+                                                    + '[MW_' + repr(MaxWindSpeed_value)
+                                                    + '[AT_' + repr(ASTtol_value)
+                                                    + suffix
+                                                    + '.idf'
+                                                    )
+                                                if verboseMode:
+                                                    print(outputname)
+                                                idf1.savecopy(outputname)
+
+                elif AdapStand_value == 1:
+                    for CAT_value in self.CAT_List:
+                        if CAT_value not in range(0, 4):
+                            continue
+                        else:
+                            SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
+                            for ComfMod_value in self.ComfMod_List:
+                                SetInputData[0].Program_Line_3 = 'set ComfMod = '+repr(ComfMod_value)
+                                for HVACmode_value in self.HVACmode_List:
+                                    SetInputData[0].Program_Line_4 = 'set HVACmode = '+repr(HVACmode_value)
+                                    if HVACmode_value == 0:
+                                        for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                            SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
+                                            SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
+                                            outputname = (
+                                                filename
+                                                + '[AS_EN16798'
+                                                + '[CA_' + repr(CAT_value)
+                                                + '[CM_' + repr(ComfMod_value)
+                                                + '[HM_' + repr(HVACmode_value)
+                                                + '[VC_X'
+                                                + '[VO_X'
+                                                + '[MT_X'
+                                                + '[MW_X'
+                                                + '[AT_' + repr(ASTtol_value)
+                                                + suffix
+                                                + '.idf'
+                                                )
+                                            if verboseMode:
+                                                print(outputname)
+                                            idf1.savecopy(outputname)
+
+                                    else:
+                                        for VentCtrl_value in self.VentCtrl_List:
+                                            SetInputData[0].Program_Line_5 = 'set VentCtrl = '+repr(VentCtrl_value)
+                                            for VSToffset_value in self.VSToffset_List:
+                                                SetInputData[0].Program_Line_6 = 'set VSToffset = '+repr(VSToffset_value)
+                                                for MinOToffset_value in self.MinOToffset_List:
+                                                    SetInputData[0].Program_Line_7 = 'set MinOToffset = '+repr(MinOToffset_value)
+                                                    for MaxWindSpeed_value in self.MaxWindSpeed_List:
+                                                        SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = '+repr(MaxWindSpeed_value)
+                                                        for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                                            SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
+                                                            SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
+                                                            outputname = (
+                                                                filename
+                                                                + '[AS_EN16798'
+                                                                + '[CA_' + repr(CAT_value)
+                                                                + '[CM_' + repr(ComfMod_value)
+                                                                + '[HM_' + repr(HVACmode_value)
+                                                                + '[VC_' + repr(VentCtrl_value)
+                                                                + '[VO_' + repr(VSToffset_value)
+                                                                + '[MT_' + repr(MinOToffset_value)
+                                                                + '[MW_' + repr(MaxWindSpeed_value)
+                                                                + '[AT_' + repr(ASTtol_value)
+                                                                + suffix
+                                                                + '.idf'
+                                                                )
+                                                            if verboseMode:
+                                                                print(outputname)
+                                                            idf1.savecopy(outputname)
+
+                elif AdapStand_value == 2:
+                    for CAT_value in self.CAT_List:
+                        if CAT_value not in range(80, 91, 10):
+                            continue
+                        else:
+                            SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
+                            for ComfMod_value in self.ComfMod_List:
+                                SetInputData[0].Program_Line_3 = 'set ComfMod = '+repr(ComfMod_value)
+                                for HVACmode_value in self.HVACmode_List:
+                                    SetInputData[0].Program_Line_4 = 'set HVACmode = '+repr(HVACmode_value)
+                                    if HVACmode_value == 0:
+                                        for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                            SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
+                                            SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
+                                            outputname = (
+                                                filename
+                                                + '[AS_EN16798'
+                                                + '[CA_' + repr(CAT_value)
+                                                + '[CM_' + repr(ComfMod_value)
+                                                + '[HM_' + repr(HVACmode_value)
+                                                + '[VC_X'
+                                                + '[VO_X'
+                                                + '[MT_X'
+                                                + '[MW_X'
+                                                + '[AT_' + repr(ASTtol_value)
+                                                + suffix
+                                                + '.idf'
+                                                )
+                                            if verboseMode:
+                                                print(outputname)
+                                            idf1.savecopy(outputname)
+                                    else:
+                                        for VentCtrl_value in self.VentCtrl_List:
+                                            SetInputData[0].Program_Line_5 = 'set VentCtrl = '+repr(VentCtrl_value)
+                                            for VSToffset_value in self.VSToffset_List:
+                                                SetInputData[0].Program_Line_6 = 'set VSToffset = '+repr(VSToffset_value)
+                                                for MinOToffset_value in self.MinOToffset_List:
+                                                    SetInputData[0].Program_Line_7 = 'set MinOToffset = '+repr(MinOToffset_value)
+                                                    for MaxWindSpeed_value in self.MaxWindSpeed_List:
+                                                        SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = '+repr(MaxWindSpeed_value)
+                                                        for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                                            SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
+                                                            SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
+                                                            outputname = (
+                                                                filename
+                                                                + '[AS_ASHRAE55'
+                                                                + '[CA_' + repr(CAT_value)
+                                                                + '[CM_' + repr(ComfMod_value)
+                                                                + '[HM_' + repr(HVACmode_value)
+                                                                + '[VC_' + repr(VentCtrl_value)
+                                                                + '[VO_' + repr(VSToffset_value)
+                                                                + '[MT_' + repr(MinOToffset_value)
+                                                                + '[MW_' + repr(MaxWindSpeed_value)
+                                                                + '[AT_' + repr(ASTtol_value)
+                                                                + suffix
+                                                                + '.idf'
+                                                                )
+                                                            if verboseMode:
+                                                                print(outputname)
+                                                            idf1.savecopy(outputname)
+    elif confirmGen == False:
+        if verboseMode:
+            print('IDF generation has been shut down')
+
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
     for file in filelist_pymod:
         os.remove(file)
