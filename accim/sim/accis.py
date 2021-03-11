@@ -515,21 +515,23 @@ def addAccis(
         ):
     """
     Parameters
-    :param ScriptType:
-    :param Outputs:
-    :param EnergyPlus_version:
-    :param AdapStand:
-    :param CAT:
-    :param ComfMod:
-    :param HVACmode:
-    :param VentCtrl:
-    :param VSToffset:
-    :param MinOToffset:
-    :param MaxWindSpeed:
-    :param ASTtol_start:
-    :param ASTtol_end_input:
-    :param ASTtol_steps:
-    :param NameSuffix:
+    :param ScriptType: The default is 'MultipleZones'. Can be 'MultipleZones'or
+        'mz', or 'SingleZone' or 'sz'.
+    :param Outputs: The default is 'Standard'. Can be 'Standard',
+        'Simplified' or 'Timestep'.
+    :param EnergyPlus_version: The default is 'Ep94'. Can be 'Ep91' or 'Ep94'.
+    :param AdapStand: The default is None.(0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55)
+    :param CAT: The default is None.(1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT)
+    :param ComfMod: The default is None.(0 = Static; 1 = OUT-CTE; 2 = OUT-SEN16798/SASHRAE55; 3 = OUT-AEN16798/AASHRAE55)
+    :param HVACmode: The default is None.(0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
+    :param VentCtrl: (0 = Ventilates above neutral temperature; 1 = Ventilates above upper comfort limit)
+    :param VSToffset: Please refer to documentation.
+    :param MinOToffset: Please refer to documentation.
+    :param MaxWindSpeed: Please refer to documentation.
+    :param ASTtol_start: Please refer to documentation.
+    :param ASTtol_end_input: Please refer to documentation.
+    :param ASTtol_steps: Please refer to documentation.
+    :param NameSuffix: Please refer to documentation.
 
     Exceptions
             DESCRIPTION. EnergyPlus version not supported.
