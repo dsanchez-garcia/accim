@@ -70,9 +70,11 @@ def runEp94(runOnlyAccim=None, confirmRun=None):
     #     epwnames = [x for x in os.listdir(EPWfilesPath) if x.endswith('.epw')]
     #     epwnames_run = [x.split('.epw')[0] for x in os.listdir(EPWfilesPath) if x.endswith('.epw')]
 
-    print(f'The IDFs we are going to run are: {idfnames}')
+    print(f'The IDFs we are going to run are:')
+    print(*idfnames, sep="\n")
     print(f' and the No. of IDFs is going to be {len(idfnames)}')
-    print(f'The EPWs we are going to run are: {epwnames}')
+    print(f'The EPWs we are going to run are:')
+    print(*epwnames, sep="\n")
     print(f' and the No. of EPWs is going to be {len(epwnames)}')
 
     print('Therefore, the simulations are going to be:')
