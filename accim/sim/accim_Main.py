@@ -211,7 +211,6 @@ class accimobj_MultipleZone_Ep94 (accimobj):
             print(*self.windownamelist, sep="\n")
 
 
-# todo add a accimobj with mz and Ep version in the arguments
 
 
 class accimInstance():
@@ -249,6 +248,7 @@ class accimInstance():
 
     from accim.sim.accim_MultipleZone import addMultipleZoneSch
     from accim.sim.accim_MultipleZone import addCurveObj
+    from accim.sim.accim_MultipleZone import addDetHVACobjEp91
     from accim.sim.accim_MultipleZone import addDetHVACobjEp94
     from accim.sim.accim_MultipleZone import addForscriptSchMultipleZone
     from accim.sim.accim_MultipleZone import checkVentIsOn
@@ -260,13 +260,18 @@ class accimInstance():
     from accim.sim.accim_MultipleZone_EMS import addEMSOutputVariableMultipleZone
     from accim.sim.accim_MultipleZone_EMS import addOutputVariablesMultipleZone
 
-    def __init__(self, filename_temp, ScriptType: str = 'mz', EnergyPlus_version: str = 'Ep94', verboseMode: bool = True):
+
+    def __init__(self, filename_temp, ScriptType: str = None, EnergyPlus_version: str = None, verboseMode: bool = True):
         from eppy import modeleditor
         from eppy.modeleditor import IDF
-        if EnergyPlus_version.lower == 'ep94':
+        if EnergyPlus_version.lower() == 'ep94':
             iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
-        else:
+        elif EnergyPlus_version.lower() == 'ep91':
             iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
+        else:
+            raise ValueError("""EnergyPlus version not supported.\n
+                                     Only works for EnergyPlus 9.1 (enter Ep91) and
+                                     EnergyPlus 9.4 (enter Ep94) versions.""")
         IDF.setiddname(iddfile)
 
         fname1 = filename_temp+'.idf'
@@ -285,7 +290,7 @@ class accimInstance():
 
         self.zonenames = ([sub.replace(':', '_') for sub in ([zone.Name for zone in self.idf1.idfobjects['ZONE']])])
         # print(self.zonenames)
-        if ScriptType.lower == 'mz' or ScriptType.lower == 'multiplezone':
+        if ScriptType.lower() == 'mz' or ScriptType.lower() == 'multiplezone':
             self.windownamelist_orig = ([window.Name for window in self.idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if window.Name.endswith('_Win')])
             print(self.windownamelist_orig)
             self.windownamelist_orig_split = ([i.split('_') for i in self.windownamelist_orig])
