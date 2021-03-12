@@ -106,7 +106,7 @@ class accimobj_MultipleZone_Ep91 (accimobj):
         # print(self.zonenames)
 
         self.windownamelist_orig = ([window.Name for window in self.idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if window.Name.endswith('_Win')])
-        print(self.windownamelist_orig)
+        # print(self.windownamelist_orig)
         self.windownamelist_orig_split = ([i.split('_') for i in self.windownamelist_orig])
         # print(self.windownamelist_orig_split)
 
@@ -198,7 +198,7 @@ class accimobj_MultipleZone_Ep94 (accimobj):
         # print(self.zonenames)
 
         self.windownamelist_orig = ([window.Name for window in self.idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if window.Name.endswith('_Win')])
-        print(self.windownamelist_orig)
+        # print(self.windownamelist_orig)
         self.windownamelist_orig_split = ([i.split('_') for i in self.windownamelist_orig])
         # print(self.windownamelist_orig_split)
 
@@ -292,7 +292,7 @@ class accimInstance():
         # print(self.zonenames)
         if ScriptType.lower() == 'mz' or ScriptType.lower() == 'multiplezone':
             self.windownamelist_orig = ([window.Name for window in self.idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if window.Name.endswith('_Win')])
-            print(self.windownamelist_orig)
+            # print(self.windownamelist_orig)
             self.windownamelist_orig_split = ([i.split('_') for i in self.windownamelist_orig])
             # print(self.windownamelist_orig_split)
 
