@@ -403,6 +403,8 @@ def genIDFMultipleZone(self,
     import numpy
     from eppy import modeleditor
     from eppy.modeleditor import IDF
+    import time
+    from accim.misc.progressBar import progressBar
 
     arguments = (AdapStand is None,
                  CAT is None,
@@ -592,6 +594,7 @@ def genIDFMultipleZone(self,
             confirmGen = False
 
     if confirmGen == True:
+    #     for file in filelist_pymod, progressBar(outputlist, prefix = 'Progress:', suffix = 'Complete', length = 50):
         for file in filelist_pymod:
             filename = file
 
@@ -785,6 +788,7 @@ def genIDFMultipleZone(self,
                                                             if verboseMode:
                                                                 print(outputname)
                                                             idf1.savecopy(outputname)
+        time.sleep(0.1)
     elif confirmGen == False:
         if verboseMode:
             print('IDF generation has been shut down')
