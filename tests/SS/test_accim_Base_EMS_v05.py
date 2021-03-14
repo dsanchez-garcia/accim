@@ -6,27 +6,31 @@ Created on Sun Feb 28 17:03:48 2021
 """
 
 
-import pytest
-from accim.sim import accim_Main
 
 def test_addEMSProgramsBase():
-    
+    from accim.sim import accim_Main
     from eppy.modeleditor import IDF
     
     iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
     IDF.setiddname(iddfile)
-    
+
     idf0 = IDF('TestModel_SingleZone.idf')
-    
     programlist = ([program.Name for program in idf0.idfobjects['EnergyManagementSystem:Program']])
-    assert ('SetComfTemp' in programlist) == False
-    
-    z = accim_Main.accimobj_SingleZone_Ep94('TestModel_SingleZone')
+    assert not ('SetComfTemp' in programlist)
+
+    try:
+        idf1 = IDF('TestModel_SingleZone_pymod.idf')
+    except FileNotFoundError:
+        z = accim_Main.accimInstance(
+            filename_temp='TestModel_SingleZone',
+            ScriptType='sz',
+            EnergyPlus_version='ep94',
+            verboseMode=False
+        )
+        idf1 = IDF('TestModel_SingleZone_pymod.idf')
     z.addEMSProgramsBase()
     z.saveaccim()
-    
-    idf1 = IDF('TestModel_SingleZone_pymod.idf')
-    
+
     programlist = ([program.Name for program in idf1.idfobjects['EnergyManagementSystem:Program']])
     assert ('SetComfTemp' in programlist) == True
 
@@ -43,5 +47,3 @@ def test_addEMSProgramsBase():
 
     print(SetComfTemp[0].Name)
     print(SetComfTemp[0].Program_Line_1)
-    
-# test_addEMSProgramsBase()

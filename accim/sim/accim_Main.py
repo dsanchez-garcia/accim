@@ -290,6 +290,10 @@ class accimInstance():
 
         self.zonenames = ([sub.replace(':', '_') for sub in ([zone.Name for zone in self.idf1.idfobjects['ZONE']])])
         # print(self.zonenames)
+        if verboseMode:
+            print(f'The zones in the model {filename_temp} are:')
+            print(*self.zonenames, sep="\n")
+
         if ScriptType.lower() == 'mz' or ScriptType.lower() == 'multiplezone':
             self.windownamelist_orig = ([window.Name for window in self.idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if window.Name.endswith('_Win')])
             # print(self.windownamelist_orig)
@@ -299,7 +303,5 @@ class accimInstance():
             self.windownamelist = ([sub.replace(':', '_') for sub in ([window.Name for window in self.idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if window.Name.endswith('_Win')])])
             # print(self.windownamelist)
             if verboseMode:
-                print(f'The zones in the model {filename_temp} are:')
-                print(*self.zonenames, sep="\n")
                 print(f'The windows in the model {filename_temp} are:')
                 print(*self.windownamelist, sep="\n")

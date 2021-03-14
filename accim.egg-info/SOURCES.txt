@@ -16,6 +16,8 @@ accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT
 accim/data/__init__.py
 accim/data/main.py
 accim/data/run.py
+accim/misc/__init__.py
+accim/misc/progressBar.py
 accim/run/__init__.py
 accim/run/run.py
 accim/sample files/TestModel_MultipleZone.idf
