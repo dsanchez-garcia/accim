@@ -204,7 +204,7 @@ def genIDFSingleZone(self,
                  ASTtol_start == 0.1,
                  ASTtol_end_input == 0.1,
                  ASTtol_steps == 0.1)
-
+    # todo if the user adds some arguments but leave others by default, might get some error; so raise error needs to be added
     if all(arguments):
         self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
     else:
@@ -404,8 +404,8 @@ def genIDFMultipleZone(self,
     from eppy import modeleditor
     from eppy.modeleditor import IDF
     import time
-    from accim.misc.progressBar import progressBar
-
+    from tqdm import tqdm
+    
     arguments = (AdapStand is None,
                  CAT is None,
                  ComfMod is None,
@@ -417,7 +417,7 @@ def genIDFMultipleZone(self,
                  ASTtol_start == 0.1,
                  ASTtol_end_input == 0.1,
                  ASTtol_steps == 0.1)
-
+    # todo if the user adds some arguments but leave others by default, might get some error; so raise error needs to be added
     if all(arguments):
         self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
     else:
@@ -594,7 +594,7 @@ def genIDFMultipleZone(self,
             confirmGen = False
 
     if confirmGen == True:
-    #     for file in filelist_pymod, progressBar(outputlist, prefix = 'Progress:', suffix = 'Complete', length = 50):
+        # pbar = tqdm(total=len(outputlist))
         for file in filelist_pymod:
             filename = file
 
@@ -634,8 +634,9 @@ def genIDFMultipleZone(self,
                                     )
                                 if verboseMode:
                                     print(outputname)
+                                    # time.sleep(0.1)
+                                    # pbar.update(1)
                                 idf1.savecopy(outputname)
-
                         else:
                             for VentCtrl_value in self.VentCtrl_List:
                                 SetInputData[0].Program_Line_5 = 'set VentCtrl = '+repr(VentCtrl_value)
@@ -664,8 +665,9 @@ def genIDFMultipleZone(self,
                                                     )
                                                 if verboseMode:
                                                     print(outputname)
+                                                    # time.sleep(0.1)
+                                                    # pbar.update(1)
                                                 idf1.savecopy(outputname)
-
                 elif AdapStand_value == 1:
                     for CAT_value in self.CAT_List:
                         if CAT_value not in range(0, 4):
@@ -696,8 +698,9 @@ def genIDFMultipleZone(self,
                                                 )
                                             if verboseMode:
                                                 print(outputname)
+                                                # time.sleep(0.1)
+                                                # pbar.update(1)
                                             idf1.savecopy(outputname)
-
                                     else:
                                         for VentCtrl_value in self.VentCtrl_List:
                                             SetInputData[0].Program_Line_5 = 'set VentCtrl = '+repr(VentCtrl_value)
@@ -726,8 +729,9 @@ def genIDFMultipleZone(self,
                                                                 )
                                                             if verboseMode:
                                                                 print(outputname)
+                                                                # time.sleep(0.1)
+                                                                # pbar.update(1)
                                                             idf1.savecopy(outputname)
-
                 elif AdapStand_value == 2:
                     for CAT_value in self.CAT_List:
                         if CAT_value not in range(80, 91, 10):
@@ -758,6 +762,8 @@ def genIDFMultipleZone(self,
                                                 )
                                             if verboseMode:
                                                 print(outputname)
+                                                # time.sleep(0.1)
+                                                # pbar.update(1)
                                             idf1.savecopy(outputname)
                                     else:
                                         for VentCtrl_value in self.VentCtrl_List:
@@ -787,8 +793,10 @@ def genIDFMultipleZone(self,
                                                                 )
                                                             if verboseMode:
                                                                 print(outputname)
+                                                                # time.sleep(0.1)
+                                                                # pbar.update(1)
                                                             idf1.savecopy(outputname)
-        time.sleep(0.1)
+        # pbar.close()
     elif confirmGen == False:
         if verboseMode:
             print('IDF generation has been shut down')

@@ -1,7 +1,7 @@
 """Add EnergyPlus objects in common to both SingleZone and MultipleZone."""
 
 
-def setComfFieldsPeople(self):
+def setComfFieldsPeople(self, verboseMode: bool = True):
     """
     Amend PEOPLE objects so that accim can work.
 
@@ -40,6 +40,10 @@ def setComfFieldsPeople(self):
             )
         firstpeopleobject = self.idf1.idfobjects['PEOPLE'][0]
         self.idf1.removeidfobject(firstpeopleobject)
+    peoplelist = ([people for people in self.idf1.idfobjects['PEOPLE']])
+    if verboseMode:
+        print('The people objects in the model are:')
+        print(*peoplelist,sep="\n")
     del peoplelist, firstpeopleobject
 
 
@@ -88,7 +92,7 @@ def addBaseSchedules(self, verboseMode : bool = True):
             print("On Schedule has been added")
 
 
-def setAvailSchOn(self):
+def setAvailSchOn(self, verboseMode: bool = True):
     """
     Amend availability schedules.
 
@@ -98,8 +102,12 @@ def setAvailSchOn(self):
     for schedule in [i for i in self.idf1.idfobjects['ZoneHVAC:IdealLoadsAirSystem']]:
         schedule.Heating_Availability_Schedule_Name='On'
         schedule.Cooling_Availability_Schedule_Name='On'
+    if verboseMode:
+        print('All ZoneHVAC:IdealLoadsAirSystem Heating and Cooling availability schedules has been set to on')
 
-
-def saveaccim(self):
+def saveaccim(self, verboseMode: bool = True):
     """Save IDF."""
     self.idf1.save()
+    if verboseMode:
+        print('IDF has been saved')
+
