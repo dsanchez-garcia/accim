@@ -1,7 +1,7 @@
 """Add EnergyPlus objects in common to both SingleZone and MultipleZone."""
 
 
-def setComfFieldsPeople(self):
+def setComfFieldsPeople(self, verboseMode: bool = True):
     """
     Amend PEOPLE objects so that accim can work.
 
@@ -40,10 +40,14 @@ def setComfFieldsPeople(self):
             )
         firstpeopleobject = self.idf1.idfobjects['PEOPLE'][0]
         self.idf1.removeidfobject(firstpeopleobject)
+    peoplelist = ([people for people in self.idf1.idfobjects['PEOPLE']])
+    if verboseMode:
+        print('The people objects in the model are:')
+        print(*peoplelist,sep="\n")
     del peoplelist, firstpeopleobject
 
 
-def addOpTempTherm(self):
+def addOpTempTherm(self, verboseMode : bool = True):
     """
     Amend ZoneControl:Thermostat:OperativeTemperature objects.
 
@@ -51,7 +55,8 @@ def addOpTempTherm(self):
     """
     for zonename_orig in self.zonenames_orig:
         if zonename_orig+' Thermostat' in [thermostat.Thermostat_Name for thermostat in self.idf1.idfobjects['ZoneControl:Thermostat:OperativeTemperature']]:
-            print(zonename_orig+' Thermostat already was in the model')
+            if verboseMode:
+                print(zonename_orig+' Thermostat already was in the model')
         else:
             self.idf1.newidfobject(
                 'ZoneControl:Thermostat:OperativeTemperature',
@@ -60,10 +65,11 @@ def addOpTempTherm(self):
                 Fixed_Radiative_Fraction='',
                 Radiative_Fraction_Schedule_Name='TypOperativeTempControlSch'
                 )
-            print(zonename_orig+' Thermostat has been added')
+            if verboseMode:
+                print(zonename_orig+' Thermostat has been added')
 
 
-def addBaseSchedules(self):
+def addBaseSchedules(self, verboseMode : bool = True):
     """
     Amend Schedule:Compact objects.
 
@@ -71,7 +77,8 @@ def addBaseSchedules(self):
     and add them in case these are not in the model
     """
     if "On" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
-        print("On Schedule already was in the model")
+        if verboseMode:
+            print("On Schedule already was in the model")
     else:
         self.idf1.newidfobject(
             'Schedule:Compact',
@@ -81,10 +88,11 @@ def addBaseSchedules(self):
             Field_2='For: AllDays',
             Field_3='Until: 24:00,1'
             )
-        print("On Schedule has been added")
+        if verboseMode:
+            print("On Schedule has been added")
 
 
-def setAvailSchOn(self):
+def setAvailSchOn(self, verboseMode: bool = True):
     """
     Amend availability schedules.
 
@@ -94,8 +102,12 @@ def setAvailSchOn(self):
     for schedule in [i for i in self.idf1.idfobjects['ZoneHVAC:IdealLoadsAirSystem']]:
         schedule.Heating_Availability_Schedule_Name='On'
         schedule.Cooling_Availability_Schedule_Name='On'
+    if verboseMode:
+        print('All ZoneHVAC:IdealLoadsAirSystem Heating and Cooling availability schedules has been set to on')
 
-
-def saveaccim(self):
+def saveaccim(self, verboseMode: bool = True):
     """Save IDF."""
     self.idf1.save()
+    if verboseMode:
+        print('IDF has been saved')
+

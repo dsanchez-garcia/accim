@@ -497,71 +497,48 @@ def addAccisMultipleZoneSimplifiedEp94():
 
 
 def addAccis(
-        ScriptType='MultipleZones',
-        Outputs='Standard',
-        EnergyPlus_version='Ep94',
-        AdapStand=None,
-        CAT=None,
-        ComfMod=None,
-        HVACmode=None,
-        VentCtrl=None,
-        VSToffset=0,
-        MinOToffset=50,
-        MaxWindSpeed=50,
-        ASTtol_start=0.1,
-        ASTtol_end_input=0.1,
-        ASTtol_steps=0.1,
-        NameSuffix=''
+        ScriptType: str = 'MultipleZones',
+        Outputs: str = 'Standard',
+        EnergyPlus_version: str ='Ep94',
+        AdapStand: any = None,
+        CAT: any = None,
+        ComfMod: any = None,
+        HVACmode: any = None,
+        VentCtrl: any = None,
+        VSToffset: any = [0],
+        MinOToffset: any = [50],
+        MaxWindSpeed: any = [50],
+        ASTtol_start: float = 0.1,
+        ASTtol_end_input: float = 0.1,
+        ASTtol_steps: float = 0.1,
+        NameSuffix: str = ''
         ):
     """
-    Add ACCIS based on arguments.
-
-    If no argument entered, information will be asked in command prompt.
-
     Parameters
-    ----------
-    ScriptType : str, optional
-        DESCRIPTION. The default is 'MultipleZones'. Can be 'MultipleZones'or
+    :param ScriptType: The default is 'MultipleZones'. Can be 'MultipleZones'or
         'mz', or 'SingleZone' or 'sz'.
-    Outputs : str, optional
-        DESCRIPTION. The default is 'Standard'. Can be 'Standard',
+    :param Outputs: The default is 'Standard'. Can be 'Standard',
         'Simplified' or 'Timestep'.
-    EnergyPlus_version : str, optional
-        DESCRIPTION. The default is 'Ep94'. Can be 'Ep91' or 'Ep94'.
-    AdapStand : list, optional
-        DESCRIPTION. The default is None.(0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55)
-    CAT : list, optional
-        DESCRIPTION. The default is None.(1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT)
-    ComfMod : list, optional
-        DESCRIPTION. The default is None.(0 = Static; 1 = OUT-CTE; 2 = OUT-SEN16798/SASHRAE55; 3 = OUT-AEN16798/AASHRAE55)
-    HVACmode : list, optional
-        DESCRIPTION. The default is None.(0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
-    VentCtrl : list, optional
-        DESCRIPTION. The default is None.(0 = Ventilates above neutral temperature; 1 = Ventilates above upper comfort limit)
-    VSToffset : list, optional
-        DESCRIPTION. The default is 0.
-    MinOToffset : list, optional
-        DESCRIPTION. The default is 50.
-    MaxWindSpeed : list, optional
-        DESCRIPTION. The default is 50.
-    ASTtol_start : float, optional
-        DESCRIPTION. The default is 0.1.
-    ASTtol_end_input : float, optional
-        DESCRIPTION. The default is 0.1.
-    ASTtol_steps : float, optional
-        DESCRIPTION. The default is 0.1.
+    :param EnergyPlus_version: The default is 'Ep94'. Can be 'Ep91' or 'Ep94'.
+    :param AdapStand: The default is None.(0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55)
+    :param CAT: The default is None.(1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT)
+    :param ComfMod: The default is None.(0 = Static; 1 = OUT-CTE; 2 = OUT-SEN16798/SASHRAE55; 3 = OUT-AEN16798/AASHRAE55)
+    :param HVACmode: The default is None.(0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
+    :param VentCtrl: (0 = Ventilates above neutral temperature; 1 = Ventilates above upper comfort limit)
+    :param VSToffset: Please refer to documentation.
+    :param MinOToffset: Please refer to documentation.
+    :param MaxWindSpeed: Please refer to documentation.
+    :param ASTtol_start: Please refer to documentation.
+    :param ASTtol_end_input: Please refer to documentation.
+    :param ASTtol_steps: Please refer to documentation.
+    :param NameSuffix: Please refer to documentation.
 
-    Raises
-    ------
-    ValueError
-        DESCRIPTION. EnergyPlus version not supported.
+    Exceptions
+            DESCRIPTION. EnergyPlus version not supported.
         Only works for EnergyPlus 9.1 (enter Ep91) and
         EnergyPlus 9.4 (enter Ep94) versions.
 
-    Returns
-    -------
-    None.
-
+    :return:
     """
     import accim.sim.accim_Main as accim_Main
 
@@ -573,24 +550,27 @@ def addAccis(
     filelist = ([file.split('.idf')[0] for file in filelist])
 
     for file in filelist:
-        if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
-            if EnergyPlus_version.lower() == 'ep94':
-                z = accim_Main.accimobj_MultipleZone_Ep94(file)
-            elif EnergyPlus_version.lower() == 'ep91':
-                z = accim_Main.accimobj_MultipleZone_Ep91(file)
-            else:
-                raise ValueError("""EnergyPlus version not supported.\n
-                                 Only works for EnergyPlus 9.1 (enter Ep91) and
-                                 EnergyPlus 9.4 (enter Ep94) versions.""")
-        elif ScriptType.lower() == 'SingleZone'.lower() or ScriptType.lower() == 'sz':
-            if EnergyPlus_version.lower() == 'ep94':
-                z = accim_Main.accimobj_SingleZone_Ep94(file)
-            elif EnergyPlus_version.lower() == 'ep91':
-                z = accim_Main.accimobj_SingleZone_Ep91(file)
-            else:
-                raise ValueError("""EnergyPlus version not supported.\n
-                                 Only works for EnergyPlus 9.1 (enter Ep91) and
-                                 EnergyPlus 9.4 (enter Ep94) versions.""")
+        z = accim_Main.accimInstance(filename_temp=file, ScriptType=ScriptType, EnergyPlus_version=EnergyPlus_version)
+
+        # if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
+        #     if EnergyPlus_version.lower() == 'ep94':
+        #         z = accim_Main.accimobj_MultipleZone_Ep94(file)
+        #     elif EnergyPlus_version.lower() == 'ep91':
+        #         z = accim_Main.accimobj_MultipleZone_Ep91(file)
+        #     else:
+        #         raise ValueError("""EnergyPlus version not supported.\n
+        #                          Only works for EnergyPlus 9.1 (enter Ep91) and
+        #                          EnergyPlus 9.4 (enter Ep94) versions.""")
+        # elif ScriptType.lower() == 'SingleZone'.lower() or ScriptType.lower() == 'sz':
+        #     if EnergyPlus_version.lower() == 'ep94':
+        #         z = accim_Main.accimobj_SingleZone_Ep94(file)
+        #     elif EnergyPlus_version.lower() == 'ep91':
+        #         z = accim_Main.accimobj_SingleZone_Ep91(file)
+        #     else:
+        #         raise ValueError("""EnergyPlus version not supported.\n
+        #                          Only works for EnergyPlus 9.1 (enter Ep91) and
+        #                          EnergyPlus 9.4 (enter Ep94) versions.""")
+
 
         z.setComfFieldsPeople()
         z.addOpTempTherm()
@@ -649,9 +629,9 @@ def addAccis(
         ComfMod is None,
         HVACmode is None,
         VentCtrl is None,
-        VSToffset == 0,
-        MinOToffset == 50,
-        MaxWindSpeed == 50,
+        VSToffset == [0],
+        MinOToffset == [50],
+        MaxWindSpeed == [50],
         ASTtol_start == 0.1,
         ASTtol_end_input == 0.1,
         ASTtol_steps == 0.1

@@ -1,7 +1,7 @@
 """Add EMS objects only for MultipleZone."""
 
 
-def addGlobVarListMultipleZone(self):
+def addGlobVarListMultipleZone(self, verboseMode: bool = True):
     """Remove existing Global Variable objects and add correct Global Variable objects for MultipleZone accim."""
     globalvariablelist = ([program for program in self.idf1.idfobjects['ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE']])
 
@@ -48,14 +48,18 @@ def addGlobVarListMultipleZone(self):
             Erl_Variable_5_Name='DiscomfNonAppColdHours_'+zonename,
             Erl_Variable_6_Name='ComfHoursNoApp_'+zonename
             )
+    if verboseMode:
+        print("Global variables objects have been added")
 
 
-def addEMSSensorsMultipleZone(self):
+
+def addEMSSensorsMultipleZone(self, verboseMode: bool = True):
     """Add EMS sensors for MultipleZone accim."""
     sensorlist = ([sensor.Name for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor']])
 
     if 'RMOT' in sensorlist:
-        print('Not added - RMOT Sensor')
+        if verboseMode:
+            print('Not added - RMOT Sensor')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:Sensor',
@@ -63,11 +67,13 @@ def addEMSSensorsMultipleZone(self):
             OutputVariable_or_OutputMeter_Index_Key_Name='People '+self.zonenames_orig[0],
             OutputVariable_or_OutputMeter_Name='Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature'
             )
-        print('Added - RMOT Sensor')
+        if verboseMode:
+            print('Added - RMOT Sensor')
     #    print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name=='RMOT'])
 
     if 'PMOT' in sensorlist:
-        print('Not added - PMOT Sensor')
+        if verboseMode:
+            print('Not added - PMOT Sensor')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:Sensor',
@@ -75,12 +81,14 @@ def addEMSSensorsMultipleZone(self):
             OutputVariable_or_OutputMeter_Index_Key_Name='People '+self.zonenames_orig[0],
             OutputVariable_or_OutputMeter_Name='Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature'
             )
-        print('Added - PMOT Sensor')
+        if verboseMode:
+            print('Added - PMOT Sensor')
     #    print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name=='PMOT'])
 
     for i in range(len(self.zonenames)):
         if self.zonenames[i]+'_OpT' in sensorlist:
-            print('Not added - '+self.zonenames[i]+'_OpT Sensor')
+            if verboseMode:
+                print('Not added - '+self.zonenames[i]+'_OpT Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
@@ -88,10 +96,12 @@ def addEMSSensorsMultipleZone(self):
                 OutputVariable_or_OutputMeter_Index_Key_Name=self.zonenames_orig[i],
                 OutputVariable_or_OutputMeter_Name='Zone Operative Temperature'
                 )
-            print('Added - '+self.zonenames[i]+'_OpT Sensor')
+            if verboseMode:
+                print('Added - '+self.zonenames[i]+'_OpT Sensor')
     #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_OpT'])
         if self.zonenames[i]+'_CoolCoil' in sensorlist:
-            print('Not added - '+self.zonenames[i]+'_CoolCoil Sensor')
+            if verboseMode:
+                print('Not added - '+self.zonenames[i]+'_CoolCoil Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
@@ -99,10 +109,12 @@ def addEMSSensorsMultipleZone(self):
                 OutputVariable_or_OutputMeter_Index_Key_Name=self.zonenames_orig[i]+' VRF Indoor Unit DX Cooling Coil',
                 OutputVariable_or_OutputMeter_Name='Cooling Coil Total Cooling Rate'
                 )
-            print('Added - '+self.zonenames[i]+'_CoolCoil Sensor')
+            if verboseMode:
+                print('Added - '+self.zonenames[i]+'_CoolCoil Sensor')
     #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_CoolCoil'])
         if self.zonenames[i]+'_HeatCoil' in sensorlist:
-            print('Not added - '+self.zonenames[i]+'_HeatCoil Sensor')
+            if verboseMode:
+                print('Not added - '+self.zonenames[i]+'_HeatCoil Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
@@ -110,10 +122,12 @@ def addEMSSensorsMultipleZone(self):
                 OutputVariable_or_OutputMeter_Index_Key_Name=self.zonenames_orig[i]+' VRF Indoor Unit DX Heating Coil',
                 OutputVariable_or_OutputMeter_Name='Heating Coil Heating Rate'
                 )
-            print('Added - '+self.zonenames[i]+'_HeatCoil Sensor')
+            if verboseMode:
+                print('Added - '+self.zonenames[i]+'_HeatCoil Sensor')
     #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_HeatCoil'])
         if self.zonenames[i]+'_WindSpeed' in sensorlist:
-            print('Not added - '+self.zonenames[i]+'_WindSpeed Sensor')
+            if verboseMode:
+                print('Not added - '+self.zonenames[i]+'_WindSpeed Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
@@ -121,10 +135,12 @@ def addEMSSensorsMultipleZone(self):
                 OutputVariable_or_OutputMeter_Index_Key_Name=self.zonenames_orig[i],
                 OutputVariable_or_OutputMeter_Name='Zone Outdoor Air Wind Speed'
                 )
-            print('Added - '+self.zonenames[i]+'_WindSpeed Sensor')
+            if verboseMode:
+                print('Added - '+self.zonenames[i]+'_WindSpeed Sensor')
     #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_WindSpeed'])
         if self.zonenames[i]+'_OutT' in sensorlist:
-            print('Not added - '+self.zonenames[i]+'_OutT Sensor')
+            if verboseMode:
+                print('Not added - '+self.zonenames[i]+'_OutT Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
@@ -132,7 +148,8 @@ def addEMSSensorsMultipleZone(self):
                 OutputVariable_or_OutputMeter_Index_Key_Name=self.zonenames_orig[i],
                 OutputVariable_or_OutputMeter_Name='Zone Outdoor Air Drybulb Temperature'
                 )
-            print('Added - '+self.zonenames[i]+'_OutT Sensor')
+            if verboseMode:
+                print('Added - '+self.zonenames[i]+'_OutT Sensor')
     #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_OutT'])
 
     # if 'HVACConsump' in sensorlist:
@@ -149,18 +166,21 @@ def addEMSSensorsMultipleZone(self):
 
     for i in range(len(self.windownamelist)):
         if self.windownamelist[i]+'_OpT' in sensorlist:
-            print('Not added - '+self.windownamelist[i]+'_OpT Sensor')
+            if verboseMode:
+                print('Not added - '+self.windownamelist[i]+'_OpT Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
                 Name=self.windownamelist[i]+'_OpT',
                 OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0],
                 OutputVariable_or_OutputMeter_Name='Zone Operative Temperature'
-                              )
-            print('Added - '+self.windownamelist[i]+'_OpT Sensor')
+            )
+            if verboseMode:
+                print('Added - '+self.windownamelist[i]+'_OpT Sensor')
 
         if self.windownamelist[i]+'_CoolCoil' in sensorlist:
-            print('Not added - '+self.windownamelist[i]+'_CoolCoil Sensor')
+            if verboseMode:
+                print('Not added - '+self.windownamelist[i]+'_CoolCoil Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
@@ -168,10 +188,12 @@ def addEMSSensorsMultipleZone(self):
                 OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0]+' VRF Indoor Unit DX Cooling Coil',
                 OutputVariable_or_OutputMeter_Name='Cooling Coil Total Cooling Rate'
                 )
-            print('Added - '+self.windownamelist[i]+'_CoolCoil Sensor')
+            if verboseMode:
+                print('Added - '+self.windownamelist[i]+'_CoolCoil Sensor')
 
         if self.windownamelist[i]+'_HeatCoil' in sensorlist:
-            print('Not added - '+self.windownamelist[i]+'_HeatCoil Sensor')
+            if verboseMode:
+                print('Not added - '+self.windownamelist[i]+'_HeatCoil Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
@@ -179,10 +201,12 @@ def addEMSSensorsMultipleZone(self):
                 OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0]+' VRF Indoor Unit DX Heating Coil',
                 OutputVariable_or_OutputMeter_Name='Heating Coil Heating Rate'
                 )
-            print('Added - '+self.windownamelist[i]+'_HeatCoil Sensor')
+            if verboseMode:
+                print('Added - '+self.windownamelist[i]+'_HeatCoil Sensor')
 
         if self.windownamelist[i]+'_WindSpeed' in sensorlist:
-            print('Not added - '+self.windownamelist[i]+'_WindSpeed Sensor')
+            if verboseMode:
+                print('Not added - '+self.windownamelist[i]+'_WindSpeed Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
@@ -190,10 +214,12 @@ def addEMSSensorsMultipleZone(self):
                 OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0],
                 OutputVariable_or_OutputMeter_Name='Zone Outdoor Air Wind Speed'
                 )
-            print('Added - '+self.windownamelist[i]+'_WindSpeed Sensor')
+            if verboseMode:
+                print('Added - '+self.windownamelist[i]+'_WindSpeed Sensor')
 
         if self.windownamelist[i]+'_OutT' in sensorlist:
-            print('Not added - '+self.windownamelist[i]+'_WindSpeed Sensor')
+            if verboseMode:
+                print('Not added - '+self.windownamelist[i]+'_WindSpeed Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
@@ -201,10 +227,12 @@ def addEMSSensorsMultipleZone(self):
                 OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0],
                 OutputVariable_or_OutputMeter_Name='Zone Outdoor Air Drybulb Temperature'
                 )
-            print('Added - '+self.windownamelist[i]+'_OutT Sensor')
+            if verboseMode:
+                print('Added - '+self.windownamelist[i]+'_OutT Sensor')
 
     if 'OutT' in sensorlist:
-        print('Not added - OutT Sensor')
+        if verboseMode:
+            print('Not added - OutT Sensor')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:Sensor',
@@ -212,18 +240,20 @@ def addEMSSensorsMultipleZone(self):
             OutputVariable_or_OutputMeter_Index_Key_Name='Environment',
             OutputVariable_or_OutputMeter_Name='Site Outdoor Air Drybulb Temperature'
             )
-        print('Added - OutT Sensor')
+        if verboseMode:
+            print('Added - OutT Sensor')
 
     del sensorlist
 
 
-def addEMSActuatorsMultipleZone(self):
+def addEMSActuatorsMultipleZone(self, verboseMode: bool = True):
     """Add EMS actuators for MultipleZone accim."""
     actuatorlist = ([actuator.Name for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator']])
 
     for zonename in self.zonenames:
         if 'FORSCRIPT_AHST_Schedule_'+zonename in actuatorlist:
-            print('Not added - FORSCRIPT_AHST_Sch_'+zonename+' Actuator')
+            if verboseMode:
+                print('Not added - FORSCRIPT_AHST_Sch_'+zonename+' Actuator')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Actuator',
@@ -232,11 +262,13 @@ def addEMSActuatorsMultipleZone(self):
                 Actuated_Component_Type='Schedule:Compact',
                 Actuated_Component_Control_Type='Schedule Value'
                 )
-            print('Added - FORSCRIPT_AHST_Sch_'+zonename+' Actuator')
+            if verboseMode:
+                print('Added - FORSCRIPT_AHST_Sch_'+zonename+' Actuator')
         #    print([actuator for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator'] if actuator.Name=='FORSCRIPT_AHST_Schedule_'+zonename])
 
         if 'FORSCRIPT_ACST_Schedule_'+zonename in actuatorlist:
-            print('Not added - FORSCRIPT_ACST_Sch_'+zonename+' Actuator')
+            if verboseMode:
+                print('Not added - FORSCRIPT_ACST_Sch_'+zonename+' Actuator')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Actuator',
@@ -245,12 +277,14 @@ def addEMSActuatorsMultipleZone(self):
                 Actuated_Component_Type='Schedule:Compact',
                 Actuated_Component_Control_Type='Schedule Value'
                 )
-            print('Added - FORSCRIPT_ACST_Sch_'+zonename+' Actuator')
+            if verboseMode:
+                print('Added - FORSCRIPT_ACST_Sch_'+zonename+' Actuator')
         #    print([actuator for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator'] if actuator.Name=='FORSCRIPT_ACST_Schedule_'+zonename])
 
     for i in range(len(self.windownamelist)):
         if self.windownamelist[i]+'_VentOpenFact' in actuatorlist:
-            print('Not added - '+self.windownamelist[i]+'_OpT Actuator')
+            if verboseMode:
+                print('Not added - '+self.windownamelist[i]+'_OpT Actuator')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Actuator',
@@ -259,16 +293,18 @@ def addEMSActuatorsMultipleZone(self):
                 Actuated_Component_Type='AirFlow Network Window/Door Opening',
                 Actuated_Component_Control_Type='Venting Opening Factor'
                 )
-            print('Added - '+self.windownamelist[i]+'_VentOpenFact Actuator')
+            if verboseMode:
+                print('Added - '+self.windownamelist[i]+'_VentOpenFact Actuator')
     del actuatorlist
 
 
-def addEMSProgramsMultipleZone(self):
+def addEMSProgramsMultipleZone(self, verboseMode: bool = True):
     """Add EMS programs for MultipleZone accim."""
     programlist = ([program.Name for program in self.idf1.idfobjects['EnergyManagementSystem:Program']])
 
     if 'SetInputData' in programlist:
-        print('Not added - SetInputData Program')
+        if verboseMode:
+            print('Not added - SetInputData Program')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:Program',
@@ -284,10 +320,12 @@ def addEMSProgramsMultipleZone(self):
             Program_Line_9='set ACSTtol = -0.25',
             Program_Line_10='set AHSTtol = 0.25'
             )
-        print('Added - SetInputData Program')
+        if verboseMode:
+            print('Added - SetInputData Program')
 
     if 'SetVST' in programlist:
-        print('Not added - SetVST Program')
+        if verboseMode:
+            print('Not added - SetVST Program')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:Program',
@@ -317,12 +355,14 @@ def addEMSProgramsMultipleZone(self):
             Program_Line_23='endif',
             Program_Line_24='endif'
             )
-        print('Added - SetVST Program')
+        if verboseMode:
+            print('Added - SetVST Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetVST'])
 
     for zonename in self.zonenames:
         if 'ApplyAST_MultipleZone_'+zonename in programlist:
-            print('Not added - ApplyAST_MultipleZone_'+zonename+' Program')
+            if verboseMode:
+                print('Not added - ApplyAST_MultipleZone_'+zonename+' Program')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Program',
@@ -398,12 +438,14 @@ def addEMSProgramsMultipleZone(self):
                 Program_Line_69='endif',
                 Program_Line_70='endif'
                 )
-            print('Added - ApplyAST_MultipleZone_'+zonename+' Program')
+            if verboseMode:
+                print('Added - ApplyAST_MultipleZone_'+zonename+' Program')
         #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'ApplyAST_MultipleZone_'+windowname])
 
     for windowname in self.windownamelist:
         if 'SetWindowOperation_'+windowname in programlist:
-            print('Not added - SetWindowOperation_'+windowname+' Program')
+            if verboseMode:
+                print('Not added - SetWindowOperation_'+windowname+' Program')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Program',
@@ -482,18 +524,20 @@ def addEMSProgramsMultipleZone(self):
                 Program_Line_72='endif',
                 Program_Line_73='endif'
                 )
-            print('Added - SetWindowOperation_'+windowname+' Program')
+            if verboseMode:
+                print('Added - SetWindowOperation_'+windowname+' Program')
         #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetWindowOperation_'+windowname])
 
     del programlist
 
 
-def addEMSOutputVariableMultipleZone(self):
+def addEMSOutputVariableMultipleZone(self, verboseMode: bool = True):
     """Add EMS output variables for MultipleZone accim."""
     outputvariablelist = ([program.Name for program in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']])
 
     if 'Ventilation Setpoint Temperature' in outputvariablelist:
-        print('Not added - Ventilation Setpoint Temperature Output Variable')
+        if verboseMode:
+            print('Not added - Ventilation Setpoint Temperature Output Variable')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:OutputVariable',
@@ -504,11 +548,13 @@ def addEMSOutputVariableMultipleZone(self):
             EMS_Program_or_Subroutine_Name='',
             Units='C'
             )
-        print('Added - Ventilation Setpoint Temperature Output Variable')
+        if verboseMode:
+            print('Added - Ventilation Setpoint Temperature Output Variable')
     #    print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == 'Ventilation Setpoint Temperature'])
 
     if 'Minimum Outdoor Temperature for MultipleZone ventilation' in outputvariablelist:
-        print('Not added - Minimum Outdoor Temperature for MultipleZone ventilation Output Variable')
+        if verboseMode:
+            print('Not added - Minimum Outdoor Temperature for MultipleZone ventilation Output Variable')
     else:
         self.idf1.newidfobject(
             'EnergyManagementSystem:OutputVariable',
@@ -519,12 +565,13 @@ def addEMSOutputVariableMultipleZone(self):
             EMS_Program_or_Subroutine_Name='',
             Units='C'
             )
-        print('Added - Ventilation Setpoint Temperature Output Variable')
+        if verboseMode:
+            print('Added - Ventilation Setpoint Temperature Output Variable')
     #    print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == 'Minimum Outdoor Temperature for MultipleZone ventilation'])
     del outputvariablelist
 
 
-def addOutputVariablesMultipleZone(self):
+def addOutputVariablesMultipleZone(self, verboseMode: bool = True):
     """Add Output:Variable objects for MultipleZone accim."""
     EnvironmentalImpactFactorslist = ([output for output in self.idf1.idfobjects['Output:EnvironmentalImpactFactors']])
     for i in range(len(EnvironmentalImpactFactorslist)):
@@ -561,11 +608,14 @@ def addOutputVariablesMultipleZone(self):
 
     for outputvariable in outputvariablelist:
         if outputvariable in outputlist:
-            print('Not added - '+outputvariable+' Output:Variable data')
+            if verboseMode:
+                print('Not added - '+outputvariable+' Output:Variable data')
         elif outputvariable.startswith("WIP"):
-            print('Not added - '+outputvariable+' Output:Variable data because its WIP')
+            if verboseMode:
+                print('Not added - '+outputvariable+' Output:Variable data because its WIP')
         elif outputvariable.startswith('Adaptive Thermal Comfort Cost Index'):
-            print('Not added - '+outputvariable+' Output:Variable data because its ATCCI')
+            if verboseMode:
+                print('Not added - '+outputvariable+' Output:Variable data because its ATCCI')
         else:
             self.idf1.newidfobject(
                 'Output:Variable',
@@ -574,7 +624,8 @@ def addOutputVariablesMultipleZone(self):
                 Reporting_Frequency='Hourly',
                 Schedule_Name=''
                 )
-            print('Added - '+outputvariable+' Output:Variable data')
+            if verboseMode:
+                print('Added - '+outputvariable+' Output:Variable data')
     #        print([output for output in self.idf1.idfobjects['Output:Variable'] if output.Variable_Name == outputvariable])
 
     for addittionaloutput in addittionaloutputs:
@@ -585,7 +636,8 @@ def addOutputVariablesMultipleZone(self):
             Reporting_Frequency='Hourly',
             Schedule_Name=''
             )
-        print('Added - '+addittionaloutput+' Output:Variable data')
+        if verboseMode:
+            print('Added - '+addittionaloutput+' Output:Variable data')
 
     del outputvariablelist, outputlist, addittionaloutputs,
 
@@ -596,7 +648,8 @@ def addOutputVariablesMultipleZone(self):
         Reporting_Frequency='Hourly',
         Schedule_Name=''
         )
-    print('Added - Site Outdoor Air Drybulb Temperature Output:Variable data')
+    if verboseMode:
+        print('Added - Site Outdoor Air Drybulb Temperature Output:Variable data')
 
     zonenames = ([sub.replace(':', '_') for sub in ([zone.Name for zone in self.idf1.idfobjects['ZONE']])])
     for zonename in zonenames:
@@ -607,7 +660,8 @@ def addOutputVariablesMultipleZone(self):
             Reporting_Frequency='Hourly',
             Schedule_Name=''
             )
-        print('Added - FORSCRIPT_AHST_'+zonename+' Output:Variable data')
+        if verboseMode:
+            print('Added - FORSCRIPT_AHST_'+zonename+' Output:Variable data')
 
         self.idf1.newidfobject(
             'Output:Variable',
@@ -616,7 +670,8 @@ def addOutputVariablesMultipleZone(self):
             Reporting_Frequency='Hourly',
             Schedule_Name=''
             )
-        print('Added - FORSCRIPT_ACST_'+zonename+' Output:Variable data')
+        if verboseMode:
+            print('Added - FORSCRIPT_ACST_'+zonename+' Output:Variable data')
 
     for zonename in self.zonenames_orig:
         self.idf1.newidfobject(
@@ -626,7 +681,8 @@ def addOutputVariablesMultipleZone(self):
             Reporting_Frequency='Hourly',
             Schedule_Name=''
             )
-        print('Added - '+zonename+' Zone Operative Temperature Output:Variable data')
+        if verboseMode:
+            print('Added - '+zonename+' Zone Operative Temperature Output:Variable data')
 
         self.idf1.newidfobject(
             'Output:Variable',
@@ -635,7 +691,8 @@ def addOutputVariablesMultipleZone(self):
             Reporting_Frequency='Hourly',
             Schedule_Name=''
             )
-        print('Added - '+zonename+' VRF Indoor Unit DX Cooling Coil Output:Variable data')
+        if verboseMode:
+            print('Added - '+zonename+' VRF Indoor Unit DX Cooling Coil Output:Variable data')
 
         self.idf1.newidfobject(
             'Output:Variable',
@@ -644,7 +701,8 @@ def addOutputVariablesMultipleZone(self):
             Reporting_Frequency='Hourly',
             Schedule_Name=''
             )
-        print('Added - '+zonename+' VRF Indoor Unit DX Heating Coil Output:Variable data')
+        if verboseMode:
+            print('Added - '+zonename+' VRF Indoor Unit DX Heating Coil Output:Variable data')
 
         self.idf1.newidfobject(
             'Output:Variable',
@@ -653,4 +711,5 @@ def addOutputVariablesMultipleZone(self):
             Reporting_Frequency='Hourly',
             Schedule_Name=''
             )
-        print('Added - '+zonename+' Zone Outdoor Air Wind Speed Output:Variable data')
+        if verboseMode:
+            print('Added - '+zonename+' Zone Outdoor Air Wind Speed Output:Variable data')
