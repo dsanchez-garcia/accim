@@ -5,3 +5,4 @@ dist/
 *.egg-info/
 tests_sim/
 /.spyproject/
+/tests/SS/

@@ -635,3 +635,101 @@ def test_addCurveObj(IDFobject):
     assert curveobj[0].Maximum_Curve_Output == ''
     assert curveobj[0].Input_Unit_Type_for_X == ''
     assert curveobj[0].Output_Unit_Type == ''
+
+
+def test_addForscriptSchMultipleZone(IDFobject):
+    from eppy.modeleditor import IDF
+
+    IDFobject.addForscriptSchMultipleZone(verboseMode=False)
+    IDFobject.saveaccim(verboseMode=False)
+    idf1 = IDF('TestModel_MultipleZone_pymod.idf')
+
+
+    zonenames_orig = ([zone.Name for zone in idf1.idfobjects['ZONE']])
+
+    zonenames = ([sub.replace(':', '_') for sub in ([zone.Name for zone in idf1.idfobjects['ZONE']])])
+
+    for zonename in zonenames:
+        obj = ([x
+                for x
+                in idf1.idfobjects['Schedule:Compact']
+                if x.Name == "FORSCRIPT_AHST_" + zonename])
+        assert obj[0].Name == "FORSCRIPT_AHST_" + zonename
+        assert obj[0].Schedule_Type_Limits_Name == "Any Number"
+        assert obj[0].Field_1 == 'Through: 12/31'
+        assert obj[0].Field_2 == 'For: AllDays'
+        assert obj[0].Field_3 == 'Until: 24:00'
+        assert obj[0].Field_4 == '20'
+        
+        obj = ([x
+                for x
+                in idf1.idfobjects['Schedule:Compact']
+                if x.Name == "FORSCRIPT_ACST_" + zonename])
+        assert obj[0].Name == "FORSCRIPT_ACST_" + zonename
+        assert obj[0].Schedule_Type_Limits_Name == "Any Number"
+        assert obj[0].Field_1 == 'Through: 12/31'
+        assert obj[0].Field_2 == 'For: AllDays'
+        assert obj[0].Field_3 == 'Until: 24:00'
+        assert obj[0].Field_4 == '24'
+    
+    for i in range(len(zonenames_orig)):
+        obj = ([x
+                for x
+                in idf1.idfobjects['ThermostatSetpoint:DualSetpoint']
+                if x.Name == zonenames_orig[i]+' Dual SP'])
+        assert obj[0].Name == zonenames_orig[i]+' Dual SP'
+        assert obj[0].Heating_Setpoint_Temperature_Schedule_Name == "FORSCRIPT_AHST_" + zonenames[i]
+        assert obj[0].Cooling_Setpoint_Temperature_Schedule_Name == "FORSCRIPT_ACST_" + zonenames[i]
+
+def test_checkVentIsOn(IDFobject):
+    from eppy.modeleditor import IDF
+
+    IDFobject.checkVentIsOn(verboseMode=False)
+    IDFobject.saveaccim(verboseMode=False)
+    idf1 = IDF('TestModel_MultipleZone_pymod.idf')
+
+    obj = ([x
+            for x
+            in idf1.idfobjects['Schedule:Compact']
+            if x.Name == "Vent_SP_temp"])
+    assert obj[0].Name == "Vent_SP_temp"
+    assert obj[0].Schedule_Type_Limits_Name == "Any Number"
+    assert obj[0].Field_1 == 'Through: 12/31'
+    assert obj[0].Field_2 == 'For: AllDays'
+    assert obj[0].Field_3 == 'Until: 24:00'
+    assert obj[0].Field_4 == '24'
+
+    windowlist = ([x
+                   for x
+                   in idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening']
+                   if x.Name.endswith('_Win')])
+    
+    for window in windowlist:
+        assert window.Height_Factor_for_Opening_Factor_1 == 1
+        assert window.Start_Height_Factor_for_Opening_Factor_1 == 0
+        assert window.Width_Factor_for_Opening_Factor_2 == 1
+        assert window.Height_Factor_for_Opening_Factor_2 == 1
+        assert window.Start_Height_Factor_for_Opening_Factor_2 == 0
+    
+    windowlist_2 = ([window
+                     for window
+                     in idf1.idfobjects['AirflowNetwork:MultiZone:Surface']
+                     if window.Surface_Name.endswith('_Win')])
+    for window in windowlist_2:
+        assert window.Ventilation_Control_Mode == 'Temperature'
+        assert window.Ventilation_Control_Zone_Temperature_Setpoint_Schedule_Name == 'Vent_SP_temp'
+        assert window.Venting_Availability_Schedule_Name == 'On'
+
+    doorlist = ([door
+                 for door
+                 in idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening']
+                 if door.Name.endswith('_Door')])
+    for door in doorlist:
+        assert door.Width_Factor_for_Opening_Factor_2 == 1
+
+    doorlist_2 = ([door
+                   for door
+                   in idf1.idfobjects['AirflowNetwork:MultiZone:Surface']
+                   if door.Surface_Name.endswith('_Door')])
+    for door in doorlist_2:
+        assert door.Venting_Availability_Schedule_Name == 'On'

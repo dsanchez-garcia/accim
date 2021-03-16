@@ -1302,6 +1302,13 @@ Schedule:Compact,
     Until: 24:00,             !- Field 16
     0;                        !- Field 17
 
+SCHEDULE:COMPACT,
+    Vent_SP_temp,             !- Name
+    Any Number,               !- Schedule Type Limits Name
+    Through: 12/31,           !- Field 1
+    For: AllDays,             !- Field 2
+    Until: 24:00,24;          !- Field 3
+
 Material,
     Urea Formaldehyde Foam_.1327,    !- Name
     Rough,                    !- Roughness
@@ -2878,14 +2885,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Wall_2_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone2_Wall_2_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Wall_3_0_0,    !- Surface Name
@@ -2898,14 +2905,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Wall_3_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone2_Wall_3_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Wall_4_0_0,    !- Surface Name
@@ -2918,14 +2925,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Wall_4_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone2_Wall_4_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Partition_5_0_0,    !- Surface Name
@@ -2956,14 +2963,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone1_Wall_2_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone1_Wall_2_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block1:Zone1_Wall_4_0_0,    !- Surface Name
@@ -2976,14 +2983,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone1_Wall_4_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone1_Wall_4_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block1:Zone1_Wall_5_0_0,    !- Surface Name
@@ -2996,14 +3003,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone1_Wall_5_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone1_Wall_5_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Roof_1_0_0,    !- Surface Name
@@ -3022,14 +3029,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Wall_2_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone2_Wall_2_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Wall_3_0_0,    !- Surface Name
@@ -3042,14 +3049,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Wall_3_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone2_Wall_3_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Wall_4_0_0,    !- Surface Name
@@ -3062,14 +3069,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Wall_4_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone2_Wall_4_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Partition_5_0_0,    !- Surface Name
@@ -3094,14 +3101,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone1_Wall_2_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone1_Wall_2_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone1_Wall_4_0_0,    !- Surface Name
@@ -3114,14 +3121,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone1_Wall_4_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone1_Wall_4_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone1_Wall_5_0_0,    !- Surface Name
@@ -3134,14 +3141,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone1_Wall_5_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone1_Wall_5_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    NoVent,                   !- Ventilation Control Mode
-    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    Temperature,              !- Ventilation Control Mode
+    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    ;                         !- Venting Availability Schedule Name
+    On;                       !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:ReferenceCrackConditions,
     Reference Crack Conditions,    !- Name
@@ -3279,11 +3286,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3307,11 +3314,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3335,11 +3342,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3363,11 +3370,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3391,11 +3398,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3419,11 +3426,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3447,11 +3454,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3475,11 +3482,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3503,11 +3510,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3531,11 +3538,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3559,11 +3566,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3587,11 +3594,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    0,                        !- Height Factor for Opening Factor 1
+    1,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1e-08,                    !- Width Factor for Opening Factor 2
+    1,                        !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -4534,475 +4541,6 @@ WaterUse:Equipment,
     Block2:Zone1,             !- Zone Name
     ,                         !- Sensible Fraction Schedule Name
     ;                         !- Latent Fraction Schedule Name
-
-CURVE:LINEAR,
-    CoolingCombRatio,         !- Name
-    0.618055,                 !- Coefficient1 Constant
-    0.381945,                 !- Coefficient2 x
-    1.0,                      !- Minimum Value of x
-    1.5,                      !- Maximum Value of x
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    ,                         !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:LINEAR,
-    HeatingCombRatio,         !- Name
-    0.96034,                  !- Coefficient1 Constant
-    0.03966,                  !- Coefficient2 x
-    1.0,                      !- Minimum Value of x
-    1.5,                      !- Maximum Value of x
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    ,                         !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:QUADRATIC,
-    VRFACCoolCapFFF,          !- Name
-    0.8,                      !- Coefficient1 Constant
-    0.2,                      !- Coefficient2 x
-    0.0,                      !- Coefficient3 x2
-    0.5,                      !- Minimum Value of x
-    1.5,                      !- Maximum Value of x
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    ,                         !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:QUADRATIC,
-    CoolingEIRHiPLR,          !- Name
-    1.0,                      !- Coefficient1 Constant
-    0.0,                      !- Coefficient2 x
-    0.0,                      !- Coefficient3 x2
-    1.0,                      !- Minimum Value of x
-    1.5,                      !- Maximum Value of x
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    ,                         !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:QUADRATIC,
-    VRFCPLFFPLR,              !- Name
-    0.85,                     !- Coefficient1 Constant
-    0.15,                     !- Coefficient2 x
-    0.0,                      !- Coefficient3 x2
-    0.0,                      !- Minimum Value of x
-    1.0,                      !- Maximum Value of x
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    ,                         !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:QUADRATIC,
-    HeatingEIRHiPLR,          !- Name
-    2.4294355,                !- Coefficient1 Constant
-    -2.235887,                !- Coefficient2 x
-    0.8064516,                !- Coefficient3 x2
-    1.0,                      !- Minimum Value of x
-    1.5,                      !- Maximum Value of x
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    ,                         !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:CUBIC,
-    DefaultFanEffRatioCurve,    !- Name
-    0.33856828,               !- Coefficient1 Constant
-    1.72644131,               !- Coefficient2 x
-    -1.49280132,              !- Coefficient3 x2
-    0.42776208,               !- Coefficient4 x3
-    0.5,                      !- Minimum Value of x
-    1.5,                      !- Maximum Value of x
-    0.3,                      !- Minimum Curve Output
-    1.0,                      !- Maximum Curve Output
-    ,                         !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:CUBIC,
-    VRFTUCoolCapFT,           !- Name
-    0.504547273506488,        !- Coefficient1 Constant
-    0.0288891279198444,       !- Coefficient2 x
-    -0.000010819418650677,    !- Coefficient3 x2
-    0.0000101359395177008,    !- Coefficient4 x3
-    0.0,                      !- Minimum Value of x
-    50.0,                     !- Maximum Value of x
-    0.5,                      !- Minimum Curve Output
-    1.5,                      !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Dimensionless;            !- Output Unit Type
-
-CURVE:CUBIC,
-    VRFTUHeatCapFT,           !- Name
-    -0.390708928227928,       !- Coefficient1 Constant
-    0.261815023760162,        !- Coefficient2 x
-    -0.0130431603151873,      !- Coefficient3 x2
-    0.000178131745997821,     !- Coefficient4 x3
-    0.0,                      !- Minimum Value of x
-    50.0,                     !- Maximum Value of x
-    0.5,                      !- Minimum Curve Output
-    1.5,                      !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Dimensionless;            !- Output Unit Type
-
-CURVE:CUBIC,
-    VRFCoolCapFTBoundary,     !- Name
-    25.73473775,              !- Coefficient1 Constant
-    -0.03150043,              !- Coefficient2 x
-    -0.01416595,              !- Coefficient3 x2
-    0,                        !- Coefficient4 x3
-    11,                       !- Minimum Value of x
-    30,                       !- Maximum Value of x
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:CUBIC,
-    VRFCoolEIRFTBoundary,     !- Name
-    25.73473775,              !- Coefficient1 Constant
-    -0.03150043,              !- Coefficient2 x
-    -0.01416595,              !- Coefficient3 x2
-    0,                        !- Coefficient4 x3
-    15,                       !- Minimum Value of x
-    24,                       !- Maximum Value of x
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:CUBIC,
-    CoolingEIRLowPLR,         !- Name
-    0.4628123,                !- Coefficient1 Constant
-    -1.0402406,               !- Coefficient2 x
-    2.17490997,               !- Coefficient3 x2
-    -0.5974817,               !- Coefficient4 x3
-    0,                        !- Minimum Value of x
-    1,                        !- Maximum Value of x
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Capacity;                 !- Output Unit Type
-
-CURVE:CUBIC,
-    VRFHeatCapFTBoundary,     !- Name
-    -7.6000882,               !- Coefficient1 Constant
-    3.05090016,               !- Coefficient2 x
-    -0.1162844,               !- Coefficient3 x2
-    0.0,                      !- Coefficient4 x3
-    15,                       !- Minimum Value of x
-    27,                       !- Maximum Value of x
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:CUBIC,
-    VRFHeatEIRFTBoundary,     !- Name
-    -7.6000882,               !- Coefficient1 Constant
-    3.05090016,               !- Coefficient2 x
-    -0.1162844,               !- Coefficient3 x2
-    0.0,                      !- Coefficient4 x3
-    15,                       !- Minimum Value of x
-    27,                       !- Maximum Value of x
-    -20,                      !- Minimum Curve Output
-    15,                       !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:CUBIC,
-    HeatingEIRLowPLR,         !- Name
-    0.1400093,                !- Coefficient1 Constant
-    0.6415002,                !- Coefficient2 x
-    0.1339047,                !- Coefficient3 x2
-    0.0845859,                !- Coefficient4 x3
-    0,                        !- Minimum Value of x
-    1,                        !- Maximum Value of x
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Dimensionless,            !- Input Unit Type for X
-    Dimensionless;            !- Output Unit Type
-
-CURVE:EXPONENT,
-    DefaultFanPowerRatioCurve,    !- Name
-    0,                        !- Coefficient1 Constant
-    1,                        !- Coefficient2 Constant
-    3,                        !- Coefficient3 Constant
-    0,                        !- Minimum Value of x
-    1.5,                      !- Maximum Value of x
-    0.01,                     !- Minimum Curve Output
-    1.5,                      !- Maximum Curve Output
-    ,                         !- Input Unit Type for X
-    ;                         !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    DXHtgCoilDefrostEIRFT,    !- Name
-    1.0,                      !- Coefficient1 Constant
-    0.0,                      !- Coefficient2 x
-    0.0,                      !- Coefficient3 x2
-    0.0,                      !- Coefficient4 y
-    0,                        !- Coefficient5 y2
-    0,                        !- Coefficient6 xy
-    0.0,                      !- Minimum Value of x
-    50.0,                     !- Maximum Value of x
-    0.0,                      !- Minimum Value of y
-    50.0,                     !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRFCoolCapFT,             !- Name
-    0.576882692,              !- Coefficient1 Constant
-    0.017447952,              !- Coefficient2 x
-    0.000583269,              !- Coefficient3 x2
-    -1.76324E-06,             !- Coefficient4 y
-    -7.474E-09,               !- Coefficient5 y2
-    -1.30413E-07,             !- Coefficient6 xy
-    15,                       !- Minimum Value of x
-    24,                       !- Maximum Value of x
-    -5,                       !- Minimum Value of y
-    23,                       !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRFCoolCapFTHi,           !- Name
-    0.6867358,                !- Coefficient1 Constant
-    0.0207631,                !- Coefficient2 x
-    0.0005447,                !- Coefficient3 x2
-    -0.0016218,               !- Coefficient4 y
-    -4.259E-07,               !- Coefficient5 y2
-    -0.0003392,               !- Coefficient6 xy
-    15,                       !- Minimum Value of x
-    24,                       !- Maximum Value of x
-    16,                       !- Minimum Value of y
-    43,                       !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRFCoolEIRFT,             !- Name
-    0.989010541,              !- Coefficient1 Constant
-    -0.02347967,              !- Coefficient2 x
-    0.000199711,              !- Coefficient3 x2
-    0.005968336,              !- Coefficient4 y
-    -1.0289E-07,              !- Coefficient5 y2
-    -0.00015686,              !- Coefficient6 xy
-    15,                       !- Minimum Value of x
-    24,                       !- Maximum Value of x
-    -5,                       !- Minimum Value of y
-    23,                       !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRFCoolEIRFTHi,           !- Name
-    0.14351470,               !- Coefficient1 Constant
-    0.01860035,               !- Coefficient2 x
-    -0.0003954,               !- Coefficient3 x2
-    0.02485219,               !- Coefficient4 y
-    0.00016329,               !- Coefficient5 y2
-    -0.0006244,               !- Coefficient6 xy
-    15,                       !- Minimum Value of x
-    24,                       !- Maximum Value of x
-    16,                       !- Minimum Value of y
-    43,                       !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRFHeatCapFT,             !- Name
-    1.014599599,              !- Coefficient1 Constant
-    -0.002506703,             !- Coefficient2 x
-    -0.000141599,             !- Coefficient3 x2
-    0.026931595,              !- Coefficient4 y
-    1.83538E-06,              !- Coefficient5 y2
-    -0.000358147,             !- Coefficient6 xy
-    15,                       !- Minimum Value of x
-    27,                       !- Maximum Value of x
-    -20,                      !- Minimum Value of y
-    15,                       !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRFHeatCapFTHi,           !- Name
-    1.161134821,              !- Coefficient1 Constant
-    0.027478868,              !- Coefficient2 x
-    -0.00168795,              !- Coefficient3 x2
-    0.001783378,              !- Coefficient4 y
-    2.03208E-06,              !- Coefficient5 y2
-    -6.8969E-05,              !- Coefficient6 xy
-    15,                       !- Minimum Value of x
-    27,                       !- Maximum Value of x
-    -10,                      !- Minimum Value of y
-    15,                       !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRFHeatEIRFT,             !- Name
-    0.87465501,               !- Coefficient1 Constant
-    -0.01319754,              !- Coefficient2 x
-    0.00110307,               !- Coefficient3 x2
-    -0.0133118,               !- Coefficient4 y
-    0.00089017,               !- Coefficient5 y2
-    -0.00012766,              !- Coefficient6 xy
-    15,                       !- Minimum Value of x
-    27,                       !- Maximum Value of x
-    -20,                      !- Minimum Value of y
-    12,                       !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRFHeatEIRFTHi,           !- Name
-    2.504005146,              !- Coefficient1 Constant
-    -0.05736767,              !- Coefficient2 x
-    4.07336E-05,              !- Coefficient3 x2
-    -0.12959669,              !- Coefficient4 y
-    0.00135839,               !- Coefficient5 y2
-    0.00317047,               !- Coefficient6 xy
-    15,                       !- Minimum Value of x
-    27,                       !- Maximum Value of x
-    -10,                      !- Minimum Value of y
-    15,                       !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    CoolingLengthCorrectionFactor,    !- Name
-    1.0693794,                !- Coefficient1 Constant
-    -0.0014951,               !- Coefficient2 x
-    2.56E-06,                 !- Coefficient3 x2
-    -0.1151104,               !- Coefficient4 y
-    0.0511169,                !- Coefficient5 y2
-    -0.0004369,               !- Coefficient6 xy
-    8,                        !- Minimum Value of x
-    175,                      !- Maximum Value of x
-    0.5,                      !- Minimum Value of y
-    1.5,                      !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRF Piping Correction Factor for Length in Heating Mode,    !- Name
-    .989916,                  !- Coefficient1 Constant
-    .001961,                  !- Coefficient2 x
-    -.000036,                 !- Coefficient3 x2
-    0,                        !- Coefficient4 y
-    0,                        !- Coefficient5 y2
-    0,                        !- Coefficient6 xy
-    7,                        !- Minimum Value of x
-    106.5,                    !- Maximum Value of x
-    1,                        !- Minimum Value of y
-    1,                        !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Distance,                 !- Input Unit Type for X
-    Dimensionless,            !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRF Heat Recovery Cooling Capacity Modifier,    !- Name
-    .9,                       !- Coefficient1 Constant
-    0,                        !- Coefficient2 x
-    0,                        !- Coefficient3 x2
-    0,                        !- Coefficient4 y
-    0,                        !- Coefficient5 y2
-    0,                        !- Coefficient6 xy
-    -100,                     !- Minimum Value of x
-    100,                      !- Maximum Value of x
-    -100,                     !- Minimum Value of y
-    100,                      !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRF Heat Recovery Cooling Energy Modifier,    !- Name
-    1.1,                      !- Coefficient1 Constant
-    0,                        !- Coefficient2 x
-    0,                        !- Coefficient3 x2
-    0,                        !- Coefficient4 y
-    0,                        !- Coefficient5 y2
-    0,                        !- Coefficient6 xy
-    -100,                     !- Minimum Value of x
-    100,                      !- Maximum Value of x
-    -100,                     !- Minimum Value of y
-    100,                      !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRF Heat Recovery Heating Capacity Modifier,    !- Name
-    .9,                       !- Coefficient1 Constant
-    0,                        !- Coefficient2 x
-    0,                        !- Coefficient3 x2
-    0,                        !- Coefficient4 y
-    0,                        !- Coefficient5 y2
-    0,                        !- Coefficient6 xy
-    -100,                     !- Minimum Value of x
-    100,                      !- Maximum Value of x
-    -100,                     !- Minimum Value of y
-    100,                      !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
-
-CURVE:BIQUADRATIC,
-    VRF Heat Recovery Heating Energy Modifier,    !- Name
-    1.1,                      !- Coefficient1 Constant
-    0,                        !- Coefficient2 x
-    0,                        !- Coefficient3 x2
-    0,                        !- Coefficient4 y
-    0,                        !- Coefficient5 y2
-    0,                        !- Coefficient6 xy
-    -100,                     !- Minimum Value of x
-    100,                      !- Maximum Value of x
-    -100,                     !- Minimum Value of y
-    100,                      !- Maximum Value of y
-    ,                         !- Minimum Curve Output
-    ,                         !- Maximum Curve Output
-    Temperature,              !- Input Unit Type for X
-    Temperature,              !- Input Unit Type for Y
-    Dimensionless;            !- Output Unit Type
 
 Output:Surfaces:List,
     Details;                  !- Report Type
