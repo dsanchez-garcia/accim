@@ -30,7 +30,7 @@ def make_eplaunch_options(idf, epw):
     return options
 
 
-def runEp94(runOnlyAccim=None, confirmRun=None):
+def runEp94(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2):
     """
     Run simulations in Energy Plus 9.4.0.
 
@@ -96,8 +96,6 @@ def runEp94(runOnlyAccim=None, confirmRun=None):
                 runs.append(temprun)
             else:
                 continue
-
-    num_CPUs = 2
 
     if confirmRun is None:
         confirmRun = input(
