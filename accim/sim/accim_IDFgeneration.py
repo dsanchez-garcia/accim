@@ -211,14 +211,17 @@ def genIDFSingleZone(self,
         ASTtol_end = ASTtol_end_input + ASTtol_steps
 
     if all(arguments):
+        ASTtol_start = round(ASTtol_start, 2)
+        ASTtol_end = round(ASTtol_end, 2)
+        ASTtol_steps = round(ASTtol_steps, 2)
         pass
     else:
         self.AdapStand_List = AdapStand
         self.CAT_List = CAT
         self.ComfMod_List = ComfMod
-        self.ASTtol_value_from = ASTtol_start
-        self.ASTtol_value_to = ASTtol_end
-        self.ASTtol_value_steps = ASTtol_steps
+        self.ASTtol_value_from = round(ASTtol_start, 2)
+        self.ASTtol_value_to = round(ASTtol_end, 2)
+        self.ASTtol_value_steps = round(ASTtol_steps, 2)
 
     if NameSuffix == '':
         suffix = ''
@@ -424,7 +427,9 @@ def genIDFMultipleZone(self,
         ASTtol_end = ASTtol_end_input + ASTtol_steps
 
     if all(arguments):
-        pass
+        ASTtol_start = round(ASTtol_start, 2)
+        ASTtol_end = round(ASTtol_end, 2)
+        ASTtol_steps = round(ASTtol_steps, 2)
     else:
         self.AdapStand_List = AdapStand
         self.CAT_List = CAT
@@ -434,9 +439,9 @@ def genIDFMultipleZone(self,
         self.VSToffset_List = VSToffset
         self.MinOToffset_List = MinOToffset
         self.MaxWindSpeed_List = MaxWindSpeed
-        self.ASTtol_value_from = ASTtol_start
-        self.ASTtol_value_to = ASTtol_end
-        self.ASTtol_value_steps = ASTtol_steps
+        self.ASTtol_value_from = round(ASTtol_start, 2)
+        self.ASTtol_value_to = round(ASTtol_end, 2)
+        self.ASTtol_value_steps = round(ASTtol_steps, 2)
 
     if NameSuffix == '':
         suffix = ''
