@@ -2,7 +2,6 @@ import pytest
 from accim.sim import accim_Main
 
 def test_genIDFSingleZone():
-    # todo to be developed
     pass
     from eppy.modeleditor import IDF
     from os import listdir
