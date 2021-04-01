@@ -3,7 +3,7 @@ Run any of the functions below to add the accis.
 
 These functions transform fixed setpoint temperature
 building energy models into adaptive setpoint temperature energy models
-by addingthe Adaptive Comfort Control Implementation Script (ACCIS)
+by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 """
 
 
@@ -11,6 +11,7 @@ def addAccisSingleZoneEp91():
     """Add SingleZone accis."""
     import accim.sim.accim_Main as accim_Main
     from os import listdir
+    # todo see why it includes output idfs from accim (files with _pymod in the name), check in all accis functions
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
                  and not file.endswith('_pymod.idf')])
