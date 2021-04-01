@@ -42,8 +42,8 @@ def setComfFieldsPeople(self, verboseMode: bool = True):
         self.idf1.removeidfobject(firstpeopleobject)
     peoplelist = ([people for people in self.idf1.idfobjects['PEOPLE']])
     if verboseMode:
-        print('The people objects in the model are:')
-        print(*peoplelist,sep="\n")
+        print('The people objects in the model have been amended.')
+        # print(*peoplelist,sep="\n")
     del peoplelist, firstpeopleobject
 
 
