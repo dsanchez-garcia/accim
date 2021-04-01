@@ -498,9 +498,9 @@ def addAccisMultipleZoneSimplifiedEp94():
 
 
 def addAccis(
-        ScriptType: str = 'MultipleZones',
-        Outputs: str = 'Standard',
-        EnergyPlus_version: str ='Ep94',
+        ScriptType: str = None,
+        Outputs: str = None,
+        EnergyPlus_version: str = None,
         AdapStand: any = None,
         CAT: any = None,
         ComfMod: any = None,
@@ -550,28 +550,52 @@ def addAccis(
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
+    objArgsDef = (
+        ScriptType is None,
+        Outputs is None,
+        EnergyPlus_version is None
+    )
+
+    fullScriptTypeList = ['MultipleZone',
+                          'multiplezone',
+                          'mz',
+                          'SingleZone',
+                          'singlezone',
+                          'sz'
+    ]
+
+    fullOutputsList = [
+        'Standard',
+        'standard',
+        'Simplified',
+        'simplified',
+        'Timestep',
+        'timestep'
+    ]
+
+    fullEPversionsList = [
+        'Ep91',
+        'ep91',
+        'Ep94',
+        'ep94'
+    ]
+
+    if all(objArgsDef):
+        ScriptType = input("Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): ")
+        while ScriptType not in fullScriptTypeList:
+            ScriptType = input("ScriptType was not correct. Please, enter the ScriptType (MultipleZone or mz, or SingleZone or sz): ")
+        Outputs = input("Enter the Output (Standard, Simplified or Timestep): ")
+        while Outputs not in fullOutputsList:
+            Outputs = input("Output was not correct. Please, enter the Output (Standard, Simplified or Timestep): ")
+        EnergyPlus_version = input("Enter the EnergyPlus version (Ep91 or Ep94): ")
+        while EnergyPlus_version not in fullEPversionsList:
+            EnergyPlus_version = input("EnergyPlus version was not correct. Please, enter the EnergyPlus version (Ep91 or Ep94): ")
+
     for file in filelist:
+        print('''\n=======================START OF PROCESS=======================\n''')
+        print('Starting with file:')
+        print(file)
         z = accim_Main.accimInstance(filename_temp=file, ScriptType=ScriptType, EnergyPlus_version=EnergyPlus_version)
-
-        # if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
-        #     if EnergyPlus_version.lower() == 'ep94':
-        #         z = accim_Main.accimobj_MultipleZone_Ep94(file)
-        #     elif EnergyPlus_version.lower() == 'ep91':
-        #         z = accim_Main.accimobj_MultipleZone_Ep91(file)
-        #     else:
-        #         raise ValueError("""EnergyPlus version not supported.\n
-        #                          Only works for EnergyPlus 9.1 (enter Ep91) and
-        #                          EnergyPlus 9.4 (enter Ep94) versions.""")
-        # elif ScriptType.lower() == 'SingleZone'.lower() or ScriptType.lower() == 'sz':
-        #     if EnergyPlus_version.lower() == 'ep94':
-        #         z = accim_Main.accimobj_SingleZone_Ep94(file)
-        #     elif EnergyPlus_version.lower() == 'ep91':
-        #         z = accim_Main.accimobj_SingleZone_Ep91(file)
-        #     else:
-        #         raise ValueError("""EnergyPlus version not supported.\n
-        #                          Only works for EnergyPlus 9.1 (enter Ep91) and
-        #                          EnergyPlus 9.4 (enter Ep94) versions.""")
-
 
         z.setComfFieldsPeople()
         z.addOpTempTherm()
@@ -621,6 +645,9 @@ def addAccis(
             z.addOutputVariablesTimestep()
 
         z.saveaccim()
+        print('Ending with file:')
+        print(file)
+        print('''\n=======================END OF PROCESS=======================\n''')
 
     z = accim_Main.accimobj()
 

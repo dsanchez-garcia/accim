@@ -181,16 +181,16 @@ def inputdataMultipleZone(self):
 
 
 def genIDFSingleZone(self,
-                     AdapStand=None,
-                     CAT=None,
-                     ComfMod=None,
-                     ASTtol_start=0.1,
-                     ASTtol_end_input=0.1,
-                     ASTtol_steps=0.1,
-                     NameSuffix='',
-                     verboseMode: bool =True,
-                     confirmGen: bool =None
-                     ):
+         AdapStand=None,
+         CAT=None,
+         ComfMod=None,
+         ASTtol_start=0.1,
+         ASTtol_end_input=0.1,
+         ASTtol_steps=0.1,
+         NameSuffix='',
+         verboseMode: bool =True,
+         confirmGen: bool =None
+         ):
     """Generate IDFs in SingleZone."""
     import os
     from os import listdir
@@ -211,9 +211,9 @@ def genIDFSingleZone(self,
         ASTtol_end = ASTtol_end_input + ASTtol_steps
 
     if all(arguments):
-        ASTtol_start = round(ASTtol_start, 2)
-        ASTtol_end = round(ASTtol_end, 2)
-        ASTtol_steps = round(ASTtol_steps, 2)
+        self.ASTtol_value_from = round(self.ASTtol_value_from, 2)
+        self.ASTtol_value_to = round(self.ASTtol_value_to, 2)
+        self.ASTtol_value_steps = round(self.ASTtol_value_steps, 2)
         pass
     else:
         self.AdapStand_List = AdapStand
@@ -427,9 +427,9 @@ def genIDFMultipleZone(self,
         ASTtol_end = ASTtol_end_input + ASTtol_steps
 
     if all(arguments):
-        ASTtol_start = round(ASTtol_start, 2)
-        ASTtol_end = round(ASTtol_end, 2)
-        ASTtol_steps = round(ASTtol_steps, 2)
+        self.ASTtol_value_from = round(self.ASTtol_value_from, 2)
+        self.ASTtol_value_to = round(self.ASTtol_value_to, 2)
+        self.ASTtol_value_steps = round(self.ASTtol_value_steps, 2)
     else:
         self.AdapStand_List = AdapStand
         self.CAT_List = CAT
