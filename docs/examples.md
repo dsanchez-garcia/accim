@@ -8,13 +8,29 @@ Say you have an IDF in some folder, called 'TestModel_MultipleZone.idf'. So, let
 
 ```
 >>> from accim.sim import accis
->>> dir(accis)
-['__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', 'addAccisMultipleZoneEp91', 'addAccisMultipleZoneEp94', 'addAccisMultipleZoneSimplifiedEp91', 'addAccisMultipleZoneSimplifiedEp94', 'addAccisMultipleZoneTimestepEp91', 'addAccisMultipleZoneTimestepEp94', 'addAccisSingleZoneEp91', 'addAccisSingleZoneEp94', 'addAccisSingleZoneSimplifiedEp91', 'addAccisSingleZoneSimplifiedEp94', 'addAccisSingleZoneTimestepEp91', 'addAccisSingleZoneTimestepEp94']
->>> accis.addAccisMultipleZoneEp94()
+>>> accis.addAccis()
+```
+When we hit enter, we'll be asked to enter some information regarding the ScriptType, the Outputs and the EnergyPlus version:
+```
+Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): mz
+Enter the Output (Standard, Simplified or Timestep): standard
+Enter the EnergyPlus version (Ep91 or Ep94): ep94
 ```
 When we hit enter, it's going to add all the EnergyPlus objects needed, and afterwards ask us to enter the required information:
-
 ```
+=======================START OF PROCESS=======================
+
+Starting with file:
+TestModel_MultipleZone
+.
+.
+.
+IDF has been saved
+Ending with file:
+TestModel_MultipleZone
+
+=======================END OF PROCESS=======================
+
 Enter the Adaptive Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55): 1
           Are you sure the numbers are correct? [y or [] / n]:
 Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT): 1 2 3
@@ -37,6 +53,7 @@ Enter the ASTtol value to (if omitted, will be 0.1):
           Are you sure the numbers are correct? [y or [] / n]:
 Enter the ASTtol value steps (if omitted, will be 0.1):
           Are you sure the numbers are correct? [y or [] / n]:
+
 ```
 Afterwards, ACCIS will let us know which the output IDFs are going to be, the total number of them and will ask for our confirmation to proceed:
 ```
@@ -81,14 +98,33 @@ Afterwards, you just need to run the simulation. In my opinion, The easiest and 
 
 In case of SingleZone functions, it's pretty much the same thing:
 
+Say you have an IDF in some folder, called 'TestModel_SingleZone.idf'. So, let's run the functions to get the energy models with adaptive setpoint temperatures.
+
 ```
 >>> from accim.sim import accis
->>> dir(accis)
-['__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', 'addAccisMultipleZoneEp91', 'addAccisMultipleZoneEp94', 'addAccisMultipleZoneSimplifiedEp91', 'addAccisMultipleZoneSimplifiedEp94', 'addAccisMultipleZoneTimestepEp91', 'addAccisMultipleZoneTimestepEp94', 'addAccisSingleZoneEp91', 'addAccisSingleZoneEp94', 'addAccisSingleZoneSimplifiedEp91', 'addAccisSingleZoneSimplifiedEp94', 'addAccisSingleZoneTimestepEp91', 'addAccisSingleZoneTimestepEp94']
->>> accis.addAccisSingleZoneEp94()
+>>> accis.addAccis()
+```
+When we hit enter, we'll be asked to enter some information regarding the ScriptType, the Outputs and the EnergyPlus version:
+```
+Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): sz
+Enter the Output (Standard, Simplified or Timestep): standard
+Enter the EnergyPlus version (Ep91 or Ep94): ep94
 ```
 When we hit enter, it's going to add all the EnergyPlus objects needed, and afterwards ask us to enter the required information:
 ```
+=======================START OF PROCESS=======================
+
+Starting with file:
+TestModel_SingleZone
+.
+.
+.
+IDF has been saved
+Ending with file:
+TestModel_SingleZone
+
+=======================END OF PROCESS=======================
+
 Enter the Adaptive Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55): 1
           Are you sure the numbers are correct? [y or [] / n]:
 Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT): 1 2 3

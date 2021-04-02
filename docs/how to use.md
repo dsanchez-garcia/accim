@@ -17,27 +17,22 @@ First you need to import the module 'accis' (stands for Adaptive Comfort Control
 ```
 >>> from accim.sim import accis
 ```
-And then, if you enter 'dir(accis)' it will return all the different functions available:
+And then, you just need to call the accis function:
 ```
->>> dir(accis)
-['__builtins__', '__cached__', '__doc__', '__file__', '__loader__', '__name__', '__package__', '__spec__', 'addAccisMultipleZoneEp91', 'addAccisMultipleZoneEp94', 'addAccisMultipleZoneSimplifiedEp91', 'addAccisMultipleZoneSimplifiedEp94', 'addAccisMultipleZoneTimestepEp91', 'addAccisMultipleZoneTimestepEp94', 'addAccisSingleZoneEp91', 'addAccisSingleZoneEp94', 'addAccisSingleZoneSimplifiedEp91', 'addAccisSingleZoneSimplifiedEp94', 'addAccisSingleZoneTimestepEp91', 'addAccisSingleZoneTimestepEp94']
+>>> accis.addAccis()
 ```
-You can see the different functions. The name is composed by the following fields:
-
-__addAccis{MultipleZone or SingleZone}{Simplified, Standard or Timestep}{Ep91 or Ep94}__
-
+Then you'll be asked in the prompt to enter some information so that python knows how do you want to set up the output IDFs:
+```
+Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): mz
+Enter the Output (Standard, Simplified or Timestep): standard
+Enter the EnergyPlus version (Ep91 or Ep94): ep94
+```
 where
-- MultipleZone or SingleZone refers to the type of functions as explained above
-- Simplified, Timestep or just empty refers to the simulation results: Simplified means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; if this field is just empty, it means that results will contain the full selection; and Timestep means that results are going to be the full selection in Timestep frequency, so this is only recommended for tests, or small number of simulations.
-- Ep91 or Ep94 refers to the IDF EnergyPlus version, which could be EnergyPlus 9.1.0 or EnergyPlus 9.4.0.
+- ScriptType can be MultipleZone or SingleZone, and it refers to the type of functions as explained above
+- Outputs can be Standard, Simplified or Timestep, and it refers to the simulation results: Standard means that results will contain the full selection; Simplified means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and Timestep means that results are going to be the full selection in Timestep frequency, so this is only recommended for tests, or small number of simulations.
+- EnergyPlus version can be Ep91 or Ep94, and it refers to the IDF EnergyPlus version, which could be EnergyPlus 9.1.0 or EnergyPlus 9.4.0. You can try with other EnergyPlus versions, but it's not guaranteed to work, and you'll still need to be entering ep91 or ep94 in the information.
 
-Besides, you can see there's another function called just `addAccis()`, that takes as arguments if you want it to be MultipleZone or SingleZone, Simplified, Standard or Timestep, and Ep91 or Ep94. Therefore, the first argument takes 'multiplezone' or 'mz' for MultipleZones scripts, or 'singlezone' or 'sz' for SingleZone scripts; the second parameter takes 'simplified', 'standard' or 'timestep'; and the third one takes 'ep91' or 'ep94'. All of these three arguments must be strings. The usage of this function will be detailed below.
-
-Finally, you just need to run the function that suits your needs, for example:
-```
->>> accis.addAccisMultipleZoneEp94()
-```
-or, if you prefer:
+Besides, `addAccis()` can take the same values we entered before in the prompt command as arguments. The usage of this function will be detailed below. An example of this, to get the same results as shown in the command prompt would be:
 ```
 >>> accis.addAccis('mz','standard','ep94')
 ```
@@ -48,7 +43,7 @@ Once you run the simulations, you might get some EnergyPlus warnings and severe 
 ## Setting up the target IDFs
 ### MultipleZones functions
 
-If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)` or any of the MultipleZones functions, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
+If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)`, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
 ```
 >>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
@@ -138,7 +133,7 @@ If some inputs are not used or don't make sense, you'll be able to se an 'X' in 
 
 ### SingleZone functions
 
-Just as previously explained for MultipleZones scripts, if you run `accis.addAccis('sz', whateverOutputs, whateverEPversion)` or any of the SingleZone functions, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
+Just as previously explained for MultipleZones scripts, if you run `accis.addAccis('sz', whateverOutputs, whateverEPversion)`, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
 ```
 >>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
