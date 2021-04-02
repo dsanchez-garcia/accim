@@ -11,10 +11,9 @@ def addAccisSingleZoneEp91():
     """Add SingleZone accis."""
     import accim.sim.accim_Main as accim_Main
     from os import listdir
-    # todo see why it includes output idfs from accim (files with _pymod in the name), check in all accis functions
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -52,7 +51,7 @@ def addAccisSingleZoneEp94():
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -90,7 +89,7 @@ def addAccisSingleZoneTimestepEp91():
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -129,7 +128,7 @@ def addAccisSingleZoneTimestepEp94():
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -168,7 +167,7 @@ def addAccisSingleZoneSimplifiedEp91():
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -206,7 +205,7 @@ def addAccisSingleZoneSimplifiedEp94():
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -244,7 +243,7 @@ def addAccisMultipleZoneEp91():
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -287,7 +286,7 @@ def addAccisMultipleZoneEp94():
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -330,7 +329,7 @@ def addAccisMultipleZoneTimestepEp91():
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -374,7 +373,7 @@ def addAccisMultipleZoneTimestepEp94():
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -418,7 +417,7 @@ def addAccisMultipleZoneSimplifiedEp91():
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -461,7 +460,7 @@ def addAccisMultipleZoneSimplifiedEp94():
     from os import listdir
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not file.endswith('_pymod.idf')])
+                 and '_pymod' not in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
