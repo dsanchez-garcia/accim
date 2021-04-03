@@ -550,9 +550,9 @@ def addAccis(
     filelist = ([file.split('.idf')[0] for file in filelist])
 
     objArgsDef = (
-        ScriptType is None,
-        Outputs is None,
-        EnergyPlus_version is None
+        ScriptType is not None,
+        Outputs is not None,
+        EnergyPlus_version is not None
     )
 
     fullScriptTypeList = ['MultipleZone',
@@ -578,8 +578,10 @@ def addAccis(
         'Ep94',
         'ep94'
     ]
-
+    # todo raise error when arguments are not correct: install package and try with command line
     if all(objArgsDef):
+        pass
+    else:
         ScriptType = input("Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): ")
         while ScriptType not in fullScriptTypeList:
             ScriptType = input("ScriptType was not correct. Please, enter the ScriptType (MultipleZone or mz, or SingleZone or sz): ")
@@ -589,6 +591,22 @@ def addAccis(
         EnergyPlus_version = input("Enter the EnergyPlus version (Ep91 or Ep94): ")
         while EnergyPlus_version not in fullEPversionsList:
             EnergyPlus_version = input("EnergyPlus version was not correct. Please, enter the EnergyPlus version (Ep91 or Ep94): ")
+
+    print('ScriptType is: '+ScriptType)
+    if ScriptType not in fullScriptTypeList:
+        print('Valid ScriptTypes: ')
+        print(fullScriptTypeList)
+        raise ValueError(ScriptType + " is not a valid ScriptType. You must choose a ScriptType from the list above.")
+    print('Outputs are: '+Outputs)
+    if Outputs not in fullOutputsList:
+        print('Valid Outputs: ')
+        print(fullOutputsList)
+        raise ValueError(Outputs + " is not a valid Output. You must choose a Output from the list above.")
+    print('EnergyPlus version is: '+EnergyPlus_version)
+    if EnergyPlus_version not in fullEPversionsList:
+        print('Valid EnergyPlus_version: ')
+        print(fullEPversionsList)
+        raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. You must choose a EnergyPlus_version from the list above.")
 
     for file in filelist:
         print('''\n=======================START OF PROCESS=======================\n''')
@@ -650,25 +668,30 @@ def addAccis(
 
     z = accim_Main.accimobj()
 
-    arguments = (
-        AdapStand is None,
-        CAT is None,
-        ComfMod is None,
-        HVACmode is None,
-        VentCtrl is None,
-        VSToffset == [0],
-        MinOToffset == [50],
-        MaxWindSpeed == [50],
-        ASTtol_start == 0.1,
-        ASTtol_end_input == 0.1,
-        ASTtol_steps == 0.1
-        )
+    # arguments = (
+    #     AdapStand is None,
+    #     CAT is None,
+    #     ComfMod is None,
+    #     HVACmode is None,
+    #     VentCtrl is None,
+    #     VSToffset == [0],
+    #     MinOToffset == [50],
+    #     MaxWindSpeed == [50],
+    #     ASTtol_start == 0.1,
+    #     ASTtol_end_input == 0.1,
+    #     ASTtol_steps == 0.1
+    #     )
+
+    args_needed = (
+        AdapStand is not None,
+        CAT is not None,
+        ComfMod is not None,
+        HVACmode is not None,
+        VentCtrl is not None,
+    )
 
     if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
-        if all(arguments):
-            z.inputdataMultipleZone()
-            z.genIDFMultipleZone()
-        else:
+        if all(args_needed):
             z.genIDFMultipleZone(
                 AdapStand,
                 CAT,
@@ -683,11 +706,11 @@ def addAccis(
                 ASTtol_steps,
                 NameSuffix
                 )
-    elif ScriptType.lower() == 'SingleZone'.lower() or ScriptType.lower() == 'sz':
-        if all(arguments):
-            z.inputdataSingleZone()
-            z.genIDFSingleZone()
         else:
+            z.inputdataMultipleZone()
+            z.genIDFMultipleZone()
+    elif ScriptType.lower() == 'SingleZone'.lower() or ScriptType.lower() == 'sz':
+        if all(args_needed):
             z.genIDFSingleZone(
                 AdapStand,
                 CAT,
@@ -697,3 +720,6 @@ def addAccis(
                 ASTtol_steps,
                 NameSuffix
                 )
+        else:
+            z.inputdataSingleZone()
+            z.genIDFSingleZone()

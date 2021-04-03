@@ -47,12 +47,12 @@ If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)`, you will 
 ```
 >>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
->>>                str, # EP version: 'ep91' or 'ep94'
->>>                list, # Adaptive Standard
->>>                list, # Category
->>>                list, # Comfort Mode
->>>                list, # HVAC Mode
->>>                list, # Ventilation Control
+>>>                str, # EnergyPlus_version: 'ep91' or 'ep94'
+>>>                list, # AdapStand, which is the Adaptive Standard
+>>>                list, # CAT, which is the Category
+>>>                list, # ComfMod, which is Comfort Mode
+>>>                list, # HVACmode, which is the HVAC mode
+>>>                list, # VentCtrl, which is the Ventilation Control
 >>>                list, # VSToffset
 >>>                list, # MinOToffset
 >>>                list, # MaxWindSpeed
@@ -64,35 +64,36 @@ If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)`, you will 
 ```
 Some example of the usage could be:
 ```
->>> accis.addAccis('mz', # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
->>>                'standard', # Outputs: 'simplified', 'standard' or 'timestep'
->>>                'ep94', # EP version: 'ep91' or 'ep94'
->>>                [0, 1, 2], # Adaptive Standard
->>>                [1, 2, 3, 80, 90], # Category
->>>                [0, 1, 2, 3], # Comfort Mode
->>>                [0, 1, 2], # HVAC Mode
->>>                [0, 1], # Ventilation Control
->>>                [0, 1, 2], # VSToffset
->>>                [0, 1, 2], # MinOToffset
->>>                [10, 20, 30], # MaxWindSpeed
->>>                0, # ASTtol start
->>>                2, # ASTtol end
->>>                0.25, # ASTtol steps
->>>                'standard' # Name Suffix: for example, just in case you want to clarify the outputs
+>>> accis.addAccis(ScriptType='mz', # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
+>>>                Outputs='standard', # Outputs: 'simplified', 'standard' or 'timestep'
+>>>                EnergyPlus_version='ep94', # EnergyPlus_version: 'ep91' or 'ep94'
+>>>                AdapStand=[0, 1, 2], # AdapStand, which is the Adaptive Standard
+>>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category
+>>>                ComfMod=[0, 1, 2, 3], # ComfMod, which is Comfort Mode
+>>>                HVACmode=[0, 1, 2], # HVACmode, which is the HVAC mode
+>>>                VentCtrl=[0, 1], # VentCtrl, which is the Ventilation Control
+>>>                VSToffset=[0, 1, 2], # VSToffset, which is the Ventilation Setpoint Temperature offset
+>>>                MinOToffset=[0, 1, 2], # MinOToffset, which is the Minimum Outdoor Temperature offset
+>>>                MaxWindSpeed=[10, 20, 30], # MaxWindSpeed, which is th Maximum Wind Speed
+>>>                ASTtol_start=0, # ASTtol_start, which is the start of the tolerance sequence
+>>>                ASTtol_end_input=2, # ASTtol_end_input, which is the end of the tolerance sequence
+>>>                ASTtol_steps=0.25, # ASTtol_steps, which are the steps of the tolerance sequence
+>>>                NameSuffix='standard' # Name Suffix: for example, just in case you want to clarify the outputs
 >>>                )
 ```
+If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs, EnergyPlus_version, AdapStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
 Each argument is explained below:
 
-- Adaptive Standard: refers to the adaptive thermal comfort model to be applied. Enter 0 for CTE, 1 for EN16798-1 and 2 for ASHRAE 55. For example, if you enter '0 1 2', you'll get IDFs for all the models. If you don't enter any number, or if some of the numbers entered are not 0, 1 or 2, it'll ask you to enter the numbers again.
+- AdapStand: and refers to the adaptive thermal comfort model to be applied. Enter 0 for CTE, 1 for EN16798-1 and 2 for ASHRAE 55. For example, if you enter '0 1 2', you'll get IDFs for all the models. If you don't enter any number, or if some of the numbers entered are not 0, 1 or 2, it'll ask you to enter the numbers again.
 
-- Category:  refers to the category of the adaptive thermal comfort model applied. Enter 1 for CAT I, 2 for CAT II,  and 3 for CAT III of EN16798; 80 for 80% acceptability and 90 for 90% acceptability in ASHRAE55. So, for example, if you enter '1 2 3 80 90' you'll get all categories for EN16798 and ASHRAE55 models, or if you enter '1 2 80' you'll get categories 1 and 2 for EN16798, and 80% acceptability for ASHRAE55. Please note that the Category values must be consistent with the Adaptive Standard values previously entered. If, for instance, you enter '1' in the Adaptive Standard value (means you're asking for EN16798 model), but then enter '80' or '90' in the Category value (which are categories used in ASHRAE55), you won't get the results you want.
+- CAT: and refers to the category of the adaptive thermal comfort model applied. Enter 1 for CAT I, 2 for CAT II,  and 3 for CAT III of EN16798; 80 for 80% acceptability and 90 for 90% acceptability in ASHRAE55. So, for example, if you enter '1 2 3 80 90' you'll get all categories for EN16798 and ASHRAE55 models, or if you enter '1 2 80' you'll get categories 1 and 2 for EN16798, and 80% acceptability for ASHRAE55. Please note that the Category values must be consistent with the Adaptive Standard values previously entered. If, for instance, you enter '1' in the Adaptive Standard value (means you're asking for EN16798 model), but then enter '80' or '90' in the Category value (which are categories used in ASHRAE55), you won't get the results you want.
 
-- Comfort Mode: refers to the comfort modes, which can be explained as follows:
+- ComfMod: is the Comfort Mode, and refers to the comfort modes used in ACCIM, which can be explained as follows:
 In static mode, static (or PMV-based) setpoint temperatures are applied all the time; in OUT-CTE mode, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, CTE (which is the Spanish Technical Building Code) setpoint temperatures (which are static) are applied; in OUT-SEN16798/SASHRAE55, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, EN16798-1 or ASHRAE 55 static setpoint temperatures are applied; and in OUT-AEN16798/AASHRAE55, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, EN16798-1 or ASHRAE 55 highest and lowest adaptive comfort limits are horizontally extended. Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Therefore, enter 0 for Static; 1 for OUT-CTE, 2 for OUT-SEN16798/SASHRAE55 and 3 for OUT-AEN16798/AASHRAE55). For example, if you enter '0 1 2 3' you'll be getting all different Comfort Modes.
 
-- HVAC Mode: refers to the HVAC mode applied. Enter 0 for Fully Air-conditioned, 1 for Naturally ventilated and/or 2 for Mixed Mode. Please note that Calculated natural ventilation must be enabled so that Mixed Mode works. So, for example, if you enter '0 1 2' you'll be getting all HVAC modes, or if you just enter '0 1' you'll be getting just Fully Air-conditioned and Naturally ventilated.
+- HVACmode: refers to the HVAC mode applied. Enter 0 for Fully Air-conditioned, 1 for Naturally ventilated and/or 2 for Mixed Mode. Please note that Calculated natural ventilation must be enabled so that Mixed Mode works. So, for example, if you enter '0 1 2' you'll be getting all HVAC modes, or if you just enter '0 1' you'll be getting just Fully Air-conditioned and Naturally ventilated.
 
-- Ventilation Control: refers to the ventilation control, only used in Mixed Mode (HVAC Mode '2'). If you enter '0', ventilation will be allowed if operative temperature exceeds neutral temperature (also known as comfort temperature); if you enter '1', ventilation will be allowed if operative temperature exceeds the upper comfort limit. In other words, sets the value of the neutral temperature or the upper comfort limit to the Ventilation Setpoint Temperature (VST). Either way, if you enter '0 1' you'll be getting both ventilation control modes.
+- VentCtrl: refers to the ventilation control, only used in Mixed Mode (HVAC Mode '2'). If you enter '0', ventilation will be allowed if operative temperature exceeds neutral temperature (also known as comfort temperature); if you enter '1', ventilation will be allowed if operative temperature exceeds the upper comfort limit. In other words, sets the value of the neutral temperature or the upper comfort limit to the Ventilation Setpoint Temperature (VST). Either way, if you enter '0 1' you'll be getting both ventilation control modes.
 
 - VSToffset: stands for Ventilation Setpoint Temperature (VST) offset, again only used in Mixed Mode (HVAC Mode '2'). Applies the entered values as an offset to the VST, in Celsius degrees. Values entered can be positive or negative float or integers, and must be space-separated. For example, if you enter '-2 -1 0 1 2' you'll be getting offsets of -2°C, -1°C, 0°C, 1°C and 2°C to the VST. If you don't enter any number, it'll be used '0' as the default value.
 
@@ -137,37 +138,38 @@ Just as previously explained for MultipleZones scripts, if you run `accis.addAcc
 ```
 >>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
->>>                str, # EP version: 'ep91' or 'ep94'
->>>                list, # Adaptive Standard
->>>                list, # Category
->>>                list, # Comfort Mode
->>>                float, # ASTtol start
->>>                float, # ASTtol end
->>>                float, # ASTtol steps
+>>>                str, # EnergyPlus_version: 'ep91' or 'ep94'
+>>>                list, # AdapStand, which is the Adaptive Standard
+>>>                list, # CAT, which is the Category
+>>>                list, # ComfMod, which is Comfort Mode
+>>>                float, # ASTtol_start, which is the start of the tolerance sequence
+>>>                float, # ASTtol_end_input, which is the end of the tolerance sequence
+>>>                float, # ASTtol_steps, which are the steps of the tolerance sequence
 >>>                str # NameSuffix: some text you might want to add at the end of the output IDF file name
 >>>                )
 ```
 Some example of the usage could be:
 ```
->>> accis.addAccis('sz', # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
->>>                'standard', # Outputs: 'simplified', 'standard' or 'timestep'
->>>                'ep94', # EP version: 'ep91' or 'ep94'
->>>                [0, 1, 2], # Adaptive Standard
->>>                [1, 2, 3, 80, 90], # Category
->>>                [0, 1, 2, 3], # Comfort Mode
->>>                0, # ASTtol start
->>>                2, # ASTtol end
->>>                0.25, # ASTtol steps
->>>                'standard' # Name Suffix: for example, just in case you want to clarify the outputs
+>>> accis.addAccis(ScriptType='sz', # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
+>>>                Outputs='standard', # Outputs: 'simplified', 'standard' or 'timestep'
+>>>                EnergyPlus_version='ep94', # EnergyPlus_version: 'ep91' or 'ep94'
+>>>                AdapStand=[0, 1, 2], # AdapStand, which is the Adaptive Standard
+>>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category
+>>>                ComfMod=[0, 1, 2, 3], # ComfMod, which is Comfort Mode
+>>>                ASTtol_start=0, # ASTtol_start, which is the start of the tolerance sequence
+>>>                ASTtol_end_input=2, # ASTtol_end_input, which is the end of the tolerance sequence
+>>>                ASTtol_steps=0.25, # ASTtol_steps, which are the steps of the tolerance sequence
+>>>                NameSuffix='standard' # Name Suffix: for example, just in case you want to clarify the outputs
 >>>                )
 ```
+If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs, EnergyPlus_version, AdapStand, CAT and ComfMod. For clarity purposes, it's recommended to specify the argument name as well. If you don't specify all aforementioned arguments, you'll be asked to enter them at the prompt command, and these values will be used instead of those specified in the function call.
 Each argument is explained below:
 
-- Adaptive Standard: same as explained above; please refer to MultipleZone functions.
+- AdapStand: same as explained above; please refer to MultipleZone functions.
 
-- Category: same as explained above; please refer to MultipleZone functions.
+- CAT: same as explained above; please refer to MultipleZone functions.
 
-- Comfort Mode: same as explained above; please refer to MultipleZone functions.
+- ComfMod: same as explained above; please refer to MultipleZone functions.
 
 - ASTtol: same as explained above; please refer to MultipleZone functions.
 

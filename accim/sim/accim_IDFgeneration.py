@@ -204,7 +204,6 @@ def genIDFSingleZone(self,
                  ASTtol_start == 0.1,
                  ASTtol_end_input == 0.1,
                  ASTtol_steps == 0.1)
-    # todo if the user adds some arguments but leave others by default, might get some error; so raise error needs to be added
     if all(arguments):
         self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
     else:
@@ -420,7 +419,6 @@ def genIDFMultipleZone(self,
                  ASTtol_start == 0.1,
                  ASTtol_end_input == 0.1,
                  ASTtol_steps == 0.1)
-    # todo if the user adds some arguments but leave others by default, might get some error; so raise error needs to be added
     if all(arguments):
         self.ASTtol_value_to = self.ASTtol_value_to_input+self.ASTtol_value_steps
     else:
