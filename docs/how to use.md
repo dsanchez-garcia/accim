@@ -43,7 +43,7 @@ Once you run the simulations, you might get some EnergyPlus warnings and severe 
 ## Setting up the target IDFs
 ### MultipleZones functions
 
-If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)`, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
+If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)`, you will be asked in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
 ```
 >>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
@@ -60,6 +60,8 @@ If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)`, you will 
 >>>                float, # ASTtol end
 >>>                float, # ASTtol steps
 >>>                str # NameSuffix: some text you might want to add at the end of the output IDF file name
+>>>                bool # verboseMode: True to print all process in screen, False to not to print it. Default is True.
+>>>                bool # confirmGen: True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. 
 >>>                )
 ```
 Some example of the usage could be:
@@ -103,6 +105,12 @@ In static mode, static (or PMV-based) setpoint temperatures are applied all the 
 
 - ASTtol: stands for Adaptive Setpoint Temperature tolerance. It applies the number that you enter as a tolerance for the adaptive heating and cooling setpoint temperatures. The  original problem was that, if we assigned the adaptive setpoint straight to the comfort limit (i.e. you enter '0' for ASTtol), there were a few hours that fell outside the comfort zone because of the error in some decimals in the simulation of the operative temperature. Therefore, the original purpose of this feature is to control that all hours are comfortable hours (i.e. operative temperature falls within the comfort zone), and we can make that sure by considering a little tolerance of 0.10 °C. For example, say that adaptive cooling and heating setpoints are originally 29.5 and 21.5°C at some day; if you enter '1' for ASTtol, then the setpoints would be modified to 28.5 and 22.5°C (1°C below original cooling setpoint, and 1°C above original heating setpoint). The function will create a sequence of numbers based on the entered values. So, numbers must be entered in 3 stages: first, the start of the sequence; second, the end of the sequence, and third, the steps. So for example, if you enter '0' for the start, '1' for the end, and '0.25' for the steps, you would be getting ASTtol values of 0°C, 0.25°C, 0.5°C, 0.75°C and 1°C. If you don't enter any number, it'll be used '0.1' as the default value (as previously said, to make sure all hours are comfortable hours), and you would be getting only one variation of 0.1°C.
 
+- NameSuffix: the text you would like to add at the end of the file name.
+
+- verboseMode: True to print all process in screen, False to not to print it. Default is True.
+
+- confirmGen: Generally, this argument should be left as default. True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. So, if you are going to set it True, be sure about the number of IDFs you are going to generate, because these might be thousands.
+
 So, below you can see a sample name of an IDF created by using ACCIM's MultipleZone functions. The package takes the original IDF file as a reference, saves a copy, run all the functions so that setpoint temperatures are transformed from static to adaptive, an changes its name based on the values previously entered:
 
 __TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[standard__
@@ -134,7 +142,7 @@ If some inputs are not used or don't make sense, you'll be able to se an 'X' in 
 
 ### SingleZone functions
 
-Just as previously explained for MultipleZones scripts, if you run `accis.addAccis('sz', whateverOutputs, whateverEPversion)`, you will be ask in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
+Just as previously explained for MultipleZones scripts, if you run `accis.addAccis('sz', whateverOutputs, whateverEPversion)`, you will be asked in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
 ```
 >>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
@@ -146,6 +154,8 @@ Just as previously explained for MultipleZones scripts, if you run `accis.addAcc
 >>>                float, # ASTtol_end_input, which is the end of the tolerance sequence
 >>>                float, # ASTtol_steps, which are the steps of the tolerance sequence
 >>>                str # NameSuffix: some text you might want to add at the end of the output IDF file name
+>>>                bool # verboseMode: True to print all process in screen, False to not to print it. Default is True.
+>>>                bool # confirmGen: True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. 
 >>>                )
 ```
 Some example of the usage could be:
@@ -172,6 +182,12 @@ Each argument is explained below:
 - ComfMod: same as explained above; please refer to MultipleZone functions.
 
 - ASTtol: same as explained above; please refer to MultipleZone functions.
+  
+- NameSuffix: the text you would like to add at the end of the file name.
+
+- verboseMode: True to print all process in screen, False to not to print it. Default is True.
+
+- confirmGen: Generally, this argument should be left as default. True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. So, if you are going to set it True, be sure about the number of IDFs you are going to generate, because these might be thousands.
 
 You can see these are the same inputs from MultipleZone functions, however, since some of them were only necessary for Mixed Mode and SingleZone functions work only with Full air-conditioning mode, these are omitted in this branch.
 
