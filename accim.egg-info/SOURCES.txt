@@ -20,6 +20,8 @@ accim/run/__init__.py
 accim/run/run.py
 accim/sample files/TestModel_MultipleZone.idf
 accim/sample files/TestModel_MultipleZone_V910.idf
+accim/sample files/TestModel_MultipleZone_V910_pymod.idf
+accim/sample files/TestModel_MultipleZone_pymod.idf
 accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
 accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
 accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_2[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
@@ -28,9 +30,16 @@ accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_3[CM_0[HM_2[VC_0[V
 accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
 accim/sample files/TestModel_SingleZone.idf
 accim/sample files/TestModel_SingleZone_V890.idf
+accim/sample files/TestModel_SingleZone_V910.idf
+accim/sample files/TestModel_SingleZone_pymod.idf
 accim/sample files/TestModel_SingleZone_pymod[AS_EN16798[CA_3[CM_3[AT_0.1.idf
 accim/sample files/__init__.py
-accim/sample files/script_usage.py
+accim/sample files/script_usage/TestModel_MultipleZone.idf
+accim/sample files/script_usage/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified.idf
+accim/sample files/script_usage/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[standard.idf
+accim/sample files/script_usage/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[timestep.idf
+accim/sample files/script_usage/__init__.py
+accim/sample files/script_usage/script_usage.py
 accim/sim/__init__.py
 accim/sim/accim_Base.py
 accim/sim/accim_Base_EMS.py
@@ -217,3 +226,27 @@ tests/test_IDFgeneration_SingleZone/TestModel_SingleZone_pymod[AS_EN16798[CA_1[C
 tests/test_IDFgeneration_SingleZone/TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_80[AT_0.2[whatever.idf
 tests/test_IDFgeneration_SingleZone/__init__.py
 tests/test_IDFgeneration_SingleZone/test_accim_IDFgeneration_SingleZone.py
+tests/test_accis_mz_ep91/TestModel_MultipleZone_V910.idf
+tests/test_accis_mz_ep91/TestModel_MultipleZone_V910_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified.idf
+tests/test_accis_mz_ep91/TestModel_MultipleZone_V910_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[standard.idf
+tests/test_accis_mz_ep91/TestModel_MultipleZone_V910_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[timestep.idf
+tests/test_accis_mz_ep91/__init__.py
+tests/test_accis_mz_ep91/test_accis.py
+tests/test_accis_mz_ep94/TestModel_MultipleZone.idf
+tests/test_accis_mz_ep94/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified.idf
+tests/test_accis_mz_ep94/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[standard.idf
+tests/test_accis_mz_ep94/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[timestep.idf
+tests/test_accis_mz_ep94/__init__.py
+tests/test_accis_mz_ep94/test_accis.py
+tests/test_accis_sz_ep91/TestModel_SingleZone_V910.idf
+tests/test_accis_sz_ep91/TestModel_SingleZone_V910_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[simplified.idf
+tests/test_accis_sz_ep91/TestModel_SingleZone_V910_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[standard.idf
+tests/test_accis_sz_ep91/TestModel_SingleZone_V910_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[timestep.idf
+tests/test_accis_sz_ep91/__init__.py
+tests/test_accis_sz_ep91/test_accis.py
+tests/test_accis_sz_ep94/TestModel_SingleZone.idf
+tests/test_accis_sz_ep94/TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[simplified.idf
+tests/test_accis_sz_ep94/TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[standard.idf
+tests/test_accis_sz_ep94/TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[timestep.idf
+tests/test_accis_sz_ep94/__init__.py
+tests/test_accis_sz_ep94/test_accis.py
