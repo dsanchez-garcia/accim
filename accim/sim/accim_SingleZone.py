@@ -15,6 +15,7 @@ def addForscriptSchSingleZone(self, verboseMode: bool = True):
             Field_2='For: AllDays',
             Field_3='Until: 24:00,20'
             )
+        # todo allow mixed mode for singlezone functions: Name="FORSCRIPT_ACST_"+zonename,
         if verboseMode:
             print("FORSCRIPT_AHST Schedule has been added")
     if "FORSCRIPT_ACST" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
