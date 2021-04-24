@@ -50,6 +50,9 @@ accim/sim/accim_MultipleZone_EMS.py
 accim/sim/accim_SingleZone.py
 accim/sim/accim_SingleZone_EMS.py
 accim/sim/accis.py
+accim/sim/SS/__init__.py
+accim/sim/SS/accim_Main_SS.py
+accim/sim/SS/accis_SS.py
 bin/accis.py
 tests/TestModel_MultipleZone.idf
 tests/TestModel_MultipleZone_pymod.idf
