@@ -40,7 +40,7 @@ def test_accimInstance():
     idf0 = IDF(originalname + '.idf')
 
     zonenames_orig = ([zone.Name for zone in idf0.idfobjects['ZONE']])
-    z = accim_Main.accimInstance(
+    z = accim_Main.accimJob(
         filename_temp=originalname,
         ScriptType='sz',
         EnergyPlus_version='ep94',
@@ -58,7 +58,7 @@ def test_accimInstance():
     windownamelist_orig = (
         [window.Name for window in idf0.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if
          window.Name.endswith('_Win')])
-    z = accim_Main.accimInstance(
+    z = accim_Main.accimJob(
         filename_temp=originalname,
         ScriptType='mz',
         EnergyPlus_version='ep94',

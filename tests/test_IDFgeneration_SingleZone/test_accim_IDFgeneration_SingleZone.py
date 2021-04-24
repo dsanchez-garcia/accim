@@ -10,7 +10,7 @@ def test_genIDFSingleZone():
     iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
     IDF.setiddname(iddfile)
 
-    z = accim_Main.accimInstance(
+    z = accim_Main.accimJob(
         filename_temp='TestModel_SingleZone',
         ScriptType='sz',
         EnergyPlus_version='ep94',
