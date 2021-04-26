@@ -31,11 +31,16 @@ def addAccis(
     :param Outputs: The default is 'Standard'. Can be 'Standard',
         'Simplified' or 'Timestep'.
     :param EnergyPlus_version: The default is 'Ep94'. Can be 'Ep91' or 'Ep94'.
-    :param AdapStand: The default is None.(0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55)
-    :param CAT: The default is None.(1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT)
-    :param ComfMod: The default is None.(0 = Static; 1 = OUT-CTE; 2 = OUT-SEN16798/SASHRAE55; 3 = OUT-AEN16798/AASHRAE55)
-    :param HVACmode: The default is None.(0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
-    :param VentCtrl: (0 = Ventilates above neutral temperature; 1 = Ventilates above upper comfort limit)
+    :param AdapStand: The default is None.
+    (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55)
+    :param CAT: The default is None.
+    (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT)
+    :param ComfMod: The default is None.
+    (0 = Static; 1 = OUT-CTE; 2 = OUT-SEN16798/SASHRAE55; 3 = OUT-AEN16798/AASHRAE55)
+    :param HVACmode: The default is None.
+    (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
+    :param VentCtrl:
+    (0 = Ventilates above neutral temperature; 1 = Ventilates above upper comfort limit)
     :param VSToffset: Please refer to documentation.
     :param MinOToffset: Please refer to documentation.
     :param MaxWindSpeed: Please refer to documentation.
@@ -135,7 +140,12 @@ def addAccis(
             print('''\n=======================START OF PROCESS=======================\n''')
             print('Starting with file:')
             print(file)
-        z = accim_Main.accimJob(filename_temp=file, ScriptType=ScriptType, EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode)
+        z = accim_Main.accimJob(
+            filename_temp=file,
+            ScriptType=ScriptType,
+            EnergyPlus_version=EnergyPlus_version,
+            verboseMode=verboseMode
+        )
 
         z.setComfFieldsPeople(verboseMode=verboseMode)
         z.addOpTempTherm(verboseMode=verboseMode)
