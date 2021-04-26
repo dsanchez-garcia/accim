@@ -4,7 +4,10 @@
 def inputdataSingleZone(self):
     """Input data for IDF generation in SingleZone."""
     fullAdapStandList = [0, 1, 2]
-    self.AdapStand_List = list(int(num) for num in input("Enter the Adaptive Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55): ").split())
+    self.AdapStand_List = list(int(num)
+                               for num
+                               in input("Enter the Adaptive Standard numbers separated by space "
+                                        "(0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55): ").split())
     while len(self.AdapStand_List) == 0 or not all(elem in fullAdapStandList for elem in self.AdapStand_List):
         print('          Adaptive Standard numbers are not correct. Please enter the numbers again.')
         self.AdapStand_List = list(int(num) for num in input("     Enter the Adaptive Standard numbers separated by space: ").split())

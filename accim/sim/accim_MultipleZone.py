@@ -34,7 +34,10 @@ def addMultipleZoneSch(self, verboseMode: bool = True):
             if verboseMode:
                 print(i+" Schedule has been added")
 
-    if "VRF Heating Cooling (Northern Hemisphere)" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
+    if "VRF Heating Cooling (Northern Hemisphere)" in [schedule.Name
+                                                       for schedule
+                                                       in self.idf1.idfobjects
+                                                       ['Schedule:Compact']]:
         if verboseMode:
             print("VRF Heating Cooling (Northern Hemisphere) Schedule already was in the model")
     else:
@@ -508,7 +511,9 @@ def addCurveObj(self, verboseMode: bool = True):
         if verboseMode:
             print("VRFHeatEIRFTHi Curve:Biquadratic Object has been added")
 
-    if 'CoolingLengthCorrectionFactor' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
+    if 'CoolingLengthCorrectionFactor' in [i.Name
+                                           for i
+                                           in self.idf1.idfobjects['Curve:Biquadratic']]:
         if verboseMode:
             print('CoolingLengthCorrectionFactor Curve:Biquadratic Object already was in the model')
     else:
@@ -534,9 +539,13 @@ def addCurveObj(self, verboseMode: bool = True):
         if verboseMode:
             print("CoolingLengthCorrectionFactor Curve:Biquadratic Object has been added")
 
-    if 'VRF Piping Correction Factor for Length in Heating Mode' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
+    if 'VRF Piping Correction Factor for Length in Heating Mode' in [i.Name
+                                                                     for i
+                                                                     in self.idf1.idfobjects
+                                                                     ['Curve:Biquadratic']]:
         if verboseMode:
-            print('VRF Piping Correction Factor for Length in Heating Mode Curve:Biquadratic Object already was in the model')
+            print('VRF Piping Correction Factor for Length in '
+                  'Heating Mode Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -558,11 +567,16 @@ def addCurveObj(self, verboseMode: bool = True):
             Output_Unit_Type='Dimensionless'
             )
         if verboseMode:
-            print("VRF Piping Correction Factor for Length in Heating Mode Curve:Biquadratic Object has been added")
+            print("VRF Piping Correction Factor for Length in "
+                  "Heating Mode Curve:Biquadratic Object has been added")
 
-    if 'VRF Heat Recovery Cooling Capacity Modifier' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
+    if 'VRF Heat Recovery Cooling Capacity Modifier' in [i.Name
+                                                         for i
+                                                         in self.idf1.idfobjects
+                                                         ['Curve:Biquadratic']]:
         if verboseMode:
-            print('VRF Heat Recovery Cooling Capacity Modifier Curve:Biquadratic Object already was in the model')
+            print('VRF Heat Recovery Cooling Capacity Modifier '
+                  'Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -584,11 +598,16 @@ def addCurveObj(self, verboseMode: bool = True):
             Output_Unit_Type='Dimensionless'
             )
         if verboseMode:
-            print("VRF Heat Recovery Cooling Capacity Modifier Curve:Biquadratic Object has been added")
+            print("VRF Heat Recovery Cooling Capacity Modifier "
+                  "Curve:Biquadratic Object has been added")
 
-    if 'VRF Heat Recovery Cooling Energy Modifier' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
+    if 'VRF Heat Recovery Cooling Energy Modifier' in [i.Name
+                                                       for i
+                                                       in self.idf1.idfobjects
+                                                       ['Curve:Biquadratic']]:
         if verboseMode:
-            print('VRF Heat Recovery Cooling Energy Modifier Curve:Biquadratic Object already was in the model')
+            print('VRF Heat Recovery Cooling Energy Modifier '
+                  'Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -610,11 +629,16 @@ def addCurveObj(self, verboseMode: bool = True):
             Output_Unit_Type='Dimensionless'
             )
         if verboseMode:
-            print("VRF Heat Recovery Cooling Energy Modifier Curve:Biquadratic Object has been added")
+            print("VRF Heat Recovery Cooling Energy Modifier "
+                  "Curve:Biquadratic Object has been added")
 
-    if 'VRF Heat Recovery Heating Capacity Modifier' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
+    if 'VRF Heat Recovery Heating Capacity Modifier' in [i.Name
+                                                         for i
+                                                         in self.idf1.idfobjects
+                                                         ['Curve:Biquadratic']]:
         if verboseMode:
-            print('VRF Heat Recovery Heating Capacity Modifier Curve:Biquadratic Object already was in the model')
+            print('VRF Heat Recovery Heating Capacity Modifier '
+                  'Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -636,11 +660,16 @@ def addCurveObj(self, verboseMode: bool = True):
             Output_Unit_Type='Dimensionless'
             )
         if verboseMode:
-            print("VRF Heat Recovery Heating Capacity Modifier Curve:Biquadratic Object has been added")
+            print("VRF Heat Recovery Heating Capacity Modifier "
+                  "Curve:Biquadratic Object has been added")
 
-    if 'VRF Heat Recovery Heating Energy Modifier' in [i.Name for i in self.idf1.idfobjects['Curve:Biquadratic']]:
+    if 'VRF Heat Recovery Heating Energy Modifier' in [i.Name
+                                                       for i
+                                                       in self.idf1.idfobjects
+                                                       ['Curve:Biquadratic']]:
         if verboseMode:
-            print('VRF Heat Recovery Heating Energy Modifier Curve:Biquadratic Object already was in the model')
+            print('VRF Heat Recovery Heating Energy Modifier '
+                  'Curve:Biquadratic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Biquadratic',
@@ -662,7 +691,8 @@ def addCurveObj(self, verboseMode: bool = True):
             Output_Unit_Type='Dimensionless'
             )
         if verboseMode:
-            print("VRF Heat Recovery Heating Energy Modifier Curve:Biquadratic Object has been added")
+            print("VRF Heat Recovery Heating Energy Modifier "
+                  "Curve:Biquadratic Object has been added")
 
     # curvequadraticlist=[i for i in self.idf1.idfobjects['Curve:Quadratic']]
     # print(curvequadraticlist)
@@ -791,57 +821,86 @@ def addCurveObj(self, verboseMode: bool = True):
 
 def addDetHVACobjEp91(self, verboseMode: bool = True):
     """Add Detailed HVAC objects for MultipleZone to work."""
-    for zonename in self.zonenames_orig:
-        if 'VRF Outdoor Unit_'+zonename in [i.Heat_Pump_Name for i in self.idf1.idfobjects['AirConditioner:VariableRefrigerantFlow']]:
+    for zn in self.zonenames_orig:
+        if 'VRF Outdoor Unit_'+zn in [i.Heat_Pump_Name
+                                            for i
+                                            in self.idf1.idfobjects
+                                            ['AirConditioner:VariableRefrigerantFlow']]:
             if verboseMode:
-                print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object already was in the model')
+                print('VRF Outdoor Unit_'+
+                      zn+
+                      ' AirConditioner:VariableRefrigerantFlow '
+                      'Object already was in the model')
         else:
             self.idf1.newidfobject(
                 'AirConditioner:VariableRefrigerantFlow',
-                Heat_Pump_Name='VRF Outdoor Unit_'+zonename,
+                Heat_Pump_Name='VRF Outdoor Unit_'+zn,
                 Availability_Schedule_Name='On 24/7',
                 Gross_Rated_Total_Cooling_Capacity='autosize',
                 Gross_Rated_Cooling_COP='2',
                 Minimum_Outdoor_Temperature_in_Cooling_Mode=-6,
                 Maximum_Outdoor_Temperature_in_Cooling_Mode=43,
-                Cooling_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name='VRFCoolCapFT',
-                Cooling_Capacity_Ratio_Boundary_Curve_Name='VRFCoolCapFTBoundary',
-                Cooling_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name='VRFCoolCapFTHi',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name='VRFCoolEIRFT',
-                Cooling_Energy_Input_Ratio_Boundary_Curve_Name='VRFCoolEIRFTBoundary',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name='VRFCoolEIRFTHi',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name='CoolingEIRLowPLR',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name='CoolingEIRHiPLR',
-                Cooling_Combination_Ratio_Correction_Factor_Curve_Name='CoolingCombRatio',
+                Cooling_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                'VRFCoolCapFT',
+                Cooling_Capacity_Ratio_Boundary_Curve_Name=
+                'VRFCoolCapFTBoundary',
+                Cooling_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                'VRFCoolCapFTHi',
+                Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                'VRFCoolEIRFT',
+                Cooling_Energy_Input_Ratio_Boundary_Curve_Name=
+                'VRFCoolEIRFTBoundary',
+                Cooling_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                'VRFCoolEIRFTHi',
+                Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name=
+                'CoolingEIRLowPLR',
+                Cooling_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name=
+                'CoolingEIRHiPLR',
+                Cooling_Combination_Ratio_Correction_Factor_Curve_Name=
+                'CoolingCombRatio',
                 Cooling_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
                 Gross_Rated_Heating_Capacity='autosize',
                 Rated_Heating_Capacity_Sizing_Ratio=1,
                 Gross_Rated_Heating_COP=2.1,
                 Minimum_Outdoor_Temperature_in_Heating_Mode=-20,
                 Maximum_Outdoor_Temperature_in_Heating_Mode=40,
-                Heating_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name='VRFHeatCapFT',
-                Heating_Capacity_Ratio_Boundary_Curve_Name='VRFHeatCapFTBoundary',
-                Heating_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name='VRFHeatCapFTHi',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name='VRFHeatEIRFT',
-                Heating_Energy_Input_Ratio_Boundary_Curve_Name='VRFHeatEIRFTBoundary',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name='VRFHeatEIRFTHi',
-                Heating_Performance_Curve_Outdoor_Temperature_Type='WetBulbTemperature',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name='HeatingEIRLowPLR',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name='HeatingEIRHiPLR',
-                Heating_Combination_Ratio_Correction_Factor_Curve_Name='HeatingCombRatio',
+                Heating_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                'VRFHeatCapFT',
+                Heating_Capacity_Ratio_Boundary_Curve_Name=
+                'VRFHeatCapFTBoundary',
+                Heating_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                'VRFHeatCapFTHi',
+                Heating_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                'VRFHeatEIRFT',
+                Heating_Energy_Input_Ratio_Boundary_Curve_Name=
+                'VRFHeatEIRFTBoundary',
+                Heating_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                'VRFHeatEIRFTHi',
+                Heating_Performance_Curve_Outdoor_Temperature_Type=
+                'WetBulbTemperature',
+                Heating_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name=
+                'HeatingEIRLowPLR',
+                Heating_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name=
+                'HeatingEIRHiPLR',
+                Heating_Combination_Ratio_Correction_Factor_Curve_Name=
+                'HeatingCombRatio',
                 Heating_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
                 Minimum_Heat_Pump_PartLoad_Ratio=0.2,
                 Zone_Name_for_Master_Thermostat_Location='',
                 Master_Thermostat_Priority_Control_Type='LoadPriority',
                 Thermostat_Priority_Schedule_Name='',
-                Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+zonename+' Zone List',
+                Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+
+                                             zn+
+                                             ' Zone List',
                 Heat_Pump_Waste_Heat_Recovery='Yes',
                 Equivalent_Piping_Length_used_for_Piping_Correction_Factor_in_Cooling_Mode=50,
                 Vertical_Height_used_for_Piping_Correction_Factor=15,
-                Piping_Correction_Factor_for_Length_in_Cooling_Mode_Curve_Name='CoolingLengthCorrectionFactor',
+                Piping_Correction_Factor_for_Length_in_Cooling_Mode_Curve_Name=
+                'CoolingLengthCorrectionFactor',
                 Piping_Correction_Factor_for_Height_in_Cooling_Mode_Coefficient=0,
                 Equivalent_Piping_Length_used_for_Piping_Correction_Factor_in_Heating_Mode=50,
-                Piping_Correction_Factor_for_Length_in_Heating_Mode_Curve_Name='VRF Piping Correction Factor for Length in Heating Mode',
+                Piping_Correction_Factor_for_Length_in_Heating_Mode_Curve_Name=
+                'VRF Piping Correction Factor for Length in Heating Mode',
                 Piping_Correction_Factor_for_Height_in_Heating_Mode_Coefficient=0,
                 Crankcase_Heater_Power_per_Compressor=15,
                 Number_of_Compressors=2,
@@ -854,7 +913,9 @@ def addDetHVACobjEp91(self, verboseMode: bool = True):
                 Resistive_Defrost_Heater_Capacity='autosize',
                 Maximum_Outdoor_Drybulb_Temperature_for_Defrost_Operation=5,
                 Condenser_Type='AirCooled',
-                Condenser_Inlet_Node_Name='VRF Outdoor Unit_'+zonename+' Outdoor Air Node',
+                Condenser_Inlet_Node_Name='VRF Outdoor Unit_'+
+                                          zn+
+                                          ' Outdoor Air Node',
                 Condenser_Outlet_Node_Name='',
                 Water_Condenser_Volume_Flow_Rate='autosize',
                 Evaporative_Condenser_Effectiveness=0.9,
@@ -867,75 +928,94 @@ def addDetHVACobjEp91(self, verboseMode: bool = True):
                 Fuel_Type='Electricity',
                 Minimum_Outdoor_Temperature_in_Heat_Recovery_Mode=-10,
                 Maximum_Outdoor_Temperature_in_Heat_Recovery_Mode=40,
-                Heat_Recovery_Cooling_Capacity_Modifier_Curve_Name='VRF Heat Recovery Cooling Capacity Modifier',
+                Heat_Recovery_Cooling_Capacity_Modifier_Curve_Name=
+                'VRF Heat Recovery Cooling Capacity Modifier',
                 Initial_Heat_Recovery_Cooling_Capacity_Fraction=0.5,
                 Heat_Recovery_Cooling_Capacity_Time_Constant=0.15,
-                Heat_Recovery_Cooling_Energy_Modifier_Curve_Name='VRF Heat Recovery Cooling Energy Modifier',
+                Heat_Recovery_Cooling_Energy_Modifier_Curve_Name=
+                'VRF Heat Recovery Cooling Energy Modifier',
                 Initial_Heat_Recovery_Cooling_Energy_Fraction=1,
                 Heat_Recovery_Cooling_Energy_Time_Constant=0,
-                Heat_Recovery_Heating_Capacity_Modifier_Curve_Name='VRF Heat Recovery Heating Capacity Modifier',
+                Heat_Recovery_Heating_Capacity_Modifier_Curve_Name=
+                'VRF Heat Recovery Heating Capacity Modifier',
                 Initial_Heat_Recovery_Heating_Capacity_Fraction=1,
                 Heat_Recovery_Heating_Capacity_Time_Constant=0.15,
-                Heat_Recovery_Heating_Energy_Modifier_Curve_Name='VRF Heat Recovery Heating Energy Modifier',
+                Heat_Recovery_Heating_Energy_Modifier_Curve_Name=
+                'VRF Heat Recovery Heating Energy Modifier',
                 Initial_Heat_Recovery_Heating_Energy_Fraction=1,
                 Heat_Recovery_Heating_Energy_Time_Constant=0
                 )
             if verboseMode:
-                print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object has been added')
+                print('VRF Outdoor Unit_'+
+                      zn+
+                      ' AirConditioner:VariableRefrigerantFlow '
+                      'Object has been added')
 
-    outdoorairnodelistlist = [i for i in self.idf1.idfobjects['OutdoorAir:NodeList']]
+    outdoorairnodelistlist = [i
+                              for i
+                              in self.idf1.idfobjects['OutdoorAir:NodeList']]
     # print(outdoorairnodelistlist)
 
     for i in range(len(outdoorairnodelistlist)):
-        firstoutdoorairnodelist = self.idf1.idfobjects['OutdoorAir:NodeList'][-1]
-        self.idf1.removeidfobject(firstoutdoorairnodelist)
+        firstOANL = self.idf1.idfobjects['OutdoorAir:NodeList'][-1]
+        self.idf1.removeidfobject(firstOANL)
 
     del outdoorairnodelistlist
 
-    zoneterminalunitlistlist = [i for i in self.idf1.idfobjects['ZoneTerminalUnitList']]
+    zoneterminalunitlistlist = [i
+                                for i
+                                in self.idf1.idfobjects['ZoneTerminalUnitList']]
     # print(zoneterminalunitlistlist)
 
     for i in range(len(zoneterminalunitlistlist)):
-        firstozoneterminalunitlist = self.idf1.idfobjects['ZoneTerminalUnitList'][-1]
-        self.idf1.removeidfobject(firstozoneterminalunitlist)
+        firstZTUL = self.idf1.idfobjects['ZoneTerminalUnitList'][-1]
+        self.idf1.removeidfobject(firstZTUL)
 
     del zoneterminalunitlistlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'OutdoorAir:NodeList',
-            Node_or_NodeList_Name_1='VRF Outdoor Unit_'+zonename+' Outdoor Air Node'
+            Node_or_NodeList_Name_1='VRF Outdoor Unit_'+
+                                    zn+
+                                    ' Outdoor Air Node'
             )
         if verboseMode:
-            print('VRF Outdoor Unit_'+zonename+' Outdoor Air Node Object has been added')
+            print('VRF Outdoor Unit_'+
+                  zn+' Outdoor Air Node Object has been added')
 
         self.idf1.newidfobject(
             'ZoneTerminalUnitList',
-            Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+zonename+' Zone List',
-            Zone_Terminal_Unit_Name_1=zonename+' VRF Indoor Unit'
+            Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+
+                                         zn+
+                                         ' Zone List',
+            Zone_Terminal_Unit_Name_1=zn+' VRF Indoor Unit'
             )
         if verboseMode:
-            print('VRF Outdoor Unit_'+zonename+' Zone List Object has been added')
+            print('VRF Outdoor Unit_'+
+                  zn+
+                  ' Zone List Object has been added')
 
-    zonecontrolthermostatlist = [i for i in self.idf1.idfobjects['ZoneControl:Thermostat']]
-    # print(zonecontrolthermostatlist)
+    ZCTlist = [i
+               for i
+               in self.idf1.idfobjects['ZoneControl:Thermostat']]
+    # print(ZCTlist)
 
-    for i in range(len(zonecontrolthermostatlist)):
-        firstzonecontrolthermostat = self.idf1.idfobjects['ZoneControl:Thermostat'][-1]
-        self.idf1.removeidfobject(firstzonecontrolthermostat)
+    for i in range(len(ZCTlist)):
+        firstZCT = self.idf1.idfobjects['ZoneControl:Thermostat'][-1]
+        self.idf1.removeidfobject(firstZCT)
 
-    del zonecontrolthermostatlist
+    del ZCTlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'ZoneControl:Thermostat',
-            Name=zonename+' Thermostat',
-            Zone_or_ZoneList_Name=zonename,
+            Name=zn+' Thermostat',
+            Zone_or_ZoneList_Name=zn,
             Control_Type_Schedule_Name='Control type schedule: Always 4',
             Control_1_Object_Type='ThermostatSetpoint:DualSetpoint',
-            Control_1_Name=zonename+' Dual SP'
+            Control_1_Name=zn+' Dual SP'
             )
-
     sizingzonelist = [i for i in self.idf1.idfobjects['Sizing:Zone']]
     # print(sizingzonelist)
 
@@ -945,19 +1025,23 @@ def addDetHVACobjEp91(self, verboseMode: bool = True):
 
     del sizingzonelist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'Sizing:Zone',
-            Zone_or_ZoneList_Name=zonename,
-            Zone_Cooling_Design_Supply_Air_Temperature_Input_Method='SupplyAirTemperature',
+            Zone_or_ZoneList_Name=zn,
+            Zone_Cooling_Design_Supply_Air_Temperature_Input_Method=
+            'SupplyAirTemperature',
             Zone_Cooling_Design_Supply_Air_Temperature=14,
             Zone_Cooling_Design_Supply_Air_Temperature_Difference=5,
-            Zone_Heating_Design_Supply_Air_Temperature_Input_Method='SupplyAirTemperature',
+            Zone_Heating_Design_Supply_Air_Temperature_Input_Method=
+            'SupplyAirTemperature',
             Zone_Heating_Design_Supply_Air_Temperature=50,
             Zone_Heating_Design_Supply_Air_Temperature_Difference=15,
             Zone_Cooling_Design_Supply_Air_Humidity_Ratio=0.009,
             Zone_Heating_Design_Supply_Air_Humidity_Ratio=0.004,
-            Design_Specification_Outdoor_Air_Object_Name=zonename+' Design Specification Outdoor Air Object',
+            Design_Specification_Outdoor_Air_Object_Name=
+            zn+
+            ' Design Specification Outdoor Air Object',
             Zone_Heating_Sizing_Factor=1.25,
             Zone_Cooling_Sizing_Factor=1.15,
             Cooling_Design_Air_Flow_Method='DesignDay',
@@ -970,28 +1054,31 @@ def addDetHVACobjEp91(self, verboseMode: bool = True):
             Heating_Maximum_Air_Flow_per_Zone_Floor_Area=0.00203,
             Heating_Maximum_Air_Flow=0.14158,
             Heating_Maximum_Air_Flow_Fraction=0.3,
-            Design_Specification_Zone_Air_Distribution_Object_Name=zonename+' Design Specification Zone Air Distribution Object',
+            Design_Specification_Zone_Air_Distribution_Object_Name=
+            zn+' Design Specification Zone Air Distribution Object',
             Account_for_Dedicated_Outdoor_Air_System='Yes',
             Dedicated_Outdoor_Air_System_Control_Strategy='NeutralSupplyAir',
             Dedicated_Outdoor_Air_Low_Setpoint_Temperature_for_Design='autosize',
             Dedicated_Outdoor_Air_High_Setpoint_Temperature_for_Design='autosize'
             )
         if verboseMode:
-            print(zonename+' Sizing:Zone Object has been added')
+            print(zn+' Sizing:Zone Object has been added')
 
-    DesignSpecificationOutdoorAirList = [i for i in self.idf1.idfobjects['DesignSpecification:OutdoorAir']]
-    # print(DesignSpecificationOutdoorAirList)
+    DSOAlist = [i
+                for i
+                in self.idf1.idfobjects['DesignSpecification:OutdoorAir']]
+    # print(DSOAlist)
 
-    for i in range(len(DesignSpecificationOutdoorAirList)):
-        firstDesSpeOutAir = self.idf1.idfobjects['DesignSpecification:OutdoorAir'][-1]
-        self.idf1.removeidfobject(firstDesSpeOutAir)
+    for i in range(len(DSOAlist)):
+        firstDSOA = self.idf1.idfobjects['DesignSpecification:OutdoorAir'][-1]
+        self.idf1.removeidfobject(firstDSOA)
 
-    del DesignSpecificationOutdoorAirList
+    del DSOAlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'DesignSpecification:OutdoorAir',
-            Name=zonename+' Design Specification Outdoor Air Object',
+            Name=zn+' Design Specification Outdoor Air Object',
             Outdoor_Air_Method='Flow/Person',
             Outdoor_Air_Flow_per_Person=0.00944,
             Outdoor_Air_Flow_per_Zone_Floor_Area=0,
@@ -1000,28 +1087,36 @@ def addDetHVACobjEp91(self, verboseMode: bool = True):
             Outdoor_Air_Schedule_Name='On 24/7'
             )
         if verboseMode:
-            print(zonename+' Design Specification Outdoor Air Object has been added')
+            print(zn+
+                  ' Design Specification Outdoor Air Object has been added')
 
-    DesignSpecificationZoneAirDistributionList = [i for i in self.idf1.idfobjects['DesignSpecification:ZoneAirDistribution']]
-    # print(DesignSpecificationZoneAirDistributionList)
+    DSOADlist = [i
+                 for i
+                 in self.idf1.idfobjects
+                 ['DesignSpecification:ZoneAirDistribution']]
+    # print(DSOADlist)
 
-    for i in range(len(DesignSpecificationZoneAirDistributionList)):
-        firstDesSpeZonAirDis = self.idf1.idfobjects['DesignSpecification:ZoneAirDistribution'][-1]
-        self.idf1.removeidfobject(firstDesSpeZonAirDis)
+    for i in range(len(DSOADlist)):
+        firstDSZAD = self.idf1.idfobjects[
+            'DesignSpecification:ZoneAirDistribution'
+        ][-1]
+        self.idf1.removeidfobject(firstDSZAD)
 
-    del DesignSpecificationZoneAirDistributionList
+    del DSOADlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'DesignSpecification:ZoneAirDistribution',
-            Name=zonename+' Design Specification Zone Air Distribution Object',
+            Name=zn+' Design Specification Zone Air Distribution Object',
             Zone_Air_Distribution_Effectiveness_in_Cooling_Mode=1,
             Zone_Air_Distribution_Effectiveness_in_Heating_Mode=1,
             Zone_Air_Distribution_Effectiveness_Schedule_Name='',
             Zone_Secondary_Recirculation_Fraction=0
             )
         if verboseMode:
-            print(zonename+' Design Specification Zone Air Distribution Object has been added')
+            print(zn+
+                  ' Design Specification Zone Air Distribution '
+                  'Object has been added')
 
     nodelistlist = [i for i in self.idf1.idfobjects['NodeList']]
     # print(nodelistlist)
@@ -1032,83 +1127,91 @@ def addDetHVACobjEp91(self, verboseMode: bool = True):
 
     del nodelistlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'NodeList',
-            Name=zonename+' Air Inlet Node List',
-            Node_1_Name=zonename+' VRF Indoor Unit Supply Outlet'
+            Name=zn+' Air Inlet Node List',
+            Node_1_Name=zn+' VRF Indoor Unit Supply Outlet'
             )
         self.idf1.newidfobject(
             'NodeList',
-            Name=zonename+' Air Exhaust Node List',
-            Node_1_Name=zonename+' VRF Indoor Unit Return'
+            Name=zn+' Air Exhaust Node List',
+            Node_1_Name=zn+' VRF Indoor Unit Return'
             )
         if verboseMode:
-            print(zonename+' Nodelist Objects has been added')
+            print(zn+' Nodelist Objects has been added')
 
-    ZoneHvacEquipmentConnectionsList = [i for i in self.idf1.idfobjects['ZoneHVAC:EquipmentConnections']]
-    # print(ZoneHvacEquipmentConnectionsList)
+    ZHEClist = [i
+                for i
+                in self.idf1.idfobjects['ZoneHVAC:EquipmentConnections']]
+    # print(ZHEClist)
 
-    for i in range(len(ZoneHvacEquipmentConnectionsList)):
-        firstZoneHvacEquipmentConnection = self.idf1.idfobjects['ZoneHVAC:EquipmentConnections'][-1]
-        self.idf1.removeidfobject(firstZoneHvacEquipmentConnection)
+    for i in range(len(ZHEClist)):
+        firstZHEC = self.idf1.idfobjects['ZoneHVAC:EquipmentConnections'][-1]
+        self.idf1.removeidfobject(firstZHEC)
 
-    del ZoneHvacEquipmentConnectionsList
+    del ZHEClist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'ZoneHVAC:EquipmentConnections',
-            Zone_Name=zonename,
-            Zone_Conditioning_Equipment_List_Name=zonename+' Equipment',
-            Zone_Air_Inlet_Node_or_NodeList_Name=zonename+' Air Inlet Node List',
-            Zone_Air_Exhaust_Node_or_NodeList_Name=zonename+' Air Exhaust Node List',
-            Zone_Air_Node_Name=zonename+' Zone Air Node',
-            Zone_Return_Air_Node_or_NodeList_Name=zonename+' Return Outlet'
+            Zone_Name=zn,
+            Zone_Conditioning_Equipment_List_Name=zn+' Equipment',
+            Zone_Air_Inlet_Node_or_NodeList_Name=zn+' Air Inlet Node List',
+            Zone_Air_Exhaust_Node_or_NodeList_Name=zn+' Air Exhaust Node List',
+            Zone_Air_Node_Name=zn+' Zone Air Node',
+            Zone_Return_Air_Node_or_NodeList_Name=zn+' Return Outlet'
             )
         if verboseMode:
-            print(zonename+' ZoneHVAC:EquipmentConnections Objects has been added')
+            print(zn+' ZoneHVAC:EquipmentConnections Objects has been added')
 
-    ZoneHvacEquipmentListList = [i for i in self.idf1.idfobjects['ZoneHVAC:EquipmentList']]
-    # print(ZoneHvacEquipmentListList)
+    ZHELlist = [i for i in self.idf1.idfobjects['ZoneHVAC:EquipmentList']]
+    # print(ZHELlist)
 
-    for i in range(len(ZoneHvacEquipmentListList)):
-        firstZoneHvacEquipmentList = self.idf1.idfobjects['ZoneHVAC:EquipmentList'][-1]
-        self.idf1.removeidfobject(firstZoneHvacEquipmentList)
+    for i in range(len(ZHELlist)):
+        firstZHEL = self.idf1.idfobjects['ZoneHVAC:EquipmentList'][-1]
+        self.idf1.removeidfobject(firstZHEL)
 
-    del ZoneHvacEquipmentListList
+    del ZHELlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'ZoneHVAC:EquipmentList',
             defaultvalues=False,
-            Name=zonename+' Equipment',
+            Name=zn+' Equipment',
             Load_Distribution_Scheme='SequentialLoad',
-            Zone_Equipment_1_Object_Type='ZoneHVAC:TerminalUnit:VariableRefrigerantFlow',
-            Zone_Equipment_1_Name=zonename+' VRF Indoor Unit',
+            Zone_Equipment_1_Object_Type=
+            'ZoneHVAC:TerminalUnit:VariableRefrigerantFlow',
+            Zone_Equipment_1_Name=zn+' VRF Indoor Unit',
             Zone_Equipment_1_Cooling_Sequence=1,
             Zone_Equipment_1_Heating_or_NoLoad_Sequence=1,
             Zone_Equipment_1_Sequential_Cooling_Fraction='',
             Zone_Equipment_1_Sequential_Heating_Fraction=''
             )
         if verboseMode:
-            print(zonename+' ZoneHVAC:EquipmentList Objects has been added')
+            print(zn+' ZoneHVAC:EquipmentList Objects has been added')
 
-    ZoneHvacTermUnitVRFlist = [i for i in self.idf1.idfobjects['ZoneHVAC:TerminalUnit:VariableRefrigerantFlow']]
-    # print(ZoneHvacTermUnitVRFlist)
+    ZHTUVRFlist = [i for i in self.idf1.idfobjects[
+        'ZoneHVAC:TerminalUnit:VariableRefrigerantFlow'
+    ]]
+    # print(ZHTUVRFlist)
 
-    for i in range(len(ZoneHvacTermUnitVRFlist)):
-        firstZoneHvacTermUnitVRF = self.idf1.idfobjects['ZoneHVAC:TerminalUnit:VariableRefrigerantFlow'][-1]
-        self.idf1.removeidfobject(firstZoneHvacTermUnitVRF)
+    for i in range(len(ZHTUVRFlist)):
+        firstZHTUVRF = self.idf1.idfobjects[
+            'ZoneHVAC:TerminalUnit:VariableRefrigerantFlow'
+        ][-1]
+        self.idf1.removeidfobject(firstZHTUVRF)
 
-    del ZoneHvacTermUnitVRFlist
+    del ZHTUVRFlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'ZoneHVAC:TerminalUnit:VariableRefrigerantFlow',
-            Zone_Terminal_Unit_Name=zonename+' VRF Indoor Unit',
+            Zone_Terminal_Unit_Name=zn+' VRF Indoor Unit',
             Terminal_Unit_Availability_Schedule='On 24/7',
-            Terminal_Unit_Air_Inlet_Node_Name=zonename+' VRF Indoor Unit Return',
-            Terminal_Unit_Air_Outlet_Node_Name=zonename+' VRF Indoor Unit Supply Outlet',
+            Terminal_Unit_Air_Inlet_Node_Name=zn+' VRF Indoor Unit Return',
+            Terminal_Unit_Air_Outlet_Node_Name=
+            zn+' VRF Indoor Unit Supply Outlet',
             Cooling_Supply_Air_Flow_Rate='autosize',
             No_Cooling_Supply_Air_Flow_Rate='autosize',
             Heating_Supply_Air_Flow_Rate='autosize',
@@ -1119,151 +1222,189 @@ def addDetHVACobjEp91(self, verboseMode: bool = True):
             Supply_Air_Fan_Operating_Mode_Schedule_Name='On 24/7',
             Supply_Air_Fan_Placement='DrawThrough',
             Supply_Air_Fan_Object_Type='Fan:ConstantVolume',
-            Supply_Air_Fan_Object_Name=zonename+' VRF Indoor Unit Supply Fan',
+            Supply_Air_Fan_Object_Name=zn+' VRF Indoor Unit Supply Fan',
             Outside_Air_Mixer_Object_Type='',
             Outside_Air_Mixer_Object_Name='',
             Cooling_Coil_Object_Type='Coil:Cooling:DX:VariableRefrigerantFlow',
-            Cooling_Coil_Object_Name=zonename+' VRF Indoor Unit DX Cooling Coil',
+            Cooling_Coil_Object_Name=zn+' VRF Indoor Unit DX Cooling Coil',
             Heating_Coil_Object_Type='Coil:Heating:DX:VariableRefrigerantFlow',
-            Heating_Coil_Object_Name=zonename+' VRF Indoor Unit DX Heating Coil',
+            Heating_Coil_Object_Name=zn+' VRF Indoor Unit DX Heating Coil',
             Zone_Terminal_Unit_On_Parasitic_Electric_Energy_Use=30,
             Zone_Terminal_Unit_Off_Parasitic_Electric_Energy_Use=20,
             Rated_Heating_Capacity_Sizing_Ratio='',
             Availability_Manager_List_Name=''
             )
         if verboseMode:
-            print(zonename+' ZoneHVAC:TerminalUnit:VariableRefrigerantFlow Object has been added')
+            print(zn+' ZoneHVAC:TerminalUnit:VariableRefrigerantFlow '
+                     'Object has been added')
 
-    CoilCoolingDXVRFlist = [i for i in self.idf1.idfobjects['Coil:Cooling:DX:VariableRefrigerantFlow']]
-    # print(CoilCoolingDXVRFlist)
+    CCDXVRFlist = [i
+                   for i
+                   in self.idf1.idfobjects
+                   ['Coil:Cooling:DX:VariableRefrigerantFlow']]
+    # print(CCDXVRFlist)
 
-    for i in range(len(CoilCoolingDXVRFlist)):
-        firstCoilCoolingDXVRF = self.idf1.idfobjects['Coil:Cooling:DX:VariableRefrigerantFlow'][-1]
-        self.idf1.removeidfobject(firstCoilCoolingDXVRF)
+    for i in range(len(CCDXVRFlist)):
+        firstCCDXVRF = self.idf1.idfobjects[
+            'Coil:Cooling:DX:VariableRefrigerantFlow'
+        ][-1]
+        self.idf1.removeidfobject(firstCCDXVRF)
 
-    del CoilCoolingDXVRFlist
+    del CCDXVRFlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'Coil:Cooling:DX:VariableRefrigerantFlow',
-            Name=zonename+' VRF Indoor Unit DX Cooling Coil',
+            Name=zn+' VRF Indoor Unit DX Cooling Coil',
             Availability_Schedule_Name='On 24/7',
             Gross_Rated_Total_Cooling_Capacity='autosize',
             Gross_Rated_Sensible_Heat_Ratio='autosize',
             Rated_Air_Flow_Rate='autosize',
-            Cooling_Capacity_Ratio_Modifier_Function_of_Temperature_Curve_Name='VRFTUCoolCapFT',
-            Cooling_Capacity_Modifier_Curve_Function_of_Flow_Fraction_Name='VRFACCoolCapFFF',
-            Coil_Air_Inlet_Node=zonename+' VRF Indoor Unit Return',
-            Coil_Air_Outlet_Node=zonename+' VRF Indoor Unit DX Cooling Coil Outlet',
+            Cooling_Capacity_Ratio_Modifier_Function_of_Temperature_Curve_Name=
+            'VRFTUCoolCapFT',
+            Cooling_Capacity_Modifier_Curve_Function_of_Flow_Fraction_Name=
+            'VRFACCoolCapFFF',
+            Coil_Air_Inlet_Node=zn+' VRF Indoor Unit Return',
+            Coil_Air_Outlet_Node=zn+' VRF Indoor Unit DX Cooling Coil Outlet',
             Name_of_Water_Storage_Tank_for_Condensate_Collection=''
             )
         if verboseMode:
-            print(zonename+' Coil:Cooling:DX:VariableRefrigerantFlow Object has been added')
+            print(zn+' Coil:Cooling:DX:VariableRefrigerantFlow '
+                     'Object has been added')
 
-    CoilHeatingDXVRFlist = [i for i in self.idf1.idfobjects['Coil:Heating:DX:VariableRefrigerantFlow']]
-    # print(CoilHeatingDXVRFlist)
+    CHDXVRFlist = [i
+                   for i
+                   in self.idf1.idfobjects
+                   ['Coil:Heating:DX:VariableRefrigerantFlow']]
+    # print(CHDXVRFlist)
 
-    for i in range(len(CoilHeatingDXVRFlist)):
-        firstCoilHeatingDXVRF = self.idf1.idfobjects['Coil:Heating:DX:VariableRefrigerantFlow'][-1]
-        self.idf1.removeidfobject(firstCoilHeatingDXVRF)
+    for i in range(len(CHDXVRFlist)):
+        firstCHDXVRF = self.idf1.idfobjects[
+            'Coil:Heating:DX:VariableRefrigerantFlow'
+        ][-1]
+        self.idf1.removeidfobject(firstCHDXVRF)
 
-    del CoilHeatingDXVRFlist
-
-    for zonename in self.zonenames_orig:
+    del CHDXVRFlist
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'Coil:Heating:DX:VariableRefrigerantFlow',
-            Name=zonename+' VRF Indoor Unit DX Heating Coil',
+            Name=zn+' VRF Indoor Unit DX Heating Coil',
             Availability_Schedule='On 24/7',
             Gross_Rated_Heating_Capacity='autosize',
             Rated_Air_Flow_Rate='autosize',
-            Coil_Air_Inlet_Node=zonename+' VRF Indoor Unit DX Cooling Coil Outlet',
-            Coil_Air_Outlet_Node=zonename+' VRF Indoor Unit DX Heating Coil Outlet',
-            Heating_Capacity_Ratio_Modifier_Function_of_Temperature_Curve_Name='VRFTUHeatCapFT',
-            Heating_Capacity_Modifier_Function_of_Flow_Fraction_Curve_Name='VRFACCoolCapFFF'
+            Coil_Air_Inlet_Node=zn+' VRF Indoor Unit DX Cooling Coil Outlet',
+            Coil_Air_Outlet_Node=zn+' VRF Indoor Unit DX Heating Coil Outlet',
+            Heating_Capacity_Ratio_Modifier_Function_of_Temperature_Curve_Name=
+            'VRFTUHeatCapFT',
+            Heating_Capacity_Modifier_Function_of_Flow_Fraction_Curve_Name=
+            'VRFACCoolCapFFF'
             )
         if verboseMode:
-            print(zonename+' Coil:Heating:DX:VariableRefrigerantFlow Object has been added')
+            print(zn+' Coil:Heating:DX:VariableRefrigerantFlow '
+                     'Object has been added')
 
-    fanconstantvolumelist = [i for i in self.idf1.idfobjects['Fan:ConstantVolume']]
-    # print(fanconstantvolumelist)
+    FCVlist = [i for i in self.idf1.idfobjects['Fan:ConstantVolume']]
+    # print(FCVlist)
 
-    for i in range(len(fanconstantvolumelist)):
-        firstfanconstantvolume = self.idf1.idfobjects['Fan:ConstantVolume'][-1]
-        self.idf1.removeidfobject(firstfanconstantvolume)
+    for i in range(len(FCVlist)):
+        firstFCV = self.idf1.idfobjects['Fan:ConstantVolume'][-1]
+        self.idf1.removeidfobject(firstFCV)
 
-    del fanconstantvolumelist
+    del FCVlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'Fan:ConstantVolume',
-            Name=zonename+' VRF Indoor Unit Supply Fan',
+            Name=zn+' VRF Indoor Unit Supply Fan',
             Availability_Schedule_Name='On 24/7',
             Fan_Total_Efficiency=0.7,
             Pressure_Rise=100,
             Maximum_Flow_Rate='autosize',
             Motor_Efficiency=0.9,
             Motor_In_Airstream_Fraction=1,
-            Air_Inlet_Node_Name=zonename+' VRF Indoor Unit DX Heating Coil Outlet',
-            Air_Outlet_Node_Name=zonename+' VRF Indoor Unit Supply Outlet',
+            Air_Inlet_Node_Name=zn+' VRF Indoor Unit DX Heating Coil Outlet',
+            Air_Outlet_Node_Name=zn+' VRF Indoor Unit Supply Outlet',
             EndUse_Subcategory='General'
             )
         if verboseMode:
-            print(zonename+' Fan:ConstantVolume Object has been added')
+            print(zn+' Fan:ConstantVolume Object has been added')
 
 
 def addDetHVACobjEp94(self, verboseMode: bool = True):
     """Add Detailed HVAC objects for MultipleZone to work."""
-    for zonename in self.zonenames_orig:
-        if 'VRF Outdoor Unit_'+zonename in [i.Heat_Pump_Name for i in self.idf1.idfobjects['AirConditioner:VariableRefrigerantFlow']]:
+    for zn in self.zonenames_orig:
+        if 'VRF Outdoor Unit_'+zn in [i.Heat_Pump_Name
+                                      for i
+                                      in self.idf1.idfobjects
+                                      ['AirConditioner:VariableRefrigerantFlow']]:
             if verboseMode:
-                print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object already was in the model')
+                print('VRF Outdoor Unit_'+
+                      zn+
+                      ' AirConditioner:VariableRefrigerantFlow '
+                      'Object already was in the model')
         else:
             self.idf1.newidfobject(
                 'AirConditioner:VariableRefrigerantFlow',
-                Heat_Pump_Name='VRF Outdoor Unit_'+zonename,
+                Heat_Pump_Name='VRF Outdoor Unit_'+zn,
                 Availability_Schedule_Name='On 24/7',
                 Gross_Rated_Total_Cooling_Capacity='autosize',
                 Gross_Rated_Cooling_COP=2,
                 Minimum_Outdoor_Temperature_in_Cooling_Mode=-6,
                 Maximum_Outdoor_Temperature_in_Cooling_Mode=43,
-                Cooling_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name='VRFCoolCapFT',
+                Cooling_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                'VRFCoolCapFT',
                 Cooling_Capacity_Ratio_Boundary_Curve_Name='VRFCoolCapFTBoundary',
-                Cooling_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name='VRFCoolCapFTHi',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name='VRFCoolEIRFT',
+                Cooling_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                'VRFCoolCapFTHi',
+                Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                'VRFCoolEIRFT',
                 Cooling_Energy_Input_Ratio_Boundary_Curve_Name='VRFCoolEIRFTBoundary',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name='VRFCoolEIRFTHi',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name='CoolingEIRLowPLR',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name='CoolingEIRHiPLR',
-                Cooling_Combination_Ratio_Correction_Factor_Curve_Name='CoolingCombRatio',
+                Cooling_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                'VRFCoolEIRFTHi',
+                Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name=
+                'CoolingEIRLowPLR',
+                Cooling_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name=
+                'CoolingEIRHiPLR',
+                Cooling_Combination_Ratio_Correction_Factor_Curve_Name=
+                'CoolingCombRatio',
                 Cooling_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
                 Gross_Rated_Heating_Capacity='autosize',
                 Rated_Heating_Capacity_Sizing_Ratio=1,
                 Gross_Rated_Heating_COP=2.1,
                 Minimum_Outdoor_Temperature_in_Heating_Mode=-20,
                 Maximum_Outdoor_Temperature_in_Heating_Mode=40,
-                Heating_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name='VRFHeatCapFT',
+                Heating_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                'VRFHeatCapFT',
                 Heating_Capacity_Ratio_Boundary_Curve_Name='VRFHeatCapFTBoundary',
-                Heating_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name='VRFHeatCapFTHi',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name='VRFHeatEIRFT',
+                Heating_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                'VRFHeatCapFTHi',
+                Heating_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                'VRFHeatEIRFT',
                 Heating_Energy_Input_Ratio_Boundary_Curve_Name='VRFHeatEIRFTBoundary',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name='VRFHeatEIRFTHi',
+                Heating_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                'VRFHeatEIRFTHi',
                 Heating_Performance_Curve_Outdoor_Temperature_Type='WetBulbTemperature',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name='HeatingEIRLowPLR',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name='HeatingEIRHiPLR',
-                Heating_Combination_Ratio_Correction_Factor_Curve_Name='HeatingCombRatio',
+                Heating_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name=
+                'HeatingEIRLowPLR',
+                Heating_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name=
+                'HeatingEIRHiPLR',
+                Heating_Combination_Ratio_Correction_Factor_Curve_Name=
+                'HeatingCombRatio',
                 Heating_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
                 Minimum_Heat_Pump_PartLoad_Ratio=0.2,
                 Zone_Name_for_Master_Thermostat_Location='',
                 Master_Thermostat_Priority_Control_Type='LoadPriority',
                 Thermostat_Priority_Schedule_Name='',
-                Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+zonename+' Zone List',
+                Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+zn+' Zone List',
                 Heat_Pump_Waste_Heat_Recovery='Yes',
                 Equivalent_Piping_Length_used_for_Piping_Correction_Factor_in_Cooling_Mode=50,
                 Vertical_Height_used_for_Piping_Correction_Factor=15,
-                Piping_Correction_Factor_for_Length_in_Cooling_Mode_Curve_Name='CoolingLengthCorrectionFactor',
+                Piping_Correction_Factor_for_Length_in_Cooling_Mode_Curve_Name=
+                'CoolingLengthCorrectionFactor',
                 Piping_Correction_Factor_for_Height_in_Cooling_Mode_Coefficient=0,
                 Equivalent_Piping_Length_used_for_Piping_Correction_Factor_in_Heating_Mode=50,
-                Piping_Correction_Factor_for_Length_in_Heating_Mode_Curve_Name='VRF Piping Correction Factor for Length in Heating Mode',
+                Piping_Correction_Factor_for_Length_in_Heating_Mode_Curve_Name=
+                'VRF Piping Correction Factor for Length in Heating Mode',
                 Piping_Correction_Factor_for_Height_in_Heating_Mode_Coefficient=0,
                 Crankcase_Heater_Power_per_Compressor=15,
                 Number_of_Compressors=2,
@@ -1276,7 +1417,9 @@ def addDetHVACobjEp94(self, verboseMode: bool = True):
                 Resistive_Defrost_Heater_Capacity='autosize',
                 Maximum_Outdoor_Drybulb_Temperature_for_Defrost_Operation=5,
                 Condenser_Type='AirCooled',
-                Condenser_Inlet_Node_Name='VRF Outdoor Unit_'+zonename+' Outdoor Air Node',
+                Condenser_Inlet_Node_Name='VRF Outdoor Unit_'+
+                                          zn+
+                                          ' Outdoor Air Node',
                 Condenser_Outlet_Node_Name='',
                 Water_Condenser_Volume_Flow_Rate='autosize',
                 Evaporative_Condenser_Effectiveness=0.9,
@@ -1289,73 +1432,82 @@ def addDetHVACobjEp94(self, verboseMode: bool = True):
                 Fuel_Type='Electricity',
                 Minimum_Outdoor_Temperature_in_Heat_Recovery_Mode=-10,
                 Maximum_Outdoor_Temperature_in_Heat_Recovery_Mode=40,
-                Heat_Recovery_Cooling_Capacity_Modifier_Curve_Name='VRF Heat Recovery Cooling Capacity Modifier',
+                Heat_Recovery_Cooling_Capacity_Modifier_Curve_Name=
+                'VRF Heat Recovery Cooling Capacity Modifier',
                 Initial_Heat_Recovery_Cooling_Capacity_Fraction=0.5,
                 Heat_Recovery_Cooling_Capacity_Time_Constant=0.15,
-                Heat_Recovery_Cooling_Energy_Modifier_Curve_Name='VRF Heat Recovery Cooling Energy Modifier',
+                Heat_Recovery_Cooling_Energy_Modifier_Curve_Name=
+                'VRF Heat Recovery Cooling Energy Modifier',
                 Initial_Heat_Recovery_Cooling_Energy_Fraction=1,
                 Heat_Recovery_Cooling_Energy_Time_Constant=0,
-                Heat_Recovery_Heating_Capacity_Modifier_Curve_Name='VRF Heat Recovery Heating Capacity Modifier',
+                Heat_Recovery_Heating_Capacity_Modifier_Curve_Name=
+                'VRF Heat Recovery Heating Capacity Modifier',
                 Initial_Heat_Recovery_Heating_Capacity_Fraction=1,
                 Heat_Recovery_Heating_Capacity_Time_Constant=0.15,
-                Heat_Recovery_Heating_Energy_Modifier_Curve_Name='VRF Heat Recovery Heating Energy Modifier',
+                Heat_Recovery_Heating_Energy_Modifier_Curve_Name=
+                'VRF Heat Recovery Heating Energy Modifier',
                 Initial_Heat_Recovery_Heating_Energy_Fraction=1,
                 Heat_Recovery_Heating_Energy_Time_Constant=0
                 )
             if verboseMode:
-                print('VRF Outdoor Unit_'+zonename+' AirConditioner:VariableRefrigerantFlow Object has been added')
+                print('VRF Outdoor Unit_'+
+                      zn+
+                      ' AirConditioner:VariableRefrigerantFlow '
+                      'Object has been added')
 
-    outdoorairnodelistlist = [i for i in self.idf1.idfobjects['OutdoorAir:NodeList']]
-    # print(outdoorairnodelistlist)
+    OANDlist = [i for i in self.idf1.idfobjects['OutdoorAir:NodeList']]
+    # print(OANDlist)
 
-    for i in range(len(outdoorairnodelistlist)):
-        firstoutdoorairnodelist = self.idf1.idfobjects['OutdoorAir:NodeList'][-1]
-        self.idf1.removeidfobject(firstoutdoorairnodelist)
+    for i in range(len(OANDlist)):
+        firstOAND = self.idf1.idfobjects['OutdoorAir:NodeList'][-1]
+        self.idf1.removeidfobject(firstOAND)
 
-    del outdoorairnodelistlist
+    del OANDlist
 
-    zoneterminalunitlistlist = [i for i in self.idf1.idfobjects['ZoneTerminalUnitList']]
-    # print(zoneterminalunitlistlist)
+    ZTULlist = [i for i in self.idf1.idfobjects['ZoneTerminalUnitList']]
+    # print(ZTULlist)
 
-    for i in range(len(zoneterminalunitlistlist)):
-        firstozoneterminalunitlist = self.idf1.idfobjects['ZoneTerminalUnitList'][-1]
-        self.idf1.removeidfobject(firstozoneterminalunitlist)
+    for i in range(len(ZTULlist)):
+        firstZTUL = self.idf1.idfobjects['ZoneTerminalUnitList'][-1]
+        self.idf1.removeidfobject(firstZTUL)
 
-    del zoneterminalunitlistlist
+    del ZTULlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'OutdoorAir:NodeList',
-            Node_or_NodeList_Name_1='VRF Outdoor Unit_'+zonename+' Outdoor Air Node'
+            Node_or_NodeList_Name_1='VRF Outdoor Unit_'+zn+' Outdoor Air Node'
             )
         if verboseMode:
-            print('VRF Outdoor Unit_'+zonename+' Outdoor Air Node Object has been added')
+            print('VRF Outdoor Unit_'+
+                  zn+
+                  ' Outdoor Air Node Object has been added')
 
         self.idf1.newidfobject(
             'ZoneTerminalUnitList',
-            Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+zonename+' Zone List',
-            Zone_Terminal_Unit_Name_1=zonename+' VRF Indoor Unit'
+            Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+zn+' Zone List',
+            Zone_Terminal_Unit_Name_1=zn+' VRF Indoor Unit'
             )
         if verboseMode:
-            print('VRF Outdoor Unit_'+zonename+' Zone List Object has been added')
+            print('VRF Outdoor Unit_'+zn+' Zone List Object has been added')
 
-    zonecontrolthermostatlist = [i for i in self.idf1.idfobjects['ZoneControl:Thermostat']]
-    # print(zonecontrolthermostatlist)
+    ZCTlist = [i for i in self.idf1.idfobjects['ZoneControl:Thermostat']]
+    # print(ZCTlist)
 
-    for i in range(len(zonecontrolthermostatlist)):
-        firstzonecontrolthermostat = self.idf1.idfobjects['ZoneControl:Thermostat'][-1]
-        self.idf1.removeidfobject(firstzonecontrolthermostat)
+    for i in range(len(ZCTlist)):
+        firstZCT = self.idf1.idfobjects['ZoneControl:Thermostat'][-1]
+        self.idf1.removeidfobject(firstZCT)
 
-    del zonecontrolthermostatlist
+    del ZCTlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'ZoneControl:Thermostat',
-            Name=zonename+' Thermostat',
-            Zone_or_ZoneList_Name=zonename,
+            Name=zn+' Thermostat',
+            Zone_or_ZoneList_Name=zn,
             Control_Type_Schedule_Name='Control type schedule: Always 4',
             Control_1_Object_Type='ThermostatSetpoint:DualSetpoint',
-            Control_1_Name=zonename+' Dual SP'
+            Control_1_Name=zn+' Dual SP'
             )
 
     sizingzonelist = [i for i in self.idf1.idfobjects['Sizing:Zone']]
@@ -1367,19 +1519,22 @@ def addDetHVACobjEp94(self, verboseMode: bool = True):
 
     del sizingzonelist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'Sizing:Zone',
-            Zone_or_ZoneList_Name=zonename,
-            Zone_Cooling_Design_Supply_Air_Temperature_Input_Method='SupplyAirTemperature',
+            Zone_or_ZoneList_Name=zn,
+            Zone_Cooling_Design_Supply_Air_Temperature_Input_Method=
+            'SupplyAirTemperature',
             Zone_Cooling_Design_Supply_Air_Temperature=14,
             Zone_Cooling_Design_Supply_Air_Temperature_Difference=5,
-            Zone_Heating_Design_Supply_Air_Temperature_Input_Method='SupplyAirTemperature',
+            Zone_Heating_Design_Supply_Air_Temperature_Input_Method=
+            'SupplyAirTemperature',
             Zone_Heating_Design_Supply_Air_Temperature=50,
             Zone_Heating_Design_Supply_Air_Temperature_Difference=15,
             Zone_Cooling_Design_Supply_Air_Humidity_Ratio=0.009,
             Zone_Heating_Design_Supply_Air_Humidity_Ratio=0.004,
-            Design_Specification_Outdoor_Air_Object_Name=zonename+' Design Specification Outdoor Air Object',
+            Design_Specification_Outdoor_Air_Object_Name=
+            zn+' Design Specification Outdoor Air Object',
             Zone_Heating_Sizing_Factor=1.25,
             Zone_Cooling_Sizing_Factor=1.15,
             Cooling_Design_Air_Flow_Method='DesignDay',
@@ -1392,28 +1547,31 @@ def addDetHVACobjEp94(self, verboseMode: bool = True):
             Heating_Maximum_Air_Flow_per_Zone_Floor_Area=0.00203,
             Heating_Maximum_Air_Flow=0.14158,
             Heating_Maximum_Air_Flow_Fraction=0.3,
-            Design_Specification_Zone_Air_Distribution_Object_Name=zonename+' Design Specification Zone Air Distribution Object',
+            Design_Specification_Zone_Air_Distribution_Object_Name=
+            zn+' Design Specification Zone Air Distribution Object',
             Account_for_Dedicated_Outdoor_Air_System='Yes',
             Dedicated_Outdoor_Air_System_Control_Strategy='NeutralSupplyAir',
             Dedicated_Outdoor_Air_Low_Setpoint_Temperature_for_Design='autosize',
             Dedicated_Outdoor_Air_High_Setpoint_Temperature_for_Design='autosize'
             )
         if verboseMode:
-            print(zonename+' Sizing:Zone Object has been added')
+            print(zn+' Sizing:Zone Object has been added')
 
-    DesignSpecificationOutdoorAirList = [i for i in self.idf1.idfobjects['DesignSpecification:OutdoorAir']]
-    # print(DesignSpecificationOutdoorAirList)
+    DSOAlist = [i
+                for i
+                in self.idf1.idfobjects['DesignSpecification:OutdoorAir']]
+    # print(DSOAlist)
 
-    for i in range(len(DesignSpecificationOutdoorAirList)):
-        firstDesSpeOutAir = self.idf1.idfobjects['DesignSpecification:OutdoorAir'][-1]
-        self.idf1.removeidfobject(firstDesSpeOutAir)
+    for i in range(len(DSOAlist)):
+        firstDSOA = self.idf1.idfobjects['DesignSpecification:OutdoorAir'][-1]
+        self.idf1.removeidfobject(firstDSOA)
 
-    del DesignSpecificationOutdoorAirList
+    del DSOAlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'DesignSpecification:OutdoorAir',
-            Name=zonename+' Design Specification Outdoor Air Object',
+            Name=zn+' Design Specification Outdoor Air Object',
             Outdoor_Air_Method='Flow/Person',
             Outdoor_Air_Flow_per_Person=0.00944,
             Outdoor_Air_Flow_per_Zone_Floor_Area=0,
@@ -1422,28 +1580,34 @@ def addDetHVACobjEp94(self, verboseMode: bool = True):
             Outdoor_Air_Schedule_Name='On 24/7'
             )
         if verboseMode:
-            print(zonename+' Design Specification Outdoor Air Object has been added')
+            print(zn+' Design Specification Outdoor Air Object has been added')
 
-    DesignSpecificationZoneAirDistributionList = [i for i in self.idf1.idfobjects['DesignSpecification:ZoneAirDistribution']]
-    # print(DesignSpecificationZoneAirDistributionList)
+    DSZADlist = [i
+                 for i
+                 in self.idf1.idfobjects
+                 ['DesignSpecification:ZoneAirDistribution']]
+    # print(DSZADlist)
 
-    for i in range(len(DesignSpecificationZoneAirDistributionList)):
-        firstDesSpeZonAirDis = self.idf1.idfobjects['DesignSpecification:ZoneAirDistribution'][-1]
-        self.idf1.removeidfobject(firstDesSpeZonAirDis)
+    for i in range(len(DSZADlist)):
+        firstDSZAD = self.idf1.idfobjects[
+            'DesignSpecification:ZoneAirDistribution'
+        ][-1]
+        self.idf1.removeidfobject(firstDSZAD)
 
-    del DesignSpecificationZoneAirDistributionList
+    del DSZADlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'DesignSpecification:ZoneAirDistribution',
-            Name=zonename+' Design Specification Zone Air Distribution Object',
+            Name=zn+' Design Specification Zone Air Distribution Object',
             Zone_Air_Distribution_Effectiveness_in_Cooling_Mode=1,
             Zone_Air_Distribution_Effectiveness_in_Heating_Mode=1,
             Zone_Air_Distribution_Effectiveness_Schedule_Name='',
             Zone_Secondary_Recirculation_Fraction=0
             )
         if verboseMode:
-            print(zonename+' Design Specification Zone Air Distribution Object has been added')
+            print(zn+' Design Specification Zone Air Distribution '
+                     'Object has been added')
 
     nodelistlist = [i for i in self.idf1.idfobjects['NodeList']]
     # print(nodelistlist)
@@ -1454,83 +1618,92 @@ def addDetHVACobjEp94(self, verboseMode: bool = True):
 
     del nodelistlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'NodeList',
-            Name=zonename+' Air Inlet Node List',
-            Node_1_Name=zonename+' VRF Indoor Unit Supply Outlet'
+            Name=zn+' Air Inlet Node List',
+            Node_1_Name=zn+' VRF Indoor Unit Supply Outlet'
             )
         self.idf1.newidfobject(
             'NodeList',
-            Name=zonename+' Air Exhaust Node List',
-            Node_1_Name=zonename+' VRF Indoor Unit Return'
+            Name=zn+' Air Exhaust Node List',
+            Node_1_Name=zn+' VRF Indoor Unit Return'
             )
         if verboseMode:
-            print(zonename+' Nodelist Objects has been added')
+            print(zn+' Nodelist Objects has been added')
 
-    ZoneHvacEquipmentConnectionsList = [i for i in self.idf1.idfobjects['ZoneHVAC:EquipmentConnections']]
-    # print(ZoneHvacEquipmentConnectionsList)
+    ZHEClist = [i
+                for i
+                in self.idf1.idfobjects['ZoneHVAC:EquipmentConnections']]
+    # print(ZHEClist)
 
-    for i in range(len(ZoneHvacEquipmentConnectionsList)):
-        firstZoneHvacEquipmentConnection = self.idf1.idfobjects['ZoneHVAC:EquipmentConnections'][-1]
-        self.idf1.removeidfobject(firstZoneHvacEquipmentConnection)
+    for i in range(len(ZHEClist)):
+        firstZHEC = self.idf1.idfobjects['ZoneHVAC:EquipmentConnections'][-1]
+        self.idf1.removeidfobject(firstZHEC)
 
-    del ZoneHvacEquipmentConnectionsList
+    del ZHEClist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'ZoneHVAC:EquipmentConnections',
-            Zone_Name=zonename,
-            Zone_Conditioning_Equipment_List_Name=zonename+' Equipment',
-            Zone_Air_Inlet_Node_or_NodeList_Name=zonename+' Air Inlet Node List',
-            Zone_Air_Exhaust_Node_or_NodeList_Name=zonename+' Air Exhaust Node List',
-            Zone_Air_Node_Name=zonename+' Zone Air Node',
-            Zone_Return_Air_Node_or_NodeList_Name=zonename+' Return Outlet'
+            Zone_Name=zn,
+            Zone_Conditioning_Equipment_List_Name=zn+' Equipment',
+            Zone_Air_Inlet_Node_or_NodeList_Name=zn+' Air Inlet Node List',
+            Zone_Air_Exhaust_Node_or_NodeList_Name=zn+' Air Exhaust Node List',
+            Zone_Air_Node_Name=zn+' Zone Air Node',
+            Zone_Return_Air_Node_or_NodeList_Name=zn+' Return Outlet'
             )
         if verboseMode:
-            print(zonename+' ZoneHVAC:EquipmentConnections Objects has been added')
+            print(zn+' ZoneHVAC:EquipmentConnections Objects has been added')
 
-    ZoneHvacEquipmentListList = [i for i in self.idf1.idfobjects['ZoneHVAC:EquipmentList']]
-    # print(ZoneHvacEquipmentListList)
+    ZHELlist = [i for i in self.idf1.idfobjects['ZoneHVAC:EquipmentList']]
+    # print(ZHELlist)
 
-    for i in range(len(ZoneHvacEquipmentListList)):
-        firstZoneHvacEquipmentList = self.idf1.idfobjects['ZoneHVAC:EquipmentList'][-1]
-        self.idf1.removeidfobject(firstZoneHvacEquipmentList)
+    for i in range(len(ZHELlist)):
+        firstZHEL = self.idf1.idfobjects['ZoneHVAC:EquipmentList'][-1]
+        self.idf1.removeidfobject(firstZHEL)
 
-    del ZoneHvacEquipmentListList
+    del ZHELlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'ZoneHVAC:EquipmentList',
             defaultvalues=False,
-            Name=zonename+' Equipment',
+            Name=zn+' Equipment',
             Load_Distribution_Scheme='SequentialLoad',
-            Zone_Equipment_1_Object_Type='ZoneHVAC:TerminalUnit:VariableRefrigerantFlow',
-            Zone_Equipment_1_Name=zonename+' VRF Indoor Unit',
+            Zone_Equipment_1_Object_Type=
+            'ZoneHVAC:TerminalUnit:VariableRefrigerantFlow',
+            Zone_Equipment_1_Name=zn+' VRF Indoor Unit',
             Zone_Equipment_1_Cooling_Sequence=1,
             Zone_Equipment_1_Heating_or_NoLoad_Sequence=1,
             Zone_Equipment_1_Sequential_Cooling_Fraction_Schedule_Name='',
             Zone_Equipment_1_Sequential_Heating_Fraction_Schedule_Name=''
             )
         if verboseMode:
-            print(zonename+' ZoneHVAC:EquipmentList Objects has been added')
+            print(zn+' ZoneHVAC:EquipmentList Objects has been added')
 
-    ZoneHvacTermUnitVRFlist = [i for i in self.idf1.idfobjects['ZoneHVAC:TerminalUnit:VariableRefrigerantFlow']]
-    # print(ZoneHvacTermUnitVRFlist)
+    ZHTUVRFlist = [i
+                   for i
+                   in self.idf1.idfobjects
+                   ['ZoneHVAC:TerminalUnit:VariableRefrigerantFlow']]
+    # print(ZHTUVRFlist)
 
-    for i in range(len(ZoneHvacTermUnitVRFlist)):
-        firstZoneHvacTermUnitVRF = self.idf1.idfobjects['ZoneHVAC:TerminalUnit:VariableRefrigerantFlow'][-1]
-        self.idf1.removeidfobject(firstZoneHvacTermUnitVRF)
+    for i in range(len(ZHTUVRFlist)):
+        firstZHTUVRF = self.idf1.idfobjects[
+            'ZoneHVAC:TerminalUnit:VariableRefrigerantFlow'
+        ][-1]
+        self.idf1.removeidfobject(firstZHTUVRF)
 
-    del ZoneHvacTermUnitVRFlist
+    del ZHTUVRFlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'ZoneHVAC:TerminalUnit:VariableRefrigerantFlow',
-            Zone_Terminal_Unit_Name=zonename+' VRF Indoor Unit',
+            Zone_Terminal_Unit_Name=zn+' VRF Indoor Unit',
             Terminal_Unit_Availability_Schedule='On 24/7',
-            Terminal_Unit_Air_Inlet_Node_Name=zonename+' VRF Indoor Unit Return',
-            Terminal_Unit_Air_Outlet_Node_Name=zonename+' VRF Indoor Unit Supply Outlet',
+            Terminal_Unit_Air_Inlet_Node_Name=zn+' VRF Indoor Unit Return',
+            Terminal_Unit_Air_Outlet_Node_Name=
+            zn+' VRF Indoor Unit Supply Outlet',
             Cooling_Supply_Air_Flow_Rate='autosize',
             No_Cooling_Supply_Air_Flow_Rate='autosize',
             Heating_Supply_Air_Flow_Rate='autosize',
@@ -1541,155 +1714,182 @@ def addDetHVACobjEp94(self, verboseMode: bool = True):
             Supply_Air_Fan_Operating_Mode_Schedule_Name='On 24/7',
             Supply_Air_Fan_Placement='DrawThrough',
             Supply_Air_Fan_Object_Type='Fan:ConstantVolume',
-            Supply_Air_Fan_Object_Name=zonename+' VRF Indoor Unit Supply Fan',
+            Supply_Air_Fan_Object_Name=zn+' VRF Indoor Unit Supply Fan',
             Outside_Air_Mixer_Object_Type='',
             Outside_Air_Mixer_Object_Name='',
             Cooling_Coil_Object_Type='Coil:Cooling:DX:VariableRefrigerantFlow',
-            Cooling_Coil_Object_Name=zonename+' VRF Indoor Unit DX Cooling Coil',
+            Cooling_Coil_Object_Name=zn+' VRF Indoor Unit DX Cooling Coil',
             Heating_Coil_Object_Type='Coil:Heating:DX:VariableRefrigerantFlow',
-            Heating_Coil_Object_Name=zonename+' VRF Indoor Unit DX Heating Coil',
+            Heating_Coil_Object_Name=zn+' VRF Indoor Unit DX Heating Coil',
             Zone_Terminal_Unit_On_Parasitic_Electric_Energy_Use=30,
             Zone_Terminal_Unit_Off_Parasitic_Electric_Energy_Use=20,
             Rated_Heating_Capacity_Sizing_Ratio='',
             Availability_Manager_List_Name=''
             )
         if verboseMode:
-            print(zonename+' ZoneHVAC:TerminalUnit:VariableRefrigerantFlow Object has been added')
+            print(zn+' ZoneHVAC:TerminalUnit:VariableRefrigerantFlow '
+                     'Object has been added')
 
-    CoilCoolingDXVRFlist = [i for i in self.idf1.idfobjects['Coil:Cooling:DX:VariableRefrigerantFlow']]
-    # print(CoilCoolingDXVRFlist)
+    CCDXVRFlist = [i
+                   for i
+                   in self.idf1.idfobjects
+                   ['Coil:Cooling:DX:VariableRefrigerantFlow']]
+    # print(CCDXVRFlist)
 
-    for i in range(len(CoilCoolingDXVRFlist)):
-        firstCoilCoolingDXVRF = self.idf1.idfobjects['Coil:Cooling:DX:VariableRefrigerantFlow'][-1]
-        self.idf1.removeidfobject(firstCoilCoolingDXVRF)
+    for i in range(len(CCDXVRFlist)):
+        firstCCDCVRF = self.idf1.idfobjects[
+            'Coil:Cooling:DX:VariableRefrigerantFlow'
+        ][-1]
+        self.idf1.removeidfobject(firstCCDCVRF)
 
-    del CoilCoolingDXVRFlist
+    del CCDXVRFlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'Coil:Cooling:DX:VariableRefrigerantFlow',
-            Name=zonename+' VRF Indoor Unit DX Cooling Coil',
+            Name=zn+' VRF Indoor Unit DX Cooling Coil',
             Availability_Schedule_Name='On 24/7',
             Gross_Rated_Total_Cooling_Capacity='autosize',
             Gross_Rated_Sensible_Heat_Ratio='autosize',
             Rated_Air_Flow_Rate='autosize',
-            Cooling_Capacity_Ratio_Modifier_Function_of_Temperature_Curve_Name='VRFTUCoolCapFT',
-            Cooling_Capacity_Modifier_Curve_Function_of_Flow_Fraction_Name='VRFACCoolCapFFF',
-            Coil_Air_Inlet_Node=zonename+' VRF Indoor Unit Return',
-            Coil_Air_Outlet_Node=zonename+' VRF Indoor Unit DX Cooling Coil Outlet',
+            Cooling_Capacity_Ratio_Modifier_Function_of_Temperature_Curve_Name=
+            'VRFTUCoolCapFT',
+            Cooling_Capacity_Modifier_Curve_Function_of_Flow_Fraction_Name=
+            'VRFACCoolCapFFF',
+            Coil_Air_Inlet_Node=zn+' VRF Indoor Unit Return',
+            Coil_Air_Outlet_Node=zn+' VRF Indoor Unit DX Cooling Coil Outlet',
             Name_of_Water_Storage_Tank_for_Condensate_Collection=''
             )
         if verboseMode:
-            print(zonename+' Coil:Cooling:DX:VariableRefrigerantFlow Object has been added')
+            print(zn+' Coil:Cooling:DX:VariableRefrigerantFlow '
+                     'Object has been added')
 
-    CoilHeatingDXVRFlist = [i for i in self.idf1.idfobjects['Coil:Heating:DX:VariableRefrigerantFlow']]
-    # print(CoilHeatingDXVRFlist)
+    CHDXVRFlist = [i
+                   for i
+                   in self.idf1.idfobjects
+                   ['Coil:Heating:DX:VariableRefrigerantFlow']]
+    # print(CHDXVRFlist)
 
-    for i in range(len(CoilHeatingDXVRFlist)):
-        firstCoilHeatingDXVRF = self.idf1.idfobjects['Coil:Heating:DX:VariableRefrigerantFlow'][-1]
-        self.idf1.removeidfobject(firstCoilHeatingDXVRF)
+    for i in range(len(CHDXVRFlist)):
+        firstCHDXVRF = self.idf1.idfobjects[
+            'Coil:Heating:DX:VariableRefrigerantFlow'
+        ][-1]
+        self.idf1.removeidfobject(firstCHDXVRF)
 
-    del CoilHeatingDXVRFlist
+    del CHDXVRFlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'Coil:Heating:DX:VariableRefrigerantFlow',
-            Name=zonename+' VRF Indoor Unit DX Heating Coil',
+            Name=zn+' VRF Indoor Unit DX Heating Coil',
             Availability_Schedule='On 24/7',
             Gross_Rated_Heating_Capacity='autosize',
             Rated_Air_Flow_Rate='autosize',
-            Coil_Air_Inlet_Node=zonename+' VRF Indoor Unit DX Cooling Coil Outlet',
-            Coil_Air_Outlet_Node=zonename+' VRF Indoor Unit DX Heating Coil Outlet',
-            Heating_Capacity_Ratio_Modifier_Function_of_Temperature_Curve_Name='VRFTUHeatCapFT',
-            Heating_Capacity_Modifier_Function_of_Flow_Fraction_Curve_Name='VRFACCoolCapFFF'
+            Coil_Air_Inlet_Node=zn+' VRF Indoor Unit DX Cooling Coil Outlet',
+            Coil_Air_Outlet_Node=zn+' VRF Indoor Unit DX Heating Coil Outlet',
+            Heating_Capacity_Ratio_Modifier_Function_of_Temperature_Curve_Name=
+            'VRFTUHeatCapFT',
+            Heating_Capacity_Modifier_Function_of_Flow_Fraction_Curve_Name=
+            'VRFACCoolCapFFF'
             )
         if verboseMode:
-            print(zonename+' Coil:Heating:DX:VariableRefrigerantFlow Object has been added')
+            print(zn+' Coil:Heating:DX:VariableRefrigerantFlow '
+                     'Object has been added')
 
-    fanconstantvolumelist = [i for i in self.idf1.idfobjects['Fan:ConstantVolume']]
-    # print(fanconstantvolumelist)
+    FCVlist = [i for i in self.idf1.idfobjects['Fan:ConstantVolume']]
+    # print(FCVlist)
 
-    for i in range(len(fanconstantvolumelist)):
-        firstfanconstantvolume = self.idf1.idfobjects['Fan:ConstantVolume'][-1]
-        self.idf1.removeidfobject(firstfanconstantvolume)
+    for i in range(len(FCVlist)):
+        firstFCV = self.idf1.idfobjects['Fan:ConstantVolume'][-1]
+        self.idf1.removeidfobject(firstFCV)
 
-    del fanconstantvolumelist
+    del FCVlist
 
-    for zonename in self.zonenames_orig:
+    for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'Fan:ConstantVolume',
-            Name=zonename+' VRF Indoor Unit Supply Fan',
+            Name=zn+' VRF Indoor Unit Supply Fan',
             Availability_Schedule_Name='On 24/7',
             Fan_Total_Efficiency=0.7,
             Pressure_Rise=100,
             Maximum_Flow_Rate='autosize',
             Motor_Efficiency=0.9,
             Motor_In_Airstream_Fraction=1,
-            Air_Inlet_Node_Name=zonename+' VRF Indoor Unit DX Heating Coil Outlet',
-            Air_Outlet_Node_Name=zonename+' VRF Indoor Unit Supply Outlet',
+            Air_Inlet_Node_Name=zn+' VRF Indoor Unit DX Heating Coil Outlet',
+            Air_Outlet_Node_Name=zn+' VRF Indoor Unit Supply Outlet',
             EndUse_Subcategory='General'
             )
         if verboseMode:
-            print(zonename+' Fan:ConstantVolume Object has been added')
+            print(zn+' Fan:ConstantVolume Object has been added')
 
 
 def addForscriptSchMultipleZone(self, verboseMode: bool = True):
     """Add FORSCRIPT Schedules for each zone for MultipleZone."""
-    for zonename in self.zonenames:
-        if "FORSCRIPT_AHST_"+zonename in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
+    for zn in self.zonenames:
+        if "FORSCRIPT_AHST_"+zn in [sch.Name
+                                    for sch
+                                    in self.idf1.idfobjects['Schedule:Compact']]:
             if verboseMode:
-                print('FORSCRIPT_AHST_'+zonename+' Schedule already was in the model')
+                print('FORSCRIPT_AHST_'+zn+' Schedule already was in the model')
         else:
             self.idf1.newidfobject(
                 'Schedule:Compact',
-                Name="FORSCRIPT_AHST_"+zonename,
+                Name="FORSCRIPT_AHST_"+zn,
                 Schedule_Type_Limits_Name="Any Number",
                 Field_1='Through: 12/31',
                 Field_2='For: AllDays',
                 Field_3='Until: 24:00,20'
                 )
             if verboseMode:
-                print('FORSCRIPT_AHST_'+zonename+' Schedule has been added')
+                print('FORSCRIPT_AHST_'+zn+' Schedule has been added')
 
-        if "FORSCRIPT_ACST_"+zonename in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
+        if "FORSCRIPT_ACST_"+zn in [sch.Name
+                                    for sch
+                                    in self.idf1.idfobjects['Schedule:Compact']]:
             if verboseMode:
-                print('FORSCRIPT_ACST_'+zonename+' Schedule already was in the model')
+                print('FORSCRIPT_ACST_'+zn+' Schedule already was in the model')
         else:
             self.idf1.newidfobject(
                 'Schedule:Compact',
-                Name="FORSCRIPT_ACST_"+zonename,
+                Name="FORSCRIPT_ACST_"+zn,
                 Schedule_Type_Limits_Name="Any Number",
                 Field_1='Through: 12/31',
                 Field_2='For: AllDays',
                 Field_3='Until: 24:00,24'
                 )
             if verboseMode:
-                print('FORSCRIPT_ACST_'+zonename+' Schedule has been added')
+                print('FORSCRIPT_ACST_'+zn+' Schedule has been added')
 
     # allschedules=([i for i in self.idf1.idfobjects['Schedule:Compact']])
     # print(allschedules)
 
-    SetpointSchedule = ([i for i in self.idf1.idfobjects['ThermostatSetpoint:DualSetpoint']])
-    # print(SetpointSchedule)
+    TSDSlist = ([i
+                 for i
+                 in self.idf1.idfobjects['ThermostatSetpoint:DualSetpoint']])
+    # print(TSDSlist)
 
-    for i in range(len(SetpointSchedule)):
-        firstschedule = self.idf1.idfobjects['ThermostatSetpoint:DualSetpoint'][-1]
-        self.idf1.removeidfobject(firstschedule)
+    for i in range(len(TSDSlist)):
+        firstTSDS = self.idf1.idfobjects['ThermostatSetpoint:DualSetpoint'][-1]
+        self.idf1.removeidfobject(firstTSDS)
 
-    del SetpointSchedule
+    del TSDSlist
 
     for i in range(len(self.zonenames_orig)):
         self.idf1.newidfobject(
             'ThermostatSetpoint:DualSetpoint',
             Name=self.zonenames_orig[i]+' Dual SP',
-            Heating_Setpoint_Temperature_Schedule_Name="FORSCRIPT_AHST_"+self.zonenames[i],
-            Cooling_Setpoint_Temperature_Schedule_Name="FORSCRIPT_ACST_"+self.zonenames[i]
+            Heating_Setpoint_Temperature_Schedule_Name=
+            "FORSCRIPT_AHST_"+self.zonenames[i],
+            Cooling_Setpoint_Temperature_Schedule_Name=
+            "FORSCRIPT_ACST_"+self.zonenames[i]
             )
 
 
 def checkVentIsOn(self, verboseMode: bool = True):
     """Check ventilation settings."""
-    if "Vent_SP_temp" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
+    if "Vent_SP_temp" in [sch.Name
+                          for sch
+                          in self.idf1.idfobjects['Schedule:Compact']]:
         if verboseMode:
             print("Vent_SP_temp Schedule already was in the model")
     else:
@@ -1704,28 +1904,44 @@ def checkVentIsOn(self, verboseMode: bool = True):
         if verboseMode:
             print("Vent_SP_temp Schedule has been added")
 
-    windowlist = ([window for window in self.idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if window.Name.endswith('_Win')])
-    # print(windowlist)
-    for window in windowlist:
-        window.Height_Factor_for_Opening_Factor_1 = 1
-        window.Start_Height_Factor_for_Opening_Factor_1 = 0
-        window.Width_Factor_for_Opening_Factor_2 = 1
-        window.Height_Factor_for_Opening_Factor_2 = 1
-        window.Start_Height_Factor_for_Opening_Factor_2 = 0
+    Wlist = ([w
+              for w
+              in self.idf1.idfobjects
+              ['AirflowNetwork:MultiZone:Component:DetailedOpening']
+              if w.Name.endswith('_Win')])
+    # print(Wlist)
+    for w in Wlist:
+        w.Height_Factor_for_Opening_Factor_1 = 1
+        w.Start_Height_Factor_for_Opening_Factor_1 = 0
+        w.Width_Factor_for_Opening_Factor_2 = 1
+        w.Height_Factor_for_Opening_Factor_2 = 1
+        w.Start_Height_Factor_for_Opening_Factor_2 = 0
 
-    windowlist_2 = ([window for window in self.idf1.idfobjects['AirflowNetwork:MultiZone:Surface'] if window.Surface_Name.endswith('_Win')])
-    # print(windowlist_2)
-    for window in windowlist_2:
-        window.Ventilation_Control_Mode = 'Temperature'
-        window.Ventilation_Control_Zone_Temperature_Setpoint_Schedule_Name = 'Vent_SP_temp'
-        window.Venting_Availability_Schedule_Name = 'On'
+    Wlist_2 = ([w
+                for w
+                in self.idf1.idfobjects
+                ['AirflowNetwork:MultiZone:Surface']
+                if w.Surface_Name.endswith('_Win')])
+    # print(Wlist_2)
+    for w in Wlist_2:
+        w.Ventilation_Control_Mode = 'Temperature'
+        w.Ventilation_Control_Zone_Temperature_Setpoint_Schedule_Name = 'Vent_SP_temp'
+        w.Venting_Availability_Schedule_Name = 'On'
 
     # Checking if all internal doors are always opened
 
-    doorlist = ([door for door in self.idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if door.Name.endswith('_Door')])
-    for door in doorlist:
-        door.Width_Factor_for_Opening_Factor_2 = 1
+    Dlist = ([d
+              for d
+              in self.idf1.idfobjects
+              ['AirflowNetwork:MultiZone:Component:DetailedOpening']
+              if d.Name.endswith('_Door')])
+    for d in Dlist:
+        d.Width_Factor_for_Opening_Factor_2 = 1
 
-    doorlist_2 = ([door for door in self.idf1.idfobjects['AirflowNetwork:MultiZone:Surface'] if door.Surface_Name.endswith('_Door')])
-    for door in doorlist_2:
-        door.Venting_Availability_Schedule_Name = 'On'
+    Dlist_2 = ([d
+                for d
+                in self.idf1.idfobjects
+                ['AirflowNetwork:MultiZone:Surface']
+                if d.Surface_Name.endswith('_Door')])
+    for d in Dlist_2:
+        d.Venting_Availability_Schedule_Name = 'On'

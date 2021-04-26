@@ -6,3 +6,5 @@ dist/
 tests_sim/
 /.spyproject/
 /tests/SS/
+/formatted_with_black/
+/formatted_manually/

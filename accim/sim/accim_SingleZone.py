@@ -3,7 +3,9 @@
 
 def addForscriptSchSingleZone(self, verboseMode: bool = True):
     """Add FORSCRIPT schedules for SingleZone accim."""
-    if "FORSCRIPT_AHST" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
+    if "FORSCRIPT_AHST" in [sch.Name
+                            for sch
+                            in self.idf1.idfobjects['Schedule:Compact']]:
         if verboseMode:
             print("FORSCRIPT_AHST Schedule already was in the model")
     else:
@@ -18,7 +20,9 @@ def addForscriptSchSingleZone(self, verboseMode: bool = True):
         # todo allow mixed mode for singlezone functions: Name="FORSCRIPT_ACST_"+zonename,
         if verboseMode:
             print("FORSCRIPT_AHST Schedule has been added")
-    if "FORSCRIPT_ACST" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
+    if "FORSCRIPT_ACST" in [sch.Name
+                            for sch
+                            in self.idf1.idfobjects['Schedule:Compact']]:
         if verboseMode:
             print("FORSCRIPT_ACST Schedule already was in the model")
     else:
@@ -33,8 +37,11 @@ def addForscriptSchSingleZone(self, verboseMode: bool = True):
         if verboseMode:
             print("FORSCRIPT_ACST Schedule has been added")
 
-    for program in [program for program in self.idf1.idfobjects['ThermostatSetpoint:DualSetpoint']]:
-        program.Heating_Setpoint_Temperature_Schedule_Name = "FORSCRIPT_AHST"
-        program.Cooling_Setpoint_Temperature_Schedule_Name = "FORSCRIPT_ACST"
+    for tsds in [tsds
+                 for tsds
+                 in self.idf1.idfobjects['ThermostatSetpoint:DualSetpoint']]:
+        tsds.Heating_Setpoint_Temperature_Schedule_Name = "FORSCRIPT_AHST"
+        tsds.Cooling_Setpoint_Temperature_Schedule_Name = "FORSCRIPT_ACST"
     if verboseMode:
-        print('FORSCRIPT_AHST and FORSCRIPT_ACST has been asigned to all ThermostatSetpoint:DualSetpoint objects')
+        print('FORSCRIPT_AHST and FORSCRIPT_ACST '
+              'has been asigned to all ThermostatSetpoint:DualSetpoint objects')

@@ -9,7 +9,9 @@ def addEMSProgramsBase(self, verboseMode: bool = True):
     in the model, and otherwise adds them.
     :param verboseMode:
     """
-    programlist = ([program.Name for program in self.idf1.idfobjects['EnergyManagementSystem:Program']])
+    programlist = ([program.Name
+                    for program
+                    in self.idf1.idfobjects['EnergyManagementSystem:Program']])
 
     if 'SetComfTemp' in programlist:
         if verboseMode:
@@ -425,8 +427,12 @@ def addEMSPCMBase(self, verboseMode: bool = True):
     Checks if some EMS program calling manager objects are already
     in the model, and otherwise adds them.
     """
-    programlist = ([program.Name for program in self.idf1.idfobjects['EnergyManagementSystem:Program']])
-    pcmlist = ([pcm.Name for pcm in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager']])
+    programlist = ([program.Name
+                    for program
+                    in self.idf1.idfobjects['EnergyManagementSystem:Program']])
+    pcmlist = ([pcm.Name
+                for pcm
+                in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager']])
 
     for i in programlist:
         if i in pcmlist:
@@ -460,7 +466,9 @@ def addEMSOutputVariableBase(self, verboseMode: bool = True):
         'Adaptive Heating Setpoint Temperature_No Tolerance': 'AHSTnoTol',
         }
 
-    outputvariablelist = ([program.Name for program in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']])
+    outputvariablelist = ([outvar.Name
+                           for outvar
+                           in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']])
 
     for i in EMSOutputVariableComfTemp_dict:
         if i in outputvariablelist:
@@ -520,10 +528,14 @@ def addOutputVariablesTimestep(self, verboseMode: bool = True):
 
     No need for further description.
     """
-    fulloutputlist = ([output for output in self.idf1.idfobjects['Output:Variable']])
+    fulloutputlist = ([output
+                       for output
+                       in self.idf1.idfobjects['Output:Variable']])
     # print(fulloutputlist)
 
-    outputlist = ([output.Variable_Name for output in self.idf1.idfobjects['Output:Variable']])
+    outputlist = ([output.Variable_Name
+                   for output
+                   in self.idf1.idfobjects['Output:Variable']])
     # print(outputlist)
 
     for i in range(len(outputlist)):
@@ -535,7 +547,9 @@ def addOutputVariablesTimestep(self, verboseMode: bool = True):
             Schedule_Name=fulloutputlist[i].Schedule_Name
             )
         if verboseMode:
-            print('Added - '+fulloutputlist[i].Variable_Name+' Output:Variable Timestep data')
+            print('Added - '+
+                  fulloutputlist[i].Variable_Name+
+                  ' Output:Variable Timestep data')
 
     # print([output for output in self.idf1.idfobjects['Output:Variable'] if output.Reporting_Frequency == 'Timestep'])
 
@@ -549,17 +563,23 @@ def addSimplifiedOutputVariables(self, verboseMode: bool = True):
     Remove all outputs and add only VFR outdoor unit consumption
     and operative temperature.
     """
-    EnvironmentalImpactFactorslist = ([output for output in self.idf1.idfobjects['Output:EnvironmentalImpactFactors']])
-    for i in range(len(EnvironmentalImpactFactorslist)):
-        firstEnvironmentalImpactFactor = self.idf1.idfobjects['Output:EnvironmentalImpactFactors'][-1]
-        self.idf1.removeidfobject(firstEnvironmentalImpactFactor)
+    EnvList = ([output
+                for output
+                in self.idf1.idfobjects['Output:EnvironmentalImpactFactors']])
+    for i in range(len(EnvList)):
+        firstEnv = self.idf1.idfobjects['Output:EnvironmentalImpactFactors'][-1]
+        self.idf1.removeidfobject(firstEnv)
 
-    outputmeterlist = ([output for output in self.idf1.idfobjects['Output:Meter']])
+    outputmeterlist = ([output
+                        for output
+                        in self.idf1.idfobjects['Output:Meter']])
     for i in range(len(outputmeterlist)):
         firstoutputmeter = self.idf1.idfobjects['Output:Meter'][-1]
         self.idf1.removeidfobject(firstoutputmeter)
 
-    alloutputs = ([output for output in self.idf1.idfobjects['Output:Variable']])
+    alloutputs = ([output
+                   for output
+                   in self.idf1.idfobjects['Output:Variable']])
     for i in range(len(alloutputs)):
         firstoutput = self.idf1.idfobjects['Output:Variable'][-1]
         self.idf1.removeidfobject(firstoutput)
