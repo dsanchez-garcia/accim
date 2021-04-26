@@ -190,20 +190,6 @@ def addAccis(
             print(file)
             print('''\n=======================END OF PROCESS=======================\n''')
 
-    # arguments = (
-    #     AdapStand is None,
-    #     CAT is None,
-    #     ComfMod is None,
-    #     HVACmode is None,
-    #     VentCtrl is None,
-    #     VSToffset == [0],
-    #     MinOToffset == [50],
-    #     MaxWindSpeed == [50],
-    #     ASTtol_start == 0.1,
-    #     ASTtol_end_input == 0.1,
-    #     ASTtol_steps == 0.1
-    #     )
-
     args_needed_mz = (
         AdapStand is not None,
         CAT is not None,
