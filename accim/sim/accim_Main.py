@@ -2,7 +2,6 @@
 
 class accimJob():
     """Class to start the accim process."""
-    # todo clean imports
     from os import listdir
     import numpy
 
@@ -46,7 +45,11 @@ class accimJob():
         addEMSOutputVariableMultipleZone, \
         addOutputVariablesMultipleZone
 
-    def __init__(self, filename_temp, ScriptType: str = None, EnergyPlus_version: str = None, verboseMode: bool = True):
+    def __init__(self,
+                 filename_temp,
+                 ScriptType: str = None,
+                 EnergyPlus_version: str = None,
+                 verboseMode: bool = True):
         from eppy import modeleditor
         from eppy.modeleditor import IDF
         if EnergyPlus_version.lower() == 'ep94':
@@ -73,19 +76,34 @@ class accimJob():
         self.zonenames_orig = ([zone.Name for zone in self.idf1.idfobjects['ZONE']])
         # print(self.zonenames_orig)
 
-        self.zonenames = ([sub.replace(':', '_') for sub in ([zone.Name for zone in self.idf1.idfobjects['ZONE']])])
+        self.zonenames = ([sub.replace(':', '_')
+                           for sub
+                           in ([zone.Name for zone in self.idf1.idfobjects['ZONE']])])
         # print(self.zonenames)
         if verboseMode:
             print(f'The zones in the model {filename_temp} are:')
             print(*self.zonenames, sep="\n")
 
         if ScriptType.lower() == 'mz' or ScriptType.lower() == 'multiplezone':
-            self.windownamelist_orig = ([window.Name for window in self.idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if window.Name.endswith('_Win')])
+            self.windownamelist_orig = ([window.Name
+                                         for window in
+                                         self.idf1.idfobjects
+                                         ['AirflowNetwork:MultiZone:Component:DetailedOpening']
+                                         if window.Name.endswith('_Win')]
+            )
             # print(self.windownamelist_orig)
             self.windownamelist_orig_split = ([i.split('_') for i in self.windownamelist_orig])
             # print(self.windownamelist_orig_split)
 
-            self.windownamelist = ([sub.replace(':', '_') for sub in ([window.Name for window in self.idf1.idfobjects['AirflowNetwork:MultiZone:Component:DetailedOpening'] if window.Name.endswith('_Win')])])
+            self.windownamelist = ([sub.replace(':', '_')
+                                    for sub
+                                    in ([window.Name
+                                         for window
+                                         in self.idf1.idfobjects
+                                         ['AirflowNetwork:MultiZone:Component:DetailedOpening']
+                                         if window.Name.endswith('_Win')]
+                                    )]
+            )
             # print(self.windownamelist)
             if verboseMode:
                 print(f'The windows in the model {filename_temp} are:')

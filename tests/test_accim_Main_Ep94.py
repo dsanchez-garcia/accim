@@ -3,7 +3,7 @@ def test_accimobj_SingleZone_Ep94():
     import os
     originalname = 'TestModel_SingleZone'
     newidfname = originalname + '_pymod'
-
+    # todo change accim classes to accimJob
     z = accim_Main.accimobj_SingleZone_Ep94(
         filename_temp=originalname,
         verboseMode=False
@@ -17,7 +17,7 @@ def test_accimobj_MultipleZone_Ep94():
     import os
     originalname = 'TestModel_MultipleZone'
     newidfname = originalname + '_pymod'
-
+    # todo change accim classes to accimJob
     z = accim_Main.accimobj_MultipleZone_Ep94(
         filename_temp=originalname,
         verboseMode=False
@@ -28,6 +28,7 @@ def test_accimobj_MultipleZone_Ep94():
 
 
 def test_accimInstance():
+    # todo change accim classes to accimJob
     from accim.sim import accim_Main
     import os
     from eppy.modeleditor import IDF

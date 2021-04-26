@@ -1302,13 +1302,6 @@ Schedule:Compact,
     Until: 24:00,             !- Field 16
     0;                        !- Field 17
 
-SCHEDULE:COMPACT,
-    Vent_SP_temp,             !- Name
-    Any Number,               !- Schedule Type Limits Name
-    Through: 12/31,           !- Field 1
-    For: AllDays,             !- Field 2
-    Until: 24:00,24;          !- Field 3
-
 Material,
     Urea Formaldehyde Foam_.1327,    !- Name
     Rough,                    !- Roughness
@@ -2885,14 +2878,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Wall_2_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone2_Wall_2_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Wall_3_0_0,    !- Surface Name
@@ -2905,14 +2898,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Wall_3_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone2_Wall_3_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Wall_4_0_0,    !- Surface Name
@@ -2925,14 +2918,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Wall_4_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone2_Wall_4_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block1:Zone2_Partition_5_0_0,    !- Surface Name
@@ -2963,14 +2956,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone1_Wall_2_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone1_Wall_2_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block1:Zone1_Wall_4_0_0,    !- Surface Name
@@ -2983,14 +2976,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone1_Wall_4_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone1_Wall_4_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block1:Zone1_Wall_5_0_0,    !- Surface Name
@@ -3003,14 +2996,14 @@ AirflowNetwork:MultiZone:Surface,
     Block1:Zone1_Wall_5_0_0_0_0_0_Win,    !- Leakage Component Name
     Block1:Zone1_Wall_5_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Roof_1_0_0,    !- Surface Name
@@ -3029,14 +3022,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Wall_2_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone2_Wall_2_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Wall_3_0_0,    !- Surface Name
@@ -3049,14 +3042,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Wall_3_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone2_Wall_3_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Wall_4_0_0,    !- Surface Name
@@ -3069,14 +3062,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Wall_4_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone2_Wall_4_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone2_Partition_5_0_0,    !- Surface Name
@@ -3101,14 +3094,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone1_Wall_2_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone1_Wall_2_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone1_Wall_4_0_0,    !- Surface Name
@@ -3121,14 +3114,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone1_Wall_4_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone1_Wall_4_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:Surface,
     Block2:Zone1_Wall_5_0_0,    !- Surface Name
@@ -3141,14 +3134,14 @@ AirflowNetwork:MultiZone:Surface,
     Block2:Zone1_Wall_5_0_0_0_0_0_Win,    !- Leakage Component Name
     Block2:Zone1_Wall_5_0_0_0_0_0_Win,    !- External Node Name
     1,                        !- WindowDoor Opening Factor or Crack Factor
-    Temperature,              !- Ventilation Control Mode
-    Vent_SP_temp,             !- Ventilation Control Zone Temperature Setpoint Schedule Name
+    NoVent,                   !- Ventilation Control Mode
+    ,                         !- Ventilation Control Zone Temperature Setpoint Schedule Name
     ,                         !- Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Temperature Difference Upper Limit for Minimum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Lower Limit For Maximum Venting Open Factor
     ,                         !- Indoor and Outdoor Enthalpy Difference Upper Limit for Minimum Venting Open Factor
-    On;                       !- Venting Availability Schedule Name
+    ;                         !- Venting Availability Schedule Name
 
 AirflowNetwork:MultiZone:ReferenceCrackConditions,
     Reference Crack Conditions,    !- Name
@@ -3286,11 +3279,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3314,11 +3307,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3342,11 +3335,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3370,11 +3363,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3398,11 +3391,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3426,11 +3419,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3454,11 +3447,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3482,11 +3475,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3510,11 +3503,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3538,11 +3531,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3566,11 +3559,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -3594,11 +3587,11 @@ AirflowNetwork:MultiZone:Component:DetailedOpening,
     0,                        !- Opening Factor 1
     0.65,                     !- Discharge Coefficient for Opening Factor 1
     0,                        !- Width Factor for Opening Factor 1
-    1,                        !- Height Factor for Opening Factor 1
+    0,                        !- Height Factor for Opening Factor 1
     0,                        !- Start Height Factor for Opening Factor 1
     1,                        !- Opening Factor 2
     0.65,                     !- Discharge Coefficient for Opening Factor 2
-    1,                        !- Width Factor for Opening Factor 2
+    1e-08,                    !- Width Factor for Opening Factor 2
     1,                        !- Height Factor for Opening Factor 2
     0,                        !- Start Height Factor for Opening Factor 2
     0,                        !- Opening Factor 3
@@ -4065,210 +4058,250 @@ AirflowNetwork:MultiZone:WindPressureCoefficientValues,
     -0.3,                     !- Wind Pressure Coefficient Value 7
     -0.35;                    !- Wind Pressure Coefficient Value 8
 
-DesignSpecification:OutdoorAir,
-    Block1:Zone2,             !- Name
-    Sum,                      !- Outdoor Air Method
-    0.01,                     !- Outdoor Air Flow per Person
+DESIGNSPECIFICATION:OUTDOORAIR,
+    Block1:Zone2 Design Specification Outdoor Air Object,    !- Name
+    Flow/Person,              !- Outdoor Air Method
+    0.00944,                  !- Outdoor Air Flow per Person
     0,                        !- Outdoor Air Flow per Zone Floor Area
     0,                        !- Outdoor Air Flow per Zone
     0,                        !- Outdoor Air Flow Air Changes per Hour
-    Office_OpenOff_Occ;       !- Outdoor Air Schedule Name
+    On 24/7;                  !- Outdoor Air Schedule Name
 
-DesignSpecification:OutdoorAir,
-    Block1:Zone1,             !- Name
-    Sum,                      !- Outdoor Air Method
-    0.01,                     !- Outdoor Air Flow per Person
+DESIGNSPECIFICATION:OUTDOORAIR,
+    Block1:Zone1 Design Specification Outdoor Air Object,    !- Name
+    Flow/Person,              !- Outdoor Air Method
+    0.00944,                  !- Outdoor Air Flow per Person
     0,                        !- Outdoor Air Flow per Zone Floor Area
     0,                        !- Outdoor Air Flow per Zone
     0,                        !- Outdoor Air Flow Air Changes per Hour
-    Office_OpenOff_Occ;       !- Outdoor Air Schedule Name
+    On 24/7;                  !- Outdoor Air Schedule Name
 
-DesignSpecification:OutdoorAir,
-    Block2:Zone2,             !- Name
-    Sum,                      !- Outdoor Air Method
-    0.01,                     !- Outdoor Air Flow per Person
+DESIGNSPECIFICATION:OUTDOORAIR,
+    Block2:Zone2 Design Specification Outdoor Air Object,    !- Name
+    Flow/Person,              !- Outdoor Air Method
+    0.00944,                  !- Outdoor Air Flow per Person
     0,                        !- Outdoor Air Flow per Zone Floor Area
     0,                        !- Outdoor Air Flow per Zone
     0,                        !- Outdoor Air Flow Air Changes per Hour
-    Office_OpenOff_Occ;       !- Outdoor Air Schedule Name
+    On 24/7;                  !- Outdoor Air Schedule Name
 
-DesignSpecification:OutdoorAir,
-    Block2:Zone1,             !- Name
-    Sum,                      !- Outdoor Air Method
-    0.01,                     !- Outdoor Air Flow per Person
+DESIGNSPECIFICATION:OUTDOORAIR,
+    Block2:Zone1 Design Specification Outdoor Air Object,    !- Name
+    Flow/Person,              !- Outdoor Air Method
+    0.00944,                  !- Outdoor Air Flow per Person
     0,                        !- Outdoor Air Flow per Zone Floor Area
     0,                        !- Outdoor Air Flow per Zone
     0,                        !- Outdoor Air Flow Air Changes per Hour
-    Office_OpenOff_Occ;       !- Outdoor Air Schedule Name
+    On 24/7;                  !- Outdoor Air Schedule Name
 
-DesignSpecification:ZoneAirDistribution,
-    Block1:Zone2,             !- Name
+DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
+    Block1:Zone2 Design Specification Zone Air Distribution Object,    !- Name
     1,                        !- Zone Air Distribution Effectiveness in Cooling Mode
-    1;                        !- Zone Air Distribution Effectiveness in Heating Mode
+    1,                        !- Zone Air Distribution Effectiveness in Heating Mode
+    ,                         !- Zone Air Distribution Effectiveness Schedule Name
+    0,                        !- Zone Secondary Recirculation Fraction
+    0;                        !- Minimum Zone Ventilation Efficiency
 
-DesignSpecification:ZoneAirDistribution,
-    Block1:Zone1,             !- Name
+DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
+    Block1:Zone1 Design Specification Zone Air Distribution Object,    !- Name
     1,                        !- Zone Air Distribution Effectiveness in Cooling Mode
-    1;                        !- Zone Air Distribution Effectiveness in Heating Mode
+    1,                        !- Zone Air Distribution Effectiveness in Heating Mode
+    ,                         !- Zone Air Distribution Effectiveness Schedule Name
+    0,                        !- Zone Secondary Recirculation Fraction
+    0;                        !- Minimum Zone Ventilation Efficiency
 
-DesignSpecification:ZoneAirDistribution,
-    Block2:Zone2,             !- Name
+DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
+    Block2:Zone2 Design Specification Zone Air Distribution Object,    !- Name
     1,                        !- Zone Air Distribution Effectiveness in Cooling Mode
-    1;                        !- Zone Air Distribution Effectiveness in Heating Mode
+    1,                        !- Zone Air Distribution Effectiveness in Heating Mode
+    ,                         !- Zone Air Distribution Effectiveness Schedule Name
+    0,                        !- Zone Secondary Recirculation Fraction
+    0;                        !- Minimum Zone Ventilation Efficiency
 
-DesignSpecification:ZoneAirDistribution,
-    Block2:Zone1,             !- Name
+DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
+    Block2:Zone1 Design Specification Zone Air Distribution Object,    !- Name
     1,                        !- Zone Air Distribution Effectiveness in Cooling Mode
-    1;                        !- Zone Air Distribution Effectiveness in Heating Mode
+    1,                        !- Zone Air Distribution Effectiveness in Heating Mode
+    ,                         !- Zone Air Distribution Effectiveness Schedule Name
+    0,                        !- Zone Secondary Recirculation Fraction
+    0;                        !- Minimum Zone Ventilation Efficiency
 
 Sizing:Parameters,
     1.25,                     !- Heating Sizing Factor
     1.15,                     !- Cooling Sizing Factor
     2;                        !- Timesteps in Averaging Window
 
-Sizing:Zone,
+SIZING:ZONE,
     Block1:Zone2,             !- Zone or ZoneList Name
     SupplyAirTemperature,     !- Zone Cooling Design Supply Air Temperature Input Method
-    12,                       !- Zone Cooling Design Supply Air Temperature
-    0,                        !- Zone Cooling Design Supply Air Temperature Difference
+    14,                       !- Zone Cooling Design Supply Air Temperature
+    5,                        !- Zone Cooling Design Supply Air Temperature Difference
     SupplyAirTemperature,     !- Zone Heating Design Supply Air Temperature Input Method
-    35,                       !- Zone Heating Design Supply Air Temperature
-    0,                        !- Zone Heating Design Supply Air Temperature Difference
-    0.0077,                   !- Zone Cooling Design Supply Air Humidity Ratio
-    0.0156,                   !- Zone Heating Design Supply Air Humidity Ratio
-    Block1:Zone2,             !- Design Specification Outdoor Air Object Name
+    50,                       !- Zone Heating Design Supply Air Temperature
+    15,                       !- Zone Heating Design Supply Air Temperature Difference
+    0.009,                    !- Zone Cooling Design Supply Air Humidity Ratio
+    0.004,                    !- Zone Heating Design Supply Air Humidity Ratio
+    Block1:Zone2 Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
     1.25,                     !- Zone Heating Sizing Factor
     1.15,                     !- Zone Cooling Sizing Factor
     DesignDay,                !- Cooling Design Air Flow Method
-    ,                         !- Cooling Design Air Flow Rate
-    ,                         !- Cooling Minimum Air Flow per Zone Floor Area
-    ,                         !- Cooling Minimum Air Flow
+    0,                        !- Cooling Design Air Flow Rate
+    0.00076,                  !- Cooling Minimum Air Flow per Zone Floor Area
+    0,                        !- Cooling Minimum Air Flow
     0,                        !- Cooling Minimum Air Flow Fraction
     DesignDay,                !- Heating Design Air Flow Method
-    ,                         !- Heating Design Air Flow Rate
-    ,                         !- Heating Maximum Air Flow per Zone Floor Area
-    ,                         !- Heating Maximum Air Flow
-    ,                         !- Heating Maximum Air Flow Fraction
-    Block1:Zone2,             !- Design Specification Zone Air Distribution Object Name
-    No,                       !- Account for Dedicated Outdoor Air System
+    0,                        !- Heating Design Air Flow Rate
+    0.00203,                  !- Heating Maximum Air Flow per Zone Floor Area
+    0.14158,                  !- Heating Maximum Air Flow
+    0.3,                      !- Heating Maximum Air Flow Fraction
+    Block1:Zone2 Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
+    Yes,                      !- Account for Dedicated Outdoor Air System
     NeutralSupplyAir,         !- Dedicated Outdoor Air System Control Strategy
     autosize,                 !- Dedicated Outdoor Air Low Setpoint Temperature for Design
     autosize;                 !- Dedicated Outdoor Air High Setpoint Temperature for Design
 
-Sizing:Zone,
+SIZING:ZONE,
     Block1:Zone1,             !- Zone or ZoneList Name
     SupplyAirTemperature,     !- Zone Cooling Design Supply Air Temperature Input Method
-    12,                       !- Zone Cooling Design Supply Air Temperature
-    0,                        !- Zone Cooling Design Supply Air Temperature Difference
+    14,                       !- Zone Cooling Design Supply Air Temperature
+    5,                        !- Zone Cooling Design Supply Air Temperature Difference
     SupplyAirTemperature,     !- Zone Heating Design Supply Air Temperature Input Method
-    35,                       !- Zone Heating Design Supply Air Temperature
-    0,                        !- Zone Heating Design Supply Air Temperature Difference
-    0.0077,                   !- Zone Cooling Design Supply Air Humidity Ratio
-    0.0156,                   !- Zone Heating Design Supply Air Humidity Ratio
-    Block1:Zone1,             !- Design Specification Outdoor Air Object Name
+    50,                       !- Zone Heating Design Supply Air Temperature
+    15,                       !- Zone Heating Design Supply Air Temperature Difference
+    0.009,                    !- Zone Cooling Design Supply Air Humidity Ratio
+    0.004,                    !- Zone Heating Design Supply Air Humidity Ratio
+    Block1:Zone1 Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
     1.25,                     !- Zone Heating Sizing Factor
     1.15,                     !- Zone Cooling Sizing Factor
     DesignDay,                !- Cooling Design Air Flow Method
-    ,                         !- Cooling Design Air Flow Rate
-    ,                         !- Cooling Minimum Air Flow per Zone Floor Area
-    ,                         !- Cooling Minimum Air Flow
+    0,                        !- Cooling Design Air Flow Rate
+    0.00076,                  !- Cooling Minimum Air Flow per Zone Floor Area
+    0,                        !- Cooling Minimum Air Flow
     0,                        !- Cooling Minimum Air Flow Fraction
     DesignDay,                !- Heating Design Air Flow Method
-    ,                         !- Heating Design Air Flow Rate
-    ,                         !- Heating Maximum Air Flow per Zone Floor Area
-    ,                         !- Heating Maximum Air Flow
-    ,                         !- Heating Maximum Air Flow Fraction
-    Block1:Zone1,             !- Design Specification Zone Air Distribution Object Name
-    No,                       !- Account for Dedicated Outdoor Air System
+    0,                        !- Heating Design Air Flow Rate
+    0.00203,                  !- Heating Maximum Air Flow per Zone Floor Area
+    0.14158,                  !- Heating Maximum Air Flow
+    0.3,                      !- Heating Maximum Air Flow Fraction
+    Block1:Zone1 Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
+    Yes,                      !- Account for Dedicated Outdoor Air System
     NeutralSupplyAir,         !- Dedicated Outdoor Air System Control Strategy
     autosize,                 !- Dedicated Outdoor Air Low Setpoint Temperature for Design
     autosize;                 !- Dedicated Outdoor Air High Setpoint Temperature for Design
 
-Sizing:Zone,
+SIZING:ZONE,
     Block2:Zone2,             !- Zone or ZoneList Name
     SupplyAirTemperature,     !- Zone Cooling Design Supply Air Temperature Input Method
-    12,                       !- Zone Cooling Design Supply Air Temperature
-    0,                        !- Zone Cooling Design Supply Air Temperature Difference
+    14,                       !- Zone Cooling Design Supply Air Temperature
+    5,                        !- Zone Cooling Design Supply Air Temperature Difference
     SupplyAirTemperature,     !- Zone Heating Design Supply Air Temperature Input Method
-    35,                       !- Zone Heating Design Supply Air Temperature
-    0,                        !- Zone Heating Design Supply Air Temperature Difference
-    0.0077,                   !- Zone Cooling Design Supply Air Humidity Ratio
-    0.0156,                   !- Zone Heating Design Supply Air Humidity Ratio
-    Block2:Zone2,             !- Design Specification Outdoor Air Object Name
+    50,                       !- Zone Heating Design Supply Air Temperature
+    15,                       !- Zone Heating Design Supply Air Temperature Difference
+    0.009,                    !- Zone Cooling Design Supply Air Humidity Ratio
+    0.004,                    !- Zone Heating Design Supply Air Humidity Ratio
+    Block2:Zone2 Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
     1.25,                     !- Zone Heating Sizing Factor
     1.15,                     !- Zone Cooling Sizing Factor
     DesignDay,                !- Cooling Design Air Flow Method
-    ,                         !- Cooling Design Air Flow Rate
-    ,                         !- Cooling Minimum Air Flow per Zone Floor Area
-    ,                         !- Cooling Minimum Air Flow
+    0,                        !- Cooling Design Air Flow Rate
+    0.00076,                  !- Cooling Minimum Air Flow per Zone Floor Area
+    0,                        !- Cooling Minimum Air Flow
     0,                        !- Cooling Minimum Air Flow Fraction
     DesignDay,                !- Heating Design Air Flow Method
-    ,                         !- Heating Design Air Flow Rate
-    ,                         !- Heating Maximum Air Flow per Zone Floor Area
-    ,                         !- Heating Maximum Air Flow
-    ,                         !- Heating Maximum Air Flow Fraction
-    Block2:Zone2,             !- Design Specification Zone Air Distribution Object Name
-    No,                       !- Account for Dedicated Outdoor Air System
+    0,                        !- Heating Design Air Flow Rate
+    0.00203,                  !- Heating Maximum Air Flow per Zone Floor Area
+    0.14158,                  !- Heating Maximum Air Flow
+    0.3,                      !- Heating Maximum Air Flow Fraction
+    Block2:Zone2 Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
+    Yes,                      !- Account for Dedicated Outdoor Air System
     NeutralSupplyAir,         !- Dedicated Outdoor Air System Control Strategy
     autosize,                 !- Dedicated Outdoor Air Low Setpoint Temperature for Design
     autosize;                 !- Dedicated Outdoor Air High Setpoint Temperature for Design
 
-Sizing:Zone,
+SIZING:ZONE,
     Block2:Zone1,             !- Zone or ZoneList Name
     SupplyAirTemperature,     !- Zone Cooling Design Supply Air Temperature Input Method
-    12,                       !- Zone Cooling Design Supply Air Temperature
-    0,                        !- Zone Cooling Design Supply Air Temperature Difference
+    14,                       !- Zone Cooling Design Supply Air Temperature
+    5,                        !- Zone Cooling Design Supply Air Temperature Difference
     SupplyAirTemperature,     !- Zone Heating Design Supply Air Temperature Input Method
-    35,                       !- Zone Heating Design Supply Air Temperature
-    0,                        !- Zone Heating Design Supply Air Temperature Difference
-    0.0077,                   !- Zone Cooling Design Supply Air Humidity Ratio
-    0.0156,                   !- Zone Heating Design Supply Air Humidity Ratio
-    Block2:Zone1,             !- Design Specification Outdoor Air Object Name
+    50,                       !- Zone Heating Design Supply Air Temperature
+    15,                       !- Zone Heating Design Supply Air Temperature Difference
+    0.009,                    !- Zone Cooling Design Supply Air Humidity Ratio
+    0.004,                    !- Zone Heating Design Supply Air Humidity Ratio
+    Block2:Zone1 Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
     1.25,                     !- Zone Heating Sizing Factor
     1.15,                     !- Zone Cooling Sizing Factor
     DesignDay,                !- Cooling Design Air Flow Method
-    ,                         !- Cooling Design Air Flow Rate
-    ,                         !- Cooling Minimum Air Flow per Zone Floor Area
-    ,                         !- Cooling Minimum Air Flow
+    0,                        !- Cooling Design Air Flow Rate
+    0.00076,                  !- Cooling Minimum Air Flow per Zone Floor Area
+    0,                        !- Cooling Minimum Air Flow
     0,                        !- Cooling Minimum Air Flow Fraction
     DesignDay,                !- Heating Design Air Flow Method
-    ,                         !- Heating Design Air Flow Rate
-    ,                         !- Heating Maximum Air Flow per Zone Floor Area
-    ,                         !- Heating Maximum Air Flow
-    ,                         !- Heating Maximum Air Flow Fraction
-    Block2:Zone1,             !- Design Specification Zone Air Distribution Object Name
-    No,                       !- Account for Dedicated Outdoor Air System
+    0,                        !- Heating Design Air Flow Rate
+    0.00203,                  !- Heating Maximum Air Flow per Zone Floor Area
+    0.14158,                  !- Heating Maximum Air Flow
+    0.3,                      !- Heating Maximum Air Flow Fraction
+    Block2:Zone1 Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
+    Yes,                      !- Account for Dedicated Outdoor Air System
     NeutralSupplyAir,         !- Dedicated Outdoor Air System Control Strategy
     autosize,                 !- Dedicated Outdoor Air Low Setpoint Temperature for Design
     autosize;                 !- Dedicated Outdoor Air High Setpoint Temperature for Design
 
-ZoneControl:Thermostat,
+ZONECONTROL:THERMOSTAT,
     Block1:Zone2 Thermostat,    !- Name
     Block1:Zone2,             !- Zone or ZoneList Name
-    Zone Control Type Sched,    !- Control Type Schedule Name
+    Control type schedule: Always 4,    !- Control Type Schedule Name
     ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
-    Dual Setpoint - Zone Block1:Zone2;    !- Control 1 Name
+    Block1:Zone2 Dual SP,     !- Control 1 Name
+    ,                         !- Control 2 Object Type
+    ,                         !- Control 2 Name
+    ,                         !- Control 3 Object Type
+    ,                         !- Control 3 Name
+    ,                         !- Control 4 Object Type
+    ,                         !- Control 4 Name
+    0;                        !- Temperature Difference Between Cutout And Setpoint
 
-ZoneControl:Thermostat,
+ZONECONTROL:THERMOSTAT,
     Block1:Zone1 Thermostat,    !- Name
     Block1:Zone1,             !- Zone or ZoneList Name
-    Zone Control Type Sched,    !- Control Type Schedule Name
+    Control type schedule: Always 4,    !- Control Type Schedule Name
     ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
-    Dual Setpoint - Zone Block1:Zone1;    !- Control 1 Name
+    Block1:Zone1 Dual SP,     !- Control 1 Name
+    ,                         !- Control 2 Object Type
+    ,                         !- Control 2 Name
+    ,                         !- Control 3 Object Type
+    ,                         !- Control 3 Name
+    ,                         !- Control 4 Object Type
+    ,                         !- Control 4 Name
+    0;                        !- Temperature Difference Between Cutout And Setpoint
 
-ZoneControl:Thermostat,
+ZONECONTROL:THERMOSTAT,
     Block2:Zone2 Thermostat,    !- Name
     Block2:Zone2,             !- Zone or ZoneList Name
-    Zone Control Type Sched,    !- Control Type Schedule Name
+    Control type schedule: Always 4,    !- Control Type Schedule Name
     ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
-    Dual Setpoint - Zone Block2:Zone2;    !- Control 1 Name
+    Block2:Zone2 Dual SP,     !- Control 1 Name
+    ,                         !- Control 2 Object Type
+    ,                         !- Control 2 Name
+    ,                         !- Control 3 Object Type
+    ,                         !- Control 3 Name
+    ,                         !- Control 4 Object Type
+    ,                         !- Control 4 Name
+    0;                        !- Temperature Difference Between Cutout And Setpoint
 
-ZoneControl:Thermostat,
+ZONECONTROL:THERMOSTAT,
     Block2:Zone1 Thermostat,    !- Name
     Block2:Zone1,             !- Zone or ZoneList Name
-    Zone Control Type Sched,    !- Control Type Schedule Name
+    Control type schedule: Always 4,    !- Control Type Schedule Name
     ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
-    Dual Setpoint - Zone Block2:Zone1;    !- Control 1 Name
+    Block2:Zone1 Dual SP,     !- Control 1 Name
+    ,                         !- Control 2 Object Type
+    ,                         !- Control 2 Name
+    ,                         !- Control 3 Object Type
+    ,                         !- Control 3 Name
+    ,                         !- Control 4 Object Type
+    ,                         !- Control 4 Name
+    0;                        !- Temperature Difference Between Cutout And Setpoint
 
 ThermostatSetpoint:DualSetpoint,
     Dual Setpoint - Zone Block1:Zone2,    !- Name
@@ -4406,93 +4439,733 @@ ZoneHVAC:IdealLoadsAirSystem,
     ,                         !- Sensible Heat Recovery Effectiveness
     ;                         !- Latent Heat Recovery Effectiveness
 
-ZoneHVAC:EquipmentList,
+ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
+    Block1:Zone2 VRF Indoor Unit,    !- Zone Terminal Unit Name
+    On 24/7,                  !- Terminal Unit Availability Schedule
+    Block1:Zone2 VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
+    Block1:Zone2 VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
+    autosize,                 !- Cooling Supply Air Flow Rate
+    autosize,                 !- No Cooling Supply Air Flow Rate
+    autosize,                 !- Heating Supply Air Flow Rate
+    autosize,                 !- No Heating Supply Air Flow Rate
+    0,                        !- Cooling Outdoor Air Flow Rate
+    0,                        !- Heating Outdoor Air Flow Rate
+    0,                        !- No Load Outdoor Air Flow Rate
+    On 24/7,                  !- Supply Air Fan Operating Mode Schedule Name
+    DrawThrough,              !- Supply Air Fan Placement
+    Fan:ConstantVolume,       !- Supply Air Fan Object Type
+    Block1:Zone2 VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
+    ,                         !- Outside Air Mixer Object Type
+    ,                         !- Outside Air Mixer Object Name
+    Coil:Cooling:DX:VariableRefrigerantFlow,    !- Cooling Coil Object Type
+    Block1:Zone2 VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
+    Coil:Heating:DX:VariableRefrigerantFlow,    !- Heating Coil Object Type
+    Block1:Zone2 VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
+    30,                       !- Zone Terminal Unit On Parasitic Electric Energy Use
+    20,                       !- Zone Terminal Unit Off Parasitic Electric Energy Use
+    ,                         !- Rated Heating Capacity Sizing Ratio
+    ,                         !- Availability Manager List Name
+    ,                         !- Design Specification ZoneHVAC Sizing Object Name
+    ,                         !- Supplemental Heating Coil Object Type
+    ,                         !- Supplemental Heating Coil Name
+    autosize,                 !- Maximum Supply Air Temperature from Supplemental Heater
+    21;                       !- Maximum Outdoor DryBulb Temperature for Supplemental Heater Operation
+
+ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
+    Block1:Zone1 VRF Indoor Unit,    !- Zone Terminal Unit Name
+    On 24/7,                  !- Terminal Unit Availability Schedule
+    Block1:Zone1 VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
+    Block1:Zone1 VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
+    autosize,                 !- Cooling Supply Air Flow Rate
+    autosize,                 !- No Cooling Supply Air Flow Rate
+    autosize,                 !- Heating Supply Air Flow Rate
+    autosize,                 !- No Heating Supply Air Flow Rate
+    0,                        !- Cooling Outdoor Air Flow Rate
+    0,                        !- Heating Outdoor Air Flow Rate
+    0,                        !- No Load Outdoor Air Flow Rate
+    On 24/7,                  !- Supply Air Fan Operating Mode Schedule Name
+    DrawThrough,              !- Supply Air Fan Placement
+    Fan:ConstantVolume,       !- Supply Air Fan Object Type
+    Block1:Zone1 VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
+    ,                         !- Outside Air Mixer Object Type
+    ,                         !- Outside Air Mixer Object Name
+    Coil:Cooling:DX:VariableRefrigerantFlow,    !- Cooling Coil Object Type
+    Block1:Zone1 VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
+    Coil:Heating:DX:VariableRefrigerantFlow,    !- Heating Coil Object Type
+    Block1:Zone1 VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
+    30,                       !- Zone Terminal Unit On Parasitic Electric Energy Use
+    20,                       !- Zone Terminal Unit Off Parasitic Electric Energy Use
+    ,                         !- Rated Heating Capacity Sizing Ratio
+    ,                         !- Availability Manager List Name
+    ,                         !- Design Specification ZoneHVAC Sizing Object Name
+    ,                         !- Supplemental Heating Coil Object Type
+    ,                         !- Supplemental Heating Coil Name
+    autosize,                 !- Maximum Supply Air Temperature from Supplemental Heater
+    21;                       !- Maximum Outdoor DryBulb Temperature for Supplemental Heater Operation
+
+ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
+    Block2:Zone2 VRF Indoor Unit,    !- Zone Terminal Unit Name
+    On 24/7,                  !- Terminal Unit Availability Schedule
+    Block2:Zone2 VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
+    Block2:Zone2 VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
+    autosize,                 !- Cooling Supply Air Flow Rate
+    autosize,                 !- No Cooling Supply Air Flow Rate
+    autosize,                 !- Heating Supply Air Flow Rate
+    autosize,                 !- No Heating Supply Air Flow Rate
+    0,                        !- Cooling Outdoor Air Flow Rate
+    0,                        !- Heating Outdoor Air Flow Rate
+    0,                        !- No Load Outdoor Air Flow Rate
+    On 24/7,                  !- Supply Air Fan Operating Mode Schedule Name
+    DrawThrough,              !- Supply Air Fan Placement
+    Fan:ConstantVolume,       !- Supply Air Fan Object Type
+    Block2:Zone2 VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
+    ,                         !- Outside Air Mixer Object Type
+    ,                         !- Outside Air Mixer Object Name
+    Coil:Cooling:DX:VariableRefrigerantFlow,    !- Cooling Coil Object Type
+    Block2:Zone2 VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
+    Coil:Heating:DX:VariableRefrigerantFlow,    !- Heating Coil Object Type
+    Block2:Zone2 VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
+    30,                       !- Zone Terminal Unit On Parasitic Electric Energy Use
+    20,                       !- Zone Terminal Unit Off Parasitic Electric Energy Use
+    ,                         !- Rated Heating Capacity Sizing Ratio
+    ,                         !- Availability Manager List Name
+    ,                         !- Design Specification ZoneHVAC Sizing Object Name
+    ,                         !- Supplemental Heating Coil Object Type
+    ,                         !- Supplemental Heating Coil Name
+    autosize,                 !- Maximum Supply Air Temperature from Supplemental Heater
+    21;                       !- Maximum Outdoor DryBulb Temperature for Supplemental Heater Operation
+
+ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
+    Block2:Zone1 VRF Indoor Unit,    !- Zone Terminal Unit Name
+    On 24/7,                  !- Terminal Unit Availability Schedule
+    Block2:Zone1 VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
+    Block2:Zone1 VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
+    autosize,                 !- Cooling Supply Air Flow Rate
+    autosize,                 !- No Cooling Supply Air Flow Rate
+    autosize,                 !- Heating Supply Air Flow Rate
+    autosize,                 !- No Heating Supply Air Flow Rate
+    0,                        !- Cooling Outdoor Air Flow Rate
+    0,                        !- Heating Outdoor Air Flow Rate
+    0,                        !- No Load Outdoor Air Flow Rate
+    On 24/7,                  !- Supply Air Fan Operating Mode Schedule Name
+    DrawThrough,              !- Supply Air Fan Placement
+    Fan:ConstantVolume,       !- Supply Air Fan Object Type
+    Block2:Zone1 VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
+    ,                         !- Outside Air Mixer Object Type
+    ,                         !- Outside Air Mixer Object Name
+    Coil:Cooling:DX:VariableRefrigerantFlow,    !- Cooling Coil Object Type
+    Block2:Zone1 VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
+    Coil:Heating:DX:VariableRefrigerantFlow,    !- Heating Coil Object Type
+    Block2:Zone1 VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
+    30,                       !- Zone Terminal Unit On Parasitic Electric Energy Use
+    20,                       !- Zone Terminal Unit Off Parasitic Electric Energy Use
+    ,                         !- Rated Heating Capacity Sizing Ratio
+    ,                         !- Availability Manager List Name
+    ,                         !- Design Specification ZoneHVAC Sizing Object Name
+    ,                         !- Supplemental Heating Coil Object Type
+    ,                         !- Supplemental Heating Coil Name
+    autosize,                 !- Maximum Supply Air Temperature from Supplemental Heater
+    21;                       !- Maximum Outdoor DryBulb Temperature for Supplemental Heater Operation
+
+ZONEHVAC:EQUIPMENTLIST,
     Block1:Zone2 Equipment,    !- Name
     SequentialLoad,           !- Load Distribution Scheme
-    ZoneHVAC:IdealLoadsAirSystem,    !- Zone Equipment 1 Object Type
-    Block1:Zone2 Ideal Loads Air,    !- Zone Equipment 1 Name
+    ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,    !- Zone Equipment 1 Object Type
+    Block1:Zone2 VRF Indoor Unit,    !- Zone Equipment 1 Name
     1,                        !- Zone Equipment 1 Cooling Sequence
     1,                        !- Zone Equipment 1 Heating or NoLoad Sequence
     ,                         !- Zone Equipment 1 Sequential Cooling Fraction Schedule Name
     ;                         !- Zone Equipment 1 Sequential Heating Fraction Schedule Name
 
-ZoneHVAC:EquipmentList,
+ZONEHVAC:EQUIPMENTLIST,
     Block1:Zone1 Equipment,    !- Name
     SequentialLoad,           !- Load Distribution Scheme
-    ZoneHVAC:IdealLoadsAirSystem,    !- Zone Equipment 1 Object Type
-    Block1:Zone1 Ideal Loads Air,    !- Zone Equipment 1 Name
+    ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,    !- Zone Equipment 1 Object Type
+    Block1:Zone1 VRF Indoor Unit,    !- Zone Equipment 1 Name
     1,                        !- Zone Equipment 1 Cooling Sequence
     1,                        !- Zone Equipment 1 Heating or NoLoad Sequence
     ,                         !- Zone Equipment 1 Sequential Cooling Fraction Schedule Name
     ;                         !- Zone Equipment 1 Sequential Heating Fraction Schedule Name
 
-ZoneHVAC:EquipmentList,
+ZONEHVAC:EQUIPMENTLIST,
     Block2:Zone2 Equipment,    !- Name
     SequentialLoad,           !- Load Distribution Scheme
-    ZoneHVAC:IdealLoadsAirSystem,    !- Zone Equipment 1 Object Type
-    Block2:Zone2 Ideal Loads Air,    !- Zone Equipment 1 Name
+    ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,    !- Zone Equipment 1 Object Type
+    Block2:Zone2 VRF Indoor Unit,    !- Zone Equipment 1 Name
     1,                        !- Zone Equipment 1 Cooling Sequence
     1,                        !- Zone Equipment 1 Heating or NoLoad Sequence
     ,                         !- Zone Equipment 1 Sequential Cooling Fraction Schedule Name
     ;                         !- Zone Equipment 1 Sequential Heating Fraction Schedule Name
 
-ZoneHVAC:EquipmentList,
+ZONEHVAC:EQUIPMENTLIST,
     Block2:Zone1 Equipment,    !- Name
     SequentialLoad,           !- Load Distribution Scheme
-    ZoneHVAC:IdealLoadsAirSystem,    !- Zone Equipment 1 Object Type
-    Block2:Zone1 Ideal Loads Air,    !- Zone Equipment 1 Name
+    ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,    !- Zone Equipment 1 Object Type
+    Block2:Zone1 VRF Indoor Unit,    !- Zone Equipment 1 Name
     1,                        !- Zone Equipment 1 Cooling Sequence
     1,                        !- Zone Equipment 1 Heating or NoLoad Sequence
     ,                         !- Zone Equipment 1 Sequential Cooling Fraction Schedule Name
     ;                         !- Zone Equipment 1 Sequential Heating Fraction Schedule Name
 
-ZoneHVAC:EquipmentConnections,
+ZONEHVAC:EQUIPMENTCONNECTIONS,
     Block1:Zone2,             !- Zone Name
     Block1:Zone2 Equipment,    !- Zone Conditioning Equipment List Name
-    Block1:Zone2 Inlets,      !- Zone Air Inlet Node or NodeList Name
-    ,                         !- Zone Air Exhaust Node or NodeList Name
-    Node Block1:Zone2 Zone,    !- Zone Air Node Name
-    Node Block1:Zone2 Out;    !- Zone Return Air Node or NodeList Name
+    Block1:Zone2 Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
+    Block1:Zone2 Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
+    Block1:Zone2 Zone Air Node,    !- Zone Air Node Name
+    Block1:Zone2 Return Outlet;    !- Zone Return Air Node or NodeList Name
 
-ZoneHVAC:EquipmentConnections,
+ZONEHVAC:EQUIPMENTCONNECTIONS,
     Block1:Zone1,             !- Zone Name
     Block1:Zone1 Equipment,    !- Zone Conditioning Equipment List Name
-    Block1:Zone1 Inlets,      !- Zone Air Inlet Node or NodeList Name
-    ,                         !- Zone Air Exhaust Node or NodeList Name
-    Node Block1:Zone1 Zone,    !- Zone Air Node Name
-    Node Block1:Zone1 Out;    !- Zone Return Air Node or NodeList Name
+    Block1:Zone1 Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
+    Block1:Zone1 Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
+    Block1:Zone1 Zone Air Node,    !- Zone Air Node Name
+    Block1:Zone1 Return Outlet;    !- Zone Return Air Node or NodeList Name
 
-ZoneHVAC:EquipmentConnections,
+ZONEHVAC:EQUIPMENTCONNECTIONS,
     Block2:Zone2,             !- Zone Name
     Block2:Zone2 Equipment,    !- Zone Conditioning Equipment List Name
-    Block2:Zone2 Inlets,      !- Zone Air Inlet Node or NodeList Name
-    ,                         !- Zone Air Exhaust Node or NodeList Name
-    Node Block2:Zone2 Zone,    !- Zone Air Node Name
-    Node Block2:Zone2 Out;    !- Zone Return Air Node or NodeList Name
+    Block2:Zone2 Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
+    Block2:Zone2 Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
+    Block2:Zone2 Zone Air Node,    !- Zone Air Node Name
+    Block2:Zone2 Return Outlet;    !- Zone Return Air Node or NodeList Name
 
-ZoneHVAC:EquipmentConnections,
+ZONEHVAC:EQUIPMENTCONNECTIONS,
     Block2:Zone1,             !- Zone Name
     Block2:Zone1 Equipment,    !- Zone Conditioning Equipment List Name
-    Block2:Zone1 Inlets,      !- Zone Air Inlet Node or NodeList Name
-    ,                         !- Zone Air Exhaust Node or NodeList Name
-    Node Block2:Zone1 Zone,    !- Zone Air Node Name
-    Node Block2:Zone1 Out;    !- Zone Return Air Node or NodeList Name
+    Block2:Zone1 Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
+    Block2:Zone1 Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
+    Block2:Zone1 Zone Air Node,    !- Zone Air Node Name
+    Block2:Zone1 Return Outlet;    !- Zone Return Air Node or NodeList Name
 
-NodeList,
-    Block1:Zone2 Inlets,      !- Name
-    Node Block1:Zone2 In;     !- Node 1 Name
+FAN:CONSTANTVOLUME,
+    Block1:Zone2 VRF Indoor Unit Supply Fan,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    0.7,                      !- Fan Total Efficiency
+    100,                      !- Pressure Rise
+    autosize,                 !- Maximum Flow Rate
+    0.9,                      !- Motor Efficiency
+    1,                        !- Motor In Airstream Fraction
+    Block1:Zone2 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
+    Block1:Zone2 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
+    General;                  !- EndUse Subcategory
 
-NodeList,
-    Block1:Zone1 Inlets,      !- Name
-    Node Block1:Zone1 In;     !- Node 1 Name
+FAN:CONSTANTVOLUME,
+    Block1:Zone1 VRF Indoor Unit Supply Fan,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    0.7,                      !- Fan Total Efficiency
+    100,                      !- Pressure Rise
+    autosize,                 !- Maximum Flow Rate
+    0.9,                      !- Motor Efficiency
+    1,                        !- Motor In Airstream Fraction
+    Block1:Zone1 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
+    Block1:Zone1 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
+    General;                  !- EndUse Subcategory
 
-NodeList,
-    Block2:Zone2 Inlets,      !- Name
-    Node Block2:Zone2 In;     !- Node 1 Name
+FAN:CONSTANTVOLUME,
+    Block2:Zone2 VRF Indoor Unit Supply Fan,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    0.7,                      !- Fan Total Efficiency
+    100,                      !- Pressure Rise
+    autosize,                 !- Maximum Flow Rate
+    0.9,                      !- Motor Efficiency
+    1,                        !- Motor In Airstream Fraction
+    Block2:Zone2 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
+    Block2:Zone2 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
+    General;                  !- EndUse Subcategory
 
-NodeList,
-    Block2:Zone1 Inlets,      !- Name
-    Node Block2:Zone1 In;     !- Node 1 Name
+FAN:CONSTANTVOLUME,
+    Block2:Zone1 VRF Indoor Unit Supply Fan,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    0.7,                      !- Fan Total Efficiency
+    100,                      !- Pressure Rise
+    autosize,                 !- Maximum Flow Rate
+    0.9,                      !- Motor Efficiency
+    1,                        !- Motor In Airstream Fraction
+    Block2:Zone1 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
+    Block2:Zone1 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
+    General;                  !- EndUse Subcategory
+
+COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
+    Block1:Zone2 VRF Indoor Unit DX Cooling Coil,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    autosize,                 !- Gross Rated Sensible Heat Ratio
+    autosize,                 !- Rated Air Flow Rate
+    VRFTUCoolCapFT,           !- Cooling Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF,          !- Cooling Capacity Modifier Curve Function of Flow Fraction Name
+    Block1:Zone2 VRF Indoor Unit Return,    !- Coil Air Inlet Node
+    Block1:Zone2 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
+    ;                         !- Name of Water Storage Tank for Condensate Collection
+
+COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
+    Block1:Zone1 VRF Indoor Unit DX Cooling Coil,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    autosize,                 !- Gross Rated Sensible Heat Ratio
+    autosize,                 !- Rated Air Flow Rate
+    VRFTUCoolCapFT,           !- Cooling Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF,          !- Cooling Capacity Modifier Curve Function of Flow Fraction Name
+    Block1:Zone1 VRF Indoor Unit Return,    !- Coil Air Inlet Node
+    Block1:Zone1 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
+    ;                         !- Name of Water Storage Tank for Condensate Collection
+
+COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
+    Block2:Zone2 VRF Indoor Unit DX Cooling Coil,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    autosize,                 !- Gross Rated Sensible Heat Ratio
+    autosize,                 !- Rated Air Flow Rate
+    VRFTUCoolCapFT,           !- Cooling Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF,          !- Cooling Capacity Modifier Curve Function of Flow Fraction Name
+    Block2:Zone2 VRF Indoor Unit Return,    !- Coil Air Inlet Node
+    Block2:Zone2 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
+    ;                         !- Name of Water Storage Tank for Condensate Collection
+
+COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
+    Block2:Zone1 VRF Indoor Unit DX Cooling Coil,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    autosize,                 !- Gross Rated Sensible Heat Ratio
+    autosize,                 !- Rated Air Flow Rate
+    VRFTUCoolCapFT,           !- Cooling Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF,          !- Cooling Capacity Modifier Curve Function of Flow Fraction Name
+    Block2:Zone1 VRF Indoor Unit Return,    !- Coil Air Inlet Node
+    Block2:Zone1 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
+    ;                         !- Name of Water Storage Tank for Condensate Collection
+
+COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
+    Block1:Zone2 VRF Indoor Unit DX Heating Coil,    !- Name
+    On 24/7,                  !- Availability Schedule
+    autosize,                 !- Gross Rated Heating Capacity
+    autosize,                 !- Rated Air Flow Rate
+    Block1:Zone2 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
+    Block1:Zone2 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
+    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
+
+COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
+    Block1:Zone1 VRF Indoor Unit DX Heating Coil,    !- Name
+    On 24/7,                  !- Availability Schedule
+    autosize,                 !- Gross Rated Heating Capacity
+    autosize,                 !- Rated Air Flow Rate
+    Block1:Zone1 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
+    Block1:Zone1 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
+    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
+
+COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
+    Block2:Zone2 VRF Indoor Unit DX Heating Coil,    !- Name
+    On 24/7,                  !- Availability Schedule
+    autosize,                 !- Gross Rated Heating Capacity
+    autosize,                 !- Rated Air Flow Rate
+    Block2:Zone2 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
+    Block2:Zone2 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
+    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
+
+COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
+    Block2:Zone1 VRF Indoor Unit DX Heating Coil,    !- Name
+    On 24/7,                  !- Availability Schedule
+    autosize,                 !- Gross Rated Heating Capacity
+    autosize,                 !- Rated Air Flow Rate
+    Block2:Zone1 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
+    Block2:Zone1 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
+    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
+
+AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
+    VRF Outdoor Unit_Block1:Zone2,    !- Heat Pump Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    2,                        !- Gross Rated Cooling COP
+    -6,                       !- Minimum Outdoor Temperature in Cooling Mode
+    43,                       !- Maximum Outdoor Temperature in Cooling Mode
+    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
+    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
+    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
+    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
+    autosize,                 !- Gross Rated Heating Capacity
+    1,                        !- Rated Heating Capacity Sizing Ratio
+    2.1,                      !- Gross Rated Heating COP
+    -20,                      !- Minimum Outdoor Temperature in Heating Mode
+    40,                       !- Maximum Outdoor Temperature in Heating Mode
+    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
+    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
+    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
+    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
+    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
+    0.2,                      !- Minimum Heat Pump PartLoad Ratio
+    ,                         !- Zone Name for Master Thermostat Location
+    LoadPriority,             !- Master Thermostat Priority Control Type
+    ,                         !- Thermostat Priority Schedule Name
+    VRF Outdoor Unit_Block1:Zone2 Zone List,    !- Zone Terminal Unit List Name
+    Yes,                      !- Heat Pump Waste Heat Recovery
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
+    15,                       !- Vertical Height used for Piping Correction Factor
+    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
+    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
+    15,                       !- Crankcase Heater Power per Compressor
+    2,                        !- Number of Compressors
+    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
+    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
+    Resistive,                !- Defrost Strategy
+    Timed,                    !- Defrost Control
+    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
+    0,                        !- Defrost Time Period Fraction
+    autosize,                 !- Resistive Defrost Heater Capacity
+    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
+    AirCooled,                !- Condenser Type
+    VRF Outdoor Unit_Block1:Zone2 Outdoor Air Node,    !- Condenser Inlet Node Name
+    ,                         !- Condenser Outlet Node Name
+    autosize,                 !- Water Condenser Volume Flow Rate
+    0.9,                      !- Evaporative Condenser Effectiveness
+    autosize,                 !- Evaporative Condenser Air Flow Rate
+    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
+    ,                         !- Supply Water Storage Tank Name
+    0,                        !- Basin Heater Capacity
+    2,                        !- Basin Heater Setpoint Temperature
+    On 24/7,                  !- Basin Heater Operating Schedule Name
+    Electricity,              !- Fuel Type
+    -10,                      !- Minimum Outdoor Temperature in Heat Recovery Mode
+    40,                       !- Maximum Outdoor Temperature in Heat Recovery Mode
+    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
+    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
+    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
+    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Cooling Energy Fraction
+    0,                        !- Heat Recovery Cooling Energy Time Constant
+    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Capacity Fraction
+    0.15,                     !- Heat Recovery Heating Capacity Time Constant
+    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Energy Fraction
+    0;                        !- Heat Recovery Heating Energy Time Constant
+
+AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
+    VRF Outdoor Unit_Block1:Zone1,    !- Heat Pump Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    2,                        !- Gross Rated Cooling COP
+    -6,                       !- Minimum Outdoor Temperature in Cooling Mode
+    43,                       !- Maximum Outdoor Temperature in Cooling Mode
+    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
+    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
+    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
+    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
+    autosize,                 !- Gross Rated Heating Capacity
+    1,                        !- Rated Heating Capacity Sizing Ratio
+    2.1,                      !- Gross Rated Heating COP
+    -20,                      !- Minimum Outdoor Temperature in Heating Mode
+    40,                       !- Maximum Outdoor Temperature in Heating Mode
+    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
+    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
+    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
+    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
+    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
+    0.2,                      !- Minimum Heat Pump PartLoad Ratio
+    ,                         !- Zone Name for Master Thermostat Location
+    LoadPriority,             !- Master Thermostat Priority Control Type
+    ,                         !- Thermostat Priority Schedule Name
+    VRF Outdoor Unit_Block1:Zone1 Zone List,    !- Zone Terminal Unit List Name
+    Yes,                      !- Heat Pump Waste Heat Recovery
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
+    15,                       !- Vertical Height used for Piping Correction Factor
+    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
+    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
+    15,                       !- Crankcase Heater Power per Compressor
+    2,                        !- Number of Compressors
+    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
+    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
+    Resistive,                !- Defrost Strategy
+    Timed,                    !- Defrost Control
+    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
+    0,                        !- Defrost Time Period Fraction
+    autosize,                 !- Resistive Defrost Heater Capacity
+    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
+    AirCooled,                !- Condenser Type
+    VRF Outdoor Unit_Block1:Zone1 Outdoor Air Node,    !- Condenser Inlet Node Name
+    ,                         !- Condenser Outlet Node Name
+    autosize,                 !- Water Condenser Volume Flow Rate
+    0.9,                      !- Evaporative Condenser Effectiveness
+    autosize,                 !- Evaporative Condenser Air Flow Rate
+    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
+    ,                         !- Supply Water Storage Tank Name
+    0,                        !- Basin Heater Capacity
+    2,                        !- Basin Heater Setpoint Temperature
+    On 24/7,                  !- Basin Heater Operating Schedule Name
+    Electricity,              !- Fuel Type
+    -10,                      !- Minimum Outdoor Temperature in Heat Recovery Mode
+    40,                       !- Maximum Outdoor Temperature in Heat Recovery Mode
+    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
+    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
+    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
+    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Cooling Energy Fraction
+    0,                        !- Heat Recovery Cooling Energy Time Constant
+    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Capacity Fraction
+    0.15,                     !- Heat Recovery Heating Capacity Time Constant
+    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Energy Fraction
+    0;                        !- Heat Recovery Heating Energy Time Constant
+
+AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
+    VRF Outdoor Unit_Block2:Zone2,    !- Heat Pump Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    2,                        !- Gross Rated Cooling COP
+    -6,                       !- Minimum Outdoor Temperature in Cooling Mode
+    43,                       !- Maximum Outdoor Temperature in Cooling Mode
+    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
+    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
+    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
+    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
+    autosize,                 !- Gross Rated Heating Capacity
+    1,                        !- Rated Heating Capacity Sizing Ratio
+    2.1,                      !- Gross Rated Heating COP
+    -20,                      !- Minimum Outdoor Temperature in Heating Mode
+    40,                       !- Maximum Outdoor Temperature in Heating Mode
+    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
+    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
+    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
+    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
+    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
+    0.2,                      !- Minimum Heat Pump PartLoad Ratio
+    ,                         !- Zone Name for Master Thermostat Location
+    LoadPriority,             !- Master Thermostat Priority Control Type
+    ,                         !- Thermostat Priority Schedule Name
+    VRF Outdoor Unit_Block2:Zone2 Zone List,    !- Zone Terminal Unit List Name
+    Yes,                      !- Heat Pump Waste Heat Recovery
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
+    15,                       !- Vertical Height used for Piping Correction Factor
+    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
+    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
+    15,                       !- Crankcase Heater Power per Compressor
+    2,                        !- Number of Compressors
+    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
+    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
+    Resistive,                !- Defrost Strategy
+    Timed,                    !- Defrost Control
+    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
+    0,                        !- Defrost Time Period Fraction
+    autosize,                 !- Resistive Defrost Heater Capacity
+    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
+    AirCooled,                !- Condenser Type
+    VRF Outdoor Unit_Block2:Zone2 Outdoor Air Node,    !- Condenser Inlet Node Name
+    ,                         !- Condenser Outlet Node Name
+    autosize,                 !- Water Condenser Volume Flow Rate
+    0.9,                      !- Evaporative Condenser Effectiveness
+    autosize,                 !- Evaporative Condenser Air Flow Rate
+    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
+    ,                         !- Supply Water Storage Tank Name
+    0,                        !- Basin Heater Capacity
+    2,                        !- Basin Heater Setpoint Temperature
+    On 24/7,                  !- Basin Heater Operating Schedule Name
+    Electricity,              !- Fuel Type
+    -10,                      !- Minimum Outdoor Temperature in Heat Recovery Mode
+    40,                       !- Maximum Outdoor Temperature in Heat Recovery Mode
+    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
+    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
+    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
+    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Cooling Energy Fraction
+    0,                        !- Heat Recovery Cooling Energy Time Constant
+    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Capacity Fraction
+    0.15,                     !- Heat Recovery Heating Capacity Time Constant
+    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Energy Fraction
+    0;                        !- Heat Recovery Heating Energy Time Constant
+
+AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
+    VRF Outdoor Unit_Block2:Zone1,    !- Heat Pump Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    2,                        !- Gross Rated Cooling COP
+    -6,                       !- Minimum Outdoor Temperature in Cooling Mode
+    43,                       !- Maximum Outdoor Temperature in Cooling Mode
+    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
+    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
+    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
+    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
+    autosize,                 !- Gross Rated Heating Capacity
+    1,                        !- Rated Heating Capacity Sizing Ratio
+    2.1,                      !- Gross Rated Heating COP
+    -20,                      !- Minimum Outdoor Temperature in Heating Mode
+    40,                       !- Maximum Outdoor Temperature in Heating Mode
+    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
+    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
+    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
+    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
+    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
+    0.2,                      !- Minimum Heat Pump PartLoad Ratio
+    ,                         !- Zone Name for Master Thermostat Location
+    LoadPriority,             !- Master Thermostat Priority Control Type
+    ,                         !- Thermostat Priority Schedule Name
+    VRF Outdoor Unit_Block2:Zone1 Zone List,    !- Zone Terminal Unit List Name
+    Yes,                      !- Heat Pump Waste Heat Recovery
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
+    15,                       !- Vertical Height used for Piping Correction Factor
+    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
+    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
+    15,                       !- Crankcase Heater Power per Compressor
+    2,                        !- Number of Compressors
+    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
+    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
+    Resistive,                !- Defrost Strategy
+    Timed,                    !- Defrost Control
+    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
+    0,                        !- Defrost Time Period Fraction
+    autosize,                 !- Resistive Defrost Heater Capacity
+    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
+    AirCooled,                !- Condenser Type
+    VRF Outdoor Unit_Block2:Zone1 Outdoor Air Node,    !- Condenser Inlet Node Name
+    ,                         !- Condenser Outlet Node Name
+    autosize,                 !- Water Condenser Volume Flow Rate
+    0.9,                      !- Evaporative Condenser Effectiveness
+    autosize,                 !- Evaporative Condenser Air Flow Rate
+    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
+    ,                         !- Supply Water Storage Tank Name
+    0,                        !- Basin Heater Capacity
+    2,                        !- Basin Heater Setpoint Temperature
+    On 24/7,                  !- Basin Heater Operating Schedule Name
+    Electricity,              !- Fuel Type
+    -10,                      !- Minimum Outdoor Temperature in Heat Recovery Mode
+    40,                       !- Maximum Outdoor Temperature in Heat Recovery Mode
+    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
+    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
+    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
+    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Cooling Energy Fraction
+    0,                        !- Heat Recovery Cooling Energy Time Constant
+    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Capacity Fraction
+    0.15,                     !- Heat Recovery Heating Capacity Time Constant
+    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Energy Fraction
+    0;                        !- Heat Recovery Heating Energy Time Constant
+
+ZONETERMINALUNITLIST,
+    VRF Outdoor Unit_Block1:Zone2 Zone List,    !- Zone Terminal Unit List Name
+    Block1:Zone2 VRF Indoor Unit;    !- Zone Terminal Unit Name 1
+
+ZONETERMINALUNITLIST,
+    VRF Outdoor Unit_Block1:Zone1 Zone List,    !- Zone Terminal Unit List Name
+    Block1:Zone1 VRF Indoor Unit;    !- Zone Terminal Unit Name 1
+
+ZONETERMINALUNITLIST,
+    VRF Outdoor Unit_Block2:Zone2 Zone List,    !- Zone Terminal Unit List Name
+    Block2:Zone2 VRF Indoor Unit;    !- Zone Terminal Unit Name 1
+
+ZONETERMINALUNITLIST,
+    VRF Outdoor Unit_Block2:Zone1 Zone List,    !- Zone Terminal Unit List Name
+    Block2:Zone1 VRF Indoor Unit;    !- Zone Terminal Unit Name 1
+
+NODELIST,
+    Block1:Zone2 Air Inlet Node List,    !- Name
+    Block1:Zone2 VRF Indoor Unit Supply Outlet;    !- Node 1 Name
+
+NODELIST,
+    Block1:Zone2 Air Exhaust Node List,    !- Name
+    Block1:Zone2 VRF Indoor Unit Return;    !- Node 1 Name
+
+NODELIST,
+    Block1:Zone1 Air Inlet Node List,    !- Name
+    Block1:Zone1 VRF Indoor Unit Supply Outlet;    !- Node 1 Name
+
+NODELIST,
+    Block1:Zone1 Air Exhaust Node List,    !- Name
+    Block1:Zone1 VRF Indoor Unit Return;    !- Node 1 Name
+
+NODELIST,
+    Block2:Zone2 Air Inlet Node List,    !- Name
+    Block2:Zone2 VRF Indoor Unit Supply Outlet;    !- Node 1 Name
+
+NODELIST,
+    Block2:Zone2 Air Exhaust Node List,    !- Name
+    Block2:Zone2 VRF Indoor Unit Return;    !- Node 1 Name
+
+NODELIST,
+    Block2:Zone1 Air Inlet Node List,    !- Name
+    Block2:Zone1 VRF Indoor Unit Supply Outlet;    !- Node 1 Name
+
+NODELIST,
+    Block2:Zone1 Air Exhaust Node List,    !- Name
+    Block2:Zone1 VRF Indoor Unit Return;    !- Node 1 Name
+
+OUTDOORAIR:NODELIST,
+    VRF Outdoor Unit_Block1:Zone2 Outdoor Air Node;    !- Node or NodeList Name 1
+
+OUTDOORAIR:NODELIST,
+    VRF Outdoor Unit_Block1:Zone1 Outdoor Air Node;    !- Node or NodeList Name 1
+
+OUTDOORAIR:NODELIST,
+    VRF Outdoor Unit_Block2:Zone2 Outdoor Air Node;    !- Node or NodeList Name 1
+
+OUTDOORAIR:NODELIST,
+    VRF Outdoor Unit_Block2:Zone1 Outdoor Air Node;    !- Node or NodeList Name 1
 
 WaterUse:Equipment,
     DHW Block1:Zone2,         !- Name

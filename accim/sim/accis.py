@@ -43,6 +43,8 @@ def addAccis(
     :param ASTtol_end_input: Please refer to documentation.
     :param ASTtol_steps: Please refer to documentation.
     :param NameSuffix: Please refer to documentation.
+    :param verboseMode: True to print the process on screen. Default is True.
+    :param confirmGen: True to skip confirmation of output IDF generation. Default is None.
 
     Exceptions
             DESCRIPTION. EnergyPlus version not supported.
@@ -94,31 +96,39 @@ def addAccis(
     else:
         ScriptType = input("Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): ")
         while ScriptType not in fullScriptTypeList:
-            ScriptType = input("ScriptType was not correct. Please, enter the ScriptType (MultipleZone or mz, or SingleZone or sz): ")
+            ScriptType = input("ScriptType was not correct. "
+                               "Please, enter the ScriptType "
+                               "(MultipleZone or mz, or SingleZone or sz): ")
         Outputs = input("Enter the Output (Standard, Simplified or Timestep): ")
         while Outputs not in fullOutputsList:
-            Outputs = input("Output was not correct. Please, enter the Output (Standard, Simplified or Timestep): ")
+            Outputs = input("Output was not correct. "
+                            "Please, enter the Output (Standard, Simplified or Timestep): ")
         EnergyPlus_version = input("Enter the EnergyPlus version (Ep91 or Ep94): ")
         while EnergyPlus_version not in fullEPversionsList:
-            EnergyPlus_version = input("EnergyPlus version was not correct. Please, enter the EnergyPlus version (Ep91 or Ep94): ")
+            EnergyPlus_version = input("EnergyPlus version was not correct. "
+                                       "Please, enter the EnergyPlus version (Ep91 or Ep94): ")
     if verboseMode:
         print('ScriptType is: '+ScriptType)
     if ScriptType not in fullScriptTypeList:
         print('Valid ScriptTypes: ')
         print(fullScriptTypeList)
-        raise ValueError(ScriptType + " is not a valid ScriptType. You must choose a ScriptType from the list above.")
+        raise ValueError(ScriptType + " is not a valid ScriptType. "
+                                      "You must choose a ScriptType from the list above.")
     if verboseMode:
         print('Outputs are: '+Outputs)
     if Outputs not in fullOutputsList:
         print('Valid Outputs: ')
         print(fullOutputsList)
-        raise ValueError(Outputs + " is not a valid Output. You must choose a Output from the list above.")
+        raise ValueError(Outputs + " is not a valid Output. "
+                                   "You must choose a Output from the list above.")
     if verboseMode:
         print('EnergyPlus version is: '+EnergyPlus_version)
     if EnergyPlus_version not in fullEPversionsList:
         print('Valid EnergyPlus_version: ')
         print(fullEPversionsList)
-        raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. You must choose a EnergyPlus_version from the list above.")
+        raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
+                                              "You must choose a EnergyPlus_version"
+                                              "from the list above.")
 
     for file in filelist:
         if verboseMode:
