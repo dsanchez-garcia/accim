@@ -14,6 +14,7 @@ When we hit enter, we'll be asked to enter some information regarding the Script
 ```
 Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): mz
 Enter the Output (Standard, Simplified or Timestep): standard
+Enter the EnergyPlus version (Ep91 to Ep95): ep95
 ```
 When we hit enter, it's going to add all the EnergyPlus objects needed, and afterwards ask us to enter the required information:
 ```
