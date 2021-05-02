@@ -65,6 +65,8 @@ class accimJob():
             raise ValueError("""EnergyPlus version not supported.\n
                                      Only works for versions between EnergyPlus 9.1 (enter Ep91) and
                                      EnergyPlus 9.5(enter Ep95).""")
+        if verboseMode:
+            print('IDD location is: '+iddfile)
         IDF.setiddname(iddfile)
 
         fname1 = filename_temp+'.idf'
