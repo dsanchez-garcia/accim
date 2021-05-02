@@ -57,7 +57,7 @@ us_version=EnergyPlus_version, verboseMode=verboseMode)
 TypeError: unsupported operand type(s) for //: 'int' and 'NoneType'
 ```
 
-If you get an error similar to the one above, you are probably trying to run `addAccis()` with an IDF whose EnergyPlus version is 8.9 or older. To solve this problem, you need to update the IDF's EnergyPlus version up to 9.1 or 9.4. To do so, you need to run EP-Launch, go to the Utilities tab, look for and select IDFversionUpdater; run IDFVersionUpdater; then choose the file to update, select the new version and finally update file.
+If you get an error similar to the one above, you are probably trying to run `addAccis()` with an IDF whose EnergyPlus version is 8.9 or older. To solve this problem, you need to update the IDF's EnergyPlus version up to some 9.X.X version. It is recommended to update up to the latest. To do so, you need to run EP-Launch, go to the Utilities tab, look for and select IDFversionUpdater; run IDFVersionUpdater; then choose the file to update, select the new version and finally update file.
 
 ![Troubleshooting_IDFversion_01](images/accim_troubleshooting_02_idf_version.png)
 

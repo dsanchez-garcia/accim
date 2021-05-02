@@ -19,7 +19,7 @@ def IDFobject():
 def test_addDetHVACobjEp95(IDFobject):
     from eppy.modeleditor import IDF
 
-    IDFobject.addDetHVACobjEp95(verboseMode=False)
+    IDFobject.addDetHVACobj(verboseMode=False)
     IDFobject.saveaccim(verboseMode=False)
     idf1 = IDF('TestModel_MultipleZone_pymod.idf')
     

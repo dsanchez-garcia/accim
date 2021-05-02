@@ -22,6 +22,7 @@ accim/run/run.py
 accim/sample files/TestModel_MultipleZone.idf
 accim/sample files/TestModel_MultipleZone_V910.idf
 accim/sample files/TestModel_MultipleZone_V910_pymod.idf
+accim/sample files/TestModel_MultipleZone_V940.idf
 accim/sample files/TestModel_MultipleZone_pymod.idf
 accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
 accim/sample files/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
@@ -51,14 +52,9 @@ accim/sim/accim_MultipleZone_EMS.py
 accim/sim/accim_SingleZone.py
 accim/sim/accim_SingleZone_EMS.py
 accim/sim/accis.py
-accim/sim/SS/__init__.py
-accim/sim/SS/accim_Main_SS.py
-accim/sim/SS/accis_SS.py
 bin/addAccis.py
 tests/TestModel_MultipleZone.idf
-tests/TestModel_MultipleZone_pymod.idf
 tests/TestModel_SingleZone.idf
-tests/TestModel_SingleZone_pymod.idf
 tests/__init__.py
 tests/test_accim_Base.py
 tests/test_accim_Base_EMS.py
@@ -70,16 +66,6 @@ tests/test_accim_MultipleZone_Ep91.py
 tests/test_accim_MultipleZone_Ep95.py
 tests/test_accim_SingleZone.py
 tests/test_accim_SingleZone_EMS.py
-tests/SS/__init__.py
-tests/SS/test_accim_Base_EMS_fixture_v00.py
-tests/SS/test_accim_Base_EMS_fixture_v01.py
-tests/SS/test_accim_Base_EMS_v00.py
-tests/SS/test_accim_Base_EMS_v01.py
-tests/SS/test_accim_Base_EMS_v02.py
-tests/SS/test_accim_Base_EMS_v03.py
-tests/SS/test_accim_Base_EMS_v04.py
-tests/SS/test_accim_Base_EMS_v05.py
-tests/SS/test_accim_Base_EMS_v06.py
 tests/test_IDFgeneration_MultipleZone/TestModel_MultipleZone.idf
 tests/test_IDFgeneration_MultipleZone/TestModel_MultipleZone_pymod[AS_ASHRAE55[CA_80[CM_1[HM_2[VC_0[VO_0[MT_10[MW_10[AT_0.1[whatever.idf
 tests/test_IDFgeneration_MultipleZone/TestModel_MultipleZone_pymod[AS_ASHRAE55[CA_80[CM_1[HM_2[VC_0[VO_0[MT_10[MW_10[AT_0.2[whatever.idf
