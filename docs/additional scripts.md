@@ -4,6 +4,8 @@
 
 This script has been created by eppy's development team (https://eppy.readthedocs.io/en/latest/runningeplus.html, specifically from section 'Running in parallel processes using Generators'), however I did some changes. Anyway, you probably should check out eppy package, since it's absolutely awesome.
 
+By using this script, the EnergyPlus version used to simulate the IDFs will be the IDF's version. Therefore, if your IDF is in version 9.4, but you don't have EnergyPlus 9.4 installed, you'll get an error.
+
 The main difference is that this one allows to run simulations with several EPW files. It takes all EPW files and IDF files located in the script folder, and runs them. So for example, say you have 2 no. IDFs (1.idf and 2.idf) and 2 no. EPW files (a.epw and b.epw). Then, this script will run the following simulations: 1[a; 1[b; 2[a; 2[b. The character '[' has been used as separator in order to not to be in conflict with other programs. Besides, there's a package within accim currently being developed (within folder data) in order to generate tables and graphs automatically.
 
 So, how to use it?
