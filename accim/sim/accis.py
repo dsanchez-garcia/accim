@@ -9,6 +9,7 @@ by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 def addAccis(
         ScriptType: str = None,
         Outputs: str = None,
+        EnergyPlus_version: str = None,
         AdapStand: any = None,
         CAT: any = None,
         ComfMod: any = None,
@@ -29,6 +30,7 @@ def addAccis(
         'mz', or 'SingleZone' or 'sz'.
     :param Outputs: The default is 'Standard'. Can be 'Standard',
         'Simplified' or 'Timestep'.
+    :param EnergyPlus_version: The default is 'Ep95'. Can be 'Ep91' or 'Ep95'.
     :param AdapStand: The default is None.
     (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55)
     :param CAT: The default is None.
@@ -49,6 +51,11 @@ def addAccis(
     :param verboseMode: True to print the process on screen. Default is True.
     :param confirmGen: True to skip confirmation of output IDF generation. Default is None.
 
+    Exceptions
+            DESCRIPTION. EnergyPlus version not supported.
+        Only works for versions between EnergyPlus 9.1 (enter Ep91) and
+        EnergyPlus 9.5 (enter Ep95).
+
     :return:
     """
     import accim.sim.accim_Main as accim_Main
@@ -62,6 +69,7 @@ def addAccis(
     objArgsDef = (
         ScriptType is not None,
         Outputs is not None,
+        EnergyPlus_version is not None
     )
 
     fullScriptTypeList = ['MultipleZone',
@@ -81,6 +89,19 @@ def addAccis(
         'timestep'
     ]
 
+    fullEPversionsList = [
+        'Ep91',
+        'ep91',
+        'Ep92',
+        'ep92',
+        'Ep93',
+        'ep93',
+        'Ep94',
+        'ep94',
+        'Ep95',
+        'ep95'
+    ]
+
     if all(objArgsDef):
         pass
     else:
@@ -93,6 +114,10 @@ def addAccis(
         while Outputs not in fullOutputsList:
             Outputs = input("Output was not correct. "
                             "Please, enter the Output (Standard, Simplified or Timestep): ")
+        EnergyPlus_version = input("Enter the EnergyPlus version (Ep91 to Ep95): ")
+        while EnergyPlus_version not in fullEPversionsList:
+            EnergyPlus_version = input("EnergyPlus version was not correct. "
+                                       "Please, enter the EnergyPlus version (Ep91 to Ep95): ")
     if verboseMode:
         print('ScriptType is: '+ScriptType)
     if ScriptType not in fullScriptTypeList:
@@ -107,6 +132,14 @@ def addAccis(
         print(fullOutputsList)
         raise ValueError(Outputs + " is not a valid Output. "
                                    "You must choose a Output from the list above.")
+    if verboseMode:
+        print('EnergyPlus version is: '+EnergyPlus_version)
+    if EnergyPlus_version not in fullEPversionsList:
+        print('Valid EnergyPlus_version: ')
+        print(fullEPversionsList)
+        raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
+                                              "You must choose a EnergyPlus_version"
+                                              "from the list above.")
 
     for file in filelist:
         if verboseMode:
@@ -116,6 +149,7 @@ def addAccis(
         z = accim_Main.accimJob(
             filename_temp=file,
             ScriptType=ScriptType,
+            EnergyPlus_version=EnergyPlus_version,
             verboseMode=verboseMode
         )
 

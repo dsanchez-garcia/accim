@@ -47,10 +47,24 @@ class accimJob():
     def __init__(self,
                  filename_temp,
                  ScriptType: str = None,
+                 EnergyPlus_version: str = None,
                  verboseMode: bool = True):
         from eppy import modeleditor
         from eppy.modeleditor import IDF
-        iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
+        if EnergyPlus_version.lower() == 'ep91':
+            iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
+        elif EnergyPlus_version.lower() == 'ep92':
+            iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
+        elif EnergyPlus_version.lower() == 'ep93':
+            iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
+        elif EnergyPlus_version.lower() == 'ep94':
+            iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
+        elif EnergyPlus_version.lower() == 'ep95':
+            iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
+        else:
+            raise ValueError("""EnergyPlus version not supported.\n
+                                     Only works for versions between EnergyPlus 9.1 (enter Ep91) and
+                                     EnergyPlus 9.5(enter Ep95).""")
         IDF.setiddname(iddfile)
 
         fname1 = filename_temp+'.idf'
