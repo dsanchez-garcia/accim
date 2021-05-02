@@ -25,16 +25,14 @@ Then you'll be asked in the prompt to enter some information so that python know
 ```
 Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): mz
 Enter the Output (Standard, Simplified or Timestep): standard
-Enter the EnergyPlus version (Ep91 or Ep95): ep95
 ```
 where
 - ScriptType can be MultipleZone or SingleZone, and it refers to the type of functions as explained above
 - Outputs can be Standard, Simplified or Timestep, and it refers to the simulation results: Standard means that results will contain the full selection; Simplified means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and Timestep means that results are going to be the full selection in Timestep frequency, so this is only recommended for tests, or small number of simulations.
-- EnergyPlus version can be Ep91 or Ep95, and it refers to the IDF EnergyPlus version, which could be EnergyPlus 9.1.0 or EnergyPlus 9.5.0. It is recommended to use when possible latest version IDFs, and latest EnergyPlus version in the script. You can try with other EnergyPlus versions, but it's not guaranteed to work, and you'll still need to be entering ep91 or ep95 in the information. If you enter 'ep95', when you run the simulation, it will be completed successfully no matter the IDFs version (from 9.1 to 9.5); however, only with 9.4 and 9.5 you'll get all the expected results in the csv file; with the remaining versions, you'll miss the VRF outdoor unit energy usage.
 
 Besides, `addAccis()` can take the same values we entered before in the prompt command as arguments. The usage of this function will be detailed below. An example of this, to get the same results as shown in the command prompt would be:
 ```
->>> accis.addAccis('mz','standard','ep95')
+>>> accis.addAccis('mz','standard')
 ```
 accis will show on the prompt command dialog all the objects it adds, and those that doesn't need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled 'Setting up the target IDFs'.
 
@@ -43,11 +41,10 @@ Once you run the simulations, you might get some EnergyPlus warnings and severe 
 ## Setting up the target IDFs
 ### MultipleZones functions
 
-If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)`, you will be asked in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
+If you run `accis.addAccis('mz', whateverOutputs)`, you will be asked in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
 ```
 >>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
->>>                str, # EnergyPlus_version: 'ep91' or 'ep95'
 >>>                list, # AdapStand, which is the Adaptive Standard
 >>>                list, # CAT, which is the Category
 >>>                list, # ComfMod, which is Comfort Mode
@@ -68,7 +65,6 @@ Some example of the usage could be:
 ```
 >>> accis.addAccis(ScriptType='mz', # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                Outputs='standard', # Outputs: 'simplified', 'standard' or 'timestep'
->>>                EnergyPlus_version='ep95', # EnergyPlus_version: 'ep91' or 'ep95'
 >>>                AdapStand=[0, 1, 2], # AdapStand, which is the Adaptive Standard
 >>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category
 >>>                ComfMod=[0, 1, 2, 3], # ComfMod, which is Comfort Mode
@@ -83,7 +79,7 @@ Some example of the usage could be:
 >>>                NameSuffix='standard' # Name Suffix: for example, just in case you want to clarify the outputs
 >>>                )
 ```
-If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs, EnergyPlus_version, AdapStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
+If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs, AdapStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
 Each argument is explained below:
 
 - AdapStand: and refers to the adaptive thermal comfort model to be applied. Enter 0 for CTE, 1 for EN16798-1 and 2 for ASHRAE 55. For example, if you enter '0 1 2', you'll get IDFs for all the models. If you don't enter any number, or if some of the numbers entered are not 0, 1 or 2, it'll ask you to enter the numbers again.
