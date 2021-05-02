@@ -69,4 +69,4 @@ ________________________
 
 If you are using only one version of Python in your computer, you should check on the option 'Add to PATH'. Otherwise, the python interpreter won't be able to find the accis package.
 
-![Troubleshooting_Path](docs/images/accim_troubleshooting_01_path.png)
+![Troubleshooting_Path](docs/images/accim_troubleshooting_01_path.jpg)
