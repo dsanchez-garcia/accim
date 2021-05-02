@@ -7,13 +7,13 @@ def test_genIDFSingleZone():
     from os import listdir
     import numpy
 
-    iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
+    iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
     IDF.setiddname(iddfile)
 
     z = accim_Main.accimJob(
         filename_temp='TestModel_SingleZone',
         ScriptType='sz',
-        EnergyPlus_version='ep94',
+        EnergyPlus_version='ep95',
         verboseMode=False)
 
     z.addEMSProgramsSingleZone(verboseMode=False)

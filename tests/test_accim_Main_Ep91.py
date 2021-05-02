@@ -1,40 +1,7 @@
-from accim.sim import accim_Main
-
-def test_accimobj_SingleZone_Ep91():
-    from accim.sim import accim_Main
-    import os
-    originalname = 'TestModel_SingleZone'
-    newidfname = originalname + '_pymod'
-    # todo change accim classes to accimJob
-    z = accim_Main.accimobj_SingleZone_Ep91(
-        filename_temp=originalname,
-        verboseMode=False
-        )
-
-    assert (newidfname + '.idf') in [i for i in os.listdir() if '_pymod' in i]
-    os.remove(newidfname+'.idf')
-
-
-def test_accimobj_MultipleZone_Ep91():
-    from accim.sim import accim_Main
-    import os
-    originalname = 'TestModel_MultipleZone'
-    newidfname = originalname + '_pymod'
-    # todo change accim classes to accimJob
-    z = accim_Main.accimobj_MultipleZone_Ep91(
-        filename_temp=originalname,
-        verboseMode=False
-        )
-
-    assert (newidfname + '.idf') in [i for i in os.listdir() if '_pymod' in i]
-    os.remove(newidfname+'.idf')
-
-
-def test_accimInstance():
+def test_accimJob():
     from accim.sim import accim_Main
     import os
     from eppy.modeleditor import IDF
-    # todo change accim classes to accimJob
     iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
     IDF.setiddname(iddfile)
 

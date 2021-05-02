@@ -30,7 +30,7 @@ def addAccis(
         'mz', or 'SingleZone' or 'sz'.
     :param Outputs: The default is 'Standard'. Can be 'Standard',
         'Simplified' or 'Timestep'.
-    :param EnergyPlus_version: The default is 'Ep94'. Can be 'Ep91' or 'Ep94'.
+    :param EnergyPlus_version: The default is 'Ep95'. Can be 'Ep91' or 'Ep95'.
     :param AdapStand: The default is None.
     (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55)
     :param CAT: The default is None.
@@ -54,7 +54,7 @@ def addAccis(
     Exceptions
             DESCRIPTION. EnergyPlus version not supported.
         Only works for EnergyPlus 9.1 (enter Ep91) and
-        EnergyPlus 9.4 (enter Ep94) versions.
+        EnergyPlus 9.5 (enter Ep95) versions.
 
     :return:
     """
@@ -92,8 +92,8 @@ def addAccis(
     fullEPversionsList = [
         'Ep91',
         'ep91',
-        'Ep94',
-        'ep94'
+        'Ep95',
+        'ep95'
     ]
 
     if all(objArgsDef):
@@ -108,10 +108,10 @@ def addAccis(
         while Outputs not in fullOutputsList:
             Outputs = input("Output was not correct. "
                             "Please, enter the Output (Standard, Simplified or Timestep): ")
-        EnergyPlus_version = input("Enter the EnergyPlus version (Ep91 or Ep94): ")
+        EnergyPlus_version = input("Enter the EnergyPlus version (Ep91 or Ep95): ")
         while EnergyPlus_version not in fullEPversionsList:
             EnergyPlus_version = input("EnergyPlus version was not correct. "
-                                       "Please, enter the EnergyPlus version (Ep91 or Ep94): ")
+                                       "Please, enter the EnergyPlus version (Ep91 or Ep95): ")
     if verboseMode:
         print('ScriptType is: '+ScriptType)
     if ScriptType not in fullScriptTypeList:
@@ -155,8 +155,8 @@ def addAccis(
         if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
             z.addMultipleZoneSch(verboseMode=verboseMode)
             z.addCurveObj(verboseMode=verboseMode)
-            if EnergyPlus_version.lower() == 'ep94':
-                z.addDetHVACobjEp94(verboseMode=verboseMode)
+            if EnergyPlus_version.lower() == 'ep95':
+                z.addDetHVACobjEp95(verboseMode=verboseMode)
             elif EnergyPlus_version.lower() == 'ep91':
                 z.addDetHVACobjEp91(verboseMode=verboseMode)
             z.checkVentIsOn(verboseMode=verboseMode)

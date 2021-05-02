@@ -4,7 +4,7 @@ from accim.sim import accis
 
 scriptTypeList = ['mz']
 outputsList = ['simplified', 'standard', 'timestep']
-EPlist = ['ep94']
+EPlist = ['ep95']
 
 for i in scriptTypeList:
     for j in outputsList:

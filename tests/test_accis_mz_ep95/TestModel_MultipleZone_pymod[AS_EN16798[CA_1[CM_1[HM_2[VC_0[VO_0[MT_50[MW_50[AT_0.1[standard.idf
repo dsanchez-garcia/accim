@@ -1,7 +1,7 @@
 !- Windows Line endings 
 
 Version,
-    9.4;                      !- Version Identifier
+    9.5;                      !- Version Identifier
 
 SimulationControl,
     Yes,                      !- Do Zone Sizing Calculation
@@ -8773,7 +8773,223 @@ OutputControl:ReportingTolerances,
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
+    Comfort Temperature,      !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Cooling Setpoint Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Heating Setpoint Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Cooling Setpoint Temperature_No Tolerance,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Heating Setpoint Temperature_No Tolerance,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_Block1_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_Block1_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_Block2_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_Block2_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Block1_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Block1_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Block2_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Block2_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_Block1_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_Block1_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_Block2_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_Block2_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_Block1_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_Block1_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_Block2_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_Block2_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_Block1_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_Block1_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_Block2_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_Block2_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_Block1_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_Block1_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_Block2_Zone2 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_Block2_Zone1 (summed),    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Setpoint Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Minimum Outdoor Temperature for MultipleZone ventilation,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
     Zone Thermostat Operative Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Facility Total HVAC Electric Demand Power,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Facility Total HVAC Electricity Demand Rate,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
@@ -8791,13 +9007,169 @@ OUTPUT:VARIABLE,
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Facility Total HVAC Electric Demand Power,    !- Variable Name
+    AFN Surface Venting Window or Door Opening Factor,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Facility Total HVAC Electricity Demand Rate,    !- Variable Name
+    AFN Zone Infiltration Air Change Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Infiltration Volume,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Environment,              !- Key Value
+    Site Outdoor Air Drybulb Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    FORSCRIPT_AHST_Block1_Zone2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    FORSCRIPT_ACST_Block1_Zone2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    FORSCRIPT_AHST_Block1_Zone1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    FORSCRIPT_ACST_Block1_Zone1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    FORSCRIPT_AHST_Block2_Zone2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    FORSCRIPT_ACST_Block2_Zone2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    FORSCRIPT_AHST_Block2_Zone1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    FORSCRIPT_ACST_Block2_Zone1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block1:Zone2,             !- Key Value
+    Zone Operative Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block1:Zone2 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block1:Zone2 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block1:Zone2,             !- Key Value
+    Zone Outdoor Air Wind Speed,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block1:Zone1,             !- Key Value
+    Zone Operative Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block1:Zone1 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block1:Zone1 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block1:Zone1,             !- Key Value
+    Zone Outdoor Air Wind Speed,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block2:Zone2,             !- Key Value
+    Zone Operative Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block2:Zone2 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block2:Zone2 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block2:Zone2,             !- Key Value
+    Zone Outdoor Air Wind Speed,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block2:Zone1,             !- Key Value
+    Zone Operative Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block2:Zone1 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block2:Zone1 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Block2:Zone1,             !- Key Value
+    Zone Outdoor Air Wind Speed,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
