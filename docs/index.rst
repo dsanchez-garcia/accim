@@ -18,6 +18,7 @@ Welcome to accim's documentation!
    how to use
    examples
    additional scripts
+   troubleshooting
 
 Indices and tables
 ==================

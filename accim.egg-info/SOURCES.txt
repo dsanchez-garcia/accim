@@ -1,3 +1,4 @@
+LICENSE.txt
 README.md
 README.rst
 setup.py
@@ -53,7 +54,7 @@ accim/sim/accis.py
 accim/sim/SS/__init__.py
 accim/sim/SS/accim_Main_SS.py
 accim/sim/SS/accis_SS.py
-bin/accis.py
+bin/addAccis.py
 tests/TestModel_MultipleZone.idf
 tests/TestModel_MultipleZone_pymod.idf
 tests/TestModel_SingleZone.idf
