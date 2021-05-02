@@ -5,21 +5,21 @@ from accim.sim import accim_Main
 def IDFobject():
     from eppy.modeleditor import IDF
 
-    iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
+    iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
     IDF.setiddname(iddfile)
 
     z = accim_Main.accimJob(
         filename_temp='TestModel_MultipleZone',
         ScriptType='mz',
-        EnergyPlus_version='ep94',
+        EnergyPlus_version='ep95',
         verboseMode=False)
     return z
 
 
-def test_addDetHVACobjEp94(IDFobject):
+def test_addDetHVACobjEp95(IDFobject):
     from eppy.modeleditor import IDF
 
-    IDFobject.addDetHVACobjEp94(verboseMode=False)
+    IDFobject.addDetHVACobjEp95(verboseMode=False)
     IDFobject.saveaccim(verboseMode=False)
     idf1 = IDF('TestModel_MultipleZone_pymod.idf')
     

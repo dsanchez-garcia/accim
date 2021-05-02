@@ -30,16 +30,16 @@ def make_eplaunch_options(idf, epw):
     return options
 
 
-def runEp94(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2):
+def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2):
     """
-    Run simulations in Energy Plus 9.4.0.
+    Run simulations in the latest EnergyPlus version installed in the computer.
 
     :param runOnlyAccim: Default is None. Enter True to run only ACCIM output IDFs, or False to run all IDFs.
     :param confirmRun: Default is None. Enter True to run all simulations regardless the no. of them,
     or False to shut down all runs.
     :return:
     """
-    iddfile = "C:/EnergyPlusV9-4-0/Energy+.idd"
+    iddfile = "C:/EnergyPlusV9-5-0/Energy+.idd"
     IDF.setiddname(iddfile)
 
     if runOnlyAccim is None:

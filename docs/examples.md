@@ -14,7 +14,7 @@ When we hit enter, we'll be asked to enter some information regarding the Script
 ```
 Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): mz
 Enter the Output (Standard, Simplified or Timestep): standard
-Enter the EnergyPlus version (Ep91 or Ep94): ep94
+Enter the EnergyPlus version (Ep91 or Ep95): ep95
 ```
 When we hit enter, it's going to add all the EnergyPlus objects needed, and afterwards ask us to enter the required information:
 ```
@@ -108,7 +108,7 @@ When we hit enter, we'll be asked to enter some information regarding the Script
 ```
 Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): sz
 Enter the Output (Standard, Simplified or Timestep): standard
-Enter the EnergyPlus version (Ep91 or Ep94): ep94
+Enter the EnergyPlus version (Ep91 or Ep95): ep95
 ```
 When we hit enter, it's going to add all the EnergyPlus objects needed, and afterwards ask us to enter the required information:
 ```
@@ -174,3 +174,4 @@ If you enter `exit()` to quit python and enter `dir` on windows command line, yo
 12/03/2021  08:11           114,617 TestModel_SingleZone_pymod[AS_EN16798[CA_3[CM_2[AT_0.1.idf
 12/03/2021  08:11           114,617 TestModel_SingleZone_pymod[AS_EN16798[CA_3[CM_3[AT_0.1.idf
 ```
+

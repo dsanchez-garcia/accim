@@ -34,7 +34,7 @@ class accimJob():
         addMultipleZoneSch, \
         addCurveObj, \
         addDetHVACobjEp91, \
-        addDetHVACobjEp94, \
+        addDetHVACobjEp95, \
         addForscriptSchMultipleZone, \
         checkVentIsOn
     from accim.sim.accim_MultipleZone_EMS import \
@@ -52,14 +52,14 @@ class accimJob():
                  verboseMode: bool = True):
         from eppy import modeleditor
         from eppy.modeleditor import IDF
-        if EnergyPlus_version.lower() == 'ep94':
-            iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
+        if EnergyPlus_version.lower() == 'ep95':
+            iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
         elif EnergyPlus_version.lower() == 'ep91':
             iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
         else:
             raise ValueError("""EnergyPlus version not supported.\n
                                      Only works for EnergyPlus 9.1 (enter Ep91) and
-                                     EnergyPlus 9.4 (enter Ep94) versions.""")
+                                     EnergyPlus 9.5(enter Ep95) versions.""")
         IDF.setiddname(iddfile)
 
         fname1 = filename_temp+'.idf'

@@ -25,16 +25,16 @@ Then you'll be asked in the prompt to enter some information so that python know
 ```
 Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): mz
 Enter the Output (Standard, Simplified or Timestep): standard
-Enter the EnergyPlus version (Ep91 or Ep94): ep94
+Enter the EnergyPlus version (Ep91 or Ep95): ep95
 ```
 where
 - ScriptType can be MultipleZone or SingleZone, and it refers to the type of functions as explained above
 - Outputs can be Standard, Simplified or Timestep, and it refers to the simulation results: Standard means that results will contain the full selection; Simplified means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and Timestep means that results are going to be the full selection in Timestep frequency, so this is only recommended for tests, or small number of simulations.
-- EnergyPlus version can be Ep91 or Ep94, and it refers to the IDF EnergyPlus version, which could be EnergyPlus 9.1.0 or EnergyPlus 9.4.0. You can try with other EnergyPlus versions, but it's not guaranteed to work, and you'll still need to be entering ep91 or ep94 in the information.
+- EnergyPlus version can be Ep91 or Ep95, and it refers to the IDF EnergyPlus version, which could be EnergyPlus 9.1.0 or EnergyPlus 9.4.0. You can try with other EnergyPlus versions, but it's not guaranteed to work, and you'll still need to be entering ep91 or ep95 in the information.
 
 Besides, `addAccis()` can take the same values we entered before in the prompt command as arguments. The usage of this function will be detailed below. An example of this, to get the same results as shown in the command prompt would be:
 ```
->>> accis.addAccis('mz','standard','ep94')
+>>> accis.addAccis('mz','standard','ep95')
 ```
 accis will show on the prompt command dialog all the objects it adds, and those that doesn't need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled 'Setting up the target IDFs'.
 
@@ -47,7 +47,7 @@ If you run `accis.addAccis('mz', whateverOutputs, whateverEPversion)`, you will 
 ```
 >>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
->>>                str, # EnergyPlus_version: 'ep91' or 'ep94'
+>>>                str, # EnergyPlus_version: 'ep91' or 'ep95'
 >>>                list, # AdapStand, which is the Adaptive Standard
 >>>                list, # CAT, which is the Category
 >>>                list, # ComfMod, which is Comfort Mode
@@ -68,7 +68,7 @@ Some example of the usage could be:
 ```
 >>> accis.addAccis(ScriptType='mz', # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                Outputs='standard', # Outputs: 'simplified', 'standard' or 'timestep'
->>>                EnergyPlus_version='ep94', # EnergyPlus_version: 'ep91' or 'ep94'
+>>>                EnergyPlus_version='ep95', # EnergyPlus_version: 'ep91' or 'ep95'
 >>>                AdapStand=[0, 1, 2], # AdapStand, which is the Adaptive Standard
 >>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category
 >>>                ComfMod=[0, 1, 2, 3], # ComfMod, which is Comfort Mode
@@ -146,7 +146,7 @@ Just as previously explained for MultipleZones scripts, if you run `accis.addAcc
 ```
 >>> accis.addAccis(str, # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
->>>                str, # EnergyPlus_version: 'ep91' or 'ep94'
+>>>                str, # EnergyPlus_version: 'ep91' or 'ep95'
 >>>                list, # AdapStand, which is the Adaptive Standard
 >>>                list, # CAT, which is the Category
 >>>                list, # ComfMod, which is Comfort Mode
@@ -162,7 +162,7 @@ Some example of the usage could be:
 ```
 >>> accis.addAccis(ScriptType='sz', # ScriptType: 'multiplezone' or 'mz', 'singlezone' or 'sz'
 >>>                Outputs='standard', # Outputs: 'simplified', 'standard' or 'timestep'
->>>                EnergyPlus_version='ep94', # EnergyPlus_version: 'ep91' or 'ep94'
+>>>                EnergyPlus_version='ep95', # EnergyPlus_version: 'ep91' or 'ep95'
 >>>                AdapStand=[0, 1, 2], # AdapStand, which is the Adaptive Standard
 >>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category
 >>>                ComfMod=[0, 1, 2, 3], # ComfMod, which is Comfort Mode

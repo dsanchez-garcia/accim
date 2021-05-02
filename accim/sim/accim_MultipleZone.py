@@ -1330,7 +1330,7 @@ def addDetHVACobjEp91(self, verboseMode: bool = True):
             print(zn+' Fan:ConstantVolume Object has been added')
 
 
-def addDetHVACobjEp94(self, verboseMode: bool = True):
+def addDetHVACobjEp95(self, verboseMode: bool = True):
     """Add Detailed HVAC objects for MultipleZone to work."""
     for zn in self.zonenames_orig:
         if 'VRF Outdoor Unit_'+zn in [i.Heat_Pump_Name
