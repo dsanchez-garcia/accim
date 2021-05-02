@@ -408,9 +408,9 @@ def genIDFMultipleZone(self,
     import numpy
     from eppy import modeleditor
     from eppy.modeleditor import IDF
-    import time
-    from tqdm import tqdm
-    
+    # import time
+    # from tqdm import tqdm
+
     arguments = (AdapStand is None,
                  CAT is None,
                  ComfMod is None,
