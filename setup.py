@@ -30,7 +30,7 @@ setuptools.setup(
       install_requires=[
            "eppy"
            ],
-      scripts=['bin/accis.py'],
+      scripts=['bin/addAccis.py'],
       keywords=[
           'adaptive thermal comfort',
           'building energy model',
