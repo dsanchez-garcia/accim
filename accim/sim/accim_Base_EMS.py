@@ -587,10 +587,8 @@ def addSimplifiedOutputVariables(self, verboseMode: bool = True):
     # del EnvironmentalImpactFactorslist,firstEnvironmentalImpactFactor, outputmeterlist, firstoutputmeter, alloutputs, firstoutput
 
     addittionaloutputs = ['Zone Thermostat Operative Temperature',
-                          'VRF Heat Pump Cooling Electricity Energy',
-                          'VRF Heat Pump Heating Electricity Energy',
-                          'Facility Total HVAC Electric Demand Power',
-                          'Facility Total HVAC Electricity Demand Rate'
+                          'Cooling Coil Total Cooling Rate',
+                          'Heating Coil Heating Rate',
                           ]
 
     for addittionaloutput in addittionaloutputs:
