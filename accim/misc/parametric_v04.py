@@ -2,18 +2,20 @@ from eppy import modeleditor
 from eppy.modeleditor import IDF
 import os
 
-iddfile = r"C:\EnergyPlusV9-1-0\Energy+.idd"
+iddfile = r"C:\EnergyPlusV9-4-0\Energy+.idd"
 # fname1 = r"D:\OneDrive - UNIVERSIDAD DE SEVILLA\Papers OneDrive\VPO_cadiz_parametrico\BA_V01.idf"
 
-path = r'D:\Paper_VPO_cadiz_parametrico'
+path = r'C:\Users\daniel.sanchez\Documents\Personal\VPO_parametrico\input_IDFs'
+outputpath = r'C:\Users\daniel.sanchez\Documents\Personal\VPO_parametrico\output_IDFs'
 
 filelist = [file.split('.idf')[0] for file in os.listdir(path) if file.endswith('.idf')]
 print(filelist)
 
 IDF.setiddname(iddfile)
 
-
 # idf1.printidf()
+
+
 
 facade_cond_list = [
     0.01292,
@@ -185,9 +187,30 @@ floor_cond_list = [
 
 for file in filelist:
     filename = file
-
+    print(file)
     fname1 = path+'/'+filename + '.idf'
     idf1 = IDF(fname1)
+
+    C01 = [mat for mat in idf1.idfobjects['MATERIAL'] if mat.Name == 'O CO1_.3'][0]
+    C01.Name = 'O CO1_.2'
+    C01.Thickness = 0.2
+
+    slab = [mat for mat in idf1.idfobjects['MATERIAL'] if mat.Name == 'OOO Hormigon celular_.1'][0]
+    slab.Name = 'Cast Concrete_.3'
+    slab.Thickness = 0.3
+    slab.Conductivity = 1.13
+    slab.Density = 2000
+    slab.Thermal_Absorptance = 0.9
+    slab.Solar_Absorptance = 0.6
+    slab.Visible_Absorptance = 0.6
+
+    buildup = [cons for cons in idf1.idfobjects['CONSTRUCTION'] if cons.Name == 'OO CO1'][0]
+    buildup.Layer_2 = 'O CO1_.2'
+    buildup.Layer_3 = 'Cast Concrete_.3'
+
+    buildup_rev = [cons for cons in idf1.idfobjects['CONSTRUCTION'] if cons.Name == 'OO CO1_Rev'][0]
+    buildup_rev.Outside_Layer = 'Cast Concrete_.3'
+    buildup_rev.Layer_2 = 'O CO1_.2'
 
     facade_mat = [mat
                   for mat
@@ -293,4 +316,4 @@ for file in filelist:
                             + '[SXX'
                             + '.idf'
                         )
-            idf1.savecopy(outputname)
+            idf1.savecopy(outputpath+'/'+outputname)
