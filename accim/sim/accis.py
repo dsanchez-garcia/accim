@@ -156,9 +156,9 @@ def addAccis(
         z.setComfFieldsPeople(verboseMode=verboseMode)
         z.addOpTempTherm(verboseMode=verboseMode)
         z.addBaseSchedules(verboseMode=verboseMode)
-        z.setAvailSchOn(verboseMode=verboseMode)
 
         if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
+            z.setAvailSchOn(verboseMode=verboseMode)
             z.addMultipleZoneSch(verboseMode=verboseMode)
             z.addCurveObj(verboseMode=verboseMode)
             z.addDetHVACobj(verboseMode=verboseMode)

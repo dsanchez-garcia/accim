@@ -1,6 +1,20 @@
 """Add EnergyPlus objects only for MultipleZone."""
 
 
+def setAvailSchOn(self, verboseMode: bool = True):
+    """
+    Amend availability schedules.
+
+    Assign On Compact:Schedule to heating and cooling availability
+    schedule names.
+    """
+    for schedule in [i for i in self.idf1.idfobjects['ZoneHVAC:IdealLoadsAirSystem']]:
+        schedule.Heating_Availability_Schedule_Name='On'
+        schedule.Cooling_Availability_Schedule_Name='On'
+    if verboseMode:
+        print('All ZoneHVAC:IdealLoadsAirSystem '
+              'Heating and Cooling availability schedules has been set to on')
+
 def addMultipleZoneSch(self, verboseMode: bool = True):
     """
     Amend Schedule:Compact objects for MultipleZone.

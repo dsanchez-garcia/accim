@@ -98,20 +98,6 @@ def addBaseSchedules(self, verboseMode : bool = True):
             print("On Schedule has been added")
 
 
-def setAvailSchOn(self, verboseMode: bool = True):
-    """
-    Amend availability schedules.
-
-    Assign On Compact:Schedule to heating and cooling availability
-    schedule names.
-    """
-    for schedule in [i for i in self.idf1.idfobjects['ZoneHVAC:IdealLoadsAirSystem']]:
-        schedule.Heating_Availability_Schedule_Name='On'
-        schedule.Cooling_Availability_Schedule_Name='On'
-    if verboseMode:
-        print('All ZoneHVAC:IdealLoadsAirSystem '
-              'Heating and Cooling availability schedules has been set to on')
-
 def saveaccim(self, verboseMode: bool = True):
     """Save IDF."""
     self.idf1.save()

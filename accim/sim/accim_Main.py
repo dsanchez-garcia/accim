@@ -14,7 +14,6 @@ class accimJob():
         setComfFieldsPeople, \
         addOpTempTherm, \
         addBaseSchedules, \
-        setAvailSchOn, \
         saveaccim
     from accim.sim.accim_Base_EMS import \
         addEMSProgramsBase, \
@@ -31,6 +30,7 @@ class accimJob():
         addEMSProgramsSingleZone, \
         addOutputVariablesSingleZone
     from accim.sim.accim_MultipleZone import \
+        setAvailSchOn, \
         addMultipleZoneSch, \
         addCurveObj, \
         addDetHVACobj, \
