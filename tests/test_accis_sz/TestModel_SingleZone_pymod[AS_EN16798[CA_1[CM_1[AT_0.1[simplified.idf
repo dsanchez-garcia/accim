@@ -2224,25 +2224,13 @@ OUTPUT:VARIABLE,
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    VRF Heat Pump Cooling Electricity Energy,    !- Variable Name
+    Cooling Coil Total Cooling Rate,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    VRF Heat Pump Heating Electricity Energy,    !- Variable Name
-    Hourly,                   !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Facility Total HVAC Electric Demand Power,    !- Variable Name
-    Hourly,                   !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Facility Total HVAC Electricity Demand Rate,    !- Variable Name
+    Heating Coil Heating Rate,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
