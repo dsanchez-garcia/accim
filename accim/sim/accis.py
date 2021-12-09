@@ -99,7 +99,9 @@ def addAccis(
         'Ep94',
         'ep94',
         'Ep95',
-        'ep95'
+        'ep95',
+        'Ep96',
+        'ep96'
     ]
 
     if all(objArgsDef):
@@ -171,7 +173,7 @@ def addAccis(
         z.addEMSOutputVariableBase(verboseMode=verboseMode)
 
         if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
-            z.addGlobVarListMultipleZone(verboseMode=verboseMode)
+            z.addGlobVarListOccZones(verboseMode=verboseMode)
             z.addEMSSensorsMultipleZone(verboseMode=verboseMode)
             z.addEMSActuatorsMultipleZone(verboseMode=verboseMode)
             z.addEMSProgramsMultipleZone(verboseMode=verboseMode)

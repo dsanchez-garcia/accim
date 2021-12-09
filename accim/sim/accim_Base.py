@@ -56,6 +56,7 @@ def addOpTempTherm(self, verboseMode : bool = True):
 
     Add ZoneControl:Thermostat:OperativeTemperature objects for each zone.
     """
+    # todo solo para VRFsystem
     for zonename_orig in self.zonenames_orig:
         if zonename_orig+' Thermostat' in [thermostat.Thermostat_Name
                                            for thermostat
@@ -82,6 +83,7 @@ def addBaseSchedules(self, verboseMode : bool = True):
     Checks Schedule:Compact objects needed for SingleZone accim,
     and add them in case these are not in the model
     """
+    # todo solo para VRFsystem
     if "On" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
         if verboseMode:
             print("On Schedule already was in the model")

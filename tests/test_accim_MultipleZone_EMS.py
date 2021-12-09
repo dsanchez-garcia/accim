@@ -18,7 +18,7 @@ def IDFobject():
 def test_addGlobVarListMultipleZone(IDFobject):
     from eppy.modeleditor import IDF
 
-    IDFobject.addGlobVarListMultipleZone(verboseMode=False)
+    IDFobject.addGlobVarListOccZones(verboseMode=False)
     IDFobject.saveaccim(verboseMode=False)
     idf1 = IDF('TestModel_MultipleZone_pymod.idf')
     

@@ -30,7 +30,7 @@ def addEMSProgramsBase(self, verboseMode: bool = True):
             print('Added - SetComfTemp Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetComfTemp'])
 
-    for zonename in self.zonenames:
+    for zonename in self.occupiedZones:
         if 'CountHours_'+zonename in programlist:
             if verboseMode:
                 print('Not added - CountHours_'+zonename+' Program')
@@ -395,7 +395,7 @@ def addEMSProgramsBase(self, verboseMode: bool = True):
             print('Added - SetASTnoTol Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetASTnoTol'])
 
-    for zonename in self.zonenames:
+    for zonename in self.occupiedZones:
         if 'CountHoursNoApp_'+zonename in programlist:
             if verboseMode:
                 print('Not added - CountHoursNoApp_'+zonename+' Program')
@@ -498,7 +498,7 @@ def addEMSOutputVariableBase(self, verboseMode: bool = True):
         }
 
     for i in EMSOutputVariableComfHours_dict:
-        for zonename in self.zonenames:
+        for zonename in self.occupiedZones:
             if i+'_'+zonename+' (summed)' in outputvariablelist:
                 if verboseMode:
                     print('Not added - '+i+'_'
@@ -518,6 +518,33 @@ def addEMSOutputVariableBase(self, verboseMode: bool = True):
                     print('Added - '+i+'_'
                           + zonename + ' (summed) Output Variable')
                 # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i+'_'+zonename+' (summed)'])
+
+    EMSOutputVariableIDFzones_dict = {
+        'Ventilation Hours': 'VentHours'
+        }
+
+    for i in EMSOutputVariableIDFzones_dict:
+        for zonename in self.zonenames:
+            if i+'_'+zonename+' (summed)' in outputvariablelist:
+                if verboseMode:
+                    print('Not added - '+i+'_'
+                          + zonename + ' (summed) Output Variable')
+            else:
+                self.idf1.newidfobject(
+                    'EnergyManagementSystem:OutputVariable',
+                    Name=i + '_' + zonename + ' (summed)',
+                    EMS_Variable_Name=EMSOutputVariableIDFzones_dict[i]+'_'
+                    + zonename,
+                    Type_of_Data_in_Variable='Summed',
+                    Update_Frequency='ZoneTimestep',
+                    EMS_Program_or_Subroutine_Name='',
+                    Units='H'
+                    )
+                if verboseMode:
+                    print('Added - '+i+'_'
+                          + zonename + ' (summed) Output Variable')
+                # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i+'_'+zonename+' (summed)'])
+
 
     del outputvariablelist
 

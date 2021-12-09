@@ -1,7 +1,7 @@
 """Add EMS objects only for MultipleZone."""
 
 
-def addGlobVarListMultipleZone(self, verboseMode: bool = True):
+def addGlobVarListOccZones(self, verboseMode: bool = True):
     """Remove existing Global Variable objects and add correct Global Variable objects for MultipleZone accim."""
     globalvariablelist = ([program for program in self.idf1.idfobjects['ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE']])
 
@@ -38,7 +38,7 @@ def addGlobVarListMultipleZone(self, verboseMode: bool = True):
         Erl_Variable_23_Name='MinOToffset'
         )
 
-    for zonename in self.zonenames:
+    for zonename in self.occupiedZones:
         self.idf1.newidfobject(
             'EnergyManagementSystem:GlobalVariable',
             Erl_Variable_1_Name='ComfHours_'+zonename,
@@ -48,9 +48,76 @@ def addGlobVarListMultipleZone(self, verboseMode: bool = True):
             Erl_Variable_5_Name='DiscomfNonAppColdHours_'+zonename,
             Erl_Variable_6_Name='ComfHoursNoApp_'+zonename
             )
+
+    for zonename in self.zonenames:
+        self.idf1.newidfobject(
+            'EnergyManagementSystem:GlobalVariable',
+            Erl_Variable_1_Name='VentHours_'+zonename
+            )
+
     if verboseMode:
         print("Global variables objects have been added")
 
+
+def addEMSSensorsVRFsystem(self, verboseMode: bool = True):
+    """Add EMS sensors for VRF system accim."""
+    sensorlist = ([sensor.Name for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor']])
+    for i in range(len(self.zonenames)):
+        if self.zonenames[i] + '_CoolCoil' in sensorlist:
+            if verboseMode:
+                print('Not added - ' + self.zonenames[i] + '_CoolCoil Sensor')
+        else:
+            self.idf1.newidfobject(
+                'EnergyManagementSystem:Sensor',
+                Name=self.zonenames[i] + '_CoolCoil',
+                OutputVariable_or_OutputMeter_Index_Key_Name=self.zonenames_orig[i] + ' VRF Indoor Unit DX Cooling Coil',
+                OutputVariable_or_OutputMeter_Name='Cooling Coil Total Cooling Rate'
+            )
+            if verboseMode:
+                print('Added - ' + self.zonenames[i] + '_CoolCoil Sensor')
+        #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_CoolCoil'])
+        if self.zonenames[i] + '_HeatCoil' in sensorlist:
+            if verboseMode:
+                print('Not added - ' + self.zonenames[i] + '_HeatCoil Sensor')
+        else:
+            self.idf1.newidfobject(
+                'EnergyManagementSystem:Sensor',
+                Name=self.zonenames[i] + '_HeatCoil',
+                OutputVariable_or_OutputMeter_Index_Key_Name=self.zonenames_orig[i] + ' VRF Indoor Unit DX Heating Coil',
+                OutputVariable_or_OutputMeter_Name='Heating Coil Heating Rate'
+            )
+            if verboseMode:
+                print('Added - ' + self.zonenames[i] + '_HeatCoil Sensor')
+    #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_HeatCoil'])
+
+    for i in range(len(self.windownamelist)):
+        if self.windownamelist[i]+'_CoolCoil' in sensorlist:
+            if verboseMode:
+                print('Not added - '+self.windownamelist[i]+'_CoolCoil Sensor')
+        else:
+            self.idf1.newidfobject(
+                'EnergyManagementSystem:Sensor',
+                Name=self.windownamelist[i]+'_CoolCoil',
+                OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0]+' VRF Indoor Unit DX Cooling Coil',
+                OutputVariable_or_OutputMeter_Name='Cooling Coil Total Cooling Rate'
+                )
+            if verboseMode:
+                print('Added - '+self.windownamelist[i]+'_CoolCoil Sensor')
+
+        if self.windownamelist[i]+'_HeatCoil' in sensorlist:
+            if verboseMode:
+                print('Not added - '+self.windownamelist[i]+'_HeatCoil Sensor')
+        else:
+            self.idf1.newidfobject(
+                'EnergyManagementSystem:Sensor',
+                Name=self.windownamelist[i]+'_HeatCoil',
+                OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0]+' VRF Indoor Unit DX Heating Coil',
+                OutputVariable_or_OutputMeter_Name='Heating Coil Heating Rate'
+                )
+            if verboseMode:
+                print('Added - '+self.windownamelist[i]+'_HeatCoil Sensor')
+
+    del sensorlist
 
 
 def addEMSSensorsMultipleZone(self, verboseMode: bool = True):
@@ -99,32 +166,6 @@ def addEMSSensorsMultipleZone(self, verboseMode: bool = True):
             if verboseMode:
                 print('Added - '+self.zonenames[i]+'_OpT Sensor')
     #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_OpT'])
-        if self.zonenames[i]+'_CoolCoil' in sensorlist:
-            if verboseMode:
-                print('Not added - '+self.zonenames[i]+'_CoolCoil Sensor')
-        else:
-            self.idf1.newidfobject(
-                'EnergyManagementSystem:Sensor',
-                Name=self.zonenames[i]+'_CoolCoil',
-                OutputVariable_or_OutputMeter_Index_Key_Name=self.zonenames_orig[i]+' VRF Indoor Unit DX Cooling Coil',
-                OutputVariable_or_OutputMeter_Name='Cooling Coil Total Cooling Rate'
-                )
-            if verboseMode:
-                print('Added - '+self.zonenames[i]+'_CoolCoil Sensor')
-    #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_CoolCoil'])
-        if self.zonenames[i]+'_HeatCoil' in sensorlist:
-            if verboseMode:
-                print('Not added - '+self.zonenames[i]+'_HeatCoil Sensor')
-        else:
-            self.idf1.newidfobject(
-                'EnergyManagementSystem:Sensor',
-                Name=self.zonenames[i]+'_HeatCoil',
-                OutputVariable_or_OutputMeter_Index_Key_Name=self.zonenames_orig[i]+' VRF Indoor Unit DX Heating Coil',
-                OutputVariable_or_OutputMeter_Name='Heating Coil Heating Rate'
-                )
-            if verboseMode:
-                print('Added - '+self.zonenames[i]+'_HeatCoil Sensor')
-    #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_HeatCoil'])
         if self.zonenames[i]+'_WindSpeed' in sensorlist:
             if verboseMode:
                 print('Not added - '+self.zonenames[i]+'_WindSpeed Sensor')
@@ -177,32 +218,6 @@ def addEMSSensorsMultipleZone(self, verboseMode: bool = True):
             )
             if verboseMode:
                 print('Added - '+self.windownamelist[i]+'_OpT Sensor')
-
-        if self.windownamelist[i]+'_CoolCoil' in sensorlist:
-            if verboseMode:
-                print('Not added - '+self.windownamelist[i]+'_CoolCoil Sensor')
-        else:
-            self.idf1.newidfobject(
-                'EnergyManagementSystem:Sensor',
-                Name=self.windownamelist[i]+'_CoolCoil',
-                OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0]+' VRF Indoor Unit DX Cooling Coil',
-                OutputVariable_or_OutputMeter_Name='Cooling Coil Total Cooling Rate'
-                )
-            if verboseMode:
-                print('Added - '+self.windownamelist[i]+'_CoolCoil Sensor')
-
-        if self.windownamelist[i]+'_HeatCoil' in sensorlist:
-            if verboseMode:
-                print('Not added - '+self.windownamelist[i]+'_HeatCoil Sensor')
-        else:
-            self.idf1.newidfobject(
-                'EnergyManagementSystem:Sensor',
-                Name=self.windownamelist[i]+'_HeatCoil',
-                OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0]+' VRF Indoor Unit DX Heating Coil',
-                OutputVariable_or_OutputMeter_Name='Heating Coil Heating Rate'
-                )
-            if verboseMode:
-                print('Added - '+self.windownamelist[i]+'_HeatCoil Sensor')
 
         if self.windownamelist[i]+'_WindSpeed' in sensorlist:
             if verboseMode:
@@ -360,6 +375,7 @@ def addEMSProgramsMultipleZone(self, verboseMode: bool = True):
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetVST'])
 
     for zonename in self.zonenames:
+        # todo renombrar program en python y EMS
         if 'ApplyAST_MultipleZone_'+zonename in programlist:
             if verboseMode:
                 print('Not added - ApplyAST_MultipleZone_'+zonename+' Program')
@@ -367,77 +383,93 @@ def addEMSProgramsMultipleZone(self, verboseMode: bool = True):
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Program',
                 Name='ApplyAST_MultipleZone_'+zonename,
-                Program_Line_1='if ('+zonename+'_OpT>VST)&&('+zonename+'_OutT < VST)',
-                Program_Line_2='if '+zonename+'_CoolCoil==0',
-                Program_Line_3='if '+zonename+'_HeatCoil==0',
-                Program_Line_4='if ('+zonename+'_OpT<ACST)&&('+zonename+'_OutT>MinOutTemp)',
-                Program_Line_5='if '+zonename+'_WindSpeed <= MaxWindSpeed',
-                Program_Line_6='set Ventilates_HVACmode2_'+zonename+' = 1',
-                Program_Line_7='else',
-                Program_Line_8='set Ventilates_HVACmode2_'+zonename+' = 0',
-                Program_Line_9='endif',
-                Program_Line_10='else',
-                Program_Line_11='set Ventilates_HVACmode2_'+zonename+' = 0',
-                Program_Line_12='endif',
-                Program_Line_13='else',
-                Program_Line_14='set Ventilates_HVACmode2_'+zonename+' = 0',
+                Program_Line_1='if (' + zonename + '_OpTemp>VST)&&(' + zonename + '_OutTemp < VST)',
+                Program_Line_2='if ' + zonename + '_CoolCoil==0',
+                Program_Line_3='if ' + zonename + '_HeatCoil==0',
+                Program_Line_4='if (' + zonename + '_OpTemp<ACST)&&(' + zonename + '_OutTemp>MinOutTemp)',
+                Program_Line_5='if ' + zonename + '_WindSpeed <= MaxWindSpeed',
+                Program_Line_6='set Ventilates_HVACmode2_' + zonename + ' = 1',
+                Program_Line_7='set VentHours_' + zonename + ' = 1*ZoneTimeStep',
+                Program_Line_8='else',
+                Program_Line_9='set Ventilates_HVACmode2_' + zonename + ' = 0',
+                Program_Line_10='set VentHours_' + zonename + ' = 0',
+                Program_Line_11='endif',
+                Program_Line_12='else',
+                Program_Line_13='set Ventilates_HVACmode2_' + zonename + ' = 0',
+                Program_Line_14='set VentHours_' + zonename + ' = 0',
                 Program_Line_15='endif',
                 Program_Line_16='else',
-                Program_Line_17='set Ventilates_HVACmode2_'+zonename+' = 0',
-                Program_Line_18='endif',
-                Program_Line_19='else',
-                Program_Line_20='set Ventilates_HVACmode2_'+zonename+' = 0',
-                Program_Line_21='endif',
-                Program_Line_22='if VentCtrl == 0',
-                Program_Line_23='if '+zonename+'_OutT < '+zonename+'_OpT',
-                Program_Line_24='if '+zonename+'_OutT>MinOutTemp',
-                Program_Line_25='if '+zonename+'_OpT > VST',
-                Program_Line_26='if '+zonename+'_WindSpeed <= MaxWindSpeed',
-                Program_Line_27='set Ventilates_HVACmode1_'+zonename+' = 1',
-                Program_Line_28='else',
-                Program_Line_29='set Ventilates_HVACmode1_'+zonename+' = 0',
-                Program_Line_30='endif',
-                Program_Line_31='else',
-                Program_Line_32='set Ventilates_HVACmode1_'+zonename+' = 0',
-                Program_Line_33='endif',
-                Program_Line_34='else',
-                Program_Line_35='set Ventilates_HVACmode1_'+zonename+' = 0',
-                Program_Line_36='endif',
-                Program_Line_37='else',
-                Program_Line_38='set Ventilates_HVACmode1_'+zonename+' = 0',
-                Program_Line_39='endif',
-                Program_Line_40='elseif VentCtrl == 1',
-                Program_Line_41='if '+zonename+'_OutT<'+zonename+'_OpT',
-                Program_Line_42='if '+zonename+'_OutT>MinOutTemp',
-                Program_Line_43='if '+zonename+'_OpT > ACSTnoTol',
-                Program_Line_44='if '+zonename+'_WindSpeed <= MaxWindSpeed',
-                Program_Line_45='set Ventilates_HVACmode1_'+zonename+' = 1',
-                Program_Line_46='else',
-                Program_Line_47='set Ventilates_HVACmode1_'+zonename+' = 0',
-                Program_Line_48='endif',
-                Program_Line_49='else',
-                Program_Line_50='set Ventilates_HVACmode1_'+zonename+' = 0',
-                Program_Line_51='endif',
-                Program_Line_52='else',
-                Program_Line_53='set Ventilates_HVACmode1_'+zonename+' = 0',
-                Program_Line_54='endif',
-                Program_Line_55='else',
-                Program_Line_56='set Ventilates_HVACmode1_'+zonename+' = 0',
-                Program_Line_57='endif',
-                Program_Line_58='endif',
-                Program_Line_59='if HVACmode == 0',
-                Program_Line_60='set FORSCRIPT_ACST_Sch_'+zonename+' = ACST',
-                Program_Line_61='set FORSCRIPT_AHST_Sch_'+zonename+' = AHST',
-                Program_Line_62='elseif HVACmode == 1',
-                Program_Line_63='Set FORSCRIPT_ACST_Sch_'+zonename+' = 100',
-                Program_Line_64='Set FORSCRIPT_AHST_Sch_'+zonename+' = -100',
-                Program_Line_65='elseif HVACmode == 2',
-                Program_Line_66='if Ventilates_HVACmode2_'+zonename+' == 0',
-                Program_Line_67='set FORSCRIPT_ACST_Sch_'+zonename+' = ACST',
-                Program_Line_68='set FORSCRIPT_AHST_Sch_'+zonename+' = AHST',
+                Program_Line_17='set Ventilates_HVACmode2_' + zonename + ' = 0',
+                Program_Line_18='set VentHours_' + zonename + ' = 0',
+                Program_Line_19='endif',
+                Program_Line_20='else',
+                Program_Line_21='set Ventilates_HVACmode2_' + zonename + ' = 0',
+                Program_Line_22='set VentHours_' + zonename + ' = 0',
+                Program_Line_23='endif',
+                Program_Line_24='else',
+                Program_Line_25='set Ventilates_HVACmode2_' + zonename + ' = 0',
+                Program_Line_26='set VentHours_' + zonename + ' = 0',
+                Program_Line_27='endif',
+                Program_Line_28='if VentCtrl == 0',
+                Program_Line_29='if ' + zonename + '_OutTemp < ' + zonename + '_OpTemp',
+                Program_Line_30='if ' + zonename + '_OutTemp>MinOutTemp',
+                Program_Line_31='if ' + zonename + '_OpTemp > VST',
+                Program_Line_32='if ' + zonename + '_WindSpeed <= MaxWindSpeed',
+                Program_Line_33='set Ventilates_HVACmode1_' + zonename + ' = 1',
+                Program_Line_34='set VentHours_' + zonename + ' = 1*ZoneTimeStep',
+                Program_Line_35='else',
+                Program_Line_36='set Ventilates_HVACmode1_' + zonename + ' = 0',
+                Program_Line_37='set VentHours_' + zonename + ' = 0',
+                Program_Line_38='endif',
+                Program_Line_39='else',
+                Program_Line_40='set Ventilates_HVACmode1_' + zonename + ' = 0',
+                Program_Line_41='set VentHours_' + zonename + ' = 0',
+                Program_Line_42='endif',
+                Program_Line_43='else',
+                Program_Line_44='set Ventilates_HVACmode1_' + zonename + ' = 0',
+                Program_Line_45='set VentHours_' + zonename + ' = 0',
+                Program_Line_46='endif',
+                Program_Line_47='else',
+                Program_Line_48='set Ventilates_HVACmode1_' + zonename + ' = 0',
+                Program_Line_49='set VentHours_' + zonename + ' = 0',
+                Program_Line_50='endif',
+                Program_Line_51='elseif VentCtrl == 1',
+                Program_Line_52='if ' + zonename + '_OutTemp<' + zonename + '_OpTemp',
+                Program_Line_53='if ' + zonename + '_OutTemp>MinOutTemp',
+                Program_Line_54='if ' + zonename + '_OpTemp > ACSTnoTol',
+                Program_Line_55='if ' + zonename + '_WindSpeed <= MaxWindSpeed',
+                Program_Line_56='set Ventilates_HVACmode1_' + zonename + ' = 1',
+                Program_Line_57='set VentHours_' + zonename + ' = 1*ZoneTimeStep',
+                Program_Line_58='else',
+                Program_Line_59='set Ventilates_HVACmode1_' + zonename + ' = 0',
+                Program_Line_60='set VentHours_' + zonename + ' = 0',
+                Program_Line_61='endif',
+                Program_Line_62='else',
+                Program_Line_63='set Ventilates_HVACmode1_' + zonename + ' = 0',
+                Program_Line_64='set VentHours_' + zonename + ' = 0',
+                Program_Line_65='endif',
+                Program_Line_66='else',
+                Program_Line_67='set Ventilates_HVACmode1_' + zonename + ' = 0',
+                Program_Line_68='set VentHours_' + zonename + ' = 0',
                 Program_Line_69='endif',
-                Program_Line_70='endif'
-                )
+                Program_Line_70='else',
+                Program_Line_71='set Ventilates_HVACmode1_' + zonename + ' = 0',
+                Program_Line_72='set VentHours_' + zonename + ' = 0',
+                Program_Line_73='endif',
+                Program_Line_74='endif',
+                Program_Line_75='if HVACmode == 0',
+                Program_Line_76='set FORSCRIPT_ACST_Sch_' + zonename + ' = ACST',
+                Program_Line_77='set FORSCRIPT_AHST_Sch_' + zonename + ' = AHST',
+                Program_Line_78='elseif HVACmode == 1',
+                Program_Line_79='Set FORSCRIPT_ACST_Sch_' + zonename + ' = 100',
+                Program_Line_80='Set FORSCRIPT_AHST_Sch_' + zonename + ' = -100',
+                Program_Line_81='elseif HVACmode == 2',
+                Program_Line_82='if Ventilates_HVACmode2_' + zonename + ' == 0',
+                Program_Line_83='set FORSCRIPT_ACST_Sch_' + zonename + ' = ACST',
+                Program_Line_84='set FORSCRIPT_AHST_Sch_' + zonename + ' = AHST',
+                Program_Line_85='endif',
+                Program_Line_86='endif'
+            )
             if verboseMode:
                 print('Added - ApplyAST_MultipleZone_'+zonename+' Program')
         #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'ApplyAST_MultipleZone_'+windowname])
@@ -533,7 +565,7 @@ def addEMSProgramsMultipleZone(self, verboseMode: bool = True):
 
 def addEMSOutputVariableMultipleZone(self, verboseMode: bool = True):
     """Add EMS output variables for MultipleZone accim."""
-    outputvariablelist = ([program.Name for program in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']])
+    outputvariablelist = ([i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']])
 
     if 'Ventilation Setpoint Temperature' in outputvariablelist:
         if verboseMode:
@@ -599,6 +631,7 @@ def addOutputVariablesMultipleZone(self, verboseMode: bool = True):
         'Heating Coil Heating Rate',
         'Facility Total HVAC Electric Demand Power',
         'Facility Total HVAC Electricity Demand Rate',
+        # todo move VRF outputvariables
         'VRF Heat Pump Cooling Electricity Energy',
         'VRF Heat Pump Heating Electricity Energy',
         'AFN Surface Venting Window or Door Opening Factor',
@@ -651,8 +684,7 @@ def addOutputVariablesMultipleZone(self, verboseMode: bool = True):
     if verboseMode:
         print('Added - Site Outdoor Air Drybulb Temperature Output:Variable data')
 
-    zonenames = ([sub.replace(':', '_') for sub in ([zone.Name for zone in self.idf1.idfobjects['ZONE']])])
-    for zonename in zonenames:
+    for zonename in self.zonenames:
         self.idf1.newidfobject(
             'Output:Variable',
             Key_Value='FORSCRIPT_AHST_'+zonename,
@@ -686,26 +718,6 @@ def addOutputVariablesMultipleZone(self, verboseMode: bool = True):
 
         self.idf1.newidfobject(
             'Output:Variable',
-            Key_Value=zonename+' VRF Indoor Unit DX Cooling Coil',
-            Variable_Name='Cooling Coil Total Cooling Rate',
-            Reporting_Frequency='Hourly',
-            Schedule_Name=''
-            )
-        if verboseMode:
-            print('Added - '+zonename+' VRF Indoor Unit DX Cooling Coil Output:Variable data')
-
-        self.idf1.newidfobject(
-            'Output:Variable',
-            Key_Value=zonename+' VRF Indoor Unit DX Heating Coil',
-            Variable_Name='Heating Coil Heating Rate',
-            Reporting_Frequency='Hourly',
-            Schedule_Name=''
-            )
-        if verboseMode:
-            print('Added - '+zonename+' VRF Indoor Unit DX Heating Coil Output:Variable data')
-
-        self.idf1.newidfobject(
-            'Output:Variable',
             Key_Value=zonename,
             Variable_Name='Zone Outdoor Air Wind Speed',
             Reporting_Frequency='Hourly',
@@ -713,3 +725,26 @@ def addOutputVariablesMultipleZone(self, verboseMode: bool = True):
             )
         if verboseMode:
             print('Added - '+zonename+' Zone Outdoor Air Wind Speed Output:Variable data')
+
+
+def addOutputVariablesVRFsystem(self, verboseMode : bool = True):
+    for zonename in self.zonenames:
+        self.idf1.newidfobject(
+            'Output:Variable',
+            Key_Value=zonename + ' VRF Indoor Unit DX Cooling Coil',
+            Variable_Name='Cooling Coil Total Cooling Rate',
+            Reporting_Frequency='Hourly',
+            Schedule_Name=''
+        )
+        if verboseMode:
+            print('Added - ' + zonename + ' VRF Indoor Unit DX Cooling Coil Output:Variable data')
+
+        self.idf1.newidfobject(
+            'Output:Variable',
+            Key_Value=zonename + ' VRF Indoor Unit DX Heating Coil',
+            Variable_Name='Heating Coil Heating Rate',
+            Reporting_Frequency='Hourly',
+            Schedule_Name=''
+        )
+        if verboseMode:
+            print('Added - ' + zonename + ' VRF Indoor Unit DX Heating Coil Output:Variable data')
