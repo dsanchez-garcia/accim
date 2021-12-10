@@ -1,4 +1,4 @@
-"""Add EnergyPlus objects in common to both SingleZone and MultipleZone."""
+"""Add EnergyPlus objects in common to both ExistingHVAC and VRFsystem."""
 
 
 def setComfFieldsPeople(self, verboseMode: bool = True):
@@ -14,6 +14,7 @@ def setComfFieldsPeople(self, verboseMode: bool = True):
         self.idf1.newidfobject(
             'PEOPLE',
             Name=ppl[i].Name,
+            # todo en ep96 este campo parece que se llama   A2 , \field Zone or ZoneList or Space or SpaceList Name
             Zone_or_ZoneList_Name=ppl[i].Zone_or_ZoneList_Name,
             Number_of_People_Schedule_Name=ppl[i].Number_of_People_Schedule_Name,
             Number_of_People_Calculation_Method=ppl[i].Number_of_People_Calculation_Method,
@@ -50,54 +51,6 @@ def setComfFieldsPeople(self, verboseMode: bool = True):
     del ppl, firstpeopleobject
 
 
-def addOpTempTherm(self, verboseMode : bool = True):
-    """
-    Amend ZoneControl:Thermostat:OperativeTemperature objects.
-
-    Add ZoneControl:Thermostat:OperativeTemperature objects for each zone.
-    """
-    # todo solo para VRFsystem
-    for zonename_orig in self.zonenames_orig:
-        if zonename_orig+' Thermostat' in [thermostat.Thermostat_Name
-                                           for thermostat
-                                           in self.idf1.idfobjects
-                                           ['ZoneControl:Thermostat:OperativeTemperature']]:
-            if verboseMode:
-                print(zonename_orig+' Thermostat already was in the model')
-        else:
-            self.idf1.newidfobject(
-                'ZoneControl:Thermostat:OperativeTemperature',
-                Thermostat_Name=zonename_orig+" Thermostat",
-                Radiative_Fraction_Input_Mode="Scheduled",
-                Fixed_Radiative_Fraction='',
-                Radiative_Fraction_Schedule_Name='TypOperativeTempControlSch'
-                )
-            if verboseMode:
-                print(zonename_orig+' Thermostat has been added')
-
-
-def addBaseSchedules(self, verboseMode : bool = True):
-    """
-    Amend Schedule:Compact objects.
-
-    Checks Schedule:Compact objects needed for SingleZone accim,
-    and add them in case these are not in the model
-    """
-    # todo solo para VRFsystem
-    if "On" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
-        if verboseMode:
-            print("On Schedule already was in the model")
-    else:
-        self.idf1.newidfobject(
-            'Schedule:Compact',
-            Name="On",
-            Schedule_Type_Limits_Name="Any Number",
-            Field_1='Through: 12/31',
-            Field_2='For: AllDays',
-            Field_3='Until: 24:00,1'
-            )
-        if verboseMode:
-            print("On Schedule has been added")
 
 
 def saveaccim(self, verboseMode: bool = True):

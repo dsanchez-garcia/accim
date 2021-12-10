@@ -1,4 +1,4 @@
-"""Class for accim SingleZone and MultipleZone."""
+"""Class for accim."""
 
 class accimJob():
     """Class to start the accim process."""
@@ -6,43 +6,37 @@ class accimJob():
     import numpy
 
     from accim.sim.accim_IDFgeneration import \
-        inputdataSingleZone,\
-        inputdataMultipleZone, \
-        genIDFSingleZone, \
-        genIDFMultipleZone
+        inputData,\
+        genIDF
     from accim.sim.accim_Base import \
         setComfFieldsPeople, \
-        addOpTempTherm, \
-        addBaseSchedules, \
         saveaccim
     from accim.sim.accim_Base_EMS import \
-        addEMSProgramsBase, \
-        addEMSPCMBase, \
+        addEMSActuatorsBase, \
         addEMSOutputVariableBase, \
+        addEMSPCMBase, \
+        addEMSProgramsBase, \
+        addEMSSensorsBase, \
+        addGlobVarList, \
+        addOutputVariablesBase, \
         addOutputVariablesTimestep, \
         addSimplifiedOutputVariables
-    from accim.sim.accim_SingleZone import \
-        addForscriptSchSingleZone
-    from accim.sim.accim_SingleZone_EMS import \
-        addGlobVarListSingleZone, \
-        addEMSSensorsSingleZone, \
-        addEMSActuatorsSingleZone, \
-        addEMSProgramsSingleZone, \
-        addOutputVariablesSingleZone
-    from accim.sim.accim_MultipleZone import \
-        setAvailSchOn, \
-        addMultipleZoneSch, \
+    from accim.sim.accim_ExistingHVAC import \
+        addForscriptSchExistHVAC
+    from accim.sim.accim_ExistingHVAC_EMS import \
+        addEMSSensorsExisHVAC
+    from accim.sim.accim_VRFsystem import \
+        addBaseSchedules, \
         addCurveObj, \
         addDetHVACobj, \
-        addForscriptSchMultipleZone, \
-        checkVentIsOn
-    from accim.sim.accim_MultipleZone_EMS import \
-        addGlobVarListOccZones, \
-        addEMSSensorsMultipleZone, \
-        addEMSActuatorsMultipleZone, \
-        addEMSProgramsMultipleZone, \
-        addEMSOutputVariableMultipleZone, \
-        addOutputVariablesMultipleZone
+        addForscriptSchVRFsystem, \
+        addOpTempTherm, \
+        addVRFsystemSch, \
+        checkVentIsOn, \
+        setAvailSchOn
+    from accim.sim.accim_VRFsystem_EMS import \
+        addEMSSensorsVRFsystem, \
+        addOutputVariablesVRFsystem
 
     def __init__(self,
                  filename_temp,
@@ -61,12 +55,12 @@ class accimJob():
             iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
         elif EnergyPlus_version.lower() == 'ep95':
             iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == 'ep96':
-            iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
+        # elif EnergyPlus_version.lower() == 'ep96':
+        #     iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
         else:
             raise ValueError("""EnergyPlus version not supported.\n
                                      Only works for versions between EnergyPlus 9.1 (enter Ep91) and
-                                     EnergyPlus 9.6(enter Ep96).""")
+                                     EnergyPlus 9.5(enter Ep95).""")
         if verboseMode:
             print('IDD location is: '+iddfile)
         IDF.setiddname(iddfile)
@@ -82,54 +76,43 @@ class accimJob():
 
         # print(self.filename)
 
-        self.occupiedZones = []
+        self.occupiedZones_orig = []
         for i in self.idf1.idfobjects['ZONE']:
             for k in self.idf1.idfobjects['PEOPLE']:
                 if i.Name in k.Name:
-                    self.occupiedZones.append(i.Name)
-        self.occupiedZones_orig = [i.replace(':', '_') for i in self.occupiedZones]
+                    self.occupiedZones_orig.append(i.Name)
+        self.occupiedZones = [i.replace(':', '_') for i in self.occupiedZones_orig]
         if verboseMode:
             print(f'The occupied zones in the model {filename_temp} are:')
-            print(*self.occupiedZones, sep="\n")
+            print(*self.occupiedZones_orig, sep="\n")
 
-        self.windownamelist_orig = ([window.Name
-                                     for window in
-                                     self.idf1.idfobjects
-                                     ['AirflowNetwork:MultiZone:Component:DetailedOpening']
-                                     if window.Name.endswith('_Win')]
-        )
+        self.windownamelist_orig = []
+
+        for i in [window.Name for window in
+                  self.idf1.idfobjects
+                  ['AirflowNetwork:MultiZone:Component:DetailedOpening']
+                  if window.Name.endswith('_Win')]:
+            for k in self.occupiedZones_orig:
+                if i.split('_')[0] in k:
+                    self.windownamelist_orig.append(i)
+
+        self.windownamelist = [i.replace(':', '_') for i in self.windownamelist_orig]
+
         # print(self.windownamelist_orig)
         self.windownamelist_orig_split = ([i.split('_') for i in self.windownamelist_orig])
         # print(self.windownamelist_orig_split)
-
-        self.windownamelist = ([sub.replace(':', '_')
-                                for sub
-                                in ([window.Name
-                                     for window
-                                     in self.idf1.idfobjects
-                                     ['AirflowNetwork:MultiZone:Component:DetailedOpening']
-                                     if window.Name.endswith('_Win')]
-                                )]
-        )
-        # print(self.windownamelist)
         if verboseMode:
             print(f'The windows in the model {filename_temp} are:')
             print(*self.windownamelist, sep="\n")
 
-        if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'vrfsystem':
-            # self.zonenames_orig = ([zone.Name for zone in self.idf1.idfobjects['ZONE']])
-            # # print(self.zonenames_orig)
-            #
-            # self.zonenames = ([sub.replace(':', '_')
-            #                    for sub
-            #                    in ([zone.Name for zone in self.idf1.idfobjects['ZONE']])])
-            # # print(self.zonenames)
+        if ScriptType.lower() == 'vrfsystem' or ScriptType.lower() == 'vrf':
+            self.zonenames = self.occupiedZones
             self.zonenames_orig = self.occupiedZones_orig
-            self.zonenames = self.zonenames
             if verboseMode:
                 print(f'The zones in the model {filename_temp} are:')
                 print(*self.zonenames, sep="\n")
-        elif ScriptType.lower() == 'existing' or ScriptType.lower() == 'existinghvac':
+
+        elif ScriptType.lower() == 'existinghvac' or ScriptType.lower() == 'ex':
             TSPtypes = [
                 'ThermostatSetpoint:SingleHeating',
                 'ThermostatSetpoint:SingleCooling',
@@ -164,67 +147,111 @@ class accimJob():
                     print(f'And the existing ThermostatSetpoint objects related to {self.HVACzonelist[i][0]} are:')
                     print(*self.HVACzonelist[i][3], sep="\n")
 
-            self.self.zonenames_orig = []
+            self.zonenames_orig = []
 
             for i in range(len(self.HVACzonelist)):
                 for k in range(len(self.HVACzonelist[i][1])):
-                    if self.HVACzonelist[i][1][k] in self.self.zonenames_orig:
+                    if self.HVACzonelist[i][1][k] in self.zonenames_orig:
                         continue
                     else:
-                        self.self.zonenames_orig.append(self.HVACzonelist[i][1][k])
+                        self.zonenames_orig.append(self.HVACzonelist[i][1][k])
 
-            self.zonenames = [i.replace(':', '_') for i in self.self.zonenames_orig]
+            self.zonenames = [i.replace(':', '_') for i in self.zonenames_orig]
 
-            HVACdict = {
+            self.HVACdict = {
+                # Group Heating and Cooling Coils
                 'Coil:Cooling:Water': 'Cooling Coil Total Cooling Rate',
                 'Coil:Cooling:Water:DetailedGeometry': 'Cooling Coil Total Cooling Rate',
+                # not supported
                 # 'CoilSystem:Cooling:Water:HeatExchangerAssisted':'',
                 'CoilSystem:Cooling:Water': 'Coil System Water Total Cooling Rate',
                 'Coil:Heating:Water': 'Heating Coil Heating Energy',
                 'Coil:Heating:Steam': 'Heating Coil Heating Energy',
                 'Coil:Heating:Electric': 'Heating Coil Heating Energy',
                 'Coil:Heating:Electric:MultiStage': 'Heating Coil Heating Energy',
-                # estoy aqui
-                'Coil:Heating:Desuperheater': '',
-                'Coil:Cooling:DX:VariableRefrigerantFlow': '',
-                'Coil:Heating:DX:VariableRefrigerantFlow': '',
-                'Coil:Cooling:DX:VariableRefrigerantFlow:FluidTemperatureControl': '',
-                'Coil:Heating:DX:VariableRefrigerantFlow:FluidTemperatureControl': '',
-                'Coil:Heating:Fuel': '',
-                'Coil:Heating:Gas:MultiStage': '',
+                'Coil:Heating:Desuperheater': 'Heating Coil Heating Energy',
+                'Coil:Cooling:DX:VariableRefrigerantFlow': 'Cooling Coil Total Cooling Rate',
+                'Coil:Heating:DX:VariableRefrigerantFlow': 'Heating Coil Heating Energy',
+                'Coil:Cooling:DX:VariableRefrigerantFlow:FluidTemperatureControl': 'Cooling Coil Total Cooling Rate',
+                'Coil:Heating:DX:VariableRefrigerantFlow:FluidTemperatureControl': 'Heating Coil Heating Energy',
+                'Coil:Heating:Fuel': 'Heating Coil Heating Energy',
+                'Coil:Heating:Gas:MultiStage': 'Heating Coil Heating Energy',
                 'Coil:Cooling:DX:SingleSpeed': 'Cooling Coil Total Cooling Rate',
-                'Coil:Cooling:DX:TwoSpeed': '',
-                'Coil:Cooling:DX:TwoStageWithHumidityControlMode': '',
-                'Coil:Cooling:DX:MultiSpeed': '',
-                'Coil:Cooling:DX:VariableSpeed': '',
-                'CoilPerformance:DX:Cooling': '',
-                'Coil:Heating:DX:SingleSpeed': '',
-                'Coil:Heating:DX:MultiSpeed': '',
-                'Coil:Heating:DX:VariableSpeed': '',
-                'Coil:WaterHeating:Desuperheater': '',
-                'CoilSystem:Cooling:DX': '',
-                'CoilSystem:Heating:DX': '',
-                'CoilSystem:Cooling:DX:HeatExchangerAssisted': '',
-                'CoilSystem:IntegratedHeatPump:AirSource': '',
-                'Coil:WaterHeating:AirToWaterHeatPump:Pumped': '',
-                'Coil:WaterHeating:AirToWaterHeatPump:Wrapped': '',
-                'Coil:WaterHeating:AirToWaterHeatPump:VariableSpeed': '',
-                'Coil:Cooling:WaterToAirHeatPump:ParameterEstimation': '',
-                'Coil:Cooling:WaterToAirHeatPump:EquationFit': '',
-                'Coil:Cooling:WaterToAirHeatPump:VariableSpeedEquationFit': '',
-                'Coil:Heating:WaterToAirHeatPump:ParameterEstimation': '',
-                'Coil:Heating:WaterToAirHeatPump:EquationFit': '',
-                'Coil:Heating:WaterToAirHeatPump:VariableSpeedEquationFit': '',
-                'Coil:Cooling:DX:SingleSpeed:ThermalStorage': '',
+                'Coil:Cooling:DX:TwoSpeed': 'Cooling Coil Total Cooling Rate',
+                'Coil:Cooling:DX:TwoStageWithHumidityControlMode': 'Cooling Coil Total Cooling Rate',
+                'Coil:Cooling:DX:MultiSpeed': 'Cooling Coil Total Cooling Rate',
+                'Coil:Cooling:DX:VariableSpeed': 'Cooling Coil Total Cooling Rate',
+                # not supported
+                # 'CoilPerformance:DX:Cooling': '',
+                'Coil:Heating:DX:SingleSpeed': 'Heating Coil Heating Energy',
+                'Coil:Heating:DX:MultiSpeed': 'Heating Coil Heating Energy',
+                'Coil:Heating:DX:VariableSpeed': 'Heating Coil Heating Energy',
+                'Coil:WaterHeating:Desuperheater': 'Water Heater Heating Energy',
+                # not supported
+                # 'CoilSystem:Cooling:DX': '',
+                # 'CoilSystem:Heating:DX': '',
+                # 'CoilSystem:Cooling:DX:HeatExchangerAssisted': '',
+                # 'CoilSystem:IntegratedHeatPump:AirSource': '',
+                # 'Coil:WaterHeating:AirToWaterHeatPump:Pumped': 'Heating Coil Heating Energy',
+                # 'Coil:WaterHeating:AirToWaterHeatPump:Wrapped': 'Heating Coil Heating Energy',
+                # 'Coil:WaterHeating:AirToWaterHeatPump:VariableSpeed': 'Cooling Coil Electricity Energy',
+                'Coil:Cooling:WaterToAirHeatPump:ParameterEstimation': 'Cooling Coil Total Cooling Rate',
+                'Coil:Cooling:WaterToAirHeatPump:EquationFit': 'Cooling Coil Total Cooling Rate',
+                'Coil:Cooling:WaterToAirHeatPump:VariableSpeedEquationFit': 'Cooling Coil Total Cooling Rate',
+                'Coil:Heating:WaterToAirHeatPump:ParameterEstimation': 'Heating Coil Heating Energy',
+                'Coil:Heating:WaterToAirHeatPump:EquationFit': 'Heating Coil Heating Energy',
+                'Coil:Heating:WaterToAirHeatPump:VariableSpeedEquationFit': 'Heating Coil Heating Energy',
+                'Coil:Cooling:DX:SingleSpeed:ThermalStorage': 'Cooling Coil Total Cooling Rate',
                 # not supported
                 # 'Secondary Coils of DX System and Heat Pump':'',
-                'Coil:Cooling:DX': '',
-                'Coil:Cooling:DX:CurveFit:Performance': '',
-                'Coil:Cooling:DX:CurveFit:OperatingMode': '',
-                'Coil:Cooling:DX:CurveFit:Speed': '',
+                'Coil:Cooling:DX': 'Cooling Coil Total Cooling Rate',
+                'Coil:Cooling:DX:CurveFit:Performance': 'Cooling Coil Total Cooling Rate',
+                'Coil:Cooling:DX:CurveFit:OperatingMode': 'Cooling Coil Total Cooling Rate',
+                'Coil:Cooling:DX:CurveFit:Speed': 'Cooling Coil Total Cooling Rate',
+
+                # Group – Radiative / Convective Units
+                # todo muchos objetos tienen en outputs heating y cooling a la vez
+                'ZoneHVAC:Baseboard:RadiantConvective:Water': 'Baseboard Total Heating Rate',
+                'ZoneHVAC:Baseboard:RadiantConvective:Steam': 'Baseboard Total Heating Rate',
+                'ZoneHVAC:Baseboard:RadiantConvective:Electric': 'Baseboard Total Heating Rate',
+                'ZoneHVAC:CoolingPanel:RadiantConvective:Water': 'Cooling Panel Total Cooling Rate',
+                'ZoneHVAC:Baseboard:Convective:Water': 'Baseboard Total Heating Rate',
+                'ZoneHVAC:Baseboard:Convective:Electric': 'Baseboard Total Heating Rate',
+                # not supported
+                # ZoneHVAC:LowTemperatureRadiant:VariableFlow can be a chilled ceiling: Zone Radiant HVAC Cooling Rate
+                # also it can be a heated floor: Zone Radiant HVAC Heating Rate
+                # 'ZoneHVAC:LowTemperatureRadiant:VariableFlow': 'Zone Radiant HVAC Heating Energy',
+                # 'ZoneHVAC:LowTemperatureRadiant:ConstantFlow': 'Zone Radiant HVAC Heating Energy',
+                # 'ZoneHVAC:LowTemperatureRadiant:Electric': 'Zone Radiant HVAC Heating Energy',
+                # 'ZoneHVAC:LowTemperatureRadiant:SurfaceGroup': 'Zone Radiant HVAC Heating Energy',
+                # 'ZoneHVAC:HighTemperatureRadiant': 'Zone Radiant HVAC Heating Energy',
+                # 'ZoneHVAC:VentilatedSlab': '',
+                # 'ZoneHVAC:VentilatedSlab:SlabGroup': '',
+
+                # Group – Zone HVAC Air Loop Terminal Units
+                'AirTerminal:SingleDuct:ConstantVolume:Reheat': '',
+                'AirTerminal:SingleDuct:ConstantVolume:NoReheat': '',
+                'AirTerminal:SingleDuct:VAV:Reheat': '',
+                'AirTerminal:SingleDuct:VAV:Reheat:VariableSpeedFan': '',
+                'AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat': '',
+                'AirTerminal:SingleDuct:VAV:NoReheat': '',
+                'AirTerminal:SingleDuct:VAV:HeatAndCool:NoReheat': '',
+                'AirTerminal:SingleDuct:SeriesPIU:Reheat': '',
+                'AirTerminal:SingleDuct:ParallelPIU:Reheat': '',
+                'AirTerminal:SingleDuct:ConstantVolume:FourPipeInduction': '',
+                'AirTerminal:SingleDuct:ConstantVolume:FourPipeBeam': '',
+                'AirTerminal:SingleDuct:ConstantVolume:CooledBeam': '',
+                'AirTerminal:SingleDuct:Mixer': '',
+                'AirTerminal:DualDuct:ConstantVolume': '',
+                'AirTerminal:DualDuct:VAV': '',
+                'AirTerminal:DualDuct:VAV:OutdoorAir': '',
+
+
+
+
             }
 
-            HVACkeylist = list(HVACdict.keys())
+            HVACkeylist = list(self.HVACdict.keys())
 
             self.ExisHVAC = []
 
@@ -253,5 +280,3 @@ class accimJob():
                 print(*self.ExisHVAC[i][2], sep='\n')
                 print(f'And the windows related to these {self.ExisHVAC[i][0]} objects are:')
                 print(*self.ExisHVAC[i][4], sep='\n')
-
-        # todo aqui

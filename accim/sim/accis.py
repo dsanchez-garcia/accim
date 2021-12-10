@@ -26,8 +26,8 @@ def addAccis(
         confirmGen: bool = None):
     """
     Parameters
-    :param ScriptType: The default is 'MultipleZones'. Can be 'MultipleZones'or
-        'mz', or 'SingleZone' or 'sz'.
+    :param ScriptType: The default is 'VRFsystem'. Can be 'VRFsystem'or
+        'mz', or 'ExistingHVAC' or 'ex'.
     :param Outputs: The default is 'Standard'. Can be 'Standard',
         'Simplified' or 'Timestep'.
     :param EnergyPlus_version: The default is 'Ep95'. Can be 'Ep91' or 'Ep95'.
@@ -72,12 +72,12 @@ def addAccis(
         EnergyPlus_version is not None
     )
 
-    fullScriptTypeList = ['MultipleZone',
-                          'multiplezone',
-                          'mz',
-                          'SingleZone',
-                          'singlezone',
-                          'sz'
+    fullScriptTypeList = ['VRFsystem',
+                          'vrfsystem',
+                          'vrf',
+                          'ExistingHVAC',
+                          'existinghvac',
+                          'ex'
     ]
 
     fullOutputsList = [
@@ -100,18 +100,18 @@ def addAccis(
         'ep94',
         'Ep95',
         'ep95',
-        'Ep96',
-        'ep96'
+        # 'Ep96',
+        # 'ep96'
     ]
 
     if all(objArgsDef):
         pass
     else:
-        ScriptType = input("Enter the ScriptType (MultipleZone or mz, or SingleZone or sz): ")
+        ScriptType = input("Enter the ScriptType (VRFsystem or vrf, or ExistingHVAC or ex): ")
         while ScriptType not in fullScriptTypeList:
             ScriptType = input("ScriptType was not correct. "
                                "Please, enter the ScriptType "
-                               "(MultipleZone or mz, or SingleZone or sz): ")
+                               "(VRFsystem or vrf, or ExistingHVAC or ex): ")
         Outputs = input("Enter the Output (Standard, Simplified or Timestep): ")
         while Outputs not in fullOutputsList:
             Outputs = input("Output was not correct. "
@@ -156,46 +156,43 @@ def addAccis(
         )
 
         z.setComfFieldsPeople(verboseMode=verboseMode)
-        z.addOpTempTherm(verboseMode=verboseMode)
-        z.addBaseSchedules(verboseMode=verboseMode)
 
-        if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
+        if ScriptType.lower() == 'VRFsystem'.lower() or ScriptType.lower() == 'vrf':
+            z.addOpTempTherm(verboseMode=verboseMode)
+            z.addBaseSchedules(verboseMode=verboseMode)
             z.setAvailSchOn(verboseMode=verboseMode)
-            z.addMultipleZoneSch(verboseMode=verboseMode)
+            z.addVRFsystemSch(verboseMode=verboseMode)
             z.addCurveObj(verboseMode=verboseMode)
             z.addDetHVACobj(verboseMode=verboseMode)
             z.checkVentIsOn(verboseMode=verboseMode)
-            z.addForscriptSchMultipleZone(verboseMode=verboseMode)
-        elif ScriptType.lower() == 'SingleZone'.lower() or ScriptType.lower() == 'sz':
-            z.addForscriptSchSingleZone(verboseMode=verboseMode)
+            z.addForscriptSchVRFsystem(verboseMode=verboseMode)
+        elif ScriptType.lower() == 'ExistingHVAC'.lower() or ScriptType.lower() == 'ex':
+            z.addForscriptSchExistHVAC(verboseMode=verboseMode)
 
         z.addEMSProgramsBase(verboseMode=verboseMode)
         z.addEMSOutputVariableBase(verboseMode=verboseMode)
+        z.addGlobVarList(verboseMode=verboseMode)
+        z.addEMSSensorsBase(verboseMode=verboseMode)
+        z.addEMSActuatorsBase(verboseMode=verboseMode)
 
-        if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
-            z.addGlobVarListOccZones(verboseMode=verboseMode)
-            z.addEMSSensorsMultipleZone(verboseMode=verboseMode)
-            z.addEMSActuatorsMultipleZone(verboseMode=verboseMode)
-            z.addEMSProgramsMultipleZone(verboseMode=verboseMode)
-        elif ScriptType.lower() == 'SingleZone'.lower() or ScriptType.lower() == 'sz':
-            z.addGlobVarListSingleZone(verboseMode=verboseMode)
-            z.addEMSSensorsSingleZone(verboseMode=verboseMode)
-            z.addEMSActuatorsSingleZone(verboseMode=verboseMode)
-            z.addEMSProgramsSingleZone(verboseMode=verboseMode)
+        if ScriptType.lower() == 'VRFsystem'.lower() or ScriptType.lower() == 'vrf':
+            z.addEMSSensorsVRFsystem(verboseMode=verboseMode)
+        elif ScriptType.lower() == 'ExistingHVAC'.lower() or ScriptType.lower() == 'ex':
+            z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
 
         z.addEMSPCMBase(verboseMode=verboseMode)
 
-        if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
-            z.addEMSOutputVariableMultipleZone(verboseMode=verboseMode)
+        if ScriptType.lower() == 'VRFsystem'.lower() or ScriptType.lower() == 'vrf':
             if Outputs.lower() == 'Simplified'.lower():
                 z.addSimplifiedOutputVariables(verboseMode=verboseMode)
             elif Outputs.lower() == 'Standard'.lower():
-                z.addOutputVariablesMultipleZone(verboseMode=verboseMode)
-        elif ScriptType.lower() == 'SingleZone'.lower() or ScriptType.lower() == 'sz':
+                z.addOutputVariablesBase(verboseMode=verboseMode)
+                z.addOutputVariablesVRFsystem(verboseMode=verboseMode)
+        elif ScriptType.lower() == 'ExistingHVAC'.lower() or ScriptType.lower() == 'ex':
             if Outputs.lower() == 'Simplified'.lower():
                 z.addSimplifiedOutputVariables(verboseMode=verboseMode)
             elif Outputs.lower() == 'Standard'.lower():
-                z.addOutputVariablesSingleZone(verboseMode=verboseMode)
+                z.addOutputVariablesBase(verboseMode=verboseMode)
         if Outputs.lower() == 'Timestep'.lower():
             z.addOutputVariablesTimestep(verboseMode=verboseMode)
 
@@ -219,40 +216,23 @@ def addAccis(
         ComfMod is not None,
     )
 
-    if ScriptType.lower() == 'MultipleZones'.lower() or ScriptType.lower() == 'mz':
-        if all(args_needed_mz):
-            z.genIDFMultipleZone(
-                AdapStand=AdapStand,
-                CAT=CAT,
-                ComfMod=ComfMod,
-                HVACmode=HVACmode,
-                VentCtrl=VentCtrl,
-                VSToffset=VSToffset,
-                MinOToffset=MinOToffset,
-                MaxWindSpeed=MaxWindSpeed,
-                ASTtol_start=ASTtol_start,
-                ASTtol_end_input=ASTtol_end_input,
-                ASTtol_steps=ASTtol_steps,
-                NameSuffix=NameSuffix,
-                verboseMode=verboseMode,
-                confirmGen=confirmGen
-                )
-        else:
-            z.inputdataMultipleZone()
-            z.genIDFMultipleZone()
-    elif ScriptType.lower() == 'SingleZone'.lower() or ScriptType.lower() == 'sz':
-        if all(args_needed_sz):
-            z.genIDFSingleZone(
-                AdapStand=AdapStand,
-                CAT=CAT,
-                ComfMod=ComfMod,
-                ASTtol_start=ASTtol_start,
-                ASTtol_end_input=ASTtol_end_input,
-                ASTtol_steps=ASTtol_steps,
-                NameSuffix=NameSuffix,
-                verboseMode=verboseMode,
-                confirmGen=confirmGen
-                )
-        else:
-            z.inputdataSingleZone()
-            z.genIDFSingleZone()
+    if all(args_needed_mz):
+        z.genIDF(
+            AdapStand=AdapStand,
+            CAT=CAT,
+            ComfMod=ComfMod,
+            HVACmode=HVACmode,
+            VentCtrl=VentCtrl,
+            VSToffset=VSToffset,
+            MinOToffset=MinOToffset,
+            MaxWindSpeed=MaxWindSpeed,
+            ASTtol_start=ASTtol_start,
+            ASTtol_end_input=ASTtol_end_input,
+            ASTtol_steps=ASTtol_steps,
+            NameSuffix=NameSuffix,
+            verboseMode=verboseMode,
+            confirmGen=confirmGen
+            )
+    else:
+        z.inputData()
+        z.genIDF()

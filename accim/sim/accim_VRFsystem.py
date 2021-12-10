@@ -1,4 +1,52 @@
-"""Add EnergyPlus objects only for MultipleZone."""
+"""Add EnergyPlus objects only for VRFsystem."""
+
+
+def addOpTempTherm(self, verboseMode : bool = True):
+    """
+    Amend ZoneControl:Thermostat:OperativeTemperature objects.
+
+    Add ZoneControl:Thermostat:OperativeTemperature objects for each zone.
+    """
+    for zonename_orig in self.zonenames_orig:
+        if zonename_orig+' Thermostat' in [thermostat.Thermostat_Name
+                                           for thermostat
+                                           in self.idf1.idfobjects
+                                           ['ZoneControl:Thermostat:OperativeTemperature']]:
+            if verboseMode:
+                print(zonename_orig+' Thermostat already was in the model')
+        else:
+            self.idf1.newidfobject(
+                'ZoneControl:Thermostat:OperativeTemperature',
+                Thermostat_Name=zonename_orig+" Thermostat",
+                Radiative_Fraction_Input_Mode="Scheduled",
+                Fixed_Radiative_Fraction='',
+                Radiative_Fraction_Schedule_Name='TypOperativeTempControlSch'
+                )
+            if verboseMode:
+                print(zonename_orig+' Thermostat has been added')
+
+
+def addBaseSchedules(self, verboseMode : bool = True):
+    """
+    Amend Schedule:Compact objects.
+
+    Checks Schedule:Compact objects needed for accim,
+    and add them in case these are not in the model
+    """
+    if "On" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
+        if verboseMode:
+            print("On Schedule already was in the model")
+    else:
+        self.idf1.newidfobject(
+            'Schedule:Compact',
+            Name="On",
+            Schedule_Type_Limits_Name="Any Number",
+            Field_1='Through: 12/31',
+            Field_2='For: AllDays',
+            Field_3='Until: 24:00,1'
+            )
+        if verboseMode:
+            print("On Schedule has been added")
 
 
 def setAvailSchOn(self, verboseMode: bool = True):
@@ -8,7 +56,6 @@ def setAvailSchOn(self, verboseMode: bool = True):
     Assign On Compact:Schedule to heating and cooling availability
     schedule names.
     """
-    # todo solo para VRFsystem
     for schedule in [i for i in self.idf1.idfobjects['ZoneHVAC:IdealLoadsAirSystem']]:
         schedule.Heating_Availability_Schedule_Name='On'
         schedule.Cooling_Availability_Schedule_Name='On'
@@ -16,15 +63,15 @@ def setAvailSchOn(self, verboseMode: bool = True):
         print('All ZoneHVAC:IdealLoadsAirSystem '
               'Heating and Cooling availability schedules has been set to on')
 
-def addMultipleZoneSch(self, verboseMode: bool = True):
-    """
-    Amend Schedule:Compact objects for MultipleZone.
 
-    Add Schedule:Compact objects needed for MultipleZone to work,
+def addVRFsystemSch(self, verboseMode: bool = True):
+    """
+    Amend Schedule:Compact objects for VRFsystem.
+
+    Add Schedule:Compact objects needed for VRFsystem to work,
     other than FORSCRIPT Schedules.
     """
-    # todo solo para VRFsystem
-    addMultipleZoneSch_dict = {
+    addVRFsystemSch_dict = {
         'On 24/7': 'Until: 24:00,1',
         'Control type schedule: Always 4': 'Until: 24:00,4',
         'Relative humidity setpoint schedule: Always 50.00': 'Until: 24:00,50',
@@ -35,7 +82,7 @@ def addMultipleZoneSch(self, verboseMode: bool = True):
         'Generic contaminant setpoint: Always 0.5ppm': 'Until: 24:00, 0.5',
         'Air distribution effectiveness (always 1)': 'Until: 24:00, 1'
         }
-    for i in addMultipleZoneSch_dict:
+    for i in addVRFsystemSch_dict:
         if i in [schedule.Name for schedule
                  in self.idf1.idfobjects['Schedule:Compact']]:
             if verboseMode:
@@ -46,7 +93,7 @@ def addMultipleZoneSch(self, verboseMode: bool = True):
                                    Schedule_Type_Limits_Name="Any Number",
                                    Field_1='Through: 12/31',
                                    Field_2='For: AllDays',
-                                   Field_3=addMultipleZoneSch_dict[i])
+                                   Field_3=addVRFsystemSch_dict[i])
             if verboseMode:
                 print(i+" Schedule has been added")
 
@@ -75,8 +122,7 @@ def addMultipleZoneSch(self, verboseMode: bool = True):
 
 
 def addCurveObj(self, verboseMode: bool = True):
-    """Add Curve Objects needed for MultipleZone to work."""
-    # todo solo para VRFsystem
+    """Add Curve Objects needed for VRFsystem to work."""
     # curvecubiclist=([i for i in self.idf1.idfobjects['Curve:Cubic']])
     # print(curvecubiclist)
 
@@ -837,8 +883,7 @@ def addCurveObj(self, verboseMode: bool = True):
 
 
 def addDetHVACobj(self, verboseMode: bool = True):
-    """Add Detailed HVAC objects for MultipleZone to work."""
-    # todo solo para VRFsystem
+    """Add Detailed HVAC objects for VRFsystem to work."""
     for zn in self.zonenames_orig:
         if 'VRF Outdoor Unit_'+zn in [i.Heat_Pump_Name
                                       for i
@@ -1330,9 +1375,8 @@ def addDetHVACobj(self, verboseMode: bool = True):
             print(zn+' Fan:ConstantVolume Object has been added')
 
 
-def addForscriptSchMultipleZone(self, verboseMode: bool = True):
-    """Add FORSCRIPT Schedules for each zone for MultipleZone."""
-    # todo esta funcion debería sobrar; addForscriptSchExistHVAC la sustituye
+def addForscriptSchVRFsystem(self, verboseMode: bool = True):
+    """Add FORSCRIPT Schedules for each zone for VRFsystem."""
     for zn in self.zonenames:
         if "FORSCRIPT_AHST_"+zn in [sch.Name
                                     for sch
@@ -1395,7 +1439,6 @@ def addForscriptSchMultipleZone(self, verboseMode: bool = True):
 
 def checkVentIsOn(self, verboseMode: bool = True):
     """Check ventilation settings."""
-    # todo solo para VRFsystem
     if "Vent_SP_temp" in [sch.Name
                           for sch
                           in self.idf1.idfobjects['Schedule:Compact']]:
@@ -1413,13 +1456,13 @@ def checkVentIsOn(self, verboseMode: bool = True):
         if verboseMode:
             print("Vent_SP_temp Schedule has been added")
 
-    # Wlist = ([w
-    #           for w
-    #           in self.idf1.idfobjects
-    #           ['AirflowNetwork:MultiZone:Component:DetailedOpening']
-    #           if w.Name.endswith('_Win')])
+    Wlist = ([w
+              for w
+              in self.idf1.idfobjects
+              ['AirflowNetwork:MultiZone:Component:DetailedOpening']
+              if w.Name.endswith('_Win')])
     # print(Wlist)
-    for w in self.windownamelist_orig:
+    for w in Wlist:
         w.Height_Factor_for_Opening_Factor_1 = 1
         w.Start_Height_Factor_for_Opening_Factor_1 = 0
         w.Width_Factor_for_Opening_Factor_2 = 1
