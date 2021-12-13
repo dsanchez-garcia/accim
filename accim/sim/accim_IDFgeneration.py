@@ -330,13 +330,14 @@ def genIDF(self,
             confirmGen = False
 
     if confirmGen == True:
+        print('Generating the following output IDF files:')
         # pbar = tqdm(total=len(outputlist))
         for file in filelist_pymod:
             filename = file
 
             fname1 = filename+'.idf'
-            if verboseMode:
-                print(fname1)
+            # if verboseMode:
+            #     print(f'Taking "{fname1}" as input IDF file:')
             idf1 = IDF(fname1)
 
             # print(filename)

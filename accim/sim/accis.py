@@ -208,6 +208,9 @@ def addAccis(
             print(file)
             print('''\n=======================END OF PROCESS=======================\n''')
 
+    if verboseMode:
+        print('''\n=======================START OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')
+
     args_needed_mz = (
         AdapStand is not None,
         CAT is not None,
