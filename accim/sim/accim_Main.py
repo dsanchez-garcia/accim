@@ -42,9 +42,12 @@ class accimJob():
                  filename_temp,
                  ScriptType: str = None,
                  EnergyPlus_version: str = None,
-                 verboseMode: bool = True):
+                 verboseMode: bool = True,
+                 accimNotWorking: bool = False):
         from eppy import modeleditor
         from eppy.modeleditor import IDF
+        self.accimNotWorking = accimNotWorking
+
         if EnergyPlus_version.lower() == 'ep91':
             iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
         elif EnergyPlus_version.lower() == 'ep92':
@@ -229,26 +232,22 @@ class accimJob():
                 # 'ZoneHVAC:VentilatedSlab:SlabGroup': '',
 
                 # Group – Zone HVAC Air Loop Terminal Units
-                'AirTerminal:SingleDuct:ConstantVolume:Reheat': '',
-                'AirTerminal:SingleDuct:ConstantVolume:NoReheat': '',
-                'AirTerminal:SingleDuct:VAV:Reheat': '',
-                'AirTerminal:SingleDuct:VAV:Reheat:VariableSpeedFan': '',
-                'AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat': '',
-                'AirTerminal:SingleDuct:VAV:NoReheat': '',
-                'AirTerminal:SingleDuct:VAV:HeatAndCool:NoReheat': '',
-                'AirTerminal:SingleDuct:SeriesPIU:Reheat': '',
-                'AirTerminal:SingleDuct:ParallelPIU:Reheat': '',
-                'AirTerminal:SingleDuct:ConstantVolume:FourPipeInduction': '',
-                'AirTerminal:SingleDuct:ConstantVolume:FourPipeBeam': '',
-                'AirTerminal:SingleDuct:ConstantVolume:CooledBeam': '',
-                'AirTerminal:SingleDuct:Mixer': '',
-                'AirTerminal:DualDuct:ConstantVolume': '',
-                'AirTerminal:DualDuct:VAV': '',
-                'AirTerminal:DualDuct:VAV:OutdoorAir': '',
-
-
-
-
+                # 'AirTerminal:SingleDuct:ConstantVolume:Reheat': '',
+                # 'AirTerminal:SingleDuct:ConstantVolume:NoReheat': '',
+                # 'AirTerminal:SingleDuct:VAV:Reheat': '',
+                # 'AirTerminal:SingleDuct:VAV:Reheat:VariableSpeedFan': '',
+                # 'AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat': '',
+                # 'AirTerminal:SingleDuct:VAV:NoReheat': '',
+                # 'AirTerminal:SingleDuct:VAV:HeatAndCool:NoReheat': '',
+                # 'AirTerminal:SingleDuct:SeriesPIU:Reheat': '',
+                # 'AirTerminal:SingleDuct:ParallelPIU:Reheat': '',
+                # 'AirTerminal:SingleDuct:ConstantVolume:FourPipeInduction': '',
+                # 'AirTerminal:SingleDuct:ConstantVolume:FourPipeBeam': '',
+                'AirTerminal:SingleDuct:ConstantVolume:CooledBeam': 'Zone Air Terminal Beam Chilled Water Energy',
+                # 'AirTerminal:SingleDuct:Mixer': '',
+                # 'AirTerminal:DualDuct:ConstantVolume': '',
+                # 'AirTerminal:DualDuct:VAV': '',
+                # 'AirTerminal:DualDuct:VAV:OutdoorAir': ''
             }
 
             HVACkeylist = list(self.HVACdict.keys())
@@ -271,7 +270,16 @@ class accimJob():
                     else:
                         self.ExisHVAC.append([HVACkeylist[i], temp, temp_zone_orig, temp_zone, temp_win])
                 except KeyError:
+                    print(f'{HVACkeylist[i]} HVAC SYSTEM IS NOT SUPPORTED')
                     continue
+
+            for i in range(len(self.ExisHVAC)):
+                for j in range(len(self.ExisHVAC[i][2])):
+                    if self.ExisHVAC[i][2][j] not in self.zonenames_orig:
+                        print(f'"{self.ExisHVAC[i][2][j]}" is not a valid room. \n'
+                         f'That means "{self.ExisHVAC[i][1][j]}" is not named following [HVAC Zone] [HVAC Element] pattern or HVAC element is shared')
+                        # raise ValueError
+                        self.accimNotWorking = True
 
             for i in range(len(self.ExisHVAC)):
                 print(f'The names of the existing {self.ExisHVAC[i][0]} objects are:')

@@ -59,7 +59,7 @@ def addAccis(
     :return:
     """
     import accim.sim.accim_Main as accim_Main
-    from os import listdir
+    from os import listdir, remove
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
                  and not '_pymod' in file])
@@ -142,6 +142,7 @@ def addAccis(
         raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
                                               "You must choose a EnergyPlus_version"
                                               "from the list above.")
+    notWorkingIDFs = []
 
     for file in filelist:
         if verboseMode:
@@ -154,6 +155,11 @@ def addAccis(
             EnergyPlus_version=EnergyPlus_version,
             verboseMode=verboseMode
         )
+
+        if z.accimNotWorking is True:
+            # raise KeyError(f'accim is not going to work with {file}')
+            notWorkingIDFs.append(file)
+            continue
 
         z.setComfFieldsPeople(verboseMode=verboseMode)
 
@@ -215,6 +221,17 @@ def addAccis(
         CAT is not None,
         ComfMod is not None,
     )
+
+    print('The following IDFs will not work, and therefore these will be deleted:')
+    print(*notWorkingIDFs, sep="\n")
+    filelist_pymod = ([file for file in listdir() if file.endswith('.idf')
+                 and '_pymod' in file])
+
+    for file in notWorkingIDFs:
+        for i in filelist_pymod:
+            if file in i:
+                remove(i)
+
 
     if all(args_needed_mz):
         z.genIDF(
