@@ -6,6 +6,7 @@
 
 def inputData(self):
     """Input data for IDF generation."""
+    print('The information you will be required to enter below will be used to generate the customised output IDFs:')
     fullAdapStandList = [0, 1, 2]
     self.AdapStand_List = list(int(num) for num in input("Enter the Adaptive Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55): ").split())
     while len(self.AdapStand_List) == 0 or not all(elem in fullAdapStandList for elem in self.AdapStand_List):

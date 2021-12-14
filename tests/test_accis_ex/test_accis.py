@@ -3,7 +3,7 @@ from accim.sim import accis
 def test_addAccis():
     from accim.sim import accis
     from os import listdir
-    scriptTypeList = ['sz']
+    scriptTypeList = ['ex']
     outputsList = ['simplified', 'standard', 'timestep']
     EPlist = ['ep95']
 
@@ -17,6 +17,11 @@ def test_addAccis():
                     AdapStand=[1],
                     CAT=[1],
                     ComfMod=[1],
+                    HVACmode=[2],
+                    VentCtrl=[0],
+                    VSToffset=[0],
+                    MinOToffset=[50],
+                    MaxWindSpeed=[50],
                     ASTtol_start=0.1,
                     ASTtol_end_input=0.1,
                     ASTtol_steps=0.1,
@@ -25,9 +30,9 @@ def test_addAccis():
                     confirmGen=True
                 )
     expectedNames = [
-        'TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[simplified.idf',
-        'TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[standard.idf',
-        'TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[timestep.idf'
+        'TestModel_ExistingHVAC_PTAC_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified.idf',
+        'TestModel_ExistingHVAC_PTAC_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[standard.idf',
+        'TestModel_ExistingHVAC_PTAC_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[timestep.idf'
         ]
 
     actualNames = [i for i in listdir() if i.endswith('.idf') and '_pymod' in i]

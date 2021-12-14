@@ -162,6 +162,9 @@ class accimJob():
             self.zonenames = [i.replace(':', '_') for i in self.zonenames_orig]
 
             self.HVACdict = {
+                # todo if there is a Coil:Heating:Whatever and another Coil:Heating:DifferentWhatever
+                #  coils and windows sensors will be duplicated and simuation will crash; it needs to be solved.
+
                 # Group Heating and Cooling Coils
                 'Coil:Cooling:Water': 'Cooling Coil Total Cooling Rate',
                 'Coil:Cooling:Water:DetailedGeometry': 'Cooling Coil Total Cooling Rate',

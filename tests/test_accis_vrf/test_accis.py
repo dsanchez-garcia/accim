@@ -3,7 +3,7 @@ from accim.sim import accis
 def test_addAccis():
     from accim.sim import accis
     from os import listdir
-    scriptTypeList = ['mz']
+    scriptTypeList = ['vrf']
     outputsList = ['simplified', 'standard', 'timestep']
     EPlist = ['ep95']
 
@@ -30,9 +30,9 @@ def test_addAccis():
                     confirmGen=True
                 )
     expectedNames = [
-        'TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified.idf',
-        'TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[standard.idf',
-        'TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[timestep.idf'
+        'TestModel_VRFsystem_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified.idf',
+        'TestModel_VRFsystem_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[standard.idf',
+        'TestModel_VRFsystem_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[timestep.idf'
         ]
 
     actualNames = [i for i in listdir() if i.endswith('.idf') and '_pymod' in i]

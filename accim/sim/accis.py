@@ -146,7 +146,7 @@ def addAccis(
 
     for file in filelist:
         if verboseMode:
-            print('''\n=======================START OF PROCESS=======================\n''')
+            print('''\n=======================START OF GENERIC IDF FILE GENERATION PROCESS=======================\n''')
             print('Starting with file:')
             print(file)
         z = accim_Main.accimJob(
@@ -206,7 +206,20 @@ def addAccis(
         if verboseMode:
             print('Ending with file:')
             print(file)
-            print('''\n=======================END OF PROCESS=======================\n''')
+            print('''\n=======================END OF GENERIC IDF FILE GENERATION PROCESS=======================\n''')
+
+    print('The following IDFs will not work, and therefore these will be deleted:')
+    if len(notWorkingIDFs) > 0:
+        print(*notWorkingIDFs, sep="\n")
+        filelist_pymod = ([file for file in listdir() if file.endswith('.idf')
+                     and '_pymod' in file])
+
+        for file in notWorkingIDFs:
+            for i in filelist_pymod:
+                if file in i:
+                    remove(i)
+    else:
+        print('None')
 
     if verboseMode:
         print('''\n=======================START OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')
@@ -224,17 +237,6 @@ def addAccis(
         CAT is not None,
         ComfMod is not None,
     )
-
-    print('The following IDFs will not work, and therefore these will be deleted:')
-    print(*notWorkingIDFs, sep="\n")
-    filelist_pymod = ([file for file in listdir() if file.endswith('.idf')
-                 and '_pymod' in file])
-
-    for file in notWorkingIDFs:
-        for i in filelist_pymod:
-            if file in i:
-                remove(i)
-
 
     if all(args_needed_mz):
         z.genIDF(
@@ -256,3 +258,6 @@ def addAccis(
     else:
         z.inputData()
         z.genIDF()
+
+    if verboseMode:
+        print('''\n=======================END OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')

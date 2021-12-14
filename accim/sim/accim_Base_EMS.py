@@ -483,6 +483,8 @@ def addEMSProgramsBase(self, verboseMode: bool = True):
                 'EnergyManagementSystem:Program',
                 Name='ApplyAST_'+zonename,
                 Program_Line_1='if (' + zonename + '_OpT>VST)&&(' + zonename + '_OutT<VST)',
+                # todo if there is no cooling coil, then zonename_COOLCOIL sensor won't be added
+                #  and therefore it should be omitted in all ExistingHVAC EMS programs; same for _HEATCOIL
                 Program_Line_2='if ' + zonename + '_CoolCoil==0',
                 Program_Line_3='if ' + zonename + '_HeatCoil==0',
                 Program_Line_4='if (' + zonename + '_OpT<ACST)&&(' + zonename + '_OutT>MinOutTemp)',
@@ -582,6 +584,8 @@ def addEMSProgramsBase(self, verboseMode: bool = True):
                 'EnergyManagementSystem:Program',
                 Name='SetWindowOperation_'+windowname,
                 Program_Line_1='if ('+windowname+'_OpT>VST)&&('+windowname+'_OutT < VST)',
+                # todo if there is no cooling coil, then zonename_COOLCOIL sensor won't be added
+                #  and therefore it should be omitted in all ExistingHVAC EMS programs; same for _HEATCOIL
                 Program_Line_2='if '+windowname+'_CoolCoil==0',
                 Program_Line_3='if '+windowname+'_HeatCoil==0',
                 Program_Line_4='if ('+windowname+'_OpT<ACST)&&('+windowname+'_OutT>MinOutTemp)',
