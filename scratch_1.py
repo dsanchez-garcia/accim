@@ -1,8 +1,16 @@
 from accim.sim import accis
-accis.addAccis(ScriptType='ex_ac',
-               Outputs='standard',
-               EnergyPlus_version='ep95',
-               AdapStand=[1],
-               CAT=[1, 2, 3],
-               ComfMod=[3]
-               )
+
+STlist = ['ex_ac', 'ex_mm']
+outputlist = ['standard', 'simplified', 'timestep']
+
+for i in STlist:
+    for j in outputlist:
+        accis.addAccis(ScriptType='ex_ac',
+                       Outputs='standard',
+                       EnergyPlus_version='ep95',
+                       AdapStand=[1],
+                       CAT=[3],
+                       ComfMod=[3],
+                       NameSuffix=i+'_'+j,
+                       confirmGen=True
+                       )

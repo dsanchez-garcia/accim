@@ -11,9 +11,9 @@ Say you have an IDF in some folder, called 'TestModel_onlyGeometryForVRFsystem.i
 ```
 When we hit enter, we'll be asked to enter some information regarding the ScriptType, the Outputs and the EnergyPlus version:
 ```
-Enter the ScriptType (VRFsystem or vrf, or ExistingHVAC or ex): vrf
-Enter the Output (Standard, Simplified or Timestep): standard
-Enter the EnergyPlus version (Ep91 to Ep95): ep95
+Enter the ScriptType (for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning mode: ex_ac): vrf
+Enter the Output (standard, simplified or timestep): standard
+Enter the EnergyPlus version (ep91 to ep95): ep95
 ```
 When we hit enter, it's going to add all the EnergyPlus objects needed, and afterwards ask us to enter the required information:
 ```

@@ -104,19 +104,19 @@ def addAccis(
     if all(objArgsDef):
         pass
     else:
-        ScriptType = input("Enter the ScriptType (for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning: ex_ac): ")
+        ScriptType = input("Enter the ScriptType (for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning mode: ex_ac): ")
         while ScriptType not in fullScriptTypeList:
             ScriptType = input("ScriptType was not correct. "
                                "Please, enter the ScriptType "
-                               "(for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning: ex_ac): ")
-        Outputs = input("Enter the Output (Standard, Simplified or Timestep): ")
+                               "(for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning mode: ex_ac): ")
+        Outputs = input("Enter the Output (standard, simplified or timestep): ")
         while Outputs not in fullOutputsList:
             Outputs = input("Output was not correct. "
-                            "Please, enter the Output (Standard, Simplified or Timestep): ")
-        EnergyPlus_version = input("Enter the EnergyPlus version (Ep91 to Ep95): ")
+                            "Please, enter the Output (standard, simplified or timestep): ")
+        EnergyPlus_version = input("Enter the EnergyPlus version (ep91 to ep95): ")
         while EnergyPlus_version not in fullEPversionsList:
             EnergyPlus_version = input("EnergyPlus version was not correct. "
-                                       "Please, enter the EnergyPlus version (Ep91 to Ep95): ")
+                                       "Please, enter the EnergyPlus version (ep91 to ep95): ")
     if verboseMode:
         print('ScriptType is: '+ScriptType)
     if ScriptType not in fullScriptTypeList:
