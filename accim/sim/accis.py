@@ -72,13 +72,10 @@ def addAccis(
         EnergyPlus_version is not None
     )
 
-    fullScriptTypeList = ['VRFsystem',
-                          'vrfsystem',
-                          'vrf',
-                          'ExistingHVAC',
-                          'existinghvac',
-                          'ex'
-    ]
+    fullScriptTypeList = ['vrf',
+                          'ex_mm',
+                          'ex_ac',
+                          ]
 
     fullOutputsList = [
         'Standard',
@@ -107,11 +104,11 @@ def addAccis(
     if all(objArgsDef):
         pass
     else:
-        ScriptType = input("Enter the ScriptType (VRFsystem or vrf, or ExistingHVAC or ex): ")
+        ScriptType = input("Enter the ScriptType (for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning: ex_ac): ")
         while ScriptType not in fullScriptTypeList:
             ScriptType = input("ScriptType was not correct. "
                                "Please, enter the ScriptType "
-                               "(VRFsystem or vrf, or ExistingHVAC or ex): ")
+                               "(for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning: ex_ac): ")
         Outputs = input("Enter the Output (Standard, Simplified or Timestep): ")
         while Outputs not in fullOutputsList:
             Outputs = input("Output was not correct. "
@@ -163,7 +160,7 @@ def addAccis(
 
         z.setComfFieldsPeople(verboseMode=verboseMode)
 
-        if ScriptType.lower() == 'VRFsystem'.lower() or ScriptType.lower() == 'vrf':
+        if ScriptType.lower() == 'vrf':
             z.addOpTempTherm(verboseMode=verboseMode)
             z.addBaseSchedules(verboseMode=verboseMode)
             z.setAvailSchOn(verboseMode=verboseMode)
@@ -172,34 +169,28 @@ def addAccis(
             z.addDetHVACobj(verboseMode=verboseMode)
             z.checkVentIsOn(verboseMode=verboseMode)
             z.addForscriptSchVRFsystem(verboseMode=verboseMode)
-        elif ScriptType.lower() == 'ExistingHVAC'.lower() or ScriptType.lower() == 'ex':
+        elif 'ex' in ScriptType.lower():
             z.addForscriptSchExistHVAC(verboseMode=verboseMode)
 
-        z.addEMSProgramsBase(verboseMode=verboseMode)
-        z.addEMSOutputVariableBase(verboseMode=verboseMode)
-        z.addGlobVarList(verboseMode=verboseMode)
-        z.addEMSSensorsBase(verboseMode=verboseMode)
-        z.addEMSActuatorsBase(verboseMode=verboseMode)
+        z.addEMSProgramsBase(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.addEMSOutputVariableBase(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.addGlobVarList(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.addEMSSensorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.addEMSActuatorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
 
-        if ScriptType.lower() == 'VRFsystem'.lower() or ScriptType.lower() == 'vrf':
+        if ScriptType.lower() == 'vrf':
             z.addEMSSensorsVRFsystem(verboseMode=verboseMode)
-        elif ScriptType.lower() == 'ExistingHVAC'.lower() or ScriptType.lower() == 'ex':
+        elif ScriptType.lower() == 'ex_mm':
             z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
 
         z.addEMSPCMBase(verboseMode=verboseMode)
 
-        if ScriptType.lower() == 'VRFsystem'.lower() or ScriptType.lower() == 'vrf':
-            if Outputs.lower() == 'Simplified'.lower():
-                z.addSimplifiedOutputVariables(verboseMode=verboseMode)
-            elif Outputs.lower() == 'Standard'.lower():
-                z.addOutputVariablesBase(verboseMode=verboseMode)
-                z.addOutputVariablesVRFsystem(verboseMode=verboseMode)
-        elif ScriptType.lower() == 'ExistingHVAC'.lower() or ScriptType.lower() == 'ex':
-            if Outputs.lower() == 'Simplified'.lower():
-                z.addSimplifiedOutputVariables(verboseMode=verboseMode)
-            elif Outputs.lower() == 'Standard'.lower():
-                z.addOutputVariablesBase(verboseMode=verboseMode)
-        if Outputs.lower() == 'Timestep'.lower():
+        if Outputs.lower() == 'simplified':
+            z.addSimplifiedOutputVariables(verboseMode=verboseMode)
+        elif Outputs.lower() == 'standard':
+            z.addOutputVariablesBase(ScriptType=ScriptType, verboseMode=verboseMode)
+
+        if Outputs.lower() == 'timestep':
             z.addOutputVariablesTimestep(verboseMode=verboseMode)
 
         z.saveaccim(verboseMode=verboseMode)
@@ -224,7 +215,7 @@ def addAccis(
     if verboseMode:
         print('''\n=======================START OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')
 
-    args_needed_mz = (
+    args_needed_mm = (
         AdapStand is not None,
         CAT is not None,
         ComfMod is not None,
@@ -232,32 +223,55 @@ def addAccis(
         VentCtrl is not None,
     )
 
-    args_needed_sz = (
+    args_needed_ac = (
         AdapStand is not None,
         CAT is not None,
         ComfMod is not None,
     )
-
-    if all(args_needed_mz):
-        z.genIDF(
-            AdapStand=AdapStand,
-            CAT=CAT,
-            ComfMod=ComfMod,
-            HVACmode=HVACmode,
-            VentCtrl=VentCtrl,
-            VSToffset=VSToffset,
-            MinOToffset=MinOToffset,
-            MaxWindSpeed=MaxWindSpeed,
-            ASTtol_start=ASTtol_start,
-            ASTtol_end_input=ASTtol_end_input,
-            ASTtol_steps=ASTtol_steps,
-            NameSuffix=NameSuffix,
-            verboseMode=verboseMode,
-            confirmGen=confirmGen
-            )
-    else:
-        z.inputData()
-        z.genIDF()
+    if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
+        if all(args_needed_mm):
+            z.genIDF(
+                ScriptType=ScriptType,
+                AdapStand=AdapStand,
+                CAT=CAT,
+                ComfMod=ComfMod,
+                HVACmode=HVACmode,
+                VentCtrl=VentCtrl,
+                VSToffset=VSToffset,
+                MinOToffset=MinOToffset,
+                MaxWindSpeed=MaxWindSpeed,
+                ASTtol_start=ASTtol_start,
+                ASTtol_end_input=ASTtol_end_input,
+                ASTtol_steps=ASTtol_steps,
+                NameSuffix=NameSuffix,
+                verboseMode=verboseMode,
+                confirmGen=confirmGen
+                )
+        else:
+            z.inputData(ScriptType=ScriptType)
+            z.genIDF(ScriptType=ScriptType)
+    elif ScriptType.lower() == 'ex_ac':
+        if all(args_needed_ac):
+            z.genIDF(
+                ScriptType=ScriptType,
+                AdapStand=AdapStand,
+                CAT=CAT,
+                ComfMod=ComfMod,
+                HVACmode=[0],
+                VentCtrl=[0],
+                VSToffset=[0],
+                MinOToffset=[0],
+                MaxWindSpeed=[0],
+                ASTtol_start=ASTtol_start,
+                ASTtol_end_input=ASTtol_end_input,
+                ASTtol_steps=ASTtol_steps,
+                NameSuffix=NameSuffix,
+                verboseMode=verboseMode,
+                confirmGen=confirmGen
+                )
+        else:
+            z.inputData(ScriptType=ScriptType)
+            z.genIDF(ScriptType=ScriptType)
 
     if verboseMode:
         print('''\n=======================END OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')

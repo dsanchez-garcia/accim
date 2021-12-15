@@ -4,7 +4,7 @@
 
 
 
-def inputData(self):
+def inputData(self, ScriptType: str = None):
     """Input data for IDF generation."""
     print('The information you will be required to enter below will be used to generate the customised output IDFs:')
     fullAdapStandList = [0, 1, 2]
@@ -40,51 +40,58 @@ def inputData(self):
             print('          Comfort Mode numbers are not correct. Please enter the numbers again.')
             self.ComfMod_List = list(int(num) for num in input("     Enter the Comfort Mode numbers separated by space: ").split())
 
-    fullHVACmodeList = [0, 1, 2]
-    self.HVACmode_List = list(int(num) for num in input("Enter the HVAC Mode numbers separated by space (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode): ").split())
-    while len(self.HVACmode_List) == 0 or not all(elem in fullHVACmodeList for elem in self.HVACmode_List):
-        print('          HVACmode numbers are not correct. Please enter the numbers again.')
-        self.HVACmode_List = list(int(num) for num in input("     Enter the HVACmode numbers separated by space: ").split())
-    while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
-        self.HVACmode_List = list(int(num) for num in input("     Enter the HVACmode numbers separated by space: ").split())
+    if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
+        fullHVACmodeList = [0, 1, 2]
+        self.HVACmode_List = list(int(num) for num in input("Enter the HVAC Mode numbers separated by space (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode): ").split())
         while len(self.HVACmode_List) == 0 or not all(elem in fullHVACmodeList for elem in self.HVACmode_List):
             print('          HVACmode numbers are not correct. Please enter the numbers again.')
             self.HVACmode_List = list(int(num) for num in input("     Enter the HVACmode numbers separated by space: ").split())
+        while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
+            self.HVACmode_List = list(int(num) for num in input("     Enter the HVACmode numbers separated by space: ").split())
+            while len(self.HVACmode_List) == 0 or not all(elem in fullHVACmodeList for elem in self.HVACmode_List):
+                print('          HVACmode numbers are not correct. Please enter the numbers again.')
+                self.HVACmode_List = list(int(num) for num in input("     Enter the HVACmode numbers separated by space: ").split())
 
-    fullVentCtrlList = [0, 1]
-    self.VentCtrl_List = list(int(num) for num in input("Enter the Ventilation Control numbers separated by space (0 = Ventilates above neutral temperature; 1 = Ventilates above upper comfort limit): ").split())
-    while len(self.VentCtrl_List) == 0 or not all(elem in fullVentCtrlList for elem in self.VentCtrl_List):
-        print('          Ventilation Control numbers are not correct. Please enter the numbers again.')
-        self.VentCtrl_List = list(int(num) for num in input("     Enter the Ventilation Control numbers separated by space: ").split())
-    while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
-        self.VentCtrl_List = list(int(num) for num in input("     Enter the Ventilation Control numbers separated by space: ").split())
+        fullVentCtrlList = [0, 1]
+        self.VentCtrl_List = list(int(num) for num in input("Enter the Ventilation Control numbers separated by space (0 = Ventilates above neutral temperature; 1 = Ventilates above upper comfort limit): ").split())
         while len(self.VentCtrl_List) == 0 or not all(elem in fullVentCtrlList for elem in self.VentCtrl_List):
             print('          Ventilation Control numbers are not correct. Please enter the numbers again.')
             self.VentCtrl_List = list(int(num) for num in input("     Enter the Ventilation Control numbers separated by space: ").split())
+        while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
+            self.VentCtrl_List = list(int(num) for num in input("     Enter the Ventilation Control numbers separated by space: ").split())
+            while len(self.VentCtrl_List) == 0 or not all(elem in fullVentCtrlList for elem in self.VentCtrl_List):
+                print('          Ventilation Control numbers are not correct. Please enter the numbers again.')
+                self.VentCtrl_List = list(int(num) for num in input("     Enter the Ventilation Control numbers separated by space: ").split())
 
-    self.VSToffset_List = list(float(num) for num in input("Enter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
-    if len(self.VSToffset_List) == 0:
-        self.VSToffset_List = [float(0)]
-    while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
-        self.VSToffset_List = list(float(num) for num in input("     Enter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
+        self.VSToffset_List = list(float(num) for num in input("Enter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
         if len(self.VSToffset_List) == 0:
             self.VSToffset_List = [float(0)]
+        while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
+            self.VSToffset_List = list(float(num) for num in input("     Enter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
+            if len(self.VSToffset_List) == 0:
+                self.VSToffset_List = [float(0)]
 
-    self.MinOToffset_List = list(float(num) for num in input("Enter the MinOToffset numbers separated by space (if omitted, will be 50): ").split())
-    if len(self.MinOToffset_List) == 0:
-        self.MinOToffset_List = [float(50)]
-    while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
-        self.MinOToffset_List = list(float(num) for num in input("     Enter the MinOToffset numbers separated by space (if omitted, will be 50): ").split())
+        self.MinOToffset_List = list(float(num) for num in input("Enter the MinOToffset numbers separated by space (if omitted, will be 50): ").split())
         if len(self.MinOToffset_List) == 0:
             self.MinOToffset_List = [float(50)]
+        while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
+            self.MinOToffset_List = list(float(num) for num in input("     Enter the MinOToffset numbers separated by space (if omitted, will be 50): ").split())
+            if len(self.MinOToffset_List) == 0:
+                self.MinOToffset_List = [float(50)]
 
-    self.MaxWindSpeed_List = list(float(num) for num in input("Enter the MaxWindSpeed numbers separated by space (if omitted, will be 50): ").split())
-    if len(self.MaxWindSpeed_List) == 0:
-        self.MaxWindSpeed_List = [float(50)]
-    while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
-        self.MaxWindSpeed_List = list(float(num) for num in input("     Enter the MaxWindSpeed numbers separated by space (if omitted, will be 50): ").split())
+        self.MaxWindSpeed_List = list(float(num) for num in input("Enter the MaxWindSpeed numbers separated by space (if omitted, will be 50): ").split())
         if len(self.MaxWindSpeed_List) == 0:
             self.MaxWindSpeed_List = [float(50)]
+        while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
+            self.MaxWindSpeed_List = list(float(num) for num in input("     Enter the MaxWindSpeed numbers separated by space (if omitted, will be 50): ").split())
+            if len(self.MaxWindSpeed_List) == 0:
+                self.MaxWindSpeed_List = [float(50)]
+    elif ScriptType.lower() == 'ex_ac':
+        self.HVACmode_List = [0]
+        self.VentCtrl_List = [0]
+        self.VSToffset_List = [0]
+        self.MinOToffset_List = [0]
+        self.MaxWindSpeed_List = [0]
 
     try:
         self.ASTtol_value_from = float(input('Enter the ASTtol value from (if omitted, will be 0.1): '))
@@ -118,6 +125,7 @@ def inputData(self):
 
 
 def genIDF(self,
+           ScriptType: str = None,
            AdapStand=None,
            CAT=None,
            ComfMod=None,
@@ -174,6 +182,13 @@ def genIDF(self,
         self.ASTtol_value_from = round(ASTtol_start, 2)
         self.ASTtol_value_to = round(ASTtol_end, 2)
         self.ASTtol_value_steps = round(ASTtol_steps, 2)
+
+    if ScriptType.lower == 'ex_ac':
+        self.HVACmode_List = [0]
+        self.VentCtrl_List = [0]
+        self.VSToffset_List = [0]
+        self.MinOToffset_List = [0]
+        self.MaxWindSpeed_List = [0]
 
     if NameSuffix == '':
         suffix = ''
