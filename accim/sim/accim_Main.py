@@ -145,15 +145,16 @@ class accimJob():
                 self.HVACzonelist.append([TSPtypes[i], temp1, temp2, temp3])
             del temp1, temp2, temp3
 
-            for i in range(len(self.HVACzonelist)):
-                if len(self.HVACzonelist[i][3]) == 0:
-                    print(f'There are no {self.HVACzonelist[i][0]} objects in the model')
-                else:
-                    print(f'Regarding {self.HVACzonelist[i][0]} objects:')
-                    print(f'The zones with {self.HVACzonelist[i][0]} are:')
-                    print(*self.HVACzonelist[i][1], sep="\n")
-                    print(f'And the existing ThermostatSetpoint objects related to {self.HVACzonelist[i][0]} are:')
-                    print(*self.HVACzonelist[i][3], sep="\n")
+            if verboseMode:
+                for i in range(len(self.HVACzonelist)):
+                    if len(self.HVACzonelist[i][3]) == 0:
+                        print(f'There are no {self.HVACzonelist[i][0]} objects in the model')
+                    else:
+                        print(f'Regarding {self.HVACzonelist[i][0]} objects:')
+                        print(f'The zones with {self.HVACzonelist[i][0]} are:')
+                        print(*self.HVACzonelist[i][1], sep="\n")
+                        print(f'And the existing ThermostatSetpoint objects related to {self.HVACzonelist[i][0]} are:')
+                        print(*self.HVACzonelist[i][3], sep="\n")
 
             self.zonenames_orig = []
             # todo currently all zones regardless the single or dual thermostat object are merged in zonenames_orig;
@@ -282,21 +283,24 @@ class accimJob():
                         else:
                             self.ExisHVAC.append([HVACkeylist[i], temp, temp_zone_orig, temp_zone, temp_win])
                     except KeyError:
-                        print(f'{HVACkeylist[i]} HVAC SYSTEM IS NOT SUPPORTED')
+                        if verboseMode:
+                            print(f'{HVACkeylist[i]} HVAC SYSTEM IS NOT SUPPORTED')
                         continue
 
                 for i in range(len(self.ExisHVAC)):
                     for j in range(len(self.ExisHVAC[i][2])):
                         if self.ExisHVAC[i][2][j] not in self.zonenames_orig:
-                            print(f'"{self.ExisHVAC[i][2][j]}" is not a valid room. \n'
-                             f'That means "{self.ExisHVAC[i][1][j]}" is not named following [HVAC Zone] [HVAC Element] pattern or HVAC element is shared')
+                            if verboseMode:
+                                print(f'"{self.ExisHVAC[i][2][j]}" is not a valid room. \n'
+                                      f'That means "{self.ExisHVAC[i][1][j]}" is not named following [HVAC Zone] [HVAC Element] pattern or HVAC element is shared')
                             # raise ValueError
                             self.accimNotWorking = True
-
-                for i in range(len(self.ExisHVAC)):
-                    print(f'The names of the existing {self.ExisHVAC[i][0]} objects are:')
-                    print(*self.ExisHVAC[i][1], sep="\n")
-                    print(f'The zones related to these {self.ExisHVAC[i][0]} objects are')
-                    print(*self.ExisHVAC[i][2], sep='\n')
-                    print(f'And the windows related to these {self.ExisHVAC[i][0]} objects are:')
-                    print(*self.ExisHVAC[i][4], sep='\n')
+                
+                if verboseMode:
+                    for i in range(len(self.ExisHVAC)):
+                        print(f'The names of the existing {self.ExisHVAC[i][0]} objects are:')
+                        print(*self.ExisHVAC[i][1], sep="\n")
+                        print(f'The zones related to these {self.ExisHVAC[i][0]} objects are')
+                        print(*self.ExisHVAC[i][2], sep='\n')
+                        print(f'And the windows related to these {self.ExisHVAC[i][0]} objects are:')
+                        print(*self.ExisHVAC[i][4], sep='\n')

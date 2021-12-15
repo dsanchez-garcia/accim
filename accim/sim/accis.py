@@ -199,9 +199,11 @@ def addAccis(
             print(file)
             print('''\n=======================END OF GENERIC IDF FILE GENERATION PROCESS=======================\n''')
 
-    print('The following IDFs will not work, and therefore these will be deleted:')
+    if verboseMode:
+        print('The following IDFs will not work, and therefore these will be deleted:')
     if len(notWorkingIDFs) > 0:
-        print(*notWorkingIDFs, sep="\n")
+        if verboseMode:
+            print(*notWorkingIDFs, sep="\n")
         filelist_pymod = ([file for file in listdir() if file.endswith('.idf')
                      and '_pymod' in file])
 
@@ -210,7 +212,8 @@ def addAccis(
                 if file in i:
                     remove(i)
     else:
-        print('None')
+        if verboseMode:
+            print('None')
 
     if verboseMode:
         print('''\n=======================START OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')

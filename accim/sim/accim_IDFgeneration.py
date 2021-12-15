@@ -346,7 +346,8 @@ def genIDF(self,
             confirmGen = False
 
     if confirmGen == True:
-        print('Generating the following output IDF files:')
+        if verboseMode:
+            print('Generating the following output IDF files:')
         # pbar = tqdm(total=len(outputlist))
         for file in filelist_pymod:
             filename = file
