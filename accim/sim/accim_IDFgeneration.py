@@ -8,7 +8,7 @@ def inputData(self, ScriptType: str = None):
     """Input data for IDF generation."""
     print('The information you will be required to enter below will be used to generate the customised output IDFs:')
     fullAdapStandList = [0, 1, 2, 3]
-    self.AdapStand_List = list(int(num) for num in input("Enter the Adaptive Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55): ").split())
+    self.AdapStand_List = list(int(num) for num in input("Enter the Adaptive Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55; 3 = JPN): ").split())
     while len(self.AdapStand_List) == 0 or not all(elem in fullAdapStandList for elem in self.AdapStand_List):
         print('          Adaptive Standard numbers are not correct. Please enter the numbers again.')
         self.AdapStand_List = list(int(num) for num in input("     Enter the Adaptive Standard numbers separated by space: ").split())
@@ -199,6 +199,13 @@ def genIDF(self,
     filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])
     # print(filelist_pymod)
 
+    AdapStand_dict = {
+        0: '[AS_CTE',
+        1: '[AS_EN16798',
+        2: '[AS_ASHRAE55',
+        3: '[AS_JPN'
+    }
+
     outputlist = []
     for file in filelist_pymod:
         filename = file
@@ -209,8 +216,7 @@ def genIDF(self,
                         for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                             outputname = (
                                 filename
-                                # todo make dictionary for AS and maybe different configurations when HM is 0
-                                + '[AS_CTE'
+                                + AdapStand_dict[AdapStand_value]
                                 + '[CA_X'
                                 + '[CM_X'
                                 + '[HM_' + repr(HVACmode_value)
@@ -231,7 +237,7 @@ def genIDF(self,
                                         for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                                             outputname = (
                                                 filename
-                                                + '[AS_CTE'
+                                                + AdapStand_dict[AdapStand_value]
                                                 + '[CA_X'
                                                 + '[CM_X'
                                                 + '[HM_' + repr(HVACmode_value)
@@ -253,88 +259,9 @@ def genIDF(self,
                             for HVACmode_value in self.HVACmode_List:
                                 if HVACmode_value == 0:
                                     for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                        if AdapStand_value == 1:
-                                            outputname = (
-                                                filename
-                                                + '[AS_EN16798'
-                                                + '[CA_' + repr(CAT_value)
-                                                + '[CM_' + repr(ComfMod_value)
-                                                + '[HM_' + repr(HVACmode_value)
-                                                + '[VC_X'
-                                                + '[VO_X'
-                                                + '[MT_X'
-                                                + '[MW_X'
-                                                + '[AT_' + repr(ASTtol_value)
-                                                + suffix
-                                                + '.idf'
-                                                )
-                                            outputlist.append(outputname)
-                                        elif AdapStand_value == 3:
-                                            outputname = (
-                                                filename
-                                                + '[AS_JPN'
-                                                + '[CA_' + repr(CAT_value)
-                                                + '[CM_' + repr(ComfMod_value)
-                                                + '[HM_' + repr(HVACmode_value)
-                                                + '[VC_X'
-                                                + '[VO_X'
-                                                + '[MT_X'
-                                                + '[MW_X'
-                                                + '[AT_' + repr(ASTtol_value)
-                                                + suffix
-                                                + '.idf'
-                                                )
-                                            outputlist.append(outputname)
-                                else:
-                                    for VentCtrl_value in self.VentCtrl_List:
-                                        for VSToffset_value in self.VSToffset_List:
-                                            for MinOToffset_value in self.MinOToffset_List:
-                                                for MaxWindSpeed_value in self.MaxWindSpeed_List:
-                                                    for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                                        if AdapStand_value == 1:
-                                                            outputname = (
-                                                                filename
-                                                                + '[AS_EN16798'
-                                                                + '[CA_' + repr(CAT_value)
-                                                                + '[CM_' + repr(ComfMod_value)
-                                                                + '[HM_' + repr(HVACmode_value)
-                                                                + '[VC_' + repr(VentCtrl_value)
-                                                                + '[VO_' + repr(VSToffset_value)
-                                                                + '[MT_' + repr(MinOToffset_value)
-                                                                + '[MW_' + repr(MaxWindSpeed_value)
-                                                                + '[AT_' + repr(ASTtol_value)
-                                                                + suffix
-                                                                + '.idf'
-                                                                )
-                                                            outputlist.append(outputname)
-                                                        elif AdapStand_value == 3:
-                                                            outputname = (
-                                                                filename
-                                                                + '[AS_JPN'
-                                                                + '[CA_' + repr(CAT_value)
-                                                                + '[CM_' + repr(ComfMod_value)
-                                                                + '[HM_' + repr(HVACmode_value)
-                                                                + '[VC_' + repr(VentCtrl_value)
-                                                                + '[VO_' + repr(VSToffset_value)
-                                                                + '[MT_' + repr(MinOToffset_value)
-                                                                + '[MW_' + repr(MaxWindSpeed_value)
-                                                                + '[AT_' + repr(ASTtol_value)
-                                                                + suffix
-                                                                + '.idf'
-                                                                )
-                                                            outputlist.append(outputname)
-            elif AdapStand_value == 2:
-                for CAT_value in self.CAT_List:
-                    if CAT_value not in range(80, 91, 10):
-                        continue
-                    else:
-                        for ComfMod_value in self.ComfMod_List:
-                            for HVACmode_value in self.HVACmode_List:
-                                if HVACmode_value == 0:
-                                    for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                                         outputname = (
                                             filename
-                                            + '[AS_EN16798'
+                                            + AdapStand_dict[AdapStand_value]
                                             + '[CA_' + repr(CAT_value)
                                             + '[CM_' + repr(ComfMod_value)
                                             + '[HM_' + repr(HVACmode_value)
@@ -355,7 +282,52 @@ def genIDF(self,
                                                     for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                                                         outputname = (
                                                             filename
-                                                            + '[AS_ASHRAE55'
+                                                            + AdapStand_dict[AdapStand_value]
+                                                            + '[CA_' + repr(CAT_value)
+                                                            + '[CM_' + repr(ComfMod_value)
+                                                            + '[HM_' + repr(HVACmode_value)
+                                                            + '[VC_' + repr(VentCtrl_value)
+                                                            + '[VO_' + repr(VSToffset_value)
+                                                            + '[MT_' + repr(MinOToffset_value)
+                                                            + '[MW_' + repr(MaxWindSpeed_value)
+                                                            + '[AT_' + repr(ASTtol_value)
+                                                            + suffix
+                                                            + '.idf'
+                                                            )
+                                                        outputlist.append(outputname)
+            elif AdapStand_value == 2:
+                for CAT_value in self.CAT_List:
+                    if CAT_value not in range(80, 91, 10):
+                        continue
+                    else:
+                        for ComfMod_value in self.ComfMod_List:
+                            for HVACmode_value in self.HVACmode_List:
+                                if HVACmode_value == 0:
+                                    for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                        outputname = (
+                                            filename
+                                            + AdapStand_dict[AdapStand_value]
+                                            + '[CA_' + repr(CAT_value)
+                                            + '[CM_' + repr(ComfMod_value)
+                                            + '[HM_' + repr(HVACmode_value)
+                                            + '[VC_X'
+                                            + '[VO_X'
+                                            + '[MT_X'
+                                            + '[MW_X'
+                                            + '[AT_' + repr(ASTtol_value)
+                                            + suffix
+                                            + '.idf'
+                                            )
+                                        outputlist.append(outputname)
+                                else:
+                                    for VentCtrl_value in self.VentCtrl_List:
+                                        for VSToffset_value in self.VSToffset_List:
+                                            for MinOToffset_value in self.MinOToffset_List:
+                                                for MaxWindSpeed_value in self.MaxWindSpeed_List:
+                                                    for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                                        outputname = (
+                                                            filename
+                                                            + AdapStand_dict[AdapStand_value]
                                                             + '[CA_' + repr(CAT_value)
                                                             + '[CM_' + repr(ComfMod_value)
                                                             + '[HM_' + repr(HVACmode_value)
@@ -410,7 +382,7 @@ def genIDF(self,
                                 SetInputData[0].Program_Line_6 = 'set AHSTtol = '+repr(ASTtol_value)
                                 outputname = (
                                     filename
-                                    + '[AS_CTE'
+                                    + AdapStand_dict[AdapStand_value]
                                     + '[CA_X'
                                     + '[CM_X'
                                     + '[HM_' + repr(HVACmode_value)
@@ -441,7 +413,7 @@ def genIDF(self,
                                                 SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
                                                 outputname = (
                                                     filename
-                                                    + '[AS_CTE'
+                                                    + AdapStand_dict[AdapStand_value]
                                                     + '[CA_X'
                                                     + '[CM_X'
                                                     + '[HM_' + repr(HVACmode_value)
@@ -472,26 +444,25 @@ def genIDF(self,
                                         for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                                             SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
                                             SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
-                                            if AdapStand_value == 1:
-                                                outputname = (
-                                                    filename
-                                                    + '[AS_EN16798'
-                                                    + '[CA_' + repr(CAT_value)
-                                                    + '[CM_' + repr(ComfMod_value)
-                                                    + '[HM_' + repr(HVACmode_value)
-                                                    + '[VC_X'
-                                                    + '[VO_X'
-                                                    + '[MT_X'
-                                                    + '[MW_X'
-                                                    + '[AT_' + repr(ASTtol_value)
-                                                    + suffix
-                                                    + '.idf'
-                                                    )
-                                                if verboseMode:
-                                                    print(outputname)
-                                                    # time.sleep(0.1)
-                                                    # pbar.update(1)
-                                                idf1.savecopy(outputname)
+                                            outputname = (
+                                                filename
+                                                + AdapStand_dict[AdapStand_value]
+                                                + '[CA_' + repr(CAT_value)
+                                                + '[CM_' + repr(ComfMod_value)
+                                                + '[HM_' + repr(HVACmode_value)
+                                                + '[VC_X'
+                                                + '[VO_X'
+                                                + '[MT_X'
+                                                + '[MW_X'
+                                                + '[AT_' + repr(ASTtol_value)
+                                                + suffix
+                                                + '.idf'
+                                                )
+                                            if verboseMode:
+                                                print(outputname)
+                                                # time.sleep(0.1)
+                                                # pbar.update(1)
+                                            idf1.savecopy(outputname)
                                     else:
                                         for VentCtrl_value in self.VentCtrl_List:
                                             SetInputData[0].Program_Line_5 = 'set VentCtrl = '+repr(VentCtrl_value)
@@ -506,7 +477,7 @@ def genIDF(self,
                                                             SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
                                                             outputname = (
                                                                 filename
-                                                                + '[AS_EN16798'
+                                                                + AdapStand_dict[AdapStand_value]
                                                                 + '[CA_' + repr(CAT_value)
                                                                 + '[CM_' + repr(ComfMod_value)
                                                                 + '[HM_' + repr(HVACmode_value)
@@ -539,7 +510,7 @@ def genIDF(self,
                                             SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
                                             outputname = (
                                                 filename
-                                                + '[AS_EN16798'
+                                                + AdapStand_dict[AdapStand_value]
                                                 + '[CA_' + repr(CAT_value)
                                                 + '[CM_' + repr(ComfMod_value)
                                                 + '[HM_' + repr(HVACmode_value)
@@ -570,7 +541,7 @@ def genIDF(self,
                                                             SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
                                                             outputname = (
                                                                 filename
-                                                                + '[AS_ASHRAE55'
+                                                                + AdapStand_dict[AdapStand_value]
                                                                 + '[CA_' + repr(CAT_value)
                                                                 + '[CM_' + repr(ComfMod_value)
                                                                 + '[HM_' + repr(HVACmode_value)

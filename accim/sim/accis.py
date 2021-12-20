@@ -26,11 +26,6 @@ def addAccis(
         confirmGen: bool = None):
     """
     Parameters
-    :param ScriptType: The default is 'VRFsystem'. Can be 'VRFsystem'or
-        'mz', or 'ExistingHVAC' or 'ex'.
-    :param Outputs: The default is 'Standard'. Can be 'Standard',
-        'Simplified' or 'Timestep'.
-    :param EnergyPlus_version: The default is 'Ep95'. Can be 'Ep91' or 'Ep95'.
     :param AdapStand: The default is None.
     (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55)
     :param CAT: The default is None.
@@ -97,8 +92,8 @@ def addAccis(
         'ep94',
         'Ep95',
         'ep95',
-        # 'Ep96',
-        # 'ep96'
+        'Ep96',
+        'ep96'
     ]
 
     if all(objArgsDef):
@@ -113,10 +108,10 @@ def addAccis(
         while Outputs not in fullOutputsList:
             Outputs = input("Output was not correct. "
                             "Please, enter the Output (standard, simplified or timestep): ")
-        EnergyPlus_version = input("Enter the EnergyPlus version (ep91 to ep95): ")
+        EnergyPlus_version = input("Enter the EnergyPlus version (ep91 to ep96): ")
         while EnergyPlus_version not in fullEPversionsList:
             EnergyPlus_version = input("EnergyPlus version was not correct. "
-                                       "Please, enter the EnergyPlus version (ep91 to ep95): ")
+                                       "Please, enter the EnergyPlus version (ep91 to ep96): ")
     if verboseMode:
         print('ScriptType is: '+ScriptType)
     if ScriptType not in fullScriptTypeList:
@@ -158,7 +153,7 @@ def addAccis(
             notWorkingIDFs.append(file)
             continue
 
-        z.setComfFieldsPeople(verboseMode=verboseMode)
+        z.setComfFieldsPeople(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode)
 
         if ScriptType.lower() == 'vrf':
             z.addOpTempTherm(verboseMode=verboseMode)
@@ -166,7 +161,7 @@ def addAccis(
             z.setAvailSchOn(verboseMode=verboseMode)
             z.addVRFsystemSch(verboseMode=verboseMode)
             z.addCurveObj(verboseMode=verboseMode)
-            z.addDetHVACobj(verboseMode=verboseMode)
+            z.addDetHVACobj(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode)
             z.checkVentIsOn(verboseMode=verboseMode)
             z.addForscriptSchVRFsystem(verboseMode=verboseMode)
         elif 'ex' in ScriptType.lower():

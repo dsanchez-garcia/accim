@@ -29,16 +29,16 @@ Then you'll be asked in the prompt to enter some information so that python know
 ```
 Enter the ScriptType (for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning mode: ex_ac): vrf
 Enter the Output (standard, simplified or timestep): standard
-Enter the EnergyPlus version (ep91 to ep95): ep95
+Enter the EnergyPlus version (ep91 to ep96): ep96
 ```
 where
 - ScriptType can be 'vrf', 'ex_mm' or 'ex_ac', and it refers to the type of functions as explained above
 - Outputs can be 'standard', 'simplified' or 'timestep', and it refers to the simulation results: 'standard' means that results will contain the full selection; 'simplified' means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and 'timestep' means that results are going to be the full selection in Timestep frequency, so this is only recommended for tests, or small number of simulations.
-- EnergyPlus_version can be 'ep91', 'ep92', 'ep93', 'ep94' or 'ep95'. It is the version of EnergyPlus you have installed in your computer. If you enter 'ep91', accim will look for the E+9.1.0 IDD file in path "C:\\EnergyPlusV9-1-0".
+- EnergyPlus_version can be 'ep91', 'ep92', 'ep93', 'ep94', 'ep95' or 'ep96'. It is the version of EnergyPlus you have installed in your computer. If you enter 'ep91', accim will look for the E+9.1.0 IDD file in path "C:\\EnergyPlusV9-1-0".
 
 Besides, `addAccis()` can take the same values we entered before in the prompt command as arguments. The usage of this function will be detailed below. An example of this, to get the same results as shown in the command prompt would be:
 ```
->>> accis.addAccis('vrf','standard','ep95')
+>>> accis.addAccis('vrf','standard','ep96')
 ```
 accis will show on the prompt command dialog all the objects it adds, and those that doesn't need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled 'Setting up the target IDFs'.
 
@@ -72,8 +72,8 @@ Some example of the usage could be:
 ```
 >>> accis.addAccis(ScriptType='vrf', # ScriptType: 'vrf', 'ex_mm', 'ex_ac'
 >>>                Outputs='standard', # Outputs: 'simplified', 'standard' or 'timestep'
->>>                EnergyPlus_version='ep95', # EnergyPlus_version: 'ep91', 'ep92', 'ep93', 'ep94', or 'ep95'
->>>                AdapStand=[0, 1, 2], # AdapStand, which is the Adaptive Standard
+>>>                EnergyPlus_version='ep95', # EnergyPlus_version: 'ep91', 'ep92', 'ep93', 'ep94','ep95' or 'ep96'
+>>>                AdapStand=[0, 1, 2, 3], # AdapStand, which is the Adaptive Standard
 >>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category
 >>>                ComfMod=[0, 1, 2, 3], # ComfMod, which is Comfort Mode
 >>>                HVACmode=[0, 1, 2], # HVACmode, which is the HVAC mode
@@ -90,7 +90,7 @@ Some example of the usage could be:
 If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs, AdapStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
 Each argument is explained below:
 
-- AdapStand: and refers to the adaptive thermal comfort model to be applied. Enter 0 for CTE, 1 for EN16798-1 and 2 for ASHRAE 55. For example, if you enter '0 1 2', you'll get IDFs for all the models. If you don't enter any number, or if some of the numbers entered are not 0, 1 or 2, it'll ask you to enter the numbers again.
+- AdapStand: and refers to the adaptive thermal comfort model to be applied. Enter 0 for CTE, 1 for EN16798-1, 2 for ASHRAE 55 and 3 for Japanese adaptive comfort model. For example, if you enter '0 1 2', you'll get IDFs for all the models. If you don't enter any number, or if some of the numbers entered are not 0, 1 or 2, it'll ask you to enter the numbers again.
 
 - CAT: and refers to the category of the adaptive thermal comfort model applied. Enter 1 for CAT I, 2 for CAT II,  and 3 for CAT III of EN16798; 80 for 80% acceptability and 90 for 90% acceptability in ASHRAE55. So, for example, if you enter '1 2 3 80 90' you'll get all categories for EN16798 and ASHRAE55 models, or if you enter '1 2 80' you'll get categories 1 and 2 for EN16798, and 80% acceptability for ASHRAE55. Please note that the Category values must be consistent with the Adaptive Standard values previously entered. If, for instance, you enter '1' in the Adaptive Standard value (means you're asking for EN16798 model), but then enter '80' or '90' in the Category value (which are categories used in ASHRAE55), you won't get the results you want.
 
@@ -123,7 +123,7 @@ where:
 
 - 'TestModel_onlyGeometryForVRFsystem' is the name of the original IDF, which is copied with the suffix '_pymod' so that the original file stays unmodified.
 
-- AS refers to the Adaptive Standard, and it's followed by the adaptive thermal comfort applied (could be 'CTE', 'EN16798' or 'ASHRAE55').
+- AS refers to the Adaptive Standard, and it's followed by the adaptive thermal comfort applied (could be 'CTE', 'EN16798', 'ASHRAE55' or 'JPN').
 
 - CA refers to the Category, which could be 1, 2 or 3 if AS is EN16798, or 80 or 90 if AS is ASHRAE55.
 
@@ -140,6 +140,6 @@ where:
 
 - AT refers to the Adaptive Setpoint Temperature offset, which could be any number, float or integer, but always positive number. Please remember this number comes from a 3-stage process (refer to the explanation above).
 
-- 'standard' is the suffix, which can be whatever you want. For example, this allows you to make a for loop with 'spandard', 'simplified' and 'timestep' and run the simulations with all type of outputs.
+- 'standard' is the suffix, which can be whatever you want. For example, this allows you to make a for loop with 'standard', 'simplified' and 'timestep' and run the simulations with all type of outputs.
 
 If some inputs are not used or don't make sense, you'll be able to se an 'X' in the output IDF file. For example, if you use CTE as Adaptive Standard, then the inputs for Category and Comfort Mode (which are only for EN16798-1 and ASHRAE 55) are not used in the process, and the output IDF would contain in its name 'AS_CTE[CA_X[CM_X'. Another similar case occurs if you use Full air-conditioning HVAC Mode (i.e. enter '0' for HVAC Mode), where the output IDF would contain in its name '[HM_0[VC_X[VO_X[MT_X[MW_X'.

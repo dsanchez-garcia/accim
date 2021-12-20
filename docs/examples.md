@@ -13,13 +13,13 @@ When we hit enter, we'll be asked to enter some information regarding the Script
 ```
 Enter the ScriptType (for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning mode: ex_ac): vrf
 Enter the Output (standard, simplified or timestep): standard
-Enter the EnergyPlus version (ep91 to ep95): ep95
+Enter the EnergyPlus version (ep91 to ep96): ep96
 ```
 When we hit enter, it's going to add all the EnergyPlus objects needed, and afterwards ask us to enter the required information:
 ```
 ScriptType is: vrf
 Outputs are: standard
-EnergyPlus version is: ep95
+EnergyPlus version is: ep96
 
 =======================START OF GENERIC IDF FILE GENERATION PROCESS=======================
 

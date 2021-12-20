@@ -57,12 +57,12 @@ class accimJob():
             iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
         elif EnergyPlus_version.lower() == 'ep95':
             iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
-        # elif EnergyPlus_version.lower() == 'ep96':
-        #     iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
+        elif EnergyPlus_version.lower() == 'ep96':
+            iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
         else:
             raise ValueError("""EnergyPlus version not supported.\n
-                                     Only works for versions between EnergyPlus 9.1 (enter Ep91) and
-                                     EnergyPlus 9.5(enter Ep95).""")
+                                     Only works for versions between EnergyPlus 9.1 (enter ep91) and
+                                     EnergyPlus 9.6(enter ep96).""")
         if verboseMode:
             print('IDD location is: '+iddfile)
         IDF.setiddname(iddfile)
@@ -226,7 +226,7 @@ class accimJob():
                     'Coil:Cooling:DX:CurveFit:Speed': 'Cooling Coil Total Cooling Rate',
 
                     # Group – Radiative / Convective Units
-                    # todo muchos objetos tienen en outputs heating y cooling a la vez
+                    # todo many objects have heating or cooling outputs for the same field
                     'ZoneHVAC:Baseboard:RadiantConvective:Water': 'Baseboard Total Heating Rate',
                     'ZoneHVAC:Baseboard:RadiantConvective:Steam': 'Baseboard Total Heating Rate',
                     'ZoneHVAC:Baseboard:RadiantConvective:Electric': 'Baseboard Total Heating Rate',

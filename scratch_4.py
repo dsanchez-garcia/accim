@@ -1,7 +1,7 @@
 from accim.sim import accis
-accis.addAccis(ScriptType='ex_ac',
+accis.addAccis(ScriptType='vrf',
                Outputs='standard',
-               EnergyPlus_version='ep95',
+               EnergyPlus_version='ep96',
                AdapStand=[3],
                CAT=[3],
                ComfMod=[3],

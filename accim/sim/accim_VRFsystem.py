@@ -882,7 +882,7 @@ def addCurveObj(self, verboseMode: bool = True):
             print("HeatingCombRatio Curve:Linear Object has been added")
 
 
-def addDetHVACobj(self, verboseMode: bool = True):
+def addDetHVACobj(self, EnergyPlus_version: str = None, verboseMode: bool = True):
     """Add Detailed HVAC objects for VRFsystem to work."""
     for zn in self.zonenames_orig:
         if 'VRF Outdoor Unit_'+zn in [i.Heat_Pump_Name
@@ -895,112 +895,225 @@ def addDetHVACobj(self, verboseMode: bool = True):
                       ' AirConditioner:VariableRefrigerantFlow '
                       'Object already was in the model')
         else:
-            self.idf1.newidfobject(
-                'AirConditioner:VariableRefrigerantFlow',
-                Heat_Pump_Name='VRF Outdoor Unit_'+zn,
-                Availability_Schedule_Name='On 24/7',
-                Gross_Rated_Total_Cooling_Capacity='autosize',
-                Gross_Rated_Cooling_COP=2,
-                Minimum_Outdoor_Temperature_in_Cooling_Mode=-6,
-                Maximum_Outdoor_Temperature_in_Cooling_Mode=43,
-                Cooling_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
-                'VRFCoolCapFT',
-                Cooling_Capacity_Ratio_Boundary_Curve_Name='VRFCoolCapFTBoundary',
-                Cooling_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
-                'VRFCoolCapFTHi',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
-                'VRFCoolEIRFT',
-                Cooling_Energy_Input_Ratio_Boundary_Curve_Name='VRFCoolEIRFTBoundary',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
-                'VRFCoolEIRFTHi',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name=
-                'CoolingEIRLowPLR',
-                Cooling_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name=
-                'CoolingEIRHiPLR',
-                Cooling_Combination_Ratio_Correction_Factor_Curve_Name=
-                'CoolingCombRatio',
-                Cooling_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
-                Gross_Rated_Heating_Capacity='autosize',
-                Rated_Heating_Capacity_Sizing_Ratio=1,
-                Gross_Rated_Heating_COP=2.1,
-                Minimum_Outdoor_Temperature_in_Heating_Mode=-20,
-                Maximum_Outdoor_Temperature_in_Heating_Mode=40,
-                Heating_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
-                'VRFHeatCapFT',
-                Heating_Capacity_Ratio_Boundary_Curve_Name='VRFHeatCapFTBoundary',
-                Heating_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
-                'VRFHeatCapFTHi',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
-                'VRFHeatEIRFT',
-                Heating_Energy_Input_Ratio_Boundary_Curve_Name='VRFHeatEIRFTBoundary',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
-                'VRFHeatEIRFTHi',
-                Heating_Performance_Curve_Outdoor_Temperature_Type='WetBulbTemperature',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name=
-                'HeatingEIRLowPLR',
-                Heating_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name=
-                'HeatingEIRHiPLR',
-                Heating_Combination_Ratio_Correction_Factor_Curve_Name=
-                'HeatingCombRatio',
-                Heating_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
-                Minimum_Heat_Pump_PartLoad_Ratio=0.2,
-                Zone_Name_for_Master_Thermostat_Location='',
-                Master_Thermostat_Priority_Control_Type='LoadPriority',
-                Thermostat_Priority_Schedule_Name='',
-                Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+zn+' Zone List',
-                Heat_Pump_Waste_Heat_Recovery='Yes',
-                Equivalent_Piping_Length_used_for_Piping_Correction_Factor_in_Cooling_Mode=50,
-                Vertical_Height_used_for_Piping_Correction_Factor=15,
-                Piping_Correction_Factor_for_Length_in_Cooling_Mode_Curve_Name=
-                'CoolingLengthCorrectionFactor',
-                Piping_Correction_Factor_for_Height_in_Cooling_Mode_Coefficient=0,
-                Equivalent_Piping_Length_used_for_Piping_Correction_Factor_in_Heating_Mode=50,
-                Piping_Correction_Factor_for_Length_in_Heating_Mode_Curve_Name=
-                'VRF Piping Correction Factor for Length in Heating Mode',
-                Piping_Correction_Factor_for_Height_in_Heating_Mode_Coefficient=0,
-                Crankcase_Heater_Power_per_Compressor=15,
-                Number_of_Compressors=2,
-                Ratio_of_Compressor_Size_to_Total_Compressor_Capacity=0.5,
-                Maximum_Outdoor_DryBulb_Temperature_for_Crankcase_Heater=5,
-                Defrost_Strategy='Resistive',
-                Defrost_Control='Timed',
-                Defrost_Energy_Input_Ratio_Modifier_Function_of_Temperature_Curve_Name='',
-                Defrost_Time_Period_Fraction=0,
-                Resistive_Defrost_Heater_Capacity='autosize',
-                Maximum_Outdoor_Drybulb_Temperature_for_Defrost_Operation=5,
-                Condenser_Type='AirCooled',
-                Condenser_Inlet_Node_Name='VRF Outdoor Unit_'+
-                                          zn+
-                                          ' Outdoor Air Node',
-                Condenser_Outlet_Node_Name='',
-                Water_Condenser_Volume_Flow_Rate='autosize',
-                Evaporative_Condenser_Effectiveness=0.9,
-                Evaporative_Condenser_Air_Flow_Rate='autosize',
-                Evaporative_Condenser_Pump_Rated_Power_Consumption='autosize',
-                Supply_Water_Storage_Tank_Name='',
-                Basin_Heater_Capacity=0,
-                Basin_Heater_Setpoint_Temperature=2,
-                Basin_Heater_Operating_Schedule_Name='On 24/7',
-                Fuel_Type='Electricity',
-                Minimum_Outdoor_Temperature_in_Heat_Recovery_Mode=-10,
-                Maximum_Outdoor_Temperature_in_Heat_Recovery_Mode=40,
-                Heat_Recovery_Cooling_Capacity_Modifier_Curve_Name=
-                'VRF Heat Recovery Cooling Capacity Modifier',
-                Initial_Heat_Recovery_Cooling_Capacity_Fraction=0.5,
-                Heat_Recovery_Cooling_Capacity_Time_Constant=0.15,
-                Heat_Recovery_Cooling_Energy_Modifier_Curve_Name=
-                'VRF Heat Recovery Cooling Energy Modifier',
-                Initial_Heat_Recovery_Cooling_Energy_Fraction=1,
-                Heat_Recovery_Cooling_Energy_Time_Constant=0,
-                Heat_Recovery_Heating_Capacity_Modifier_Curve_Name=
-                'VRF Heat Recovery Heating Capacity Modifier',
-                Initial_Heat_Recovery_Heating_Capacity_Fraction=1,
-                Heat_Recovery_Heating_Capacity_Time_Constant=0.15,
-                Heat_Recovery_Heating_Energy_Modifier_Curve_Name=
-                'VRF Heat Recovery Heating Energy Modifier',
-                Initial_Heat_Recovery_Heating_Energy_Fraction=1,
-                Heat_Recovery_Heating_Energy_Time_Constant=0
+            if EnergyPlus_version.lower() == 'ep96':
+                self.idf1.newidfobject(
+                    'AirConditioner:VariableRefrigerantFlow',
+                    Heat_Pump_Name='VRF Outdoor Unit_'+zn,
+                    Availability_Schedule_Name='On 24/7',
+                    Gross_Rated_Total_Cooling_Capacity='autosize',
+                    Gross_Rated_Cooling_COP=2,
+                    Minimum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=-6,
+                    Maximum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=43,
+                    # Minimum_Outdoor_Temperature_in_Cooling_Mode=-6,
+                    # Maximum_Outdoor_Temperature_in_Cooling_Mode=43,
+                    Cooling_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                    'VRFCoolCapFT',
+                    Cooling_Capacity_Ratio_Boundary_Curve_Name='VRFCoolCapFTBoundary',
+                    Cooling_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                    'VRFCoolCapFTHi',
+                    Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                    'VRFCoolEIRFT',
+                    Cooling_Energy_Input_Ratio_Boundary_Curve_Name='VRFCoolEIRFTBoundary',
+                    Cooling_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                    'VRFCoolEIRFTHi',
+                    Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name=
+                    'CoolingEIRLowPLR',
+                    Cooling_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name=
+                    'CoolingEIRHiPLR',
+                    Cooling_Combination_Ratio_Correction_Factor_Curve_Name=
+                    'CoolingCombRatio',
+                    Cooling_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
+                    Gross_Rated_Heating_Capacity='autosize',
+                    Rated_Heating_Capacity_Sizing_Ratio=1,
+                    Gross_Rated_Heating_COP=2.1,
+                    Minimum_Condenser_Inlet_Node_Temperature_in_Heating_Mode=-20,
+                    Maximum_Condenser_Inlet_Node_Temperature_in_Heating_Mode=40,
+                    Heating_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                    'VRFHeatCapFT',
+                    Heating_Capacity_Ratio_Boundary_Curve_Name='VRFHeatCapFTBoundary',
+                    Heating_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                    'VRFHeatCapFTHi',
+                    Heating_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                    'VRFHeatEIRFT',
+                    Heating_Energy_Input_Ratio_Boundary_Curve_Name='VRFHeatEIRFTBoundary',
+                    Heating_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                    'VRFHeatEIRFTHi',
+                    Heating_Performance_Curve_Outdoor_Temperature_Type='WetBulbTemperature',
+                    Heating_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name=
+                    'HeatingEIRLowPLR',
+                    Heating_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name=
+                    'HeatingEIRHiPLR',
+                    Heating_Combination_Ratio_Correction_Factor_Curve_Name=
+                    'HeatingCombRatio',
+                    Heating_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
+                    Minimum_Heat_Pump_PartLoad_Ratio=0.2,
+                    Zone_Name_for_Master_Thermostat_Location='',
+                    Master_Thermostat_Priority_Control_Type='LoadPriority',
+                    Thermostat_Priority_Schedule_Name='',
+                    Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_'+zn+' Zone List',
+                    Heat_Pump_Waste_Heat_Recovery='Yes',
+                    Equivalent_Piping_Length_used_for_Piping_Correction_Factor_in_Cooling_Mode=50,
+                    Vertical_Height_used_for_Piping_Correction_Factor=15,
+                    Piping_Correction_Factor_for_Length_in_Cooling_Mode_Curve_Name=
+                    'CoolingLengthCorrectionFactor',
+                    Piping_Correction_Factor_for_Height_in_Cooling_Mode_Coefficient=0,
+                    Equivalent_Piping_Length_used_for_Piping_Correction_Factor_in_Heating_Mode=50,
+                    Piping_Correction_Factor_for_Length_in_Heating_Mode_Curve_Name=
+                    'VRF Piping Correction Factor for Length in Heating Mode',
+                    Piping_Correction_Factor_for_Height_in_Heating_Mode_Coefficient=0,
+                    Crankcase_Heater_Power_per_Compressor=15,
+                    Number_of_Compressors=2,
+                    Ratio_of_Compressor_Size_to_Total_Compressor_Capacity=0.5,
+                    Maximum_Outdoor_DryBulb_Temperature_for_Crankcase_Heater=5,
+                    Defrost_Strategy='Resistive',
+                    Defrost_Control='Timed',
+                    Defrost_Energy_Input_Ratio_Modifier_Function_of_Temperature_Curve_Name='',
+                    Defrost_Time_Period_Fraction=0,
+                    Resistive_Defrost_Heater_Capacity='autosize',
+                    Maximum_Outdoor_Drybulb_Temperature_for_Defrost_Operation=5,
+                    Condenser_Type='AirCooled',
+                    Condenser_Inlet_Node_Name='VRF Outdoor Unit_'+
+                                              zn+
+                                              ' Outdoor Air Node',
+                    Condenser_Outlet_Node_Name='',
+                    Water_Condenser_Volume_Flow_Rate='autosize',
+                    Evaporative_Condenser_Effectiveness=0.9,
+                    Evaporative_Condenser_Air_Flow_Rate='autosize',
+                    Evaporative_Condenser_Pump_Rated_Power_Consumption='autosize',
+                    Supply_Water_Storage_Tank_Name='',
+                    Basin_Heater_Capacity=0,
+                    Basin_Heater_Setpoint_Temperature=2,
+                    Basin_Heater_Operating_Schedule_Name='On 24/7',
+                    Fuel_Type='Electricity',
+                    Minimum_Condenser_Inlet_Node_Temperature_in_Heat_Recovery_Mode=-10,
+                    Maximum_Condenser_Inlet_Node_Temperature_in_Heat_Recovery_Mode=40,
+                    Heat_Recovery_Cooling_Capacity_Modifier_Curve_Name=
+                    'VRF Heat Recovery Cooling Capacity Modifier',
+                    Initial_Heat_Recovery_Cooling_Capacity_Fraction=0.5,
+                    Heat_Recovery_Cooling_Capacity_Time_Constant=0.15,
+                    Heat_Recovery_Cooling_Energy_Modifier_Curve_Name=
+                    'VRF Heat Recovery Cooling Energy Modifier',
+                    Initial_Heat_Recovery_Cooling_Energy_Fraction=1,
+                    Heat_Recovery_Cooling_Energy_Time_Constant=0,
+                    Heat_Recovery_Heating_Capacity_Modifier_Curve_Name=
+                    'VRF Heat Recovery Heating Capacity Modifier',
+                    Initial_Heat_Recovery_Heating_Capacity_Fraction=1,
+                    Heat_Recovery_Heating_Capacity_Time_Constant=0.15,
+                    Heat_Recovery_Heating_Energy_Modifier_Curve_Name=
+                    'VRF Heat Recovery Heating Energy Modifier',
+                    Initial_Heat_Recovery_Heating_Energy_Fraction=1,
+                    Heat_Recovery_Heating_Energy_Time_Constant=0
+                    )
+            else:
+                self.idf1.newidfobject(
+                    'AirConditioner:VariableRefrigerantFlow',
+                    Heat_Pump_Name='VRF Outdoor Unit_' + zn,
+                    Availability_Schedule_Name='On 24/7',
+                    Gross_Rated_Total_Cooling_Capacity='autosize',
+                    Gross_Rated_Cooling_COP=2,
+                    # Minimum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=-6,
+                    # Maximum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=43,
+                    Minimum_Outdoor_Temperature_in_Cooling_Mode=-6,
+                    Maximum_Outdoor_Temperature_in_Cooling_Mode=43,
+                    Cooling_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                    'VRFCoolCapFT',
+                    Cooling_Capacity_Ratio_Boundary_Curve_Name='VRFCoolCapFTBoundary',
+                    Cooling_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                    'VRFCoolCapFTHi',
+                    Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                    'VRFCoolEIRFT',
+                    Cooling_Energy_Input_Ratio_Boundary_Curve_Name='VRFCoolEIRFTBoundary',
+                    Cooling_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                    'VRFCoolEIRFTHi',
+                    Cooling_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name=
+                    'CoolingEIRLowPLR',
+                    Cooling_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name=
+                    'CoolingEIRHiPLR',
+                    Cooling_Combination_Ratio_Correction_Factor_Curve_Name=
+                    'CoolingCombRatio',
+                    Cooling_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
+                    Gross_Rated_Heating_Capacity='autosize',
+                    Rated_Heating_Capacity_Sizing_Ratio=1,
+                    Gross_Rated_Heating_COP=2.1,
+                    Minimum_Outdoor_Temperature_in_Heating_Mode=-20,
+                    Maximum_Outdoor_Temperature_in_Heating_Mode=40,
+                    Heating_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                    'VRFHeatCapFT',
+                    Heating_Capacity_Ratio_Boundary_Curve_Name='VRFHeatCapFTBoundary',
+                    Heating_Capacity_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                    'VRFHeatCapFTHi',
+                    Heating_Energy_Input_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
+                    'VRFHeatEIRFT',
+                    Heating_Energy_Input_Ratio_Boundary_Curve_Name='VRFHeatEIRFTBoundary',
+                    Heating_Energy_Input_Ratio_Modifier_Function_of_High_Temperature_Curve_Name=
+                    'VRFHeatEIRFTHi',
+                    Heating_Performance_Curve_Outdoor_Temperature_Type='WetBulbTemperature',
+                    Heating_Energy_Input_Ratio_Modifier_Function_of_Low_PartLoad_Ratio_Curve_Name=
+                    'HeatingEIRLowPLR',
+                    Heating_Energy_Input_Ratio_Modifier_Function_of_High_PartLoad_Ratio_Curve_Name=
+                    'HeatingEIRHiPLR',
+                    Heating_Combination_Ratio_Correction_Factor_Curve_Name=
+                    'HeatingCombRatio',
+                    Heating_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
+                    Minimum_Heat_Pump_PartLoad_Ratio=0.2,
+                    Zone_Name_for_Master_Thermostat_Location='',
+                    Master_Thermostat_Priority_Control_Type='LoadPriority',
+                    Thermostat_Priority_Schedule_Name='',
+                    Zone_Terminal_Unit_List_Name='VRF Outdoor Unit_' + zn + ' Zone List',
+                    Heat_Pump_Waste_Heat_Recovery='Yes',
+                    Equivalent_Piping_Length_used_for_Piping_Correction_Factor_in_Cooling_Mode=50,
+                    Vertical_Height_used_for_Piping_Correction_Factor=15,
+                    Piping_Correction_Factor_for_Length_in_Cooling_Mode_Curve_Name=
+                    'CoolingLengthCorrectionFactor',
+                    Piping_Correction_Factor_for_Height_in_Cooling_Mode_Coefficient=0,
+                    Equivalent_Piping_Length_used_for_Piping_Correction_Factor_in_Heating_Mode=50,
+                    Piping_Correction_Factor_for_Length_in_Heating_Mode_Curve_Name=
+                    'VRF Piping Correction Factor for Length in Heating Mode',
+                    Piping_Correction_Factor_for_Height_in_Heating_Mode_Coefficient=0,
+                    Crankcase_Heater_Power_per_Compressor=15,
+                    Number_of_Compressors=2,
+                    Ratio_of_Compressor_Size_to_Total_Compressor_Capacity=0.5,
+                    Maximum_Outdoor_DryBulb_Temperature_for_Crankcase_Heater=5,
+                    Defrost_Strategy='Resistive',
+                    Defrost_Control='Timed',
+                    Defrost_Energy_Input_Ratio_Modifier_Function_of_Temperature_Curve_Name='',
+                    Defrost_Time_Period_Fraction=0,
+                    Resistive_Defrost_Heater_Capacity='autosize',
+                    Maximum_Outdoor_Drybulb_Temperature_for_Defrost_Operation=5,
+                    Condenser_Type='AirCooled',
+                    Condenser_Inlet_Node_Name='VRF Outdoor Unit_' +
+                                              zn +
+                                              ' Outdoor Air Node',
+                    Condenser_Outlet_Node_Name='',
+                    Water_Condenser_Volume_Flow_Rate='autosize',
+                    Evaporative_Condenser_Effectiveness=0.9,
+                    Evaporative_Condenser_Air_Flow_Rate='autosize',
+                    Evaporative_Condenser_Pump_Rated_Power_Consumption='autosize',
+                    Supply_Water_Storage_Tank_Name='',
+                    Basin_Heater_Capacity=0,
+                    Basin_Heater_Setpoint_Temperature=2,
+                    Basin_Heater_Operating_Schedule_Name='On 24/7',
+                    Fuel_Type='Electricity',
+                    Minimum_Outdoor_Temperature_in_Heat_Recovery_Mode=-10,
+                    Maximum_Outdoor_Temperature_in_Heat_Recovery_Mode=40,
+                    Heat_Recovery_Cooling_Capacity_Modifier_Curve_Name=
+                    'VRF Heat Recovery Cooling Capacity Modifier',
+                    Initial_Heat_Recovery_Cooling_Capacity_Fraction=0.5,
+                    Heat_Recovery_Cooling_Capacity_Time_Constant=0.15,
+                    Heat_Recovery_Cooling_Energy_Modifier_Curve_Name=
+                    'VRF Heat Recovery Cooling Energy Modifier',
+                    Initial_Heat_Recovery_Cooling_Energy_Fraction=1,
+                    Heat_Recovery_Cooling_Energy_Time_Constant=0,
+                    Heat_Recovery_Heating_Capacity_Modifier_Curve_Name=
+                    'VRF Heat Recovery Heating Capacity Modifier',
+                    Initial_Heat_Recovery_Heating_Capacity_Fraction=1,
+                    Heat_Recovery_Heating_Capacity_Time_Constant=0.15,
+                    Heat_Recovery_Heating_Energy_Modifier_Curve_Name=
+                    'VRF Heat Recovery Heating Energy Modifier',
+                    Initial_Heat_Recovery_Heating_Energy_Fraction=1,
+                    Heat_Recovery_Heating_Energy_Time_Constant=0
                 )
+
             if verboseMode:
                 print('VRF Outdoor Unit_'+
                       zn+
