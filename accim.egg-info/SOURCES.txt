@@ -27,6 +27,16 @@ accim/misc/parametric_v05.py
 accim/run/__init__.py
 accim/run/run.py
 accim/sample files/__init__.py
+accim/sample files/sample IDFs/TestModel_ExistingHVAC_CooledBeams_V950.idf
+accim/sample files/sample IDFs/TestModel_ExistingHVAC_ElectricRadiators_V950.idf
+accim/sample files/sample IDFs/TestModel_ExistingHVAC_PTAC_V950.idf
+accim/sample files/sample IDFs/TestModel_onlyGeometryForVRFsystem_V910.idf
+accim/sample files/sample IDFs/TestModel_onlyGeometryForVRFsystem_V920.idf
+accim/sample files/sample IDFs/TestModel_onlyGeometryForVRFsystem_V930.idf
+accim/sample files/sample IDFs/TestModel_onlyGeometryForVRFsystem_V940.idf
+accim/sample files/sample IDFs/TestModel_onlyGeometryForVRFsystem_V950.idf
+accim/sample files/sample IDFs/TestModel_onlyGeometryForVRFsystem_V960.idf
+accim/sample files/sample IDFs/__init__.py
 accim/sample files/script_usage/__init__.py
 accim/sample files/script_usage/script_usage.py
 accim/sim/__init__.py
