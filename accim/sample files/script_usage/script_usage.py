@@ -2,7 +2,7 @@
 
 from accim.sim import accis
 
-scriptTypeList = ['mz']
+scriptTypeList = ['vrf']
 outputsList = ['simplified', 'standard', 'timestep']
 EPlist = ['ep95']
 
