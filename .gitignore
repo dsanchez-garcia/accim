@@ -10,16 +10,4 @@ tests_sim/
 /formatted_manually/
 /tests_data/
 /tests_additional_scripts/
-/tests/test_IDFgeneration_MultipleZone/
-/tests/test_IDFgeneration_SingleZone/
-/tests/__init__.py
-/tests/test_accim_Base.py
-/tests/test_accim_Base_EMS.py
-/tests/test_accim_Main.py
-/tests/test_accim_MultipleZone_EMS.py
-/tests/test_accim_SingleZone.py
-/tests/test_accim_SingleZone_EMS.py
-/tests/test_accim_VRFsystem.py
-/tests/TestModel_MultipleZone.idf
-/tests/TestModel_SingleZone.idf
-/tests/TestModel_SingleZone_pymod.idf
+/tests/notWorking/

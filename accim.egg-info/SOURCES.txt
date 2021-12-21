@@ -26,10 +26,7 @@ accim/misc/parametric_v04.py
 accim/misc/parametric_v05.py
 accim/run/__init__.py
 accim/run/run.py
-accim/sample files/TestModel_VRFsystem_V910.idf
-accim/sample files/TestModel_VRFsystem_V940.idf
 accim/sample files/__init__.py
-accim/sample files/script_usage/TestModel_VRFsystem.idf
 accim/sample files/script_usage/__init__.py
 accim/sample files/script_usage/script_usage.py
 accim/sim/__init__.py
@@ -205,14 +202,8 @@ tests/test_IDFgeneration_SingleZone/TestModel_SingleZone_pymod[AS_EN16798[CA_1[C
 tests/test_IDFgeneration_SingleZone/__init__.py
 tests/test_IDFgeneration_SingleZone/test_accim_IDFgeneration_SingleZone.py
 tests/test_accis_ex/TestModel_ExistingHVAC_PTAC.idf
-tests/test_accis_ex/TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[simplified.idf
-tests/test_accis_ex/TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[standard.idf
-tests/test_accis_ex/TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_1[AT_0.1[timestep.idf
 tests/test_accis_ex/__init__.py
 tests/test_accis_ex/test_accis.py
-tests/test_accis_vrf/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified.idf
-tests/test_accis_vrf/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[standard.idf
-tests/test_accis_vrf/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[timestep.idf
 tests/test_accis_vrf/TestModel_VRFsystem.idf
 tests/test_accis_vrf/__init__.py
 tests/test_accis_vrf/test_accis.py
