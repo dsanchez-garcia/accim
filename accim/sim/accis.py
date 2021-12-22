@@ -51,8 +51,8 @@ def addAccis(
 
     Exceptions
             DESCRIPTION. EnergyPlus version not supported.
-        Only works for versions between EnergyPlus 9.1 (enter Ep91) and
-        EnergyPlus 9.5 (enter Ep95).
+        Only works for versions between EnergyPlus 9.1 (enter ep91) and
+        EnergyPlus 9.6 (enter ep96).
 
     :return:
     Returns nothing. Output IDFs are generated in the source folder, where input IDFs were located.
