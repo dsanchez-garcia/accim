@@ -25,7 +25,7 @@ setuptools.setup(
           ],
       packages=setuptools.find_packages(),
       package_data={
-           "": ["*.csv", "*.idf"]
+           "": ["*.csv", "*.idf", "*.eso"]
            },
       install_requires=[
            "eppy"
