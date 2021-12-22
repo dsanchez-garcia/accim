@@ -26,23 +26,26 @@ def addAccis(
         confirmGen: bool = None):
     """
     Parameters
+    :param ScriptType: The default is None.'vrf' for VRFsystem, 'ex_ac' for ExistingHVAC only with full air-conditioning mode, and 'ex_mm' for ExistingHVAC with mixed-mode..
+    :param Outputs: The default is None. Can be 'standard', 'simplified' or 'timestep'.
+    :param EnergyPlus_version: The default is None. Can be 'ep91', 'ep92', 'ep93', 'ep94', 'ep95' or 'ep96'.
     :param AdapStand: The default is None.
-    (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55)
+    (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55; 3 = JPN)
     :param CAT: The default is None.
     (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT)
     :param ComfMod: The default is None.
     (0 = Static; 1 = OUT-CTE; 2 = OUT-SEN16798/SASHRAE55; 3 = OUT-AEN16798/AASHRAE55)
     :param HVACmode: The default is None.
     (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
-    :param VentCtrl:
+    :param VentCtrl: The default is None.
     (0 = Ventilates above neutral temperature; 1 = Ventilates above upper comfort limit)
-    :param VSToffset: Please refer to documentation.
-    :param MinOToffset: Please refer to documentation.
-    :param MaxWindSpeed: Please refer to documentation.
-    :param ASTtol_start: Please refer to documentation.
-    :param ASTtol_end_input: Please refer to documentation.
-    :param ASTtol_steps: Please refer to documentation.
-    :param NameSuffix: Please refer to documentation.
+    :param VSToffset: The default is 0. Please refer to documentation.
+    :param MinOToffset: The default is 50. Please refer to documentation.
+    :param MaxWindSpeed: The default is 50. Please refer to documentation.
+    :param ASTtol_start: The default is 0.1. Please refer to documentation.
+    :param ASTtol_end_input: The default is 0.1. Please refer to documentation.
+    :param ASTtol_steps: The default is 0.1. Please refer to documentation.
+    :param NameSuffix: The default is '' (an empty string). Please refer to documentation.
     :param verboseMode: True to print the process on screen. Default is True.
     :param confirmGen: True to skip confirmation of output IDF generation. Default is None.
 
@@ -52,6 +55,7 @@ def addAccis(
         EnergyPlus 9.5 (enter Ep95).
 
     :return:
+    Returns nothing. Output IDFs are generated in the source folder, where input IDFs were located.
     """
     import accim.sim.accim_Main as accim_Main
     from os import listdir, remove
