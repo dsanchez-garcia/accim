@@ -8,17 +8,38 @@ accim.egg-info/SOURCES.txt
 accim.egg-info/dependency_links.txt
 accim.egg-info/requires.txt
 accim.egg-info/top_level.txt
-accim/data/Main.py
-accim/data/Run.py
-accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2015.csv
-accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2018.csv
-accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2015.csv
-accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2018.csv
-accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2015.csv
-accim/data/TestModel_MultipleZone_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[ESP_Bilbao.08250_SWEC_2018.csv
 accim/data/__init__.py
-accim/data/main.py
-accim/data/run.py
+accim/data/datawrangling.py
+accim/data/SS/__init__.py
+accim/data/SS/main.py
+accim/data/SS/run.py
+accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1.idf
+accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[JPN_Tokyo.csv
+accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[JPN_Tokyo.eso
+accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1.idf
+accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[JPN_Tokyo.csv
+accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[JPN_Tokyo.eso
+accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1.idf
+accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[JPN_Tokyo.csv
+accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[JPN_Tokyo.eso
+accim/data/WIP/__init__.py
+accim/data/WIP/mdd-rdd/__init__.py
+accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960.idf
+accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified.idf
+accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified[JPN_Tokyo.csv
+accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified[JPN_Tokyo.eso
+accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified.idf
+accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified[JPN_Tokyo.csv
+accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified[JPN_Tokyo.eso
+accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified.idf
+accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified[JPN_Tokyo.csv
+accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified[JPN_Tokyo.eso
+accim/data/WIP/simplified/__init__.py
+accim/data/WIP/simplified/addAccis.py
+accim/data/WIP_2/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_1[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1.idf
+accim/data/WIP_2/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_2[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1.idf
+accim/data/WIP_2/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_3[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1.idf
+accim/data/WIP_2/__init__.py
 accim/misc/__init__.py
 accim/misc/amend_idfs.py
 accim/misc/amend_idfs_v02.py
@@ -26,6 +47,7 @@ accim/misc/parametric_v04.py
 accim/misc/parametric_v05.py
 accim/run/__init__.py
 accim/run/run.py
+accim/sample files/Seville_Present.epw
 accim/sample files/__init__.py
 accim/sample files/sample IDFs/TestModel_ExistingHVAC_CooledBeams_V950.idf
 accim/sample files/sample IDFs/TestModel_ExistingHVAC_ElectricRadiators_V950.idf

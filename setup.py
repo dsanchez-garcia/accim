@@ -7,7 +7,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
       name='accim',
-      version='0.2.2',
+      version='0.2.3',
       description="Transforms PMV-based into adaptive setpoint temperature EnergyPlus building energy models",
       long_description=long_description,
       long_description_content_type='text/markdown',
@@ -28,7 +28,8 @@ setuptools.setup(
            "": ["*.csv", "*.idf", "*.eso", "*.epw"]
            },
       install_requires=[
-           "eppy"
+          "eppy",
+          "datapackage"
            ],
       scripts=['bin/addAccis.py'],
       keywords=[

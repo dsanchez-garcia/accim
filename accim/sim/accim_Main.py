@@ -173,7 +173,7 @@ class accimJob():
 
                 self.HVACdict = {
                     # todo if there is a Coil:Heating:Whatever and another Coil:Heating:DifferentWhatever
-                    #  coils and windows sensors will be duplicated and simuation will crash; it needs to be solved.
+                    #  coils and windows sensors will be duplicated and simulation will crash; it needs to be solved.
 
                     # Group Heating and Cooling Coils
                     'Coil:Cooling:Water': 'Cooling Coil Total Cooling Rate',

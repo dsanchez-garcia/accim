@@ -444,7 +444,7 @@ def test_addEMSOutputVariableBase(IDFobject):
 
     EMSOutputVariableComfHours_dict = {
         'Comfortable Hours_No Applicability': 'ComfHoursNoApp',
-        'Comfortable Hours': 'ComfHours',
+        'Comfortable Hours_Applicability': 'ComfHours',
         'Discomfortable Applicable Hot Hours': 'DiscomfAppHotHours',
         'Discomfortable Applicable Cold Hours': 'DiscomfAppColdHours',
         'Discomfortable Non Applicable Hot Hours': 'DiscomfNonAppHotHours',

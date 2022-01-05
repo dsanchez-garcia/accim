@@ -802,7 +802,7 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
 
     EMSOutputVariableComfHours_dict = {
         'Comfortable Hours_No Applicability': 'ComfHoursNoApp',
-        'Comfortable Hours': 'ComfHours',
+        'Comfortable Hours_Applicability': 'ComfHours',
         'Discomfortable Applicable Hot Hours': 'DiscomfAppHotHours',
         'Discomfortable Applicable Cold Hours': 'DiscomfAppColdHours',
         'Discomfortable Non Applicable Hot Hours': 'DiscomfNonAppHotHours',
@@ -952,7 +952,8 @@ def addOutputVariablesBase(self, ScriptType: str = None, verboseMode: bool = Tru
         'Heating Coil Heating Rate',
         'Facility Total HVAC Electric Demand Power',
         'Facility Total HVAC Electricity Demand Rate',
-        'AFN Surface Venting Window or Door Opening Factor',
+        # todo maybe create a new output type to include this variable, to be used in case of tests
+        # 'AFN Surface Venting Window or Door Opening Factor',
         'AFN Zone Infiltration Air Change Rate',
         'AFN Zone Infiltration Volume'
         ]
@@ -992,15 +993,20 @@ def addOutputVariablesBase(self, ScriptType: str = None, verboseMode: bool = Tru
 
     del outputvariablelist, outputlist, addittionaloutputs,
 
-    self.idf1.newidfobject(
-        'Output:Variable',
-        Key_Value='Environment',
-        Variable_Name='Site Outdoor Air Drybulb Temperature',
-        Reporting_Frequency='Hourly',
-        Schedule_Name=''
-        )
-    if verboseMode:
-        print('Added - Site Outdoor Air Drybulb Temperature Output:Variable data')
+    siteAddOutputs = [
+        'Site Outdoor Air Drybulb Temperature',
+        'Site Wind Speed'
+    ]
+    for addittionaloutput in siteAddOutputs:
+        self.idf1.newidfobject(
+            'Output:Variable',
+            Key_Value='Environment',
+            Variable_Name=addittionaloutput,
+            Reporting_Frequency='Hourly',
+            Schedule_Name=''
+            )
+        if verboseMode:
+            print('Added - '+addittionaloutput+' Output:Variable data')
 
     for zonename in self.zonenames:
         self.idf1.newidfobject(
@@ -1033,16 +1039,6 @@ def addOutputVariablesBase(self, ScriptType: str = None, verboseMode: bool = Tru
             )
         if verboseMode:
             print('Added - '+zonename+' Zone Operative Temperature Output:Variable data')
-
-        self.idf1.newidfobject(
-            'Output:Variable',
-            Key_Value=zonename,
-            Variable_Name='Zone Outdoor Air Wind Speed',
-            Reporting_Frequency='Hourly',
-            Schedule_Name=''
-            )
-        if verboseMode:
-            print('Added - '+zonename+' Zone Outdoor Air Wind Speed Output:Variable data')
 
     if ScriptType.lower() == 'vrf':
         VRFoutputs = [
