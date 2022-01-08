@@ -3,8 +3,9 @@ from accim.data.datawrangling import Table
 z = Table(frequency='runperiod',
           sum_or_mean='sum',
           standard_outputs=True,
-          level=['whatever'],
-          level_sum_or_mean=['sum']
+          level=['block', 'building'],
+          level_sum_or_mean=['sum'],
+          match_cities=False
           )
 
 # print(*z.returndf().columns, sep='\n')

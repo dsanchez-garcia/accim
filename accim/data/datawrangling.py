@@ -6,7 +6,7 @@ class Table:
                  standard_outputs: bool = None,
                  level=None,
                  level_sum_or_mean=None,
-                 ):
+                 match_cities: bool = False):
         if level_sum_or_mean is None:
             level_sum_or_mean = []
         if level is None:
@@ -17,6 +17,7 @@ class Table:
         from pathlib import Path
         import datapackage
         import glob
+        import numpy as np
 
         # todo check if glob.glob works with in terms of package, if not switch back to sorted
         # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
@@ -51,7 +52,14 @@ class Table:
             'VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Rate [W](Hourly)',
             'VRF OUTDOOR UNIT',
             'Heating Coil Heating Rate [W](Hourly)',
-            'Cooling Coil Total Cooling Rate [W](Hourly)'
+            'Cooling Coil Total Cooling Rate [W](Hourly)',
+            'Zone Air Volume',
+            'Zone Floor Area'
+        ]
+
+        colstomean = [
+            'Zone Air Volume',
+            'Zone Floor Area'
         ]
 
         summed_dataframes = []
@@ -76,6 +84,24 @@ class Table:
             df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
             df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
 
+            constantcols = []
+            for i in [
+                'Zone Air Volume',
+                'Zone Floor Area'
+            ]:
+                for j in df.columns:
+                    if i in j:
+                        constantcols.append(j)
+            constantcols = list(dict.fromkeys(constantcols))
+
+            constantcolsdict = {}
+
+            for i in range(len(constantcols)):
+                tempdict = {constantcols[i]: df[constantcols[i]][0]}
+                constantcolsdict.update(tempdict)
+
+            if frequency == 'timestep':
+                df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(sum_or_mean)
             if frequency == 'hourly':
                 df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(sum_or_mean)
             if frequency == 'daily':
@@ -84,6 +110,10 @@ class Table:
                 df = df.groupby(['Source', 'Month'], as_index=False).agg(sum_or_mean)
             if frequency == 'runperiod':
                 df = df.groupby(['Source'], as_index=False).agg(sum_or_mean)
+
+            for i in constantcolsdict:
+                df[i] = constantcolsdict[i]
+
             summed_dataframes.append(df)
 
         self.df = pd.concat(summed_dataframes)
@@ -133,7 +163,9 @@ class Table:
             'VRF Heat Pump Cooling Electricity Energy': 'Cooling Energy Consumption (VRF Heat Pump Cooling Electricity Energy) (J)',
             'VRF Heat Pump Heating Electricity Energy': 'Heating Energy Consumption (VRF Heat Pump Heating Electricity Energy) (J)',
             'Coil': 'Total Energy Demand (W)',
-            'VRF OUTDOOR UNIT': 'Total Energy Consumption (J)'
+            'VRF OUTDOOR UNIT': 'Total Energy Consumption (J)',
+            'Zone Air Volume': 'Zone Air Volume (m3)',
+            'Zone Floor Area': 'Zone Floor Area (m2)'
             }
 
         if any('block' in i for i in level):
@@ -193,26 +225,7 @@ class Table:
         self.df['EPW'] = self.df['EPW'].str[:-4]
         self.df['Source'] = self.df['Source'].str[:-4]
 
-        package_cities = datapackage.Package('https://datahub.io/core/world-cities/datapackage.json')
-        package_countries = datapackage.Package('https://datahub.io/core/country-list/datapackage.json')
-
-        # to load only tabular data_cities
-        resources_cities = package_cities.resources
-        for resource in resources_cities:
-            if resource.tabular:
-                data_cities = pd.read_csv(resource.descriptor['path'])
-
-        resources_countries = package_countries.resources
-        for resource in resources_countries:
-            if resource.tabular:
-                data_countries = pd.read_csv(resource.descriptor['path'])
-
         self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
-
-        self.df['EPW_mod'] = self.df['EPW'].str.split('_')
-        data_cities['subcountry'] = data_cities['subcountry'].astype(str)
-        data_countries['Name'] = data_countries['Name'].astype(str)
-        data_countries['Code'] = data_countries['Code'].astype(str)
 
         rcpdict = {
             'Present': ['Presente', 'Actual', 'Present', 'Current'],
@@ -231,49 +244,91 @@ class Table:
         for i in rcpdict['Present']:
             rcp_present.append(i)
 
-        locations = []
-        for i in list(self.df['EPW_mod']):
-            for j in i:
-                if j in rcp:
-                    continue
-                elif j.isnumeric():
-                    continue
-                elif len(j) <= 2:
-                    continue
-                else:
-                    locations.append(j.lower())
-        locations = list(dict.fromkeys(locations))
-
-        data_temp_city = []
-        for i in list(data_cities['name']):
-            data_temp_city.append(i.lower())
-
-        data_temp_subcountry = []
-        for i in list(data_cities['subcountry']):
-            data_temp_subcountry.append(i.lower())
-
-        matches_city = list(set(locations).intersection(set(data_temp_city)))
-        matches_subcountry = list(set(locations).intersection(data_temp_subcountry))
-        # matches_city = list(set(locations).intersection(set(data_cities['name'].str.lower())))
-        # matches_subcountry = list(set(locations).intersection(data_cities['subcountry'].str.lower()))
-        matches = matches_subcountry + matches_city
-        matches = list(dict.fromkeys(matches))
-
-        cities_df_list = []
-        for i in matches:
-            temp_df = data_cities.query('name.str.lower() == "%s"' % i.lower())
-            if len(temp_df) == 0:
-                temp_df = data_cities.query('subcountry.str.lower() == "%s"' % i.lower())
-            cities_df_list.append(temp_df)
-        cities_df = pd.concat(cities_df_list)
-        cities_df = cities_df.set_index([pd.RangeIndex(len(cities_df))])
-        cities_df['country'] = cities_df['country'].astype(str)
+        self.df['EPW_mod'] = self.df['EPW'].str.split('_')
 
         for i in range(len(self.df['EPW_mod'])):
             for j in self.df.loc[i, 'EPW_mod']:
                 if len(j) == 2:
                     self.df.loc[i, 'EPW_CountryCode'] = j
-        self.df['EPW_CountryCode'] = self.df['EPW_CountryCode'].astype(str)
+                else:
+                    self.df.loc[i, 'EPW_CountryCode'] = np.nan
+
+                for k in rcpdict:
+                    for m in range(len(rcpdict[k])):
+                        if j in rcpdict[k][m]:
+                            self.df.loc[i, 'EPW_Scenario'] = k
+                        else:
+                            self.df.loc[i, 'EPW_Scenario'] = np.nan
+
+            self.df.loc[i, 'EPW_Year'] = np.nan
+
+        if match_cities:
+            # todo add argument to match cities and countries or not; by default not (False), because it takes time
+            package_cities = datapackage.Package('https://datahub.io/core/world-cities/datapackage.json')
+            package_countries = datapackage.Package('https://datahub.io/core/country-list/datapackage.json')
+
+            # to load only tabular data_cities
+            resources_cities = package_cities.resources
+            for resource in resources_cities:
+                if resource.tabular:
+                    data_cities = pd.read_csv(resource.descriptor['path'])
+
+            resources_countries = package_countries.resources
+            for resource in resources_countries:
+                if resource.tabular:
+                    data_countries = pd.read_csv(resource.descriptor['path'])
+
+            self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
+
+            # todo if len <1
+            data_cities['subcountry'] = data_cities['subcountry'].astype(str)
+            data_countries['Name'] = data_countries['Name'].astype(str)
+            data_countries['Code'] = data_countries['Code'].astype(str)
+
+            locations = []
+            for i in list(self.df['EPW_mod']):
+                for j in i:
+                    if j in rcp:
+                        continue
+                    elif j.isnumeric():
+                        continue
+                    elif len(j) <= 2:
+                        continue
+                    else:
+                        locations.append(j.lower())
+            locations = list(dict.fromkeys(locations))
+
+            data_temp_city = []
+            for i in list(data_cities['name']):
+                data_temp_city.append(i.lower())
+
+            data_temp_subcountry = []
+            for i in list(data_cities['subcountry']):
+                data_temp_subcountry.append(i.lower())
+
+            matches_city = list(set(locations).intersection(set(data_temp_city)))
+            matches_subcountry = list(set(locations).intersection(data_temp_subcountry))
+            # matches_city = list(set(locations).intersection(set(data_cities['name'].str.lower())))
+            # matches_subcountry = list(set(locations).intersection(data_cities['subcountry'].str.lower()))
+            matches = matches_subcountry + matches_city
+            matches = list(dict.fromkeys(matches))
+
+            cities_df_list = []
+            try:
+                for i in matches:
+                    temp_df = data_cities.query('name.str.lower() == "%s"' % i.lower())
+                    if len(temp_df) == 0:
+                        temp_df = data_cities.query('subcountry.str.lower() == "%s"' % i.lower())
+                    cities_df_list.append(temp_df)
+                cities_df = pd.concat(cities_df_list)
+                cities_df = cities_df.set_index([pd.RangeIndex(len(cities_df))])
+                cities_df['country'] = cities_df['country'].astype(str)
+                isEPWformatValid = True
+            except ValueError:
+                isEPWformatValid = False
+                print('EPW files are not correctly named')
+
+            self.df['EPW_CountryCode'] = self.df['EPW_CountryCode'].astype(str)
 
         for i in range(len(self.df['EPW_mod'])):
             for j in self.df.loc[i, 'EPW_mod']:
@@ -286,29 +341,26 @@ class Table:
                 elif len(j) == 2:
                     continue
                 else:
-                    for k in range(len(cities_df)):
-                        if self.df.loc[i, 'EPW_CountryCode'].lower() in cities_df.loc[k, 'country'].lower():
-                            self.df.loc[i, 'EPW_Country'] = cities_df.loc[k, 'country']
-                        # if str(j).lower() in cities_df.loc[k, 'name'].lower():
-                        #     self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
-                        # elif str(j).lower() in cities_df.loc[k, 'subcountry'].lower():
-                        #     self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
-                        # elif str(j).isalnum():
-                        #     self.df.loc[i, 'EPW_City_or_subcountry'] = j.upper()
-                        # else:
+                    if match_cities:
+                        if isEPWformatValid:
+                            for k in range(len(cities_df)):
+                                if self.df.loc[i, 'EPW_CountryCode'].lower() in cities_df.loc[k, 'country'].lower():
+                                    self.df.loc[i, 'EPW_Country'] = cities_df.loc[k, 'country']
+                                if str(j).lower() in cities_df.loc[k, 'name'].lower():
+                                    self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
+                                elif str(j).lower() in cities_df.loc[k, 'subcountry'].lower():
+                                    self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
+                                elif str(j).isalnum():
+                                    self.df.loc[i, 'EPW_City_or_subcountry'] = j.upper()
+                                else:
+                                    self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
+                    else:
                         self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
-
-        for i in range(len(self.df['EPW_mod'])):
-            for j in self.df.loc[i, 'EPW_mod']:
-                for k in rcpdict:
-                    for m in range(len(rcpdict[k])):
-                        if j in rcpdict[k][m]:
-                            self.df.loc[i, 'EPW_Scenario'] = k
 
         self.df = self.df.drop(['EPW_mod'], axis=1)
 
         cols = self.df.columns.tolist()
-        cols = cols[-16:] + cols[:-16]
+        cols = cols[-15:] + cols[:-15]
         self.df = self.df[cols]
         self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 

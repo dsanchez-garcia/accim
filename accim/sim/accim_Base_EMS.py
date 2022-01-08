@@ -463,6 +463,20 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
                 print('Added - CountHoursNoApp_'+zonename+' Program')
     #        print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'CountHoursNoApp_'+zonename])
 
+        if 'SetGeoVar'+zonename in programlist:
+            if verboseMode:
+                print('Not added - SetGeoVar'+zonename+' Program')
+        else:
+            self.idf1.newidfobject(
+                'EnergyManagementSystem:Program',
+                Name='SetGeoVar'+zonename,
+                Program_Line_1='set ZoneFloorArea_' + zonename + ' = ZFA_' + zonename + '/2',
+                Program_Line_2='set ZoneAirVolume_' + zonename + ' = ZAV_' + zonename + '/2'
+            )
+            if verboseMode:
+                print('Added - SetGeoVar'+zonename+' Program')
+    #        print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetGeoVar'+zonename])
+
     if 'SetInputData' in programlist:
         if verboseMode:
             print('Not added - SetInputData Program')
@@ -764,25 +778,25 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
     Checks if some EMS output variables objects are already
     in the model, and otherwise adds them.
     """
-    EMSOutputVariableComfTemp_dict = {
-        'Comfort Temperature': 'ComfTemp',
-        'Adaptive Cooling Setpoint Temperature': 'ACST',
-        'Adaptive Heating Setpoint Temperature': 'AHST',
-        'Adaptive Cooling Setpoint Temperature_No Tolerance': 'ACSTnoTol',
-        'Adaptive Heating Setpoint Temperature_No Tolerance': 'AHSTnoTol',
-        }
-    EMSOutputVariableComfTempMM_dict = {
-        'Ventilation Setpoint Temperature': 'VST',
-        'Minimum Outdoor Temperature for ventilation': 'MinOutTemp'
+    EMSOutputVariableAvg_dict = {
+        'Comfort Temperature': ['ComfTemp', 'C'],
+        'Adaptive Cooling Setpoint Temperature': ['ACST', 'C'],
+        'Adaptive Heating Setpoint Temperature': ['AHST', 'C'],
+        'Adaptive Cooling Setpoint Temperature_No Tolerance': ['ACSTnoTol', 'C'],
+        'Adaptive Heating Setpoint Temperature_No Tolerance': ['AHSTnoTol', 'C'],
+    }
+    EMSOutputVariableAvgMM_dict = {
+        'Ventilation Setpoint Temperature': ['VST', 'C'],
+        'Minimum Outdoor Temperature for ventilation': ['MinOutTemp', 'C']
         }
     if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
-        EMSOutputVariableComfTemp_dict.update(EMSOutputVariableComfTempMM_dict)
+        EMSOutputVariableAvg_dict.update(EMSOutputVariableAvgMM_dict)
 
     outputvariablelist = ([outvar.Name
                            for outvar
                            in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']])
 
-    for i in EMSOutputVariableComfTemp_dict:
+    for i in EMSOutputVariableAvg_dict:
         if i in outputvariablelist:
             if verboseMode:
                 print('Not added - '+i+' Output Variable')
@@ -790,46 +804,48 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
             self.idf1.newidfobject(
                 'EnergyManagementSystem:OutputVariable',
                 Name=i,
-                EMS_Variable_Name=EMSOutputVariableComfTemp_dict[i],
+                EMS_Variable_Name=EMSOutputVariableAvg_dict[i][0],
                 Type_of_Data_in_Variable='Averaged',
                 Update_Frequency='ZoneTimestep',
                 EMS_Program_or_Subroutine_Name='',
-                Units='C'
+                Units=EMSOutputVariableAvg_dict[i][1]
                 )
             if verboseMode:
                 print('Added - '+i+' Output Variable')
             # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i])
 
-    EMSOutputVariableComfHours_dict = {
-        'Comfortable Hours_No Applicability': 'ComfHoursNoApp',
-        'Comfortable Hours_Applicability': 'ComfHours',
-        'Discomfortable Applicable Hot Hours': 'DiscomfAppHotHours',
-        'Discomfortable Applicable Cold Hours': 'DiscomfAppColdHours',
-        'Discomfortable Non Applicable Hot Hours': 'DiscomfNonAppHotHours',
-        'Discomfortable Non Applicable Cold Hours': 'DiscomfNonAppColdHours',
-        }
+    EMSOutputVariableSum_dict = {
+        'Comfortable Hours_No Applicability': ['ComfHoursNoApp', 'H'],
+        'Comfortable Hours_Applicability': ['ComfHours', 'H'],
+        'Discomfortable Applicable Hot Hours': ['DiscomfAppHotHours', 'H'],
+        'Discomfortable Applicable Cold Hours': ['DiscomfAppColdHours', 'H'],
+        'Discomfortable Non Applicable Hot Hours': ['DiscomfNonAppHotHours', 'H'],
+        'Discomfortable Non Applicable Cold Hours': ['DiscomfNonAppColdHours', 'H'],
+        'Zone Floor Area': ['ZoneFloorArea', 'm2'],
+        'Zone Air Volume': ['ZoneAirVolume', 'm3'],
+    }
 
-    for i in EMSOutputVariableComfHours_dict:
+    for i in EMSOutputVariableSum_dict:
         for zonename in self.occupiedZones:
-            if i+'_'+zonename+' (summed)' in outputvariablelist:
+            if i+'_'+zonename in outputvariablelist:
                 if verboseMode:
                     print('Not added - '+i+'_'
-                          + zonename + ' (summed) Output Variable')
+                          + zonename + ' Output Variable')
             else:
                 self.idf1.newidfobject(
                     'EnergyManagementSystem:OutputVariable',
-                    Name=i + '_' + zonename + ' (summed)',
-                    EMS_Variable_Name=EMSOutputVariableComfHours_dict[i]+'_'
+                    Name=i + '_' + zonename,
+                    EMS_Variable_Name=EMSOutputVariableSum_dict[i][0]+'_'
                     + zonename,
                     Type_of_Data_in_Variable='Summed',
                     Update_Frequency='ZoneTimestep',
                     EMS_Program_or_Subroutine_Name='',
-                    Units='H'
+                    Units=EMSOutputVariableSum_dict[i][1]
                     )
                 if verboseMode:
                     print('Added - '+i+'_'
-                          + zonename + ' (summed) Output Variable')
-                # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i+'_'+zonename+' (summed)'])
+                          + zonename + ' Output Variable')
+                # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i+'_'+zonename'])
 
     if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
         EMSOutputVariableIDFzones_dict = {
@@ -838,14 +854,14 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
 
         for i in EMSOutputVariableIDFzones_dict:
             for zonename in self.zonenames:
-                if i+'_'+zonename+' (summed)' in outputvariablelist:
+                if i+'_'+zonename in outputvariablelist:
                     if verboseMode:
                         print('Not added - '+i+'_'
-                              + zonename + ' (summed) Output Variable')
+                              + zonename + ' Output Variable')
                 else:
                     self.idf1.newidfobject(
                         'EnergyManagementSystem:OutputVariable',
-                        Name=i + '_' + zonename + ' (summed)',
+                        Name=i + '_' + zonename,
                         EMS_Variable_Name=EMSOutputVariableIDFzones_dict[i]+'_'
                         + zonename,
                         Type_of_Data_in_Variable='Summed',
@@ -855,8 +871,8 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
                         )
                     if verboseMode:
                         print('Added - '+i+'_'
-                              + zonename + ' (summed) Output Variable')
-                    # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i+'_'+zonename+' (summed)'])
+                              + zonename + ' Output Variable')
+                    # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i+'_'+zonename'])
 
     del outputvariablelist
 
@@ -898,8 +914,11 @@ def addGlobVarList(self, ScriptType: str = None, verboseMode: bool = True):
             Erl_Variable_3_Name='DiscomfAppColdHours_'+zonename,
             Erl_Variable_4_Name='DiscomfNonAppHotHours_'+zonename,
             Erl_Variable_5_Name='DiscomfNonAppColdHours_'+zonename,
-            Erl_Variable_6_Name='ComfHoursNoApp_'+zonename
-            )
+            Erl_Variable_6_Name='ComfHoursNoApp_'+zonename,
+            Erl_Variable_7_Name='ZoneFloorArea_' + zonename,
+            Erl_Variable_8_Name='ZoneAirVolume_' + zonename
+
+        )
 
     if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
         self.idf1.newidfobject(
@@ -920,6 +939,32 @@ def addGlobVarList(self, ScriptType: str = None, verboseMode: bool = True):
 
     if verboseMode:
         print("Global variables objects have been added")
+
+def addIntVarList(self, verboseMode: bool = True):
+    """Add Internal variables objects for accim."""
+    internalvariablelist = ([program for program in self.idf1.idfobjects['ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE']])
+
+    for i in range(len(internalvariablelist)):
+        firstinternalvariablelist = self.idf1.idfobjects['ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE'][-1]
+        self.idf1.removeidfobject(firstinternalvariablelist)
+
+    del internalvariablelist
+
+    intvardict = {
+        'ZFA_': 'Zone Floor Area',
+        'ZAV_': 'Zone Air Volume'
+    }
+
+    for i in range(len(self.zonenames)):
+        for j in intvardict:
+            self.idf1.newidfobject(
+                'EnergyManagementSystem:InternalVariable',
+                Name=j+self.zonenames[i],
+                Internal_Data_Index_Key_Name=self.zonenames_orig[i],
+                Internal_Data_Type=intvardict[j]
+            )
+    if verboseMode:
+        print("Internal variables objects have been added")
 
 # todo add argument for mm outputvariables
 def addOutputVariablesBase(self, ScriptType: str = None, verboseMode: bool = True):

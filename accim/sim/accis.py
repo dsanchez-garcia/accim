@@ -174,6 +174,7 @@ def addAccis(
         z.addEMSProgramsBase(ScriptType=ScriptType, verboseMode=verboseMode)
         z.addEMSOutputVariableBase(ScriptType=ScriptType, verboseMode=verboseMode)
         z.addGlobVarList(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.addIntVarList(verboseMode=verboseMode)
         z.addEMSSensorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
         z.addEMSActuatorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
 

@@ -18,6 +18,7 @@ class accimJob():
         addEMSProgramsBase, \
         addEMSSensorsBase, \
         addGlobVarList, \
+        addIntVarList, \
         addOutputVariablesBase, \
         addOutputVariablesTimestep, \
         addSimplifiedOutputVariables

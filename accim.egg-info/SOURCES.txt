@@ -23,6 +23,7 @@ accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_3[CM_3[HM
 accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[JPN_Tokyo.csv
 accim/data/WIP/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[JPN_Tokyo.eso
 accim/data/WIP/__init__.py
+accim/data/WIP/data wrangling.py
 accim/data/WIP/mdd-rdd/__init__.py
 accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960.idf
 accim/data/WIP/simplified/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_JPN[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[simplified.idf
@@ -49,6 +50,11 @@ accim/run/__init__.py
 accim/run/run.py
 accim/sample files/Seville_Present.epw
 accim/sample files/__init__.py
+accim/sample files/sample CSVs/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_ASHRAE55[CA_80[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1[RCP45_2100_MADRID_SP.csv
+accim/sample files/sample CSVs/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_ASHRAE55[CA_80[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1[RCP45_2100_Nagasaki_JA.csv
+accim/sample files/sample CSVs/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_ASHRAE55[CA_80[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1[RCP85_2100_MADRID_SP.csv
+accim/sample files/sample CSVs/TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_ASHRAE55[CA_80[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1[RCP85_2100_Nagasaki_JA.csv
+accim/sample files/sample CSVs/__init__.py
 accim/sample files/sample IDFs/TestModel_ExistingHVAC_CooledBeams_V950.idf
 accim/sample files/sample IDFs/TestModel_ExistingHVAC_ElectricRadiators_V950.idf
 accim/sample files/sample IDFs/TestModel_ExistingHVAC_PTAC_V950.idf
