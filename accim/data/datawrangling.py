@@ -57,11 +57,6 @@ class Table:
             'Zone Floor Area'
         ]
 
-        colstomean = [
-            'Zone Air Volume',
-            'Zone Floor Area'
-        ]
-
         summed_dataframes = []
 
         for file in source_files:
