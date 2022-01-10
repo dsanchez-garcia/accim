@@ -83,7 +83,7 @@ class accimJob():
         for i in self.idf1.idfobjects['ZONE']:
             for k in self.idf1.idfobjects['PEOPLE']:
                 if i.Name in k.Name:
-                    self.occupiedZones_orig.append(i.Name)
+                    self.occupiedZones_orig.append(i.Name.upper())
         self.occupiedZones = [i.replace(':', '_') for i in self.occupiedZones_orig]
         if verboseMode:
             print(f'The occupied zones in the model {filename_temp} are:')
@@ -140,8 +140,8 @@ class accimJob():
                 if len(self.idf1.idfobjects[TSPtypes[i]]) > 0:
                     for j in range(len(self.ZCTlist)):
                         if self.ZCTlist[j].Control_1_Object_Type in TSPtypes[i]:
-                            temp1.append(self.ZCTlist[j].Zone_or_ZoneList_Name)
-                            temp2.append(self.ZCTlist[j].Zone_or_ZoneList_Name.replace(":", "_"))
+                            temp1.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper())
+                            temp2.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper().replace(":", "_"))
                             temp3.append(self.ZCTlist[j].Control_1_Name)
                 self.HVACzonelist.append([TSPtypes[i], temp1, temp2, temp3])
             del temp1, temp2, temp3
