@@ -6,7 +6,8 @@ class Table:
                  standard_outputs: bool = None,
                  level=None,
                  level_sum_or_mean=None,
-                 match_cities: bool = False):
+                 match_cities: bool = False,
+                 normalised_energy_units: bool = False):
         if level_sum_or_mean is None:
             level_sum_or_mean = []
         if level is None:
@@ -113,9 +114,10 @@ class Table:
 
         self.df = pd.concat(summed_dataframes)
 
-        OpTempColumn = [i for i in self.df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
-        occBZlist_colon = [i.split(' ')[0][:-5] for i in OpTempColumn]
+        optempcolumn = [i for i in self.df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
+        occBZlist_colon = [i.split(' ')[0][:-5] for i in optempcolumn]
         occBZlist_colon = list(dict.fromkeys(occBZlist_colon))
+        occBZlist_underscore = [i.replace(':', '_') for i in occBZlist_colon]
 
         hvacBZlist_colon = [i.split(' ')[0]
                             for i
@@ -131,9 +133,31 @@ class Table:
         block_list = [i.split(':')[0] for i in occBZlist_colon]
         block_list = list(dict.fromkeys(block_list))
 
+        renamezonesdict = {}
+        for i in range(len(occBZlist_underscore)):
+            for j in self.df.columns:
+                if occBZlist_underscore[i].lower() in j.lower():
+                    temp = {j: j.replace(occBZlist_underscore[i], occBZlist_colon[i])}
+                    renamezonesdict.update(temp)
+
+        self.df = self.df.rename(columns=renamezonesdict)
+
+        for i in self.df.columns:
+            if 'VRF OUTDOOR UNIT' in i:
+                self.df[i] = self.df[i]/3600
+
+        renamedict = {}
+
+        for i in self.df.columns:
+            if 'VRF OUTDOOR UNIT' in i:
+                temp = {i: i.replace('[J]', '[W]')}
+                renamedict.update(temp)
+
+        self.df = self.df.rename(columns=renamedict)
+
         BZoutputDict = {
-            'VRF INDOOR UNIT': 'Total Energy Demand (W)',
-            'VRF OUTDOOR UNIT': 'Total Energy Consumption (J)'
+            'VRF INDOOR UNIT': 'Total Energy Demand (Wh)',
+            'VRF OUTDOOR UNIT': 'Total Energy Consumption (Wh)'
         }
 
         for output in BZoutputDict:
@@ -153,12 +177,14 @@ class Table:
             'Ventilation Hours': 'Ventilation Hours (h)',
             'AFN Zone Infiltration Volume': 'AFN Zone Infiltration Volume (m3)',
             'AFN Zone Infiltration Air Change Rate': 'AFN Zone Infiltration Air Change Rate (ach)',
-            'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand (Cooling Coil Total Cooling Rate) (W)',
-            'Heating Coil Heating Rate': 'Heating Energy Demand (Heating Coil Heating Rate) (W)',
-            'VRF Heat Pump Cooling Electricity Energy': 'Cooling Energy Consumption (VRF Heat Pump Cooling Electricity Energy) (J)',
-            'VRF Heat Pump Heating Electricity Energy': 'Heating Energy Consumption (VRF Heat Pump Heating Electricity Energy) (J)',
-            'Coil': 'Total Energy Demand (W)',
-            'VRF OUTDOOR UNIT': 'Total Energy Consumption (J)',
+            'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand (Cooling Coil Total Cooling Rate) (Wh)',
+            'Heating Coil Heating Rate': 'Heating Energy Demand (Heating Coil Heating Rate) (Wh)',
+            'VRF Heat Pump Cooling Electricity Energy': 'Cooling Energy Consumption (VRF Heat Pump Cooling '
+                                                        'Electricity Energy) (Wh)',
+            'VRF Heat Pump Heating Electricity Energy': 'Heating Energy Consumption (VRF Heat Pump Heating '
+                                                        'Electricity Energy) (Wh)',
+            'Coil': 'Total Energy Demand (Wh)',
+            'VRF OUTDOOR UNIT': 'Total Energy Consumption (Wh)',
             'Zone Air Volume': 'Zone Air Volume (m3)',
             'Zone Floor Area': 'Zone Floor Area (m2)'
             }
@@ -167,27 +193,57 @@ class Table:
             for output in outputdict:
                 for block in block_list:
                     if any('sum' in j for j in level_sum_or_mean):
-                        self.df[f'{block}' + '_' + outputdict[output] + ' [summed]_pymod'] = self.df[
+                        self.df[f'{block}' + '_Total_' + outputdict[output] + ' [summed]_pymod'] = self.df[
                             [i for i in self.df.columns
                              if block.lower() in i.lower() and output in i and '_pymod' not in i]
                         ].sum(axis=1)
                     if any('mean' in j for j in level_sum_or_mean):
-                        self.df[f'{block}' + '_' + outputdict[output] + ' [mean]_pymod'] = self.df[
+                        self.df[f'{block}' + '_Total_' + outputdict[output] + ' [mean]_pymod'] = self.df[
                             [i for i in self.df.columns
                              if block.lower() in i.lower() and output in i and '_pymod' not in i]
                         ].mean(axis=1)
         if any('building' in i for i in level):
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
-                    self.df['Building_' + outputdict[output] + ' [summed]_pymod'] = self.df[
+                    self.df['Building_Total_' + outputdict[output] + ' [summed]_pymod'] = self.df[
                         [i for i in self.df.columns
                          if output in i and '_pymod' not in i]
                     ].sum(axis=1)
                 if any('mean' in j for j in level_sum_or_mean):
-                    self.df['Building_' + outputdict[output] + ' [mean]_pymod'] = self.df[
+                    self.df['Building_Total_' + outputdict[output] + ' [mean]_pymod'] = self.df[
                         [i for i in self.df.columns
                          if output in i and '_pymod' not in i]
                     ].mean(axis=1)
+
+        if normalised_energy_units:
+            for i in self.df.columns:
+                if '[W]' in i or '(Wh)' in i:
+                    for j in hvacBZlist_colon:
+                        if j in i:
+                            self.df[i] = self.df[i] / self.df[
+                                [i for i in self.df.columns
+                                 if 'Zone Floor Area' in i
+                                 and j.lower() in i.lower()][0]]
+                    for k in block_list:
+                        if k+'_Total_' in i:
+                            self.df[i] = self.df[i] / self.df[
+                                [i for i in self.df.columns
+                                 if 'Zone Floor Area' in i
+                                 and k.lower()+'_Total_'.lower() in i.lower()][0]]
+                    if 'Building_Total_' in i:
+                        self.df[i] = self.df[i] / self.df[
+                            [i for i in self.df.columns
+                             if 'Zone Floor Area' in i
+                             and 'Building_Total_'.lower() in i.lower()][0]]
+
+            normUnitsDict = {}
+
+            for i in self.df.columns:
+                if '(Wh)' in i:
+                    temp = {i: i.replace('(Wh)', '(Wh/m2)')}
+                    normUnitsDict.update(temp)
+
+            self.df = self.df.rename(columns=normUnitsDict)
 
         self.df.set_axis(
             labels=[c[:-6] if c.endswith('_pymod') else c for c in self.df],
@@ -258,7 +314,6 @@ class Table:
             self.df.loc[i, 'EPW_Year'] = np.nan
 
         if match_cities:
-            # todo add argument to match cities and countries or not; by default not (False), because it takes time
             package_cities = datapackage.Package('https://datahub.io/core/world-cities/datapackage.json')
             package_countries = datapackage.Package('https://datahub.io/core/country-list/datapackage.json')
 
