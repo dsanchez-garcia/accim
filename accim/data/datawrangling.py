@@ -6,7 +6,8 @@ class Table:
                  standard_outputs: bool = None,
                  level=None,
                  level_sum_or_mean=None,
-                 match_cities: bool = False):
+                 match_cities: bool = False,
+                 normalised_energy_units: bool = False):
         if level_sum_or_mean is None:
             level_sum_or_mean = []
         if level is None:
@@ -18,6 +19,9 @@ class Table:
         import datapackage
         import glob
         import numpy as np
+
+        self.frequency = frequency
+        self.normalised_energy_units = normalised_energy_units
 
         # todo check if glob.glob works with in terms of package, if not switch back to sorted
         # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
@@ -116,8 +120,9 @@ class Table:
         OpTempColumn = [i for i in self.df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
         occBZlist_colon = [i.split(' ')[0][:-5] for i in OpTempColumn]
         occBZlist_colon = list(dict.fromkeys(occBZlist_colon))
+        occBZlist_underscore = [i.replace(':', '_') for i in occBZlist_colon]
 
-        hvacBZlist_colon = [i.split(' ')[0]
+        self.hvacBZlist_colon = [i.split(' ')[0]
                             for i
                             in [i
                                 for i
@@ -126,18 +131,41 @@ class Table:
                                 ]
                             ]
 
-        hvacBZlist_colon = list(dict.fromkeys(hvacBZlist_colon))
+        self.hvacBZlist_colon = list(dict.fromkeys(self.hvacBZlist_colon))
+        hvacBZlist_underscore = [i.replace(':', '_') for i in self.hvacBZlist_colon]
 
-        block_list = [i.split(':')[0] for i in occBZlist_colon]
-        block_list = list(dict.fromkeys(block_list))
+        self.block_list = [i.split(':')[0] for i in occBZlist_colon]
+        self.block_list = list(dict.fromkeys(self.block_list))
+
+        renamezonesdict = {}
+        for i in range(len(occBZlist_underscore)):
+            for j in self.df.columns:
+                if occBZlist_underscore[i].lower() in j.lower():
+                    temp = {j: j.replace(occBZlist_underscore[i], occBZlist_colon[i])}
+                    renamezonesdict.update(temp)
+
+        self.df = self.df.rename(columns=renamezonesdict)
+
+        for i in self.df.columns:
+            if 'VRF OUTDOOR UNIT' in i:
+                self.df[i] = self.df[i]/3600
+
+        renamedict = {}
+
+        for i in self.df.columns:
+            if 'VRF OUTDOOR UNIT' in i:
+                temp = {i: i.replace('[J]', '[W]')}
+                renamedict.update(temp)
+
+        self.df = self.df.rename(columns=renamedict)
 
         BZoutputDict = {
-            'VRF INDOOR UNIT': 'Total Energy Demand (W)',
-            'VRF OUTDOOR UNIT': 'Total Energy Consumption (J)'
+            'VRF INDOOR UNIT': 'Total Energy Demand (Wh)',
+            'VRF OUTDOOR UNIT': 'Total Energy Consumption (Wh)'
         }
 
         for output in BZoutputDict:
-            for block_zone in hvacBZlist_colon:
+            for block_zone in self.hvacBZlist_colon:
                 self.df[f'{block_zone}' + '_' + BZoutputDict[output] + ' [summed]_pymod'] = self.df[
                     [i for i in self.df.columns
                      if block_zone.lower() in i.lower() and output in i and '_pymod' not in i]
@@ -153,41 +181,71 @@ class Table:
             'Ventilation Hours': 'Ventilation Hours (h)',
             'AFN Zone Infiltration Volume': 'AFN Zone Infiltration Volume (m3)',
             'AFN Zone Infiltration Air Change Rate': 'AFN Zone Infiltration Air Change Rate (ach)',
-            'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand (Cooling Coil Total Cooling Rate) (W)',
-            'Heating Coil Heating Rate': 'Heating Energy Demand (Heating Coil Heating Rate) (W)',
-            'VRF Heat Pump Cooling Electricity Energy': 'Cooling Energy Consumption (VRF Heat Pump Cooling Electricity Energy) (J)',
-            'VRF Heat Pump Heating Electricity Energy': 'Heating Energy Consumption (VRF Heat Pump Heating Electricity Energy) (J)',
-            'Coil': 'Total Energy Demand (W)',
-            'VRF OUTDOOR UNIT': 'Total Energy Consumption (J)',
+            'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand (Cooling Coil Total Cooling Rate) (Wh)',
+            'Heating Coil Heating Rate': 'Heating Energy Demand (Heating Coil Heating Rate) (Wh)',
+            'VRF Heat Pump Cooling Electricity Energy': 'Cooling Energy Consumption (VRF Heat Pump Cooling Electricity Energy) (Wh)',
+            'VRF Heat Pump Heating Electricity Energy': 'Heating Energy Consumption (VRF Heat Pump Heating Electricity Energy) (Wh)',
+            'Coil': 'Total Energy Demand (Wh)',
+            'VRF OUTDOOR UNIT': 'Total Energy Consumption (Wh)',
             'Zone Air Volume': 'Zone Air Volume (m3)',
             'Zone Floor Area': 'Zone Floor Area (m2)'
             }
 
         if any('block' in i for i in level):
             for output in outputdict:
-                for block in block_list:
+                for block in self.block_list:
                     if any('sum' in j for j in level_sum_or_mean):
-                        self.df[f'{block}' + '_' + outputdict[output] + ' [summed]_pymod'] = self.df[
+                        self.df[f'{block}' + '_Total_' + outputdict[output] + ' [summed]_pymod'] = self.df[
                             [i for i in self.df.columns
                              if block.lower() in i.lower() and output in i and '_pymod' not in i]
                         ].sum(axis=1)
                     if any('mean' in j for j in level_sum_or_mean):
-                        self.df[f'{block}' + '_' + outputdict[output] + ' [mean]_pymod'] = self.df[
+                        self.df[f'{block}' + '_Total_' + outputdict[output] + ' [mean]_pymod'] = self.df[
                             [i for i in self.df.columns
                              if block.lower() in i.lower() and output in i and '_pymod' not in i]
                         ].mean(axis=1)
         if any('building' in i for i in level):
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
-                    self.df['Building_' + outputdict[output] + ' [summed]_pymod'] = self.df[
+                    self.df['Building_Total_' + outputdict[output] + ' [summed]_pymod'] = self.df[
                         [i for i in self.df.columns
                          if output in i and '_pymod' not in i]
                     ].sum(axis=1)
                 if any('mean' in j for j in level_sum_or_mean):
-                    self.df['Building_' + outputdict[output] + ' [mean]_pymod'] = self.df[
+                    self.df['Building_Total_' + outputdict[output] + ' [mean]_pymod'] = self.df[
                         [i for i in self.df.columns
                          if output in i and '_pymod' not in i]
                     ].mean(axis=1)
+
+        if normalised_energy_units:
+            for i in self.df.columns:
+                if '[W]' in i or '(Wh)' in i:
+                    for j in self.hvacBZlist_colon:
+                        if j in i:
+                            self.df[i] = self.df[i] / self.df[
+                                [i for i in self.df.columns
+                                 if 'Zone Floor Area' in i
+                                 and j.lower() in i.lower()][0]]
+                    for k in self.block_list:
+                        if k+'_Total_' in i:
+                            self.df[i] = self.df[i] / self.df[
+                                [i for i in self.df.columns
+                                 if 'Zone Floor Area' in i
+                                 and k.lower()+'_Total_'.lower() in i.lower()][0]]
+                    if 'Building_Total_' in i:
+                        self.df[i] = self.df[i] / self.df[
+                            [i for i in self.df.columns
+                             if 'Zone Floor Area' in i
+                             and 'Building_Total_'.lower() in i.lower()][0]]
+
+            normUnitsDict = {}
+
+            for i in self.df.columns:
+                if '(Wh)' in i:
+                    temp = {i: i.replace('(Wh)', '(Wh/m2)')}
+                    normUnitsDict.update(temp)
+
+            self.df = self.df.rename(columns=normUnitsDict)
 
         self.df.set_axis(
             labels=[c[:-6] if c.endswith('_pymod') else c for c in self.df],
@@ -258,7 +316,6 @@ class Table:
             self.df.loc[i, 'EPW_Year'] = np.nan
 
         if match_cities:
-            # todo add argument to match cities and countries or not; by default not (False), because it takes time
             package_cities = datapackage.Package('https://datahub.io/core/world-cities/datapackage.json')
             package_countries = datapackage.Package('https://datahub.io/core/country-list/datapackage.json')
 
@@ -361,3 +418,133 @@ class Table:
 
     def returndf(self):
         return self.df
+
+    def energy_demand_table(self,
+                            var_to_gather: str = None,
+                            baseline: str = None):
+
+        import numpy as np
+
+        enDemCols = [col for col in self.df.columns if 'Cooling Coil Total Cooling Rate' in col
+                     or 'Heating Coil Heating Rate' in col
+                     or '_Total Energy Demand' in col
+                     or '_Total_Cooling Energy Demand' in col
+                     or '_Total_Heating Energy Demand' in col]
+
+        indexcols = [
+            'Model',
+            'Adaptive Standard',
+            'Category',
+            'Comfort mode',
+            'HVAC mode',
+            'Ventilation control',
+            'VSToffset',
+            'MinOToffset',
+            'MaxWindSpeed',
+            'ASTtol',
+            'EPW',
+            'EPW_CountryCode',
+            'EPW_Scenario',
+            'EPW_Year',
+            'EPW_City_or_subcountry',
+            'Source',
+            'col_to_pivot'
+        ]
+        if 'monthly' in self.frequency:
+            indexcols.append('Month')
+        if 'daily' in self.frequency:
+            indexcols.append('Day')
+        if 'hourly' in self.frequency:
+            indexcols.append('Hour')
+        if 'timestep' in self.frequency:
+            indexcols.append('Minute')
+
+        # var_to_gather = 'Adaptive Standard'
+
+        self.df['col_to_pivot'] = 'temp'
+        orig_indexcols = indexcols
+
+        self.enDemDf = self.df[indexcols + enDemCols]
+
+        if 'Month' in self.enDemDf.columns:
+            self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather] +
+                                       '_'
+                                       + self.enDemDf['Month'].astype(str) +
+                                       '_Month')
+        else:
+            self.enDemDf['col_to_pivot'] = self.enDemDf[var_to_gather]
+
+        self.df = self.df.drop('col_to_pivot', axis=1)
+
+        self.enDemDf = self.enDemDf.pivot_table(
+            index=indexcols.remove('col_to_pivot'),
+            columns='col_to_pivot',
+            values=enDemCols,
+            aggfunc=np.sum,
+            fill_value=0)
+
+        # baseline = 'ASHRAE55'
+        var_to_gather_values = list(dict.fromkeys(self.df[var_to_gather]))
+        other_than_baseline = list(set(var_to_gather_values) - set([baseline]))
+
+        # sumando mensuales para hacer runperiod
+
+        if 'Month' in self.df.columns:
+            for i in var_to_gather_values:
+                self.enDemDf[f'{i}_Runperiod_Total'] = self.enDemDf[
+                    [j for j in self.enDemDf.columns
+                     if i in j]
+                ].sum(axis=1)
+
+            for j in other_than_baseline:
+                for i in list(dict.fromkeys(self.df['Month'])):
+                    self.enDemDf[f'1-({baseline}/{j})_{i}_Month'] = (
+                            1-
+                            (self.enDemDf[j + f'_{i}_Month'] / self.enDemDf[baseline + f'_{i}_Month'])
+                    )
+                self.enDemDf[f'1-({baseline}/{j})_Runperiod_Total'] = (
+                        1-
+                        (self.enDemDf[j + '_Runperiod_Total'] / self.enDemDf[baseline + '_Runperiod_Total'])
+                )
+        else:
+            for j in other_than_baseline:
+                self.enDemDf[f'1-({baseline}/{j})'] = (
+                        1 -
+                        (self.enDemDf[j] / self.enDemDf[baseline])
+                )
+
+        renametabledict = {}
+        if self.normalised_energy_units:
+            energy_units = '(Wh/m2)'
+        else:
+            energy_units = '(Wh)'
+
+        for i in self.enDemDf.index:
+            for j in ['Heating', 'Cooling', 'Total']:
+                for block in self.block_list:
+                    if block+'_Total_'+j in i:
+                        if '[summed]' in i:
+                            temp = {i: f'{block}_Total_{j} Energy Demand {energy_units} [summed]'}
+                            renametabledict.update(temp)
+                        if '[mean]' in i:
+                            temp = {i: f'{block}_Total_{j} Energy Demand {energy_units} [mean]'}
+                            renametabledict.update(temp)
+                if 'Building_Total_' + j in i:
+                    if '[summed]' in i:
+                        temp = {i: f'Building_Total_{j} Energy Demand {energy_units} [summed]'}
+                        renametabledict.update(temp)
+                    if '[mean]' in i:
+                        temp = {i: f'Building_Total_{j} Energy Demand {energy_units} [mean]'}
+                        renametabledict.update(temp)
+            for k in self.hvacBZlist_colon:
+                if 'Total Cooling Rate'.lower() in i.lower() and k.lower() in i.lower():
+                    temp = {i: f'{k}_Cooling Energy Demand {energy_units}'}
+                    renametabledict.update(temp)
+                if 'Heating Rate'.lower() in i.lower() and k.lower() in i.lower():
+                    temp = {i: f'{k}_Heating Energy Demand {energy_units}'}
+                    renametabledict.update(temp)
+                if 'Total Energy Demand'.lower() in i.lower() and k.lower() in i.lower():
+                    temp = {i: f'{k}_Total Energy Demand {energy_units}'}
+                    renametabledict.update(temp)
+
+        self.enDemDf = self.enDemDf.rename(index=renametabledict)
