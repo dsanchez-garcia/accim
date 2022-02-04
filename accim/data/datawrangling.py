@@ -420,8 +420,12 @@ class Table:
         return self.df
 
     def energy_demand_table(self,
-                            var_to_gather: str = None,
+                            stages_no: int = None,
+                            var_to_gather_1: str = None,
+                            var_to_gather_2: str = None,
+                            var_to_gather_3: str = None,
                             baseline: str = None):
+        # todo easy-use mode (accim.data to show the var_to_gather available and the baselines available depending on the input data)
 
         import numpy as np
 
@@ -459,22 +463,53 @@ class Table:
         if 'timestep' in self.frequency:
             indexcols.append('Minute')
 
-        # var_to_gather = 'Adaptive Standard'
+        # var_to_gather_1 = 'Adaptive Standard'
 
         self.df['col_to_pivot'] = 'temp'
         orig_indexcols = indexcols
 
         self.enDemDf = self.df[indexcols + enDemCols]
 
-        if 'Month' in self.enDemDf.columns:
-            self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather] +
-                                       '_'
-                                       + self.enDemDf['Month'].astype(str) +
-                                       '_Month')
-        else:
-            self.enDemDf['col_to_pivot'] = self.enDemDf[var_to_gather]
+        if stages_no == 1:
+            if 'Month' in self.enDemDf.columns:
+                self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather_1] +
+                                           '_' +
+                                           self.enDemDf['Month'].astype(str) +
+                                           '_Month')
+            else:
+                self.enDemDf['col_to_pivot'] = self.enDemDf[var_to_gather_1]
+        elif stages_no == 2:
+            if 'Month' in self.enDemDf.columns:
+                self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather_1] +
+                                           '_' +
+                                           self.enDemDf[var_to_gather_2] +
+                                           '_' +
+                                           self.enDemDf['Month'].astype(str) +
+                                           '_Month')
+            else:
+                self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather_1] +
+                                            '_' +
+                                           self.enDemDf[var_to_gather_2]
+                                           )
+        elif stages_no == 3:
+            if 'Month' in self.enDemDf.columns:
+                self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather_1] +
+                                           '_' +
+                                           self.enDemDf[var_to_gather_2] +
+                                           '_' +
+                                           self.enDemDf[var_to_gather_3] +
+                                           '_' +
+                                           self.enDemDf['Month'].astype(str) +
+                                           '_Month')
+            else:
+                self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather_1] +
+                                            '_' +
+                                           self.enDemDf[var_to_gather_2] +
+                                           '_' +
+                                           self.enDemDf[var_to_gather_3]
+                                           )
 
-        self.df = self.df.drop('col_to_pivot', axis=1)
+        self.df['col_to_pivot'] = self.enDemDf['col_to_pivot']
 
         self.enDemDf = self.enDemDf.pivot_table(
             index=indexcols.remove('col_to_pivot'),
@@ -484,8 +519,10 @@ class Table:
             fill_value=0)
 
         # baseline = 'ASHRAE55'
-        var_to_gather_values = list(dict.fromkeys(self.df[var_to_gather]))
+        var_to_gather_values = list(dict.fromkeys(self.df['col_to_pivot']))
         other_than_baseline = list(set(var_to_gather_values) - set([baseline]))
+
+        self.df = self.df.drop('col_to_pivot', axis=1)
 
         # sumando mensuales para hacer runperiod
 
