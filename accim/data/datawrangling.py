@@ -419,13 +419,12 @@ class Table:
     def returndf(self):
         return self.df
 
+
     def energy_demand_table(self,
-                            stages_no: int = None,
-                            var_to_gather_1: str = None,
-                            var_to_gather_2: str = None,
-                            var_to_gather_3: str = None,
+                            vars_to_gather=None,
                             baseline: str = None):
-        # todo easy-use mode (accim.data to show the var_to_gather available and the baselines available depending on the input data)
+        if vars_to_gather is None:
+            vars_to_gather = []
 
         import numpy as np
 
@@ -463,51 +462,37 @@ class Table:
         if 'timestep' in self.frequency:
             indexcols.append('Minute')
 
-        # var_to_gather_1 = 'Adaptive Standard'
-
         self.df['col_to_pivot'] = 'temp'
-        orig_indexcols = indexcols
+
+        available_vars_to_gather = [
+            'Model',
+            'Adaptive Standard',
+            'Category',
+            'Comfort mode',
+            'HVAC mode',
+            'Ventilation control',
+            'VSToffset',
+            'MinOToffset',
+            'MaxWindSpeed',
+            'ASTtol',
+            'EPW'
+            ]
 
         self.enDemDf = self.df[indexcols + enDemCols]
 
-        if stages_no == 1:
-            if 'Month' in self.enDemDf.columns:
-                self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather_1] +
-                                           '_' +
-                                           self.enDemDf['Month'].astype(str) +
-                                           '_Month')
-            else:
-                self.enDemDf['col_to_pivot'] = self.enDemDf[var_to_gather_1]
-        elif stages_no == 2:
-            if 'Month' in self.enDemDf.columns:
-                self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather_1] +
-                                           '_' +
-                                           self.enDemDf[var_to_gather_2] +
-                                           '_' +
-                                           self.enDemDf['Month'].astype(str) +
-                                           '_Month')
-            else:
-                self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather_1] +
-                                            '_' +
-                                           self.enDemDf[var_to_gather_2]
-                                           )
-        elif stages_no == 3:
-            if 'Month' in self.enDemDf.columns:
-                self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather_1] +
-                                           '_' +
-                                           self.enDemDf[var_to_gather_2] +
-                                           '_' +
-                                           self.enDemDf[var_to_gather_3] +
-                                           '_' +
-                                           self.enDemDf['Month'].astype(str) +
-                                           '_Month')
-            else:
-                self.enDemDf['col_to_pivot'] = (self.enDemDf[var_to_gather_1] +
-                                            '_' +
-                                           self.enDemDf[var_to_gather_2] +
-                                           '_' +
-                                           self.enDemDf[var_to_gather_3]
-                                           )
+        while not(all(elem in available_vars_to_gather for elem in vars_to_gather)) or len(vars_to_gather) != len(set(vars_to_gather)):
+            print('Some of the variables to be gathered are not available or are duplicated:')
+            print(vars_to_gather)
+            print('The list of available variables to be gathered is:')
+            print(available_vars_to_gather)
+            vars_to_gather = list(str(var) for var in input("Enter the variables to be gathered separated by semicolon: ").split(';'))
+
+        if 'Month' in self.enDemDf.columns:
+            self.enDemDf['col_to_pivot'] = (self.enDemDf[vars_to_gather].agg('['.join, axis=1) +
+                                       self.enDemDf['Month'].astype(str) +
+                                       '[Month')
+        else:
+            self.enDemDf['col_to_pivot'] = self.enDemDf[vars_to_gather].agg('['.join, axis=1)
 
         self.df['col_to_pivot'] = self.enDemDf['col_to_pivot']
 
@@ -520,6 +505,12 @@ class Table:
 
         # baseline = 'ASHRAE55'
         var_to_gather_values = list(dict.fromkeys(self.df['col_to_pivot']))
+
+        if baseline not in var_to_gather_values:
+            print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
+            print(var_to_gather_values)
+            baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
+
         other_than_baseline = list(set(var_to_gather_values) - set([baseline]))
 
         self.df = self.df.drop('col_to_pivot', axis=1)

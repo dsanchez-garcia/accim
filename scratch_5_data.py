@@ -7,14 +7,14 @@ z = Table(frequency='runperiod',
           level_sum_or_mean=['sum'],
           match_cities=False
           )
-# todo list of possible var_to_gather_1 and baseline
-z.energy_demand_table(stages_no=2,
-                      var_to_gather_1='Adaptive Standard',
-                      var_to_gather_2='Category',
-                      baseline='CTE_X')
+
+z.energy_demand_table(vars_to_gather=['Model',
+                                      'Adaptive Standard',
+                                      'Comfort mode',
+                                      'Category'])
 
 z.enDemDf.to_excel('export_test_enerdem.xlsx')
-z.enDemDf
+# z.enDemDf
 # print(*z.returndf().columns, sep='\n')
 
 # z.df['EPW']
