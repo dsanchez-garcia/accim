@@ -8,13 +8,16 @@ z = Table(frequency='runperiod',
           match_cities=False
           )
 
-z.energy_demand_table(vars_to_gather=['Model',
-                                      'Adaptive Standard',
-                                      'Comfort mode',
-                                      'Category'])
+z.wrangled_table(
+    vars_to_gather=[
+        'Adaptive Standard',
+        'Category'
+        ],
+    type_of_table='energy demand',
+    comparison_cols=['absolute', 'relative'])
 
-z.enDemDf.to_excel('export_test_enerdem.xlsx')
-# z.enDemDf
+z.wrangled_df.to_excel('export_test_wrangled.xlsx')
+# z.wrangled_df
 # print(*z.returndf().columns, sep='\n')
 
 # z.df['EPW']

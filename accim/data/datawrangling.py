@@ -118,9 +118,9 @@ class Table:
         self.df = pd.concat(summed_dataframes)
 
         OpTempColumn = [i for i in self.df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
-        occBZlist_colon = [i.split(' ')[0][:-5] for i in OpTempColumn]
-        occBZlist_colon = list(dict.fromkeys(occBZlist_colon))
-        occBZlist_underscore = [i.replace(':', '_') for i in occBZlist_colon]
+        self.occBZlist_colon = [i.split(' ')[0][:-5] for i in OpTempColumn]
+        self.occBZlist_colon = list(dict.fromkeys(self.occBZlist_colon))
+        occBZlist_underscore = [i.replace(':', '_') for i in self.occBZlist_colon]
 
         self.hvacBZlist_colon = [i.split(' ')[0]
                             for i
@@ -134,14 +134,14 @@ class Table:
         self.hvacBZlist_colon = list(dict.fromkeys(self.hvacBZlist_colon))
         hvacBZlist_underscore = [i.replace(':', '_') for i in self.hvacBZlist_colon]
 
-        self.block_list = [i.split(':')[0] for i in occBZlist_colon]
+        self.block_list = [i.split(':')[0] for i in self.occBZlist_colon]
         self.block_list = list(dict.fromkeys(self.block_list))
 
         renamezonesdict = {}
         for i in range(len(occBZlist_underscore)):
             for j in self.df.columns:
                 if occBZlist_underscore[i].lower() in j.lower():
-                    temp = {j: j.replace(occBZlist_underscore[i], occBZlist_colon[i])}
+                    temp = {j: j.replace(occBZlist_underscore[i], self.occBZlist_colon[i])}
                     renamezonesdict.update(temp)
 
         self.df = self.df.rename(columns=renamezonesdict)
@@ -420,19 +420,41 @@ class Table:
         return self.df
 
 
-    def energy_demand_table(self,
-                            vars_to_gather=None,
-                            baseline: str = None):
+    def wrangled_table(self,
+                       vars_to_gather=None,
+                       baseline: str = None,
+                       type_of_table: str = None,
+                       comparison_cols=None):
+        """
+
+        :param vars_to_gather: A list of the variables to be transposed from rows to columns.
+        :param baseline: The already transposed column you want to use as a baseline for comparisons.
+        If ommited, you will be asked which one to use.
+        :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours'.
+        :param comparison_cols: 'absolute' to get the difference or 'relative' to get the percentage of reduction
+        """
         if vars_to_gather is None:
             vars_to_gather = []
+        if comparison_cols is None:
+            comparison_cols = []
 
         import numpy as np
 
-        enDemCols = [col for col in self.df.columns if 'Cooling Coil Total Cooling Rate' in col
-                     or 'Heating Coil Heating Rate' in col
-                     or '_Total Energy Demand' in col
-                     or '_Total_Cooling Energy Demand' in col
-                     or '_Total_Heating Energy Demand' in col]
+        if type_of_table == 'energy demand':
+            val_cols = [col for col in self.df.columns if 'Cooling Coil Total Cooling Rate' in col
+                        or 'Heating Coil Heating Rate' in col
+                        or '_Total Energy Demand' in col
+                        or '_Total_Cooling Energy Demand' in col
+                        or '_Total_Heating Energy Demand' in col]
+        elif type_of_table == 'comfort hours':
+            val_cols = [col for col in self.df.columns if 'Comfortable Hours_No Applicability' in col
+                        or 'Comfortable Hours_Applicability' in col
+                        or 'Discomfortable Applicable Hot Hours' in col
+                        or 'Discomfortable Applicable Cold Hours' in col
+                        or 'Discomfortable Non Applicable Hot Hours' in col
+                        or 'Discomfortable Non Applicable Cold Hours' in col
+                        or 'Ventilation Hours' in col]
+        
 
         indexcols = [
             'Model',
@@ -478,7 +500,7 @@ class Table:
             'EPW'
             ]
 
-        self.enDemDf = self.df[indexcols + enDemCols]
+        self.wrangled_df = self.df[indexcols + val_cols]
 
         while not(all(elem in available_vars_to_gather for elem in vars_to_gather)) or len(vars_to_gather) != len(set(vars_to_gather)):
             print('Some of the variables to be gathered are not available or are duplicated:')
@@ -487,19 +509,19 @@ class Table:
             print(available_vars_to_gather)
             vars_to_gather = list(str(var) for var in input("Enter the variables to be gathered separated by semicolon: ").split(';'))
 
-        if 'Month' in self.enDemDf.columns:
-            self.enDemDf['col_to_pivot'] = (self.enDemDf[vars_to_gather].agg('['.join, axis=1) +
-                                       self.enDemDf['Month'].astype(str) +
+        if 'Month' in self.wrangled_df.columns:
+            self.wrangled_df['col_to_pivot'] = (self.wrangled_df[vars_to_gather].agg('['.join, axis=1) +
+                                                self.wrangled_df['Month'].astype(str) +
                                        '[Month')
         else:
-            self.enDemDf['col_to_pivot'] = self.enDemDf[vars_to_gather].agg('['.join, axis=1)
+            self.wrangled_df['col_to_pivot'] = self.wrangled_df[vars_to_gather].agg('['.join, axis=1)
 
-        self.df['col_to_pivot'] = self.enDemDf['col_to_pivot']
+        self.df['col_to_pivot'] = self.wrangled_df['col_to_pivot']
 
-        self.enDemDf = self.enDemDf.pivot_table(
+        self.wrangled_df = self.wrangled_df.pivot_table(
             index=indexcols.remove('col_to_pivot'),
             columns='col_to_pivot',
-            values=enDemCols,
+            values=val_cols,
             aggfunc=np.sum,
             fill_value=0)
 
@@ -519,60 +541,94 @@ class Table:
 
         if 'Month' in self.df.columns:
             for i in var_to_gather_values:
-                self.enDemDf[f'{i}_Runperiod_Total'] = self.enDemDf[
-                    [j for j in self.enDemDf.columns
+                self.wrangled_df[f'{i}_Runperiod_Total'] = self.wrangled_df[
+                    [j for j in self.wrangled_df.columns
                      if i in j]
                 ].sum(axis=1)
 
             for j in other_than_baseline:
                 for i in list(dict.fromkeys(self.df['Month'])):
-                    self.enDemDf[f'1-({baseline}/{j})_{i}_Month'] = (
-                            1-
-                            (self.enDemDf[j + f'_{i}_Month'] / self.enDemDf[baseline + f'_{i}_Month'])
+                    if any('relative' in k for k in comparison_cols):
+                        self.wrangled_df[f'1-({baseline}/{j})_{i}_Month'] = (
+                                1 -
+                                (self.wrangled_df[j + f'_{i}_Month'] / self.wrangled_df[baseline + f'_{i}_Month'])
+                        )
+                    if any('absolute' in k for k in comparison_cols):
+                        self.wrangled_df[f'{baseline}-{j}_{i}_Month'] = (
+                                self.wrangled_df[baseline + f'_{i}_Month'] - self.wrangled_df[j + f'_{i}_Month']
+                        )
+                if any('relative' in k for k in comparison_cols):
+                    self.wrangled_df[f'1-({baseline}/{j})_Runperiod_Total'] = (
+                            1 -
+                            (self.wrangled_df[j + '_Runperiod_Total'] / self.wrangled_df[baseline + '_Runperiod_Total'])
                     )
-                self.enDemDf[f'1-({baseline}/{j})_Runperiod_Total'] = (
-                        1-
-                        (self.enDemDf[j + '_Runperiod_Total'] / self.enDemDf[baseline + '_Runperiod_Total'])
-                )
+                if any('absolute' in k for k in comparison_cols):
+                    self.wrangled_df[f'{baseline} - {j}_Runperiod_Total'] = (
+                            self.wrangled_df[baseline + '_Runperiod_Total'] - self.wrangled_df[j + '_Runperiod_Total']
+                    )
         else:
             for j in other_than_baseline:
-                self.enDemDf[f'1-({baseline}/{j})'] = (
-                        1 -
-                        (self.enDemDf[j] / self.enDemDf[baseline])
-                )
+                if any('relative' in k for k in comparison_cols):
+                    self.wrangled_df[f'1-({baseline}/{j})'] = (
+                            1 -
+                            (self.wrangled_df[j] / self.wrangled_df[baseline])
+                    )
+                if any('absolute' in k for k in comparison_cols):
+                    self.wrangled_df[f'{baseline} - {j}'] = (
+                            self.wrangled_df[baseline] - self.wrangled_df[j]
+                    )
+        
+        if type_of_table == 'comfort hours':
+            renametabledict = {}
+            comfhours_rename_list = [
+                'Comfortable Hours_Applicability',
+                'Comfortable Hours_No Applicability',
+                'Discomfortable Applicable Hot Hours',
+                'Discomfortable Applicable Cold Hours',
+                'Discomfortable Non Applicable Hot Hours',
+                'Discomfortable Non Applicable Cold Hours',
+                'Ventilation Hours'
+            ]
+            for row in self.wrangled_df.index:
+                for block_zone in self.occBZlist_colon:
+                    for hour in comfhours_rename_list:
+                        if 'EMS:' in row and hour in row and block_zone in row:
+                            temp = {row: f'{block_zone}_{hour} (h)'}
+                            renametabledict.update(temp)
 
-        renametabledict = {}
-        if self.normalised_energy_units:
-            energy_units = '(Wh/m2)'
-        else:
-            energy_units = '(Wh)'
+        if type_of_table == 'energy demand':
+            renametabledict = {}
+            if self.normalised_energy_units:
+                energy_units = '(Wh/m2)'
+            else:
+                energy_units = '(Wh)'
 
-        for i in self.enDemDf.index:
-            for j in ['Heating', 'Cooling', 'Total']:
-                for block in self.block_list:
-                    if block+'_Total_'+j in i:
+            for i in self.wrangled_df.index:
+                for j in ['Heating', 'Cooling', 'Total']:
+                    for block in self.block_list:
+                        if block+'_Total_'+j in i:
+                            if '[summed]' in i:
+                                temp = {i: f'{block}_Total_{j} Energy Demand {energy_units} [summed]'}
+                                renametabledict.update(temp)
+                            if '[mean]' in i:
+                                temp = {i: f'{block}_Total_{j} Energy Demand {energy_units} [mean]'}
+                                renametabledict.update(temp)
+                    if 'Building_Total_' + j in i:
                         if '[summed]' in i:
-                            temp = {i: f'{block}_Total_{j} Energy Demand {energy_units} [summed]'}
+                            temp = {i: f'Building_Total_{j} Energy Demand {energy_units} [summed]'}
                             renametabledict.update(temp)
                         if '[mean]' in i:
-                            temp = {i: f'{block}_Total_{j} Energy Demand {energy_units} [mean]'}
+                            temp = {i: f'Building_Total_{j} Energy Demand {energy_units} [mean]'}
                             renametabledict.update(temp)
-                if 'Building_Total_' + j in i:
-                    if '[summed]' in i:
-                        temp = {i: f'Building_Total_{j} Energy Demand {energy_units} [summed]'}
+                for k in self.hvacBZlist_colon:
+                    if 'Total Cooling Rate'.lower() in i.lower() and k.lower() in i.lower():
+                        temp = {i: f'{k}_Cooling Energy Demand {energy_units}'}
                         renametabledict.update(temp)
-                    if '[mean]' in i:
-                        temp = {i: f'Building_Total_{j} Energy Demand {energy_units} [mean]'}
+                    if 'Heating Rate'.lower() in i.lower() and k.lower() in i.lower():
+                        temp = {i: f'{k}_Heating Energy Demand {energy_units}'}
                         renametabledict.update(temp)
-            for k in self.hvacBZlist_colon:
-                if 'Total Cooling Rate'.lower() in i.lower() and k.lower() in i.lower():
-                    temp = {i: f'{k}_Cooling Energy Demand {energy_units}'}
-                    renametabledict.update(temp)
-                if 'Heating Rate'.lower() in i.lower() and k.lower() in i.lower():
-                    temp = {i: f'{k}_Heating Energy Demand {energy_units}'}
-                    renametabledict.update(temp)
-                if 'Total Energy Demand'.lower() in i.lower() and k.lower() in i.lower():
-                    temp = {i: f'{k}_Total Energy Demand {energy_units}'}
-                    renametabledict.update(temp)
+                    if 'Total Energy Demand'.lower() in i.lower() and k.lower() in i.lower():
+                        temp = {i: f'{k}_Total Energy Demand {energy_units}'}
+                        renametabledict.update(temp)
 
-        self.enDemDf = self.enDemDf.rename(index=renametabledict)
+        self.wrangled_df = self.wrangled_df.rename(index=renametabledict)
