@@ -9,10 +9,7 @@ class Table:
                  match_cities: bool = False,
                  normalised_energy_units: bool = False,
                  rename_cols: bool = True,
-                 energy_units_in_kwh: bool = True,
-                 type_of_table: str = None,
-                 custom_cols=None
-                 ):
+                 energy_units_in_kwh: bool = True):
         """
         Generates a table or dataframe using the EnergyPlus simulation results CSV files
         available in the current folder.
@@ -36,17 +33,12 @@ class Table:
         purposes.
         :param energy_units_in_kwh: A bool, can be True or False. If True, energy units will be in kWh or kWh/m2,
         otherwise these will be in Wh or Wh/m2.
-        :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours'.
-        :param custom_cols: A list of strings.
-        The strings will be used as a filter, and the columns that match will be selected.
 
         """
         if level_sum_or_mean is None:
             level_sum_or_mean = []
         if level is None:
             level = []
-        if custom_cols is None:
-            custom_cols = []
 
         # import os
         import pandas as pd
@@ -573,7 +565,67 @@ class Table:
 
             self.df = self.df.rename(columns=all_cols_renamed)
 
-        self.indexcols = [
+    def returndf(self):
+        return self.df
+
+    def wrangled_table(self,
+                       vars_to_gather=None,
+                       baseline: str = None,
+                       type_of_table: str = None,
+                       custom_cols=None,
+                       comparison_cols=None):
+        """
+        Creates a table based on the arguments.
+
+        :param vars_to_gather: A list of the variables to be transposed from rows to columns.
+        :param baseline: The already transposed column you want to use as a baseline for comparisons.
+        If ommited, you will be asked which one to use.
+        :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours'.
+        :param custom_cols: A list of strings.
+        The strings will be used as a filter, and the columns that match will be selected.
+        :param comparison_cols: 'absolute' to get the difference or 'relative' to get the percentage of reduction.
+        """
+        if vars_to_gather is None:
+            vars_to_gather = []
+        if comparison_cols is None:
+            comparison_cols = []
+        if custom_cols is None:
+            custom_cols = []
+
+        import numpy as np
+
+        val_cols = []
+        if type_of_table == 'custom':
+
+            for custom_col in custom_cols:
+                for col in self.df.columns:
+                    if custom_col.lower() in col.lower():
+                        val_cols.append(col)
+        elif type_of_table == 'energy demand':
+            if self.rename_cols:
+                val_cols = [col for col in self.df.columns if
+                            'Total Energy Demand' in col or
+                            'Cooling Energy Demand' in col or
+                            'Heating Energy Demand' in col]
+            else:
+                val_cols = [col for col in self.df.columns if
+                            'Cooling Coil Total Cooling Rate' in col or
+                            'Heating Coil Heating Rate' in col or
+                            'Total Energy Demand' in col]
+        elif type_of_table == 'comfort hours':
+            val_cols = [col for col in self.df.columns if 'Comfortable Hours_No Applicability' in col
+                        or 'Comfortable Hours_Applicability' in col
+                        or 'Discomfortable Applicable Hot Hours' in col
+                        or 'Discomfortable Applicable Cold Hours' in col
+                        or 'Discomfortable Non Applicable Hot Hours' in col
+                        or 'Discomfortable Non Applicable Cold Hours' in col
+                        or 'Ventilation Hours' in col]
+        if len(val_cols) == 0:
+            raise ValueError('You have not selected any column to make the custom table. '
+                             'Please check the columns you want to select. '
+                             'To see the full list of columns, enter print("name of class instance".df.columns)')
+
+        indexcols = [
             'Model',
             'Adaptive Standard',
             'Category',
@@ -590,82 +642,16 @@ class Table:
             'EPW_Year',
             'EPW_City_or_subcountry',
             'Source',
-            # 'col_to_pivot'
+            'col_to_pivot'
         ]
         if 'monthly' in self.frequency:
-            self.indexcols.append('Month')
+            indexcols.append('Month')
         if 'daily' in self.frequency:
-            self.indexcols.append('Day')
+            indexcols.append('Day')
         if 'hourly' in self.frequency:
-            self.indexcols.append('Hour')
+            indexcols.append('Hour')
         if 'timestep' in self.frequency:
-            self.indexcols.append('Minute')
-
-        self.val_cols = []
-        if type_of_table == 'custom':
-            for custom_col in custom_cols:
-                for col in self.df.columns:
-                    if custom_col.lower() in col.lower():
-                        self.val_cols.append(col)
-        elif type_of_table == 'energy demand':
-            if self.rename_cols:
-                self.val_cols = [col for col in self.df.columns if
-                            'Total Energy Demand' in col or
-                            'Cooling Energy Demand' in col or
-                            'Heating Energy Demand' in col]
-            else:
-                self.val_cols = [col for col in self.df.columns if
-                            'Cooling Coil Total Cooling Rate' in col or
-                            'Heating Coil Heating Rate' in col or
-                            'Total Energy Demand' in col]
-        elif type_of_table == 'comfort hours':
-            self.val_cols = [col for col in self.df.columns if 'Comfortable Hours_No Applicability' in col
-                        or 'Comfortable Hours_Applicability' in col
-                        or 'Discomfortable Applicable Hot Hours' in col
-                        or 'Discomfortable Applicable Cold Hours' in col
-                        or 'Discomfortable Non Applicable Hot Hours' in col
-                        or 'Discomfortable Non Applicable Cold Hours' in col
-                        or 'Ventilation Hours' in col]
-        # elif type_of_table == 'all':
-        #     # self.val_cols = list(set(self.df.columns) - set(self.indexcols))
-        #     self.val_cols = []
-        #     for col in self.df.columns:
-        #         if col not in self.indexcols:
-        #             self.val_cols.append(col)
-
-        if type_of_table == 'custom':
-            if len(self.val_cols) == 0:
-                raise ValueError('You have not selected any column to make the custom table. '
-                                 'Please check the columns you want to select. '
-                                 'To see the full list of columns, enter print("name of class instance".df.columns)')
-
-        if not(type_of_table == 'all'):
-            self.df = self.df[self.indexcols + self.val_cols]
-
-
-
-    def returndf(self):
-        return self.df
-
-    def wrangled_table(self,
-                       vars_to_gather=None,
-                       baseline: str = None,
-                       comparison_cols=None):
-        """
-        Creates a table based on the arguments.
-
-        :param vars_to_gather: A list of the variables to be transposed from rows to columns.
-        :param baseline: The already transposed column you want to use as a baseline for comparisons.
-        If ommited, you will be asked which one to use.
-        :param comparison_cols: 'absolute' to get the difference or 'relative' to get the percentage of reduction.
-        """
-        if vars_to_gather is None:
-            vars_to_gather = []
-        if comparison_cols is None:
-            comparison_cols = []
-
-        import numpy as np
-
+            indexcols.append('Minute')
 
         self.df['col_to_pivot'] = 'temp'
 
@@ -683,7 +669,7 @@ class Table:
             'EPW'
             ]
 
-        self.indexcols.append('col_to_pivot')
+        self.wrangled_df = self.df[indexcols + val_cols]
 
         while (not(all(elem in available_vars_to_gather for elem in vars_to_gather))
                or len(vars_to_gather) != len(set(vars_to_gather))):
@@ -695,8 +681,6 @@ class Table:
                                    for var
                                    in input("Enter the variables to be gathered separated by semicolon: ").split(';')))
 
-        self.wrangled_df = self.df
-
         if 'Month' in self.wrangled_df.columns:
             self.wrangled_df['col_to_pivot'] = (self.wrangled_df[vars_to_gather].agg('['.join, axis=1) +
                                                 self.wrangled_df['Month'].astype(str) +
@@ -707,9 +691,9 @@ class Table:
         self.df['col_to_pivot'] = self.wrangled_df['col_to_pivot']
 
         self.wrangled_df = self.wrangled_df.pivot_table(
-            index=self.indexcols.remove('col_to_pivot'),
+            index=indexcols.remove('col_to_pivot'),
             columns='col_to_pivot',
-            values=self.val_cols,
+            values=val_cols,
             aggfunc=np.sum,
             fill_value=0)
 
