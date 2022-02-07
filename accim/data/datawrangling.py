@@ -7,7 +7,31 @@ class Table:
                  level=None,
                  level_sum_or_mean=None,
                  match_cities: bool = False,
-                 normalised_energy_units: bool = False):
+                 normalised_energy_units: bool = False,
+                 rename_cols: bool = True,
+                 energy_units_in_kWh: bool = True):
+        """
+        Generates a table or dataframe using the EnergyPlus simulation results CSV files
+        available in the current folder.
+
+        :param frequency: A list of strings.
+        Strings can be 'timestep', 'hourly', 'daily', 'monthly' and/or 'runperiod'.
+        :param sum_or_mean: A string. Can be 'sum' or 'mean'.
+        Aggregates the rows based on the defined frequency by sum or mean.
+        :param standard_outputs: A bool, can be True or False.
+        Used to consider only standard outputs from accim.
+        :param level: A list of strings. Strings can be 'block' and/or 'building'.
+        Used to create columns with block or building values.
+        :param level_sum_or_mean: A list of strings. Strings can be 'sum' and/or 'mean'.
+        Used to create the columns for levels preciously stated by summing and/or averaging.
+        :param match_cities: A bool, can be True or False.
+        Used to try to match the cities in the EPW file name with actual cities.
+        :param normalised_energy_units: A bool, can be True or False.
+        Used to show Wh or Wh/m2 units.
+        :param rename_cols: A bool, can be True or False.
+        Used to keep the original name of EnergyPlus outputs or rename them for understanding
+        purposes.
+        """
         if level_sum_or_mean is None:
             level_sum_or_mean = []
         if level is None:
@@ -40,7 +64,8 @@ class Table:
             'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
             'EMS:Ventilation Setpoint Temperature [C](Hourly)',
             'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
-            'EMS:Comfortable Hours',
+            'EMS:Comfortable Hours_No Applicability',
+            'EMS:Comfortable Hours_Applicability',
             'EMS:Discomfortable Applicable Hot Hours',
             'EMS:Discomfortable Applicable Cold Hours',
             'EMS:Discomfortable Non Applicable Hot Hours',
@@ -181,10 +206,10 @@ class Table:
             'Ventilation Hours': 'Ventilation Hours (h)',
             'AFN Zone Infiltration Volume': 'AFN Zone Infiltration Volume (m3)',
             'AFN Zone Infiltration Air Change Rate': 'AFN Zone Infiltration Air Change Rate (ach)',
-            'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand (Cooling Coil Total Cooling Rate) (Wh)',
-            'Heating Coil Heating Rate': 'Heating Energy Demand (Heating Coil Heating Rate) (Wh)',
-            'VRF Heat Pump Cooling Electricity Energy': 'Cooling Energy Consumption (VRF Heat Pump Cooling Electricity Energy) (Wh)',
-            'VRF Heat Pump Heating Electricity Energy': 'Heating Energy Consumption (VRF Heat Pump Heating Electricity Energy) (Wh)',
+            'Cooling Coil Total Cooling Rate': 'Cooling Coil Total Cooling Rate (Wh)',
+            'Heating Coil Heating Rate': 'Heating Coil Heating Rate (Wh)',
+            'VRF Heat Pump Cooling Electricity Energy': 'VRF Heat Pump Cooling Electricity Energy (Wh)',
+            'VRF Heat Pump Heating Electricity Energy': 'VRF Heat Pump Heating Electricity Energy (Wh)',
             'Coil': 'Total Energy Demand (Wh)',
             'VRF OUTDOOR UNIT': 'Total Energy Consumption (Wh)',
             'Zone Air Volume': 'Zone Air Volume (m3)',
@@ -246,6 +271,15 @@ class Table:
                     normUnitsDict.update(temp)
 
             self.df = self.df.rename(columns=normUnitsDict)
+
+            normUnitsDict = {}
+
+            for i in df.columns:
+                if '[W]' in i and 'Whole Building:Facility Total HVAC Electricity Demand Rate [W](Hourly)' not in i:
+                    temp = {i: i.replace('[W]', '(Wh/m2)')}
+                    normUnitsDict.update(temp)
+
+            df = df.rename(columns=normUnitsDict)
 
         self.df.set_axis(
             labels=[c[:-6] if c.endswith('_pymod') else c for c in self.df],
@@ -416,6 +450,114 @@ class Table:
         self.df = self.df[cols]
         self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
+        self.rename_cols = rename_cols
+        if rename_cols:
+            renaming_criteria_bz = {
+                'EMS:Comfortable Hours_No Applicability': 'Comfortable Hours_No Applicability (h)',
+                'EMS:Comfortable Hours_Applicability': 'Comfortable Hours_Applicability (h)',
+                'EMS:Discomfortable Applicable Hot Hours': 'Discomfortable Applicable Hot Hours (h)',
+                'EMS:Discomfortable Applicable Cold Hours': 'Discomfortable Applicable Cold Hours (h)',
+                'EMS:Discomfortable Non Applicable Hot Hours': 'Discomfortable Non Applicable Hot Hours (h)',
+                'EMS:Discomfortable Non Applicable Cold Hours': 'Discomfortable Non Applicable Cold Hours (h)',
+                'Zone Air Volume': 'Zone Air Volume (m3)',
+                'Zone Floor Area': 'Zone Floor Area (m2)',
+                'EMS:Ventilation Hours': 'Ventilation Hours (h)',
+                'AFN Zone Infiltration Volume [m3](Hourly)': 'AFN Zone Infiltration Volume (m3)',
+                'AFN Zone Infiltration Air Change Rate [ach](Hourly)': 'AFN Zone Infiltration Air Change Rate (ach)',
+                'Zone Thermostat Operative Temperature [C](Hourly)': 'Zone Thermostat Operative Temperature (°C)',
+                'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)': 'EN16798-1 Running mean outdoor temperature (°C)',
+                # todo falta ashrae
+                'FORSCRIPT_AHST': 'FORSCRIPT_AHST',
+                'FORSCRIPT_ACST': 'FORSCRIPT_ACST',
+                'VRF Heat Pump Cooling Electricity Energy': 'Cooling Energy Consumption',
+                'VRF Heat Pump Heating Electricity Energy': 'Heating Energy Consumption',
+                'Heating Coil Heating Rate': 'Heating Energy Demand',
+                'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand'
+            }
+
+            renaming_criteria = {
+                # 'Date/Time',
+                'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)': 'Site Outdoor Air Drybulb Temperature (°C)',
+                'Environment:Site Wind Speed [m/s](Hourly)': 'Site Wind Speed (m/s)',
+                'EMS:Comfort Temperature [C](Hourly)': 'Comfort Temperature (°C)',
+                'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)': 'Adaptive Cooling Setpoint Temperature (°C)',
+                'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)': 'Adaptive Heating Setpoint Temperature (°C)',
+                'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)': 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+                'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)': 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
+                'EMS:Ventilation Setpoint Temperature [C](Hourly)': 'Ventilation Setpoint Temperature (°C)',
+                'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)': 'Minimum Outdoor Temperature for ventilation (°C)',
+                'Whole Building:Facility Total HVAC Electricity Demand Rate [W](Hourly)': 'Whole Building Facility Total HVAC Electricity Demand Rate (W)',
+            }
+
+            all_cols_renamed = {}
+
+            if normalised_energy_units:
+                if energy_units_in_kWh:
+                    energy_units = '(kWh/m2)'
+                else:
+                    energy_units = '(Wh/m2)'
+            else:
+                if energy_units_in_kWh:
+                    energy_units = '(kWh)'
+                else:
+                    energy_units = '(Wh)'
+
+            for col in self.df.columns:
+                for crit in renaming_criteria_bz:
+                    if '[summed]' not in col:
+                        if crit in col:
+                            for block_zone in self.occBZlist_colon:
+                                if block_zone in col:
+                                    if energy_units in col:
+                                        temp = {col: block_zone + '_' + renaming_criteria_bz[crit] + ' ' + energy_units}
+                                        all_cols_renamed.update(temp)
+                                    else:
+                                        temp = {col: block_zone + '_' + renaming_criteria_bz[crit]}
+                                        all_cols_renamed.update(temp)
+
+            for col in self.df.columns:
+                for crit in renaming_criteria:
+                    if '[summed]' not in col:
+                        if crit in col:
+                            temp = {col: renaming_criteria[crit]}
+                            all_cols_renamed.update(temp)
+
+            renaming_criteria_block = {
+                'VRF Heat Pump Cooling Electricity Energy': 'Cooling Energy Consumption',
+                'VRF Heat Pump Heating Electricity Energy': 'Heating Energy Consumption',
+                'Heating Coil Heating Rate': 'Heating Energy Demand',
+                'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand'
+            }
+
+            for col in self.df.columns:
+                for crit in renaming_criteria_block:
+                    for block in self.block_list:
+                        if block+'_Total_'+crit in col:
+                            temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} [summed]'}
+                            all_cols_renamed.update(temp)
+                    if 'Building_Total_'+crit in col:
+                        temp = {col: f'Building_Total_{renaming_criteria_block[crit]} {energy_units} [summed]'}
+                        all_cols_renamed.update(temp)
+
+            self.df = self.df.rename(columns=all_cols_renamed)
+
+            normUnitsDict = {}
+
+            if energy_units_in_kWh:
+                for i in self.df.columns:
+                    if '(Wh)' in i:
+                        temp = {i: i.replace('(Wh)', '(kWh)')}
+                        normUnitsDict.update(temp)
+                    if '(Wh/m2)' in i:
+                        temp = {i: i.replace('(Wh/m2)', '(kWh/m2)')}
+                        normUnitsDict.update(temp)
+            self.df = self.df.rename(columns=normUnitsDict)
+
+            if energy_units_in_kWh:
+                for col in self.df.columns:
+                    if '(kWh)' in col or '(kWh/m2)' in col:
+                        self.df[col] = self.df[col] / 1000
+
     def returndf(self):
         return self.df
 
@@ -424,28 +566,45 @@ class Table:
                        vars_to_gather=None,
                        baseline: str = None,
                        type_of_table: str = None,
+                       custom_cols=None,
                        comparison_cols=None):
         """
+        Creates a table based on the arguments.
 
         :param vars_to_gather: A list of the variables to be transposed from rows to columns.
         :param baseline: The already transposed column you want to use as a baseline for comparisons.
         If ommited, you will be asked which one to use.
         :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours'.
+        :param custom_cols: A list of strings.
+        The strings will be used as a filter, and the columns that match will be selected.
         :param comparison_cols: 'absolute' to get the difference or 'relative' to get the percentage of reduction
         """
         if vars_to_gather is None:
             vars_to_gather = []
         if comparison_cols is None:
             comparison_cols = []
+        if custom_cols is None:
+            custom_cols = []
 
         import numpy as np
 
-        if type_of_table == 'energy demand':
-            val_cols = [col for col in self.df.columns if 'Cooling Coil Total Cooling Rate' in col
-                        or 'Heating Coil Heating Rate' in col
-                        or '_Total Energy Demand' in col
-                        or '_Total_Cooling Energy Demand' in col
-                        or '_Total_Heating Energy Demand' in col]
+        if type_of_table == 'custom':
+            val_cols = []
+            for custom_col in custom_cols:
+                for col in self.df.columns:
+                    if custom_col.lower() in col.lower():
+                        val_cols.append(col)
+        elif type_of_table == 'energy demand':
+            if self.rename_cols:
+                val_cols = [col for col in self.df.columns if
+                            'Total Energy Demand' in col or
+                            'Cooling Energy Demand' in col or
+                            'Heating Energy Demand' in col]
+            else:
+                val_cols = [col for col in self.df.columns if
+                            'Cooling Coil Total Cooling Rate' in col or
+                            'Heating Coil Heating Rate' in col or
+                            'Total Energy Demand' in col]
         elif type_of_table == 'comfort hours':
             val_cols = [col for col in self.df.columns if 'Comfortable Hours_No Applicability' in col
                         or 'Comfortable Hours_Applicability' in col
@@ -454,7 +613,10 @@ class Table:
                         or 'Discomfortable Non Applicable Hot Hours' in col
                         or 'Discomfortable Non Applicable Cold Hours' in col
                         or 'Ventilation Hours' in col]
-        
+        if len(val_cols) == 0:
+            raise ValueError('You have not selected any column to make the custom table. '
+                  'Please check the columns you want to select. '
+                  'To see the full list of columns, enter print("name of class instance".df.columns)')
 
         indexcols = [
             'Model',
@@ -549,7 +711,7 @@ class Table:
             for j in other_than_baseline:
                 for i in list(dict.fromkeys(self.df['Month'])):
                     if any('relative' in k for k in comparison_cols):
-                        self.wrangled_df[f'1-({baseline}/{j})_{i}_Month'] = (
+                        self.wrangled_df[f'1-({j}/{baseline})_{i}_Month'] = (
                                 1 -
                                 (self.wrangled_df[j + f'_{i}_Month'] / self.wrangled_df[baseline + f'_{i}_Month'])
                         )
@@ -558,7 +720,7 @@ class Table:
                                 self.wrangled_df[baseline + f'_{i}_Month'] - self.wrangled_df[j + f'_{i}_Month']
                         )
                 if any('relative' in k for k in comparison_cols):
-                    self.wrangled_df[f'1-({baseline}/{j})_Runperiod_Total'] = (
+                    self.wrangled_df[f'1-({j}/{baseline})_Runperiod_Total'] = (
                             1 -
                             (self.wrangled_df[j + '_Runperiod_Total'] / self.wrangled_df[baseline + '_Runperiod_Total'])
                     )
@@ -569,7 +731,7 @@ class Table:
         else:
             for j in other_than_baseline:
                 if any('relative' in k for k in comparison_cols):
-                    self.wrangled_df[f'1-({baseline}/{j})'] = (
+                    self.wrangled_df[f'1-({j}/{baseline})'] = (
                             1 -
                             (self.wrangled_df[j] / self.wrangled_df[baseline])
                     )
@@ -578,57 +740,57 @@ class Table:
                             self.wrangled_df[baseline] - self.wrangled_df[j]
                     )
         
-        if type_of_table == 'comfort hours':
-            renametabledict = {}
-            comfhours_rename_list = [
-                'Comfortable Hours_Applicability',
-                'Comfortable Hours_No Applicability',
-                'Discomfortable Applicable Hot Hours',
-                'Discomfortable Applicable Cold Hours',
-                'Discomfortable Non Applicable Hot Hours',
-                'Discomfortable Non Applicable Cold Hours',
-                'Ventilation Hours'
-            ]
-            for row in self.wrangled_df.index:
-                for block_zone in self.occBZlist_colon:
-                    for hour in comfhours_rename_list:
-                        if 'EMS:' in row and hour in row and block_zone in row:
-                            temp = {row: f'{block_zone}_{hour} (h)'}
-                            renametabledict.update(temp)
-
-        if type_of_table == 'energy demand':
-            renametabledict = {}
-            if self.normalised_energy_units:
-                energy_units = '(Wh/m2)'
-            else:
-                energy_units = '(Wh)'
-
-            for i in self.wrangled_df.index:
-                for j in ['Heating', 'Cooling', 'Total']:
-                    for block in self.block_list:
-                        if block+'_Total_'+j in i:
-                            if '[summed]' in i:
-                                temp = {i: f'{block}_Total_{j} Energy Demand {energy_units} [summed]'}
-                                renametabledict.update(temp)
-                            if '[mean]' in i:
-                                temp = {i: f'{block}_Total_{j} Energy Demand {energy_units} [mean]'}
-                                renametabledict.update(temp)
-                    if 'Building_Total_' + j in i:
-                        if '[summed]' in i:
-                            temp = {i: f'Building_Total_{j} Energy Demand {energy_units} [summed]'}
-                            renametabledict.update(temp)
-                        if '[mean]' in i:
-                            temp = {i: f'Building_Total_{j} Energy Demand {energy_units} [mean]'}
-                            renametabledict.update(temp)
-                for k in self.hvacBZlist_colon:
-                    if 'Total Cooling Rate'.lower() in i.lower() and k.lower() in i.lower():
-                        temp = {i: f'{k}_Cooling Energy Demand {energy_units}'}
-                        renametabledict.update(temp)
-                    if 'Heating Rate'.lower() in i.lower() and k.lower() in i.lower():
-                        temp = {i: f'{k}_Heating Energy Demand {energy_units}'}
-                        renametabledict.update(temp)
-                    if 'Total Energy Demand'.lower() in i.lower() and k.lower() in i.lower():
-                        temp = {i: f'{k}_Total Energy Demand {energy_units}'}
-                        renametabledict.update(temp)
-
-        self.wrangled_df = self.wrangled_df.rename(index=renametabledict)
+        # if type_of_table == 'comfort hours':
+        #     renametabledict = {}
+        #     comfhours_rename_list = [
+        #         'Comfortable Hours_Applicability',
+        #         'Comfortable Hours_No Applicability',
+        #         'Discomfortable Applicable Hot Hours',
+        #         'Discomfortable Applicable Cold Hours',
+        #         'Discomfortable Non Applicable Hot Hours',
+        #         'Discomfortable Non Applicable Cold Hours',
+        #         'Ventilation Hours'
+        #     ]
+        #     for row in self.wrangled_df.index:
+        #         for block_zone in self.occBZlist_colon:
+        #             for hour in comfhours_rename_list:
+        #                 if 'EMS:' in row and hour in row and block_zone in row:
+        #                     temp = {row: f'{block_zone}_{hour} (h)'}
+        #                     renametabledict.update(temp)
+        #
+        # if type_of_table == 'energy demand':
+        #     renametabledict = {}
+        #     if self.normalised_energy_units:
+        #         energy_units = '(Wh/m2)'
+        #     else:
+        #         energy_units = '(Wh)'
+        #
+        #     for i in self.wrangled_df.index:
+        #         for j in ['Heating', 'Cooling', 'Total']:
+        #             for block in self.block_list:
+        #                 if block+'_Total_'+j in i:
+        #                     if '[summed]' in i:
+        #                         temp = {i: f'{block}_Total_{j} Energy Demand {energy_units} [summed]'}
+        #                         renametabledict.update(temp)
+        #                     if '[mean]' in i:
+        #                         temp = {i: f'{block}_Total_{j} Energy Demand {energy_units} [mean]'}
+        #                         renametabledict.update(temp)
+        #             if 'Building_Total_' + j in i:
+        #                 if '[summed]' in i:
+        #                     temp = {i: f'Building_Total_{j} Energy Demand {energy_units} [summed]'}
+        #                     renametabledict.update(temp)
+        #                 if '[mean]' in i:
+        #                     temp = {i: f'Building_Total_{j} Energy Demand {energy_units} [mean]'}
+        #                     renametabledict.update(temp)
+        #         for k in self.hvacBZlist_colon:
+        #             if 'Total Cooling Rate'.lower() in i.lower() and k.lower() in i.lower():
+        #                 temp = {i: f'{k}_Cooling Energy Demand {energy_units}'}
+        #                 renametabledict.update(temp)
+        #             if 'Heating Rate'.lower() in i.lower() and k.lower() in i.lower():
+        #                 temp = {i: f'{k}_Heating Energy Demand {energy_units}'}
+        #                 renametabledict.update(temp)
+        #             if 'Total Energy Demand'.lower() in i.lower() and k.lower() in i.lower():
+        #                 temp = {i: f'{k}_Total Energy Demand {energy_units}'}
+        #                 renametabledict.update(temp)
+        #
+        # self.wrangled_df = self.wrangled_df.rename(index=renametabledict)
