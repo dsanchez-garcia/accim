@@ -993,6 +993,7 @@ def addOutputVariablesBase(self, ScriptType: str = None, verboseMode: bool = Tru
     addittionaloutputs = [
         'Zone Thermostat Operative Temperature',
         'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
+        'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',
         'Cooling Coil Total Cooling Rate',
         'Heating Coil Heating Rate',
         'Facility Total HVAC Electric Demand Power',

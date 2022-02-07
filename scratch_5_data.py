@@ -8,9 +8,9 @@ z = Table(frequency='runperiod',
           match_cities=False,
           normalised_energy_units=False,
           rename_cols=True,
-          energy_units_in_kWh=True
+          energy_units_in_kwh=True
           )
-# print(*z.df.columns, sep='\n')
+print(*z.df.columns, sep='\n')
 
 z.wrangled_table(
     vars_to_gather=[
@@ -18,12 +18,13 @@ z.wrangled_table(
         'Category'
         ],
     baseline='AS_CTE[CA_X',
-    type_of_table='energy demand',
+    type_of_table='custom',
     custom_cols=[
         # 'Heating Energy Demand',
         # 'Cooling Energy Demand',
         # 'Total Energy Demand',
-        'discomfortable'
+        'facility',
+        'floor'
         ],
     comparison_cols=['absolute', 'relative']
 )
