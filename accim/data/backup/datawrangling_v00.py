@@ -7,11 +7,9 @@ class Table:
                  level=None,
                  level_sum_or_mean=None,
                  match_cities: bool = False,
-                 manage_epw_names: bool = False,
-                 normalised_energy_units: bool = True,
+                 normalised_energy_units: bool = False,
                  rename_cols: bool = True,
-                 energy_units_in_kwh: bool = True,
-                 ):
+                 energy_units_in_kwh: bool = True):
         """
         Generates a table or dataframe using the EnergyPlus simulation results CSV files
         available in the current folder.
@@ -28,10 +26,6 @@ class Table:
         Used to create the columns for levels preciously stated by summing and/or averaging.
         :param match_cities: A bool, can be True or False.
         Used to try to match the cities in the EPW file name with actual cities.
-        :param manage_epw_names: A bool, can be True or False.
-        Used to detect climate change scenario, country and sub-country codes and city.
-        If a large number of CSVs is going to be computed
-        or hourly values are going to be considered, it is recommended to be False.
         :param normalised_energy_units: A bool, can be True or False.
         Used to show Wh or Wh/m2 units.
         :param rename_cols: A bool, can be True or False.
@@ -45,8 +39,6 @@ class Table:
             level_sum_or_mean = []
         if level is None:
             level = []
-        # if custom_cols is None:
-        #     custom_cols = []
 
         # import os
         import pandas as pd
@@ -155,31 +147,30 @@ class Table:
         self.df = pd.concat(summed_dataframes)
 
         OpTempColumn = [i for i in self.df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
-        self.occupied_zone_list = [i.split(' ')[0][:-5] for i in OpTempColumn]
-        self.occupied_zone_list = list(dict.fromkeys(self.occupied_zone_list))
+        self.occBZlist_colon = [i.split(' ')[0][:-5] for i in OpTempColumn]
+        self.occBZlist_colon = list(dict.fromkeys(self.occBZlist_colon))
+        occBZlist_underscore = [i.replace(':', '_') for i in self.occBZlist_colon]
 
-        occBZlist_underscore = [i.replace(':', '_') for i in self.occupied_zone_list]
-
-        self.hvac_zone_list = [i.split(' ')[0]
-                               for i
-                               in [i
+        self.hvacBZlist_colon = [i.split(' ')[0]
+                                 for i
+                                 in [i
                                      for i
                                      in self.df.columns
                                      if 'Cooling Coil Total Cooling Rate' in i
                                      ]
-                               ]
+                                 ]
 
-        self.hvac_zone_list = list(dict.fromkeys(self.hvac_zone_list))
+        self.hvacBZlist_colon = list(dict.fromkeys(self.hvacBZlist_colon))
         # hvacBZlist_underscore = [i.replace(':', '_') for i in self.hvac_zone_list]
 
-        self.block_list = [i.split(':')[0] for i in self.occupied_zone_list]
+        self.block_list = [i.split(':')[0] for i in self.occBZlist_colon]
         self.block_list = list(dict.fromkeys(self.block_list))
 
         renamezonesdict = {}
         for i in range(len(occBZlist_underscore)):
             for j in self.df.columns:
                 if occBZlist_underscore[i].lower() in j.lower():
-                    temp = {j: j.replace(occBZlist_underscore[i], self.occupied_zone_list[i])}
+                    temp = {j: j.replace(occBZlist_underscore[i], self.occBZlist_colon[i])}
                     renamezonesdict.update(temp)
 
         self.df = self.df.rename(columns=renamezonesdict)
@@ -203,14 +194,13 @@ class Table:
         }
 
         for output in BZoutputDict:
-            for block_zone in self.hvac_zone_list:
+            for block_zone in self.hvacBZlist_colon:
                 self.df[f'{block_zone}' + '_' + BZoutputDict[output] + ' [summed]_pymod'] = self.df[
                     [i for i in self.df.columns
                      if block_zone.lower() in i.lower() and output in i and '_pymod' not in i]
                 ].sum(axis=1)
 
         outputdict = {
-            'Zone Thermostat Operative Temperature [C](Hourly)': 'Zone Thermostat Operative Temperature (°C)',
             'Comfortable Hours_No Applicability': 'Comfortable Hours_No Applicability (h)',
             'Comfortable Hours_Applicability': 'Comfortable Hours_Applicability (h)',
             'Discomfortable Applicable Hot Hours': 'Discomfortable Applicable Hot Hours (h)',
@@ -277,7 +267,7 @@ class Table:
         if normalised_energy_units:
             for i in self.df.columns:
                 if '(Wh)' in i:
-                    for j in self.hvac_zone_list:
+                    for j in self.hvacBZlist_colon:
                         if j in i:
                             self.df[i] = self.df[i] / self.df[
                                 [i for i in self.df.columns
@@ -345,41 +335,40 @@ class Table:
 
         self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
-        if manage_epw_names:
-            rcpdict = {
-                'Present': ['Presente', 'Actual', 'Present', 'Current'],
-                'RCP2.6': ['RCP2.6', 'RCP26'],
-                'RCP4.5': ['RCP4.5', 'RCP45'],
-                'RCP6.0': ['RCP6.0', 'RCP60'],
-                'RCP8.5': ['RCP8.5', 'RCP85']
-            }
+        rcpdict = {
+            'Present': ['Presente', 'Actual', 'Present', 'Current'],
+            'RCP2.6': ['RCP2.6', 'RCP26'],
+            'RCP4.5': ['RCP4.5', 'RCP45'],
+            'RCP6.0': ['RCP6.0', 'RCP60'],
+            'RCP8.5': ['RCP8.5', 'RCP85']
+        }
 
-            rcp = []
-            for i in rcpdict:
-                for j in range(len(rcpdict[i])):
-                    rcp.append(rcpdict[i][j])
+        rcp = []
+        for i in rcpdict:
+            for j in range(len(rcpdict[i])):
+                rcp.append(rcpdict[i][j])
 
-            rcp_present = []
-            for i in rcpdict['Present']:
-                rcp_present.append(i)
+        rcp_present = []
+        for i in rcpdict['Present']:
+            rcp_present.append(i)
 
-            self.df['EPW_mod'] = self.df['EPW'].str.split('_')
+        self.df['EPW_mod'] = self.df['EPW'].str.split('_')
 
-            for i in range(len(self.df['EPW_mod'])):
-                for j in self.df.loc[i, 'EPW_mod']:
-                    if len(j) == 2:
-                        self.df.loc[i, 'EPW_CountryCode'] = j
-                    else:
-                        self.df.loc[i, 'EPW_CountryCode'] = np.nan
+        for i in range(len(self.df['EPW_mod'])):
+            for j in self.df.loc[i, 'EPW_mod']:
+                if len(j) == 2:
+                    self.df.loc[i, 'EPW_CountryCode'] = j
+                else:
+                    self.df.loc[i, 'EPW_CountryCode'] = np.nan
 
-                    for k in rcpdict:
-                        for m in range(len(rcpdict[k])):
-                            if j in rcpdict[k][m]:
-                                self.df.loc[i, 'EPW_Scenario'] = k
-                            else:
-                                self.df.loc[i, 'EPW_Scenario'] = np.nan
+                for k in rcpdict:
+                    for m in range(len(rcpdict[k])):
+                        if j in rcpdict[k][m]:
+                            self.df.loc[i, 'EPW_Scenario'] = k
+                        else:
+                            self.df.loc[i, 'EPW_Scenario'] = np.nan
 
-                self.df.loc[i, 'EPW_Year'] = np.nan
+            self.df.loc[i, 'EPW_Year'] = np.nan
 
         isEPWformatValid = False
         if match_cities:
@@ -450,35 +439,34 @@ class Table:
 
             self.df['EPW_CountryCode'] = self.df['EPW_CountryCode'].astype(str)
 
-        if manage_epw_names:
-            for i in range(len(self.df['EPW_mod'])):
-                for j in self.df.loc[i, 'EPW_mod']:
-                    if j in rcp_present:
-                        self.df.loc[i, 'EPW_Year'] = 'Present'
-                    elif j in rcp:
-                        continue
-                    elif j.isnumeric():
-                        self.df.loc[i, 'EPW_Year'] = int(j)
-                    elif len(j) == 2:
-                        continue
+        for i in range(len(self.df['EPW_mod'])):
+            for j in self.df.loc[i, 'EPW_mod']:
+                if j in rcp_present:
+                    self.df.loc[i, 'EPW_Year'] = 'Present'
+                elif j in rcp:
+                    continue
+                elif j.isnumeric():
+                    self.df.loc[i, 'EPW_Year'] = int(j)
+                elif len(j) == 2:
+                    continue
+                else:
+                    if match_cities:
+                        if isEPWformatValid:
+                            for k in range(len(cities_df)):
+                                if self.df.loc[i, 'EPW_CountryCode'].lower() in cities_df.loc[k, 'country'].lower():
+                                    self.df.loc[i, 'EPW_Country'] = cities_df.loc[k, 'country']
+                                if str(j).lower() in cities_df.loc[k, 'name'].lower():
+                                    self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
+                                elif str(j).lower() in cities_df.loc[k, 'subcountry'].lower():
+                                    self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
+                                elif str(j).isalnum():
+                                    self.df.loc[i, 'EPW_City_or_subcountry'] = j.upper()
+                                else:
+                                    self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
                     else:
-                        if match_cities:
-                            if isEPWformatValid:
-                                for k in range(len(cities_df)):
-                                    if self.df.loc[i, 'EPW_CountryCode'].lower() in cities_df.loc[k, 'country'].lower():
-                                        self.df.loc[i, 'EPW_Country'] = cities_df.loc[k, 'country']
-                                    if str(j).lower() in cities_df.loc[k, 'name'].lower():
-                                        self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
-                                    elif str(j).lower() in cities_df.loc[k, 'subcountry'].lower():
-                                        self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
-                                    elif str(j).isalnum():
-                                        self.df.loc[i, 'EPW_City_or_subcountry'] = j.upper()
-                                    else:
-                                        self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
-                        else:
-                            self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
+                        self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
 
-            self.df = self.df.drop(['EPW_mod'], axis=1)
+        self.df = self.df.drop(['EPW_mod'], axis=1)
 
         cols = self.df.columns.tolist()
         cols = cols[-15:] + cols[:-15]
@@ -536,9 +524,9 @@ class Table:
 
             for col in self.df.columns:
                 for crit in renaming_criteria_bz:
-                    if '[summed]' not in col and '[mean]' not in col:
+                    if '[summed]' not in col:
                         if crit in col:
-                            for block_zone in self.occupied_zone_list:
+                            for block_zone in self.occBZlist_colon:
                                 if block_zone in col:
                                     if energy_units in col:
                                         temp = {col: block_zone + '_' + renaming_criteria_bz[crit] + ' ' + energy_units}
@@ -549,7 +537,7 @@ class Table:
 
             for col in self.df.columns:
                 for crit in renaming_criteria:
-                    if '[summed]' not in col and '[mean]' not in col:
+                    if '[summed]' not in col:
                         if crit in col:
                             if energy_units in col:
                                 temp = {col: renaming_criteria[crit] + ' ' + energy_units}
@@ -569,41 +557,75 @@ class Table:
                 for crit in renaming_criteria_block:
                     for block in self.block_list:
                         if block + '_Total_' + crit in col:
-                            if '[summed]' in col:
-                                temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} [summed]'}
-                                all_cols_renamed.update(temp)
-                            elif '[mean]' in col:
-                                temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} [mean]'}
-                                all_cols_renamed.update(temp)
+                            temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} [summed]'}
+                            all_cols_renamed.update(temp)
                     if 'Building_Total_' + crit in col:
-                        if '[summed]' in col:
-                            temp = {col: f'Building_Total_{renaming_criteria_block[crit]} {energy_units} [summed]'}
-                            all_cols_renamed.update(temp)
-                        if '[mean]' in col:
-                            temp = {col: f'Building_Total_{renaming_criteria_block[crit]} {energy_units} [mean]'}
-                            all_cols_renamed.update(temp)
+                        temp = {col: f'Building_Total_{renaming_criteria_block[crit]} {energy_units} [summed]'}
+                        all_cols_renamed.update(temp)
 
             self.df = self.df.rename(columns=all_cols_renamed)
 
-    def format_table(self,
-                       type_of_table: str = 'all',
-                       custom_cols=None,
-                       manage_epw_names: bool = False
-                       ):
-        """
+    def returndf(self):
+        return self.df
 
+    def wrangled_table(self,
+                       vars_to_gather=None,
+                       baseline: str = None,
+                       type_of_table: str = None,
+                       custom_cols=None,
+                       comparison_cols=None):
+        """
+        Creates a table based on the arguments.
+
+        :param vars_to_gather: A list of the variables to be transposed from rows to columns.
+        :param baseline: The already transposed column you want to use as a baseline for comparisons.
+        If ommited, you will be asked which one to use.
         :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours'.
         :param custom_cols: A list of strings.
         The strings will be used as a filter, and the columns that match will be selected.
-        :param manage_epw_names: A bool, can be True or False.
-        Used to detect climate change scenario, country and sub-country codes and city.
-        If a large number of CSVs is going to be computed
-        or hourly values are going to be considered, it is recommended to be False.
+        :param comparison_cols: 'absolute' to get the difference or 'relative' to get the percentage of reduction.
         """
+        if vars_to_gather is None:
+            vars_to_gather = []
+        if comparison_cols is None:
+            comparison_cols = []
         if custom_cols is None:
             custom_cols = []
 
-        self.indexcols = [
+        import numpy as np
+
+        val_cols = []
+        if type_of_table == 'custom':
+
+            for custom_col in custom_cols:
+                for col in self.df.columns:
+                    if custom_col.lower() in col.lower():
+                        val_cols.append(col)
+        elif type_of_table == 'energy demand':
+            if self.rename_cols:
+                val_cols = [col for col in self.df.columns if
+                            'Total Energy Demand' in col or
+                            'Cooling Energy Demand' in col or
+                            'Heating Energy Demand' in col]
+            else:
+                val_cols = [col for col in self.df.columns if
+                            'Cooling Coil Total Cooling Rate' in col or
+                            'Heating Coil Heating Rate' in col or
+                            'Total Energy Demand' in col]
+        elif type_of_table == 'comfort hours':
+            val_cols = [col for col in self.df.columns if 'Comfortable Hours_No Applicability' in col
+                        or 'Comfortable Hours_Applicability' in col
+                        or 'Discomfortable Applicable Hot Hours' in col
+                        or 'Discomfortable Applicable Cold Hours' in col
+                        or 'Discomfortable Non Applicable Hot Hours' in col
+                        or 'Discomfortable Non Applicable Cold Hours' in col
+                        or 'Ventilation Hours' in col]
+        if len(val_cols) == 0:
+            raise ValueError('You have not selected any column to make the custom table. '
+                             'Please check the columns you want to select. '
+                             'To see the full list of columns, enter print("name of class instance".df.columns)')
+
+        indexcols = [
             'Model',
             'Adaptive Standard',
             'Category',
@@ -615,96 +637,21 @@ class Table:
             'MaxWindSpeed',
             'ASTtol',
             'EPW',
+            'EPW_CountryCode',
+            'EPW_Scenario',
+            'EPW_Year',
+            'EPW_City_or_subcountry',
             'Source',
-            # 'col_to_pivot'
+            'col_to_pivot'
         ]
         if 'monthly' in self.frequency:
-            self.indexcols.append('Month')
+            indexcols.append('Month')
         if 'daily' in self.frequency:
-            self.indexcols.append('Day')
+            indexcols.append('Day')
         if 'hourly' in self.frequency:
-            self.indexcols.append('Hour')
+            indexcols.append('Hour')
         if 'timestep' in self.frequency:
-            self.indexcols.append('Minute')
-        if manage_epw_names:
-            self.indexcols.extend([
-                'EPW_CountryCode',
-                'EPW_Scenario',
-                'EPW_Year',
-                'EPW_City_or_subcountry'
-                ])
-
-        self.val_cols = []
-        if type_of_table == 'custom':
-            for custom_col in custom_cols:
-                for col in self.df.columns:
-                    if custom_col.lower() in col.lower():
-                        self.val_cols.append(col)
-        elif type_of_table == 'energy demand':
-            if self.rename_cols:
-                self.val_cols = [col for col in self.df.columns if
-                            'Total Energy Demand' in col or
-                            'Cooling Energy Demand' in col or
-                            'Heating Energy Demand' in col]
-            else:
-                self.val_cols = [col for col in self.df.columns if
-                            'Cooling Coil Total Cooling Rate' in col or
-                            'Heating Coil Heating Rate' in col or
-                            'Total Energy Demand' in col]
-        elif type_of_table == 'comfort hours':
-            self.val_cols = [col for col in self.df.columns if 'Comfortable Hours_No Applicability' in col
-                        or 'Comfortable Hours_Applicability' in col
-                        or 'Discomfortable Applicable Hot Hours' in col
-                        or 'Discomfortable Applicable Cold Hours' in col
-                        or 'Discomfortable Non Applicable Hot Hours' in col
-                        or 'Discomfortable Non Applicable Cold Hours' in col
-                        or 'Ventilation Hours' in col]
-        # elif type_of_table == 'all':
-        #     # self.val_cols = list(set(self.df.columns) - set(self.indexcols))
-        #     self.val_cols = []
-        #     for col in self.df.columns:
-        #         if col not in self.indexcols:
-        #             self.val_cols.append(col)
-
-        if type_of_table == 'custom':
-            if len(self.val_cols) == 0:
-                raise ValueError('You have not selected any column to make the custom table. '
-                                 'Please check the columns you want to select. '
-                                 'To see the full list of columns, enter print("name of class instance".df.columns)')
-
-        if not(type_of_table == 'all'):
-            self.df = self.df[self.indexcols + self.val_cols]
-
-    def returndf(self):
-        return self.df
-
-    # def hvac_zone_list(self):
-    #     return self.hvac_zone_list
-    #
-    # def occupied_zone_list(self):
-    #     return self.occupied_zone_list
-    #
-    # def block_list(self):
-    #     return self.block_list()
-
-    def wrangled_table(self,
-                       vars_to_gather=None,
-                       baseline: str = None,
-                       comparison_cols=None):
-        """
-        Creates a table based on the arguments.
-
-        :param vars_to_gather: A list of the variables to be transposed from rows to columns.
-        :param baseline: The already transposed column you want to use as a baseline for comparisons.
-        If ommited, you will be asked which one to use.
-        :param comparison_cols: 'absolute' to get the difference or 'relative' to get the percentage of reduction.
-        """
-        if vars_to_gather is None:
-            vars_to_gather = []
-        if comparison_cols is None:
-            comparison_cols = []
-
-        import numpy as np
+            indexcols.append('Minute')
 
         self.df['col_to_pivot'] = 'temp'
 
@@ -722,7 +669,7 @@ class Table:
             'EPW'
             ]
 
-        self.indexcols.append('col_to_pivot')
+        self.wrangled_df = self.df[indexcols + val_cols]
 
         while (not(all(elem in available_vars_to_gather for elem in vars_to_gather))
                or len(vars_to_gather) != len(set(vars_to_gather))):
@@ -734,8 +681,6 @@ class Table:
                                    for var
                                    in input("Enter the variables to be gathered separated by semicolon: ").split(';')))
 
-        self.wrangled_df = self.df
-
         if 'Month' in self.wrangled_df.columns:
             self.wrangled_df['col_to_pivot'] = (self.wrangled_df[vars_to_gather].agg('['.join, axis=1) +
                                                 self.wrangled_df['Month'].astype(str) +
@@ -746,9 +691,9 @@ class Table:
         self.df['col_to_pivot'] = self.wrangled_df['col_to_pivot']
 
         self.wrangled_df = self.wrangled_df.pivot_table(
-            index=self.indexcols.remove('col_to_pivot'),
+            index=indexcols.remove('col_to_pivot'),
             columns='col_to_pivot',
-            values=self.val_cols,
+            values=val_cols,
             aggfunc=np.sum,
             fill_value=0)
 
