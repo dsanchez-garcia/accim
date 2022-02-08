@@ -7,10 +7,11 @@ class Table:
                  level=None,
                  level_sum_or_mean=None,
                  match_cities: bool = False,
-                 normalised_energy_units: bool = False,
+                 manage_epw_names: bool = False,
+                 normalised_energy_units: bool = True,
                  rename_cols: bool = True,
                  energy_units_in_kwh: bool = True,
-                 type_of_table: str = None,
+                 type_of_table: str = 'all',
                  custom_cols=None
                  ):
         """
@@ -29,6 +30,10 @@ class Table:
         Used to create the columns for levels preciously stated by summing and/or averaging.
         :param match_cities: A bool, can be True or False.
         Used to try to match the cities in the EPW file name with actual cities.
+        :param manage_epw_names: A bool, can be True or False.
+        Used to detect climate change scenario, country and sub-country codes and city.
+        If a large number of CSVs is going to be computed
+        or hourly values are going to be considered, it is recommended to be False.
         :param normalised_energy_units: A bool, can be True or False.
         Used to show Wh or Wh/m2 units.
         :param rename_cols: A bool, can be True or False.
@@ -343,40 +348,41 @@ class Table:
 
         self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
-        rcpdict = {
-            'Present': ['Presente', 'Actual', 'Present', 'Current'],
-            'RCP2.6': ['RCP2.6', 'RCP26'],
-            'RCP4.5': ['RCP4.5', 'RCP45'],
-            'RCP6.0': ['RCP6.0', 'RCP60'],
-            'RCP8.5': ['RCP8.5', 'RCP85']
-        }
+        if manage_epw_names:
+            rcpdict = {
+                'Present': ['Presente', 'Actual', 'Present', 'Current'],
+                'RCP2.6': ['RCP2.6', 'RCP26'],
+                'RCP4.5': ['RCP4.5', 'RCP45'],
+                'RCP6.0': ['RCP6.0', 'RCP60'],
+                'RCP8.5': ['RCP8.5', 'RCP85']
+            }
 
-        rcp = []
-        for i in rcpdict:
-            for j in range(len(rcpdict[i])):
-                rcp.append(rcpdict[i][j])
+            rcp = []
+            for i in rcpdict:
+                for j in range(len(rcpdict[i])):
+                    rcp.append(rcpdict[i][j])
 
-        rcp_present = []
-        for i in rcpdict['Present']:
-            rcp_present.append(i)
+            rcp_present = []
+            for i in rcpdict['Present']:
+                rcp_present.append(i)
 
-        self.df['EPW_mod'] = self.df['EPW'].str.split('_')
+            self.df['EPW_mod'] = self.df['EPW'].str.split('_')
 
-        for i in range(len(self.df['EPW_mod'])):
-            for j in self.df.loc[i, 'EPW_mod']:
-                if len(j) == 2:
-                    self.df.loc[i, 'EPW_CountryCode'] = j
-                else:
-                    self.df.loc[i, 'EPW_CountryCode'] = np.nan
+            for i in range(len(self.df['EPW_mod'])):
+                for j in self.df.loc[i, 'EPW_mod']:
+                    if len(j) == 2:
+                        self.df.loc[i, 'EPW_CountryCode'] = j
+                    else:
+                        self.df.loc[i, 'EPW_CountryCode'] = np.nan
 
-                for k in rcpdict:
-                    for m in range(len(rcpdict[k])):
-                        if j in rcpdict[k][m]:
-                            self.df.loc[i, 'EPW_Scenario'] = k
-                        else:
-                            self.df.loc[i, 'EPW_Scenario'] = np.nan
+                    for k in rcpdict:
+                        for m in range(len(rcpdict[k])):
+                            if j in rcpdict[k][m]:
+                                self.df.loc[i, 'EPW_Scenario'] = k
+                            else:
+                                self.df.loc[i, 'EPW_Scenario'] = np.nan
 
-            self.df.loc[i, 'EPW_Year'] = np.nan
+                self.df.loc[i, 'EPW_Year'] = np.nan
 
         isEPWformatValid = False
         if match_cities:
@@ -447,34 +453,35 @@ class Table:
 
             self.df['EPW_CountryCode'] = self.df['EPW_CountryCode'].astype(str)
 
-        for i in range(len(self.df['EPW_mod'])):
-            for j in self.df.loc[i, 'EPW_mod']:
-                if j in rcp_present:
-                    self.df.loc[i, 'EPW_Year'] = 'Present'
-                elif j in rcp:
-                    continue
-                elif j.isnumeric():
-                    self.df.loc[i, 'EPW_Year'] = int(j)
-                elif len(j) == 2:
-                    continue
-                else:
-                    if match_cities:
-                        if isEPWformatValid:
-                            for k in range(len(cities_df)):
-                                if self.df.loc[i, 'EPW_CountryCode'].lower() in cities_df.loc[k, 'country'].lower():
-                                    self.df.loc[i, 'EPW_Country'] = cities_df.loc[k, 'country']
-                                if str(j).lower() in cities_df.loc[k, 'name'].lower():
-                                    self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
-                                elif str(j).lower() in cities_df.loc[k, 'subcountry'].lower():
-                                    self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
-                                elif str(j).isalnum():
-                                    self.df.loc[i, 'EPW_City_or_subcountry'] = j.upper()
-                                else:
-                                    self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
+        if manage_epw_names:
+            for i in range(len(self.df['EPW_mod'])):
+                for j in self.df.loc[i, 'EPW_mod']:
+                    if j in rcp_present:
+                        self.df.loc[i, 'EPW_Year'] = 'Present'
+                    elif j in rcp:
+                        continue
+                    elif j.isnumeric():
+                        self.df.loc[i, 'EPW_Year'] = int(j)
+                    elif len(j) == 2:
+                        continue
                     else:
-                        self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
+                        if match_cities:
+                            if isEPWformatValid:
+                                for k in range(len(cities_df)):
+                                    if self.df.loc[i, 'EPW_CountryCode'].lower() in cities_df.loc[k, 'country'].lower():
+                                        self.df.loc[i, 'EPW_Country'] = cities_df.loc[k, 'country']
+                                    if str(j).lower() in cities_df.loc[k, 'name'].lower():
+                                        self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
+                                    elif str(j).lower() in cities_df.loc[k, 'subcountry'].lower():
+                                        self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
+                                    elif str(j).isalnum():
+                                        self.df.loc[i, 'EPW_City_or_subcountry'] = j.upper()
+                                    else:
+                                        self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
+                        else:
+                            self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
 
-        self.df = self.df.drop(['EPW_mod'], axis=1)
+            self.df = self.df.drop(['EPW_mod'], axis=1)
 
         cols = self.df.columns.tolist()
         cols = cols[-15:] + cols[:-15]
@@ -585,10 +592,6 @@ class Table:
             'MaxWindSpeed',
             'ASTtol',
             'EPW',
-            'EPW_CountryCode',
-            'EPW_Scenario',
-            'EPW_Year',
-            'EPW_City_or_subcountry',
             'Source',
             # 'col_to_pivot'
         ]
@@ -600,6 +603,13 @@ class Table:
             self.indexcols.append('Hour')
         if 'timestep' in self.frequency:
             self.indexcols.append('Minute')
+        if manage_epw_names:
+            self.indexcols.extend([
+                'EPW_CountryCode',
+                'EPW_Scenario',
+                'EPW_Year',
+                'EPW_City_or_subcountry'
+                ])
 
         self.val_cols = []
         if type_of_table == 'custom':
@@ -665,7 +675,6 @@ class Table:
             comparison_cols = []
 
         import numpy as np
-
 
         self.df['col_to_pivot'] = 'temp'
 
