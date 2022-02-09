@@ -36,10 +36,26 @@ additional_list = [
 custom_cols_list = temp_list + additional_list
 
 z.format_table(type_of_table='custom',
-               custom_cols=custom_cols_list
+               custom_cols=custom_cols_list,
+               manage_epw_names=False
                )
 
-# print(*z.df.index, sep='\n')
+print(*z.df.columns, sep='\n')
+
+fig, ax = plt.subplots()
+ax.plot(
+    z.df['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)'],
+    z.df['Adaptive Cooling Setpoint Temperature_No Tolerance (°C)'],
+    c='r',
+    ms=1,
+    marker='o',
+)
+plt.show()
+
+# multiple plots
+
+
+
 
 def format_col_name(col: str):
     col = (col
@@ -77,87 +93,48 @@ z.df = z.df.rename(columns=rename_dict)
 
 
 # single plot
-# sources = list(set(z.df['Source']))
-# df_temp = z.df[z.df.Source =='TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_ASHRAE55[CA_90[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1[Seville_Present']
-# # print(*df_temp.columns, sep='\n')
-#
-# fig, ax = plt.subplots()
-# ax.plot(
-#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-#     df_temp.Adaptive_Cooling_Setpoint_Temperature_No_Tolerance,
-#     marker='o'
-# )
-# ax.plot(
-#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-#     df_temp.Adaptive_Heating_Setpoint_Temperature_No_Tolerance,
-#     marker='o'
-# )
-# ax.plot(
-#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-#     df_temp.Building_Total_Zone_Thermostat_Operative_Temperature_mean,
-#     marker='o'
-# )
-#
-# ax2 = ax.twinx()
-# ax2.plot(
-#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-#     df_temp.Building_Total_Cooling_Energy_Demand_summed,
-#     marker='o'
-# )
-# ax2.plot(
-#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-#     df_temp.Building_Total_Heating_Energy_Demand_summed,
-#     marker='o'
-# )
-#
-# plt.show()
-#
-#
-#
-#
-# fig, ax = plt.subplots(
-#     1,
-#     # figsize=(10, 6)
-# )
-#
-# fig, ax = plt.subplots()
-# ax.plot(
-#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-#     df_temp.Adaptive_Cooling_Setpoint_Temperature_No_Tolerance,
-#     c='r',
-#     ms=1,
-#     marker='o',
-#     # linewidth=1
-# )
-# ax.plot(
-#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-#     df_temp.Adaptive_Heating_Setpoint_Temperature_No_Tolerance,
-#     c='b',
-#     ms=1,
-#     marker='o',
-#     # linewidth=1
-# )
-# ax.scatter(
-#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-#     df_temp.Building_Total_Zone_Thermostat_Operative_Temperature_mean,
-#     c='g',
-#     s=1,
-#     marker='o'
-# )
-#
-# ax2 = ax.twinx()
-# ax2.scatter(
-#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-#     df_temp.Building_Total_Cooling_Energy_Demand_summed,
-#     s=1,
-#     marker='o'
-# )
-# ax2.scatter(
-#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-#     df_temp.Building_Total_Heating_Energy_Demand_summed,
-#     s=1,
-#     marker='o'
-# )
-# plt.show()
+sources = list(set(z.df['Source']))
+df_temp = z.df[z.df.Source =='TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_ASHRAE55[CA_90[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1[Seville_Present']
+# print(*df_temp.columns, sep='\n')
 
-# multiple plots
+
+fig, ax = plt.subplots()
+ax.plot(
+    df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
+    df_temp.Adaptive_Cooling_Setpoint_Temperature_No_Tolerance,
+    c='r',
+    ms=1,
+    marker='o',
+    # linewidth=1
+)
+ax.plot(
+    df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
+    df_temp.Adaptive_Heating_Setpoint_Temperature_No_Tolerance,
+    c='b',
+    ms=1,
+    marker='o',
+    # linewidth=1
+)
+ax.scatter(
+    df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
+    df_temp.Building_Total_Zone_Thermostat_Operative_Temperature_mean,
+    c='g',
+    s=1,
+    marker='o'
+)
+
+ax2 = ax.twinx()
+ax2.scatter(
+    df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
+    df_temp.Building_Total_Cooling_Energy_Demand_summed,
+    s=1,
+    marker='o'
+)
+ax2.scatter(
+    df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
+    df_temp.Building_Total_Heating_Energy_Demand_summed,
+    s=1,
+    marker='o'
+)
+plt.show()
+
