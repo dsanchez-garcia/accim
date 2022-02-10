@@ -585,6 +585,21 @@ class Table:
 
             self.df = self.df.rename(columns=all_cols_renamed)
 
+        self.available_vars_to_gather = [
+            'Model',
+            'Adaptive Standard',
+            'Category',
+            'Comfort mode',
+            'HVAC mode',
+            'Ventilation control',
+            'VSToffset',
+            'MinOToffset',
+            'MaxWindSpeed',
+            'ASTtol',
+            'EPW'
+            ]
+
+
     def format_table(self,
                        type_of_table: str = 'all',
                        custom_cols=None,
@@ -674,6 +689,8 @@ class Table:
 
         if not(type_of_table == 'all'):
             self.df = self.df[self.indexcols + self.val_cols]
+        
+
 
     def returndf(self):
         return self.df
@@ -708,31 +725,10 @@ class Table:
 
         self.df['col_to_pivot'] = 'temp'
 
-        available_vars_to_gather = [
-            'Model',
-            'Adaptive Standard',
-            'Category',
-            'Comfort mode',
-            'HVAC mode',
-            'Ventilation control',
-            'VSToffset',
-            'MinOToffset',
-            'MaxWindSpeed',
-            'ASTtol',
-            'EPW'
-            ]
 
         self.indexcols.append('col_to_pivot')
 
-        while (not(all(elem in available_vars_to_gather for elem in vars_to_gather))
-               or len(vars_to_gather) != len(set(vars_to_gather))):
-            print('Some of the variables to be gathered are not available or are duplicated:')
-            print(vars_to_gather)
-            print('The list of available variables to be gathered is:')
-            print(available_vars_to_gather)
-            vars_to_gather = (list(str(var)
-                                   for var
-                                   in input("Enter the variables to be gathered separated by semicolon: ").split(';')))
+        self.enter_vars_to_gather(vars_to_gather)
 
         self.wrangled_df = self.df
 
@@ -803,3 +799,80 @@ class Table:
                     self.wrangled_df[f'{baseline} - {j}'] = (
                             self.wrangled_df[baseline] - self.wrangled_df[j]
                     )
+
+    def scatter_plot(
+            self,
+            vars_to_gather_cols=None,
+            vars_to_gather_rows=None
+    ):
+        if vars_to_gather_cols is None:
+            vars_to_gather = []
+        if vars_to_gather_rows is None:
+            vars_to_gather_rows = []
+
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        self.df['col_to_gather_in_cols'] = 'temp'
+        self.df['col_to_gather_in_rows'] = 'temp'
+
+        self.indexcols.extend(['col_to_gather_in_cols', 'col_to_gather_in_rows'])
+
+        self.enter_vars_to_gather(vars_to_gather_cols)
+        self.enter_vars_to_gather(vars_to_gather_rows)
+
+        self.df_for_graph = self.df
+
+        if 'Month' in self.df_for_graph.columns:
+            self.df_for_graph['col_to_gather_in_cols'] = (self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1) +
+                                                self.df_for_graph['Month'].astype(str) +
+                                                '[Month')
+        else:
+            self.df_for_graph['col_to_gather_in_cols'] = self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1)
+
+        self.df['col_to_gather_in_cols'] = self.df_for_graph['col_to_gather_in_cols']
+
+        if 'Month' in self.df_for_graph.columns:
+            self.df_for_graph['col_to_gather_in_rows'] = (self.df_for_graph[vars_to_gather_rows].agg('['.join, axis=1) +
+                                                self.df_for_graph['Month'].astype(str) +
+                                                '[Month')
+        else:
+            self.df_for_graph['col_to_gather_in_rows'] = self.df_for_graph[vars_to_gather_rows].agg('['.join, axis=1)
+
+        self.df['col_to_gather_in_rows'] = self.df_for_graph['col_to_gather_in_rows']
+
+        print(f'The number of columns and the list of these is going to be:')
+        print(f'No. of columns = {len(list(set(self.df_for_graph.col_to_gather_in_cols)))}')
+        print(f'List of columns:')
+        print(*list(set(self.df_for_graph.col_to_gather_in_cols)), sep='\n')
+
+        print(f'The number of rows and the list of these is going to be:')
+        print(f'No. of rows = {len(list(set(self.df_for_graph.col_to_gather_in_rows)))}')
+        print(f'List of rows:')
+        print(*list(set(self.df_for_graph.col_to_gather_in_rows)), sep='\n')
+        proceed = input('Are you sure this is correct? [y/n]')
+        # if 'y' in proceed:
+        ax, fit = plt.subplots(
+            len(list(set(self.df_for_graph.col_to_gather_in_cols))),
+            len(list(set(self.df_for_graph.col_to_gather_in_rows))),
+        )
+
+
+
+    def enter_vars_to_gather(
+            self,
+            vars_to_gather=None
+    ):
+        if vars_to_gather is None:
+            vars_to_gather = []
+
+        while (not(all(elem in self.available_vars_to_gather for elem in vars_to_gather))
+               or len(vars_to_gather) != len(set(vars_to_gather))):
+            print('Some of the variables to be gathered are not available or are duplicated:')
+            print(vars_to_gather)
+            print('The list of available variables to be gathered is:')
+            print(self.available_vars_to_gather)
+            vars_to_gather = (list(str(var)
+                                   for var
+                                   in input("Enter the variables to be gathered separated by semicolon: ").split(';')))
+        return vars_to_gather

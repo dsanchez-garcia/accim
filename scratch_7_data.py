@@ -1,6 +1,7 @@
 from accim.data.datawrangling import Table
 import matplotlib.pyplot as plt
-
+import time
+start = time.time()
 
 z = Table(frequency='hourly',
           sum_or_mean='sum',
@@ -12,6 +13,15 @@ z = Table(frequency='hourly',
           rename_cols=True,
           energy_units_in_kwh=True,
           )
+
+# print(f'The number of columns and the list of these is going to be:')
+# print(f'No. of columns = {len(list(set(z.df.Source)))}')
+# print(f'List of columns:')
+# print(*list(set(z.df.Source)), sep='\n')
+#
+# print(f'The number of rows and the list of these is going to be:')
+# print(f'No. of rows = {len(list(set(z.df.Source)))}')
+
 # print(*z.df.columns, sep='\n')
 
 # z.hvac_zone_list
@@ -19,10 +29,10 @@ z = Table(frequency='hourly',
 # z.block_list
 
 temp_list = []
-for col in z.df.columns:
-    for zone in z.occupied_zone_list:
-        if zone in col and 'Zone Thermostat Operative Temperature' in col:
-            temp_list.append(col)
+# for col in z.df.columns:
+#     for zone in z.occupied_zone_list:
+#         if zone in col and 'Zone Thermostat Operative Temperature' in col:
+#             temp_list.append(col)
 
 additional_list = [
     'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
@@ -42,99 +52,145 @@ z.format_table(type_of_table='custom',
 
 print(*z.df.columns, sep='\n')
 
-fig, ax = plt.subplots()
-ax.plot(
-    z.df['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)'],
-    z.df['Adaptive Cooling Setpoint Temperature_No Tolerance (°C)'],
-    c='r',
-    ms=1,
-    marker='o',
-)
-plt.show()
+# fig, ax = plt.subplots()
+# ax.plot(
+#     z.df['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)'],
+#     z.df['Adaptive Cooling Setpoint Temperature_No Tolerance (°C)'],
+#     c='r',
+#     ms=1,
+#     marker='o',
+# )
+# plt.show()
 
 # multiple plots
+z.df['col_to_gather_in_cols'] = z.df[['Adaptive Standard', 'Category']].agg('['.join, axis=1)
+z.df['col_to_gather_in_rows'] = z.df['EPW']
+print(list(set(z.df['col_to_gather_in_cols'])))
+
+cols = list(set(z.df['col_to_gather_in_cols']))
+rows = list(set(z.df['col_to_gather_in_rows']))
+
+for col in cols:
+    for row in rows:
+        x_{col}_{row} =
+
+fig, ax = plt.subplots(3, 4)
+
+for i in range(len(cols)*len(rows)):
+    ax[i].scatter(
+        z.df[
+            (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_3') &
+            (z.df['col_to_gather_in_rows'] == 'London_Present')
+            ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
+    )
 
 
+x_row_0 = z.df[
+    (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_3') &
+    (z.df['col_to_gather_in_rows'] == 'London_Present')
+]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
 
-
-def format_col_name(col: str):
-    col = (col
-           .replace(' ', '_')
-           .replace(':', '_')
-           .replace('_(kWh/m2)', '')
-           .replace('_(Wh/m2)', '')
-           .replace('_(kWh)', '')
-           .replace('_(Wh)', '')
-           .replace('_(°C)', '')
-           .replace('_(h)', '')
-           .replace('_(m/s)', '')
-           .replace('[summed]', 'summed')
-           .replace('[mean]', 'mean')
-           )
-    return col
-
-cols_to_plot = [
-    'Adaptive Standard',
-    'Category'
+x_row_1 = z.df[
+    (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_3') &
+    (z.df['col_to_gather_in_rows'] == 'London_RCP85_2050')
 ]
 
-cols_to_plot = [format_col_name(i) for i in cols_to_plot]
+x_row_2 = z.df[
+    (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_3') &
+    (z.df['col_to_gather_in_rows'] == 'London_RCP85_2100')
+]
 
-rename_dict = {}
-for col in z.df.columns:
-    temp = {col: format_col_name(col)}
-    rename_dict.update(temp)
 
-z.df = z.df.rename(columns=rename_dict)
 
+
+
+
+
+
+
+
+
+
+
+# def format_col_name(col: str):
+#     col = (col
+#            .replace(' ', '_')
+#            .replace(':', '_')
+#            .replace('_(kWh/m2)', '')
+#            .replace('_(Wh/m2)', '')
+#            .replace('_(kWh)', '')
+#            .replace('_(Wh)', '')
+#            .replace('_(°C)', '')
+#            .replace('_(h)', '')
+#            .replace('_(m/s)', '')
+#            .replace('[summed]', 'summed')
+#            .replace('[mean]', 'mean')
+#            )
+#     return col
+# 
+# cols_to_plot = [
+#     'Adaptive Standard',
+#     'Category'
+# ]
+# 
+# cols_to_plot = [format_col_name(i) for i in cols_to_plot]
+# 
+# rename_dict = {}
+# for col in z.df.columns:
+#     temp = {col: format_col_name(col)}
+#     rename_dict.update(temp)
+# 
+# z.df = z.df.rename(columns=rename_dict)
 
 
 
 
 
 # single plot
-sources = list(set(z.df['Source']))
-df_temp = z.df[z.df.Source =='TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_ASHRAE55[CA_90[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1[Seville_Present']
-# print(*df_temp.columns, sep='\n')
+# sources = list(set(z.df['Source']))
+# df_temp = z.df[z.df.Source =='TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_ASHRAE55[CA_90[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1[Seville_Present']
+# # print(*df_temp.columns, sep='\n')
+# 
+# 
+# fig, ax = plt.subplots()
+# ax.plot(
+#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
+#     df_temp.Adaptive_Cooling_Setpoint_Temperature_No_Tolerance,
+#     c='r',
+#     ms=1,
+#     marker='o',
+#     # linewidth=1
+# )
+# ax.plot(
+#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
+#     df_temp.Adaptive_Heating_Setpoint_Temperature_No_Tolerance,
+#     c='b',
+#     ms=1,
+#     marker='o',
+#     # linewidth=1
+# )
+# ax.scatter(
+#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
+#     df_temp.Building_Total_Zone_Thermostat_Operative_Temperature_mean,
+#     c='g',
+#     s=1,
+#     marker='o'
+# )
+# 
+# ax2 = ax.twinx()
+# ax2.scatter(
+#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
+#     df_temp.Building_Total_Cooling_Energy_Demand_summed,
+#     s=1,
+#     marker='o'
+# )
+# ax2.scatter(
+#     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
+#     df_temp.Building_Total_Heating_Energy_Demand_summed,
+#     s=1,
+#     marker='o'
+# )
+# plt.show()
 
-
-fig, ax = plt.subplots()
-ax.plot(
-    df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-    df_temp.Adaptive_Cooling_Setpoint_Temperature_No_Tolerance,
-    c='r',
-    ms=1,
-    marker='o',
-    # linewidth=1
-)
-ax.plot(
-    df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-    df_temp.Adaptive_Heating_Setpoint_Temperature_No_Tolerance,
-    c='b',
-    ms=1,
-    marker='o',
-    # linewidth=1
-)
-ax.scatter(
-    df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-    df_temp.Building_Total_Zone_Thermostat_Operative_Temperature_mean,
-    c='g',
-    s=1,
-    marker='o'
-)
-
-ax2 = ax.twinx()
-ax2.scatter(
-    df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-    df_temp.Building_Total_Cooling_Energy_Demand_summed,
-    s=1,
-    marker='o'
-)
-ax2.scatter(
-    df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
-    df_temp.Building_Total_Heating_Energy_Demand_summed,
-    s=1,
-    marker='o'
-)
-plt.show()
-
+end = time.time()
+print(end-start)
