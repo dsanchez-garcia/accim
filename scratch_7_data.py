@@ -127,19 +127,19 @@ x_row_2 = z.df[
 #            .replace('[mean]', 'mean')
 #            )
 #     return col
-# 
+#
 # cols_to_plot = [
 #     'Adaptive Standard',
 #     'Category'
 # ]
-# 
+#
 # cols_to_plot = [format_col_name(i) for i in cols_to_plot]
-# 
+#
 # rename_dict = {}
 # for col in z.df.columns:
 #     temp = {col: format_col_name(col)}
 #     rename_dict.update(temp)
-# 
+#
 # z.df = z.df.rename(columns=rename_dict)
 
 
@@ -150,8 +150,8 @@ x_row_2 = z.df[
 # sources = list(set(z.df['Source']))
 # df_temp = z.df[z.df.Source =='TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_ASHRAE55[CA_90[CM_3[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1[Seville_Present']
 # # print(*df_temp.columns, sep='\n')
-# 
-# 
+#
+#
 # fig, ax = plt.subplots()
 # ax.plot(
 #     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
@@ -176,7 +176,7 @@ x_row_2 = z.df[
 #     s=1,
 #     marker='o'
 # )
-# 
+#
 # ax2 = ax.twinx()
 # ax2.scatter(
 #     df_temp.BLOCK1_ZONE2_ASHRAE_55_Running_mean_outdoor_temperature,
