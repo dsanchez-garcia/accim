@@ -70,25 +70,88 @@ print(list(set(z.df['col_to_gather_in_cols'])))
 cols = list(set(z.df['col_to_gather_in_cols']))
 rows = list(set(z.df['col_to_gather_in_rows']))
 
+cols.sort()
+rows.sort()
+
+# for col in cols:
+#     for row in rows:
+#         x_{col}_{row} =
+#
+# fig, ax = plt.subplots(3, 4)
+#
+# for i in range(len(cols)*len(rows)):
+#     ax[i].scatter(
+#         z.df[
+#             (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_3') &
+#             (z.df['col_to_gather_in_rows'] == 'London_Present')
+#             ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
+#     )
+
+x_list = []
+x = -1
+# for i in range(len(cols)*len(rows)):
 for col in cols:
     for row in rows:
-        x_{col}_{row} =
-
-fig, ax = plt.subplots(3, 4)
-
-for i in range(len(cols)*len(rows)):
-    ax[i].scatter(
+        x = x+1
+        temp = [x,
+        f'{col}_{row}',
         z.df[
-            (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_3') &
-            (z.df['col_to_gather_in_rows'] == 'London_Present')
+            (z.df['col_to_gather_in_cols'] == col) &
+            (z.df['col_to_gather_in_rows'] == row)
             ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
-    )
+        ]
+        x_list.append(temp)
+
+y_data_main = [
+    'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+    'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
+    'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]'
+]
+y_list_main = []
+x = -1
+# for i in range(len(cols)*len(rows)):
+for col in cols:
+    for row in rows:
+        x = x+1
+        temp = [x,
+        f'{col}_{row}',
+        [z.df[
+            (z.df['col_to_gather_in_cols'] == col) &
+            (z.df['col_to_gather_in_rows'] == row)
+            ][i]
+         for i in y_data_main
+        ]]
+        y_list_main.append(temp)
+
+y_data_sec = [
+    'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
+    'Building_Total_Heating Energy Demand (kWh/m2) [summed]'
+]
+y_list_sec = []
+x = -1
+# for i in range(len(cols)*len(rows)):
+for col in cols:
+    for row in rows:
+        x = x+1
+        temp = [x,
+        f'{col}_{row}',
+        [z.df[
+            (z.df['col_to_gather_in_cols'] == col) &
+            (z.df['col_to_gather_in_rows'] == row)
+            ][i]
+         for i in y_data_sec
+        ]]
+        y_list_sec.append(temp)
+
+
+
+
 
 
 x_row_0 = z.df[
     (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_3') &
     (z.df['col_to_gather_in_rows'] == 'London_Present')
-]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
+    ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
 
 x_row_1 = z.df[
     (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_3') &
