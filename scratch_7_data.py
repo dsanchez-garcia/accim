@@ -118,7 +118,9 @@ for i in range(len(rows)):
 
 
 y_data_main_scatter = [
-    'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]'
+    'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
+    # 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+    # 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)'
 ]
 y_list_main_scatter = []
 for i in range(len(rows)):
@@ -190,33 +192,38 @@ for i in range(len(rows)):
 # print(y_list_sec)
 
 fig, ax = plt.subplots(len(rows), len(cols))
-# ax[0].scatter()
-# for i in range(12):
-#     ax[i].scatter()
-#
-# ax[0].scatter(
-#     z.df['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)'],
-#     z.df['Building_Total_Zone Thermostat Operative Temperature (°C) [mean]'],
-#     c='g',
-#     s=1,
-#     marker='o'
-# )
-
 
 # y_list_main_scatter
 for i in range(len(rows)):
     for j in range(len(cols)):
         for k in range(len(y_list_main_scatter[i][j][3])):
-            # if i in x_list[i][0]:
             if 'Zone Thermostat Operative Temperature' in y_list_main_scatter[i][j][2][k]:
                 ax[i, j].scatter(
                     x_list[i][j][2],
                     y_list_main_scatter[i][j][3][k],
                     c='g',
+                    s=1,
+                    marker='o'
+                )
+            if 'Cooling' in y_list_main_scatter[i][j][2][k]:
+                ax[i, j].scatter(
+                    x_list[i][j][2],
+                    y_list_main_scatter[i][j][3][k],
+                    c='b',
+                    s=1,
+                    marker='o'
+                )
+            if 'Heating' in y_list_main_scatter[i][j][2][k]:
+                ax[i, j].scatter(
+                    x_list[i][j][2],
+                    y_list_main_scatter[i][j][3][k],
+                    c='r',
+                    s=1,
                     marker='o'
                 )
 
-# y_list_main_plot
+
+y_list_main_plot
 for i in range(len(rows)):
     for j in range(len(cols)):
         for k in range(len(y_list_main_plot[i][j][3])):
@@ -225,6 +232,7 @@ for i in range(len(rows)):
                     x_list[i][j][2],
                     y_list_main_plot[i][j][3][k],
                     c='b',
+                    ms=1,
                     marker='o'
                 )
             if 'Heating' in y_list_main_plot[i][j][2][k]:
@@ -232,6 +240,7 @@ for i in range(len(rows)):
                     x_list[i][j][2],
                     y_list_main_plot[i][j][3][k],
                     c='r',
+                    ms=1,
                     marker='o'
                 )
 
