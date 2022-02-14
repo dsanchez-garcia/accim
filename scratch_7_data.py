@@ -52,20 +52,21 @@ z.format_table(type_of_table='custom',
 
 print(*z.df.columns, sep='\n')
 
-# fig, ax = plt.subplots()
-# ax.plot(
-#     z.df['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)'],
-#     z.df['Adaptive Cooling Setpoint Temperature_No Tolerance (°C)'],
-#     c='r',
-#     ms=1,
-#     marker='o',
-# )
-# plt.show()
+# fig, ax = plt.subplots(3)
+# for i in range(3):
+#     ax[i].scatter(
+#         z.df['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)'],
+#         z.df['Adaptive Cooling Setpoint Temperature_No Tolerance (°C)'],
+#         c='r',
+#         s=1,
+#         marker='o',
+#     )
+#     plt.show()
 
 # multiple plots
 z.df['col_to_gather_in_cols'] = z.df[['Adaptive Standard', 'Category']].agg('['.join, axis=1)
 z.df['col_to_gather_in_rows'] = z.df['EPW']
-print(list(set(z.df['col_to_gather_in_cols'])))
+# print(list(set(z.df['col_to_gather_in_cols'])))
 
 cols = list(set(z.df['col_to_gather_in_cols']))
 rows = list(set(z.df['col_to_gather_in_rows']))
@@ -87,88 +88,152 @@ rows.sort()
 #             ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
 #     )
 
-x_list = []
-x = -1
-# for i in range(len(cols)*len(rows)):
-for col in cols:
-    for row in rows:
-        x = x+1
-        temp = [x,
-        f'{col}_{row}',
-        z.df[
-            (z.df['col_to_gather_in_cols'] == col) &
-            (z.df['col_to_gather_in_rows'] == row)
-            ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
-        ]
-        x_list.append(temp)
+# x_list = []
+# for i in range(len(rows)):
+#     for j in range(len(cols)):
+#         temp = [
+#             [i, j],
+#             f'{rows[i]}_{cols[j]}',
+#             z.df[
+#                 (z.df['col_to_gather_in_rows'] == rows[i]) &
+#                 (z.df['col_to_gather_in_cols'] == cols[j])
+#                 ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
+#             ]
+#         x_list.append(temp)
 
-y_data_main = [
-    'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
-    'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
+x_list = []
+for i in range(len(rows)):
+    temp_row = []
+    for j in range(len(cols)):
+        temp = [
+            [i, j],
+            f'{rows[i]}_{cols[j]}',
+            z.df[
+                (z.df['col_to_gather_in_rows'] == rows[i]) &
+                (z.df['col_to_gather_in_cols'] == cols[j])
+                ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
+            ]
+        temp_row.append(temp)
+    x_list.append(temp_row)
+
+
+y_data_main_scatter = [
     'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]'
 ]
-y_list_main = []
-x = -1
-# for i in range(len(cols)*len(rows)):
-for col in cols:
-    for row in rows:
-        x = x+1
-        temp = [x,
-        f'{col}_{row}',
-        [z.df[
-            (z.df['col_to_gather_in_cols'] == col) &
-            (z.df['col_to_gather_in_rows'] == row)
-            ][i]
-         for i in y_data_main
-        ]]
-        y_list_main.append(temp)
+y_list_main_scatter = []
+for i in range(len(rows)):
+    temp_row = []
+    for j in range(len(cols)):
+        temp = [
+            [i, j],
+            f'{rows[i]}_{cols[j]}',
+            [i for i in y_data_main_scatter],
+            [z.df[
+                (z.df['col_to_gather_in_rows'] == rows[i]) &
+                (z.df['col_to_gather_in_cols'] == cols[j])
+                ][k]
+             for k in y_data_main_scatter
+             ]]
+        temp_row.append(temp)
+    y_list_main_scatter.append(temp_row)
+
+y_data_main_plot = [
+    'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+    'Adaptive Heating Setpoint Temperature_No Tolerance (°C)'
+]
+y_list_main_plot = []
+for i in range(len(rows)):
+    temp_row = []
+    for j in range(len(cols)):
+        temp = [
+            [i, j],
+            f'{rows[i]}_{cols[j]}',
+            [i for i in y_data_main_plot],
+            [z.df[
+                (z.df['col_to_gather_in_rows'] == rows[i]) &
+                (z.df['col_to_gather_in_cols'] == cols[j])
+                ][k]
+             for k in y_data_main_plot
+             ]]
+        temp_row.append(temp)
+    y_list_main_plot.append(temp_row)
+
+
 
 y_data_sec = [
     'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
     'Building_Total_Heating Energy Demand (kWh/m2) [summed]'
 ]
 y_list_sec = []
-x = -1
-# for i in range(len(cols)*len(rows)):
-for col in cols:
-    for row in rows:
-        x = x+1
-        temp = [x,
-        f'{col}_{row}',
-        [z.df[
-            (z.df['col_to_gather_in_cols'] == col) &
-            (z.df['col_to_gather_in_rows'] == row)
-            ][i]
-         for i in y_data_sec
+for i in range(len(rows)):
+    temp_row = []
+    for j in range(len(cols)):
+        temp = [
+            [i, j],
+            f'{rows[i]}_{cols[j]}',
+            [i for i in y_data_sec],
+            [z.df[
+                (z.df['col_to_gather_in_rows'] == rows[i]) &
+                (z.df['col_to_gather_in_cols'] == cols[j])
+                ][k]
+             for k in y_data_sec
         ]]
-        y_list_sec.append(temp)
+        temp_row.append(temp)
+    y_list_sec.append(temp_row)
 
 
+# print(cols)
+# print(rows)
+# print(x_list)
+# print(y_list_main_scatter)
+# print(y_list_main_plot)
+# print(y_list_sec)
+
+fig, ax = plt.subplots(len(rows), len(cols))
+# ax[0].scatter()
+# for i in range(12):
+#     ax[i].scatter()
+#
+# ax[0].scatter(
+#     z.df['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)'],
+#     z.df['Building_Total_Zone Thermostat Operative Temperature (°C) [mean]'],
+#     c='g',
+#     s=1,
+#     marker='o'
+# )
 
 
+# y_list_main_scatter
+for i in range(len(rows)):
+    for j in range(len(cols)):
+        for k in range(len(y_list_main_scatter[i][j][3])):
+            # if i in x_list[i][0]:
+            if 'Zone Thermostat Operative Temperature' in y_list_main_scatter[i][j][2][k]:
+                ax[i, j].scatter(
+                    x_list[i][j][2],
+                    y_list_main_scatter[i][j][3][k],
+                    c='g',
+                    marker='o'
+                )
 
-
-x_row_0 = z.df[
-    (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_3') &
-    (z.df['col_to_gather_in_rows'] == 'London_Present')
-    ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
-
-x_row_1 = z.df[
-    (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_3') &
-    (z.df['col_to_gather_in_rows'] == 'London_RCP85_2050')
-]
-
-x_row_2 = z.df[
-    (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_3') &
-    (z.df['col_to_gather_in_rows'] == 'London_RCP85_2100')
-]
-
-
-
-
-
-
-
+# y_list_main_plot
+for i in range(len(rows)):
+    for j in range(len(cols)):
+        for k in range(len(y_list_main_plot[i][j][3])):
+            if 'Cooling' in y_list_main_plot[i][j][2][k]:
+                ax[i, j].plot(
+                    x_list[i][j][2],
+                    y_list_main_plot[i][j][3][k],
+                    c='b',
+                    marker='o'
+                )
+            if 'Heating' in y_list_main_plot[i][j][2][k]:
+                ax[i, j].plot(
+                    x_list[i][j][2],
+                    y_list_main_plot[i][j][3][k],
+                    c='r',
+                    marker='o'
+                )
 
 
 
