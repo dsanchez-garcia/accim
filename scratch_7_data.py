@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import time
 start = time.time()
 
+# making df
 z = Table(frequency='hourly',
           sum_or_mean='sum',
           standard_outputs=True,
@@ -22,7 +23,7 @@ z = Table(frequency='hourly',
 # print(f'The number of rows and the list of these is going to be:')
 # print(f'No. of rows = {len(list(set(z.df.Source)))}')
 
-# print(*z.df.columns, sep='\n')
+print(*z.df.columns, sep='\n')
 
 # z.hvac_zone_list
 # z.occupied_zone_list
@@ -37,7 +38,7 @@ temp_list = []
 additional_list = [
     'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
     'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
-    'BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)',
+    'BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)',
     'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
     'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
     'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
@@ -50,7 +51,7 @@ z.format_table(type_of_table='custom',
                manage_epw_names=False
                )
 
-print(*z.df.columns, sep='\n')
+# print(*z.df.columns, sep='\n')
 
 # fig, ax = plt.subplots(3)
 # for i in range(3):
@@ -88,19 +89,7 @@ rows.sort()
 #             ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
 #     )
 
-# x_list = []
-# for i in range(len(rows)):
-#     for j in range(len(cols)):
-#         temp = [
-#             [i, j],
-#             f'{rows[i]}_{cols[j]}',
-#             z.df[
-#                 (z.df['col_to_gather_in_rows'] == rows[i]) &
-#                 (z.df['col_to_gather_in_cols'] == cols[j])
-#                 ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
-#             ]
-#         x_list.append(temp)
-
+# making lists for figure
 x_list = []
 for i in range(len(rows)):
     temp_row = []
@@ -111,7 +100,7 @@ for i in range(len(rows)):
             z.df[
                 (z.df['col_to_gather_in_rows'] == rows[i]) &
                 (z.df['col_to_gather_in_cols'] == cols[j])
-                ]['BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)']
+                ]['BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)']
             ]
         temp_row.append(temp)
     x_list.append(temp_row)
@@ -119,8 +108,8 @@ for i in range(len(rows)):
 
 y_data_main_scatter = [
     'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
-    # 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
-    # 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)'
+    'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+    'Adaptive Heating Setpoint Temperature_No Tolerance (°C)'
 ]
 y_list_main_scatter = []
 for i in range(len(rows)):
@@ -191,11 +180,21 @@ for i in range(len(rows)):
 # print(y_list_main_plot)
 # print(y_list_sec)
 
-fig, ax = plt.subplots(len(rows), len(cols))
+fig, ax = plt.subplots(nrows=len(rows),
+                       ncols=len(cols),
+                       sharex=True,
+                       sharey=True,
+                       constrained_layout=True)
 
 # y_list_main_scatter
 for i in range(len(rows)):
     for j in range(len(cols)):
+        ax[i, j].set_title(f'{rows[i]} / {cols[j]}')
+        ax[i, j].grid(True, linestyle='-.')
+        ax[i, j].tick_params(axis='both',
+                             grid_color='black',
+                             grid_alpha=0.5)
+        ax[i, j].set_facecolor((0, 0, 0, 0.10))
         for k in range(len(y_list_main_scatter[i][j][3])):
             if 'Zone Thermostat Operative Temperature' in y_list_main_scatter[i][j][2][k]:
                 ax[i, j].scatter(
@@ -203,7 +202,8 @@ for i in range(len(rows)):
                     y_list_main_scatter[i][j][3][k],
                     c='g',
                     s=1,
-                    marker='o'
+                    marker='o',
+                    alpha=0.5,
                 )
             if 'Cooling' in y_list_main_scatter[i][j][2][k]:
                 ax[i, j].scatter(
@@ -211,7 +211,8 @@ for i in range(len(rows)):
                     y_list_main_scatter[i][j][3][k],
                     c='b',
                     s=1,
-                    marker='o'
+                    marker='o',
+                    alpha=0.5,
                 )
             if 'Heating' in y_list_main_scatter[i][j][2][k]:
                 ax[i, j].scatter(
@@ -219,34 +220,71 @@ for i in range(len(rows)):
                     y_list_main_scatter[i][j][3][k],
                     c='r',
                     s=1,
-                    marker='o'
+                    marker='o',
+                    alpha=0.5,
                 )
-
-
-y_list_main_plot
+        for k in range(len(y_list_sec[i][j][3])):
+            if 'Cooling' in y_list_sec[i][j][2][k]:
+                ax[i, j].twinx().scatter(
+                    x_list[i][j][2],
+                    y_list_sec[i][j][3][k],
+                    c='c',
+                    s=1,
+                    marker='o',
+                    alpha=0.5,
+                )
+            if 'Heating' in y_list_sec[i][j][2][k]:
+                ax[i, j].twinx().scatter(
+                    x_list[i][j][2],
+                    y_list_sec[i][j][3][k],
+                    c='m',
+                    s=1,
+                    marker='o',
+                    alpha=0.5,
+                )
 for i in range(len(rows)):
-    for j in range(len(cols)):
-        for k in range(len(y_list_main_plot[i][j][3])):
-            if 'Cooling' in y_list_main_plot[i][j][2][k]:
-                ax[i, j].plot(
-                    x_list[i][j][2],
-                    y_list_main_plot[i][j][3][k],
-                    c='b',
-                    ms=1,
-                    marker='o'
-                )
-            if 'Heating' in y_list_main_plot[i][j][2][k]:
-                ax[i, j].plot(
-                    x_list[i][j][2],
-                    y_list_main_plot[i][j][3][k],
-                    c='r',
-                    ms=1,
-                    marker='o'
-                )
+    ax[i, 0].set_ylabel(rows[i], rotation=90, size='large')
+
+for j in range(len(cols)):
+    ax[0, j].set_title(cols[j])
+
+fig.supxlabel('Running mean outdoor temperature (°C)')
+fig.supylabel('Operative temperature (°C)')
+
+fig.axes
+
+# y_list_main_plot
+# for i in range(len(rows)):
+#     for j in range(len(cols)):
+#         ax[i, j].set_title(f'{rows[i]}_{cols[j]}')
+#         for k in range(len(y_list_main_plot[i][j][3])):
+#             if 'Cooling' in y_list_main_plot[i][j][2][k]:
+#                 ax[i, j].plot(
+#                     x_list[i][j][2],
+#                     y_list_main_plot[i][j][3][k],
+#                     c='b',
+#                     ms=1,
+#                     marker='o'
+#                 )
+#             if 'Heating' in y_list_main_plot[i][j][2][k]:
+#                 ax[i, j].plot(
+#                     x_list[i][j][2],
+#                     y_list_main_plot[i][j][3][k],
+#                     c='r',
+#                     ms=1,
+#                     marker='o'
+#                 )
+
+plt.show()
 
 
-
-
+# todo testing
+# y_list_main_plot[0][1][3][0]
+# temp_df = z.df[
+#     (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_1') &
+#     (z.df['col_to_gather_in_rows'] == 'London_Present')
+#     ]
+# temp_df.to_excel('temp_testing.xlsx')
 
 
 # def format_col_name(col: str):

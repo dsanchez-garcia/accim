@@ -802,13 +802,28 @@ class Table:
 
     def scatter_plot(
             self,
+            type_of_graph: str = None,
             vars_to_gather_cols=None,
-            vars_to_gather_rows=None
-    ):
+            vars_to_gather_rows=None,
+            data_on_x_axis: str = None,
+            data_on_y_main_axis=None,
+            data_on_y_sec_axis=None,
+            data_lines_on_y_axis=None,
+            supxlabel: str = None,
+            supylabel: str = None,
+            colorlist=None):
         if vars_to_gather_cols is None:
-            vars_to_gather = []
+            vars_to_gather_cols = []
         if vars_to_gather_rows is None:
             vars_to_gather_rows = []
+        if data_on_y_main_axis is None:
+            data_on_y_main_axis = []
+        if data_on_y_sec_axis is None:
+            data_on_y_sec_axis = []
+        if data_lines_on_y_axis is None:
+            data_lines_on_y_axis = []
+        if colorlist is None:
+            colorlist = []
 
         import numpy as np
         import matplotlib.pyplot as plt
@@ -817,9 +832,12 @@ class Table:
         self.df['col_to_gather_in_rows'] = 'temp'
 
         self.indexcols.extend(['col_to_gather_in_cols', 'col_to_gather_in_rows'])
-
-        self.enter_vars_to_gather(vars_to_gather_cols)
-        self.enter_vars_to_gather(vars_to_gather_rows)
+        if len(vars_to_gather_rows) == 0:
+            print('In relation to the variables to be gathered in rows,')
+            self.enter_vars_to_gather(vars_to_gather_cols)
+        if len(vars_to_gather_cols) == 0:
+            print('In relation to the variables to be gathered in columns,')
+            self.enter_vars_to_gather(vars_to_gather_cols)
 
         self.df_for_graph = self.df
 
@@ -841,23 +859,295 @@ class Table:
 
         self.df['col_to_gather_in_rows'] = self.df_for_graph['col_to_gather_in_rows']
 
-        print(f'The number of columns and the list of these is going to be:')
-        print(f'No. of columns = {len(list(set(self.df_for_graph.col_to_gather_in_cols)))}')
-        print(f'List of columns:')
-        print(*list(set(self.df_for_graph.col_to_gather_in_cols)), sep='\n')
+        cols = list(set(self.df_for_graph['col_to_gather_in_cols']))
+        rows = list(set(self.df_for_graph['col_to_gather_in_rows']))
+
+        cols.sort()
+        rows.sort()
 
         print(f'The number of rows and the list of these is going to be:')
         print(f'No. of rows = {len(list(set(self.df_for_graph.col_to_gather_in_rows)))}')
         print(f'List of rows:')
-        print(*list(set(self.df_for_graph.col_to_gather_in_rows)), sep='\n')
-        proceed = input('Are you sure this is correct? [y/n]')
-        # if 'y' in proceed:
-        ax, fit = plt.subplots(
-            len(list(set(self.df_for_graph.col_to_gather_in_cols))),
-            len(list(set(self.df_for_graph.col_to_gather_in_rows))),
-        )
+        print(*rows, sep='\n')
 
+        print(f'The number of columns and the list of these is going to be:')
+        print(f'No. of columns = {len(list(set(self.df_for_graph.col_to_gather_in_cols)))}')
+        print(f'List of columns:')
+        print(*cols, sep='\n')
 
+        proceed = input('Are you sure this is correct? [y/n]:')
+        if 'y' in proceed:
+            # making lists for figure
+            x_list = []
+            for i in range(len(rows)):
+                temp_row = []
+                for j in range(len(cols)):
+                    temp = [
+                        [i, j],
+                        f'{rows[i]}_{cols[j]}',
+                        self.df_for_graph[
+                            (self.df_for_graph['col_to_gather_in_rows'] == rows[i]) &
+                            (self.df_for_graph['col_to_gather_in_cols'] == cols[j])
+                            ][data_on_x_axis]
+                    ]
+                    temp_row.append(temp)
+                x_list.append(temp_row)
+
+            # data_on_y_main_axis = [
+            #     'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
+            #     'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+            #     'Adaptive Heating Setpoint Temperature_No Tolerance (°C)'
+            # ]
+            y_list_main_scatter = []
+            for i in range(len(rows)):
+                temp_row = []
+                for j in range(len(cols)):
+                    temp = [
+                        [i, j],
+                        f'{rows[i]}_{cols[j]}',
+                        [i for i in data_on_y_main_axis],
+                        [self.df_for_graph[
+                             (self.df_for_graph['col_to_gather_in_rows'] == rows[i]) &
+                             (self.df_for_graph['col_to_gather_in_cols'] == cols[j])
+                             ][k]
+                         for k in data_on_y_main_axis
+                         ],
+                        [i for i in colorlist]
+                    ]
+                    temp_row.append(temp)
+                y_list_main_scatter.append(temp_row)
+
+            # data_lines_on_y_axis = [
+            #     'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+            #     'Adaptive Heating Setpoint Temperature_No Tolerance (°C)'
+            # ]
+            if len(data_lines_on_y_axis) > 0:
+                y_list_main_plot = []
+                for i in range(len(rows)):
+                    temp_row = []
+                    for j in range(len(cols)):
+                        temp = [
+                            [i, j],
+                            f'{rows[i]}_{cols[j]}',
+                            [i for i in data_lines_on_y_axis],
+                            [self.df_for_graph[
+                                 (self.df_for_graph['col_to_gather_in_rows'] == rows[i]) &
+                                 (self.df_for_graph['col_to_gather_in_cols'] == cols[j])
+                                 ][k]
+                             for k in data_lines_on_y_axis
+                             ],
+                            [i for i in colorlist]
+                        ]
+                        temp_row.append(temp)
+                    y_list_main_plot.append(temp_row)
+
+            # data_on_y_sec_axis = [
+            #     'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
+            #     'Building_Total_Heating Energy Demand (kWh/m2) [summed]'
+            # ]
+            if len(data_on_y_sec_axis) > 0:
+                y_list_sec = []
+                for i in range(len(rows)):
+                    temp_row = []
+                    for j in range(len(cols)):
+                        temp = [
+                            [i, j],
+                            f'{rows[i]}_{cols[j]}',
+                            [i for i in data_on_y_sec_axis],
+                            [self.df_for_graph[
+                                 (self.df_for_graph['col_to_gather_in_rows'] == rows[i]) &
+                                 (self.df_for_graph['col_to_gather_in_cols'] == cols[j])
+                                 ][k]
+                             for k in data_on_y_sec_axis
+                             ],
+                            [i for i in colorlist]
+                        ]
+                        temp_row.append(temp)
+                    y_list_sec.append(temp_row)
+
+            fig, ax = plt.subplots(nrows=len(rows),
+                                   ncols=len(cols),
+                                   sharex=True,
+                                   sharey=True,
+                                   constrained_layout=True)
+
+            data_dict = {
+                'op temp vs rmot': {
+                    'Zone Thermostat Operative Temperature': 'g',
+                    'Cooling': 'b',
+                    'Heating': 'r'
+                    },
+
+            }
+
+            # y_list_main_scatter
+            # list_of_axes = []
+            for i in range(len(rows)):
+                for j in range(len(cols)):
+                    ax[i, j].set_title(f'{rows[i]} / {cols[j]}')
+                    ax[i, j].grid(True, linestyle='-.')
+                    ax[i, j].tick_params(axis='both',
+                                         grid_color='black',
+                                         grid_alpha=0.5)
+                    ax[i, j].set_facecolor((0, 0, 0, 0.10))
+                    # list_of_axes.append(ax[i, j][0])
+                    for k in range(len(y_list_main_scatter[i][j][3])):
+                        if 'op temp vs rmot' in type_of_graph:
+                            if 'Zone Thermostat Operative Temperature' in y_list_main_scatter[i][j][2][k]:
+                                ax[i, j].scatter(
+                                    x_list[i][j][2],
+                                    y_list_main_scatter[i][j][3][k],
+                                    c='g',
+                                    s=1,
+                                    marker='o',
+                                    alpha=0.5,
+                                )
+                            elif 'Cooling' in y_list_main_scatter[i][j][2][k]:
+                                ax[i, j].scatter(
+                                    x_list[i][j][2],
+                                    y_list_main_scatter[i][j][3][k],
+                                    c='b',
+                                    s=1,
+                                    marker='o',
+                                    alpha=0.5,
+                                )
+                            elif 'Heating' in y_list_main_scatter[i][j][2][k]:
+                                ax[i, j].scatter(
+                                    x_list[i][j][2],
+                                    y_list_main_scatter[i][j][3][k],
+                                    c='r',
+                                    s=1,
+                                    marker='o',
+                                    alpha=0.5,
+                                )
+                            else:
+                                ax[i, j].scatter(
+                                    x_list[i][j][2],
+                                    y_list_main_scatter[i][j][3][k],
+                                    s=1,
+                                    marker='o',
+                                    alpha=0.5,
+                                )
+                        elif 'custom' in type_of_graph:
+                            ax[i, j].scatter(
+                                x_list[i][j][2],
+                                y_list_main_scatter[i][j][3][k],
+                                c=y_list_main_scatter[i][j][4][k],
+                                s=1,
+                                marker='o',
+                                alpha=0.5,
+                            )
+
+                    if len(data_on_y_sec_axis) > 0:
+                        for k in range(len(y_list_sec[i][j][3])):
+                            if 'op temp vs rmot' in type_of_graph:
+                                if 'Cooling' in y_list_sec[i][j][2][k]:
+                                    ax[i, j].twinx().scatter(
+                                        x_list[i][j][2],
+                                        y_list_sec[i][j][3][k],
+                                        c='c',
+                                        s=1,
+                                        marker='o',
+                                        alpha=0.5,
+                                    )
+                                elif 'Heating' in y_list_sec[i][j][2][k]:
+                                    ax[i, j].twinx().scatter(
+                                        x_list[i][j][2],
+                                        y_list_sec[i][j][3][k],
+                                        c='m',
+                                        s=1,
+                                        marker='o',
+                                        alpha=0.5,
+                                    )
+                                else:
+                                    ax[i, j].twinx().scatter(
+                                        x_list[i][j][2],
+                                        y_list_sec[i][j][3][k],
+                                        s=1,
+                                        marker='o',
+                                        alpha=0.5,
+                                    )
+                            elif 'custom' in type_of_graph:
+                                ax[i, j].twinx().scatter(
+                                    x_list[i][j][2],
+                                    y_list_sec[i][j][3][k],
+                                    s=1,
+                                    c=y_list_sec[i][j][4][k],
+                                    marker='o',
+                                    alpha=0.5,
+                                )
+
+                    if len(data_lines_on_y_axis) > 0:
+                        for k in range(len(y_list_main_plot[i][j][3])):
+                            if 'op temp vs rmot' in type_of_graph:
+                                if 'Cooling' in y_list_main_plot[i][j][2][k]:
+                                    ax[i, j].plot(
+                                        x_list[i][j][2],
+                                        y_list_main_plot[i][j][3][k],
+                                        c='b',
+                                        ms=1,
+                                        marker='o'
+                                    )
+                                elif 'Heating' in y_list_main_plot[i][j][2][k]:
+                                    ax[i, j].plot(
+                                        x_list[i][j][2],
+                                        y_list_main_plot[i][j][3][k],
+                                        c='r',
+                                        ms=1,
+                                        marker='o'
+                                    )
+                                else:
+                                    ax[i, j].plot(
+                                        x_list[i][j][2],
+                                        y_list_main_plot[i][j][3][k],
+                                        ms=1,
+                                        marker='o'
+                                    )
+                            elif 'custom' in type_of_graph:
+                                ax[i, j].plot(
+                                    x_list[i][j][2],
+                                    y_list_main_plot[i][j][3][k],
+                                    c=y_list_main_plot[i][j][4][k],
+                                    ms=1,
+                                    marker='o'
+                            )
+
+            for i in range(len(rows)):
+                ax[i, 0].set_ylabel(rows[i], rotation=90, size='large')
+
+            for j in range(len(cols)):
+                ax[0, j].set_title(cols[j])
+
+            if 'op temp vs rmot' in type_of_graph:
+                fig.supxlabel('Running mean outdoor temperature (°C)')
+                fig.supylabel('Operative temperature (°C)')
+            elif 'custom' in type_of_graph:
+                fig.supxlabel(supxlabel)
+                fig.supylabel(supylabel)
+
+            # list_of_labels = []
+            # for i in range(len(rows)):
+            #     for j in range(len(cols)):
+            #         for k in range(len(y_list_main_scatter[i][j][3])):
+            #             list_of_labels.append(y_list_main_scatter[i][j][2][k])
+            #         if len(data_on_y_sec_axis) > 0:
+            #             for k in range(len(y_list_sec[i][j][3])):
+            #                 list_of_labels.append(y_list_sec[i][j][2][k])
+            #         if len(data_lines_on_y_axis) > 0:
+            #             for k in range(len(y_list_main_plot[i][j][3])):
+            #                 list_of_labels.append(y_list_main_plot[i][j][2][k])
+            #
+            # fig.legend(
+            #     list_of_axes,
+            #     list_of_labels,
+            #     loc='center right',
+            #     title='Legend'
+            # )
+
+            # handles, labels = ax[i, j].get_legend_handles_labels()
+            # fig.legend(handles, labels, loc='upper center')
+
+            plt.show()
 
     def enter_vars_to_gather(
             self,
