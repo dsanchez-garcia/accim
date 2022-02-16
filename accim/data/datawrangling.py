@@ -811,7 +811,9 @@ class Table:
             data_lines_on_y_axis=None,
             supxlabel: str = None,
             supylabel: str = None,
-            colorlist=None):
+            colorlist=None,
+            figname: str = None,
+            figsize: int = 1):
         if vars_to_gather_cols is None:
             vars_to_gather_cols = []
         if vars_to_gather_rows is None:
@@ -969,22 +971,27 @@ class Table:
                                    ncols=len(cols),
                                    sharex=True,
                                    sharey=True,
-                                   constrained_layout=True)
+                                   constrained_layout=True,
+                                   figsize=(figsize * len(cols), figsize * len(rows)))
 
-            data_dict = {
+            color_dict = {
                 'op temp vs rmot': {
-                    'Zone Thermostat Operative Temperature': 'g',
-                    'Cooling': 'b',
-                    'Heating': 'r'
-                    },
-
+                    'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]': 'g',
+                    'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)': 'b',
+                    'Adaptive Heating Setpoint Temperature_No Tolerance (°C)': 'r',
+                    'Building_Total_Cooling Energy Demand (kWh/m2) [summed]': 'c',
+                    'Building_Total_Heating Energy Demand (kWh/m2) [summed]': 'm',
+                },
+                'outdoor temp vs energy demand': {
+                    'Building_Total_Cooling Energy Demand (kWh/m2) [summed]': 'b',
+                    'Building_Total_Heating Energy Demand (kWh/m2) [summed]': 'r',
+                },
             }
 
             # y_list_main_scatter
-            # list_of_axes = []
             for i in range(len(rows)):
                 for j in range(len(cols)):
-                    ax[i, j].set_title(f'{rows[i]} / {cols[j]}')
+                    # ax[i, j].set_title(f'{rows[i]} / {cols[j]}')
                     ax[i, j].grid(True, linestyle='-.')
                     ax[i, j].tick_params(axis='both',
                                          grid_color='black',
@@ -992,125 +999,134 @@ class Table:
                     ax[i, j].set_facecolor((0, 0, 0, 0.10))
                     # list_of_axes.append(ax[i, j][0])
                     for k in range(len(y_list_main_scatter[i][j][3])):
-                        if 'op temp vs rmot' in type_of_graph:
-                            if 'Zone Thermostat Operative Temperature' in y_list_main_scatter[i][j][2][k]:
+                        for x in color_dict:
+                            if x in type_of_graph:
+                                for y in color_dict[x]:
+                                    if y in y_list_main_scatter[i][j][2][k]:
+                                        if i == 0 and j == 0:
+                                            ax[i, j].scatter(
+                                                x_list[i][j][2],
+                                                y_list_main_scatter[i][j][3][k],
+                                                c=color_dict[x][y],
+                                                s=1,
+                                                marker='o',
+                                                alpha=0.5,
+                                                label=y_list_main_scatter[i][j][2][k]
+                                            )
+                                        else:
+                                            ax[i, j].scatter(
+                                                x_list[i][j][2],
+                                                y_list_main_scatter[i][j][3][k],
+                                                c=color_dict[x][y],
+                                                s=1,
+                                                marker='o',
+                                                alpha=0.5,
+                                            )
+                        if 'custom' in type_of_graph:
+                            if i == 0 and j == 0:
                                 ax[i, j].scatter(
                                     x_list[i][j][2],
                                     y_list_main_scatter[i][j][3][k],
-                                    c='g',
+                                    c=y_list_main_scatter[i][j][4][k],
                                     s=1,
                                     marker='o',
                                     alpha=0.5,
-                                )
-                            elif 'Cooling' in y_list_main_scatter[i][j][2][k]:
-                                ax[i, j].scatter(
-                                    x_list[i][j][2],
-                                    y_list_main_scatter[i][j][3][k],
-                                    c='b',
-                                    s=1,
-                                    marker='o',
-                                    alpha=0.5,
-                                )
-                            elif 'Heating' in y_list_main_scatter[i][j][2][k]:
-                                ax[i, j].scatter(
-                                    x_list[i][j][2],
-                                    y_list_main_scatter[i][j][3][k],
-                                    c='r',
-                                    s=1,
-                                    marker='o',
-                                    alpha=0.5,
+                                    label=y_list_main_scatter[i][j][2][k]
                                 )
                             else:
                                 ax[i, j].scatter(
                                     x_list[i][j][2],
                                     y_list_main_scatter[i][j][3][k],
+                                    c=y_list_main_scatter[i][j][4][k],
                                     s=1,
                                     marker='o',
                                     alpha=0.5,
                                 )
-                        elif 'custom' in type_of_graph:
-                            ax[i, j].scatter(
-                                x_list[i][j][2],
-                                y_list_main_scatter[i][j][3][k],
-                                c=y_list_main_scatter[i][j][4][k],
-                                s=1,
-                                marker='o',
-                                alpha=0.5,
-                            )
-
                     if len(data_on_y_sec_axis) > 0:
                         for k in range(len(y_list_sec[i][j][3])):
-                            if 'op temp vs rmot' in type_of_graph:
-                                if 'Cooling' in y_list_sec[i][j][2][k]:
+                            for x in color_dict:
+                                if x in type_of_graph:
+                                    for y in color_dict[x]:
+                                        if y in y_list_sec[i][j][2][k]:
+                                            if i == 0 and j == 0:
+                                                ax[i, j].twinx().scatter(
+                                                    x_list[i][j][2],
+                                                    y_list_sec[i][j][3][k],
+                                                    c=color_dict[x][y],
+                                                    s=1,
+                                                    marker='o',
+                                                    alpha=0.5,
+                                                    label=y_list_sec[i][j][2][k]
+                                                )
+                                            else:
+                                                ax[i, j].twinx().scatter(
+                                                    x_list[i][j][2],
+                                                    y_list_sec[i][j][3][k],
+                                                    c=color_dict[x][y],
+                                                    s=1,
+                                                    marker='o',
+                                                    alpha=0.5,
+                                                )
+                            if 'custom' in type_of_graph:
+                                if i == 0 and j == 0:
                                     ax[i, j].twinx().scatter(
                                         x_list[i][j][2],
                                         y_list_sec[i][j][3][k],
-                                        c='c',
                                         s=1,
+                                        c=y_list_sec[i][j][4][k],
                                         marker='o',
                                         alpha=0.5,
-                                    )
-                                elif 'Heating' in y_list_sec[i][j][2][k]:
-                                    ax[i, j].twinx().scatter(
-                                        x_list[i][j][2],
-                                        y_list_sec[i][j][3][k],
-                                        c='m',
-                                        s=1,
-                                        marker='o',
-                                        alpha=0.5,
+                                        label=y_list_sec[i][j][2][k]
                                     )
                                 else:
                                     ax[i, j].twinx().scatter(
                                         x_list[i][j][2],
                                         y_list_sec[i][j][3][k],
                                         s=1,
+                                        c=y_list_sec[i][j][4][k],
                                         marker='o',
                                         alpha=0.5,
                                     )
-                            elif 'custom' in type_of_graph:
-                                ax[i, j].twinx().scatter(
-                                    x_list[i][j][2],
-                                    y_list_sec[i][j][3][k],
-                                    s=1,
-                                    c=y_list_sec[i][j][4][k],
-                                    marker='o',
-                                    alpha=0.5,
-                                )
-
                     if len(data_lines_on_y_axis) > 0:
                         for k in range(len(y_list_main_plot[i][j][3])):
-                            if 'op temp vs rmot' in type_of_graph:
-                                if 'Cooling' in y_list_main_plot[i][j][2][k]:
-                                    ax[i, j].plot(
-                                        x_list[i][j][2],
-                                        y_list_main_plot[i][j][3][k],
-                                        c='b',
-                                        ms=1,
-                                        marker='o'
-                                    )
-                                elif 'Heating' in y_list_main_plot[i][j][2][k]:
-                                    ax[i, j].plot(
-                                        x_list[i][j][2],
-                                        y_list_main_plot[i][j][3][k],
-                                        c='r',
-                                        ms=1,
-                                        marker='o'
-                                    )
-                                else:
-                                    ax[i, j].plot(
-                                        x_list[i][j][2],
-                                        y_list_main_plot[i][j][3][k],
-                                        ms=1,
-                                        marker='o'
-                                    )
-                            elif 'custom' in type_of_graph:
-                                ax[i, j].plot(
-                                    x_list[i][j][2],
-                                    y_list_main_plot[i][j][3][k],
-                                    c=y_list_main_plot[i][j][4][k],
-                                    ms=1,
-                                    marker='o'
-                            )
+                            for x in color_dict:
+                                if x in type_of_graph:
+                                    for y in color_dict[x]:
+                                        if y in y_list_main_plot[i][j][2][k]:
+                                            if i == 0 and j == 0:
+                                                ax[i, j].plot(
+                                                    x_list[i][j][2],
+                                                    y_list_main_plot[i][j][3][k],
+                                                    c=color_dict[x][y],
+                                                    ms=1,
+                                                    marker='o',
+                                                    label=y_list_main_plot[i][j][2][k]
+                                                )
+                                            else:
+                                                ax[i, j].plot(
+                                                    x_list[i][j][2],
+                                                    y_list_main_plot[i][j][3][k],
+                                                    c=color_dict[x][y],
+                                                    ms=1,
+                                                    marker='o',
+                                                )
+                                if 'custom' in type_of_graph:
+                                    if i == 0 and j == 0:
+                                        ax[i, j].plot(
+                                            x_list[i][j][2],
+                                            y_list_main_plot[i][j][3][k],
+                                            c=y_list_main_plot[i][j][4][k],
+                                            ms=1,
+                                            marker='o'
+                                        )
+                                    else:
+                                        ax[i, j].plot(
+                                            x_list[i][j][2],
+                                            y_list_main_plot[i][j][3][k],
+                                            c=y_list_main_plot[i][j][4][k],
+                                            ms=1,
+                                            marker='o'
+                                        )
 
             for i in range(len(rows)):
                 ax[i, 0].set_ylabel(rows[i], rotation=90, size='large')
@@ -1118,34 +1134,43 @@ class Table:
             for j in range(len(cols)):
                 ax[0, j].set_title(cols[j])
 
-            if 'op temp vs rmot' in type_of_graph:
-                fig.supxlabel('Running mean outdoor temperature (°C)')
-                fig.supylabel('Operative temperature (°C)')
-            elif 'custom' in type_of_graph:
+            suplabels_dict = {
+                'op temp vs rmot': {
+                    'x': 'Running mean outdoor temperature (°C)',
+                    'y': 'Operative temperature (°C)'
+                },
+                'outdoor temp vs energy demand':{
+                    'x': 'Outdoor temperature (°C)',
+                    'y': 'Energy demand'
+                }
+            }
+
+            for i in suplabels_dict:
+                if i in type_of_graph:
+                    fig.supxlabel(suplabels_dict[i]['x'])
+                    fig.supylabel(suplabels_dict[i]['y'])
+            if 'custom' in type_of_graph:
                 fig.supxlabel(supxlabel)
                 fig.supylabel(supylabel)
 
-            # list_of_labels = []
-            # for i in range(len(rows)):
-            #     for j in range(len(cols)):
-            #         for k in range(len(y_list_main_scatter[i][j][3])):
-            #             list_of_labels.append(y_list_main_scatter[i][j][2][k])
-            #         if len(data_on_y_sec_axis) > 0:
-            #             for k in range(len(y_list_sec[i][j][3])):
-            #                 list_of_labels.append(y_list_sec[i][j][2][k])
-            #         if len(data_lines_on_y_axis) > 0:
-            #             for k in range(len(y_list_main_plot[i][j][3])):
-            #                 list_of_labels.append(y_list_main_plot[i][j][2][k])
-            #
-            # fig.legend(
-            #     list_of_axes,
-            #     list_of_labels,
-            #     loc='center right',
-            #     title='Legend'
-            # )
+            leg = fig.legend(
+                bbox_to_anchor=(0.5, 0),
+                loc='upper center',
+                fontsize='large'
+                # borderaxespad=0.1,
+            )
 
-            # handles, labels = ax[i, j].get_legend_handles_labels()
-            # fig.legend(handles, labels, loc='upper center')
+            for i in range(len(leg.legendHandles)):
+                leg.legendHandles[i]._sizes = [30]
+
+            # plt.subplots_adjust(bottom=0.2)
+            # plt.tight_layout()
+
+            plt.savefig(figname + '.jpg',
+                        dpi=900,
+                        format='jpg',
+                        bbox_extra_artists=(leg,),
+                        bbox_inches='tight')
 
             plt.show()
 

@@ -1,3 +1,5 @@
+##
+
 from accim.data.datawrangling import Table
 import matplotlib.pyplot as plt
 import time
@@ -46,7 +48,7 @@ additional_list = [
 
 custom_cols_list = temp_list + additional_list
 
-z.format_table(type_of_table='custom',
+z.format_table(type_of_graph='custom',
                custom_cols=custom_cols_list,
                manage_epw_names=False
                )
@@ -180,11 +182,31 @@ for i in range(len(rows)):
 # print(y_list_main_plot)
 # print(y_list_sec)
 
+data_dict = {
+    'op temp vs rmot': {
+        'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]': 'g',
+        'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)': 'b',
+        'Adaptive Heating Setpoint Temperature_No Tolerance (°C)': 'r',
+        'Building_Total_Cooling Energy Demand (kWh/m2) [summed]': 'c',
+        'Building_Total_Heating Energy Demand (kWh/m2) [summed]': 'm',
+    },
+    'outdoor temp vs energy demand': {
+        'Building_Total_Cooling Energy Demand (kWh/m2) [summed]': 'b',
+        'Building_Total_Heating Energy Demand (kWh/m2) [summed]': 'r',
+    },
+}
+
+
+##
+s=4
+type_of_graph = 'op temp vs rmot'
+
 fig, ax = plt.subplots(nrows=len(rows),
                        ncols=len(cols),
                        sharex=True,
                        sharey=True,
-                       constrained_layout=True)
+                       constrained_layout=True,
+                       figsize=(s*len(cols), s*len(rows)))
 
 # y_list_main_scatter
 for i in range(len(rows)):
@@ -196,52 +218,63 @@ for i in range(len(rows)):
                              grid_alpha=0.5)
         ax[i, j].set_facecolor((0, 0, 0, 0.10))
         for k in range(len(y_list_main_scatter[i][j][3])):
-            if 'Zone Thermostat Operative Temperature' in y_list_main_scatter[i][j][2][k]:
-                ax[i, j].scatter(
-                    x_list[i][j][2],
-                    y_list_main_scatter[i][j][3][k],
-                    c='g',
-                    s=1,
-                    marker='o',
-                    alpha=0.5,
-                )
-            if 'Cooling' in y_list_main_scatter[i][j][2][k]:
-                ax[i, j].scatter(
-                    x_list[i][j][2],
-                    y_list_main_scatter[i][j][3][k],
-                    c='b',
-                    s=1,
-                    marker='o',
-                    alpha=0.5,
-                )
-            if 'Heating' in y_list_main_scatter[i][j][2][k]:
-                ax[i, j].scatter(
-                    x_list[i][j][2],
-                    y_list_main_scatter[i][j][3][k],
-                    c='r',
-                    s=1,
-                    marker='o',
-                    alpha=0.5,
-                )
+            for x in data_dict:
+                if x in type_of_graph:
+                    for y in data_dict[x]:
+                        if y in y_list_main_scatter[i][j][2][k]:
+                            if i == 0 and j == 0:
+                                ax[i, j].scatter(
+                                    x_list[i][j][2],
+                                    y_list_main_scatter[i][j][3][k],
+                                    c=data_dict[x][y],
+                                    s=1,
+                                    marker='o',
+                                    alpha=0.5,
+                                    label=y_list_main_scatter[i][j][2][k]
+                                )
+                            else:
+                                ax[i, j].scatter(
+                                    x_list[i][j][2],
+                                    y_list_main_scatter[i][j][3][k],
+                                    c=data_dict[x][y],
+                                    s=1,
+                                    marker='o',
+                                    alpha=0.5,
+                                )
         for k in range(len(y_list_sec[i][j][3])):
-            if 'Cooling' in y_list_sec[i][j][2][k]:
-                ax[i, j].twinx().scatter(
-                    x_list[i][j][2],
-                    y_list_sec[i][j][3][k],
-                    c='c',
-                    s=1,
-                    marker='o',
-                    alpha=0.5,
-                )
-            if 'Heating' in y_list_sec[i][j][2][k]:
-                ax[i, j].twinx().scatter(
-                    x_list[i][j][2],
-                    y_list_sec[i][j][3][k],
-                    c='m',
-                    s=1,
-                    marker='o',
-                    alpha=0.5,
-                )
+            for x in data_dict:
+                if x in type_of_graph:
+                    for y in data_dict[x]:
+                        if y in y_list_sec[i][j][2][k]:
+                            if i == 0 and j == 0:
+                                ax[i, j].twinx().scatter(
+                                    x_list[i][j][2],
+                                    y_list_sec[i][j][3][k],
+                                    c=data_dict[x][y],
+                                    s=1,
+                                    marker='o',
+                                    alpha=0.5,
+                                    label=y_list_sec[i][j][2][k]
+                                )
+                            else:
+                                ax[i, j].twinx().scatter(
+                                    x_list[i][j][2],
+                                    y_list_sec[i][j][3][k],
+                                    c=data_dict[x][y],
+                                    s=1,
+                                    marker='o',
+                                    alpha=0.5,
+                                )
+
+# for k in range(len(y_list_main_scatter[0][0][3])):
+#     ax[0, 0].scatter(label=y_list_main_scatter[0][0][2][k])
+# for k in range(len(y_list_sec[0][0][3])):
+#     ax[0, 0].twinx().scatter(label=y_list_sec[0][0][2][k])
+
+# for k in range(len(y_list_main_plot[0][0][3])):
+#     ax[0, 0].scatter(label=y_list_main_plot[0][0][2][k])
+
+
 for i in range(len(rows)):
     ax[i, 0].set_ylabel(rows[i], rotation=90, size='large')
 
@@ -251,7 +284,30 @@ for j in range(len(cols)):
 fig.supxlabel('Running mean outdoor temperature (°C)')
 fig.supylabel('Operative temperature (°C)')
 
-fig.axes
+# fig_legend = ax[0,0].legend(loc='center right')
+leg = fig.legend(
+    bbox_to_anchor=(0.5, 0),
+    loc='upper center',
+    fontsize='large'
+    # borderaxespad=0.1,
+)
+
+for i in range(len(leg.legendHandles)):
+    leg.legendHandles[i]._sizes = [30]
+
+# plt.subplots_adjust(bottom=0.2)
+# plt.tight_layout()
+
+plt.savefig('temp_fig_10.jpg',
+            dpi=300,
+            format='jpg',
+            bbox_extra_artists=(leg,),
+            bbox_inches='tight')
+
+
+# legend1 = ax[0,0].legend(*scatter.legend_elements(),
+#                     loc="lower left", title="Classes")
+# fig.add_artist(legend1)
 
 # y_list_main_plot
 # for i in range(len(rows)):
@@ -277,7 +333,7 @@ fig.axes
 
 plt.show()
 
-
+##
 # todo testing
 # y_list_main_plot[0][1][3][0]
 # temp_df = z.df[
@@ -366,6 +422,39 @@ plt.show()
 #     marker='o'
 # )
 # plt.show()
+
+
+
+
+
+
+
+# seaborn
+
+# df2 = z.df.drop([
+#     'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
+#     'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
+#     'col_to_gather_in_cols', 'col_to_gather_in_rows'
+# ],
+#     axis=1)
+# df2.set_index([
+# 'Model', 'Adaptive Standard', 'Category', 'Comfort mode', 'HVAC mode',
+#        'Ventilation control', 'VSToffset', 'MinOToffset', 'MaxWindSpeed',
+#        'ASTtol', 'EPW', 'Source', 'Hour',
+#        # 'col_to_gather_in_cols', 'col_to_gather_in_rows'
+# ], inplace=True)
+#
+# df2 = df2.stack()
+#
+# df2['col_to_gather_in_rows'] = z.df['col_to_gather_in_rows']
+# df2['col_to_gather_in_cols'] = z.df['col_to_gather_in_cols']
+#
+# import seaborn as sns
+# g = sns.FacetGrid(z.df2, row='col_to_gather_in_rows', col='col_to_gather_in_cols')
+# g.map(sns.scatterplot, 'BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)', 'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]')
+#
+#
+#
 
 end = time.time()
 print(end-start)
