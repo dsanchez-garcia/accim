@@ -636,11 +636,11 @@ class Table:
         if 'monthly' in self.frequency:
             self.indexcols.append('Month')
         if 'daily' in self.frequency:
-            self.indexcols.append('Day')
+            self.indexcols.extend(['Month', 'Day'])
         if 'hourly' in self.frequency:
-            self.indexcols.append('Hour')
+            self.indexcols.extend(['Month', 'Day', 'Hour'])
         if 'timestep' in self.frequency:
-            self.indexcols.append('Minute')
+            self.indexcols.extend(['Month', 'Day', 'Hour', 'Minute'])
         if manage_epw_names:
             self.indexcols.extend([
                 'EPW_CountryCode',
@@ -730,7 +730,7 @@ class Table:
 
         self.enter_vars_to_gather(vars_to_gather)
 
-        self.wrangled_df = self.df
+        self.wrangled_df = self.df.copy()
 
         if 'Month' in self.wrangled_df.columns:
             self.wrangled_df['col_to_pivot'] = (self.wrangled_df[vars_to_gather].agg('['.join, axis=1) +
@@ -848,23 +848,24 @@ class Table:
             print('In relation to the variables to be gathered in columns,')
             self.enter_vars_to_gather(vars_to_gather_cols)
 
-        self.df_for_graph = self.df
+        self.df_for_graph = self.df.copy()
 
-        if 'Month' in self.df_for_graph.columns:
-            self.df_for_graph['col_to_gather_in_cols'] = (self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1) +
-                                                self.df_for_graph['Month'].astype(str) +
-                                                '[Month')
-        else:
-            self.df_for_graph['col_to_gather_in_cols'] = self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1)
+        # todo month columns to be amended
+        # if 'Month' in self.df_for_graph.columns:
+        #     self.df_for_graph['col_to_gather_in_cols'] = (self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1) +
+        #                                         self.df_for_graph['Month'].astype(str) +
+        #                                         '[Month')
+        # else:
+        self.df_for_graph['col_to_gather_in_cols'] = self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1)
 
         self.df['col_to_gather_in_cols'] = self.df_for_graph['col_to_gather_in_cols']
 
-        if 'Month' in self.df_for_graph.columns:
-            self.df_for_graph['col_to_gather_in_rows'] = (self.df_for_graph[vars_to_gather_rows].agg('['.join, axis=1) +
-                                                self.df_for_graph['Month'].astype(str) +
-                                                '[Month')
-        else:
-            self.df_for_graph['col_to_gather_in_rows'] = self.df_for_graph[vars_to_gather_rows].agg('['.join, axis=1)
+        # if 'Month' in self.df_for_graph.columns:
+        #     self.df_for_graph['col_to_gather_in_rows'] = (self.df_for_graph[vars_to_gather_rows].agg('['.join, axis=1) +
+        #                                         self.df_for_graph['Month'].astype(str) +
+        #                                         '[Month')
+        # else:
+        self.df_for_graph['col_to_gather_in_rows'] = self.df_for_graph[vars_to_gather_rows].agg('['.join, axis=1)
 
         self.df['col_to_gather_in_rows'] = self.df_for_graph['col_to_gather_in_rows']
 
@@ -1187,11 +1188,11 @@ class Table:
 
             for i in suplabels_dict:
                 if i in type_of_graph:
-                    fig.supxlabel(suplabels_dict[i]['x'])
-                    fig.supylabel(suplabels_dict[i]['y'])
+                    supx = fig.supxlabel(suplabels_dict[i]['x'])
+                    supy = fig.supylabel(suplabels_dict[i]['y'])
             if 'custom' in type_of_graph:
-                fig.supxlabel(supxlabel)
-                fig.supylabel(supylabel)
+                supx = fig.supxlabel(supxlabel)
+                supy = fig.supylabel(supylabel)
 
             leg = fig.legend(
                 bbox_to_anchor=(0.5, 0),
@@ -1209,10 +1210,13 @@ class Table:
             plt.savefig(figname + '.png',
                         dpi=1200,
                         format='png',
-                        bbox_extra_artists=(leg,),
+                        bbox_extra_artists=(leg, supx, supy),
                         bbox_inches='tight')
 
             plt.show()
+
+    def scatter_plot_adap_vs_stat(self,
+                                  ):
 
     def enter_vars_to_gather(
             self,
