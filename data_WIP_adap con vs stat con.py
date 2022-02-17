@@ -10,7 +10,7 @@ z = Table(frequency='hourly',
           sum_or_mean='sum',
           standard_outputs=True,
           level=['building'],
-          level_sum_or_mean=['sum', 'mean'],
+          level_sum_or_mean=['sum'],
           match_cities=False,
           normalised_energy_units=True,
           rename_cols=True,
@@ -38,20 +38,38 @@ temp_list = []
 #             temp_list.append(col)
 
 additional_list = [
-    'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
-    'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
-    'BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)',
-    'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
     'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
     'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
 ]
 
 custom_cols_list = temp_list + additional_list
 
-z.format_table(type_of_graph='custom',
+z.format_table(type_of_table='custom',
                custom_cols=custom_cols_list,
                manage_epw_names=False
                )
+
+df2 = z.df.stack()
+
+
+
+
+
+
+# not working
+# z.wrangled_table(
+#     vars_to_gather=['Adaptive Standard', 'Category'],
+#     comparison_cols=['relative']
+#     )
+
+
+
+
+
+
+
+
+
 
 # print(*z.df.columns, sep='\n')
 
@@ -207,6 +225,17 @@ fig, ax = plt.subplots(nrows=len(rows),
                        sharey=True,
                        constrained_layout=True,
                        figsize=(s*len(cols), s*len(rows)))
+
+
+
+
+
+
+
+
+
+
+
 
 # y_list_main_scatter
 for i in range(len(rows)):

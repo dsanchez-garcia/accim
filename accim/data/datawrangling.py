@@ -805,6 +805,8 @@ class Table:
             type_of_graph: str = None,
             vars_to_gather_cols=None,
             vars_to_gather_rows=None,
+            detailed_cols=None,
+            detailed_rows=None,
             data_on_x_axis: str = None,
             data_on_y_main_axis=None,
             data_on_y_sec_axis=None,
@@ -813,11 +815,16 @@ class Table:
             supylabel: str = None,
             colorlist=None,
             figname: str = None,
-            figsize: int = 1):
+            figsize: int = 1,
+            confirm_graph: bool = False):
         if vars_to_gather_cols is None:
             vars_to_gather_cols = []
         if vars_to_gather_rows is None:
             vars_to_gather_rows = []
+        if detailed_cols is None:
+            detailed_cols = []
+        if detailed_rows is None:
+            detailed_rows = []
         if data_on_y_main_axis is None:
             data_on_y_main_axis = []
         if data_on_y_sec_axis is None:
@@ -864,21 +871,52 @@ class Table:
         cols = list(set(self.df_for_graph['col_to_gather_in_cols']))
         rows = list(set(self.df_for_graph['col_to_gather_in_rows']))
 
+        while not(all(i in cols for i in detailed_cols)):
+            print('Some of the detailed data to be gathered in columns based on the argument '
+                  'vars_to_gather_cols is not available. '
+                  'Only the following data is available for columns:')
+            print(cols)
+            detailed_cols = (list(str(var)
+                                   for var
+                                   in input("Please enter the requested data to be arranged "
+                                            "in columns separated by semicolon: ").split(';')))
+        while not(all(i in rows for i in detailed_rows)):
+            print('Some of the detailed data to be gathered in rows based on the argument '
+                  'vars_to_gather_rows is not available. '
+                  'Only the following data is available for rows:')
+            print(rows)
+            detailed_rows = (list(str(var)
+                                   for var
+                                   in input("Please enter the requested data to be arranged "
+                                            "in rows separated by semicolon: ").split(';')))
+
+        if len(detailed_cols) > 0:
+            cols = detailed_cols
+        if len(detailed_rows) > 0:
+            rows = detailed_rows
+
         cols.sort()
         rows.sort()
 
+
         print(f'The number of rows and the list of these is going to be:')
-        print(f'No. of rows = {len(list(set(self.df_for_graph.col_to_gather_in_rows)))}')
+        print(f'No. of rows = {len(rows)}')
         print(f'List of rows:')
         print(*rows, sep='\n')
 
         print(f'The number of columns and the list of these is going to be:')
-        print(f'No. of columns = {len(list(set(self.df_for_graph.col_to_gather_in_cols)))}')
+        print(f'No. of columns = {len(cols)}')
         print(f'List of columns:')
         print(*cols, sep='\n')
 
-        proceed = input('Are you sure this is correct? [y/n]:')
-        if 'y' in proceed:
+        if confirm_graph is False:
+            proceed = input('Do you want to proceed? [y/n]:')
+            if 'y' in proceed:
+                confirm_graph = True
+            elif 'n' in proceed:
+                confirm_graph = False
+
+        if confirm_graph:
             # making lists for figure
             x_list = []
             for i in range(len(rows)):
@@ -966,6 +1004,8 @@ class Table:
                         ]
                         temp_row.append(temp)
                     y_list_sec.append(temp_row)
+
+            # todo separate in a different function
 
             fig, ax = plt.subplots(nrows=len(rows),
                                    ncols=len(cols),
@@ -1139,7 +1179,7 @@ class Table:
                     'x': 'Running mean outdoor temperature (°C)',
                     'y': 'Operative temperature (°C)'
                 },
-                'outdoor temp vs energy demand':{
+                'outdoor temp vs energy demand': {
                     'x': 'Outdoor temperature (°C)',
                     'y': 'Energy demand'
                 }
@@ -1166,9 +1206,9 @@ class Table:
             # plt.subplots_adjust(bottom=0.2)
             # plt.tight_layout()
 
-            plt.savefig(figname + '.jpg',
-                        dpi=900,
-                        format='jpg',
+            plt.savefig(figname + '.png',
+                        dpi=1200,
+                        format='png',
                         bbox_extra_artists=(leg,),
                         bbox_inches='tight')
 
