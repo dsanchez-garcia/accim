@@ -49,14 +49,23 @@ z.format_table(type_of_table='custom',
                manage_epw_names=False
                )
 ##
+# todo argument
+datasets = [
+    'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
+    'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
+]
+colorlist = [
+    'b',
+    'r'
+]
 
-self.df_for_graph = z.df.copy()
+df_for_graph = z.df.copy()
 
-self.df_for_graph['col_to_gather_in_cols'] = self.df_for_graph[['Adaptive Standard', 'Category']].agg('['.join, axis=1)
-self.df_for_graph['col_to_gather_in_rows'] = self.df_for_graph['EPW']
+df_for_graph['col_to_gather_in_cols'] = df_for_graph[['Adaptive Standard', 'Category']].agg('['.join, axis=1)
+df_for_graph['col_to_gather_in_rows'] = df_for_graph['EPW']
 
-all_cols = list(set(self.df_for_graph['col_to_gather_in_cols']))
-rows = list(set(self.df_for_graph['col_to_gather_in_rows']))
+all_cols = list(set(df_for_graph['col_to_gather_in_cols']))
+rows = list(set(df_for_graph['col_to_gather_in_rows']))
 
 all_cols.sort()
 rows.sort()
@@ -66,9 +75,9 @@ baseline = 'AS_CTE[CA_X'
 
 cols = [x for x in all_cols if x not in set([baseline])]
 
-self.df_for_graph['col_to_unstack'] = self.df_for_graph[['col_to_gather_in_cols', 'col_to_gather_in_rows']].agg('['.join, axis=1)
+df_for_graph['col_to_unstack'] = df_for_graph[['col_to_gather_in_cols', 'col_to_gather_in_rows']].agg('['.join, axis=1)
 
-self.df_for_graph = self.df_for_graph.drop(
+df_for_graph = df_for_graph.drop(
     columns=[
     'Model',
     'Adaptive Standard',
@@ -103,21 +112,16 @@ if 'hourly' in frequency:
 if 'timestep' in frequency:
     multi_index.extend(['Month', 'Day', 'Hour', 'Minute'])
 
-self.df_for_graph.set_index(multi_index, inplace=True)
+df_for_graph.set_index(multi_index, inplace=True)
 
-self.df_for_graph = self.df_for_graph.unstack('col_to_unstack')
+max_value = max([df_for_graph[dataset].max() for dataset in datasets])
 
-self.df_for_graph.columns = self.df_for_graph.columns.map('['.join)
+df_for_graph['Building_Total_Cooling Energy Demand (kWh/m2) [summed]'].max()
 
-# todo argument
-datasets = [
-    'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
-    'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
-]
-colorlist = [
-    'b',
-    'r'
-]
+df_for_graph = df_for_graph.unstack('col_to_unstack')
+
+df_for_graph.columns = df_for_graph.columns.map('['.join)
+
 
 # making lists for figure
 x_list = []
@@ -128,7 +132,7 @@ for i in range(len(rows)):
             [i, j],
             f'{rows[i]}_{cols[j]}',
             [
-                self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and baseline in x and dataset in x]]
+                df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and baseline in x and dataset in x]]
                 for dataset in datasets
             ]
         ]
@@ -143,7 +147,7 @@ for i in range(len(rows)):
             [i, j],
             f'{rows[i]}_{cols[j]}',
             [
-                self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
+                df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
                 for dataset in datasets
             ],
             [dataset for dataset in datasets],
@@ -154,23 +158,51 @@ for i in range(len(rows)):
 
 #todo argument
 s=2
-
+import numpy as np
 fig, ax = plt.subplots(nrows=len(rows),
                        ncols=len(cols),
                        sharex=True,
                        sharey=True,
                        constrained_layout=True,
                        figsize=(s*len(cols), s*len(rows)))
-
+import matplotlib.lines as lines
 # y_list_main_scatter
 for i in range(len(rows)):
     for j in range(len(cols)):
         # ax[i, j].set_title(f'{rows[i]} / {cols[j]}')
-        ax[i, j].grid(True, linestyle='-.')
+        # ax[i, j].set_aspect('equal')
+        # ax[i, j].axis('equal')
+        ax[i, j].grid(True,
+                      linestyle='-.',
+                      which='both',
+                      axis='both'
+                      )
+        # not working
+        # ax[i, j].set_yticks(np.linspace(ax[i, j].get_yticks()[0], ax[i, j].get_yticks()[-1], len(ax[i, j].get_yticks())))
         ax[i, j].tick_params(axis='both',
                              grid_color='black',
                              grid_alpha=0.5)
         ax[i, j].set_facecolor((0, 0, 0, 0.10))
+        # lines
+        ax[i, j].add_artist((lines.Line2D(
+            [0, max_value], [0, max_value],
+            dashes=(2, 2, 2, 2),
+            linewidth=1,
+            color='gray'
+            )))
+        ax[i, j].add_artist((lines.Line2D(
+            [0, max_value/2], [0, max_value],
+            dashes=(2, 2, 2, 2),
+            linewidth=1,
+            color='gray'
+            )))
+        ax[i, j].add_artist((lines.Line2D(
+            [0, max_value/4], [0, max_value],
+            dashes=(2, 2, 2, 2),
+            linewidth=1,
+            color='gray'
+            )))
+
         for k in range(len(x_list[i][j][2])):
             if i == 0 and j == 0:
                 ax[i, j].scatter(
@@ -191,6 +223,16 @@ for i in range(len(rows)):
                     marker='o',
                     alpha=0.5,
                 )
+        # ax[i, j].set_box_aspect(1)
+        # ax[i, j].set(adjustable='box', aspect='equal')
+        # ax[i, j].set_aspect('equal', share=True)
+        ax[i, j].set_ylim((0, max_value))
+        ax[i, j].set_xlim((0, max_value))
+
+
+ax[0, 0].set_aspect('equal',
+                    # adjustable='box',
+                    share=True)
 
 for i in range(len(rows)):
     ax[i, 0].set_ylabel(rows[i], rotation=90, size='large')
