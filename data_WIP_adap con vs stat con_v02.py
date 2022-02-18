@@ -157,7 +157,7 @@ for i in range(len(rows)):
     y_list.append(temp_row)
 
 #todo argument
-s=2
+s=3
 import numpy as np
 fig, ax = plt.subplots(nrows=len(rows),
                        ncols=len(cols),
@@ -202,6 +202,23 @@ for i in range(len(rows)):
             linewidth=1,
             color='gray'
             )))
+        ax[i, j].add_artist((lines.Line2D(
+            [0, max_value], [0, max_value/2],
+            dashes=(2, 2, 2, 2),
+            linewidth=1,
+            color='gray'
+            )))
+        ax[i, j].add_artist((lines.Line2D(
+            [0, max_value], [0, max_value/4],
+            dashes=(2, 2, 2, 2),
+            linewidth=1,
+            color='gray'
+            )))
+        # ax[i, j].annotate(
+        #     '100%',
+        #     xycoords='figure points',
+        #     xy=(1, 1)
+        # )
 
         for k in range(len(x_list[i][j][2])):
             if i == 0 and j == 0:
@@ -263,7 +280,7 @@ for i in range(len(leg.legendHandles)):
 # plt.tight_layout()
 
 
-plt.savefig('temp_fig_adap vs stat en dem_daily.png',
+plt.savefig('temp_fig_adap vs stat en dem_daily_2.png',
             dpi=1200,
             format='png',
             bbox_extra_artists=(leg, supx, supy),

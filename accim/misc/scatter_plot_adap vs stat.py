@@ -43,15 +43,17 @@ z.scatter_plot_adap_vs_stat(
     vars_to_gather_cols=['Adaptive Standard', 'Category'],
     vars_to_gather_rows=['EPW'],
     adap_vs_stat_data=additional_list,
+    baseline='AS_CTE[CA_X',
     supxlabel='Static Energy Demand',
     supylabel='Adaptive Energy Demand',
     colorlist=[
         'b',
         'r'
     ],
-    figname='temp_figure_adap vs stat en dem_4',
-    figsize=2,
-    confirm_graph=False
+    figname='temp_fig_adap vs stat en dem_daily_3',
+    figsize=3,
+    markersize=4,
+    confirm_graph=True
 )
 
 end = time.time()
