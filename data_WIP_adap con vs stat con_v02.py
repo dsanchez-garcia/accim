@@ -280,7 +280,7 @@ for i in range(len(leg.legendHandles)):
 # plt.tight_layout()
 
 
-plt.savefig('temp_fig_adap vs stat en dem_daily_2.png',
+plt.savefig('temp_fig_adap vs stat en dem_daily_3.png',
             dpi=1200,
             format='png',
             bbox_extra_artists=(leg, supx, supy),

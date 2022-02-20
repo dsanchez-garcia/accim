@@ -1339,38 +1339,43 @@ class Table:
                 confirm_graph = False
 
         if confirm_graph:
-            self.df_for_graph['col_to_unstack'] = self.df_for_graph[['col_to_gather_in_cols', 'col_to_gather_in_rows']].agg('['.join, axis=1)
+            self.df_for_graph['col_to_unstack'] = self.df_for_graph[
+                ['col_to_gather_in_cols', 'col_to_gather_in_rows']].agg('['.join, axis=1)
+
+            columns_to_drop = [
+                # 'Date/Time',
+                'Model',
+                'Adaptive Standard',
+                'Category',
+                'Comfort mode',
+                'HVAC mode',
+                'Ventilation control',
+                'VSToffset',
+                'MinOToffset',
+                'MaxWindSpeed',
+                'ASTtol',
+                'Source',
+                'EPW',
+                'col_to_gather_in_cols',
+                'col_to_gather_in_rows'
+            ]
+            if 'monthly' in self.frequency:
+                columns_to_drop.append('Month')
+            if 'daily' in self.frequency:
+                columns_to_drop.extend(['Month', 'Day'])
+            if 'hourly' in self.frequency:
+                columns_to_drop.extend(['Month', 'Day', 'Hour'])
+            if 'timestep' in self.frequency:
+                columns_to_drop.extend(['Month', 'Day', 'Hour', 'Minute'])
 
             self.df_for_graph = self.df_for_graph.drop(
-                columns=[
-                    'Date/Time',
-                    'Model',
-                    'Adaptive Standard',
-                    'Category',
-                    'Comfort mode',
-                    'HVAC mode',
-                    'Ventilation control',
-                    'VSToffset',
-                    'MinOToffset',
-                    'MaxWindSpeed',
-                    'ASTtol',
-                    'Source',
-                    'EPW',
-                    'col_to_gather_in_cols',
-                    'col_to_gather_in_rows']
+                columns=columns_to_drop
             )
 
             multi_index = [
+                'Date/Time',
                 'col_to_unstack'
             ]
-            if 'monthly' in self.frequency:
-                multi_index.append('Month')
-            if 'daily' in self.frequency:
-                multi_index.extend(['Month', 'Day'])
-            if 'hourly' in self.frequency:
-                multi_index.extend(['Month', 'Day', 'Hour'])
-            if 'timestep' in self.frequency:
-                multi_index.extend(['Month', 'Day', 'Hour', 'Minute'])
 
             self.df_for_graph.set_index(multi_index, inplace=True)
 
@@ -1539,7 +1544,464 @@ class Table:
         return vars_to_gather
 
     # todo testing
-    def generate_fig_data(
+    
+    def generate_fig_data(self,
+                          vars_to_gather_cols=None,
+                          vars_to_gather_rows=None,
+                          detailed_cols=None,
+                          detailed_rows=None,
+                          graph_mode: str = None,
+                          adap_vs_stat_data=None,
+                          baseline: str = None,
+                          data_on_x_axis: str = None,
+                          data_on_y_main_axis=None,
+                          data_on_y_sec_axis=None,
+                          colorlist=None,
+                          confirm_graph: bool = False):
+        if vars_to_gather_cols is None:
+            vars_to_gather_cols = []
+        if vars_to_gather_rows is None:
+            vars_to_gather_rows = []
+        if detailed_cols is None:
+            detailed_cols = []
+        if detailed_rows is None:
+            detailed_rows = []
+        if adap_vs_stat_data is None:
+            adap_vs_stat_data = []
+        if colorlist is None:
+            colorlist = []
+
+        import matplotlib.pyplot as plt
+        import matplotlib.lines as lines
+
+        self.df_for_graph = self.df.copy()
+
+        self.df_for_graph['col_to_gather_in_cols'] = 'temp'
+        self.df_for_graph['col_to_gather_in_rows'] = 'temp'
+
+        if len(vars_to_gather_rows) == 0:
+            print('In relation to the variables to be gathered in self.rows,')
+            self.enter_vars_to_gather(vars_to_gather_cols)
+        if len(vars_to_gather_cols) == 0:
+            print('In relation to the variables to be gathered in columns,')
+            self.enter_vars_to_gather(vars_to_gather_cols)
+
+        self.df_for_graph['col_to_gather_in_rows'] = self.df_for_graph[vars_to_gather_rows].agg('['.join, axis=1)
+        self.df_for_graph['col_to_gather_in_cols'] = self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1)
+
+        all_cols = list(set(self.df_for_graph['col_to_gather_in_cols']))
+        self.rows = list(set(self.df_for_graph['col_to_gather_in_rows']))
+
+        all_cols.sort()
+        self.rows.sort()
+
+        if graph_mode == 'adap vs stat':
+            if baseline not in all_cols:
+                print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
+                print(all_cols)
+                baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
+
+        if graph_mode == 'adap vs stat':
+            self.cols = [x for x in all_cols if x not in set([baseline])]
+        else:
+            self.cols = all_cols
+
+        while not(all(i in self.cols for i in detailed_cols)):
+            print('Some of the detailed data to be gathered in columns based on the argument '
+                  'vars_to_gather_cols is not available. '
+                  'Only the following data is available for columns:')
+            print(self.cols)
+            detailed_cols = (list(str(var)
+                                   for var
+                                   in input("Please enter the requested data to be arranged "
+                                            "in columns separated by semicolon: ").split(';')))
+        while not(all(i in self.rows for i in detailed_rows)):
+            print('Some of the detailed data to be gathered in self.rows based on the argument '
+                  'vars_to_gather_rows is not available. '
+                  'Only the following data is available for self.rows:')
+            print(self.rows)
+            detailed_rows = (list(str(var)
+                                   for var
+                                   in input("Please enter the requested data to be arranged "
+                                            "in self.rows separated by semicolon: ").split(';')))
+
+        if len(detailed_cols) > 0:
+            self.cols = detailed_cols
+        if len(detailed_rows) > 0:
+            self.rows = detailed_rows
+
+        self.cols.sort()
+        self.rows.sort()
+
+        print(f'The number of self.rows and the list of these is going to be:')
+        print(f'No. of self.rows = {len(self.rows)}')
+        print(f'List of self.rows:')
+        print(*self.rows, sep='\n')
+
+        print(f'The number of columns and the list of these is going to be:')
+        print(f'No. of columns = {len(self.cols)}')
+        print(f'List of columns:')
+        print(*self.cols, sep='\n')
+
+        if confirm_graph is False:
+            proceed = input('Do you want to proceed? [y/n]:')
+            if 'y' in proceed:
+                confirm_graph = True
+            elif 'n' in proceed:
+                confirm_graph = False
+
+        if confirm_graph:
+            self.df_for_graph['col_to_unstack'] = self.df_for_graph[
+                ['col_to_gather_in_cols', 'col_to_gather_in_rows']].agg('['.join, axis=1)
+
+            columns_to_drop = [
+                # 'Date/Time',
+                'Model',
+                'Adaptive Standard',
+                'Category',
+                'Comfort mode',
+                'HVAC mode',
+                'Ventilation control',
+                'VSToffset',
+                'MinOToffset',
+                'MaxWindSpeed',
+                'ASTtol',
+                'Source',
+                'EPW',
+                'col_to_gather_in_cols',
+                'col_to_gather_in_rows'
+            ]
+            if 'monthly' in self.frequency:
+                columns_to_drop.append('Month')
+            if 'daily' in self.frequency:
+                columns_to_drop.extend(['Month', 'Day'])
+            if 'hourly' in self.frequency:
+                columns_to_drop.extend(['Month', 'Day', 'Hour'])
+            if 'timestep' in self.frequency:
+                columns_to_drop.extend(['Month', 'Day', 'Hour', 'Minute'])
+
+            self.df_for_graph = self.df_for_graph.drop(
+                columns=columns_to_drop
+            )
+
+            multi_index = [
+                'Date/Time',
+                'col_to_unstack'
+            ]
+
+            self.df_for_graph.set_index(multi_index, inplace=True)
+            # todo to be amended
+            # max_value = max([self.df_for_graph[dataset].max() for dataset in adap_vs_stat_data])
+
+            self.df_for_graph = self.df_for_graph.unstack('col_to_unstack')
+
+            self.df_for_graph.columns = self.df_for_graph.columns.map('['.join)
+
+            # making lists for figure
+            self.x_list = []
+            for i in range(len(self.rows)):
+                temp_row = []
+                for j in range(len(self.cols)):
+                    if baseline is not None and len(adap_vs_stat_data) > 0:
+                        temp = [
+                            [i, j],
+                            f'{self.rows[i]}_{self.cols[j]}',
+                            [
+                                self.df_for_graph[[x for x in self.df_for_graph.columns if self.rows[i] in x and baseline in x and dataset in x]]
+                                for dataset in adap_vs_stat_data
+                            ]
+                        ]
+                    else:
+                        temp = [
+                            [i, j],
+                            f'{self.rows[i]}_{self.cols[j]}',
+                            [
+                                self.df_for_graph[[x for x in self.df_for_graph.columns if self.rows[i] in x and self.cols[j] in x and dataset in x]]
+                                for dataset in data_on_x_axis
+                            ]
+                        ]
+                    temp_row.append(temp)
+                self.x_list.append(temp_row)
+
+            self.y_list = []
+            for i in range(len(self.rows)):
+                temp_row = []
+                for j in range(len(self.cols)):
+                    if baseline is not None and len(adap_vs_stat_data) > 0:
+                        temp = [
+                            [i, j],
+                            f'{self.rows[i]}_{self.cols[j]}',
+                            [
+                                self.df_for_graph[[x for x in self.df_for_graph.columns if self.rows[i] in x and self.cols[j] in x and dataset in x]]
+                                for dataset in adap_vs_stat_data
+                            ],
+                            [dataset for dataset in adap_vs_stat_data],
+                            [color for color in colorlist]
+                        ]
+                    else:
+                        temp = [
+                            [i, j],
+                            f'{self.rows[i]}_{self.cols[j]}',
+                            [
+                                self.df_for_graph[[x for x in self.df_for_graph.columns if self.rows[i] in x and self.cols[j] in x and dataset in x]]
+                                for dataset in data_on_y_main_axis
+                            ],
+                            [dataset for dataset in data_on_y_main_axis],
+                            [color for color in colorlist]
+                        ]
+                    temp_row.append(temp)
+                self.y_list.append(temp_row)
+        
+    def timeline_plot(self,
+                      supxlabel: str = None,
+                      supylabel: str = None,
+                      figname: str = None,
+                      figsize: int = 1,
+                      markersize: int = 1,
+                      ):
+        import matplotlib.pyplot as plt
+        
+        fig, ax = plt.subplots(nrows=len(self.rows),
+                               ncols=len(self.cols),
+                               sharex=True,
+                               sharey=True,
+                               constrained_layout=True,
+                               figsize=(figsize * len(self.cols), figsize * len(self.rows)/3))
+
+        # y_list_main_scatter
+        for i in range(len(self.rows)):
+            for j in range(len(self.cols)):
+                if len(self.rows) == 1 and len(self.cols) == 1:
+                    # ax.set_title(f'{self.rows[i]} / {self.cols[j]}')
+                    # ax.grid(True, linestyle='-.')
+                    # ax.tick_params(axis='both',
+                    #                      grid_color='black',
+                    #                      grid_alpha=0.5)
+                    # ax.set_facecolor((0, 0, 0, 0.10))
+                    for k in range(len(self.y_list[i][j][2])):
+                        if i == 0 and j == 0:
+                            ax.plot(
+                                # self.x_list[i][j][2],
+                                self.y_list[i][j][2][k],
+                                # c=self.y_list[i][j][4][k],
+                                # ms=markersize,
+                                # marker='o',
+                                # alpha=0.5,
+                                label=self.y_list[i][j][3][k]
+                            )
+                        else:
+                            ax.plot(
+                                # self.x_list[i][j][2],
+                                self.y_list[i][j][2][k],
+                                # c=self.y_list[i][j][4][k],
+                                # ms=markersize,
+                                # marker='o',
+                                # alpha=0.5,
+                            )
+                if len(self.cols) == 1 and len(self.rows) > 1:
+                    # ax[i].set_title(f'{self.rows[i]} / {self.cols[j]}')
+                    # ax[i].grid(True, linestyle='-.')
+                    # ax[i].tick_params(axis='both',
+                    #                      grid_color='black',
+                    #                      grid_alpha=0.5)
+                    # ax[i].set_facecolor((0, 0, 0, 0.10))
+                    for k in range(len(self.y_list[i][j][2])):
+                        if i == 0 and j == 0:
+                            ax[i].plot(
+                                # self.x_list[i][j][2],
+                                self.y_list[i][j][2][k],
+                                # c=self.y_list[i][j][4][k],
+                                # ms=markersize,
+                                # marker='o',
+                                # alpha=0.5,
+                                label=self.y_list[i][j][3][k]
+                            )
+                        else:
+                            ax[i].plot(
+                                # self.x_list[i][j][2],
+                                self.y_list[i][j][2][k],
+                                # c=self.y_list[i][j][4][k],
+                                # ms=markersize,
+                                # marker='o',
+                                # alpha=0.5,
+                            )
+                else:
+                    # ax[i, j].set_title(f'{self.rows[i]} / {self.cols[j]}')
+                    # ax[i, j].grid(True, linestyle='-.')
+                    # ax[i, j].tick_params(axis='both',
+                    #                      grid_color='black',
+                    #                      grid_alpha=0.5)
+                    # ax[i, j].set_facecolor((0, 0, 0, 0.10))
+                    for k in range(len(self.y_list[i][j][2])):
+                        if i == 0 and j == 0:
+                            ax[i, j].plot(
+                                # self.x_list[i][j][2],
+                                self.y_list[i][j][2][k],
+                                # c=self.y_list[i][j][4][k],
+                                # ms=markersize,
+                                # marker='o',
+                                # alpha=0.5,
+                                label=self.y_list[i][j][3][k]
+                            )
+                        else:
+                            ax[i, j].plot(
+                                # self.x_list[i][j][2],
+                                self.y_list[i][j][2][k],
+                                # c=self.y_list[i][j][4][k],
+                                # ms=markersize,
+                                # marker='o',
+                                # alpha=0.5,
+                            )
+
+        # if len(self.rows) == 1 and len(self.cols) == 1:
+        #     ax.set_aspect('equal',
+        #                         # adjustable='box',
+        #                         share=True)
+        # if len(self.cols) == 1 and len(self.rows) > 1:
+        #     ax[0].set_aspect('equal',
+        #                         # adjustable='box',
+        #                         share=True)
+        # else:
+        #     ax[0, 0].set_aspect('equal',
+        #                         # adjustable='box',
+        #                         share=True)
+
+        if len(self.rows) > 1:
+            if len(self.cols) == 1:
+                for i in range(len(self.rows)):
+                    ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
+            else:
+                for i in range(len(self.rows)):
+                    ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
+
+        if len(self.rows) > 1 and len(self.cols) > 1:
+            for j in range(len(self.cols)):
+                ax[0, j].set_title(self.cols[j])
+
+        supx = fig.supxlabel(supxlabel)
+        supy = fig.supylabel(supylabel)
+
+        leg = fig.legend(
+            bbox_to_anchor=(0.5, 0),
+            loc='upper center',
+            fontsize='large'
+            # borderaxespad=0.1,
+        )
+
+        for i in range(len(leg.legendHandles)):
+            leg.legendHandles[i]._sizes = [30]
+
+        # plt.subplots_adjust(
+        #     # bottom=0.2,
+        #     left=0.05
+        # )
+
+        # plt.tight_layout()
+
+        plt.savefig(figname+'.png',
+                    dpi=1200,
+                    format='png',
+                    bbox_extra_artists=(leg, supx, supy),
+                    bbox_inches='tight'
+                    )
+
+    def timeline_plot_2(self,
+                        supxlabel: str = None,
+                        supylabel: str = None,
+                        figname: str = None,
+                        figsize: int = 1,
+                        markersize: int = 1,
+                        ):
+        import matplotlib.pyplot as plt
+
+        fig, ax = plt.subplots(nrows=len(self.rows),
+                               ncols=len(self.cols),
+                               sharex=True,
+                               sharey=True,
+                               constrained_layout=True,
+                               figsize=(figsize * len(self.cols), figsize * len(self.rows) / 3))
+
+        for i in range(len(self.rows)):
+            for j in range(len(self.cols)):
+                for k in range(len(self.y_list[i][j][2])):
+                    if len(self.rows) == 1 and len(self.cols) == 1:
+                        ax.plot(
+                            # self.x_list[i][j][2],
+                            self.y_list[i][j][2][k],
+                            linewidth=1
+                            # c=self.y_list[i][j][4][k],
+                            # ms=markersize,
+                            # marker='o',
+                            # alpha=0.5,
+                            # label=self.y_list[i][j][3][k]
+                        )
+                    # if len(self.rows) == 1 and len(self.cols) > 1:
+                    #     ax[i, j].plot(
+                    #         # self.x_list[i][j][2],
+                    #         self.y_list[i][j][2][k],
+                    #         linewidth=1
+                    #         # c=self.y_list[i][j][4][k],
+                    #         # ms=markersize,
+                    #         # marker='o',
+                    #         # alpha=0.5,
+                    #         # label=self.y_list[i][j][3][k]
+                    #     )
+                    if len(self.cols) == 1 and len(self.rows) > 1:
+                        ax[i].plot(
+                            # self.x_list[i][j][2],
+                            self.y_list[i][j][2][k],
+                            linewidth=1
+                            # c=self.y_list[i][j][4][k],
+                            # ms=markersize,
+                            # marker='o',
+                            # alpha=0.5,
+                            # label=self.y_list[i][j][3][k]
+                        )
+                    else:
+                        ax[i, j].plot(
+                            # self.x_list[i][j][2],
+                            self.y_list[i][j][2][k],
+                            linewidth=1
+                            # c=self.y_list[i][j][4][k],
+                            # ms=markersize,
+                            # marker='o',
+                            # alpha=0.5,
+                            # label=self.y_list[i][j][3][k]
+                        )
+
+        if len(self.rows) > 1:
+            if len(self.cols) == 1:
+                for i in range(len(self.rows)):
+                    ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
+            else:
+                for i in range(len(self.rows)):
+                    ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
+
+        if len(self.rows) > 1 and len(self.cols) > 1:
+            for j in range(len(self.cols)):
+                ax[0, j].set_title(self.cols[j])
+
+        supx = fig.supxlabel(supxlabel)
+        supy = fig.supylabel(supylabel)
+
+        leg = fig.legend(
+            bbox_to_anchor=(0.5, 0),
+            loc='upper center',
+            fontsize='large'
+            # borderaxespad=0.1,
+        )
+
+        for i in range(len(leg.legendHandles)):
+            leg.legendHandles[i]._sizes = [30]
+
+        plt.savefig(figname+'.png',
+                    dpi=1200,
+                    format='png',
+                    bbox_extra_artists=(leg, supx, supy),
+                    # bbox_inches='tight'
+                    )
+
+    def generate_fig_data_timeconsuming(
             self,
             # type_of_graph: str = None,
             vars_to_gather_cols=None,
@@ -1745,7 +2207,7 @@ class Table:
 
             # todo separate in a different function
 
-    def timeline_plot(self,
+    def timeline_plot_timeconsuming(self,
                       supxlabel: str = None,
                       supylabel: str = None,
                       figname: str = None,
@@ -1788,20 +2250,20 @@ class Table:
                 for k in range(len(self.y_list_main_scatter[i][j][3])):
                     if i == 0 and j == 0:
                         ax[i, j].plot(
-                            # self.x_list[i][j][2],
+                            self.x_list[i][j][2],
                             self.y_list_main_scatter[i][j][3][k],
                             # c=self.y_list_main_scatter[i][j][4][k],
-                            # linewidth=1,
+                            linewidth=1,
                             # marker='o',
                             # alpha=0.5,
                             label=self.y_list_main_scatter[i][j][2][k]
                         )
                     else:
                         ax[i, j].plot(
-                            # self.x_list[i][j][2],
+                            self.x_list[i][j][2],
                             self.y_list_main_scatter[i][j][3][k],
                             # c=self.y_list_main_scatter[i][j][4][k],
-                            # linewidth=1,
+                            linewidth=1,
                             # marker='o',
                             # alpha=0.5,
                         )
@@ -1809,9 +2271,9 @@ class Table:
                     for k in range(len(self.y_list_sec[i][j][3])):
                         if i == 0 and j == 0:
                             ax[i, j].twinx().plot(
-                                # self.x_list[i][j][2],
+                                self.x_list[i][j][2],
                                 self.y_list_sec[i][j][3][k],
-                                # linewidth=1,
+                                linewidth=1,
                                 # c=self.y_list_sec[i][j][4][k],
                                 # marker='o',
                                 # alpha=0.5,
@@ -1819,9 +2281,9 @@ class Table:
                             )
                         else:
                             ax[i, j].twinx().plot(
-                                # self.x_list[i][j][2],
+                                self.x_list[i][j][2],
                                 self.y_list_sec[i][j][3][k],
-                                # linewidth=1,
+                                linewidth=1,
                                 # c=self.y_list_sec[i][j][4][k],
                                 # marker='o',
                                 # alpha=0.5,

@@ -1,6 +1,6 @@
 from accim.data.datawrangling import Table
 import time
-start = time.time()
+start1 = time.time()
 
 # making df
 z = Table(frequency='hourly',
@@ -38,9 +38,13 @@ print(*z.df.columns, sep='\n')
 z.generate_fig_data(
     vars_to_gather_rows=['EPW'],
     vars_to_gather_cols=['Adaptive Standard', 'Category'],
-    detailed_rows=['London_RCP85_2100', 'London_Present'],
-    detailed_cols=['AS_CTE[CA_X', 'AS_EN16798[CA_1'],
-    data_on_x_axis='Date/Time',
+    # detailed_rows=['London_RCP85_2100', 'London_Present'],
+    detailed_cols=[
+        # 'AS_CTE[CA_X',
+        'AS_EN16798[CA_1'
+    ],
+    graph_mode='anything else',
+    data_on_x_axis=['Date/Time'],
     data_on_y_main_axis=[
         'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
         'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
@@ -53,39 +57,106 @@ z.generate_fig_data(
     ],
     confirm_graph=True
 )
+## Version 01
+# import matplotlib.pyplot as plt
+# start2 = time.time()
+#
+# # fig = plt.figure()
+# plt.plot(z.df_for_graph['Adaptive Heating Setpoint Temperature_No Tolerance (°C)[AS_EN16798[CA_3[London_Present'])
+# plt.plot(z.df_for_graph['Adaptive Cooling Setpoint Temperature_No Tolerance (°C)[AS_EN16798[CA_3[London_Present'])
+# plt.plot(z.df_for_graph['Building_Total_Zone Thermostat Operative Temperature (°C) [mean][AS_EN16798[CA_3[London_Present'])
+#
+# plt.savefig('temp_time_plot.png')
+#
+# end2 = time.time()
+# print(end2-start2)
+
+## Version 02
+# start3 = time.time()
+# figsize = 15
+# fig, ax = plt.subplots(nrows=len(z.rows),
+#                        ncols=len(z.cols),
+#                        sharex=True,
+#                        sharey=True,
+#                        constrained_layout=True,
+#                        figsize=(figsize * len(z.cols), figsize * len(z.rows)/3))
+#
+# for i in range(len(z.rows)):
+#     for j in range(len(z.cols)):
+#         for k in range(len(z.y_list[i][j][2])):
+#             if len(z.rows) == 1 and len(z.cols) == 1:
+#                 ax.plot(
+#                     # self.x_list[i][j][2],
+#                     z.y_list[i][j][2][k],
+#                     linewidth=1
+#                     # c=self.y_list[i][j][4][k],
+#                     # ms=markersize,
+#                     # marker='o',
+#                     # alpha=0.5,
+#                     # label=self.y_list[i][j][3][k]
+#                 )
+#             # if len(z.rows) == 1 and len(z.cols) > 1:
+#             #     ax[i, j].plot(
+#             #         # self.x_list[i][j][2],
+#             #         z.y_list[i][j][2][k],
+#             #         linewidth=1
+#             #         # c=self.y_list[i][j][4][k],
+#             #         # ms=markersize,
+#             #         # marker='o',
+#             #         # alpha=0.5,
+#             #         # label=self.y_list[i][j][3][k]
+#             #     )
+#             if len(z.cols) == 1 and len(z.rows) > 1:
+#                 ax[i].plot(
+#                     # self.x_list[i][j][2],
+#                     z.y_list[i][j][2][k],
+#                     linewidth=1
+#                     # c=self.y_list[i][j][4][k],
+#                     # ms=markersize,
+#                     # marker='o',
+#                     # alpha=0.5,
+#                     # label=self.y_list[i][j][3][k]
+#                 )
+#             else:
+#                 ax[i, j].plot(
+#                     # self.x_list[i][j][2],
+#                     z.y_list[i][j][2][k],
+#                     linewidth=1
+#                     # c=self.y_list[i][j][4][k],
+#                     # ms=markersize,
+#                     # marker='o',
+#                     # alpha=0.5,
+#                     # label=self.y_list[i][j][3][k]
+#                 )
+# plt.savefig('temp_time_plot_3.png',
+#             dpi=900)
+#
+# end3 = time.time()
+# print(end3-start3)
+
+## Version 03
+start4 = time.time()
 
 z.timeline_plot(
     supxlabel='Time',
     supylabel='Tempreature',
-    figname='test_fig_timeline_plot_01',
-    figsize=5
+    figname='temp_time_plot_4',
+    figsize=18
 )
+end4 = time.time()
+print(end4-start4)
+
+## Version 04
+# start5 = time.time()
+#
+# z.timeline_plot_2(figname='temp_time_plot_5',
+#                   figsize=15)
+# end5 = time.time()
+# print(end5-start5)
 
 
 
-
-
-# z.scatter_plot(type_of_graph='op temp vs rmot',
-#                vars_to_gather_rows=['EPW'],
-#                vars_to_gather_cols=['Adaptive Standard', 'Category'],
-#                # detailed_rows=['London_RCP85_2100', 'London_Present'],
-#                # detailed_cols=['AS_CTE[CA_X', 'AS_EN16798[CA_1'],
-#                data_on_x_axis='BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)',
-#                data_on_y_main_axis=[
-#                    'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
-#                    'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
-#                    'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
-#                ],
-#                # colorlist=[
-#                #     'b',
-#                #     'r'
-#                # ],
-#                # supxlabel='Outdoor temperature',
-#                # supylabel='Energy demand',
-#                figname='test_figure_rmot vs op temp_4',
-#                figsize=4,
-#                confirm_graph=True
-#                )
-end = time.time()
-print(end-start)
+##
+end1 = time.time()
+print(end1-start1)
 
