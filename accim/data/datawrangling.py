@@ -120,6 +120,14 @@ class Table:
             df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
             df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
 
+            # df['Hour_mod'] = df['Hour'].astype(str).astype(int)-1
+
+            # df['Hour_mod'] = (pd.to_numeric(df['Hour'])-1).astype(int).astype(str).str.zfill(2)
+            # df['Hour_mod'] = (pd.to_numeric(df['Hour'], )-1).astype(str).str.zfill(2)
+            df['Hour_mod'] = (pd.to_numeric(df['Hour'])-1).astype(str).str.pad(width=2, side='left', fillchar='0')
+
+            df['Hour'] = df['Hour_mod']
+
             constantcols = []
             for i in [
                 'Zone Air Volume',
@@ -1760,7 +1768,8 @@ class Table:
                       markersize: int = 1,
                       ):
         import matplotlib.pyplot as plt
-        
+        import matplotlib.dates as mdates
+
         fig, ax = plt.subplots(nrows=len(self.rows),
                                ncols=len(self.cols),
                                sharex=True,
@@ -1800,11 +1809,14 @@ class Table:
                             )
                 if len(self.cols) == 1 and len(self.rows) > 1:
                     # ax[i].set_title(f'{self.rows[i]} / {self.cols[j]}')
-                    # ax[i].grid(True, linestyle='-.')
+                    ax[i].grid(True, linestyle='-.')
                     # ax[i].tick_params(axis='both',
                     #                      grid_color='black',
                     #                      grid_alpha=0.5)
-                    # ax[i].set_facecolor((0, 0, 0, 0.10))
+                    ax[i].set_facecolor((0, 0, 0, 0.10))
+                    # ax.xaxis.set_major_locator(mdates.MonthLocator())
+                    # ax.xaxis.set_minor_locator(mdates.WeekdayLocator(byweekday=1))
+
                     for k in range(len(self.y_list[i][j][2])):
                         if i == 0 and j == 0:
                             ax[i].plot(
@@ -1866,6 +1878,10 @@ class Table:
         #                         # adjustable='box',
         #                         share=True)
 
+        if len(self.rows) == 1:
+            if len(self.cols) == 1:
+                for i in range(len(self.rows)):
+                    ax.set_ylabel(self.rows[i], rotation=90, size='large')
         if len(self.rows) > 1:
             if len(self.cols) == 1:
                 for i in range(len(self.rows)):
@@ -1874,7 +1890,7 @@ class Table:
                 for i in range(len(self.rows)):
                     ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
 
-        if len(self.rows) > 1 and len(self.cols) > 1:
+        if len(self.rows) >= 1 and len(self.cols) >= 1:
             for j in range(len(self.cols)):
                 ax[0, j].set_title(self.cols[j])
 
