@@ -54,6 +54,7 @@ class Table:
         import datapackage
         import glob
         import numpy as np
+        import csv
 
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
@@ -101,7 +102,13 @@ class Table:
         summed_dataframes = []
 
         for file in source_files:
+
+            # with open(file) as csv_file:
+            #     csv_reader = csv.reader(csv_file, delimiter=',')
+            #     df = pd.DataFrame([csv_reader], index=True)
+
             df = pd.DataFrame(pd.read_csv(file))
+
             if standard_outputs:
                 keeplist = []
                 for i in cleaned_columns:
@@ -115,18 +122,12 @@ class Table:
             # df['Source'] = file.name
             df['Source'] = file
 
+            # df['Date/Time_orig'] = df['Date/Time'].copy()
+
             df[['TBD1', 'Month/Day', 'TBD2', 'Hour']] = df['Date/Time'].str.split(' ', expand=True)
             df = df.drop(['TBD1', 'TBD2'], axis=1)
             df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
             df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
-
-            # df['Hour_mod'] = df['Hour'].astype(str).astype(int)-1
-
-            # df['Hour_mod'] = (pd.to_numeric(df['Hour'])-1).astype(int).astype(str).str.zfill(2)
-            # df['Hour_mod'] = (pd.to_numeric(df['Hour'], )-1).astype(str).str.zfill(2)
-            df['Hour_mod'] = (pd.to_numeric(df['Hour'])-1).astype(str).str.pad(width=2, side='left', fillchar='0')
-
-            df['Hour'] = df['Hour_mod']
 
             constantcols = []
             for i in [
@@ -144,10 +145,13 @@ class Table:
                 tempdict = {constantcols[i]: df[constantcols[i]][0]}
                 constantcolsdict.update(tempdict)
 
-            if frequency == 'timestep':
-                df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(sum_or_mean)
-            if frequency == 'hourly':
-                df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(sum_or_mean)
+            # todo timestep frequency to be removed
+            # if frequency == 'timestep':
+                # pass
+                # df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(sum_or_mean)
+            # if frequency == 'hourly':
+                # pass
+                # df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(sum_or_mean)
             if frequency == 'daily':
                 df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(sum_or_mean)
             if frequency == 'monthly':
@@ -161,6 +165,11 @@ class Table:
             summed_dataframes.append(df)
 
         self.df = pd.concat(summed_dataframes)
+
+        # todo not working
+        # self.df['Hour_mod'] = (pd.to_numeric(self.df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
+        # self.df['Hour_mod'] = self.df['Hour_mod'].str.replace('.0', '').str.pad(width=2, side='left', fillchar='0')
+        # self.df['Hour'] = self.df['Hour_mod']
 
         OpTempColumn = [i for i in self.df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
         self.occupied_zone_list = [i.split(' ')[0][:-5] for i in OpTempColumn]
@@ -354,12 +363,16 @@ class Table:
 
         # todo date/time column
         if 'monthly' in self.frequency:
+            self.df['Month'] = self.df['Month'].astype(str)
             self.df['Date/Time'] = self.df['Month']
         if 'daily' in self.frequency:
+            self.df[['Day', 'Month']] = self.df[['Day', 'Month']].astype(str)
             self.df['Date/Time'] = self.df[['Day', 'Month']].agg('/'.join, axis=1)
         if 'hourly' in self.frequency:
+            self.df[['Day', 'Month', 'Hour']] = self.df[['Day', 'Month', 'Hour']].astype(str)
             self.df['Date/Time'] = self.df[['Day', 'Month']].agg('/'.join, axis=1) + ' ' + self.df['Hour'] + ':00'
         if 'timestep' in self.frequency:
+            self.df[['Day', 'Month', 'Hour', 'Minute']] = self.df[['Day', 'Month', 'Hour', 'Minute']].astype(str)
             self.df['Date/Time'] = (self.df[['Day', 'Month']].agg('/'.join, axis=1) +
                                     ' ' +
                                     self.df[['Hour', 'Minute']].agg(':'.join, axis=1))
