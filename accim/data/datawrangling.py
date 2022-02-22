@@ -383,8 +383,14 @@ class Table:
 
         self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
+        frequency_dict = {
+            'monthly': ['Month'],
+            'daily': ['Day', 'Month'],
+            'hourly': ['Day', 'Month', 'Hour'],
+            'timestep': ['Day', 'Month', 'Hour', 'Minute']
+        }
 
-        for i in ['Month', 'Day', 'Hour', 'Minute', 'Second']:
+        for i in frequency_dict[self.frequency]:
             for j in range(len(self.df)):
                 if self.df.loc[j, i] is None:
                     self.df.loc[j, i] = str(int((int(self.df.loc[j - 1, i]) + int(self.df.loc[j + 1, i])) / 2))
@@ -396,7 +402,8 @@ class Table:
         self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
         # self.df['Hour_mod'] = self.df['Hour'].copy()
-        self.df['Hour'] = (pd.to_numeric(self.df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
+        if 'hourly' in self.frequency or 'timestep' in self.frequency:
+            self.df['Hour'] = (pd.to_numeric(self.df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
         # self.df['Hour_mod'] = self.df['Hour_mod'].str.replace('.0', '').str.pad(width=2, side='left', fillchar='0')
         # self.df['Hour'] = self.df['Hour_mod']
 

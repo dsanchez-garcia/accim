@@ -6,7 +6,8 @@ import matplotlib.dates as mdates
 import pandas as pd
 import collections
 
-z = Table(frequency='hourly',
+frequency = 'hourly'
+z = Table(frequency=frequency,
           sum_or_mean='sum',
           standard_outputs=True,
           level=['building'],
@@ -22,8 +23,8 @@ additional_list = [
     'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
     # 'BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)',
     'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
-    'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
-    'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
+    # 'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
+    # 'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
 ]
 
 custom_cols_list = additional_list
@@ -40,11 +41,12 @@ z.generate_fig_data(
     vars_to_gather_rows=['EPW'],
     vars_to_gather_cols=['Adaptive Standard', 'Category'],
     detailed_rows=[
-        # 'London_RCP85_2100',
+        'London_RCP85_2100',
+        'London_RCP85_2050',
         'London_Present'
     ],
     detailed_cols=[
-        # 'AS_CTE[CA_X',
+        'AS_CTE[CA_X',
         'AS_EN16798[CA_1'
     ],
     graph_mode='anything else',
@@ -56,6 +58,9 @@ z.generate_fig_data(
         'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
         'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
         'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
+        # 'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
+        # 'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
+
     ],
     colorlist=[
         'b',
@@ -65,27 +70,93 @@ z.generate_fig_data(
     confirm_graph=True
 )
 z.df_for_graph['Date/Time'] = z.df_for_graph.index
-start_date = datetime.datetime.strptime(z.df_for_graph['Date/Time'][0], "%d/%m %H:%M")
-end_date = datetime.datetime.strptime(z.df_for_graph['Date/Time'][len(z.df_for_graph)-1], "%d/%m %H:%M")
-(end_date-start_date).days
 
-freq_dict = {
-    'timestep': 'X',
-    'hourly': 'H',
-    'daily': 'D',
-    'monthly': 'M?',
-    'runperiod': '?'
+freq_graph_dict = {
+    'timestep': ['X?', "%d/%m %H:%M"],
+    'hourly': ['H', "%d/%m %H:%M"],
+    'daily': ['D', "%d/%m"],
+    'monthly': ['M?', "%m"],
+    'runperiod': ['?', "?"]
 }
-frequency = 'hourly'
 
-z.df_for_graph['temp_date'] =pd.date_range(
+start_date = datetime.datetime.strptime(z.df_for_graph['Date/Time'][0], freq_graph_dict[frequency][1])
+# end_date = datetime.datetime.strptime(z.df_for_graph['Date/Time'][len(z.df_for_graph)-1], "%d/%m %H:%M")
+# (end_date-start_date).days
+
+
+z.df_for_graph['Date/Time'] = pd.date_range(
     start=start_date,
     periods=len(z.df_for_graph),
     # '2017-31-12 23:00',
-    freq = freq_dict[frequency]
+    freq = freq_graph_dict[frequency][0]
 )
 
-z.df_for_graph.set_index(z.df_for_graph['temp_date'], inplace=True)
+# todo consider not to set Date/time as index, since it needs to be specified anyway in timeplot
+z.df_for_graph.set_index(z.df_for_graph['Date/Time'], inplace=True)
+# z.df_for_graph = z.df_for_graph.drop(z.df_for_graph['Date/Time'])
+
+##
+start3 = time.time()
+figsize = 15
+fig, ax = plt.subplots(nrows=len(z.rows),
+                       ncols=len(z.cols),
+                       sharex=True,
+                       sharey=True,
+                       constrained_layout=True,
+                       figsize=(figsize * len(z.cols), figsize * len(z.rows)/3))
+
+for i in range(len(z.rows)):
+    for j in range(len(z.cols)):
+        current_axis = plt.gca()
+        current_axis.xaxis.set_major_formatter(mdates.DateFormatter(freq_graph_dict[frequency][1]))
+        current_axis.xaxis.set_major_locator(mdates.MonthLocator())
+
+        for k in range(len(z.y_list[i][j][2])):
+            if len(z.rows) == 1 and len(z.cols) == 1:
+                ax.plot(
+                    z.df_for_graph.index,
+                    z.y_list[i][j][2][k],
+                    linewidth=1,
+                    c=z.y_list[i][j][4][k],
+                    label=z.y_list[i][j][3][k]
+                )
+            elif len(z.rows) == 1 and len(z.cols) > 1:
+                ax[i, j].plot(
+                    z.df_for_graph.index,
+                    z.y_list[i][j][2][k],
+                    linewidth=1,
+                    c=z.y_list[i][j][4][k],
+                    label=z.y_list[i][j][3][k]
+                )
+            elif len(z.cols) == 1 and len(z.rows) > 1:
+                ax[i].plot(
+                    z.df_for_graph.index,
+                    z.y_list[i][j][2][k],
+                    linewidth=1,
+                    c=z.y_list[i][j][4][k],
+                    label=z.y_list[i][j][3][k]
+                )
+            else:
+                ax[i, j].plot(
+                    z.df_for_graph.index,
+                    z.y_list[i][j][2][k],
+                    linewidth=1
+                    # c=z.y_list[i][j][4][k],
+                    # ms=markersize,
+                    # marker='o',
+                    # alpha=0.5,
+                    # label=z.y_list[i][j][3][k]
+                )
+
+plt.show()
+# plt.savefig('temp_time_plot_3.png',
+#             dpi=900)
+
+end3 = time.time()
+print(end3-start3)
+
+
+
 
 ##
 fig, ax = plt.subplots(nrows=1,
@@ -97,7 +168,7 @@ fig, ax = plt.subplots(nrows=1,
                        )
 ax.plot(
     # x
-    # self.x_list[i][j][2],
+    # z.x_list[i][j][2],
     # x_values,
     # 'Date/Time',
     # z.df_for_graph.index,
@@ -105,21 +176,24 @@ ax.plot(
 
     # y
     # 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)[AS_EN16798[CA_3[London_RCP85_2100',
-    z.df_for_graph['Adaptive Heating Setpoint Temperature_No Tolerance (°C)[AS_EN16798[CA_3[London_RCP85_2100'],
+    # z.df_for_graph['Adaptive Heating Setpoint Temperature_No Tolerance (°C)[AS_EN16798[CA_3[London_RCP85_2100'],
+    z.df_for_graph['Building_Total_Cooling Energy Demand (kWh/m2) [summed][AS_EN16798[CA_3[London_RCP85_2100'],
+
+
     # temp_df.test
 
 
     # data=z.df_for_graph,
     # linewidth=1
-    # c=self.y_list[i][j][4][k],
+    # c=z.y_list[i][j][4][k],
     # ms=markersize,
     # marker='o',
     # alpha=0.5,
-    # label=self.y_list[i][j][3][k]
+    # label=z.y_list[i][j][3][k]
 )
 current_axis = plt.gca()
 
-current_axis.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m %H:%M"))
+current_axis.xaxis.set_major_formatter(mdates.DateFormatter(freq_graph_dict[frequency][1]))
 current_axis.xaxis.set_major_locator(mdates.MonthLocator())
 
 plt.show()
@@ -178,7 +252,7 @@ fig, ax = plt.subplots(nrows=1,
                        )
 ax.plot(
     # x
-    # self.x_list[i][j][2],
+    # z.x_list[i][j][2],
     # x_values,
     # 'Date/Time',
     # z.df_for_graph.index,
@@ -192,11 +266,11 @@ ax.plot(
 
     # data=z.df_for_graph,
     # linewidth=1
-    # c=self.y_list[i][j][4][k],
+    # c=z.y_list[i][j][4][k],
     # ms=markersize,
     # marker='o',
     # alpha=0.5,
-    # label=self.y_list[i][j][3][k]
+    # label=z.y_list[i][j][3][k]
 )
 
 current_axis = plt.gca()
@@ -219,7 +293,7 @@ fig, ax = plt.subplots(nrows=1,
                        )
 ax.plot(
     # x
-    # self.x_list[i][j][2],
+    # z.x_list[i][j][2],
     # x_values,
     # 'Date/Time',
     # z.df_for_graph.index,
@@ -232,11 +306,11 @@ ax.plot(
 
     # data=z.df_for_graph,
     # linewidth=1
-    # c=self.y_list[i][j][4][k],
+    # c=z.y_list[i][j][4][k],
     # ms=markersize,
     # marker='o',
     # alpha=0.5,
-    # label=self.y_list[i][j][3][k]
+    # label=z.y_list[i][j][3][k]
 )
 plt.show()
 
