@@ -129,6 +129,8 @@ class Table:
             df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
             df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
 
+
+
             constantcols = []
             for i in [
                 'Zone Air Volume',
@@ -145,13 +147,31 @@ class Table:
                 tempdict = {constantcols[i]: df[constantcols[i]][0]}
                 constantcolsdict.update(tempdict)
 
-            # todo timestep frequency to be removed
-            # if frequency == 'timestep':
-                # pass
-                # df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(sum_or_mean)
-            # if frequency == 'hourly':
-                # pass
-                # df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(sum_or_mean)
+            minute_df_len = len(
+                df[
+                    (df['Minute'] != '00') &
+                    (df['Minute'].astype(str) != 'None') &
+                    (df['Minute'] != '')
+                    ]
+            )
+
+            # todo timestep frequency to be tested
+            if frequency == 'timestep':
+                df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(sum_or_mean)
+                print(f'Input data frequency in file {file} is timestep '
+                      f'and requested frequency is also timestep, '
+                      f'therefore no aggregation will be performed. '
+                      f'The user needs to check the output rows number is correct.')
+
+            if frequency == 'hourly':
+                if minute_df_len > 0:
+                    df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(sum_or_mean)
+                    print(f'Input data frequency in file {file} is timestep '
+                          f'and requested frequency is hourly, '
+                          f'therefore aggregation will be performed. '
+                          f'The user needs to check the output rows number is correct.')
+                else:
+                    print(f'Input data frequency in file {file} is hourly, therefore no aggregation will be performed.')
             if frequency == 'daily':
                 df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(sum_or_mean)
             if frequency == 'monthly':
@@ -361,6 +381,26 @@ class Table:
         self.df['EPW'] = self.df['EPW'].str[:-4]
         self.df['Source'] = self.df['Source'].str[:-4]
 
+        self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
+
+
+        for i in ['Month', 'Day', 'Hour', 'Minute', 'Second']:
+            for j in range(len(self.df)):
+                if self.df.loc[j, i] is None:
+                    self.df.loc[j, i] = str(int((int(self.df.loc[j - 1, i]) + int(self.df.loc[j + 1, i])) / 2))
+                # if self.df.loc[j, i] == '':
+                if len(self.df.loc[j, i]) == 0:
+                    self.df.loc[j, i] = str(int((int(self.df.loc[j - 1, i]) + int(self.df.loc[j + 1, i])) / 2))
+            self.df[i] = self.df[i].str.pad(width=2, side='left', fillchar='0')
+
+        self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
+
+        # self.df['Hour_mod'] = self.df['Hour'].copy()
+        self.df['Hour'] = (pd.to_numeric(self.df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
+        # self.df['Hour_mod'] = self.df['Hour_mod'].str.replace('.0', '').str.pad(width=2, side='left', fillchar='0')
+        # self.df['Hour'] = self.df['Hour_mod']
+
+
         # todo date/time column
         if 'monthly' in self.frequency:
             self.df['Month'] = self.df['Month'].astype(str)
@@ -371,13 +411,11 @@ class Table:
         if 'hourly' in self.frequency:
             self.df[['Day', 'Month', 'Hour']] = self.df[['Day', 'Month', 'Hour']].astype(str)
             self.df['Date/Time'] = self.df[['Day', 'Month']].agg('/'.join, axis=1) + ' ' + self.df['Hour'] + ':00'
-        if 'timestep' in self.frequency:
-            self.df[['Day', 'Month', 'Hour', 'Minute']] = self.df[['Day', 'Month', 'Hour', 'Minute']].astype(str)
-            self.df['Date/Time'] = (self.df[['Day', 'Month']].agg('/'.join, axis=1) +
-                                    ' ' +
-                                    self.df[['Hour', 'Minute']].agg(':'.join, axis=1))
-
-
+        # if 'timestep' in self.frequency:
+        #     self.df[['Day', 'Month', 'Hour', 'Minute']] = self.df[['Day', 'Month', 'Hour', 'Minute']].astype(str)
+        #     self.df['Date/Time'] = (self.df[['Day', 'Month']].agg('/'.join, axis=1) +
+        #                             ' ' +
+        #                             self.df[['Hour', 'Minute']].agg(':'.join, axis=1))
 
 
         self.df = self.df.set_index([pd.RangeIndex(len(self.df))])

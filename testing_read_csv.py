@@ -97,6 +97,8 @@ for file in source_files:
     df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
     df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
 
+
+
     constantcols = []
     for i in [
         'Zone Air Volume',
@@ -133,6 +135,14 @@ for file in source_files:
     summed_dataframes.append(df)
 
 df = pd.concat(summed_dataframes)
+
+len(
+    df[
+        (df['Minute'] != '00') &
+        (df['Minute'].astype(str) != 'None') &
+        (df['Minute'] != '')
+        ]
+    )
 
 # todo not working
 # df['Hour_mod'] = (pd.to_numeric(df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
@@ -371,6 +381,8 @@ for i in ['Month', 'Day', 'Hour', 'Minute', 'Second']:
     # df[i] = df[i].str.replace('.0', '')
     df[i] = df[i].str.pad(width=2, side='left', fillchar='0')
 
+x = ''
+x is empty
 df = df.set_index([pd.RangeIndex(len(df))])
 
 
