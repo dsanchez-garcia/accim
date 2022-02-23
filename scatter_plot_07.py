@@ -22,8 +22,8 @@ z = Table(frequency=frequency,
 
 additional_list = [
     # 'Site Outdoor Air Drybulb Temperature (°C)',
-    # 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
-    # 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
+    'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+    'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
     # 'BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)',
     'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
     'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
@@ -36,28 +36,46 @@ z.format_table(type_of_table='custom',
                custom_cols=custom_cols_list,
                manage_epw_names=False
                )
-
-
+##
 
 z.generate_fig_data(
-    vars_to_gather_rows=['EPW'],
-    vars_to_gather_cols=['Adaptive Standard', 'Category'],
+    vars_to_gather_rows=[
+        # 'EPW',
+        'Adaptive Standard',
+        'Category'
+    ],
+    vars_to_gather_cols=[
+        'EPW',
+        # 'Adaptive Standard',
+        # 'Category'
+    ],
     detailed_rows=[
-        'London_Present',
+        # 'London_Present',
         # 'London_RCP85_2050',
-        'London_RCP85_2100',
+        # 'London_RCP85_2100',
+
+        'AS_CTE[CA_X',
+        'AS_EN16798[CA_3'
     ],
     detailed_cols=[
+        # 'London_Present',
+        'London_RCP85_2050',
+        'London_RCP85_2100',
+
         # 'AS_CTE[CA_X',
-        'AS_EN16798[CA_1'
+        # 'AS_EN16798[CA_3'
     ],
     adap_vs_stat_data_y_main=[
             'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
             'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
     ],
-    adap_vs_stat_data_y_sec=[
-            'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
-    ],
+    baseline='London_Present',
+
+
+    # todo temporarily unavailable
+    # adap_vs_stat_data_y_sec=[
+    #         'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
+    # ],
 
     # data_on_x_axis=(
     #     # 'Date/Time'
@@ -65,37 +83,55 @@ z.generate_fig_data(
     #     # 'BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)'
     # ),
     # data_on_y_main_axis=[
-    #     # 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
-    #     # 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
-    #     # 'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
-    #     'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
-    #     'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
-    # ],
-    # data_on_y_sec_axis=[
+    #     'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+    #     'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
+    #     'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
     #     # 'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
     #     # 'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
+    # ],
+    # data_on_y_sec_axis=[
+    #     'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
+    #     'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
     # ],
     colorlist_y_main_axis=[
         'b',
         'r',
         # 'g'
     ],
-    colorlist_y_sec_axis=[
-        'c',
-        # 'm'
-    ]
+
+    # colorlist_y_sec_axis=[
+    #     'c',
+    #     'm'
+    # ]
 )
 
 # print(*z.x_list, sep='\n')
-z.rows
+# z.rows
+# z.df_for_graph.columns
+# z.df_for_graph.index
 
 ##
-z.WIP_scatter_plot_adap_vs_stat(
+
+z.time_plot(
+    supxlabel='Year',
+    supylabel='Temperature',
+    y_sec_label='Energy demand',
+    figname='test_scatter_plot_07_timeplot_01',
+    figsize=15,
+    ratio_height_to_width=1/3,
+    confirm_graph=True
+)
+
+
+
+##
+
+z.scatter_plot_adap_vs_stat(
     supxlabel='Static Energy Demand',
     supylabel='Adaptive Energy Demand',
-    figname='test_scatter_plot_adap_vs_stat_01',
+    figname='test_scatter_plot_adap_vs_stat_01_transposed',
     figsize=5,
-    confirm_graph=False
+    confirm_graph=True
 )
 
 
@@ -104,7 +140,7 @@ z.WIP_scatter_plot_adap_vs_stat(
 
 
 ##
-z.WIP_scatter_plot(
+z.scatter_plot(
     supxlabel='Outdoor temperature',
     supylabel='Operative temmperature',
     # y_sec_label='Energy demand',
