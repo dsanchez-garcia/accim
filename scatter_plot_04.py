@@ -233,7 +233,7 @@ z.generate_fig_data(
 ## Version 03
 # start4 = time.time()
 #
-# z.timeline_plot(
+# z.WIP_timeline_plot(
 #     supxlabel='Time',
 #     supylabel='Tempreature',
 #     figname='temp_time_plot_4_test',
@@ -245,7 +245,7 @@ z.generate_fig_data(
 ## Version 04
 # start5 = time.time()
 #
-# z.timeline_plot_2(figname='temp_time_plot_5',
+# z.WIP_timeline_plot_2(figname='temp_time_plot_5',
 #                   figsize=15)
 # end5 = time.time()
 # print(end5-start5)
