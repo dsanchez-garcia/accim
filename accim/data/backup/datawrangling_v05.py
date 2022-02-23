@@ -1782,14 +1782,9 @@ class Table:
                                    sharey=True,
                                    constrained_layout=True,
                                    figsize=(figsize * len(self.cols), ratio_height_to_width * figsize * len(self.rows)))
-            # todo add argument to see if secondary axis data shoud be on the same sec axis or different
-            #  try to make a list of the secondary axes for each subplot and plot all data in the same secondary axis;
-            #  try to move the spines to make room for the secondary axis
-            secondary_y_axis = []
 
             for i in range(len(self.rows)):
                 for j in range(len(self.cols)):
-
                     current_axis = plt.gca()
                     current_axis.xaxis.set_major_formatter(mdates.DateFormatter(freq_graph_dict[self.frequency][1]))
                     current_axis.xaxis.set_major_locator(mdates.MonthLocator())
