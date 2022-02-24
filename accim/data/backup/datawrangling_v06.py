@@ -1721,7 +1721,7 @@ class Table:
             self,
             supxlabel: str = None,
             supylabel: str = None,
-            supylabel_sec: str = None,
+            y_sec_label: str = None,
             figname: str = None,
             figsize: float = 1,
             ratio_height_to_width: float = 1,
@@ -1802,77 +1802,135 @@ class Table:
     
                     if len(self.rows) == 1 and len(self.cols) == 1:
                         main_y_axis_temp_rows.append(ax)
-                    elif len(self.cols) == 1 and len(self.rows) > 1:
-                        main_y_axis_temp_rows.append(ax[i])
-                    else:
-                        main_y_axis_temp_rows.append(ax[i, j])
-                    if len(self.rows) == 1 and len(self.cols) == 1:
-                        secondary_y_axis_temp_rows.append(ax.twinx())
-                        # ax.twinx().set_ylabel(y_sec_label)
-                    elif len(self.cols) == 1 and len(self.rows) > 1:
-                        secondary_y_axis_temp_rows.append(ax[i].twinx())
-                        # ax[i].twinx().set_ylabel(y_sec_label)
-                    else:
-                        secondary_y_axis_temp_rows.append(ax[i, j].twinx())
-                        # ax[i, j].twinx().set_ylabel(y_sec_label)
-                main_y_axis.append(main_y_axis_temp_rows)
-                secondary_y_axis.append(secondary_y_axis_temp_rows)
-
-            for i in range(len(self.rows)):
-                for j in range(len(self.cols)):
-                    main_y_axis[i][j].grid(True, linestyle='-.')
-                    main_y_axis[i][j].tick_params(axis='both',
-                                         grid_color='black',
-                                         grid_alpha=0.5)
-                    main_y_axis[i][j].set_facecolor((0, 0, 0, 0.10))
-
-                    for k in range(len(self.y_list[i][j][2])):
-                        if i == 0 and j == 0:
-                            main_y_axis[i][j].plot(
+                        ax.grid(True, linestyle='-.')
+                        ax.tick_params(axis='both',
+                                       grid_color='black',
+                                       grid_alpha=0.5)
+                        ax.set_facecolor((0, 0, 0, 0.10))
+                        for k in range(len(self.y_list[i][j][2])):
+                            ax.plot(
                                 self.df_for_graph['Date/Time'],
                                 self.y_list[i][j][2][k],
                                 linewidth=1,
                                 c=self.y_list[i][j][4][k],
-                                # ms=markersize,
-                                # marker='o',
-                                # alpha=0.5,
                                 label=self.y_list[i][j][3][k]
                             )
-                        else:
-                            main_y_axis[i][j].plot(
+                    elif len(self.cols) == 1 and len(self.rows) > 1:
+                        main_y_axis_temp_rows.append(ax[i])
+                        ax[i].grid(True, linestyle='-.')
+                        ax[i].tick_params(axis='both',
+                                       grid_color='black',
+                                       grid_alpha=0.5)
+                        ax[i].set_facecolor((0, 0, 0, 0.10))
+
+                        for k in range(len(self.y_list[i][j][2])):
+                            if i == 0 and j == 0:
+                                ax[i].plot(
+                                    self.df_for_graph['Date/Time'],
+                                    self.y_list[i][j][2][k],
+                                    linewidth=1,
+                                    c=self.y_list[i][j][4][k],
+                                    label=self.y_list[i][j][3][k]
+                                )
+                            else:
+                                ax[i].plot(
+                                    self.df_for_graph['Date/Time'],
+                                    self.y_list[i][j][2][k],
+                                    linewidth=1,
+                                    c=self.y_list[i][j][4][k],
+                                )
+                    else:
+                        main_y_axis_temp_rows.append(ax[i, j])
+                        ax[i, j].grid(True, linestyle='-.')
+                        ax[i, j].tick_params(axis='both',
+                                       grid_color='black',
+                                       grid_alpha=0.5)
+                        ax[i, j].set_facecolor((0, 0, 0, 0.10))
+                        
+                        for k in range(len(self.y_list[i][j][2])):
+                            if i == 0 and j == 0:
+                                ax[i, j].plot(
+                                    self.df_for_graph['Date/Time'],
+                                    self.y_list[i][j][2][k],
+                                    linewidth=1,
+                                    c=self.y_list[i][j][4][k],
+                                    # ms=markersize,
+                                    # marker='o',
+                                    # alpha=0.5,
+                                    label=self.y_list[i][j][3][k]
+                                )
+                            else:
+                                ax[i, j].plot(
+                                    self.df_for_graph['Date/Time'],
+                                    self.y_list[i][j][2][k],
+                                    linewidth=1,
+                                    c=self.y_list[i][j][4][k],
+                                    # ms=markersize,
+                                    # marker='o',
+                                    # alpha=0.5,
+                                )
+                    if len(self.rows) == 1 and len(self.cols) == 1:
+                        secondary_y_axis_temp_rows.append(ax.twinx())
+                        for k in range(len(self.y_list_sec[i][j][2])):
+                            ax.twinx().set_ylabel(y_sec_label)
+                            ax.twinx().plot(
                                 self.df_for_graph['Date/Time'],
-                                self.y_list[i][j][2][k],
+                                self.y_list_sec[i][j][2][k],
                                 linewidth=1,
-                                c=self.y_list[i][j][4][k],
-                                # ms=markersize,
-                                # marker='o',
-                                # alpha=0.5,
+                                c=self.y_list_sec[i][j][4][k],
+                                label=self.y_list_sec[i][j][3][k]
                             )
+                    elif len(self.cols) == 1 and len(self.rows) > 1:
+                        secondary_y_axis_temp_rows.append(ax[i].twinx())
+                        ax[i].twinx().set_ylabel(y_sec_label)
+                        for k in range(len(self.y_list_sec[i][j][2])):
+                            if i == 0 and j == 0:
+                                ax[i].twinx().plot(
+                                    self.df_for_graph['Date/Time'],
+                                    self.y_list_sec[i][j][2][k],
+                                    linewidth=1,
+                                    c=self.y_list_sec[i][j][4][k],
+                                    label=self.y_list_sec[i][j][3][k]
+                                )
+                            else:
+                                ax[i].twinx().plot(
+                                    self.df_for_graph['Date/Time'],
+                                    self.y_list_sec[i][j][2][k],
+                                    linewidth=1,
+                                    c=self.y_list_sec[i][j][4][k],
+                                )
+                    else:
+                        secondary_y_axis_temp_rows.append(ax.twinx())
+                        ax[i, j].twinx().set_ylabel(y_sec_label)
+                        for k in range(len(self.y_list_sec[i][j][2])):
+                            if i == 0 and j == 0:
+                                ax[i, j].twinx().plot(
+                                    self.df_for_graph['Date/Time'],
+                                    self.y_list_sec[i][j][2][k],
+                                    linewidth=1,
+                                    c=self.y_list_sec[i][j][4][k],
+                                    # ms=markersize,
+                                    # marker='o',
+                                    # alpha=0.5,
+                                    label=self.y_list_sec[i][j][3][k]
+                                )
+                            else:
+                                ax[i, j].twinx().plot(
+                                    self.df_for_graph['Date/Time'],
+                                    self.y_list_sec[i][j][2][k],
+                                    linewidth=1,
+                                    c=self.y_list_sec[i][j][4][k],
+                                    # ms=markersize,
+                                    # marker='o',
+                                    # alpha=0.5,
+                                )
 
             for i in range(len(self.rows)):
                 for j in range(len(self.cols)):
-                    for k in range(len(self.y_list_sec[i][j][2])):
-                        if i == 0 and j == 0:
-                            secondary_y_axis[i][j].plot(
-                                self.df_for_graph['Date/Time'],
-                                self.y_list_sec[i][j][2][k],
-                                linewidth=1,
-                                c=self.y_list_sec[i][j][4][k],
-                                # ms=markersize,
-                                # marker='o',
-                                # alpha=0.5,
-                                label=self.y_list_sec[i][j][3][k]
-                            )
-                        else:
-                            secondary_y_axis[i][j].plot(
-                                self.df_for_graph['Date/Time'],
-                                self.y_list_sec[i][j][2][k],
-                                linewidth=1,
-                                c=self.y_list_sec[i][j][4][k],
-                                # ms=markersize,
-                                # marker='o',
-                                # alpha=0.5,
-                            )
+
+
+
+
 
             if len(self.rows) == 1:
                 if len(self.cols) == 1:
@@ -1902,13 +1960,6 @@ class Table:
                 fontsize='large'
                 # borderaxespad=0.1,
             )
-            if len(self.data_on_y_sec_axis) > 0:
-                rhstext = fig.text(1, 0.5, s=supylabel_sec, va='center', rotation='vertical', size='large')
-
-            if len(self.data_on_y_sec_axis) > 0:
-                bbox_extra_artists_tuple = (rhstext, leg, supx, supy)
-            else:
-                bbox_extra_artists_tuple = (leg, supx, supy)
 
             for i in range(len(leg.legendHandles)):
                 leg.legendHandles[i]._sizes = [30]
@@ -1916,11 +1967,10 @@ class Table:
             # plt.subplots_adjust(bottom=0.2)
             # plt.tight_layout()
 
-
             plt.savefig(figname + '.png',
                         dpi=1200,
                         format='png',
-                        bbox_extra_artists=bbox_extra_artists_tuple,
+                        bbox_extra_artists=(leg, supx, supy),
                         bbox_inches='tight')
 
             plt.show()
