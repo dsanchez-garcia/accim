@@ -91,7 +91,7 @@ z.df_for_graph['Date/Time'] = pd.date_range(
     freq = freq_graph_dict[frequency][0]
 )
 
-# todo consider not to set Date/time as index, since it needs to be specified anyway in timeplot
+# previoustodo consider not to set Date/time as index, since it needs to be specified anyway in timeplot
 z.df_for_graph.set_index(z.df_for_graph['Date/Time'], inplace=True)
 z.df_for_graph = z.df_for_graph.drop(z.df_for_graph['Date/Time'])
 

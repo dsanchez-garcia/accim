@@ -59,7 +59,7 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
-        # todo check if glob.glob works with in terms of package, if not switch back to sorted
+        #  check if glob.glob works with in terms of package, if not switch back to sorted
         # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
         allfiles = glob.glob('*.csv', recursive=True)
@@ -155,7 +155,7 @@ class Table:
                     ]
             )
 
-            # todo timestep frequency to be tested
+            #  timestep frequency to be tested
             if frequency == 'timestep':
                 df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(sum_or_mean)
                 print(f'Input data frequency in file {file} is timestep '
@@ -186,7 +186,7 @@ class Table:
 
         self.df = pd.concat(summed_dataframes)
 
-        # todo not working
+        #  not working
         # self.df['Hour_mod'] = (pd.to_numeric(self.df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
         # self.df['Hour_mod'] = self.df['Hour_mod'].str.replace('.0', '').str.pad(width=2, side='left', fillchar='0')
         # self.df['Hour'] = self.df['Hour_mod']
@@ -408,7 +408,7 @@ class Table:
         # self.df['Hour'] = self.df['Hour_mod']
 
 
-        # todo date/time column
+        #  date/time column
         if 'monthly' in self.frequency:
             self.df['Month'] = self.df['Month'].astype(str)
             self.df['Date/Time'] = self.df['Month']
@@ -481,7 +481,7 @@ class Table:
 
             self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
-            # todo if len <1
+            #  if len <1
             data_cities['subcountry'] = data_cities['subcountry'].astype(str)
             data_countries['Name'] = data_countries['Name'].astype(str)
             data_countries['Code'] = data_countries['Code'].astype(str)
@@ -936,7 +936,7 @@ class Table:
 
         self.df_for_graph = self.df.copy()
 
-        # todo month columns to be amended
+        #  month columns to be amended
         # if 'Month' in self.df_for_graph.columns:
         #     self.df_for_graph['col_to_gather_in_cols'] = (self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1) +
         #                                         self.df_for_graph['Month'].astype(str) +
@@ -1092,7 +1092,7 @@ class Table:
                         temp_row.append(temp)
                     y_list_sec.append(temp_row)
 
-            # todo separate in a different function
+            # previoustodo separate in a different function
 
             fig, ax = plt.subplots(nrows=len(rows),
                                    ncols=len(cols),
@@ -1609,7 +1609,7 @@ class Table:
                                    in input("Enter the variables to be gathered separated by semicolon: ").split(';')))
         return vars_to_gather
 
-    # todo testing
+    # previoustodo testing
     
     def generate_fig_data(self,
                           vars_to_gather_cols=None,
@@ -1698,7 +1698,7 @@ class Table:
             self.rows = detailed_rows
 
 
-        # todo fix baseline
+        # previoustodo fix baseline
         if len(adap_vs_stat_data_y_main) > 0:
             if baseline is None:
                 print(f'Any baseline has been specified. The list of available baselines is:')
@@ -1764,7 +1764,7 @@ class Table:
         ]
 
         self.df_for_graph.set_index(multi_index, inplace=True)
-        # todo to be amended
+        # previoustodo to be amended
         self.max_value = max([self.df_for_graph[dataset].max() for dataset in adap_vs_stat_data_y_main])
 
 
@@ -2735,7 +2735,7 @@ class Table:
 
         self.df_for_graph = self.df.copy()
 
-        # todo month columns to be amended
+        # previoustodo month columns to be amended
         # if 'Month' in self.df_for_graph.columns:
         #     self.df_for_graph['col_to_gather_in_cols'] = (self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1) +
         #                                         self.df_for_graph['Month'].astype(str) +
@@ -2891,7 +2891,7 @@ class Table:
                         temp_row.append(temp)
                     self.y_list_sec.append(temp_row)
 
-            # todo separate in a different function
+            # previoustodo separate in a different function
 
     def WIP_timeline_plot_timeconsuming(self,
                                         supxlabel: str = None,
@@ -2900,7 +2900,7 @@ class Table:
                                         figsize: int = 1
                                         ):
         import matplotlib.pyplot as plt
-        # todo try unstacking, because it takes ages (400secs) to make a figure
+        # previoustodo try unstacking, because it takes ages (400secs) to make a figure
         fig, ax = plt.subplots(nrows=len(self.rows),
                                ncols=len(self.cols),
                                sharex=True,
@@ -2923,7 +2923,7 @@ class Table:
         # }
 
         # self.y_list_main_scatter
-        # todo if there is only one column or one row, indexing [i, j] does not work, since it would be something like [i]
+        # previoustodo if there is only one column or one row, indexing [i, j] does not work, since it would be something like [i]
         for i in range(len(self.rows)):
             for j in range(len(self.cols)):
                 # ax[i, j].set_title(f'{self.rows[i]} / {self.cols[j]}')

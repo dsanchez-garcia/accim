@@ -59,7 +59,7 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
-        # todo check if glob.glob works with in terms of package, if not switch back to sorted
+        # previoustodo check if glob.glob works with in terms of package, if not switch back to sorted
         # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
         allfiles = glob.glob('*.csv', recursive=True)
@@ -155,7 +155,7 @@ class Table:
                     ]
             )
 
-            # todo timestep frequency to be tested
+            # previoustodo timestep frequency to be tested
             if frequency == 'timestep':
                 df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(sum_or_mean)
                 print(f'Input data frequency in file {file} is timestep '
@@ -403,7 +403,7 @@ class Table:
         # self.df['Hour'] = self.df['Hour_mod']
 
 
-        # todo test timestep
+        # previoustodo test timestep
         if 'monthly' in self.frequency:
             self.df['Month'] = self.df['Month'].astype(str)
             self.df['Date/Time'] = self.df['Month']
@@ -476,7 +476,7 @@ class Table:
 
             self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
-            # todo if len <1
+            # previoustodo if len <1
             data_cities['subcountry'] = data_cities['subcountry'].astype(str)
             data_countries['Name'] = data_countries['Name'].astype(str)
             data_countries['Code'] = data_countries['Code'].astype(str)
@@ -899,7 +899,7 @@ class Table:
                                    in input("Enter the variables to be gathered separated by semicolon: ").split(';')))
         return vars_to_gather
 
-    # todo testing
+    # previoustodo testing
     
     def generate_fig_data(self,
                           vars_to_gather_cols=None,
@@ -1772,7 +1772,7 @@ class Table:
                 freq=freq_graph_dict[self.frequency][0]
             )
 
-            # todo consider not to set Date/time as index, since it needs to be specified anyway in timeplot
+            # previoustodo consider not to set Date/time as index, since it needs to be specified anyway in timeplot
             # self.df_for_graph = self.df_for_graph.set_index(self.df_for_graph['Date/Time'], inplace=True)
             # self.df_for_graph.drop(self.df_for_graph['Date/Time'])
 
@@ -2255,7 +2255,7 @@ class Table:
 
         self.df_for_graph = self.df.copy()
 
-        # todo month columns to be amended
+        # previoustodo month columns to be amended
         # if 'Month' in self.df_for_graph.columns:
         #     self.df_for_graph['col_to_gather_in_cols'] = (self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1) +
         #                                         self.df_for_graph['Month'].astype(str) +
@@ -2418,7 +2418,7 @@ class Table:
                                         figsize: int = 1
                                         ):
         import matplotlib.pyplot as plt
-        # todo try unstacking, because it takes ages (400secs) to make a figure
+        # previoustodo try unstacking, because it takes ages (400secs) to make a figure
         fig, ax = plt.subplots(nrows=len(self.rows),
                                ncols=len(self.cols),
                                sharex=True,

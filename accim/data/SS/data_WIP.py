@@ -345,7 +345,7 @@ plt.savefig('temp_fig_10.jpg',
 plt.show()
 
 ##
-# todo testing
+# previoustodo testing
 # y_list_main_plot[0][1][3][0]
 # temp_df = z.df[
 #     (z.df['col_to_gather_in_cols'] == 'AS_EN16798[CA_1') &

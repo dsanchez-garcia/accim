@@ -63,7 +63,7 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
-        # todo check if glob.glob works with in terms of package, if not switch back to sorted
+        #  check if glob.glob works with in terms of package, if not switch back to sorted
         # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
         allfiles = glob.glob('*.csv', recursive=True)
@@ -405,7 +405,7 @@ class Table:
 
             self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
-            # todo if len <1
+            #  if len <1
             data_cities['subcountry'] = data_cities['subcountry'].astype(str)
             data_countries['Name'] = data_countries['Name'].astype(str)
             data_countries['Code'] = data_countries['Code'].astype(str)

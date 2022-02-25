@@ -88,7 +88,7 @@ z.generate_fig_data(
     # baseline='London_Present',
 
 
-    # todo temporarily unavailable
+    # temporarily unavailable
     # adap_vs_stat_data_y_sec=[
     #         'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
     # ],

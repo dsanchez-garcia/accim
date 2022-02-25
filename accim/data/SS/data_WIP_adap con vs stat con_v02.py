@@ -49,7 +49,7 @@ z.format_table(type_of_table='custom',
                manage_epw_names=False
                )
 ##
-# todo argument
+# previoustodo argument
 datasets = [
     'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
     'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
@@ -70,7 +70,7 @@ rows = list(set(df_for_graph['col_to_gather_in_rows']))
 all_cols.sort()
 rows.sort()
 
-# todo argument
+# previoustodo argument
 baseline = 'AS_CTE[CA_X'
 
 cols = [x for x in all_cols if x not in set([baseline])]
@@ -94,7 +94,7 @@ df_for_graph = df_for_graph.drop(
     'col_to_gather_in_cols',
     'col_to_gather_in_rows']
 )
-# todo argument
+# previoustodo argument
 frequency = 'daily'
 
 multi_index = [
@@ -156,7 +156,7 @@ for i in range(len(rows)):
         temp_row.append(temp)
     y_list.append(temp_row)
 
-#todo argument
+#previoustodo argument
 s=3
 import numpy as np
 fig, ax = plt.subplots(nrows=len(rows),

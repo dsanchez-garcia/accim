@@ -59,7 +59,7 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
-        # todo check if glob.glob works with in terms of package, if not switch back to sorted
+        # previoustodo check if glob.glob works with in terms of package, if not switch back to sorted
         # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
         allfiles = glob.glob('*.csv', recursive=True)
@@ -155,7 +155,7 @@ class Table:
                     ]
             )
 
-            # todo timestep frequency to be tested
+            # previoustodo timestep frequency to be tested
             if frequency == 'timestep':
                 df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(sum_or_mean)
                 print(f'Input data frequency in file {file} is timestep '
@@ -403,7 +403,7 @@ class Table:
         # self.df['Hour'] = self.df['Hour_mod']
 
 
-        # todo test timestep
+        # previoustodo test timestep
         if 'monthly' in self.frequency:
             self.df['Month'] = self.df['Month'].astype(str)
             self.df['Date/Time'] = self.df['Month']
@@ -476,7 +476,7 @@ class Table:
 
             self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
-            # todo if len <1
+            # previoustodo if len <1
             data_cities['subcountry'] = data_cities['subcountry'].astype(str)
             data_countries['Name'] = data_countries['Name'].astype(str)
             data_countries['Code'] = data_countries['Code'].astype(str)
@@ -899,7 +899,7 @@ class Table:
                                    in input("Enter the variables to be gathered separated by semicolon: ").split(';')))
         return vars_to_gather
 
-    # todo testing
+    # previoustodo testing
     
     def generate_fig_data(self,
                           vars_to_gather_cols=None,
@@ -1772,7 +1772,7 @@ class Table:
                 freq=freq_graph_dict[self.frequency][0]
             )
 
-            # todo consider not to set Date/time as index, since it needs to be specified anyway in timeplot
+            # previoustodo consider not to set Date/time as index, since it needs to be specified anyway in timeplot
             # self.df_for_graph = self.df_for_graph.set_index(self.df_for_graph['Date/Time'], inplace=True)
             # self.df_for_graph.drop(self.df_for_graph['Date/Time'])
 
@@ -1782,7 +1782,7 @@ class Table:
                                    sharey=True,
                                    constrained_layout=True,
                                    figsize=(figsize * len(self.cols), ratio_height_to_width * figsize * len(self.rows)))
-            # todo add argument to see if secondary axis data shoud be on the same sec axis or different
+            # previoustodo add argument to see if secondary axis data shoud be on the same sec axis or different
             #  try to make a list of the secondary axes for each subplot and plot all data in the same secondary axis;
             #  try to move the spines to make room for the secondary axis
             standard_units = ['(°C)', '(h)', '(m3)', '(m2)', '(ach)', '(Wh)', '(kWh)', '(Wh/m2)', '(kWh/m2)']
@@ -1925,8 +1925,8 @@ class Table:
                                     # alpha=0.5,
                                 )
 
-            for i in range(len(self.rows)):
-                for j in range(len(self.cols)):
+            # for i in range(len(self.rows)):
+            #     for j in range(len(self.cols)):
 
 
 

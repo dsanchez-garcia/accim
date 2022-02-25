@@ -58,7 +58,7 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
-        # todo check if glob.glob works with in terms of package, if not switch back to sorted
+        # previoustodo check if glob.glob works with in terms of package, if not switch back to sorted
         # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
         allfiles = glob.glob('*.csv', recursive=True)
@@ -344,7 +344,7 @@ class Table:
         self.df['EPW'] = self.df['EPW'].str[:-4]
         self.df['Source'] = self.df['Source'].str[:-4]
 
-        # todo date/time column
+        # previoustodo date/time column
         if 'monthly' in self.frequency:
             self.df['Date/Time'] = self.df['Month']
         if 'daily' in self.frequency:
@@ -415,7 +415,7 @@ class Table:
 
             self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
-            # todo if len <1
+            # previoustodo if len <1
             data_cities['subcountry'] = data_cities['subcountry'].astype(str)
             data_countries['Name'] = data_countries['Name'].astype(str)
             data_countries['Code'] = data_countries['Code'].astype(str)
@@ -870,7 +870,7 @@ class Table:
 
         self.df_for_graph = self.df.copy()
 
-        # todo month columns to be amended
+        # previoustodo month columns to be amended
         # if 'Month' in self.df_for_graph.columns:
         #     self.df_for_graph['col_to_gather_in_cols'] = (self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1) +
         #                                         self.df_for_graph['Month'].astype(str) +
@@ -1026,7 +1026,7 @@ class Table:
                         temp_row.append(temp)
                     y_list_sec.append(temp_row)
 
-            # todo separate in a different function
+            # previoustodo separate in a different function
 
             fig, ax = plt.subplots(nrows=len(rows),
                                    ncols=len(cols),
@@ -1538,7 +1538,7 @@ class Table:
                                    in input("Enter the variables to be gathered separated by semicolon: ").split(';')))
         return vars_to_gather
 
-    # todo testing
+    # previoustodo testing
     def generate_fig_data(
             self,
             type_of_graph: str = None,
@@ -1585,7 +1585,7 @@ class Table:
 
         self.df_for_graph = self.df.copy()
 
-        # todo month columns to be amended
+        # previoustodo month columns to be amended
         # if 'Month' in self.df_for_graph.columns:
         #     self.df_for_graph['col_to_gather_in_cols'] = (self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1) +
         #                                         self.df_for_graph['Month'].astype(str) +
@@ -1741,7 +1741,7 @@ class Table:
                         temp_row.append(temp)
                     y_list_sec.append(temp_row)
 
-            # todo separate in a different function
+            # previoustodo separate in a different function
 
     def timeline_plot(self,
                       supxlabel: str = None,
@@ -1965,7 +1965,7 @@ class Table:
 
 
 
-    # todo testing
+    # previoustodo testing
     def testing_scatter_plot(
             self,
             # type_of_graph: str = None,
@@ -2196,7 +2196,7 @@ class Table:
                         temp_row.append(temp)
                     y_list_sec.append(temp_row)
 
-            # todo separate in a different function
+            # previoustodo separate in a different function
 
             fig, ax = plt.subplots(nrows=len(rows),
                                    ncols=len(cols),

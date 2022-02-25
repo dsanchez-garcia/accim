@@ -61,7 +61,7 @@ rows = list(set(self.df_for_graph['col_to_gather_in_rows']))
 all_cols.sort()
 rows.sort()
 
-# todo argument
+# previoustodo argument
 baseline = 'AS_CTE[CA_X'
 
 cols = [x for x in all_cols if x not in set([baseline])]
@@ -85,7 +85,7 @@ self.df_for_graph = self.df_for_graph.drop(
     'col_to_gather_in_cols',
     'col_to_gather_in_rows']
 )
-# todo argument
+# previoustodo argument
 frequency = 'daily'
 
 multi_index = [
@@ -109,7 +109,7 @@ self.df_for_graph = self.df_for_graph.unstack('col_to_unstack')
 
 self.df_for_graph.columns = self.df_for_graph.columns.map('['.join)
 
-# todo argument
+# previoustodo argument
 datasets = [
     'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
     'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
@@ -152,7 +152,7 @@ for i in range(len(rows)):
         temp_row.append(temp)
     y_list.append(temp_row)
 
-#todo argument
+#previoustodo argument
 s=2
 
 fig, ax = plt.subplots(nrows=len(rows),

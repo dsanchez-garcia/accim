@@ -161,9 +161,30 @@ class Table:
                     ]
             )
 
+            aggregation_list_mean = [
+            'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
+            'Environment:Site Wind Speed [m/s](Hourly)',
+            'EMS:Comfort Temperature [C](Hourly)',
+            'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
+            'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
+            'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)',
+            'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
+            'EMS:Ventilation Setpoint Temperature [C](Hourly)',
+            'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
+            ]
+
+            agg_dict = {}
+
+            for i in df.columns:
+                for j in aggregation_list_mean:
+                    if j in i:
+                        agg_dict.update({i: 'mean'})
+                    else:
+                        agg_dict.update({i: sum_or_mean})
+
             # todo timestep frequency to be tested
             if frequency == 'timestep':
-                df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(sum_or_mean)
+                df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(agg_dict)
                 print(f'Input data frequency in file {file} is timestep '
                       f'and requested frequency is also timestep, '
                       f'therefore no aggregation will be performed. '
@@ -171,7 +192,7 @@ class Table:
 
             if frequency == 'hourly':
                 if minute_df_len > 0:
-                    df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(sum_or_mean)
+                    df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(agg_dict)
                     print(f'Input data frequency in file {file} is timestep '
                           f'and requested frequency is hourly, '
                           f'therefore aggregation will be performed. '
@@ -179,11 +200,11 @@ class Table:
                 else:
                     print(f'Input data frequency in file {file} is hourly, therefore no aggregation will be performed.')
             if frequency == 'daily':
-                df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(sum_or_mean)
+                df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(agg_dict)
             if frequency == 'monthly':
-                df = df.groupby(['Source', 'Month'], as_index=False).agg(sum_or_mean)
+                df = df.groupby(['Source', 'Month'], as_index=False).agg(agg_dict)
             if frequency == 'runperiod':
-                df = df.groupby(['Source'], as_index=False).agg(sum_or_mean)
+                df = df.groupby(['Source'], as_index=False).agg(agg_dict)
 
             for i in constantcolsdict:
                 df[i] = constantcolsdict[i]
@@ -1285,13 +1306,16 @@ class Table:
             for i in range(len(self.rows)):
                 for j in range(len(self.cols)):
                     for k in range(len(self.y_list_sec[i][j])):
-                        if i > 0 and j > 0:
-                            sec_y_axis[0][0][k].get_shared_y_axes().join(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
+                        sec_y_axis[0][0][k].get_shared_y_axes().join(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
                         if len(self.data_on_y_sec_axis) > 1:
-                            sec_y_axis[i][j][k].set_ylabel(self.data_on_y_sec_axis[k][0])
-                            if k > 0:
-                                sec_y_axis[i][j][k].spines["right"].set_position(("axes", 1 + k * 0.1))
-                                sec_y_axis[i][j][k].spines["right"].set_visible(True)
+                            if len(self.y_list_sec[i][j]) >= 1:
+                                if j < (len(self.cols) - 1):
+                                    # sec_y_axis[i][j][k].set_yticklabels([])
+                                    sec_y_axis[i][j][k].set_yticks([], [])
+                                if j == (len(self.cols) - 1):
+                                    sec_y_axis[i][j][k].set_ylabel(self.data_on_y_sec_axis[k][0])
+                                    sec_y_axis[i][j][k].spines["right"].set_position(("axes", 1 + k * 0.15))
+                                    sec_y_axis[i][j][k].spines["right"].set_visible(True)
                         for x in range(len(self.y_list_sec[i][j][k]['dataframe'])):
                             if i == 0 and j == 0:
                                 sec_y_axis[i][j][k].scatter(
@@ -1312,9 +1336,6 @@ class Table:
                                     marker='o',
                                     alpha=0.5,
                                 )
-                        # if i > 0 and j > 0:
-                        #     sec_y_axis[0][0][k].get_shared_y_axes().join(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
-
 
             if len(self.rows) == 1:
                 if len(self.cols) == 1:
@@ -1809,6 +1830,7 @@ class Table:
                 main_y_axis.append(main_y_axis_temp_rows)
                 sec_y_axis.append(sec_y_axis_temp_rows)
 
+
             for i in range(len(self.rows)):
                 for j in range(len(self.cols)):
 
@@ -1849,13 +1871,16 @@ class Table:
             for i in range(len(self.rows)):
                 for j in range(len(self.cols)):
                     for k in range(len(self.y_list_sec[i][j])):
-                        if i > 0 and j > 0:
-                            sec_y_axis[0][0][k].get_shared_y_axes().join(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
+                        sec_y_axis[0][0][k].get_shared_y_axes().join(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
                         if len(self.data_on_y_sec_axis) > 1:
-                            sec_y_axis[i][j][k].set_ylabel(self.data_on_y_sec_axis[k][0])
-                            if k > 0:
-                                sec_y_axis[i][j][k].spines["right"].set_position(("axes", 1 + k * 0.075))
-                                sec_y_axis[i][j][k].spines["right"].set_visible(True)
+                            if len(self.y_list_sec[i][j]) >= 1:
+                                if j < (len(self.cols) - 1):
+                                    # sec_y_axis[i][j][k].set_yticklabels([])
+                                    sec_y_axis[i][j][k].set_yticks([], [])
+                                if j == (len(self.cols) - 1):
+                                    sec_y_axis[i][j][k].set_ylabel(self.data_on_y_sec_axis[k][0])
+                                    sec_y_axis[i][j][k].spines["right"].set_position(("axes", 1 + k * 0.1))
+                                    sec_y_axis[i][j][k].spines["right"].set_visible(True)
                         for x in range(len(self.y_list_sec[i][j][k]['dataframe'])):
                             if i == 0 and j == 0:
                                 sec_y_axis[i][j][k].plot(
@@ -1920,7 +1945,6 @@ class Table:
 
             # plt.subplots_adjust(bottom=0.2)
             # plt.tight_layout()
-
 
             plt.savefig(figname + '.png',
                         dpi=1200,
