@@ -1,4 +1,4 @@
-frequency = 'hourly'
+frequency = 'monthly'
 sum_or_mean = 'sum'
 standard_outputs = True
 level=['building']
@@ -27,7 +27,7 @@ import csv
 frequency = frequency
 normalised_energy_units = normalised_energy_units
 
-# todo check if glob.glob works with in terms of package, if not switch back to sorted
+# previoustodo check if glob.glob works with in terms of package, if not switch back to sorted
 # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
 allfiles = glob.glob('*.csv', recursive=True)
@@ -67,9 +67,50 @@ cleaned_columns = [
     'Zone Floor Area'
 ]
 
+files = [f for f in allfiles if
+         # 'London_Present' in f and 'AS_EN16798[CA_3' in f or
+         # 'London_RCP85_2100' in f and 'AS_EN16798[CA_3' in f or
+         # 'London_Present' in f and 'AS_CTE[CA_X' in f or
+         'London_RCP85_2100' in f and 'AS_CTE[CA_X' in f
+         ]
+
+indexcols = [
+    'Date/Time',
+    'Model',
+    'Adaptive Standard',
+    'Category',
+    'Comfort mode',
+    'HVAC mode',
+    'Ventilation control',
+    'VSToffset',
+    'MinOToffset',
+    'MaxWindSpeed',
+    'ASTtol',
+    'EPW',
+    'Source',
+    # 'col_to_pivot'
+]
+if 'runperiod' in frequency:
+    indexcols.remove('Date/Time')
+if 'monthly' in frequency:
+    indexcols.append('Month')
+if 'daily' in frequency:
+    indexcols.extend(['Month', 'Day'])
+if 'hourly' in frequency:
+    indexcols.extend(['Month', 'Day', 'Hour'])
+if 'timestep' in frequency:
+    indexcols.extend(['Month', 'Day', 'Hour', 'Minute'])
+if manage_epw_names:
+    indexcols.extend([
+        'EPW_CountryCode',
+        'EPW_Scenario',
+        'EPW_Year',
+        'EPW_City_or_subcountry'
+    ])
+
 summed_dataframes = []
 
-for file in source_files:
+for file in files:
 
     # with open(file) as csv_file:
     #     csv_reader = csv.reader(csv_file, delimiter=',')
@@ -115,19 +156,62 @@ for file in source_files:
         tempdict = {constantcols[i]: df[constantcols[i]][0]}
         constantcolsdict.update(tempdict)
 
-    # todo timestep frequency to be removed
-    # if frequency == 'timestep':
-    # pass
-    # df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(sum_or_mean)
-    # if frequency == 'hourly':
-    # pass
-    # df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(sum_or_mean)
+    minute_df_len = len(
+        df[
+            (df['Minute'] != '00') &
+            (df['Minute'].astype(str) != 'None') &
+            (df['Minute'] != '')
+            ]
+    )
+
+    aggregation_list_mean = [
+        'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
+        'Environment:Site Wind Speed [m/s](Hourly)',
+        'EMS:Comfort Temperature [C](Hourly)',
+        'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
+        'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
+        'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)',
+        'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
+        'EMS:Ventilation Setpoint Temperature [C](Hourly)',
+        'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
+    ]
+
+    agg_dict = {}
+
+    for i in df.columns:
+        for j in aggregation_list_mean:
+            if j in i:
+                agg_dict.update({i: 'mean'})
+            else:
+                agg_dict.update({i: sum_or_mean})
+
+    # todo timestep frequency to be tested
+    
+    # todo source, date/time and other columns concatenate when aggregating. Try setting as multiindex
+    df.set_index(indexcols)
+
+    if frequency == 'timestep':
+        df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(agg_dict)
+        print(f'Input data frequency in file {file} is timestep '
+              f'and requested frequency is also timestep, '
+              f'therefore no aggregation will be performed. '
+              f'The user needs to check the output rows number is correct.')
+
+    if frequency == 'hourly':
+        if minute_df_len > 0:
+            df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(agg_dict)
+            print(f'Input data frequency in file {file} is timestep '
+                  f'and requested frequency is hourly, '
+                  f'therefore aggregation will be performed. '
+                  f'The user needs to check the output rows number is correct.')
+        else:
+            print(f'Input data frequency in file {file} is hourly, therefore no aggregation will be performed.')
     if frequency == 'daily':
-        df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(sum_or_mean)
+        df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(agg_dict)
     if frequency == 'monthly':
-        df = df.groupby(['Source', 'Month'], as_index=False).agg(sum_or_mean)
+        df = df.groupby(['Source', 'Month'], as_index=False).agg(agg_dict)
     if frequency == 'runperiod':
-        df = df.groupby(['Source'], as_index=False).agg(sum_or_mean)
+        df = df.groupby(['Source'], as_index=False).agg(agg_dict)
 
     for i in constantcolsdict:
         df[i] = constantcolsdict[i]
@@ -136,15 +220,9 @@ for file in source_files:
 
 df = pd.concat(summed_dataframes)
 
-len(
-    df[
-        (df['Minute'] != '00') &
-        (df['Minute'].astype(str) != 'None') &
-        (df['Minute'] != '')
-        ]
-    )
+##
 
-# todo not working
+# previoustodo not working
 # df['Hour_mod'] = (pd.to_numeric(df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
 # df['Hour_mod'] = df['Hour_mod'].str.replace('.0', '').str.pad(width=2, side='left', fillchar='0')
 # df['Hour'] = df['Hour_mod']
@@ -316,6 +394,8 @@ df.set_axis(
     inplace=True
 )
 
+##
+
 df[['Model',
          'Adaptive Standard',
          'Category',
@@ -328,7 +408,7 @@ df[['Model',
          'ASTtol',
          'EPW']] = df['Source'].str.split('[', expand=True)
 
-
+##
 
 df['Model'] = df['Model'].str[:-6]
 # df['Adaptive Standard'] = df['Adaptive Standard'].str[3:]
@@ -377,7 +457,7 @@ for i in ['Month', 'Day', 'Hour', 'Minute', 'Second']:
         if df.loc[j, i] == '':
             df.loc[j, i] = str(int((int(df.loc[j-1, i]) + int(df.loc[j+1, i]))/2))
 
-    # todo changes 10 for 0
+    # previoustodo changes 10 for 0
     # df[i] = df[i].str.replace('.0', '')
     df[i] = df[i].str.pad(width=2, side='left', fillchar='0')
 
@@ -397,7 +477,7 @@ df['Hour'] = df['Hour_mod']
 # df[['Day', 'Month']] = df[['Day', 'Month']].astype(str)
 
 
-# todo date/time column
+# previoustodo date/time column
 if 'monthly' in frequency:
 
     df['Date/Time'] = df['Month']
