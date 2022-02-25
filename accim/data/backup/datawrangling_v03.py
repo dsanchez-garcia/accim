@@ -2184,7 +2184,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
                             else:
                                 ax.scatter(
@@ -2203,7 +2203,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
 
                         ax.set_ylim((0, self.max_value))
@@ -2266,7 +2266,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
                             else:
                                 ax[i].scatter(
@@ -2285,7 +2285,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
 
                         ax[i].set_ylim((0, self.max_value))
@@ -2348,7 +2348,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
                             else:
                                 ax[i, j].scatter(
@@ -2367,7 +2367,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
 
                         ax[i, j].set_ylim((0, self.max_value))
@@ -2462,7 +2462,7 @@ class Table:
                             ax.plot(
                                 # self.x_list[i][j][2],
                                 self.y_list[i][j][2][k],
-                                # c=self.y_list[i][j][4][k],
+                                # c=self.y_list_main[i][j][4][k],
                                 # ms=markersize,
                                 # marker='o',
                                 # alpha=0.5,
@@ -2472,7 +2472,7 @@ class Table:
                             ax.plot(
                                 # self.x_list[i][j][2],
                                 self.y_list[i][j][2][k],
-                                # c=self.y_list[i][j][4][k],
+                                # c=self.y_list_main[i][j][4][k],
                                 # ms=markersize,
                                 # marker='o',
                                 # alpha=0.5,
@@ -2492,7 +2492,7 @@ class Table:
                             ax[i].plot(
                                 # self.x_list[i][j][2],
                                 self.y_list[i][j][2][k],
-                                # c=self.y_list[i][j][4][k],
+                                # c=self.y_list_main[i][j][4][k],
                                 # ms=markersize,
                                 # marker='o',
                                 # alpha=0.5,
@@ -2502,7 +2502,7 @@ class Table:
                             ax[i].plot(
                                 # self.x_list[i][j][2],
                                 self.y_list[i][j][2][k],
-                                # c=self.y_list[i][j][4][k],
+                                # c=self.y_list_main[i][j][4][k],
                                 # ms=markersize,
                                 # marker='o',
                                 # alpha=0.5,
@@ -2519,7 +2519,7 @@ class Table:
                             ax[i, j].plot(
                                 # self.x_list[i][j][2],
                                 self.y_list[i][j][2][k],
-                                # c=self.y_list[i][j][4][k],
+                                # c=self.y_list_main[i][j][4][k],
                                 # ms=markersize,
                                 # marker='o',
                                 # alpha=0.5,
@@ -2529,7 +2529,7 @@ class Table:
                             ax[i, j].plot(
                                 # self.x_list[i][j][2],
                                 self.y_list[i][j][2][k],
-                                # c=self.y_list[i][j][4][k],
+                                # c=self.y_list_main[i][j][4][k],
                                 # ms=markersize,
                                 # marker='o',
                                 # alpha=0.5,
@@ -2615,44 +2615,44 @@ class Table:
                             # self.x_list[i][j][2],
                             self.y_list[i][j][2][k],
                             linewidth=1
-                            # c=self.y_list[i][j][4][k],
+                            # c=self.y_list_main[i][j][4][k],
                             # ms=markersize,
                             # marker='o',
                             # alpha=0.5,
-                            # label=self.y_list[i][j][3][k]
+                            # label=self.y_list_main[i][j][3][k]
                         )
                     # if len(self.rows) == 1 and len(self.cols) > 1:
                     #     ax[i, j].plot(
                     #         # self.x_list[i][j][2],
-                    #         self.y_list[i][j][2][k],
+                    #         self.y_list_main[i][j][2][k],
                     #         linewidth=1
-                    #         # c=self.y_list[i][j][4][k],
+                    #         # c=self.y_list_main[i][j][4][k],
                     #         # ms=markersize,
                     #         # marker='o',
                     #         # alpha=0.5,
-                    #         # label=self.y_list[i][j][3][k]
+                    #         # label=self.y_list_main[i][j][3][k]
                     #     )
                     if len(self.cols) == 1 and len(self.rows) > 1:
                         ax[i].plot(
                             # self.x_list[i][j][2],
                             self.y_list[i][j][2][k],
                             linewidth=1
-                            # c=self.y_list[i][j][4][k],
+                            # c=self.y_list_main[i][j][4][k],
                             # ms=markersize,
                             # marker='o',
                             # alpha=0.5,
-                            # label=self.y_list[i][j][3][k]
+                            # label=self.y_list_main[i][j][3][k]
                         )
                     else:
                         ax[i, j].plot(
                             # self.x_list[i][j][2],
                             self.y_list[i][j][2][k],
                             linewidth=1
-                            # c=self.y_list[i][j][4][k],
+                            # c=self.y_list_main[i][j][4][k],
                             # ms=markersize,
                             # marker='o',
                             # alpha=0.5,
-                            # label=self.y_list[i][j][3][k]
+                            # label=self.y_list_main[i][j][3][k]
                         )
 
         if len(self.rows) > 1:

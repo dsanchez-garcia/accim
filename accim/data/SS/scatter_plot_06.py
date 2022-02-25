@@ -111,41 +111,41 @@ for i in range(len(z.rows)):
         current_axis.xaxis.set_major_formatter(mdates.DateFormatter(freq_graph_dict[frequency][1]))
         current_axis.xaxis.set_major_locator(mdates.MonthLocator())
 
-        for k in range(len(z.y_list[i][j][2])):
+        for k in range(len(z.y_list_main[i][j][2])):
             if len(z.rows) == 1 and len(z.cols) == 1:
                 ax.plot(
                     z.df_for_graph.index,
-                    z.y_list[i][j][2][k],
+                    z.y_list_main[i][j][2][k],
                     linewidth=1,
-                    c=z.y_list[i][j][4][k],
-                    label=z.y_list[i][j][3][k]
+                    c=z.y_list_main[i][j][4][k],
+                    label=z.y_list_main[i][j][3][k]
                 )
             elif len(z.rows) == 1 and len(z.cols) > 1:
                 ax[i, j].plot(
                     z.df_for_graph.index,
-                    z.y_list[i][j][2][k],
+                    z.y_list_main[i][j][2][k],
                     linewidth=1,
-                    c=z.y_list[i][j][4][k],
-                    label=z.y_list[i][j][3][k]
+                    c=z.y_list_main[i][j][4][k],
+                    label=z.y_list_main[i][j][3][k]
                 )
             elif len(z.cols) == 1 and len(z.rows) > 1:
                 ax[i].plot(
                     z.df_for_graph.index,
-                    z.y_list[i][j][2][k],
+                    z.y_list_main[i][j][2][k],
                     linewidth=1,
-                    c=z.y_list[i][j][4][k],
-                    label=z.y_list[i][j][3][k]
+                    c=z.y_list_main[i][j][4][k],
+                    label=z.y_list_main[i][j][3][k]
                 )
             else:
                 ax[i, j].plot(
                     z.df_for_graph.index,
-                    z.y_list[i][j][2][k],
+                    z.y_list_main[i][j][2][k],
                     linewidth=1
-                    # c=z.y_list[i][j][4][k],
+                    # c=z.y_list_main[i][j][4][k],
                     # ms=markersize,
                     # marker='o',
                     # alpha=0.5,
-                    # label=z.y_list[i][j][3][k]
+                    # label=z.y_list_main[i][j][3][k]
                 )
 
 plt.show()
@@ -185,11 +185,11 @@ ax.plot(
 
     # data=z.df_for_graph,
     # linewidth=1
-    # c=z.y_list[i][j][4][k],
+    # c=z.y_list_main[i][j][4][k],
     # ms=markersize,
     # marker='o',
     # alpha=0.5,
-    # label=z.y_list[i][j][3][k]
+    # label=z.y_list_main[i][j][3][k]
 )
 current_axis = plt.gca()
 
@@ -266,11 +266,11 @@ ax.plot(
 
     # data=z.df_for_graph,
     # linewidth=1
-    # c=z.y_list[i][j][4][k],
+    # c=z.y_list_main[i][j][4][k],
     # ms=markersize,
     # marker='o',
     # alpha=0.5,
-    # label=z.y_list[i][j][3][k]
+    # label=z.y_list_main[i][j][3][k]
 )
 
 current_axis = plt.gca()
@@ -306,11 +306,11 @@ ax.plot(
 
     # data=z.df_for_graph,
     # linewidth=1
-    # c=z.y_list[i][j][4][k],
+    # c=z.y_list_main[i][j][4][k],
     # ms=markersize,
     # marker='o',
     # alpha=0.5,
-    # label=z.y_list[i][j][3][k]
+    # label=z.y_list_main[i][j][3][k]
 )
 plt.show()
 

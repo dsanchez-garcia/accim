@@ -179,50 +179,50 @@ z.generate_fig_data(
 #
 # for i in range(len(z.rows)):
 #     for j in range(len(z.cols)):
-#         for k in range(len(z.y_list[i][j][2])):
+#         for k in range(len(z.y_list_main[i][j][2])):
 #             if len(z.rows) == 1 and len(z.cols) == 1:
 #                 ax.plot(
 #                     # self.x_list[i][j][2],
-#                     z.y_list[i][j][2][k],
+#                     z.y_list_main[i][j][2][k],
 #                     linewidth=1
-#                     # c=self.y_list[i][j][4][k],
+#                     # c=self.y_list_main[i][j][4][k],
 #                     # ms=markersize,
 #                     # marker='o',
 #                     # alpha=0.5,
-#                     # label=self.y_list[i][j][3][k]
+#                     # label=self.y_list_main[i][j][3][k]
 #                 )
 #             # if len(z.rows) == 1 and len(z.cols) > 1:
 #             #     ax[i, j].plot(
 #             #         # self.x_list[i][j][2],
-#             #         z.y_list[i][j][2][k],
+#             #         z.y_list_main[i][j][2][k],
 #             #         linewidth=1
-#             #         # c=self.y_list[i][j][4][k],
+#             #         # c=self.y_list_main[i][j][4][k],
 #             #         # ms=markersize,
 #             #         # marker='o',
 #             #         # alpha=0.5,
-#             #         # label=self.y_list[i][j][3][k]
+#             #         # label=self.y_list_main[i][j][3][k]
 #             #     )
 #             if len(z.cols) == 1 and len(z.rows) > 1:
 #                 ax[i].plot(
 #                     # self.x_list[i][j][2],
-#                     z.y_list[i][j][2][k],
+#                     z.y_list_main[i][j][2][k],
 #                     linewidth=1
-#                     # c=self.y_list[i][j][4][k],
+#                     # c=self.y_list_main[i][j][4][k],
 #                     # ms=markersize,
 #                     # marker='o',
 #                     # alpha=0.5,
-#                     # label=self.y_list[i][j][3][k]
+#                     # label=self.y_list_main[i][j][3][k]
 #                 )
 #             else:
 #                 ax[i, j].plot(
 #                     # self.x_list[i][j][2],
-#                     z.y_list[i][j][2][k],
+#                     z.y_list_main[i][j][2][k],
 #                     linewidth=1
-#                     # c=self.y_list[i][j][4][k],
+#                     # c=self.y_list_main[i][j][4][k],
 #                     # ms=markersize,
 #                     # marker='o',
 #                     # alpha=0.5,
-#                     # label=self.y_list[i][j][3][k]
+#                     # label=self.y_list_main[i][j][3][k]
 #                 )
 # plt.savefig('temp_time_plot_3.png',
 #             dpi=900)

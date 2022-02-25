@@ -234,11 +234,11 @@ z.df_for_graph.index
 #     'Adaptive Heating Setpoint Temperature_No Tolerance (°C)[AS_EN16798[CA_3[London_RCP85_2100',
 #     data=z.df_for_graph,
 #     linewidth=1
-#     # c=self.y_list[i][j][4][k],
+#     # c=self.y_list_main[i][j][4][k],
 #     # ms=markersize,
 #     # marker='o',
 #     # alpha=0.5,
-#     # label=self.y_list[i][j][3][k]
+#     # label=self.y_list_main[i][j][3][k]
 # )
 current_axis = plt.gca()
 formatter = mdates.DateFormatter("%d/%m %H:%M")
@@ -253,55 +253,55 @@ plt.locator_params(axis='x', nbins=10)
 
 for i in range(len(z.rows)):
     for j in range(len(z.cols)):
-        for k in range(len(z.y_list[i][j][2])):
+        for k in range(len(z.y_list_main[i][j][2])):
             if len(z.rows) == 1 and len(z.cols) == 1:
                 ax.plot(
                     # self.x_list[i][j][2],
                     # x_values,
                     # z.df_for_graph['Date/Time'],
                     # z.df_for_graph.index,
-                    z.y_list[i][j][2][k],
+                    z.y_list_main[i][j][2][k],
                     linewidth=1
-                    # c=self.y_list[i][j][4][k],
+                    # c=self.y_list_main[i][j][4][k],
                     # ms=markersize,
                     # marker='o',
                     # alpha=0.5,
-                    # label=self.y_list[i][j][3][k]
+                    # label=self.y_list_main[i][j][3][k]
                 )
             # if len(z.rows) == 1 and len(z.cols) > 1:
             #     ax[i, j].plot(
             #         # self.x_list[i][j][2],
-            #         z.y_list[i][j][2][k],
+            #         z.y_list_main[i][j][2][k],
             #         linewidth=1
-            #         # c=self.y_list[i][j][4][k],
+            #         # c=self.y_list_main[i][j][4][k],
             #         # ms=markersize,
             #         # marker='o',
             #         # alpha=0.5,
-            #         # label=self.y_list[i][j][3][k]
+            #         # label=self.y_list_main[i][j][3][k]
             #     )
             elif len(z.cols) == 1 and len(z.rows) > 1:
                 ax[i].plot(
                     # self.x_list[i][j][2],
                     # x_values,
-                    z.y_list[i][j][2][k],
+                    z.y_list_main[i][j][2][k],
                     linewidth=1
-                    # c=self.y_list[i][j][4][k],
+                    # c=self.y_list_main[i][j][4][k],
                     # ms=markersize,
                     # marker='o',
                     # alpha=0.5,
-                    # label=self.y_list[i][j][3][k]
+                    # label=self.y_list_main[i][j][3][k]
                 )
             else:
                 ax[i, j].plot(
                     # self.x_list[i][j][2],
                     # x_values,
-                    z.y_list[i][j][2][k],
+                    z.y_list_main[i][j][2][k],
                     linewidth=1
-                    # c=self.y_list[i][j][4][k],
+                    # c=self.y_list_main[i][j][4][k],
                     # ms=markersize,
                     # marker='o',
                     # alpha=0.5,
-                    # label=self.y_list[i][j][3][k]
+                    # label=self.y_list_main[i][j][3][k]
                 )
 
 plt.show()

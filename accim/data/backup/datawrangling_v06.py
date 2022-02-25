@@ -1473,7 +1473,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
                             else:
                                 ax.scatter(
@@ -1492,7 +1492,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
 
                         ax.set_ylim((0, self.max_value))
@@ -1555,7 +1555,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
                             else:
                                 ax[i].scatter(
@@ -1574,7 +1574,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
 
                         ax[i].set_ylim((0, self.max_value))
@@ -1637,7 +1637,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
                             else:
                                 ax[i, j].scatter(
@@ -1656,7 +1656,7 @@ class Table:
                                 #         s=markersize,
                                 #         marker='o',
                                 #         alpha=0.5,
-                                #         label=self.y_list[i][j][3][k]
+                                #         label=self.y_list_main[i][j][3][k]
                                 #     )
 
                         ax[i, j].set_ylim((0, self.max_value))

@@ -7,27 +7,50 @@ import pandas as pd
 import collections
 start = time.time()
 frequency = 'hourly'
-z = Table(frequency=frequency,
-          sum_or_mean='sum',
-          standard_outputs=True,
-          level=['building'],
-          level_sum_or_mean=['sum', 'mean'],
-          match_cities=False,
-          normalised_energy_units=True,
-          rename_cols=True,
-          energy_units_in_kwh=True,
-          )
 
-# print(*z.df.columns, sep='\n')
+import glob
+
+allfiles = glob.glob('*.csv', recursive=True)
+files_desired = [
+    'London_Present',
+    'London_RCP85_2100',
+    'AS_EN16798[CA_3',
+]
+files = [f for f in allfiles if all(d in f for d in files_desired)]
+
+files = [f for f in allfiles if
+         'London_Present' in f and 'AS_EN16798[CA_3' in f or
+         'London_RCP85_2100' in f and 'AS_EN16798[CA_3' in f or
+         'London_Present' in f and 'AS_CTE[CA_X' in f or
+         'London_RCP85_2100' in f and 'AS_CTE[CA_X' in f
+         ]
+
+
+z = Table(
+    datasets=files,
+    frequency=frequency,
+    sum_or_mean='sum',
+    standard_outputs=True,
+    level=['building'],
+    level_sum_or_mean=['sum', 'mean'],
+    match_cities=False,
+    normalised_energy_units=True,
+    rename_cols=True,
+    energy_units_in_kwh=True,
+    )
+
+print(*z.df.columns, sep='\n')
 
 additional_list = [
-    # 'Site Outdoor Air Drybulb Temperature (°C)',
+    'Site Outdoor Air Drybulb Temperature (°C)',
     'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
     'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
-    # 'BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)',
+    'BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)',
     'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
     'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
     'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
+    'Building_Total_AFN Zone Infiltration Volume (m3) [summed]',
+    'Building_Total_Comfortable Hours_No Applicability (h) [mean]'
 ]
 
 custom_cols_list = additional_list
@@ -36,8 +59,6 @@ z.format_table(type_of_table='custom',
                custom_cols=custom_cols_list,
                manage_epw_names=False
                )
-
-
 
 
 z.generate_fig_data(
@@ -54,7 +75,7 @@ z.generate_fig_data(
     detailed_rows=[
         'London_Present',
         # 'London_RCP85_2050',
-        # 'London_RCP85_2100',
+        'London_RCP85_2100',
 
         # 'AS_CTE[CA_X',
         # 'AS_EN16798[CA_3'
@@ -67,12 +88,19 @@ z.generate_fig_data(
         # 'AS_CTE[CA_X',
         'AS_EN16798[CA_3'
     ],
+
     # adap_vs_stat_data_y_main=[
     #         'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
     #         'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
     # ],
-    # baseline='London_Present',
-
+    # baseline=(
+    #     'AS_CTE[CA_X'
+    #     # 'London_Present',
+    # ),
+    # colorlist_adap_vs_stat_data=[
+    #     'b',
+    #     'r'
+    # ],
 
     # todo temporarily unavailable
     # adap_vs_stat_data_y_sec=[
@@ -80,29 +108,58 @@ z.generate_fig_data(
     # ],
 
     data_on_x_axis=(
-        'Date/Time'
+        # 'Date/Time'
         # 'Site Outdoor Air Drybulb Temperature (°C)'
-        # 'BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)'
+        'BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)'
     ),
     data_on_y_main_axis=[
-        'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
-        'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
-        'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
-        # 'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
-        # 'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
+        ['Temperature',[
+            'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+            'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
+            'Building_Total_Zone Thermostat Operative Temperature (°C) [mean]',
+        ]
+         ],
     ],
+
     data_on_y_sec_axis=[
-        'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
-        'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
+        ['Energy demand',[
+            'Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
+            'Building_Total_Heating Energy Demand (kWh/m2) [summed]',
+            ]
+         ],
+        ['Infiltration Volumne',[
+            'Building_Total_AFN Zone Infiltration Volume (m3) [summed]'
+            ],
+        ],
+        ['Comfort hours', [
+            'Building_Total_Comfortable Hours_No Applicability (h) [mean]'
+        ],
+         ],
     ],
+
     colorlist_y_main_axis=[
-        'b',
-        'r',
-        'g'
+        ['Temperature',[
+            'b',
+            'r',
+            'g',
+            ]
+         ],
     ],
+
     colorlist_y_sec_axis=[
-        'c',
-        'm'
+        ['Energy demand', [
+            'c',
+            'm',
+        ]
+         ],
+        ['Infiltration Volumne', [
+            'y'
+        ],
+         ],
+        ['comfort hours', [
+            'orange'
+        ],
+         ],
     ]
 )
 
@@ -111,14 +168,13 @@ z.generate_fig_data(
 # z.df_for_graph.columns
 # z.df_for_graph.index
 
-
+##
 
 z.time_plot(
     supxlabel='Year',
     supylabel='Temperature',
-    supylabel_sec='Energy demand',
     figname='test_scatter_plot_07_timeplot_02',
-    figsize=7,
+    figsize=14,
     ratio_height_to_width=1/3,
     confirm_graph=True
 )
@@ -143,13 +199,12 @@ z.scatter_plot_adap_vs_stat(
 ##
 z.scatter_plot(
     supxlabel='Outdoor temperature',
-    supylabel='Operative temmperature',
-    # y_sec_label='Energy demand',
-    figname='test_scatter_plot_07_02',
-    figsize=8,
+    figname='test_scatter_plot_07_04',
+    figsize=10,
     ratio_height_to_width=1,
     confirm_graph=True
 )
 
 end = time.time()
 print(end-start)
+
