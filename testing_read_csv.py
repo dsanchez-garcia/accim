@@ -1,4 +1,4 @@
-frequency = 'monthly'
+frequency = 'runperiod'
 sum_or_mean = 'sum'
 standard_outputs = True
 level=['building']
@@ -188,7 +188,12 @@ for file in files:
     # todo timestep frequency to be tested
     
     # todo source, date/time and other columns concatenate when aggregating. Try setting as multiindex
-    df.set_index(indexcols)
+    # df.set_index(indexcols)
+
+    # df.set_index(df.Source, inplace=True)
+    "ValueError: 'Source' is both an index level and a column label, which is ambiguous."
+
+    sources = list(dict.fromkeys(df.Source))
 
     if frequency == 'timestep':
         df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(agg_dict)
@@ -219,6 +224,55 @@ for file in files:
     summed_dataframes.append(df)
 
 df = pd.concat(summed_dataframes)
+
+for i in sources:
+    for j in range(len(df)):
+        if i in df.loc[j, 'Source']:
+            df.loc[j, 'Source'] = i
+##
+# cols_to_drop = [
+#     'Date/Time',
+#     # 'Source',
+#     'Month/Day',
+#     'Month',
+#     'Day',
+#     'Hour',
+#     'Minute',
+#     'Second'
+# ]
+
+if frequency == 'hourly':
+    df = df.drop(columns=[
+        'Date/Time',
+        'Minute',
+        'Second'
+    ])
+if frequency == 'daily':
+    df = df.drop(columns=[
+        'Date/Time',
+        'Hour',
+        'Minute',
+        'Second'
+    ])
+if frequency == 'monthly':
+    df = df.drop(columns=[
+        'Date/Time',
+        'Day',
+        'Month/Day',
+        'Hour',
+        'Minute',
+        'Second'
+    ])
+if frequency == 'runperiod':
+    df = df.drop(columns=[
+        'Date/Time',
+        'Month',
+        'Day',
+        'Month/Day',
+        'Hour',
+        'Minute',
+        'Second'
+    ])
 
 ##
 

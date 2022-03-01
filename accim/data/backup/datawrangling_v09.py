@@ -62,7 +62,7 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
-        # todo check if glob.glob works with in terms of package, if not switch back to sorted
+        # previouslytodo check if glob.glob works with in terms of package, if not switch back to sorted
         # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
         if len(datasets) > 0:
@@ -182,7 +182,7 @@ class Table:
                     else:
                         agg_dict.update({i: sum_or_mean})
 
-            # todo timestep frequency to be tested
+            # previouslytodo timestep frequency to be tested
             if frequency == 'timestep':
                 df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(agg_dict)
                 print(f'Input data frequency in file {file} is timestep '
@@ -430,7 +430,7 @@ class Table:
         # self.df['Hour'] = self.df['Hour_mod']
 
 
-        # todo test timestep
+        # previouslytodo test timestep
         if 'monthly' in self.frequency:
             self.df['Month'] = self.df['Month'].astype(str)
             self.df['Date/Time'] = self.df['Month']
@@ -503,7 +503,7 @@ class Table:
 
             self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
-            # todo if len <1
+            # previouslytodo if len <1
             data_cities['subcountry'] = data_cities['subcountry'].astype(str)
             data_countries['Name'] = data_countries['Name'].astype(str)
             data_countries['Code'] = data_countries['Code'].astype(str)
@@ -797,7 +797,7 @@ class Table:
 
         if not(type_of_table == 'all'):
             self.df = self.df[self.indexcols + self.val_cols]
-        
+
 
 
     def returndf(self):
@@ -926,7 +926,7 @@ class Table:
                                    in input("Enter the variables to be gathered separated by semicolon: ").split(';')))
         return vars_to_gather
 
-    # todo testing
+    # previouslytodo testing
     
     def generate_fig_data(self,
                           vars_to_gather_cols=None,
