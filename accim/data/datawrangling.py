@@ -1785,6 +1785,7 @@ class Table:
                 'hourly': ['H', "%d/%m %H:%M"],
                 'daily': ['D', "%d/%m"],
                 'monthly': ['M', "%m"],
+                # todo WIP
                 'runperiod': ['?', "?"]
             }
 
@@ -1852,11 +1853,14 @@ class Table:
             for i in range(len(self.rows)):
                 for j in range(len(self.cols)):
 
-                    # main_y_axis[i][j].xaxis.set_major_formatter(mdates.DateFormatter(freq_graph_dict[self.frequency][1]))
-                    # main_y_axis[i][j].xaxis.set_major_locator(mdates.MonthLocator())
 
 
                     for k in range(len(self.y_list_main[i][j])):
+
+                        main_y_axis[i][j][k].xaxis.set_major_formatter(
+                            mdates.DateFormatter(freq_graph_dict[self.frequency][1]))
+                        main_y_axis[i][j][k].xaxis.set_major_locator(mdates.MonthLocator())
+
                         main_y_axis[i][j][k].grid(True, linestyle='-.')
                         main_y_axis[i][j][k].tick_params(axis='both',
                                                       grid_color='black',
@@ -1897,7 +1901,7 @@ class Table:
                                     sec_y_axis[i][j][k].set_yticks([], [])
                                 if j == (len(self.cols) - 1):
                                     sec_y_axis[i][j][k].set_ylabel(self.data_on_y_sec_axis[k][0])
-                                    sec_y_axis[i][j][k].spines["right"].set_position(("axes", 1 + k * 0.1))
+                                    sec_y_axis[i][j][k].spines["right"].set_position(("axes", 1 + k * 0.15))
                                     sec_y_axis[i][j][k].spines["right"].set_visible(True)
                         for x in range(len(self.y_list_sec[i][j][k]['dataframe'])):
                             if i == 0 and j == 0:

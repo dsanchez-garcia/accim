@@ -6,7 +6,7 @@ import matplotlib.dates as mdates
 import pandas as pd
 import collections
 start = time.time()
-frequency = 'monthly'
+frequency = 'hourly'
 
 import glob
 
@@ -19,8 +19,8 @@ files_desired = [
 files = [f for f in allfiles if all(d in f for d in files_desired)]
 
 files = [f for f in allfiles if
-         # 'London_Present' in f and 'AS_EN16798[CA_3' in f or
-         # 'London_RCP85_2100' in f and 'AS_EN16798[CA_3' in f or
+         'London_Present' in f and 'AS_EN16798[CA_3' in f or
+         'London_RCP85_2100' in f and 'AS_EN16798[CA_3' in f or
          'London_Present' in f and 'AS_CTE[CA_X' in f or
          'London_RCP85_2100' in f and 'AS_CTE[CA_X' in f
          ]
@@ -40,6 +40,88 @@ z = Table(
     )
 
 # z.df.to_excel('temp_runperiod.xlsx')
+
+
+##
+
+temp_df = z.df[z.df.Source == 'TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_CTE[CA_X[CM_X[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1[London_RCP85_2100']
+
+print(*temp_df.columns, sep='\n')
+
+plt.scatter(x='Site Outdoor Air Drybulb Temperature (°C)',
+            y='Building_Total_AFN Zone Infiltration Volume (m3) [summed]',
+            c='Building_Total_Total Energy Demand (kWh/m2) [summed]',
+            # c='Month',
+            s='Site Wind Speed (m/s)',
+            alpha=0.5,
+            cmap='rainbow',
+            data=temp_df)
+plt.colorbar(label='wha')
+
+##
+import seaborn as sns
+temp_df = z.df[z.df.Source == 'TestModel_onlyGeometryForVRFsystem_V960_pymod[AS_CTE[CA_X[CM_X[HM_2[VC_1[VO_0[MT_0[MW_0[AT_0.1[London_RCP85_2100']
+
+temp_plot1 = sns.scatterplot(
+    x='Site Outdoor Air Drybulb Temperature (°C)',
+    y='Building_Total_Cooling Energy Demand (kWh/m2) [summed]',
+    # c='Building_Total_Total Energy Demand (kWh/m2) [summed]',
+    # s='Site Wind Speed (m/s)',
+    alpha=0.5,
+    cmap='rainbow',
+    hue='Category',
+    legend='full',
+    data=temp_df
+)
+
+ax2 = plt.twinx()
+
+temp_plot2 = sns.scatterplot(
+    x='Site Outdoor Air Drybulb Temperature (°C)',
+    y='Building_Total_Heating Energy Demand (kWh/m2) [summed]',
+    # c='Building_Total_Total Energy Demand (kWh/m2) [summed]',
+    # s='Site Wind Speed (m/s)',
+    alpha=0.5,
+    cmap='rainbow',
+    hue='Category',
+    legend='full',
+    data=temp_df,
+    ax=ax2
+)
+
+# temp_plot1.add_legend()
+# temp_plot1.savefig('temp_x_2.png')
+
+##
+
+import seaborn as sns
+
+temp_plot = sns.FacetGrid(
+    z.df,
+    row='EPW',
+    col='Category',
+    margin_titles=True,
+    legend_out=True
+              )
+
+temp_plot.map_dataframe(
+    sns.scatterplot,
+    x='Site Outdoor Air Drybulb Temperature (°C)',
+    y='Building_Total_AFN Zone Infiltration Volume (m3) [summed]',
+    # c='Building_Total_Total Energy Demand (kWh/m2) [summed]',
+    # s='Site Wind Speed (m/s)',
+    alpha=0.5,
+    cmap='rainbow',
+    hue='Month',
+    legend='full',
+)
+temp_plot.add_legend()
+temp_plot.savefig('temp_x_2.png')
+
+
+
+
+##
 
 
 additional_list = [
@@ -169,7 +251,7 @@ z.generate_fig_data(
 ##
 z.time_plot(supxlabel='temp',
             figname='temp_x',
-            figsize=10,
+            figsize=6,
             ratio_height_to_width=1/4,
             confirm_graph=True
             )
