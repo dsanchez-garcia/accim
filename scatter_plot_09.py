@@ -6,7 +6,7 @@ import matplotlib.dates as mdates
 import pandas as pd
 import collections
 start = time.time()
-frequency = 'runperiod'
+frequency = 'monthly'
 
 import glob
 
@@ -21,7 +21,7 @@ files = [f for f in allfiles if all(d in f for d in files_desired)]
 files = [f for f in allfiles if
          # 'London_Present' in f and 'AS_EN16798[CA_3' in f or
          # 'London_RCP85_2100' in f and 'AS_EN16798[CA_3' in f or
-         # 'London_Present' in f and 'AS_CTE[CA_X' in f or
+         'London_Present' in f and 'AS_CTE[CA_X' in f or
          'London_RCP85_2100' in f and 'AS_CTE[CA_X' in f
          ]
 
@@ -39,9 +39,8 @@ z = Table(
     energy_units_in_kwh=True,
     )
 
-z.df.to_excel('temp_runperiod.xlsx')
+# z.df.to_excel('temp_runperiod.xlsx')
 
-##
 
 additional_list = [
     'Site Outdoor Air Drybulb Temperature (°C)',
@@ -62,10 +61,8 @@ z.format_table(type_of_table='custom',
                manage_epw_names=False
                )
 
-print(*z.df.columns, sep='\n')
+# print(*z.df.columns, sep='\n')
 
-
-##
 
 z.generate_fig_data(
     vars_to_gather_rows=[
@@ -91,8 +88,8 @@ z.generate_fig_data(
         # 'London_RCP85_2050',
         # 'London_RCP85_2100',
 
-        # 'AS_CTE[CA_X',
-        'AS_EN16798[CA_3'
+        'AS_CTE[CA_X',
+        # 'AS_EN16798[CA_3'
     ],
 
     # adap_vs_stat_data_y_main=[
@@ -168,3 +165,11 @@ z.generate_fig_data(
          ],
     ]
 )
+
+##
+z.time_plot(supxlabel='temp',
+            figname='temp_x',
+            figsize=10,
+            ratio_height_to_width=1/4,
+            confirm_graph=True
+            )

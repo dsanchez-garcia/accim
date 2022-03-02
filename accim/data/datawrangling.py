@@ -161,26 +161,44 @@ class Table:
                     ]
             )
 
-            aggregation_list_mean = [
-            'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
-            'Environment:Site Wind Speed [m/s](Hourly)',
-            'EMS:Comfort Temperature [C](Hourly)',
-            'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
-            'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
-            'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)',
-            'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
-            'EMS:Ventilation Setpoint Temperature [C](Hourly)',
-            'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
+            agg_dict = {}
+            aggregation_list_first = [
+                'Date/Time',
+                'Source',
+                'Month/Day',
+                'Month',
+                'Day',
+                'Hour',
+                'Minute',
+                'Second'
             ]
 
-            agg_dict = {}
+            for i in aggregation_list_first:
+                agg_dict.update({i: 'first'})
+
+            aggregation_list_mean = [
+                'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
+                'Environment:Site Wind Speed [m/s](Hourly)',
+                'EMS:Comfort Temperature [C](Hourly)',
+                'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
+                'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
+                'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)',
+                'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
+                'EMS:Ventilation Setpoint Temperature [C](Hourly)',
+                'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
+                'Zone Thermostat Operative Temperature [C](Hourly)',
+                'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
+                'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
+            ]
 
             for i in df.columns:
                 for j in aggregation_list_mean:
                     if j in i:
                         agg_dict.update({i: 'mean'})
-                    else:
-                        agg_dict.update({i: sum_or_mean})
+
+            for i in df.columns:
+                if i not in agg_dict:
+                    agg_dict.update({i: sum_or_mean})
 
             # todo timestep frequency to be tested
             if frequency == 'timestep':
@@ -1766,7 +1784,7 @@ class Table:
                 'timestep': ['X?', "%d/%m %H:%M"],
                 'hourly': ['H', "%d/%m %H:%M"],
                 'daily': ['D', "%d/%m"],
-                'monthly': ['M?', "%m"],
+                'monthly': ['M', "%m"],
                 'runperiod': ['?', "?"]
             }
 

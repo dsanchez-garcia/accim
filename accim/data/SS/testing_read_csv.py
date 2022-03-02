@@ -1,4 +1,4 @@
-frequency = 'runperiod'
+frequency = 'daily'
 sum_or_mean = 'sum'
 standard_outputs = True
 level=['building']
@@ -23,6 +23,7 @@ import datapackage
 import glob
 import numpy as np
 import csv
+import datetime
 
 frequency = frequency
 normalised_energy_units = normalised_energy_units
@@ -70,7 +71,7 @@ cleaned_columns = [
 files = [f for f in allfiles if
          # 'London_Present' in f and 'AS_EN16798[CA_3' in f or
          # 'London_RCP85_2100' in f and 'AS_EN16798[CA_3' in f or
-         # 'London_Present' in f and 'AS_CTE[CA_X' in f or
+         'London_Present' in f and 'AS_CTE[CA_X' in f or
          'London_RCP85_2100' in f and 'AS_CTE[CA_X' in f
          ]
 
@@ -110,125 +111,198 @@ if manage_epw_names:
 
 summed_dataframes = []
 
-for file in files:
+sources = []
+# months = []
+
+freq_graph_dict = {
+    'timestep': ['X?', "%d/%m %H:%M"],
+    'hourly': ['H', "%d/%m %H:%M"],
+    'daily': ['D', "%d/%m"],
+    'monthly': ['M', "%m"],
+    'runperiod': ['?', "?"]
+}
+
+# for file in files:
 
     # with open(file) as csv_file:
     #     csv_reader = csv.reader(csv_file, delimiter=',')
     #     df = pd.DataFrame([csv_reader], index=True)
 
-    df = pd.DataFrame(pd.read_csv(file))
+    # df = pd.DataFrame(pd.read_csv(file))
+df = pd.DataFrame(pd.read_csv(files[0]))
+file = files[0]
 
-    if standard_outputs:
-        keeplist = []
-        for i in cleaned_columns:
-            for j in df.columns:
-                if i in j:
-                    keeplist.append(j)
-        keeplist = list(dict.fromkeys(keeplist))
-        droplist = list(set(df.columns) - set(keeplist))
-        df = df.drop(droplist, axis=1)
-
-    # df['Source'] = file.name
-    df['Source'] = file
-
-    # df['Date/Time_orig'] = df['Date/Time'].copy()
-
-    df[['TBD1', 'Month/Day', 'TBD2', 'Hour']] = df['Date/Time'].str.split(' ', expand=True)
-    df = df.drop(['TBD1', 'TBD2'], axis=1)
-    df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
-    df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
-
-
-
-    constantcols = []
-    for i in [
-        'Zone Air Volume',
-        'Zone Floor Area'
-    ]:
+if standard_outputs:
+    keeplist = []
+    for i in cleaned_columns:
         for j in df.columns:
             if i in j:
-                constantcols.append(j)
-    constantcols = list(dict.fromkeys(constantcols))
+                keeplist.append(j)
+    keeplist = list(dict.fromkeys(keeplist))
+    droplist = list(set(df.columns) - set(keeplist))
+    df = df.drop(droplist, axis=1)
 
-    constantcolsdict = {}
+# df['Source'] = file.name
+df['Source'] = file
 
-    for i in range(len(constantcols)):
-        tempdict = {constantcols[i]: df[constantcols[i]][0]}
-        constantcolsdict.update(tempdict)
+# df['Date/Time_orig'] = df['Date/Time'].copy()
 
-    minute_df_len = len(
-        df[
-            (df['Minute'] != '00') &
-            (df['Minute'].astype(str) != 'None') &
-            (df['Minute'] != '')
-            ]
-    )
+df[['TBD1', 'Month/Day', 'TBD2', 'Hour']] = df['Date/Time'].str.split(' ', expand=True)
+df = df.drop(['TBD1', 'TBD2'], axis=1)
+df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
+df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
 
-    aggregation_list_mean = [
-        'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
-        'Environment:Site Wind Speed [m/s](Hourly)',
-        'EMS:Comfort Temperature [C](Hourly)',
-        'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
-        'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
-        'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)',
-        'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
-        'EMS:Ventilation Setpoint Temperature [C](Hourly)',
-        'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
-    ]
 
-    agg_dict = {}
 
-    for i in df.columns:
-        for j in aggregation_list_mean:
-            if j in i:
-                agg_dict.update({i: 'mean'})
-            else:
-                agg_dict.update({i: sum_or_mean})
+constantcols = []
+for i in [
+    'Zone Air Volume',
+    'Zone Floor Area'
+]:
+    for j in df.columns:
+        if i in j:
+            constantcols.append(j)
+constantcols = list(dict.fromkeys(constantcols))
 
-    # todo timestep frequency to be tested
-    
-    # todo source, date/time and other columns concatenate when aggregating. Try setting as multiindex
-    # df.set_index(indexcols)
+constantcolsdict = {}
 
-    # df.set_index(df.Source, inplace=True)
-    "ValueError: 'Source' is both an index level and a column label, which is ambiguous."
+for i in range(len(constantcols)):
+    tempdict = {constantcols[i]: df[constantcols[i]][0]}
+    constantcolsdict.update(tempdict)
 
-    sources = list(dict.fromkeys(df.Source))
+minute_df_len = len(
+    df[
+        (df['Minute'] != '00') &
+        (df['Minute'].astype(str) != 'None') &
+        (df['Minute'] != '')
+        ]
+)
 
-    if frequency == 'timestep':
-        df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(agg_dict)
+agg_dict = {}
+aggregation_list_first = [
+    'Date/Time',
+    'Source',
+    'Month/Day',
+    'Month',
+    'Day',
+    'Hour',
+    'Minute',
+    'Second'
+]
+
+for i in aggregation_list_first:
+    agg_dict.update({i: 'first'})
+
+aggregation_list_mean = [
+    'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
+    'Environment:Site Wind Speed [m/s](Hourly)',
+    'EMS:Comfort Temperature [C](Hourly)',
+    'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
+    'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
+    'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)',
+    'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
+    'EMS:Ventilation Setpoint Temperature [C](Hourly)',
+    'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
+]
+
+for i in df.columns:
+    for j in aggregation_list_mean:
+        if j in i:
+            agg_dict.update({i: 'mean'})
+
+
+for i in df.columns:
+    if i not in agg_dict:
+        agg_dict.update({i: sum_or_mean})
+
+# todo timestep frequency to be tested
+
+# todo source, date/time and other columns concatenate when aggregating. Try setting as multiindex
+# df.set_index(indexcols)
+# df.drop(columns='Source')
+# df.set_index(df.Source, inplace=True)
+"ValueError: 'Source' is both an index level and a column label, which is ambiguous."
+
+# sources.append(df.loc[0, 'Source'])
+# if file == files[0]:
+#     months = (list(dict.fromkeys(df.Month)))
+#     days = (list(dict.fromkeys(df.Day)))
+#     hours = (list(dict.fromkeys(df.Hour)))
+#     start_date = datetime.datetime.strptime(df['Date/Time'][0], " %d/%m %H:%M:%S")
+#     # end_date = datetime.datetime.strptime(self.df_for_graph['Date/Time'][len(self.df_for_graph)-1], "%d/%m %H:%M")
+#     # (end_date-start_date).days
+
+
+
+
+
+if frequency == 'timestep':
+    df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(agg_dict)
+    print(f'Input data frequency in file {file} is timestep '
+          f'and requested frequency is also timestep, '
+          f'therefore no aggregation will be performed. '
+          f'The user needs to check the output rows number is correct.')
+
+if frequency == 'hourly':
+    if minute_df_len > 0:
+        df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(agg_dict)
         print(f'Input data frequency in file {file} is timestep '
-              f'and requested frequency is also timestep, '
-              f'therefore no aggregation will be performed. '
+              f'and requested frequency is hourly, '
+              f'therefore aggregation will be performed. '
               f'The user needs to check the output rows number is correct.')
+    else:
+        print(f'Input data frequency in file {file} is hourly, therefore no aggregation will be performed.')
+if frequency == 'daily':
+    df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(agg_dict)
+if frequency == 'monthly':
+    df = df.groupby(['Source', 'Month'], as_index=False).agg(agg_dict)
+if frequency == 'runperiod':
+    df = df.groupby(['Source'], as_index=False).agg(agg_dict)
 
-    if frequency == 'hourly':
-        if minute_df_len > 0:
-            df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(agg_dict)
-            print(f'Input data frequency in file {file} is timestep '
-                  f'and requested frequency is hourly, '
-                  f'therefore aggregation will be performed. '
-                  f'The user needs to check the output rows number is correct.')
-        else:
-            print(f'Input data frequency in file {file} is hourly, therefore no aggregation will be performed.')
-    if frequency == 'daily':
-        df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(agg_dict)
-    if frequency == 'monthly':
-        df = df.groupby(['Source', 'Month'], as_index=False).agg(agg_dict)
-    if frequency == 'runperiod':
-        df = df.groupby(['Source'], as_index=False).agg(agg_dict)
+for i in constantcolsdict:
+    df[i] = constantcolsdict[i]
 
-    for i in constantcolsdict:
-        df[i] = constantcolsdict[i]
+summed_dataframes.append(df)
 
-    summed_dataframes.append(df)
 
-df = pd.concat(summed_dataframes)
+
+
+
+
+df_concat = pd.concat(summed_dataframes)
+
+##
+# x = pd.DataFrame.from_dict({'row1':[1, 1, 1, 1, 2, 2, 2],'row2':['a','b','a','b','a','b','a'], 'add': [1, 2, 3, 4, 5, 6, 7], 'take1': ['a', 'b', 'c', 'd', 'e', 'f', 'g'], 'take2': ['11', '22', '33', '44', '55', '66', '77'], 'range': [100, 200, 300, 400, 500, 600, 700]})
+#
+# d = {'add':'sum', 'take1':'first', 'take2':'first', 'range':['min','max']}
+#
+# #group by the row column and apply the corresponding aggregation to each
+# #column as specified in the dictionary d
+# df = x.groupby(['row1', 'row2'], as_index=False).agg(d)
+#
+# #rename some columns
+# df = df.rename(columns={'first':'', 'sum':''})
+# df.columns = ['{0[0]}_{0[1]}'.format(x).strip('_') for x in df.columns]
+# print (df)
+
+##
+df = df.set_index([pd.RangeIndex(len(df))])
 
 for i in sources:
     for j in range(len(df)):
         if i in df.loc[j, 'Source']:
             df.loc[j, 'Source'] = i
+
+##
+
+for i in sources:
+    df[(df['Source'] == i)]['Date/Time'] = pd.date_range(
+        start=start_date,
+        periods=len(df[(df['Source'] == files[0])]),
+        # '2017-31-12 23:00',
+        freq=freq_graph_dict[frequency][0]
+    )
+
 ##
 # cols_to_drop = [
 #     'Date/Time',
