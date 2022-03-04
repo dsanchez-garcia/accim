@@ -208,7 +208,7 @@ def genIDF(self,
 
     outputlist = []
     for file in filelist_pymod:
-        filename = file
+        filename = file.replace('_pymod', '')
         for AdapStand_value in self.AdapStand_List:
             if AdapStand_value == 0:
                 for HVACmode_value in self.HVACmode_List:
@@ -256,45 +256,48 @@ def genIDF(self,
                         continue
                     else:
                         for ComfMod_value in self.ComfMod_List:
-                            for HVACmode_value in self.HVACmode_List:
-                                if HVACmode_value == 0:
-                                    for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                        outputname = (
-                                            filename
-                                            + AdapStand_dict[AdapStand_value]
-                                            + '[CA_' + repr(CAT_value)
-                                            + '[CM_' + repr(ComfMod_value)
-                                            + '[HM_' + repr(HVACmode_value)
-                                            + '[VC_X'
-                                            + '[VO_X'
-                                            + '[MT_X'
-                                            + '[MW_X'
-                                            + '[AT_' + repr(ASTtol_value)
-                                            + suffix
-                                            + '.idf'
-                                            )
-                                        outputlist.append(outputname)
-                                else:
-                                    for VentCtrl_value in self.VentCtrl_List:
-                                        for VSToffset_value in self.VSToffset_List:
-                                            for MinOToffset_value in self.MinOToffset_List:
-                                                for MaxWindSpeed_value in self.MaxWindSpeed_List:
-                                                    for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                                        outputname = (
-                                                            filename
-                                                            + AdapStand_dict[AdapStand_value]
-                                                            + '[CA_' + repr(CAT_value)
-                                                            + '[CM_' + repr(ComfMod_value)
-                                                            + '[HM_' + repr(HVACmode_value)
-                                                            + '[VC_' + repr(VentCtrl_value)
-                                                            + '[VO_' + repr(VSToffset_value)
-                                                            + '[MT_' + repr(MinOToffset_value)
-                                                            + '[MW_' + repr(MaxWindSpeed_value)
-                                                            + '[AT_' + repr(ASTtol_value)
-                                                            + suffix
-                                                            + '.idf'
-                                                            )
-                                                        outputlist.append(outputname)
+                            if AdapStand_value == 3 and ComfMod_value < 2:
+                                continue
+                            else:
+                                for HVACmode_value in self.HVACmode_List:
+                                    if HVACmode_value == 0:
+                                        for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                            outputname = (
+                                                filename
+                                                + AdapStand_dict[AdapStand_value]
+                                                + '[CA_' + repr(CAT_value)
+                                                + '[CM_' + repr(ComfMod_value)
+                                                + '[HM_' + repr(HVACmode_value)
+                                                + '[VC_X'
+                                                + '[VO_X'
+                                                + '[MT_X'
+                                                + '[MW_X'
+                                                + '[AT_' + repr(ASTtol_value)
+                                                + suffix
+                                                + '.idf'
+                                                )
+                                            outputlist.append(outputname)
+                                    else:
+                                        for VentCtrl_value in self.VentCtrl_List:
+                                            for VSToffset_value in self.VSToffset_List:
+                                                for MinOToffset_value in self.MinOToffset_List:
+                                                    for MaxWindSpeed_value in self.MaxWindSpeed_List:
+                                                        for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                                            outputname = (
+                                                                filename
+                                                                + AdapStand_dict[AdapStand_value]
+                                                                + '[CA_' + repr(CAT_value)
+                                                                + '[CM_' + repr(ComfMod_value)
+                                                                + '[HM_' + repr(HVACmode_value)
+                                                                + '[VC_' + repr(VentCtrl_value)
+                                                                + '[VO_' + repr(VSToffset_value)
+                                                                + '[MT_' + repr(MinOToffset_value)
+                                                                + '[MW_' + repr(MaxWindSpeed_value)
+                                                                + '[AT_' + repr(ASTtol_value)
+                                                                + suffix
+                                                                + '.idf'
+                                                                )
+                                                            outputlist.append(outputname)
             elif AdapStand_value == 2:
                 for CAT_value in self.CAT_List:
                     if CAT_value not in range(80, 91, 10):
@@ -361,6 +364,8 @@ def genIDF(self,
             filename = file
 
             fname1 = filename+'.idf'
+
+            filename = file.replace('_pymod', '')
             # if verboseMode:
             #     print(f'Taking "{fname1}" as input IDF file:')
             idf1 = IDF(fname1)
@@ -437,63 +442,66 @@ def genIDF(self,
                         else:
                             SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
                             for ComfMod_value in self.ComfMod_List:
-                                SetInputData[0].Program_Line_3 = 'set ComfMod = '+repr(ComfMod_value)
-                                for HVACmode_value in self.HVACmode_List:
-                                    SetInputData[0].Program_Line_4 = 'set HVACmode = '+repr(HVACmode_value)
-                                    if HVACmode_value == 0:
-                                        for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                            SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
-                                            SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
-                                            outputname = (
-                                                filename
-                                                + AdapStand_dict[AdapStand_value]
-                                                + '[CA_' + repr(CAT_value)
-                                                + '[CM_' + repr(ComfMod_value)
-                                                + '[HM_' + repr(HVACmode_value)
-                                                + '[VC_X'
-                                                + '[VO_X'
-                                                + '[MT_X'
-                                                + '[MW_X'
-                                                + '[AT_' + repr(ASTtol_value)
-                                                + suffix
-                                                + '.idf'
-                                                )
-                                            if verboseMode:
-                                                print(outputname)
-                                                # time.sleep(0.1)
-                                                # pbar.update(1)
-                                            idf1.savecopy(outputname)
-                                    else:
-                                        for VentCtrl_value in self.VentCtrl_List:
-                                            SetInputData[0].Program_Line_5 = 'set VentCtrl = '+repr(VentCtrl_value)
-                                            for VSToffset_value in self.VSToffset_List:
-                                                SetInputData[0].Program_Line_6 = 'set VSToffset = '+repr(VSToffset_value)
-                                                for MinOToffset_value in self.MinOToffset_List:
-                                                    SetInputData[0].Program_Line_7 = 'set MinOToffset = '+repr(MinOToffset_value)
-                                                    for MaxWindSpeed_value in self.MaxWindSpeed_List:
-                                                        SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = '+repr(MaxWindSpeed_value)
-                                                        for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                                            SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
-                                                            SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
-                                                            outputname = (
-                                                                filename
-                                                                + AdapStand_dict[AdapStand_value]
-                                                                + '[CA_' + repr(CAT_value)
-                                                                + '[CM_' + repr(ComfMod_value)
-                                                                + '[HM_' + repr(HVACmode_value)
-                                                                + '[VC_' + repr(VentCtrl_value)
-                                                                + '[VO_' + repr(VSToffset_value)
-                                                                + '[MT_' + repr(MinOToffset_value)
-                                                                + '[MW_' + repr(MaxWindSpeed_value)
-                                                                + '[AT_' + repr(ASTtol_value)
-                                                                + suffix
-                                                                + '.idf'
-                                                                )
-                                                            if verboseMode:
-                                                                print(outputname)
-                                                                # time.sleep(0.1)
-                                                                # pbar.update(1)
-                                                            idf1.savecopy(outputname)
+                                if AdapStand_value == 3 and ComfMod_value < 2:
+                                    continue
+                                else:
+                                    SetInputData[0].Program_Line_3 = 'set ComfMod = '+repr(ComfMod_value)
+                                    for HVACmode_value in self.HVACmode_List:
+                                        SetInputData[0].Program_Line_4 = 'set HVACmode = '+repr(HVACmode_value)
+                                        if HVACmode_value == 0:
+                                            for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                                SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
+                                                SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
+                                                outputname = (
+                                                    filename
+                                                    + AdapStand_dict[AdapStand_value]
+                                                    + '[CA_' + repr(CAT_value)
+                                                    + '[CM_' + repr(ComfMod_value)
+                                                    + '[HM_' + repr(HVACmode_value)
+                                                    + '[VC_X'
+                                                    + '[VO_X'
+                                                    + '[MT_X'
+                                                    + '[MW_X'
+                                                    + '[AT_' + repr(ASTtol_value)
+                                                    + suffix
+                                                    + '.idf'
+                                                    )
+                                                if verboseMode:
+                                                    print(outputname)
+                                                    # time.sleep(0.1)
+                                                    # pbar.update(1)
+                                                idf1.savecopy(outputname)
+                                        else:
+                                            for VentCtrl_value in self.VentCtrl_List:
+                                                SetInputData[0].Program_Line_5 = 'set VentCtrl = '+repr(VentCtrl_value)
+                                                for VSToffset_value in self.VSToffset_List:
+                                                    SetInputData[0].Program_Line_6 = 'set VSToffset = '+repr(VSToffset_value)
+                                                    for MinOToffset_value in self.MinOToffset_List:
+                                                        SetInputData[0].Program_Line_7 = 'set MinOToffset = '+repr(MinOToffset_value)
+                                                        for MaxWindSpeed_value in self.MaxWindSpeed_List:
+                                                            SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = '+repr(MaxWindSpeed_value)
+                                                            for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
+                                                                SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
+                                                                SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
+                                                                outputname = (
+                                                                    filename
+                                                                    + AdapStand_dict[AdapStand_value]
+                                                                    + '[CA_' + repr(CAT_value)
+                                                                    + '[CM_' + repr(ComfMod_value)
+                                                                    + '[HM_' + repr(HVACmode_value)
+                                                                    + '[VC_' + repr(VentCtrl_value)
+                                                                    + '[VO_' + repr(VSToffset_value)
+                                                                    + '[MT_' + repr(MinOToffset_value)
+                                                                    + '[MW_' + repr(MaxWindSpeed_value)
+                                                                    + '[AT_' + repr(ASTtol_value)
+                                                                    + suffix
+                                                                    + '.idf'
+                                                                    )
+                                                                if verboseMode:
+                                                                    print(outputname)
+                                                                    # time.sleep(0.1)
+                                                                    # pbar.update(1)
+                                                                idf1.savecopy(outputname)
                 elif AdapStand_value == 2:
                     for CAT_value in self.CAT_List:
                         if CAT_value not in range(80, 91, 10):
