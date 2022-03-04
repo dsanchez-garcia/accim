@@ -84,11 +84,8 @@ def setComfFieldsPeople(self, EnergyPlus_version: str = None, verboseMode: bool 
     del ppl, firstpeopleobject
 
 
-
-
 def saveaccim(self, verboseMode: bool = True):
     """Save IDF."""
     self.idf1.save()
     if verboseMode:
         print('IDF has been saved')
-
