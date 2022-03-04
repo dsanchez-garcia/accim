@@ -5,7 +5,7 @@ accis.addAccis(
     EnergyPlus_version='ep96',
     AdapStand=[2, 3],
     CAT=[80, 90, 1, 2, 3],
-    ComfMod=[0, 3],
+    ComfMod=[0, 1, 2, 3],
     HVACmode=[0, 2],
     VentCtrl=[0],
     VSToffset=[0],
