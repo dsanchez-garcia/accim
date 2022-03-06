@@ -8772,18 +8772,18 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     endif,                    !- Program Line 122
     else,                     !- Program Line 123
     if (CAT==80),             !- Program Line 124
-    set ACST = 22.9+ACSTtol,    !- Program Line 125
+    set ACST = 23.9+ACSTtol,    !- Program Line 125
     elseif (CAT==90),         !- Program Line 126
-    set ACST = 23.9+ACSTtol,    !- Program Line 127
+    set ACST = 22.9+ACSTtol,    !- Program Line 127
     endif,                    !- Program Line 128
     endif,                    !- Program Line 129
     endif,                    !- Program Line 130
     if (AdapStand == 2) && (ComfMod == 0),    !- Program Line 131
     if (DayOfYear >= 121) && (DayOfYear < 274),    !- Program Line 132
     if (CAT==80),             !- Program Line 133
-    set AHST = 24.6+AHSTtol,    !- Program Line 134
+    set AHST = 23.6+AHSTtol,    !- Program Line 134
     elseif (CAT==90),         !- Program Line 135
-    set AHST = 23.6+AHSTtol,    !- Program Line 136
+    set AHST = 24.6+AHSTtol,    !- Program Line 136
     endif,                    !- Program Line 137
     else,                     !- Program Line 138
     if (CAT==80),             !- Program Line 139
@@ -8815,60 +8815,132 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     endif,                    !- Program Line 165
     if (AdapStand == 2) && (ComfMod == 2) && (PMOT >= ACSTall) && (PMOT <= ACSTaul),    !- Program Line 166
     set ACST = PMOT*0.31+17.8+ACSToffset+ACSTtol,    !- Program Line 167
-    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT < ACSTall),    !- Program Line 168
+    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT < ACSTall) && (CAT==80),    !- Program Line 168
     set ACST = 23.9+ACSTtol,    !- Program Line 169
-    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT > ACSTaul),    !- Program Line 170
+    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT > ACSTaul) && (CAT==80),    !- Program Line 170
     set ACST = 26.8+ACSTtol,    !- Program Line 171
-    endif,                    !- Program Line 172
-    if (AdapStand == 2) && (ComfMod == 2) && (PMOT >= AHSTall) && (PMOT <= AHSTaul),    !- Program Line 173
-    set AHST = PMOT*0.31+17.8+AHSToffset+AHSTtol,    !- Program Line 174
-    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT < AHSTall),    !- Program Line 175
-    set AHST = 19.6+AHSTtol,    !- Program Line 176
-    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT > AHSTaul),    !- Program Line 177
-    set AHST = 23.6+AHSTtol,    !- Program Line 178
-    endif,                    !- Program Line 179
-    if (AdapStand == 2) && (ComfMod == 3) && (PMOT >= ACSTall) && (PMOT <= ACSTaul),    !- Program Line 180
-    set ACST = PMOT*0.31+17.8+ACSToffset+ACSTtol,    !- Program Line 181
-    elseif (AdapStand == 2) && (ComfMod == 3) && (PMOT < ACSTall),    !- Program Line 182
-    set ACST = ACSTall*0.31+17.8+ACSToffset+ACSTtol,    !- Program Line 183
-    elseif (AdapStand == 2) && (ComfMod == 3) && (PMOT > ACSTaul),    !- Program Line 184
-    set ACST = ACSTaul*0.31+17.8+ACSToffset+ACSTtol,    !- Program Line 185
-    endif,                    !- Program Line 186
-    if (AdapStand == 2) && (ComfMod == 3) && (PMOT >= AHSTall) && (PMOT <= AHSTaul),    !- Program Line 187
-    set AHST = PMOT*0.31+17.8+AHSToffset+AHSTtol,    !- Program Line 188
-    elseif (AdapStand == 2) && (ComfMod == 3) && (PMOT < AHSTall),    !- Program Line 189
-    set AHST = AHSTall*0.31+17.8+AHSToffset+AHSTtol,    !- Program Line 190
-    elseif (AdapStand == 2) && (ComfMod == 3) && (PMOT > AHSTaul),    !- Program Line 191
-    set AHST = AHSTaul*0.31+17.8+AHSToffset+AHSTtol,    !- Program Line 192
-    endif,                    !- Program Line 193
-    if (AdapStand == 3) && (ComfMod == 2) && (PMOT >= ACSTall) && (PMOT <= ACSTaul),    !- Program Line 194
-    set ACST = PMOT*0.37+16.8+ACSToffset+ACSTtol,    !- Program Line 195
-    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT < ACSTall),    !- Program Line 196
-    set ACST = 23.9+ACSTtol,    !- Program Line 197
-    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT > ACSTaul),    !- Program Line 198
-    set ACST = 26.8+ACSTtol,    !- Program Line 199
-    endif,                    !- Program Line 200
-    if (AdapStand == 3) && (ComfMod == 2) && (PMOT >= AHSTall) && (PMOT <= AHSTaul),    !- Program Line 201
-    set AHST = PMOT*0.37+16.8+AHSToffset+AHSTtol,    !- Program Line 202
-    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT < AHSTall),    !- Program Line 203
-    set AHST = 19.6+AHSTtol,    !- Program Line 204
-    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT > AHSTaul),    !- Program Line 205
-    set AHST = 23.6+AHSTtol,    !- Program Line 206
-    endif,                    !- Program Line 207
-    if (AdapStand == 3) && (ComfMod == 3) && (PMOT >= ACSTall) && (PMOT <= ACSTaul),    !- Program Line 208
-    set ACST = PMOT*0.37+16.8+ACSToffset+ACSTtol,    !- Program Line 209
-    elseif (AdapStand == 3) && (ComfMod == 3) && (PMOT < ACSTall),    !- Program Line 210
-    set ACST = ACSTall*0.37+16.8+ACSToffset+ACSTtol,    !- Program Line 211
-    elseif (AdapStand == 3) && (ComfMod == 3) && (PMOT > ACSTaul),    !- Program Line 212
-    set ACST = ACSTaul*0.37+16.8+ACSToffset+ACSTtol,    !- Program Line 213
-    endif,                    !- Program Line 214
-    if (AdapStand == 3) && (ComfMod == 3) && (PMOT >= AHSTall) && (PMOT <= AHSTaul),    !- Program Line 215
-    set AHST = PMOT*0.37+16.8+AHSToffset+AHSTtol,    !- Program Line 216
-    elseif (AdapStand == 3) && (ComfMod == 3) && (PMOT < AHSTall),    !- Program Line 217
-    set AHST = AHSTall*0.37+16.8+AHSToffset+AHSTtol,    !- Program Line 218
-    elseif (AdapStand == 3) && (ComfMod == 3) && (PMOT > AHSTaul),    !- Program Line 219
-    set AHST = AHSTaul*0.37+16.8+AHSToffset+AHSTtol,    !- Program Line 220
-    endif;                    !- Program Line 221
+    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT < ACSTall) && (CAT==90),    !- Program Line 172
+    set ACST = 22.9+ACSTtol,    !- Program Line 173
+    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT > ACSTaul) && (CAT==90),    !- Program Line 174
+    set ACST = 25.8+ACSTtol,    !- Program Line 175
+    endif,                    !- Program Line 176
+    if (AdapStand == 2) && (ComfMod == 2) && (PMOT >= AHSTall) && (PMOT <= AHSTaul),    !- Program Line 177
+    set AHST = PMOT*0.31+17.8+AHSToffset+AHSTtol,    !- Program Line 178
+    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT < AHSTall) && (CAT==80),    !- Program Line 179
+    set AHST = 18.6+AHSTtol,    !- Program Line 180
+    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT > AHSTaul) && (CAT==80),    !- Program Line 181
+    set AHST = 23.6+AHSTtol,    !- Program Line 182
+    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT < AHSTall) && (CAT==90),    !- Program Line 183
+    set AHST = 19.6+AHSTtol,    !- Program Line 184
+    elseif (AdapStand == 2) && (ComfMod == 2) && (PMOT > AHSTaul) && (CAT==90),    !- Program Line 185
+    set AHST = 24.6+AHSTtol,    !- Program Line 186
+    endif,                    !- Program Line 187
+    if (AdapStand == 2) && (ComfMod == 3) && (PMOT >= ACSTall) && (PMOT <= ACSTaul),    !- Program Line 188
+    set ACST = PMOT*0.31+17.8+ACSToffset+ACSTtol,    !- Program Line 189
+    elseif (AdapStand == 2) && (ComfMod == 3) && (PMOT < ACSTall),    !- Program Line 190
+    set ACST = ACSTall*0.31+17.8+ACSToffset+ACSTtol,    !- Program Line 191
+    elseif (AdapStand == 2) && (ComfMod == 3) && (PMOT > ACSTaul),    !- Program Line 192
+    set ACST = ACSTaul*0.31+17.8+ACSToffset+ACSTtol,    !- Program Line 193
+    endif,                    !- Program Line 194
+    if (AdapStand == 2) && (ComfMod == 3) && (PMOT >= AHSTall) && (PMOT <= AHSTaul),    !- Program Line 195
+    set AHST = PMOT*0.31+17.8+AHSToffset+AHSTtol,    !- Program Line 196
+    elseif (AdapStand == 2) && (ComfMod == 3) && (PMOT < AHSTall),    !- Program Line 197
+    set AHST = AHSTall*0.31+17.8+AHSToffset+AHSTtol,    !- Program Line 198
+    elseif (AdapStand == 2) && (ComfMod == 3) && (PMOT > AHSTaul),    !- Program Line 199
+    set AHST = AHSTaul*0.31+17.8+AHSToffset+AHSTtol,    !- Program Line 200
+    endif,                    !- Program Line 201
+    if (AdapStand == 3) && (ComfMod == 0),    !- Program Line 202
+    if (CAT==1),              !- Program Line 203
+    set ACST = 26+ACSTtol,    !- Program Line 204
+    elseif (CAT==2),          !- Program Line 205
+    set ACST = 27+ACSTtol,    !- Program Line 206
+    elseif (CAT==3),          !- Program Line 207
+    set ACST = 28+ACSTtol,    !- Program Line 208
+    endif,                    !- Program Line 209
+    endif,                    !- Program Line 210
+    if (AdapStand == 3) && (ComfMod == 0),    !- Program Line 211
+    if (CAT==1),              !- Program Line 212
+    set AHST = 20+AHSTtol,    !- Program Line 213
+    elseif (CAT==2),          !- Program Line 214
+    set AHST = 19+AHSTtol,    !- Program Line 215
+    elseif (CAT==3),          !- Program Line 216
+    set AHST = 18+AHSTtol,    !- Program Line 217
+    endif,                    !- Program Line 218
+    endif,                    !- Program Line 219
+    if (AdapStand == 3) && (ComfMod == 1) && (PMOT >= ACSTall) && (PMOT <= ACSTaul),    !- Program Line 220
+    set ACST = PMOT*0.37+16.8+ACSToffset+ACSTtol,    !- Program Line 221
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT < ACSTall) && (CAT==1),    !- Program Line 222
+    set ACST = 26+ACSTtol,    !- Program Line 223
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT > ACSTaul) && (CAT==1),    !- Program Line 224
+    set ACST = 26+ACSTtol,    !- Program Line 225
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT < ACSTall) && (CAT==2),    !- Program Line 226
+    set ACST = 27+ACSTtol,    !- Program Line 227
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT > ACSTaul) && (CAT==2),    !- Program Line 228
+    set ACST = 27+ACSTtol,    !- Program Line 229
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT < ACSTall) && (CAT==3),    !- Program Line 230
+    set ACST = 28+ACSTtol,    !- Program Line 231
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT > ACSTaul) && (CAT==3),    !- Program Line 232
+    set ACST = 28+ACSTtol,    !- Program Line 233
+    endif,                    !- Program Line 234
+    if (AdapStand == 3) && (ComfMod == 1) && (PMOT >= AHSTall) && (PMOT <= AHSTaul),    !- Program Line 235
+    set AHST = PMOT*0.37+16.8+AHSToffset+AHSTtol,    !- Program Line 236
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT < AHSTall) && (CAT==1),    !- Program Line 237
+    set AHST = 20+AHSTtol,    !- Program Line 238
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT > AHSTaul) && (CAT==1),    !- Program Line 239
+    set AHST = 20+AHSTtol,    !- Program Line 240
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT < AHSTall) && (CAT==2),    !- Program Line 241
+    set AHST = 19+AHSTtol,    !- Program Line 242
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT > AHSTaul) && (CAT==2),    !- Program Line 243
+    set AHST = 19+AHSTtol,    !- Program Line 244
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT < AHSTall) && (CAT==3),    !- Program Line 245
+    set AHST = 18+AHSTtol,    !- Program Line 246
+    elseif (AdapStand == 3) && (ComfMod == 1) && (PMOT > AHSTaul) && (CAT==3),    !- Program Line 247
+    set AHST = 18+AHSTtol,    !- Program Line 248
+    endif,                    !- Program Line 249
+    if (AdapStand == 3) && (ComfMod == 2) && (PMOT >= ACSTall) && (PMOT <= ACSTaul),    !- Program Line 250
+    set ACST = PMOT*0.37+16.8+ACSToffset+ACSTtol,    !- Program Line 251
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT < ACSTall) && (CAT==1),    !- Program Line 252
+    set ACST = 21.9+ACSTtol,    !- Program Line 253
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT > ACSTaul) && (CAT==1),    !- Program Line 254
+    set ACST = 24.8+ACSTtol,    !- Program Line 255
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT < ACSTall) && (CAT==2),    !- Program Line 256
+    set ACST = 22.9+ACSTtol,    !- Program Line 257
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT > ACSTaul) && (CAT==2),    !- Program Line 258
+    set ACST = 25.8+ACSTtol,    !- Program Line 259
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT < ACSTall) && (CAT==3),    !- Program Line 260
+    set ACST = 23.9+ACSTtol,    !- Program Line 261
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT > ACSTaul) && (CAT==3),    !- Program Line 262
+    set ACST = 26.8+ACSTtol,    !- Program Line 263
+    endif,                    !- Program Line 264
+    if (AdapStand == 3) && (ComfMod == 2) && (PMOT >= AHSTall) && (PMOT <= AHSTaul),    !- Program Line 265
+    set AHST = PMOT*0.37+16.8+AHSToffset+AHSTtol,    !- Program Line 266
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT < AHSTall) && (CAT==1),    !- Program Line 267
+    set AHST = 20.6+AHSTtol,    !- Program Line 268
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT > AHSTaul) && (CAT==1),    !- Program Line 269
+    set AHST = 25.6+AHSTtol,    !- Program Line 270
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT < AHSTall) && (CAT==2),    !- Program Line 271
+    set AHST = 19.6+AHSTtol,    !- Program Line 272
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT > AHSTaul) && (CAT==2),    !- Program Line 273
+    set AHST = 24.6+AHSTtol,    !- Program Line 274
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT < AHSTall) && (CAT==3),    !- Program Line 275
+    set AHST = 18.6+AHSTtol,    !- Program Line 276
+    elseif (AdapStand == 3) && (ComfMod == 2) && (PMOT > AHSTaul) && (CAT==3),    !- Program Line 277
+    set AHST = 23.6+AHSTtol,    !- Program Line 278
+    endif,                    !- Program Line 279
+    if (AdapStand == 3) && (ComfMod == 3) && (PMOT >= ACSTall) && (PMOT <= ACSTaul),    !- Program Line 280
+    set ACST = PMOT*0.37+16.8+ACSToffset+ACSTtol,    !- Program Line 281
+    elseif (AdapStand == 3) && (ComfMod == 3) && (PMOT < ACSTall),    !- Program Line 282
+    set ACST = ACSTall*0.37+16.8+ACSToffset+ACSTtol,    !- Program Line 283
+    elseif (AdapStand == 3) && (ComfMod == 3) && (PMOT > ACSTaul),    !- Program Line 284
+    set ACST = ACSTaul*0.37+16.8+ACSToffset+ACSTtol,    !- Program Line 285
+    endif,                    !- Program Line 286
+    if (AdapStand == 3) && (ComfMod == 3) && (PMOT >= AHSTall) && (PMOT <= AHSTaul),    !- Program Line 287
+    set AHST = PMOT*0.37+16.8+AHSToffset+AHSTtol,    !- Program Line 288
+    elseif (AdapStand == 3) && (ComfMod == 3) && (PMOT < AHSTall),    !- Program Line 289
+    set AHST = AHSTall*0.37+16.8+AHSToffset+AHSTtol,    !- Program Line 290
+    elseif (AdapStand == 3) && (ComfMod == 3) && (PMOT > AHSTaul),    !- Program Line 291
+    set AHST = AHSTaul*0.37+16.8+AHSToffset+AHSTtol,    !- Program Line 292
+    endif;                    !- Program Line 293
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetASTnoTol,              !- Name
