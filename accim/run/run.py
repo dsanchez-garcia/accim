@@ -45,16 +45,16 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2):
     if runOnlyAccim is None:
         runOnlyAccim = input('Do you want to run only ACCIM output IDFs? [y or n]: ')
         if runOnlyAccim.lower() == 'y' or runOnlyAccim.lower() == '':
-            idfnames = [x for x in os.listdir() if x.endswith('.idf') and '_pymod' in x]
+            idfnames = [x for x in os.listdir() if x.endswith('.idf') and '[' in x]
         else:
             idfnames = [x for x in os.listdir() if x.endswith('.idf')]
     elif runOnlyAccim:
-        idfnames = [x for x in os.listdir() if x.endswith('.idf') and '_pymod' in x]
+        idfnames = [x for x in os.listdir() if x.endswith('.idf') and '[' in x]
     else:
         idfnames = [x for x in os.listdir() if x.endswith('.idf')]
 
     epwnames = [x for x in os.listdir() if x.endswith('.epw')]
-    epwnames_run = [x.split('.epw')[0] for x in os.listdir() if x.endswith('.epw')]
+    epwnames_run = [x.replace('.epw', '') for x in os.listdir() if x.endswith('.epw')]
 
     # if IDFfilesPath is None:
     # else:
@@ -112,7 +112,7 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2):
 
 def removefiles():
     """
-    Delete all files except '.py', '.idf', '.epw' and '.csv'.
+    Delete all files except '.py', '.idf', '.epw', '.csv' and '.eso'.
 
     'Table.csv', 'Zsz.csv' files are deleted as well.
     """

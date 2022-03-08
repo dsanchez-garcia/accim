@@ -23,7 +23,18 @@ setuptools.setup(
           "Operating System :: OS Independent",
           "Topic :: Scientific/Engineering"
           ],
-      packages=setuptools.find_packages(),
+      packages=setuptools.find_packages(
+          # include=[
+          #     'accim.data',
+          #     'accim.r'
+          # ]
+          exclude=[
+              'accim.data.backup',
+              'accim.data.SS',
+              'accim.sim.SS',
+              'accim.WIP'
+          ]
+      ),
       package_data={
            "": ["*.csv", "*.idf", "*.eso", "*.epw"]
            },

@@ -181,20 +181,23 @@ class rename_epw_files:
         for i in range(len(self.epw_df['EPW_mod'])):
             for j in self.epw_df.loc[i, 'EPW_mod']:
                 if j.lower() in [k.lower() for k in self.location_matches_df['name']]:
-                    self.epw_df.loc[i, 'EPW_City_or_subcountry'] = j
-            self.epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=self.epw_df.loc[i, 'EPW_country_code']).name
+                    self.epw_df.loc[i, 'EPW_City_or_subcountry'] = j.replace(' ', '-')
+            self.epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=self.epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
 
         for i in range(len(self.epw_df['EPW_mod'])):
             if type(self.epw_df.loc[i, 'EPW_City_or_subcountry']) is float:
                 location = geolocator.reverse(self.epw_df.loc[i, 'EPW_latitude'] + "," + self.epw_df.loc[i, 'EPW_longitude'])
-                self.epw_df.loc[i, 'EPW_City_or_subcountry'] = location.raw['address'].get('city')
+                try:
+                    self.epw_df.loc[i, 'EPW_City_or_subcountry'] = location.raw['address'].get('city').replace(' ', '-')
+                except AttributeError:
+                    self.epw_df.loc[i, 'EPW_City_or_subcountry'] = location.raw['address'].get('city')
 
         for col in ['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']:
             for row in range(len(self.epw_df)):
                 if self.epw_df.loc[row, col] is None:
                     self.epw_df.loc[row, col] = 'UNKNOWN'
 
-        self.epw_df['EPW_new_names'] = self.epw_df[['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']].agg('['.join, axis=1)
+        self.epw_df['EPW_new_names'] = self.epw_df[['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']].agg('_'.join, axis=1)
 
         for i in range(len(self.epw_df)):
             shutil.copy(self.epw_df.loc[i, 'EPW_abs_path'], path + '/' + self.epw_df.loc[i, 'EPW_new_names'] + '.epw')
