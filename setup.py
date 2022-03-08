@@ -32,7 +32,11 @@ setuptools.setup(
               'accim.data.backup',
               'accim.data.SS',
               'accim.sim.SS',
-              'accim.WIP'
+              'accim.WIP',
+              'accim.sample_files.EPWs',
+              'accim.sample_files.sample_CSVs',
+              'accim.sample_files.sample_figures',
+              'accim.sample_files.sample_tables',
           ]
       ),
       package_data={
