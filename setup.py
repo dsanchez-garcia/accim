@@ -44,7 +44,11 @@ setuptools.setup(
            },
       install_requires=[
           "eppy",
-          "datapackage"
+          "datapackage",
+          "pycountry",
+          "geopy",
+          "pandas",
+          "matplotlib"
            ],
       scripts=['bin/addAccis.py'],
       keywords=[
