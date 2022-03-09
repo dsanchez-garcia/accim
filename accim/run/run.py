@@ -30,7 +30,7 @@ def make_eplaunch_options(idf, epw):
     return options
 
 
-def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2):
+def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_version: str = None):
     """
     Run simulations in the latest EnergyPlus version installed in the computer.
 
@@ -39,7 +39,39 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2):
     or False to shut down all runs.
     :return:
     """
-    iddfile = "C:/EnergyPlusV9-5-0/Energy+.idd"
+
+    fullEPversionsList = [
+        'ep91',
+        'ep92',
+        'ep93',
+        'ep94',
+        'ep95',
+        'ep96'
+    ]
+
+    if EnergyPlus_version is None:
+        print('You must enter an EnergyPlus version from the following list:')
+        print(fullEPversionsList)
+        EnergyPlus_version = input('Please enter the desired EnergyPlus version: ')
+
+    if EnergyPlus_version.lower() == 'ep91':
+        iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == 'ep92':
+        iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == 'ep93':
+        iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == 'ep94':
+        iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == 'ep95':
+        iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == 'ep96':
+        iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
+    else:
+        while EnergyPlus_version.lower() not in fullEPversionsList:
+            print(f'{EnergyPlus_version} is not available. You must enter one of the following list:')
+            print(fullEPversionsList)
+            EnergyPlus_version = input('Please enter the desired EnergyPlus version: ')
+
     IDF.setiddname(iddfile)
 
     if runOnlyAccim is None:

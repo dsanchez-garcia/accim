@@ -1,13 +1,14 @@
 class rename_epw_files:
     def __init__(
-            self,
-            filelist=None
+        self,
+        filelist=None,
+        confirm_renaming=None,
+        confirm_deletion=None
     ):
         import glob
         import pandas as pd
         import datapackage
         import numpy as np
-        import os
         import os
         from geopy.geocoders import Nominatim
         import pycountry
@@ -19,12 +20,12 @@ class rename_epw_files:
         match_cities = True
 
         if len(filelist) > 0:
-            allfiles = filelist
+            epw_files_to_rename = filelist
         else:
-            allfiles = glob.glob('*.epw', recursive=True)
+            epw_files_to_rename = glob.glob('*.epw', recursive=True)
 
-        self.epw_df = pd.DataFrame(data=allfiles,
-                              index=list(range(len(allfiles))),
+        self.epw_df = pd.DataFrame(data=epw_files_to_rename,
+                              index=list(range(len(epw_files_to_rename))),
                               columns=['EPW_file_names'])
 
         for i in range(len(self.epw_df)):
@@ -34,10 +35,10 @@ class rename_epw_files:
 
         rcpdict = {
             'Present': ['Presente', 'Actual', 'Present', 'Current'],
-            'RCP2.6': ['RCP2.6', 'RCP26'],
-            'RCP4.5': ['RCP4.5', 'RCP45'],
-            'RCP6.0': ['RCP6.0', 'RCP60'],
-            'RCP8.5': ['RCP8.5', 'RCP85']
+            'RCP26': ['RCP2.6', 'RCP26'],
+            'RCP45': ['RCP4.5', 'RCP45'],
+            'RCP60': ['RCP6.0', 'RCP60'],
+            'RCP85': ['RCP8.5', 'RCP85']
         }
 
         for i in range(len(self.epw_df['EPW_names'])):
@@ -71,7 +72,7 @@ class rename_epw_files:
             if self.epw_df.loc[i, 'EPW_scenario'] == 'Present':
                 self.epw_df.loc[i, 'EPW_scenario_year'] = 'Present'
             else:
-                self.epw_df.loc[i, 'EPW_scenario_year'] = self.epw_df.loc[i, 'EPW_scenario'] + '_' + self.epw_df.loc[i, 'EPW_year']
+                self.epw_df.loc[i, 'EPW_scenario_year'] = self.epw_df.loc[i, 'EPW_scenario'] + '-' + self.epw_df.loc[i, 'EPW_year']
 
         year_not_found_list = []
         for i in range(len(self.epw_df['EPW_names'])):
@@ -90,7 +91,7 @@ class rename_epw_files:
         # path = r'C:\Users\user\PycharmProjects\accim'
         path = os.getcwd()
         new_list = []
-        for fle in allfiles:
+        for fle in epw_files_to_rename:
             # open the file and then call .read() to get the text
             with open(
                     os.path.join(path, fle),
@@ -199,8 +200,32 @@ class rename_epw_files:
 
         self.epw_df['EPW_new_names'] = self.epw_df[['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']].agg('_'.join, axis=1)
 
-        for i in range(len(self.epw_df)):
-            shutil.copy(self.epw_df.loc[i, 'EPW_abs_path'], path + '/' + self.epw_df.loc[i, 'EPW_new_names'] + '.epw')
+        print('The previous names of the EPW files are:')
+        print(*list(self.epw_df['EPW_names']), sep='\n')
+        print('And the new names of the EPW files are going to be:')
+        print(*list(self.epw_df['EPW_new_names']), sep='\n')
+
+        if confirm_renaming is None:
+            proceed = input('Do you want to rename the file or files? [y/n]:')
+            if 'y' in proceed:
+                confirm_renaming = True
+            elif 'n' in proceed:
+                confirm_renaming = False
+
+        if confirm_renaming:
+            for i in range(len(self.epw_df)):
+                shutil.copy(self.epw_df.loc[i, 'EPW_abs_path'], path + '/' + self.epw_df.loc[i, 'EPW_new_names'] + '.epw')
+
+        if confirm_deletion is None:
+            proceed = input('Do you want to delete the original EPW file or files? [y/n]:')
+            if 'y' in proceed:
+                confirm_deletion = True
+            elif 'n' in proceed:
+                confirm_deletion = False
+
+        if confirm_deletion:
+            for i in epw_files_to_rename:
+                os.remove(i)
 
 
 class Table:
