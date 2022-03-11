@@ -659,15 +659,15 @@ class Table:
             'hourly': ['Day', 'Month', 'Hour'],
             'timestep': ['Day', 'Month', 'Hour', 'Minute']
         }
-
-        for i in frequency_dict[self.frequency]:
-            for j in range(len(self.df)):
-                if self.df.loc[j, i] is None:
-                    self.df.loc[j, i] = str(int((int(self.df.loc[j - 1, i]) + int(self.df.loc[j + 1, i])) / 2))
-                # if self.df.loc[j, i] == '':
-                if len(self.df.loc[j, i]) == 0:
-                    self.df.loc[j, i] = str(int((int(self.df.loc[j - 1, i]) + int(self.df.loc[j + 1, i])) / 2))
-            self.df[i] = self.df[i].str.pad(width=2, side='left', fillchar='0')
+        if self.frequency != 'runperiod':
+            for i in frequency_dict[self.frequency]:
+                for j in range(len(self.df)):
+                    if self.df.loc[j, i] is None:
+                        self.df.loc[j, i] = str(int((int(self.df.loc[j - 1, i]) + int(self.df.loc[j + 1, i])) / 2))
+                    # if self.df.loc[j, i] == '':
+                    if len(self.df.loc[j, i]) == 0:
+                        self.df.loc[j, i] = str(int((int(self.df.loc[j - 1, i]) + int(self.df.loc[j + 1, i])) / 2))
+                self.df[i] = self.df[i].str.pad(width=2, side='left', fillchar='0')
 
         self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
