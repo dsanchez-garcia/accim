@@ -61,7 +61,7 @@ def addAccis(
     from os import listdir, remove
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not '_pymod' in file])
+                 and not '[' in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
