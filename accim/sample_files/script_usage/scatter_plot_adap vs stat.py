@@ -36,7 +36,7 @@ custom_cols_list = temp_list + additional_list
 
 z.format_table(type_of_table='custom',
                custom_cols=custom_cols_list,
-               manage_epw_names=False
+               split_epw_names=False
                )
 
 z.scatter_plot_adap_vs_stat(

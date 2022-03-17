@@ -160,7 +160,7 @@ class accimJob():
                         print(*self.HVACzonelist[i][3], sep="\n")
 
             self.zonenames_orig = []
-            # todo currently all zones regardless the single or dual thermostat object are merged in zonenames_orig;
+            # previoustodo currently all zones regardless the single or dual thermostat object are merged in zonenames_orig;
             #  this would be desirable to be amended
 
             for i in range(len(self.HVACzonelist)):
@@ -175,7 +175,7 @@ class accimJob():
             if ScriptType.lower() == 'existinghvac_mm' or ScriptType.lower() == 'ex_mm':
 
                 self.HVACdict = {
-                    # todo if there is a Coil:Heating:Whatever and another Coil:Heating:DifferentWhatever
+                    # previoustodo if there is a Coil:Heating:Whatever and another Coil:Heating:DifferentWhatever
                     #  coils and windows sensors will be duplicated and simulation will crash; it needs to be solved.
 
                     # Group Heating and Cooling Coils
@@ -229,7 +229,7 @@ class accimJob():
                     'Coil:Cooling:DX:CurveFit:Speed': 'Cooling Coil Total Cooling Rate',
 
                     # Group – Radiative / Convective Units
-                    # todo many objects have heating or cooling outputs for the same field
+                    # previoustodo many objects have heating or cooling outputs for the same field
                     'ZoneHVAC:Baseboard:RadiantConvective:Water': 'Baseboard Total Heating Rate',
                     'ZoneHVAC:Baseboard:RadiantConvective:Steam': 'Baseboard Total Heating Rate',
                     'ZoneHVAC:Baseboard:RadiantConvective:Electric': 'Baseboard Total Heating Rate',

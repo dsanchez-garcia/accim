@@ -239,6 +239,7 @@ class Table:
                  level_sum_or_mean=None,
                  match_cities: bool = False,
                  manage_epw_names: bool = False,
+                 split_epw_names: bool = False,
                  normalised_energy_units: bool = True,
                  rename_cols: bool = True,
                  energy_units_in_kwh: bool = True,
@@ -305,6 +306,7 @@ class Table:
             'Date/Time',
             'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
             'Environment:Site Wind Speed [m/s](Hourly)',
+            'Environment:Site Outdoor Air Relative Humidity [%](Hourly)',
             'EMS:Comfort Temperature [C](Hourly)',
             'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
             'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
@@ -409,6 +411,7 @@ class Table:
             aggregation_list_mean = [
                 'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
                 'Environment:Site Wind Speed [m/s](Hourly)',
+                'Environment:Site Outdoor Air Relative Humidity [%](Hourly)',
                 'EMS:Comfort Temperature [C](Hourly)',
                 'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
                 'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
@@ -626,17 +629,19 @@ class Table:
             inplace=True
         )
 
-        self.df[['Model',
-                 'Adaptive Standard',
-                 'Category',
-                 'Comfort mode',
-                 'HVAC mode',
-                 'Ventilation control',
-                 'VSToffset',
-                 'MinOToffset',
-                 'MaxWindSpeed',
-                 'ASTtol',
-                 'EPW']] = self.df['Source'].str.split('[', expand=True)
+        self.df[[
+            'Model',
+            'Adaptive Standard',
+            'Category',
+            'Comfort mode',
+            'HVAC mode',
+            'Ventilation control',
+            'VSToffset',
+            'MinOToffset',
+            'MaxWindSpeed',
+            'ASTtol',
+            'EPW'
+        ]] = self.df['Source'].str.split('[', expand=True)
 
         self.df['Model'] = self.df['Model'].str[:-6]
         # self.df['Adaptive Standard'] = self.df['Adaptive Standard'].str[3:]
@@ -650,6 +655,13 @@ class Table:
         # self.df['ASTtol'] = self.df['ASTtol'].str[3:]
         self.df['EPW'] = self.df['EPW'].str[:-4]
         self.df['Source'] = self.df['Source'].str[:-4]
+
+        if split_epw_names:
+            self.df[[
+                'EPW_Country_name',
+                'EPW_City_or_subcountry',
+                'EPW_Scenario-Year'
+            ]] = self.df['EPW'].str.split('_', expand=True)
 
         self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
@@ -871,6 +883,8 @@ class Table:
                 'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)':
                     'Site Outdoor Air Drybulb Temperature (°C)',
                 'Environment:Site Wind Speed [m/s](Hourly)': 'Site Wind Speed (m/s)',
+                'Environment:Site Outdoor Air Relative Humidity [%](Hourly)':
+                    'Site Outdoor Air Relative Humidity (%)',
                 'EMS:Comfort Temperature [C](Hourly)': 'Comfort Temperature (°C)',
                 'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)': 'Adaptive Cooling Setpoint Temperature (°C)',
                 'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)': 'Adaptive Heating Setpoint Temperature (°C)',
@@ -952,18 +966,25 @@ class Table:
             'EPW'
             ]
 
+        if split_epw_names:
+            self.available_vars_to_gather.extend([
+                'EPW_Country_name',
+                'EPW_City_or_subcountry',
+                'EPW_Scenario-Year'
+            ])
+
 
     def format_table(self,
-                       type_of_table: str = 'all',
-                       custom_cols=None,
-                       manage_epw_names: bool = False
-                       ):
+                     type_of_table: str = 'all',
+                     custom_cols=None,
+                     split_epw_names: bool = False
+                     ):
         """
 
         :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours'.
         :param custom_cols: A list of strings.
         The strings will be used as a filter, and the columns that match will be selected.
-        :param manage_epw_names: A bool, can be True or False.
+        :param split_epw_names: A bool, can be True or False.
         Used to detect climate change scenario, country and sub-country codes and city.
         If a large number of CSVs is going to be computed
         or hourly values are going to be considered, it is recommended to be False.
@@ -997,12 +1018,11 @@ class Table:
             self.indexcols.extend(['Month', 'Day', 'Hour'])
         if 'timestep' in self.frequency:
             self.indexcols.extend(['Month', 'Day', 'Hour', 'Minute'])
-        if manage_epw_names:
+        if split_epw_names:
             self.indexcols.extend([
-                'EPW_CountryCode',
-                'EPW_Scenario',
-                'EPW_Year',
-                'EPW_City_or_subcountry'
+                'EPW_Country_name',
+                'EPW_City_or_subcountry',
+                'EPW_Scenario-Year'
                 ])
 
         self.val_cols = []

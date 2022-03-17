@@ -1613,7 +1613,7 @@ def checkVentIsOn(self, verboseMode: bool = True):
 
 def setPMVsetpoint(self, verboseMode: bool = True):
     """"""
-    # todo check again the difference between operative temp and fanger; see ZoneControl:Thermostat and where is it assigned
+    # previoustodo check again the difference between operative temp and fanger; see ZoneControl:Thermostat and where is it assigned
     optempthermlist = ([program for program in self.idf1.idfobjects['ZoneControl:Thermostat:OperativeTemperature']])
 
     for i in range(len(optempthermlist)):

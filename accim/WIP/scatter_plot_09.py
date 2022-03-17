@@ -140,7 +140,7 @@ custom_cols_list = additional_list
 
 z.format_table(type_of_table='custom',
                custom_cols=custom_cols_list,
-               manage_epw_names=False
+               split_epw_names=False
                )
 
 # print(*z.df.columns, sep='\n')

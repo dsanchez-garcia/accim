@@ -16,7 +16,7 @@ z = Table(frequency='runperiod',
 
 z.format_table(type_of_table='energy demand',
                # custom_cols=custom_cols_list,
-               manage_epw_names=False
+               split_epw_names=False
                )
 
 

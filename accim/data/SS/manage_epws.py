@@ -181,7 +181,7 @@ if match_cities:
 
     # epw_df['EPW_CountryCode'] = epw_df['EPW_CountryCode'].astype(str)
 ##
-# todo list of the epws where isEPWformatValid is false, and for these, assign the name of the city from geopy coordinates, try to find language and translate it into englies
+# previoustodo list of the epws where isEPWformatValid is false, and for these, assign the name of the city from geopy coordinates, try to find language and translate it into englies
 
 for i in range(len(epw_df['EPW_mod'])):
     for j in epw_df.loc[i, 'EPW_mod']:

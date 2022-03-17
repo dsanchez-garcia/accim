@@ -1113,8 +1113,50 @@ def addOutputVariablesBase(self, ScriptType: str = None, verboseMode: bool = Tru
 
     siteAddOutputs = [
         'Site Outdoor Air Drybulb Temperature',
-        'Site Wind Speed'
+        'Site Wind Speed',
+        'Site Outdoor Air Relative Humidity'
     ]
+
+    other_site_outputs = [
+        'Site Outdoor Air Drybulb Temperature [C]',
+        'Site Outdoor Air Dewpoint Temperature [C]',
+        'Site Outdoor Air Wetbulb Temperature [C]',
+        'Site Outdoor Air Humidity Ratio [kgWater/kgAir]',
+        'Site Outdoor Air Relative Humidity [%]',
+        'Site Outdoor Air Barometric Pressure [Pa]',
+        'Site Wind Speed [m/s]',
+        'Site Wind Direction [deg]',
+        'Site Sky Temperature [C]',
+        'Site Horizontal Infrared Radiation Rate per Area [W/m2]',
+        'Site Difuse Solar Radiation Rate per Area [W/m2]',
+        'Site Direct Solar Radiation Rate per Area [W/m2]',
+        'Site Total Sky Cover []',
+        'Site Opaque Sky Cover []',
+        'Site Precipitation Depth [m]',
+        'Site Ground Refected Solar Radiation Rate per Area [W/m2]',
+        'Site Ground Temperature [C]',
+        'Site Surface Ground Temperature [C]',
+        'Site Deep Ground Temperature [C]',
+        'Site Simple Factor Model Ground Temperature [C]',
+        'Site Outdoor Air Enthalpy [J/kg]',
+        'Site Outdoor Air Density [kg/m3]',
+        'Site Solar Azimuth Angle [deg]',
+        'Site Solar Altitude Angle [deg]',
+        'Site Solar Hour Angle [deg]',
+        'Site Rain Status []',
+        'Site Snow on Ground Status []',
+        'Site Exterior Horizontal Sky Illuminance [lux]',
+        'Site Exterior Horizontal Beam Illuminance [lux]',
+        'Site Exterior Beam Normal Illuminance [lux]',
+        'Site Sky Difuse Solar Radiation Luminous Eﬀcacy [lum/W]',
+        'Site Beam Solar Radiation Luminous Eﬀcacy [lum/W]',
+        'Site Daylighting Model Sky Clearness []',
+        'Sky Brightness for Daylighting Calculation []',
+        'Site Daylight Saving Time Status []',
+        'Site Day Type Index []',
+        'Site Mains Water Temperature [C]',
+    ]
+
     for addittionaloutput in siteAddOutputs:
         self.idf1.newidfobject(
             'Output:Variable',

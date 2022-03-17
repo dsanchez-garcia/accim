@@ -28,7 +28,7 @@ import datetime
 frequency = frequency
 normalised_energy_units = normalised_energy_units
 
-# previoustodo check if glob.glob works with in terms of package, if not switch back to sorted
+# previousprevioustodo check if glob.glob works with in terms of package, if not switch back to sorted
 # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
 allfiles = glob.glob('*.csv', recursive=True)
@@ -215,9 +215,9 @@ for i in df.columns:
     if i not in agg_dict:
         agg_dict.update({i: sum_or_mean})
 
-# todo timestep frequency to be tested
+# previoustodo timestep frequency to be tested
 
-# todo source, date/time and other columns concatenate when aggregating. Try setting as multiindex
+# previoustodo source, date/time and other columns concatenate when aggregating. Try setting as multiindex
 # df.set_index(indexcols)
 # df.drop(columns='Source')
 # df.set_index(df.Source, inplace=True)
@@ -350,7 +350,7 @@ if frequency == 'runperiod':
 
 ##
 
-# previoustodo not working
+# previousprevioustodo not working
 # df['Hour_mod'] = (pd.to_numeric(df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
 # df['Hour_mod'] = df['Hour_mod'].str.replace('.0', '').str.pad(width=2, side='left', fillchar='0')
 # df['Hour'] = df['Hour_mod']
@@ -585,7 +585,7 @@ for i in ['Month', 'Day', 'Hour', 'Minute', 'Second']:
         if df.loc[j, i] == '':
             df.loc[j, i] = str(int((int(df.loc[j-1, i]) + int(df.loc[j+1, i]))/2))
 
-    # previoustodo changes 10 for 0
+    # previousprevioustodo changes 10 for 0
     # df[i] = df[i].str.replace('.0', '')
     df[i] = df[i].str.pad(width=2, side='left', fillchar='0')
 
@@ -605,7 +605,7 @@ df['Hour'] = df['Hour_mod']
 # df[['Day', 'Month']] = df[['Day', 'Month']].astype(str)
 
 
-# previoustodo date/time column
+# previousprevioustodo date/time column
 if 'monthly' in frequency:
 
     df['Date/Time'] = df['Month']

@@ -545,7 +545,7 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
                     'EnergyManagementSystem:Program',
                     Name='ApplyAST_'+zonename,
                     Program_Line_1='if (' + zonename + '_OpT>VST)&&(' + zonename + '_OutT<VST)',
-                    # todo if there is no cooling coil, then zonename_COOLCOIL sensor won't be added
+                    # previoustodo if there is no cooling coil, then zonename_COOLCOIL sensor won't be added
                     #  and therefore it should be omitted in all ExistingHVAC EMS programs; same for _HEATCOIL
                     Program_Line_2='if ' + zonename + '_CoolCoil==0',
                     Program_Line_3='if ' + zonename + '_HeatCoil==0',
@@ -646,7 +646,7 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
                     'EnergyManagementSystem:Program',
                     Name='SetWindowOperation_'+windowname,
                     Program_Line_1='if ('+windowname+'_OpT>VST)&&('+windowname+'_OutT < VST)',
-                    # todo if there is no cooling coil, then zonename_COOLCOIL sensor won't be added
+                    # previoustodo if there is no cooling coil, then zonename_COOLCOIL sensor won't be added
                     #  and therefore it should be omitted in all ExistingHVAC EMS programs; same for _HEATCOIL
                     Program_Line_2='if '+windowname+'_CoolCoil==0',
                     Program_Line_3='if '+windowname+'_HeatCoil==0',
@@ -966,7 +966,7 @@ def addIntVarList(self, verboseMode: bool = True):
     if verboseMode:
         print("Internal variables objects have been added")
 
-# todo add argument for mm outputvariables
+# previoustodo add argument for mm outputvariables
 def addOutputVariablesBase(
         self,
         ScriptType: str = None,
@@ -1002,7 +1002,7 @@ def addOutputVariablesBase(
         'Heating Coil Heating Rate',
         'Facility Total HVAC Electric Demand Power',
         'Facility Total HVAC Electricity Demand Rate',
-        # todo maybe create a new output type to include this variable, to be used in case of tests
+        # previoustodo maybe create a new output type to include this variable, to be used in case of tests
         # 'AFN Surface Venting Window or Door Opening Factor',
         'AFN Zone Infiltration Air Change Rate',
         'AFN Zone Infiltration Volume'
