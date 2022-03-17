@@ -94,8 +94,69 @@ df_for_graph_monthly_site = z.df.copy()
 # z.df = z.df.groupby(['Source', 'Month', 'Day']).agg(site_dict)
 df_for_graph_monthly_site = df_for_graph_monthly_site.groupby(['Source', 'Month', 'Day']).agg(site_dict).groupby(['Source', 'Month']).agg('mean')
 
-df_for_graph_monthly_site.columns = df_for_graph_monthly_site.columns.map('['.join)
+# df_for_graph_monthly_site.columns = df_for_graph_monthly_site.columns.map('['.join)
+
+
 ##
+
+df_for_graph_monthly_site = df_for_graph_monthly_site.stack()
+
+
+
+df_for_graph_monthly_site['new'] = ['_'.join(map(str, i)) for i in df_for_graph_monthly_site.index.tolist()]
+df_for_graph_monthly_site['data'] = 'temp'
+
+df_for_graph_monthly_site = df_for_graph_monthly_site.set_index([pd.RangeIndex(len(df_for_graph_monthly_site))])
+
+for i in range(len(df_for_graph_monthly_site)):
+    df_for_graph_monthly_site.loc[i, 'data'] = str(df_for_graph_monthly_site.loc[i, 'new']).split('[')[-1]
+
+df_for_graph_monthly_site[[
+    'EPW_Country_name',
+    'EPW_City_or_subcountry',
+    'EPW_Scenario-Year',
+    'Month',
+    'mean_max_or_min'
+    ]] = df_for_graph_monthly_site['data'].str.split('_', expand=True)
+
+df_for_graph_monthly_site = df_for_graph_monthly_site.drop('new', axis=1)
+df_for_graph_monthly_site = df_for_graph_monthly_site.drop('data', axis=1)
+df_for_graph_monthly_site.columns
+
+df_for_graph_monthly_site['EPW_Country_City_Scenario-Year'] = df_for_graph_monthly_site[[
+    'EPW_Country_name',
+    'EPW_City_or_subcountry',
+    'EPW_Scenario-Year',
+    ]].agg('_'.join, axis=1)
+
+##
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+sns.lineplot(
+    data=df_for_graph_monthly_site,
+    x='Month',
+    y='Site Outdoor Air Drybulb Temperature (°C)',
+    hue='mean_max_or_min',
+    style='EPW_Country_City_Scenario-Year'
+)
+
+ax2 = plt.twinx()
+
+sns.lineplot(
+    data=df_for_graph_monthly_site,
+    x='Month',
+    y='Site Outdoor Air Relative Humidity (%)',
+    hue='mean_max_or_min',
+    style='EPW_Country_City_Scenario-Year'
+)
+
+
+
+##
+
+# not used
 
 df_for_graph_monthly_site['new'] = ['_'.join(map(str, i)) for i in df_for_graph_monthly_site.index.tolist()]
 df_for_graph_monthly_site['data'] = 'temp'
