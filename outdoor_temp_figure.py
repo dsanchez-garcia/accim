@@ -139,18 +139,21 @@ import matplotlib.pyplot as plt
 
 sns.set_theme()
 sns.set_style("darkgrid")
-height = 2.5
+sns.set_context('paper')
+
+height = 1.25
+aspect = 1.65
 temp_plot = sns.FacetGrid(
     df_for_graph_monthly_site,
     col='EPW_Scenario',
     row='EPW_City_or_subcountry',
     hue='EPW_Year',
-    sharex=True,
+    sharex=False,
     sharey=True,
     margin_titles=True,
     legend_out=True,
-    # height=height,
-    # aspect=0.5
+    height=height,
+    aspect=aspect
               )
 
 temp_plot.map_dataframe(
@@ -167,15 +170,32 @@ temp_plot.map_dataframe(
     # style='mean_max_or_min',
     legend='full',
 )
-temp_plot.set_ylabels('Temperature (°C)')
+
+plt.subplots_adjust(hspace=0.01, wspace=0.01)
+
+# temp_plot.set_ylabels('Temperature (°C)')
+# temp_plot.set_ylabels('')
+# temp_plot.set_xlabels('')
+
+# temp_plot.fig.axis.xaxis.set_visible(False)
+# temp_plot.fig.axes.yaxis.set_visible(False)
+temp_plot.set(xlabel=None, ylabel=None)
+
 temp_plot.set_titles(col_template='{col_name}', row_template='{row_name}')
+
+temp_plot.fig.supxlabel('Month')
+temp_plot.fig.supylabel('Temperature (°C)')
+
+
+temp_plot.fig.tight_layout()
+
 temp_plot.add_legend()
 
 # temp_plot.supylabel('whatever')
 
-# temp_plot.savefig(f'temp_x_height_{height}.png')
-temp_plot.savefig(f'temp_x_height_default.png')
-
+temp_plot.savefig(f'temp_x_height_{height}_aspect_{aspect}.png')
+# temp_plot.savefig(f'temp_x_height_default.png')
+# temp_plot.savefig(f'temp_x_height_default_v00.png')
 
 
 
