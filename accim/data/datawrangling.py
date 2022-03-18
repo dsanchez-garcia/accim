@@ -22,6 +22,7 @@ class rename_epw_files:
         if len(filelist) > 0:
             epw_files_to_rename = filelist
         else:
+            # todo same as Table
             epw_files_to_rename = glob.glob('*.epw', recursive=True)
 
         self.epw_df = pd.DataFrame(data=epw_files_to_rename,
@@ -662,6 +663,11 @@ class Table:
                 'EPW_City_or_subcountry',
                 'EPW_Scenario-Year'
             ]] = self.df['EPW'].str.split('_', expand=True)
+            self.df[[
+                'EPW_Scenario',
+                'EPW_Year',
+            ]] = self.df['EPW_Scenario-Year'].str.split('-', expand=True)
+            self.df.EPW_Year.fillna(value='Present', inplace=True)
 
         self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
 
@@ -970,7 +976,9 @@ class Table:
             self.available_vars_to_gather.extend([
                 'EPW_Country_name',
                 'EPW_City_or_subcountry',
-                'EPW_Scenario-Year'
+                'EPW_Scenario-Year',
+                'EPW_Scenario',
+                'EPW_Year'
             ])
 
 
@@ -1022,8 +1030,10 @@ class Table:
             self.indexcols.extend([
                 'EPW_Country_name',
                 'EPW_City_or_subcountry',
-                'EPW_Scenario-Year'
-                ])
+                'EPW_Scenario-Year',
+                'EPW_Scenario',
+                'EPW_Year'
+            ])
 
         self.val_cols = []
         if type_of_table == 'custom':
