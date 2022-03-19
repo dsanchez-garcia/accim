@@ -137,19 +137,23 @@ df_for_graph_monthly_site.EPW_Year.fillna(value='Present', inplace=True)
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-sns.set_theme()
-sns.set_style("darkgrid")
-sns.set_context('paper')
+sns.set_theme(
+    context='paper',
+    # style='whitegrid',
 
-height = 1.25
-aspect = 1.65
+)
+
+sns.set_style("darkgrid", {"grid.color": ".6"})
+
+height = 1.5
+aspect = 1.5
 temp_plot = sns.FacetGrid(
     df_for_graph_monthly_site,
     col='EPW_Scenario',
     row='EPW_City_or_subcountry',
     hue='EPW_Year',
-    sharex=False,
-    sharey=True,
+    sharex=True,
+    sharey='row',
     margin_titles=True,
     legend_out=True,
     height=height,
@@ -171,7 +175,7 @@ temp_plot.map_dataframe(
     legend='full',
 )
 
-plt.subplots_adjust(hspace=0.01, wspace=0.01)
+plt.subplots_adjust(hspace=0.00, wspace=0.00)
 
 # temp_plot.set_ylabels('Temperature (°C)')
 # temp_plot.set_ylabels('')
@@ -193,7 +197,10 @@ temp_plot.add_legend()
 
 # temp_plot.supylabel('whatever')
 
-temp_plot.savefig(f'temp_x_height_{height}_aspect_{aspect}.png')
+temp_plot.savefig(
+    fname=f'temp_x_height_{height}_aspect_{aspect}.png',
+    dpi=900
+)
 # temp_plot.savefig(f'temp_x_height_default.png')
 # temp_plot.savefig(f'temp_x_height_default_v00.png')
 
