@@ -250,7 +250,7 @@ def genIDF(self,
                                                 + '.idf'
                                                 )
                                             outputlist.append(outputname)
-            elif AdapStand_value == 1:
+            elif AdapStand_value == 1 or AdapStand_value == 3:
                 for CAT_value in self.CAT_List:
                     if CAT_value not in range(0, 4):
                         continue
@@ -295,7 +295,7 @@ def genIDF(self,
                                                             + '.idf'
                                                             )
                                                         outputlist.append(outputname)
-            elif AdapStand_value == 2 or AdapStand_value == 3:
+            elif AdapStand_value == 2:
                 for CAT_value in self.CAT_List:
                     if CAT_value not in range(80, 91, 10):
                         continue
@@ -432,7 +432,7 @@ def genIDF(self,
                                                     # time.sleep(0.1)
                                                     # pbar.update(1)
                                                 idf1.savecopy(outputname)
-                elif AdapStand_value == 1:
+                elif AdapStand_value == 1 or AdapStand_value == 3:
                     for CAT_value in self.CAT_List:
                         if CAT_value not in range(0, 4):
                             continue
@@ -496,7 +496,7 @@ def genIDF(self,
                                                                 # time.sleep(0.1)
                                                                 # pbar.update(1)
                                                             idf1.savecopy(outputname)
-                elif AdapStand_value == 2 or AdapStand_value == 3:
+                elif AdapStand_value == 2:
                     for CAT_value in self.CAT_List:
                         if CAT_value not in range(80, 91, 10):
                             continue
