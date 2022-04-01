@@ -51,7 +51,7 @@ If you run `accis.addAccis(whateverScriptType, whateverOutputs, whateverEPversio
 ```
 >>> accis.addAccis(str, # ScriptType: 'vrf', 'ex_mm', 'ex_ac'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
->>>                str, # EnergyPlus_version: 'ep91', 'ep92', 'ep93', 'ep94', or 'ep95'
+>>>                str, # EnergyPlus_version: 'ep91', 'ep92', 'ep93', 'ep94', 'ep95' or 'ep96'
 >>>                list, # AdapStand, which is the Adaptive Standard
 >>>                list, # CAT, which is the Category
 >>>                list, # ComfMod, which is Comfort Mode
