@@ -1044,7 +1044,10 @@ def addIntVarList(self, verboseMode: bool = True):
         print("Internal variables objects have been added")
 
 # todo add argument for mm outputvariables
-def addOutputVariablesBase(self, ScriptType: str = None, verboseMode: bool = True):
+def addOutputVariablesBase(
+        self,
+        ScriptType: str = None,
+        verboseMode: bool = True):
     """Add Output:Variable objects for accim."""
     EnvironmentalImpactFactorslist = ([output for output in self.idf1.idfobjects['Output:EnvironmentalImpactFactors']])
     outputmeterlist = ([output for output in self.idf1.idfobjects['Output:Meter']])
