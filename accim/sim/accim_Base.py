@@ -38,7 +38,7 @@ def setComfFieldsPeople(self, EnergyPlus_version: str = None, verboseMode: bool 
                 Air_Velocity_Schedule_Name=ppl[i].Air_Velocity_Schedule_Name,
                 Thermal_Comfort_Model_1_Type='AdaptiveASH55',
                 Thermal_Comfort_Model_2_Type='AdaptiveCEN15251',
-                Thermal_Comfort_Model_3_Type='',
+                Thermal_Comfort_Model_3_Type='Fanger',
                 Thermal_Comfort_Model_4_Type='',
                 Thermal_Comfort_Model_5_Type='',
                 )
@@ -71,7 +71,7 @@ def setComfFieldsPeople(self, EnergyPlus_version: str = None, verboseMode: bool 
                 Air_Velocity_Schedule_Name=ppl[i].Air_Velocity_Schedule_Name,
                 Thermal_Comfort_Model_1_Type='AdaptiveASH55',
                 Thermal_Comfort_Model_2_Type='AdaptiveCEN15251',
-                Thermal_Comfort_Model_3_Type='',
+                Thermal_Comfort_Model_3_Type='Fanger',
                 Thermal_Comfort_Model_4_Type='',
                 Thermal_Comfort_Model_5_Type='',
                 )

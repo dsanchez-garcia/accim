@@ -1047,6 +1047,7 @@ def addIntVarList(self, verboseMode: bool = True):
 def addOutputVariablesBase(
         self,
         ScriptType: str = None,
+        TempCtrl: str = None,
         verboseMode: bool = True):
     """Add Output:Variable objects for accim."""
     EnvironmentalImpactFactorslist = ([output for output in self.idf1.idfobjects['Output:EnvironmentalImpactFactors']])
@@ -1082,7 +1083,13 @@ def addOutputVariablesBase(
         # 'AFN Surface Venting Window or Door Opening Factor',
         'AFN Zone Infiltration Air Change Rate',
         'AFN Zone Infiltration Volume'
-        ]
+    ]
+    if TempCtrl.lower() == 'pmv':
+        addittionaloutputs.extend([
+            'Zone Thermal Comfort Fanger Model PMV',
+            'Zone Thermal Comfort Fanger Model PPD'
+        ])
+
 
     for outputvariable in outputvariablelist:
         if outputvariable in outputlist:
@@ -1281,7 +1288,10 @@ def addOutputVariablesTimestep(self, verboseMode: bool = True):
     del fulloutputlist, outputlist
 
 
-def addSimplifiedOutputVariables(self, verboseMode: bool = True):
+def addSimplifiedOutputVariables(
+        self,
+        TempCtrl: str = None,
+        verboseMode: bool = True):
     """
     Add simplified Output:Variable objects for accim.
 
@@ -1311,10 +1321,17 @@ def addSimplifiedOutputVariables(self, verboseMode: bool = True):
 
     # del EnvironmentalImpactFactorslist,firstEnvironmentalImpactFactor, outputmeterlist, firstoutputmeter, alloutputs, firstoutput
 
-    addittionaloutputs = ['Zone Thermostat Operative Temperature',
-                          'Cooling Coil Total Cooling Rate',
-                          'Heating Coil Heating Rate',
-                          ]
+    addittionaloutputs = [
+        'Zone Thermostat Operative Temperature',
+        'Cooling Coil Total Cooling Rate',
+        'Heating Coil Heating Rate',
+    ]
+
+    if TempCtrl.lower() == 'pmv':
+        addittionaloutputs.extend([
+            'Zone Thermal Comfort Fanger Model PMV',
+            'Zone Thermal Comfort Fanger Model PPD'
+        ])
 
     for addittionaloutput in addittionaloutputs:
         self.idf1.newidfobject(

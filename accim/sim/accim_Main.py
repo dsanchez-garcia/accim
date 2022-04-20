@@ -34,7 +34,8 @@ class accimJob():
         addOpTempTherm, \
         addVRFsystemSch, \
         checkVentIsOn, \
-        setAvailSchOn
+        setAvailSchOn, \
+        setPMVsetpoint
     from accim.sim.accim_VRFsystem_EMS import \
         addEMSSensorsVRFsystem
 
@@ -42,6 +43,7 @@ class accimJob():
                  filename_temp,
                  ScriptType: str = None,
                  EnergyPlus_version: str = None,
+                 TempCtrl: str = None,
                  verboseMode: bool = True,
                  accimNotWorking: bool = False):
         from eppy import modeleditor
@@ -102,7 +104,7 @@ class accimJob():
                       ['AirflowNetwork:MultiZone:Component:DetailedOpening']
                       if window.Name.endswith('_Win')]:
                 for k in self.occupiedZones_orig:
-                    if i.split('_')[0] in k:
+                    if i.split('_')[0].lower() in k.lower():
                         self.windownamelist_orig.append(i)
 
             self.windownamelist = [i.replace(':', '_') for i in self.windownamelist_orig]

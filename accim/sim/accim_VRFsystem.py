@@ -882,7 +882,7 @@ def addCurveObj(self, verboseMode: bool = True):
             print("HeatingCombRatio Curve:Linear Object has been added")
 
 
-def addDetHVACobj(self, EnergyPlus_version: str = None, verboseMode: bool = True):
+def addDetHVACobj(self, EnergyPlus_version: str = None, verboseMode: bool = True, TempCtrl: str = None):
     """Add Detailed HVAC objects for VRFsystem to work."""
     for zn in self.zonenames_orig:
         if 'VRF Outdoor Unit_'+zn in [i.Heat_Pump_Name
@@ -1184,16 +1184,21 @@ def addDetHVACobj(self, EnergyPlus_version: str = None, verboseMode: bool = True
 
     del sizingzonelist
 
+    if TempCtrl == 'pmv':
+        supply_air_temp_input_method = 'SupplyAirTemperature'
+    elif TempCtrl.lower() == 'temp' or TempCtrl.lower() == 'temperature':
+        supply_air_temp_input_method = 'TemperatureDifference'
+
     for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'Sizing:Zone',
             Zone_or_ZoneList_Name=zn,
             Zone_Cooling_Design_Supply_Air_Temperature_Input_Method=
-            'TemperatureDifference',
+            supply_air_temp_input_method,
             Zone_Cooling_Design_Supply_Air_Temperature=14,
             Zone_Cooling_Design_Supply_Air_Temperature_Difference=0.5,
             Zone_Heating_Design_Supply_Air_Temperature_Input_Method=
-            'TemperatureDifference',
+            supply_air_temp_input_method,
             Zone_Heating_Design_Supply_Air_Temperature=50,
             Zone_Heating_Design_Supply_Air_Temperature_Difference=0.5,
             Zone_Cooling_Design_Supply_Air_Humidity_Ratio=0.009,
@@ -1610,3 +1615,64 @@ def checkVentIsOn(self, verboseMode: bool = True):
                 if d.Surface_Name.endswith('_Door')])
     for d in Dlist_2:
         d.Venting_Availability_Schedule_Name = 'On'
+
+def setPMVsetpoint(self, verboseMode: bool = True):
+    """"""
+    # previoustodo check again the difference between operative temp and fanger; see ZoneControl:Thermostat and where is it assigned
+    optempthermlist = ([program for program in self.idf1.idfobjects['ZoneControl:Thermostat:OperativeTemperature']])
+
+    for i in range(len(optempthermlist)):
+        firstoptempthermlist = self.idf1.idfobjects['ZoneControl:Thermostat:OperativeTemperature'][-1]
+        self.idf1.removeidfobject(firstoptempthermlist)
+
+    fangerdict = {
+        'Cooling Fanger comfort setpoint: Always 0.5': '0.5',
+        'Heating Fanger comfort setpoint: Always -0.5': '-0.5'
+    }
+    for i in fangerdict:
+        if i in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
+            if verboseMode:
+                print(f"{i} Schedule already was in the model")
+        else:
+            self.idf1.newidfobject(
+                'Schedule:Compact',
+                Name=i,
+                Schedule_Type_Limits_Name="Any Number",
+                Field_1='Through: 12/31',
+                Field_2='For: AllDays',
+                Field_3='Until: 24:00,' + fangerdict[i]
+                )
+            if verboseMode:
+                print(f"{i} Schedule has been added")
+
+    for zone in self.zonenames_orig:
+        if f'{zone} Comfort Control' in [i.Name for i in self.idf1.idfobjects['ZoneControl:Thermostat:ThermalComfort']]:
+            if verboseMode:
+                print(f'{zone} Comfort Control ZoneControl:Thermostat:ThermalComfort already was in the model')
+        else:
+            self.idf1.newidfobject(
+                'ZoneControl:Thermostat:ThermalComfort',
+                Name=f'{zone} Comfort Control',
+                Zone_or_ZoneList_Name=zone,
+                Averaging_Method='PeopleAverage',
+                Minimum_DryBulb_Temperature_Setpoint=12.8,
+                Maximum_DryBulb_Temperature_Setpoint=40.0,
+                Thermal_Comfort_Control_Type_Schedule_Name='Zone Comfort Control Type Sched',
+                Thermal_Comfort_Control_1_Object_Type='ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint',
+                Thermal_Comfort_Control_1_Name=f'{zone} Dual Comfort Setpoint'
+            )
+            if verboseMode:
+                print(f'{zone} Comfort Control ZoneControl:Thermostat:ThermalComfort has been added')
+
+        if f'{zone} Dual Comfort Setpoint' in [i.Name for i in self.idf1.idfobjects['ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint']]:
+            if verboseMode:
+                print(f'{zone} Dual Comfort Setpoint ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint already was in the model')
+        else:
+            self.idf1.newidfobject(
+                'ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint',
+                Name=f'{zone} Dual Comfort Setpoint',
+                Fanger_Thermal_Comfort_Heating_Schedule_Name='Heating Fanger comfort setpoint: Always -0.5',
+                Fanger_Thermal_Comfort_Cooling_Schedule_Name='Cooling Fanger comfort setpoint: Always 0.5'
+            )
+            if verboseMode:
+                print(f'{zone} Dual Comfort Setpoint ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint has been added')

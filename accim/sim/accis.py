@@ -10,6 +10,7 @@ def addAccis(
         ScriptType: str = None,
         Outputs: str = None,
         EnergyPlus_version: str = None,
+        TempCtrl: str = None,
         AdapStand: any = None,
         CAT: any = None,
         ComfMod: any = None,
@@ -68,7 +69,8 @@ def addAccis(
     objArgsDef = (
         ScriptType is not None,
         Outputs is not None,
-        EnergyPlus_version is not None
+        EnergyPlus_version is not None,
+        TempCtrl is not None
     )
 
     fullScriptTypeList = ['vrf',
@@ -100,6 +102,12 @@ def addAccis(
         'ep96'
     ]
 
+    fullTempCtrllist = [
+        'temperature',
+        'temp',
+        'pmv'
+    ]
+
     if all(objArgsDef):
         pass
     else:
@@ -116,6 +124,10 @@ def addAccis(
         while EnergyPlus_version not in fullEPversionsList:
             EnergyPlus_version = input("EnergyPlus version was not correct. "
                                        "Please, enter the EnergyPlus version (ep91 to ep96): ")
+        while TempCtrl not in fullTempCtrllist:
+            TempCtrl = input("Temperature Control method was not correct. "
+                                       "Please, enter the Temperature Control method (temperature or pmv: ")
+
     if verboseMode:
         print('ScriptType is: '+ScriptType)
     if ScriptType not in fullScriptTypeList:
@@ -138,6 +150,15 @@ def addAccis(
         raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
                                               "You must choose a EnergyPlus_version"
                                               "from the list above.")
+    if verboseMode:
+        print('Temperature Control method is: '+TempCtrl)
+    if TempCtrl not in fullTempCtrllist:
+        print('Valid Temperature Control methods: ')
+        print(fullTempCtrllist)
+        raise ValueError(TempCtrl + " is not a valid Temperature Control method. "
+                                              "You must choose a Temperature Control method"
+                                              "from the list above.")
+
     notWorkingIDFs = []
 
     for file in filelist:
@@ -149,6 +170,7 @@ def addAccis(
             filename_temp=file,
             ScriptType=ScriptType,
             EnergyPlus_version=EnergyPlus_version,
+            TempCtrl=TempCtrl,
             verboseMode=verboseMode
         )
 
@@ -160,12 +182,15 @@ def addAccis(
         z.setComfFieldsPeople(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode)
 
         if ScriptType.lower() == 'vrf':
-            z.addOpTempTherm(verboseMode=verboseMode)
+            if TempCtrl.lower() == 'temperature' or TempCtrl.lower() == 'temp':
+                z.addOpTempTherm(verboseMode=verboseMode)
+            elif TempCtrl.lower() == 'pmv':
+                z.setPMVsetpoint(verboseMode=verboseMode)
             z.addBaseSchedules(verboseMode=verboseMode)
             z.setAvailSchOn(verboseMode=verboseMode)
             z.addVRFsystemSch(verboseMode=verboseMode)
             z.addCurveObj(verboseMode=verboseMode)
-            z.addDetHVACobj(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode)
+            z.addDetHVACobj(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode, TempCtrl=TempCtrl)
             z.checkVentIsOn(verboseMode=verboseMode)
             z.addForscriptSchVRFsystem(verboseMode=verboseMode)
         elif 'ex' in ScriptType.lower():
@@ -186,9 +211,16 @@ def addAccis(
         z.addEMSPCMBase(verboseMode=verboseMode)
 
         if Outputs.lower() == 'simplified':
-            z.addSimplifiedOutputVariables(verboseMode=verboseMode)
+            z.addSimplifiedOutputVariables(
+                TempCtrl=TempCtrl,
+                verboseMode=verboseMode
+            )
         elif Outputs.lower() == 'standard':
-            z.addOutputVariablesBase(ScriptType=ScriptType, verboseMode=verboseMode)
+            z.addOutputVariablesBase(
+                ScriptType=ScriptType,
+                TempCtrl=TempCtrl,
+                verboseMode=verboseMode
+            )
 
         if Outputs.lower() == 'timestep':
             z.addOutputVariablesTimestep(verboseMode=verboseMode)
@@ -235,6 +267,7 @@ def addAccis(
         if all(args_needed_mm):
             z.genIDF(
                 ScriptType=ScriptType,
+                TempCtrl=TempCtrl,
                 AdapStand=AdapStand,
                 CAT=CAT,
                 ComfMod=ComfMod,
@@ -257,6 +290,7 @@ def addAccis(
         if all(args_needed_ac):
             z.genIDF(
                 ScriptType=ScriptType,
+                TempCtrl=TempCtrl,
                 AdapStand=AdapStand,
                 CAT=CAT,
                 ComfMod=ComfMod,
