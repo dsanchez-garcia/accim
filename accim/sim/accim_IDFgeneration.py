@@ -192,9 +192,9 @@ def genIDF(self,
         self.MaxWindSpeed_List = [0]
 
     if NameSuffix == '':
-        suffix = ''
+        suffix = '[NS_X'
     else:
-        suffix = '[' + NameSuffix
+        suffix = '[NS_' + NameSuffix
 
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
     filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])

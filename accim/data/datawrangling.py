@@ -601,7 +601,9 @@ class Table:
                             df[i] = df[i] / df[
                                 [i for i in df.columns
                                  if 'Zone Floor Area' in i
-                                 and j.replace(':', '_').lower() in i.lower()][0]]
+                                 and j.lower() in i.lower()
+                                 # and j.replace(':', '_').lower() in i.lower()
+                                 ][0]]
                     for k in block_list:
                         if k + '_Total_' in i:
                             df[i] = df[i] / df[
@@ -637,8 +639,7 @@ class Table:
             axis=1,
             inplace=True
         )
-
-        df[[
+        fixed_columns = [
             'Model',
             'Adaptive Standard',
             'Category',
@@ -649,8 +650,11 @@ class Table:
             'MinOToffset',
             'MaxWindSpeed',
             'ASTtol',
+            'NameSuffix',
             'EPW'
-        ]] = df['Source'].str.split('[', expand=True)
+        ]
+
+        df[fixed_columns] = df['Source'].str.split('[', expand=True)
 
         df['Model'] = df['Model'].str[:-6]
         # df['Adaptive Standard'] = df['Adaptive Standard'].str[3:]
@@ -671,10 +675,15 @@ class Table:
                 'EPW_City_or_subcountry',
                 'EPW_Scenario-Year'
             ]] = df['EPW'].str.split('_', expand=True)
-            df[[
-                'EPW_Scenario',
-                'EPW_Year',
-            ]] = df['EPW_Scenario-Year'].str.split('-', expand=True)
+            try:
+                df[[
+                    'EPW_Scenario',
+                    'EPW_Year',
+                ]] = df['EPW_Scenario-Year'].str.split('-', expand=True)
+            except ValueError:
+                print('All CSVs are for present scenario.')
+                df['EPW_Scenario'] = 'Present'
+                df['EPW_Year'] = 'Present'
             df.EPW_Year.fillna(value='Present', inplace=True)
 
         df = df.set_index([pd.RangeIndex(len(df))])
@@ -858,9 +867,34 @@ class Table:
 
             df = df.drop(['EPW_mod'], axis=1)
 
+        # reorder of the columns
         cols = df.columns.tolist()
-        cols = cols[-16:] + cols[:-16]
-        cols = cols[4:] + cols[:4]
+
+        if self.frequency == 'runperiod':
+            # this 1 is Source
+            freq_extension = 1
+        else:
+            freq_extension = 1 + len(frequency_dict[self.frequency])
+
+        if split_epw_names:
+            epw_extension = 5
+        else:
+            epw_extension = 0
+
+        # todo timestep frequency to be considered
+        if self.frequency == 'runperiod':
+            adj_extension = -3
+        if self.frequency == 'monthly':
+            adj_extension = -4
+        if self.frequency == 'daily':
+            adj_extension = -5
+        if self.frequency == 'hourly':
+            adj_extension = -6
+
+        # the 2 is for Date/Time and Month/Day
+        temp_num = -(len(fixed_columns) + 2 + freq_extension + epw_extension + adj_extension)
+        cols = cols[temp_num:] + cols[:temp_num]
+        # cols = cols[5:] + cols[:5]
         df = df[cols]
         df = df.set_index([pd.RangeIndex(len(df))])
 
@@ -892,7 +926,6 @@ class Table:
                 'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand',
                 'Zone Thermal Comfort Fanger Model PMV': 'PMV',
                 'Zone Thermal Comfort Fanger Model PPD': 'PPD (%)'
-
             }
 
             renaming_criteria = {
@@ -981,6 +1014,7 @@ class Table:
             'MinOToffset',
             'MaxWindSpeed',
             'ASTtol',
+            'NameSuffix',
             'EPW'
             ]
 
@@ -1030,6 +1064,7 @@ class Table:
             'MinOToffset',
             'MaxWindSpeed',
             'ASTtol',
+            'NameSuffix',
             'EPW',
             'Source',
             # 'col_to_pivot'
@@ -1358,6 +1393,7 @@ class Table:
             'ASTtol',
             'Source',
             'EPW',
+            'NameSuffix',
             'col_to_gather_in_cols',
             'col_to_gather_in_rows'
         ]
