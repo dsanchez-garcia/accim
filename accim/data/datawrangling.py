@@ -469,8 +469,37 @@ class Table:
 
         df = pd.concat(summed_dataframes)
 
-        OpTempColumn = [i for i in df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
-        occupied_zone_list = [i.split(' ')[0][:-5] for i in OpTempColumn]
+        # OpTempColumn = [i for i in df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
+        # if len(OpTempColumn) == 0:
+        #     OpTempColumn = [i for i in df.columns if 'Zone Operative Temperature [C](Hourly)' in i]
+
+        occupied_zone_list = [i.split(' ')[0][:-5]
+                               for i
+                               in [i
+                                     for i
+                                     in df.columns
+                                     if 'Zone Thermostat Operative Temperature [C](Hourly)' in i
+                                     ]
+                               ]
+        if len(occupied_zone_list) == 0:
+            occupied_zone_list = [i.split(' ')[0][:-5]
+                            for i
+                            in [i
+                                for i
+                                in df.columns
+                                if 'Zone Operative Temperature [C](Hourly)' in i
+                                ]
+                            ]
+        if len(occupied_zone_list) == 0:
+            occupied_zone_list = [i.split(' ')[0][:-5]
+                            for i
+                            in [i
+                                for i
+                                in df.columns
+                                if 'Operative Temperature' in i
+                                ]
+                            ]
+        # occupied_zone_list = [i.split(' ')[0][:-5] for i in OpTempColumn]
         occupied_zone_list = list(dict.fromkeys(occupied_zone_list))
 
         occBZlist_underscore = [i.replace(':', '_') for i in occupied_zone_list]

@@ -1,12 +1,15 @@
 from accim.data.datawrangling import Table
 csvfiles = [
-    # r'C:\Users\user\PycharmProjects\accim\TestModel_onlyGeometryForVRFsystem_V960[AS_JPN[CA_90[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_temp[Japan_Asahikawa_RCP85-2100.csv',
-    r'C:\Users\user\PycharmProjects\accim\TestModel_onlyGeometryForVRFsystem_V960[AS_JPN[CA_90[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_temp[Japan_Asahikawa_Present.csv',
+    r'TestModel_onlyGeometryForVRFsystem_V960[AS_JPN[CA_90[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_temp[Japan_Asahikawa_RCP85-2100.csv',
+    r'TestModel_onlyGeometryForVRFsystem_V960[AS_JPN[CA_90[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_temp[Japan_Asahikawa_Present.csv',
 ]
 csvfiles_2 = [
     r'TestModel_onlyGeometryForVRFsystem_V960[AS_PMV[CA_X[CM_X[HM_0[VC_X[VO_X[MT_X[MW_X[AT_X[NS_pmv[Japan_Asahikawa_RCP85-2100.csv',
     r'TestModel_onlyGeometryForVRFsystem_V960[AS_PMV[CA_X[CM_X[HM_0[VC_X[VO_X[MT_X[MW_X[AT_X[NS_pmv[Japan_Asahikawa_Present.csv',
 ]
+
+totalcsv = csvfiles + csvfiles_2
+
 z = Table(
     # todo con csvfiles_2, es decir, pmv, hay que reemplazar : por _; averiguar por qué
     datasets=csvfiles_2,
