@@ -232,12 +232,12 @@ class rename_epw_files:
 class Table:
 
     def __init__(self,
-                 datasets=None,
+                 datasets: list = None,
                  frequency: str = None,
                  sum_or_mean: str = None,
                  standard_outputs: bool = None,
-                 level=None,
-                 level_sum_or_mean=None,
+                 level: list = None,
+                 level_sum_or_mean: list = None,
                  match_cities: bool = False,
                  manage_epw_names: bool = False,
                  split_epw_names: bool = False,
@@ -335,7 +335,9 @@ class Table:
             'Heating Coil Heating Rate [W](Hourly)',
             'Cooling Coil Total Cooling Rate [W](Hourly)',
             'Zone Air Volume',
-            'Zone Floor Area'
+            'Zone Floor Area',
+            'Zone Thermal Comfort Fanger Model PMV',
+            'Zone Thermal Comfort Fanger Model PPD'
         ]
 
         summed_dataframes = []
@@ -423,6 +425,8 @@ class Table:
                 'Zone Thermostat Operative Temperature [C](Hourly)',
                 'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
                 'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
+                'Zone Thermal Comfort Fanger Model PMV',
+                'Zone Thermal Comfort Fanger Model PPD'
             ]
 
             for i in df.columns:
@@ -463,50 +467,50 @@ class Table:
 
             summed_dataframes.append(df)
 
-        self.df = pd.concat(summed_dataframes)
+        df = pd.concat(summed_dataframes)
 
-        OpTempColumn = [i for i in self.df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
-        self.occupied_zone_list = [i.split(' ')[0][:-5] for i in OpTempColumn]
-        self.occupied_zone_list = list(dict.fromkeys(self.occupied_zone_list))
+        OpTempColumn = [i for i in df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
+        occupied_zone_list = [i.split(' ')[0][:-5] for i in OpTempColumn]
+        occupied_zone_list = list(dict.fromkeys(occupied_zone_list))
 
-        occBZlist_underscore = [i.replace(':', '_') for i in self.occupied_zone_list]
+        occBZlist_underscore = [i.replace(':', '_') for i in occupied_zone_list]
 
-        self.hvac_zone_list = [i.split(' ')[0]
+        hvac_zone_list = [i.split(' ')[0]
                                for i
                                in [i
                                      for i
-                                     in self.df.columns
+                                     in df.columns
                                      if 'Cooling Coil Total Cooling Rate' in i
                                      ]
                                ]
 
-        self.hvac_zone_list = list(dict.fromkeys(self.hvac_zone_list))
-        # hvacBZlist_underscore = [i.replace(':', '_') for i in self.hvac_zone_list]
+        hvac_zone_list = list(dict.fromkeys(hvac_zone_list))
+        hvac_zone_list_underscore = [i.replace(':', '_') for i in hvac_zone_list]
 
-        self.block_list = [i.split(':')[0] for i in self.occupied_zone_list]
-        self.block_list = list(dict.fromkeys(self.block_list))
+        block_list = [i.split(':')[0] for i in occupied_zone_list]
+        block_list = list(dict.fromkeys(block_list))
 
         renamezonesdict = {}
         for i in range(len(occBZlist_underscore)):
-            for j in self.df.columns:
+            for j in df.columns:
                 if occBZlist_underscore[i].lower() in j.lower():
-                    temp = {j: j.replace(occBZlist_underscore[i], self.occupied_zone_list[i])}
+                    temp = {j: j.replace(occBZlist_underscore[i], occupied_zone_list[i])}
                     renamezonesdict.update(temp)
 
-        self.df = self.df.rename(columns=renamezonesdict)
+        df = df.rename(columns=renamezonesdict)
 
-        for i in self.df.columns:
+        for i in df.columns:
             if 'VRF OUTDOOR UNIT' in i:
-                self.df[i] = self.df[i]/3600
+                df[i] = df[i]/3600
 
         renamedict = {}
 
-        for i in self.df.columns:
+        for i in df.columns:
             if 'VRF OUTDOOR UNIT' in i:
                 temp = {i: i.replace('[J]', '[W]')}
                 renamedict.update(temp)
 
-        self.df = self.df.rename(columns=renamedict)
+        df = df.rename(columns=renamedict)
 
         BZoutputDict = {
             'VRF INDOOR UNIT': 'Total Energy Demand (Wh)',
@@ -514,9 +518,9 @@ class Table:
         }
 
         for output in BZoutputDict:
-            for block_zone in self.hvac_zone_list:
-                self.df[f'{block_zone}' + '_' + BZoutputDict[output] + ' [summed]_pymod'] = self.df[
-                    [i for i in self.df.columns
+            for block_zone in hvac_zone_list:
+                df[f'{block_zone}' + '_' + BZoutputDict[output] + ' [summed]_pymod'] = df[
+                    [i for i in df.columns
                      if block_zone.lower() in i.lower() and output in i and '_pymod' not in i]
                 ].sum(axis=1)
 
@@ -538,41 +542,45 @@ class Table:
             'Coil': 'Total Energy Demand (Wh)',
             'VRF OUTDOOR UNIT': 'Total Energy Consumption (Wh)',
             'Zone Air Volume': 'Zone Air Volume (m3)',
-            'Zone Floor Area': 'Zone Floor Area (m2)'
-            }
+            'Zone Floor Area': 'Zone Floor Area (m2)',
+            'Zone Thermal Comfort Fanger Model PMV': 'PMV',
+            'Zone Thermal Comfort Fanger Model PPD': 'PPD (%)'
+        }
 
+        # todo Building_Total_Zone Thermostat Operative Temperature (°C) [summed] and [mean] are computed as n/a values
+        #  and only building operative temperatures are kept, others are discarded
         if any('block' in i for i in level):
             for output in outputdict:
-                for block in self.block_list:
+                for block in block_list:
                     if any('sum' in j for j in level_sum_or_mean):
-                        self.df[f'{block}' + '_Total_' + outputdict[output] + ' [summed]_pymod'] = self.df[
-                            [i for i in self.df.columns
+                        df[f'{block}' + '_Total_' + outputdict[output] + ' [summed]_pymod'] = df[
+                            [i for i in df.columns
                              if block.lower() in i.lower() and output in i and '_pymod' not in i]
                         ].sum(axis=1)
                     if any('mean' in j for j in level_sum_or_mean):
-                        self.df[f'{block}' + '_Total_' + outputdict[output] + ' [mean]_pymod'] = self.df[
-                            [i for i in self.df.columns
+                        df[f'{block}' + '_Total_' + outputdict[output] + ' [mean]_pymod'] = df[
+                            [i for i in df.columns
                              if block.lower() in i.lower() and output in i and '_pymod' not in i]
                         ].mean(axis=1)
         if any('building' in i for i in level):
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
-                    self.df['Building_Total_' + outputdict[output] + ' [summed]_pymod'] = self.df[
-                        [i for i in self.df.columns
+                    df['Building_Total_' + outputdict[output] + ' [summed]_pymod'] = df[
+                        [i for i in df.columns
                          if output in i and '_pymod' not in i]
                     ].sum(axis=1)
                 if any('mean' in j for j in level_sum_or_mean):
-                    self.df['Building_Total_' + outputdict[output] + ' [mean]_pymod'] = self.df[
-                        [i for i in self.df.columns
+                    df['Building_Total_' + outputdict[output] + ' [mean]_pymod'] = df[
+                        [i for i in df.columns
                          if output in i and '_pymod' not in i]
                     ].mean(axis=1)
 
         renamedict = {}
-        for i in self.df.columns:
+        for i in df.columns:
             if '[W]' in i:
                 temp = {i: i.replace('[W]', '(Wh)')}
                 renamedict.update(temp)
-        self.df = self.df.rename(columns=renamedict)
+        df = df.rename(columns=renamedict)
 
         if normalised_energy_units:
             if energy_units_in_kwh:
@@ -586,51 +594,51 @@ class Table:
                 energy_units = '(Wh)'
 
         if normalised_energy_units:
-            for i in self.df.columns:
+            for i in df.columns:
                 if '(Wh)' in i:
-                    for j in self.hvac_zone_list:
+                    for j in hvac_zone_list:
                         if j in i:
-                            self.df[i] = self.df[i] / self.df[
-                                [i for i in self.df.columns
+                            df[i] = df[i] / df[
+                                [i for i in df.columns
                                  if 'Zone Floor Area' in i
-                                 and j.lower() in i.lower()][0]]
-                    for k in self.block_list:
+                                 and j.replace(':', '_').lower() in i.lower()][0]]
+                    for k in block_list:
                         if k + '_Total_' in i:
-                            self.df[i] = self.df[i] / self.df[
-                                [i for i in self.df.columns
+                            df[i] = df[i] / df[
+                                [i for i in df.columns
                                  if 'Zone Floor Area' in i
                                  and k.lower() + '_Total_'.lower() in i.lower()][0]]
                     if 'Building_Total_' in i:
-                        self.df[i] = self.df[i] / self.df[
-                            [i for i in self.df.columns
+                        df[i] = df[i] / df[
+                            [i for i in df.columns
                              if 'Zone Floor Area' in i
                              and 'Building_Total_'.lower() in i.lower()][0]]
                     if any('building' in x for x in level):
                         if 'Whole Building:Facility Total HVAC Electricity Demand Rate' in i:
-                            self.df[i] = self.df[i] / self.df[
-                                [i for i in self.df.columns
+                            df[i] = df[i] / df[
+                                [i for i in df.columns
                                  if 'Zone Floor Area' in i
                                  and 'Building_Total_'.lower() in i.lower()][0]]
 
         if energy_units_in_kwh:
-            for col in self.df.columns:
+            for col in df.columns:
                 if '(Wh)' in col:
-                    self.df[col] = self.df[col] / 1000
+                    df[col] = df[col] / 1000
 
         energy_units_dict = {}
-        for i in self.df.columns:
+        for i in df.columns:
             if '(Wh)' in i:
                 temp = {i: i.replace('(Wh)', energy_units)}
                 energy_units_dict.update(temp)
-        self.df = self.df.rename(columns=energy_units_dict)
+        df = df.rename(columns=energy_units_dict)
 
-        self.df.set_axis(
-            labels=[c[:-6] if c.endswith('_pymod') else c for c in self.df],
+        df.set_axis(
+            labels=[c[:-6] if c.endswith('_pymod') else c for c in df],
             axis=1,
             inplace=True
         )
 
-        self.df[[
+        df[[
             'Model',
             'Adaptive Standard',
             'Category',
@@ -642,34 +650,34 @@ class Table:
             'MaxWindSpeed',
             'ASTtol',
             'EPW'
-        ]] = self.df['Source'].str.split('[', expand=True)
+        ]] = df['Source'].str.split('[', expand=True)
 
-        self.df['Model'] = self.df['Model'].str[:-6]
-        # self.df['Adaptive Standard'] = self.df['Adaptive Standard'].str[3:]
-        # self.df['Category'] = self.df['Category'].str[3:]
-        # self.df['Comfort mode'] = self.df['Comfort mode'].str[3:]
-        # self.df['HVAC mode'] = self.df['HVAC mode'].str[3:]
-        # self.df['Ventilation control'] = self.df['Ventilation control'].str[3:]
-        # self.df['VSToffset'] = self.df['VSToffset'].str[3:]
-        # self.df['MinOToffset'] = self.df['MinOToffset'].str[3:]
-        # self.df['MaxWindSpeed'] = self.df['MaxWindSpeed'].str[3:]
-        # self.df['ASTtol'] = self.df['ASTtol'].str[3:]
-        self.df['EPW'] = self.df['EPW'].str[:-4]
-        self.df['Source'] = self.df['Source'].str[:-4]
+        df['Model'] = df['Model'].str[:-6]
+        # df['Adaptive Standard'] = df['Adaptive Standard'].str[3:]
+        # df['Category'] = df['Category'].str[3:]
+        # df['Comfort mode'] = df['Comfort mode'].str[3:]
+        # df['HVAC mode'] = df['HVAC mode'].str[3:]
+        # df['Ventilation control'] = df['Ventilation control'].str[3:]
+        # df['VSToffset'] = df['VSToffset'].str[3:]
+        # df['MinOToffset'] = df['MinOToffset'].str[3:]
+        # df['MaxWindSpeed'] = df['MaxWindSpeed'].str[3:]
+        # df['ASTtol'] = df['ASTtol'].str[3:]
+        df['EPW'] = df['EPW'].str[:-4]
+        df['Source'] = df['Source'].str[:-4]
 
         if split_epw_names:
-            self.df[[
+            df[[
                 'EPW_Country_name',
                 'EPW_City_or_subcountry',
                 'EPW_Scenario-Year'
-            ]] = self.df['EPW'].str.split('_', expand=True)
-            self.df[[
+            ]] = df['EPW'].str.split('_', expand=True)
+            df[[
                 'EPW_Scenario',
                 'EPW_Year',
-            ]] = self.df['EPW_Scenario-Year'].str.split('-', expand=True)
-            self.df.EPW_Year.fillna(value='Present', inplace=True)
+            ]] = df['EPW_Scenario-Year'].str.split('-', expand=True)
+            df.EPW_Year.fillna(value='Present', inplace=True)
 
-        self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
+        df = df.set_index([pd.RangeIndex(len(df))])
 
         frequency_dict = {
             'monthly': ['Month'],
@@ -679,41 +687,41 @@ class Table:
         }
         if self.frequency != 'runperiod':
             for i in frequency_dict[self.frequency]:
-                for j in range(len(self.df)):
-                    if self.df.loc[j, i] is None:
-                        self.df.loc[j, i] = str(int((int(self.df.loc[j - 1, i]) + int(self.df.loc[j + 1, i])) / 2))
-                    # if self.df.loc[j, i] == '':
-                    if len(self.df.loc[j, i]) == 0:
-                        self.df.loc[j, i] = str(int((int(self.df.loc[j - 1, i]) + int(self.df.loc[j + 1, i])) / 2))
-                self.df[i] = self.df[i].str.pad(width=2, side='left', fillchar='0')
+                for j in range(len(df)):
+                    if df.loc[j, i] is None:
+                        df.loc[j, i] = str(int((int(df.loc[j - 1, i]) + int(df.loc[j + 1, i])) / 2))
+                    # if df.loc[j, i] == '':
+                    if len(df.loc[j, i]) == 0:
+                        df.loc[j, i] = str(int((int(df.loc[j - 1, i]) + int(df.loc[j + 1, i])) / 2))
+                df[i] = df[i].str.pad(width=2, side='left', fillchar='0')
 
-        self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
+        df = df.set_index([pd.RangeIndex(len(df))])
 
-        # self.df['Hour_mod'] = self.df['Hour'].copy()
+        # df['Hour_mod'] = df['Hour'].copy()
         if 'hourly' in self.frequency or 'timestep' in self.frequency:
-            self.df['Hour'] = (pd.to_numeric(self.df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
-        # self.df['Hour_mod'] = self.df['Hour_mod'].str.replace('.0', '').str.pad(width=2, side='left', fillchar='0')
-        # self.df['Hour'] = self.df['Hour_mod']
+            df['Hour'] = (pd.to_numeric(df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
+        # df['Hour_mod'] = df['Hour_mod'].str.replace('.0', '').str.pad(width=2, side='left', fillchar='0')
+        # df['Hour'] = df['Hour_mod']
 
 
         # todo test timestep
         if 'monthly' in self.frequency:
-            self.df['Month'] = self.df['Month'].astype(str)
-            self.df['Date/Time'] = self.df['Month']
+            df['Month'] = df['Month'].astype(str)
+            df['Date/Time'] = df['Month']
         if 'daily' in self.frequency:
-            self.df[['Day', 'Month']] = self.df[['Day', 'Month']].astype(str)
-            self.df['Date/Time'] = self.df[['Day', 'Month']].agg('/'.join, axis=1)
+            df[['Day', 'Month']] = df[['Day', 'Month']].astype(str)
+            df['Date/Time'] = df[['Day', 'Month']].agg('/'.join, axis=1)
         if 'hourly' in self.frequency:
-            self.df[['Day', 'Month', 'Hour']] = self.df[['Day', 'Month', 'Hour']].astype(str)
-            self.df['Date/Time'] = self.df[['Day', 'Month']].agg('/'.join, axis=1) + ' ' + self.df['Hour'] + ':00'
+            df[['Day', 'Month', 'Hour']] = df[['Day', 'Month', 'Hour']].astype(str)
+            df['Date/Time'] = df[['Day', 'Month']].agg('/'.join, axis=1) + ' ' + df['Hour'] + ':00'
         # if 'timestep' in self.frequency:
-        #     self.df[['Day', 'Month', 'Hour', 'Minute']] = self.df[['Day', 'Month', 'Hour', 'Minute']].astype(str)
-        #     self.df['Date/Time'] = (self.df[['Day', 'Month']].agg('/'.join, axis=1) +
+        #     df[['Day', 'Month', 'Hour', 'Minute']] = df[['Day', 'Month', 'Hour', 'Minute']].astype(str)
+        #     df['Date/Time'] = (df[['Day', 'Month']].agg('/'.join, axis=1) +
         #                             ' ' +
-        #                             self.df[['Hour', 'Minute']].agg(':'.join, axis=1))
+        #                             df[['Hour', 'Minute']].agg(':'.join, axis=1))
 
 
-        self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
+        df = df.set_index([pd.RangeIndex(len(df))])
 
         if manage_epw_names:
             rcpdict = {
@@ -733,23 +741,23 @@ class Table:
             for i in rcpdict['Present']:
                 rcp_present.append(i)
 
-            self.df['EPW_mod'] = self.df['EPW'].str.split('_')
+            df['EPW_mod'] = df['EPW'].str.split('_')
 
-            for i in range(len(self.df['EPW_mod'])):
-                for j in self.df.loc[i, 'EPW_mod']:
+            for i in range(len(df['EPW_mod'])):
+                for j in df.loc[i, 'EPW_mod']:
                     if len(j) == 2:
-                        self.df.loc[i, 'EPW_CountryCode'] = j
+                        df.loc[i, 'EPW_CountryCode'] = j
                     else:
-                        self.df.loc[i, 'EPW_CountryCode'] = np.nan
+                        df.loc[i, 'EPW_CountryCode'] = np.nan
 
                     for k in rcpdict:
                         for m in range(len(rcpdict[k])):
                             if j in rcpdict[k][m]:
-                                self.df.loc[i, 'EPW_Scenario'] = k
+                                df.loc[i, 'EPW_Scenario'] = k
                             else:
-                                self.df.loc[i, 'EPW_Scenario'] = np.nan
+                                df.loc[i, 'EPW_Scenario'] = np.nan
 
-                self.df.loc[i, 'EPW_Year'] = np.nan
+                df.loc[i, 'EPW_Year'] = np.nan
 
         isEPWformatValid = False
         if match_cities:
@@ -767,7 +775,7 @@ class Table:
                 if resource.tabular:
                     data_countries = pd.read_csv(resource.descriptor['path'])
 
-            self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
+            df = df.set_index([pd.RangeIndex(len(df))])
 
             # todo if len <1
             data_cities['subcountry'] = data_cities['subcountry'].astype(str)
@@ -775,7 +783,7 @@ class Table:
             data_countries['Code'] = data_countries['Code'].astype(str)
 
             locations = []
-            for i in list(self.df['EPW_mod']):
+            for i in list(df['EPW_mod']):
                 for j in i:
                     if j in rcp:
                         continue
@@ -818,43 +826,43 @@ class Table:
                 isEPWformatValid = False
                 print('EPW files are not correctly named')
 
-            self.df['EPW_CountryCode'] = self.df['EPW_CountryCode'].astype(str)
+            df['EPW_CountryCode'] = df['EPW_CountryCode'].astype(str)
 
         if manage_epw_names:
-            for i in range(len(self.df['EPW_mod'])):
-                for j in self.df.loc[i, 'EPW_mod']:
+            for i in range(len(df['EPW_mod'])):
+                for j in df.loc[i, 'EPW_mod']:
                     if j in rcp_present:
-                        self.df.loc[i, 'EPW_Year'] = 'Present'
+                        df.loc[i, 'EPW_Year'] = 'Present'
                     elif j in rcp:
                         continue
                     elif j.isnumeric():
-                        self.df.loc[i, 'EPW_Year'] = int(j)
+                        df.loc[i, 'EPW_Year'] = int(j)
                     elif len(j) == 2:
                         continue
                     else:
                         if match_cities:
                             if isEPWformatValid:
                                 for k in range(len(cities_df)):
-                                    if self.df.loc[i, 'EPW_CountryCode'].lower() in cities_df.loc[k, 'country'].lower():
-                                        self.df.loc[i, 'EPW_Country'] = cities_df.loc[k, 'country']
+                                    if df.loc[i, 'EPW_CountryCode'].lower() in cities_df.loc[k, 'country'].lower():
+                                        df.loc[i, 'EPW_Country'] = cities_df.loc[k, 'country']
                                     if str(j).lower() in cities_df.loc[k, 'name'].lower():
-                                        self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
+                                        df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
                                     elif str(j).lower() in cities_df.loc[k, 'subcountry'].lower():
-                                        self.df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
+                                        df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
                                     elif str(j).isalnum():
-                                        self.df.loc[i, 'EPW_City_or_subcountry'] = j.upper()
+                                        df.loc[i, 'EPW_City_or_subcountry'] = j.upper()
                                     else:
-                                        self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
+                                        df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
                         else:
-                            self.df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
+                            df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
 
-            self.df = self.df.drop(['EPW_mod'], axis=1)
+            df = df.drop(['EPW_mod'], axis=1)
 
-        cols = self.df.columns.tolist()
+        cols = df.columns.tolist()
         cols = cols[-16:] + cols[:-16]
         cols = cols[4:] + cols[:4]
-        self.df = self.df[cols]
-        self.df = self.df.set_index([pd.RangeIndex(len(self.df))])
+        df = df[cols]
+        df = df.set_index([pd.RangeIndex(len(df))])
 
         self.rename_cols = rename_cols
 
@@ -881,7 +889,10 @@ class Table:
                 'VRF Heat Pump Cooling Electricity Energy': 'Cooling Energy Consumption',
                 'VRF Heat Pump Heating Electricity Energy': 'Heating Energy Consumption',
                 'Heating Coil Heating Rate': 'Heating Energy Demand',
-                'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand'
+                'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand',
+                'Zone Thermal Comfort Fanger Model PMV': 'PMV',
+                'Zone Thermal Comfort Fanger Model PPD': 'PPD (%)'
+
             }
 
             renaming_criteria = {
@@ -907,11 +918,11 @@ class Table:
 
             all_cols_renamed = {}
 
-            for col in self.df.columns:
+            for col in df.columns:
                 for crit in renaming_criteria_bz:
                     if '[summed]' not in col and '[mean]' not in col:
                         if crit in col:
-                            for block_zone in self.occupied_zone_list:
+                            for block_zone in occupied_zone_list:
                                 if block_zone in col:
                                     if energy_units in col:
                                         temp = {col: block_zone + '_' + renaming_criteria_bz[crit] + ' ' + energy_units}
@@ -920,7 +931,7 @@ class Table:
                                         temp = {col: block_zone + '_' + renaming_criteria_bz[crit]}
                                         all_cols_renamed.update(temp)
 
-            for col in self.df.columns:
+            for col in df.columns:
                 for crit in renaming_criteria:
                     if '[summed]' not in col and '[mean]' not in col:
                         if crit in col:
@@ -938,9 +949,10 @@ class Table:
                 'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand'
             }
 
-            for col in self.df.columns:
+            # todo it looks like this only works for energy-related columns, but what for other such as comfort hours or PMV-PPD?
+            for col in df.columns:
                 for crit in renaming_criteria_block:
-                    for block in self.block_list:
+                    for block in block_list:
                         if block + '_Total_' + crit in col:
                             if '[summed]' in col:
                                 temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} [summed]'}
@@ -956,9 +968,9 @@ class Table:
                             temp = {col: f'Building_Total_{renaming_criteria_block[crit]} {energy_units} [mean]'}
                             all_cols_renamed.update(temp)
 
-            self.df = self.df.rename(columns=all_cols_renamed)
+            df = df.rename(columns=all_cols_renamed)
 
-        self.available_vars_to_gather = [
+        available_vars_to_gather = [
             'Model',
             'Adaptive Standard',
             'Category',
@@ -973,13 +985,19 @@ class Table:
             ]
 
         if split_epw_names:
-            self.available_vars_to_gather.extend([
+            available_vars_to_gather.extend([
                 'EPW_Country_name',
                 'EPW_City_or_subcountry',
                 'EPW_Scenario-Year',
                 'EPW_Scenario',
                 'EPW_Year'
             ])
+
+        self.hvac_zone_list = hvac_zone_list
+        self.occupied_zone_list = occupied_zone_list
+        self.available_vars_to_gather = available_vars_to_gather
+        self.block_list = block_list
+        self.df = df
 
 
     def format_table(self,
@@ -1075,7 +1093,7 @@ class Table:
 
         if not(type_of_table == 'all'):
             self.df = self.df[self.indexcols + self.val_cols]
-        
+
 
 
     def returndf(self):
@@ -1088,7 +1106,7 @@ class Table:
     #     return self.occupied_zone_list
     #
     # def block_list(self):
-    #     return self.block_list()
+    #     return block_list()
 
     def wrangled_table(self,
                        vars_to_gather=None,
