@@ -1072,7 +1072,8 @@ def addOutputVariablesBase(
                            in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']])
     outputlist = ([output.Variable_Name for output in self.idf1.idfobjects['Output:Variable']])
     addittionaloutputs = [
-        'Zone Thermostat Operative Temperature',
+        # 'Zone Thermostat Operative Temperature',
+        'Zone Operative Temperature',
         'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
         'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',
         'Cooling Coil Total Cooling Rate',
@@ -1322,7 +1323,8 @@ def addSimplifiedOutputVariables(
     # del EnvironmentalImpactFactorslist,firstEnvironmentalImpactFactor, outputmeterlist, firstoutputmeter, alloutputs, firstoutput
 
     addittionaloutputs = [
-        'Zone Thermostat Operative Temperature',
+        # 'Zone Thermostat Operative Temperature',
+        'Zone Operative Temperature',
         'Cooling Coil Total Cooling Rate',
         'Heating Coil Heating Rate',
     ]

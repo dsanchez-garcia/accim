@@ -283,9 +283,9 @@ class Table:
         # if custom_cols is None:
         #     custom_cols = []
 
-        # import os
+        import os
         import pandas as pd
-        # from pathlib import Path
+        from pathlib import Path
         import datapackage
         import glob
         import numpy as np
@@ -294,14 +294,14 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
-        # todo check if glob.glob works with in terms of package, if not switch back to sorted
-        # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
         if len(datasets) > 0:
             source_files = datasets
         else:
             allfiles = glob.glob('*.csv', recursive=True)
             source_files = [f for f in allfiles if 'Table.csv' not in f and 'Zsz.csv' not in f]
+            # todo check if glob.glob works with in terms of package, if not switch back to sorted
+            # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
         cleaned_columns = [
             'Date/Time',
@@ -324,7 +324,8 @@ class Table:
             'EMS:Ventilation Hours',
             'AFN Zone Infiltration Volume [m3](Hourly)',
             'AFN Zone Infiltration Air Change Rate [ach](Hourly)',
-            'Zone Thermostat Operative Temperature [C](Hourly)',
+            # 'Zone Thermostat Operative Temperature [C](Hourly)',
+            'Zone Operative Temperature [C](Hourly)',
             'Whole Building:Facility Total HVAC Electricity Demand Rate [W](Hourly)',
             'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
             'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
@@ -422,7 +423,8 @@ class Table:
                 'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
                 'EMS:Ventilation Setpoint Temperature [C](Hourly)',
                 'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
-                'Zone Thermostat Operative Temperature [C](Hourly)',
+                # 'Zone Thermostat Operative Temperature [C](Hourly)',
+                'Zone Operative Temperature [C](Hourly)',
                 'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
                 'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
                 'Zone Thermal Comfort Fanger Model PMV',
@@ -473,32 +475,32 @@ class Table:
         # if len(OpTempColumn) == 0:
         #     OpTempColumn = [i for i in df.columns if 'Zone Operative Temperature [C](Hourly)' in i]
 
+        # occupied_zone_list = [i.split(' ')[0][:-5]
+        #                        for i
+        #                        in [i
+        #                              for i
+        #                              in df.columns
+        #                              if 'Zone Thermostat Operative Temperature [C](Hourly)' in i
+        #                              ]
+        #                        ]
+        # if len(occupied_zone_list) == 0:
         occupied_zone_list = [i.split(' ')[0][:-5]
-                               for i
-                               in [i
-                                     for i
-                                     in df.columns
-                                     if 'Zone Thermostat Operative Temperature [C](Hourly)' in i
-                                     ]
-                               ]
-        if len(occupied_zone_list) == 0:
-            occupied_zone_list = [i.split(' ')[0][:-5]
+                        for i
+                        in [i
                             for i
-                            in [i
-                                for i
-                                in df.columns
-                                if 'Zone Operative Temperature [C](Hourly)' in i
-                                ]
+                            in df.columns
+                            if 'Zone Operative Temperature [C](Hourly)' in i
                             ]
-        if len(occupied_zone_list) == 0:
-            occupied_zone_list = [i.split(' ')[0][:-5]
-                            for i
-                            in [i
-                                for i
-                                in df.columns
-                                if 'Operative Temperature' in i
-                                ]
-                            ]
+                        ]
+        # if len(occupied_zone_list) == 0:
+        #     occupied_zone_list = [i.split(' ')[0][:-5]
+        #                     for i
+        #                     in [i
+        #                         for i
+        #                         in df.columns
+        #                         if 'Operative Temperature' in i
+        #                         ]
+        #                     ]
         # occupied_zone_list = [i.split(' ')[0][:-5] for i in OpTempColumn]
         occupied_zone_list = list(dict.fromkeys(occupied_zone_list))
 
@@ -554,7 +556,8 @@ class Table:
                 ].sum(axis=1)
 
         outputdict = {
-            'Zone Thermostat Operative Temperature [C](Hourly)': 'Zone Thermostat Operative Temperature (°C)',
+            # 'Zone Thermostat Operative Temperature [C](Hourly)': 'Zone Thermostat Operative Temperature (°C)',
+            'Zone Operative Temperature [C](Hourly)': 'Zone Operative Temperature (°C)',
             'Comfortable Hours_No Applicability': 'Comfortable Hours_No Applicability (h)',
             'Comfortable Hours_Applicability': 'Comfortable Hours_Applicability (h)',
             'Discomfortable Applicable Hot Hours': 'Discomfortable Applicable Hot Hours (h)',
@@ -942,7 +945,8 @@ class Table:
                 'EMS:Ventilation Hours': 'Ventilation Hours (h)',
                 'AFN Zone Infiltration Volume [m3](Hourly)': 'AFN Zone Infiltration Volume (m3)',
                 'AFN Zone Infiltration Air Change Rate [ach](Hourly)': 'AFN Zone Infiltration Air Change Rate (ach)',
-                'Zone Thermostat Operative Temperature [C](Hourly)': 'Zone Thermostat Operative Temperature (°C)',
+                # 'Zone Thermostat Operative Temperature [C](Hourly)': 'Zone Thermostat Operative Temperature (°C)',
+                'Zone Operative Temperature [C](Hourly)': 'Zone Operative Temperature (°C)',
                 'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)':
                     'EN16798-1 Running mean outdoor temperature (°C)',
                 'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)':
@@ -1031,6 +1035,15 @@ class Table:
                             all_cols_renamed.update(temp)
 
             df = df.rename(columns=all_cols_renamed)
+
+        # dropping Operative temperature columns which are 0 for all rows or nan
+        # optemp_df = df.filter(regex='Operative Temperature')
+        # optemp_to_drop = []
+        # optemp_to_drop.extend(optemp_df.columns[optemp_df.isna().any()].tolist())
+        # for i in optemp_df.columns:
+        #     if (optemp_df[i] == 0).all():
+        #         optemp_to_drop.append(i)
+        # df = df.drop(optemp_to_drop, axis=1)
 
         available_vars_to_gather = [
             'Model',
