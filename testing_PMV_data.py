@@ -8,11 +8,15 @@ csvfiles_2 = [
     r'TestModel_onlyGeometryForVRFsystem_V960[AS_PMV[CA_X[CM_X[HM_0[VC_X[VO_X[MT_X[MW_X[AT_X[NS_pmv[Japan_Asahikawa_Present.csv',
 ]
 
+CSVfile = [
+    r'JapaneseApartment_v04_Adiabatic_PMV_SCRIPT[AS_PMV[CA_X[CM_X[HM_0[VC_X[VO_X[MT_X[MW_X[AT_X[NS_X[Japan_Asahikawa_Present.csv'
+    ]
+
 totalcsv = csvfiles + csvfiles_2
 
 z = Table(
     # todo con csvfiles_2, es decir, pmv, hay que reemplazar : por _; averiguar por qué
-    # datasets=totalcsv,
+    datasets=CSVfile,
     frequency='runperiod',
     sum_or_mean='sum',
     standard_outputs=True,
@@ -21,8 +25,9 @@ z = Table(
     split_epw_names=True,
     normalised_energy_units=True,
 )
+# z.df.to_excel('to be deleted_hourly.xlsx')
 
-print(*z.df.columns, sep="\n")
+# print(*z.df.columns, sep="\n")
 
 # z.df.to_excel('to_be_deleted.xlsx')
 

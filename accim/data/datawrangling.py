@@ -326,13 +326,16 @@ class Table:
             'AFN Zone Infiltration Air Change Rate [ach](Hourly)',
             # 'Zone Thermostat Operative Temperature [C](Hourly)',
             'Zone Operative Temperature [C](Hourly)',
+            'Zone Operative Temperature',
             'Whole Building:Facility Total HVAC Electricity Demand Rate [W](Hourly)',
             'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
             'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
             'FORSCRIPT',
             'VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate [W](Hourly)',
             'VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Rate [W](Hourly)',
-            'VRF OUTDOOR UNIT',
+            # 'VRF OUTDOOR UNIT',
+            'VRF Heat Pump Cooling Electricity Rate',
+            'VRF Heat Pump Heating Electricity Rate',
             'Heating Coil Heating Rate [W](Hourly)',
             'Cooling Coil Total Cooling Rate [W](Hourly)',
             'Zone Air Volume',
@@ -425,6 +428,7 @@ class Table:
                 'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
                 # 'Zone Thermostat Operative Temperature [C](Hourly)',
                 'Zone Operative Temperature [C](Hourly)',
+                'Zone Operative Temperature',
                 'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
                 'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
                 'Zone Thermal Comfort Fanger Model PMV',
@@ -470,6 +474,8 @@ class Table:
             summed_dataframes.append(df)
 
         df = pd.concat(summed_dataframes)
+        df.to_excel('checkpoint_00.xlsx')
+
 
         # OpTempColumn = [i for i in df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
         # if len(OpTempColumn) == 0:
@@ -489,7 +495,10 @@ class Table:
                         in [i
                             for i
                             in df.columns
-                            if 'Zone Operative Temperature [C](Hourly)' in i
+                            if
+                            # 'Zone Operative Temperature [C](Hourly)'
+                            'Zone Operative Temperature'
+                            in i
                             ]
                         ]
         # if len(occupied_zone_list) == 0:
@@ -531,13 +540,13 @@ class Table:
         df = df.rename(columns=renamezonesdict)
 
         for i in df.columns:
-            if 'VRF OUTDOOR UNIT' in i:
+            if 'VRF OUTDOOR UNIT' in i and '[J]' in i:
                 df[i] = df[i]/3600
 
         renamedict = {}
 
         for i in df.columns:
-            if 'VRF OUTDOOR UNIT' in i:
+            if 'VRF OUTDOOR UNIT' in i and '[J]' in i:
                 temp = {i: i.replace('[J]', '[W]')}
                 renamedict.update(temp)
 
@@ -554,10 +563,12 @@ class Table:
                     [i for i in df.columns
                      if block_zone.lower() in i.lower() and output in i and '_pymod' not in i]
                 ].sum(axis=1)
+        df.to_excel('checkpoint_01.xlsx')
 
         outputdict = {
             # 'Zone Thermostat Operative Temperature [C](Hourly)': 'Zone Thermostat Operative Temperature (°C)',
-            'Zone Operative Temperature [C](Hourly)': 'Zone Operative Temperature (°C)',
+            # 'Zone Operative Temperature [C](Hourly)': 'Zone Operative Temperature (°C)',
+            'Zone Operative Temperature': 'Zone Operative Temperature (°C)',
             'Comfortable Hours_No Applicability': 'Comfortable Hours_No Applicability (h)',
             'Comfortable Hours_Applicability': 'Comfortable Hours_Applicability (h)',
             'Discomfortable Applicable Hot Hours': 'Discomfortable Applicable Hot Hours (h)',
@@ -579,15 +590,12 @@ class Table:
             'Zone Thermal Comfort Fanger Model PPD': 'PPD (%)'
         }
 
-        # todo Building_Total_Zone Thermostat Operative Temperature (°C) [summed] and [mean] are computed as n/a values
-        #  and only building operative temperatures are kept, others are discarded
         if any('block' in i for i in level):
             for output in outputdict:
                 for block in block_list:
                     if any('sum' in j for j in level_sum_or_mean):
                         df[f'{block}' + '_Total_' + outputdict[output] + ' [summed]_pymod'] = df[
-                            [i for i in df.columns
-                             if block.lower() in i.lower() and output in i and '_pymod' not in i]
+                            [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i]
                         ].sum(axis=1)
                     if any('mean' in j for j in level_sum_or_mean):
                         df[f'{block}' + '_Total_' + outputdict[output] + ' [mean]_pymod'] = df[
@@ -598,14 +606,15 @@ class Table:
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
                     df['Building_Total_' + outputdict[output] + ' [summed]_pymod'] = df[
-                        [i for i in df.columns
-                         if output in i and '_pymod' not in i]
+                        [i for i in df.columns if output in i and '_pymod' not in i]
                     ].sum(axis=1)
                 if any('mean' in j for j in level_sum_or_mean):
                     df['Building_Total_' + outputdict[output] + ' [mean]_pymod'] = df[
                         [i for i in df.columns
                          if output in i and '_pymod' not in i]
                     ].mean(axis=1)
+
+        df.to_excel('checkpoint_02.xlsx')
 
         renamedict = {}
         for i in df.columns:
@@ -665,6 +674,9 @@ class Table:
                 temp = {i: i.replace('(Wh)', energy_units)}
                 energy_units_dict.update(temp)
         df = df.rename(columns=energy_units_dict)
+
+        df.to_excel('checkpoint_03.xlsx')
+
 
         df.set_axis(
             labels=[c[:-6] if c.endswith('_pymod') else c for c in df],
@@ -947,6 +959,7 @@ class Table:
                 'AFN Zone Infiltration Air Change Rate [ach](Hourly)': 'AFN Zone Infiltration Air Change Rate (ach)',
                 # 'Zone Thermostat Operative Temperature [C](Hourly)': 'Zone Thermostat Operative Temperature (°C)',
                 'Zone Operative Temperature [C](Hourly)': 'Zone Operative Temperature (°C)',
+                'Zone Operative Temperature': 'Zone Operative Temperature (°C)',
                 'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)':
                     'EN16798-1 Running mean outdoor temperature (°C)',
                 'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)':
@@ -1074,6 +1087,8 @@ class Table:
         self.available_vars_to_gather = available_vars_to_gather
         self.block_list = block_list
         self.df = df
+
+        df.to_excel('checkpoint_04.xlsx')
 
 
     def format_table(self,
