@@ -1,0 +1,46 @@
+Program Version,EnergyPlus, Version 9.6.0-f420c06a69, YMD=2022.04.22 11:11
+1,5,Environment Title[],Latitude[deg],Longitude[deg],Time Zone[],Elevation[m]
+2,8,Day of Simulation[],Month[],Day of Month[],DST Indicator[1=yes 0=no],Hour[],StartMinute[],EndMinute[],DayType
+3,5,Cumulative Day of Simulation[],Month[],Day of Month[],DST Indicator[1=yes 0=no],DayType  ! When Daily Report Variables Requested
+4,2,Cumulative Days of Simulation[],Month[]  ! When Monthly Report Variables Requested
+5,1,Cumulative Days of Simulation[] ! When Run Period Report Variables Requested
+6,1,Calendar Year of Simulation[] ! When Annual Report Variables Requested
+7,1,Environment,Site Outdoor Air Drybulb Temperature [C] !Hourly
+8,1,Environment,Site Outdoor Air Dewpoint Temperature [C] !Hourly
+9,1,Environment,Site Outdoor Air Barometric Pressure [Pa] !Hourly
+10,1,Environment,Site Wind Speed [m/s] !Hourly
+11,1,Environment,Site Wind Direction [deg] !Hourly
+12,1,Environment,Site Diffuse Solar Radiation Rate per Area [W/m2] !Hourly
+13,1,Environment,Site Direct Solar Radiation Rate per Area [W/m2] !Hourly
+14,1,Environment,Site Solar Azimuth Angle [deg] !Hourly
+15,1,Environment,Site Solar Altitude Angle [deg] !Hourly
+16,1,BLOCK1:ZONE1,Zone Total Internal Latent Gain Energy [J] !Hourly
+17,1,BLOCK1:ZONE3,Zone Total Internal Latent Gain Energy [J] !Hourly
+18,1,BLOCK1:ZONE5,Zone Total Internal Latent Gain Energy [J] !Hourly
+19,1,BLOCK1:ZONE2,Zone Total Internal Latent Gain Energy [J] !Hourly
+20,1,BLOCK1:ZONE4,Zone Total Internal Latent Gain Energy [J] !Hourly
+21,1,BLOCK1:ZONE1,Zone People Sensible Heating Rate [W] !Hourly
+22,1,BLOCK1:ZONE3,Zone People Sensible Heating Rate [W] !Hourly
+23,1,BLOCK1:ZONE5,Zone People Sensible Heating Rate [W] !Hourly
+24,1,BLOCK1:ZONE2,Zone People Sensible Heating Rate [W] !Hourly
+25,1,BLOCK1:ZONE4,Zone People Sensible Heating Rate [W] !Hourly
+26,1,BLOCK1:ZONE1,Lights Total Heating Rate [W] !Hourly
+148,1,BLOCK1:ZONE3,Lights Total Heating Rate [W] !Hourly
+186,1,BLOCK1:ZONE5,Lights Total Heating Rate [W] !Hourly
+224,1,BLOCK1:ZONE2,Lights Total Heating Rate [W] !Hourly
+262,1,BLOCK1:ZONE4,Lights Total Heating Rate [W] !Hourly
+300,1,BLOCK1:ZONE1,Zone Lights Electricity Rate [W] !Hourly
+301,1,BLOCK1:ZONE3,Zone Lights Electricity Rate [W] !Hourly
+302,1,BLOCK1:ZONE5,Zone Lights Electricity Rate [W] !Hourly
+303,1,BLOCK1:ZONE2,Zone Lights Electricity Rate [W] !Hourly
+304,1,BLOCK1:ZONE4,Zone Lights Electricity Rate [W] !Hourly
+378,1,BLOCK1:ZONE1 MISCELLANEOUS GAIN 1,Other Equipment Total Heating Rate [W] !Hourly
+428,1,BLOCK1:ZONE3 MISCELLANEOUS GAIN 1,Other Equipment Total Heating Rate [W] !Hourly
+478,1,BLOCK1:ZONE5 MISCELLANEOUS GAIN 1,Other Equipment Total Heating Rate [W] !Hourly
+528,1,BLOCK1:ZONE2 MISCELLANEOUS GAIN 1,Other Equipment Total Heating Rate [W] !Hourly
+578,1,BLOCK1:ZONE4 MISCELLANEOUS GAIN 1,Other Equipment Total Heating Rate [W] !Hourly
+579,1,BLOCK1:ZONE1,Zone Other Equipment Total Heating Rate [W] !Hourly
+580,1,BLOCK1:ZONE3,Zone Other Equipment Total Heating Rate [W] !Hourly
+581,1,BLOCK1:ZONE5,Zone Other Equipment Total Heating Rate [W] !Hourly
+582,1,BLOCK1:ZONE2,Zone Other Equipment Total Heating Rate [W] !Hourly
+583,1,BLOCK1:ZONE4,Zone Other Equipment Total Heating Rate [W] !Hourly
