@@ -1067,10 +1067,10 @@ def addOutputVariablesBase(
 
     # del EnvironmentalImpactFactorslist,firstEnvironmentalImpactFactor, outputmeterlist, firstoutputmeter, alloutputs, firstoutput
 
-    outputvariablelist = ([outputvariable.Name
+    EMSoutputvariablenamelist = ([outputvariable.Name
                            for outputvariable
                            in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']])
-    outputlist = ([output.Variable_Name for output in self.idf1.idfobjects['Output:Variable']])
+    outputnamelist = ([output.Variable_Name for output in self.idf1.idfobjects['Output:Variable']])
     addittionaloutputs = [
         # 'Zone Thermostat Operative Temperature',
         'Zone Operative Temperature',
@@ -1092,8 +1092,8 @@ def addOutputVariablesBase(
         ])
 
 
-    for outputvariable in outputvariablelist:
-        if outputvariable in outputlist:
+    for outputvariable in EMSoutputvariablenamelist:
+        if outputvariable in outputnamelist:
             if verboseMode:
                 print('Not added - '+outputvariable+' Output:Variable data')
         elif outputvariable.startswith("WIP"):
@@ -1115,7 +1115,7 @@ def addOutputVariablesBase(
     #        print([output for output in self.idf1.idfobjects['Output:Variable'] if output.Variable_Name == outputvariable])
 
     for addittionaloutput in addittionaloutputs:
-        if addittionaloutput in outputlist:
+        if addittionaloutput in outputnamelist:
             if verboseMode:
                 print('Not added - '+addittionaloutput+' Output:Variable data')
         else:
@@ -1129,6 +1129,11 @@ def addOutputVariablesBase(
             if verboseMode:
                 print('Added - '+addittionaloutput+' Output:Variable data')
 
+    outputlist = ([output for output in self.idf1.idfobjects['Output:Variable']])
+    for i in outputlist:
+        for addittionaloutput in addittionaloutputs:
+            if addittionaloutput in i.Variable_Name:
+                i.Schedule_Name = ''
 
     siteAddOutputs = [
         'Site Outdoor Air Drybulb Temperature',
@@ -1177,7 +1182,7 @@ def addOutputVariablesBase(
     ]
 
     for addittionaloutput in siteAddOutputs:
-        if addittionaloutput in outputlist:
+        if addittionaloutput in outputnamelist:
             if verboseMode:
                 print('Not added - '+addittionaloutput+' Output:Variable data')
         else:
@@ -1261,7 +1266,7 @@ def addOutputVariablesBase(
             if verboseMode:
                 print('Added - ' + zonename + ' VRF Indoor Unit DX Heating Coil Output:Variable data')
 
-    del outputvariablelist, outputlist, addittionaloutputs,
+    del EMSoutputvariablenamelist, outputnamelist, addittionaloutputs,
 
 
 def addOutputVariablesTimestep(self, verboseMode: bool = True):
