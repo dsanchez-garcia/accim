@@ -474,7 +474,7 @@ class Table:
             summed_dataframes.append(df)
 
         df = pd.concat(summed_dataframes)
-        df.to_excel('checkpoint_00.xlsx')
+        # df.to_excel('checkpoint_00.xlsx')
 
 
         # OpTempColumn = [i for i in df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
@@ -563,7 +563,7 @@ class Table:
                     [i for i in df.columns
                      if block_zone.lower() in i.lower() and output in i and '_pymod' not in i]
                 ].sum(axis=1)
-        df.to_excel('checkpoint_01.xlsx')
+        # df.to_excel('checkpoint_01.xlsx')
 
         outputdict = {
             # 'Zone Thermostat Operative Temperature [C](Hourly)': 'Zone Thermostat Operative Temperature (°C)',
@@ -598,10 +598,13 @@ class Table:
                             [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i]
                         ].sum(axis=1)
                     if any('mean' in j for j in level_sum_or_mean):
-                        df[f'{block}' + '_Total_' + outputdict[output] + ' [mean]_pymod'] = df[
-                            [i for i in df.columns
-                             if block.lower() in i.lower() and output in i and '_pymod' not in i]
-                        ].mean(axis=1)
+                        if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
+                            continue
+                        else:
+                            df[f'{block}' + '_Total_' + outputdict[output] + ' [mean]_pymod'] = df[
+                                [i for i in df.columns
+                                 if block.lower() in i.lower() and output in i and '_pymod' not in i]
+                            ].mean(axis=1)
         if any('building' in i for i in level):
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
@@ -609,12 +612,15 @@ class Table:
                         [i for i in df.columns if output in i and '_pymod' not in i]
                     ].sum(axis=1)
                 if any('mean' in j for j in level_sum_or_mean):
-                    df['Building_Total_' + outputdict[output] + ' [mean]_pymod'] = df[
-                        [i for i in df.columns
-                         if output in i and '_pymod' not in i]
-                    ].mean(axis=1)
+                    if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
+                        continue
+                    else:
+                        df['Building_Total_' + outputdict[output] + ' [mean]_pymod'] = df[
+                            [i for i in df.columns
+                             if output in i and '_pymod' not in i]
+                        ].mean(axis=1)
 
-        df.to_excel('checkpoint_02.xlsx')
+        # df.to_excel('checkpoint_02.xlsx')
 
         renamedict = {}
         for i in df.columns:
@@ -663,10 +669,14 @@ class Table:
                                  if 'Zone Floor Area' in i
                                  and 'Building_Total_'.lower() in i.lower()][0]]
 
+        # df.to_excel('checkpoint_03-0.xlsx')
+
         if energy_units_in_kwh:
             for col in df.columns:
                 if '(Wh)' in col:
                     df[col] = df[col] / 1000
+
+        # df.to_excel('checkpoint_03-1.xlsx')
 
         energy_units_dict = {}
         for i in df.columns:
@@ -675,7 +685,7 @@ class Table:
                 energy_units_dict.update(temp)
         df = df.rename(columns=energy_units_dict)
 
-        df.to_excel('checkpoint_03.xlsx')
+        # df.to_excel('checkpoint_03-2.xlsx')
 
 
         df.set_axis(
@@ -1088,7 +1098,7 @@ class Table:
         self.block_list = block_list
         self.df = df
 
-        df.to_excel('checkpoint_04.xlsx')
+        # df.to_excel('checkpoint_04.xlsx')
 
 
     def format_table(self,

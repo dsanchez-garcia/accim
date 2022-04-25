@@ -1,0 +1,1102 @@
+
+ Meters for 20,BLOCK1:ZONE1:Lights Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:BLOCK1:ZONE1 [J]
+  OnMeter=Electricity:SpaceType:GENERAL [J]
+  OnMeter=InteriorLights:Electricity [J]
+  OnMeter=InteriorLights:Electricity:Zone:BLOCK1:ZONE1 [J]
+  OnMeter=InteriorLights:Electricity:SpaceType:GENERAL [J]
+  OnMeter=General:InteriorLights:Electricity [J]
+  OnMeter=General:InteriorLights:Electricity:Zone:BLOCK1:ZONE1 [J]
+  OnMeter=General:InteriorLights:Electricity:SpaceType:GENERAL [J]
+
+ Meters for 141,BLOCK1:ZONE3:Lights Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:BLOCK1:ZONE3 [J]
+  OnMeter=Electricity:SpaceType:GENERAL [J]
+  OnMeter=InteriorLights:Electricity [J]
+  OnMeter=InteriorLights:Electricity:Zone:BLOCK1:ZONE3 [J]
+  OnMeter=InteriorLights:Electricity:SpaceType:GENERAL [J]
+  OnMeter=General:InteriorLights:Electricity [J]
+  OnMeter=General:InteriorLights:Electricity:Zone:BLOCK1:ZONE3 [J]
+  OnMeter=General:InteriorLights:Electricity:SpaceType:GENERAL [J]
+
+ Meters for 178,BLOCK1:ZONE5:Lights Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:BLOCK1:ZONE5 [J]
+  OnMeter=Electricity:SpaceType:GENERAL [J]
+  OnMeter=InteriorLights:Electricity [J]
+  OnMeter=InteriorLights:Electricity:Zone:BLOCK1:ZONE5 [J]
+  OnMeter=InteriorLights:Electricity:SpaceType:GENERAL [J]
+  OnMeter=General:InteriorLights:Electricity [J]
+  OnMeter=General:InteriorLights:Electricity:Zone:BLOCK1:ZONE5 [J]
+  OnMeter=General:InteriorLights:Electricity:SpaceType:GENERAL [J]
+
+ Meters for 215,BLOCK1:ZONE2:Lights Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:BLOCK1:ZONE2 [J]
+  OnMeter=Electricity:SpaceType:GENERAL [J]
+  OnMeter=InteriorLights:Electricity [J]
+  OnMeter=InteriorLights:Electricity:Zone:BLOCK1:ZONE2 [J]
+  OnMeter=InteriorLights:Electricity:SpaceType:GENERAL [J]
+  OnMeter=General:InteriorLights:Electricity [J]
+  OnMeter=General:InteriorLights:Electricity:Zone:BLOCK1:ZONE2 [J]
+  OnMeter=General:InteriorLights:Electricity:SpaceType:GENERAL [J]
+
+ Meters for 252,BLOCK1:ZONE4:Lights Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:BLOCK1:ZONE4 [J]
+  OnMeter=Electricity:SpaceType:GENERAL [J]
+  OnMeter=InteriorLights:Electricity [J]
+  OnMeter=InteriorLights:Electricity:Zone:BLOCK1:ZONE4 [J]
+  OnMeter=InteriorLights:Electricity:SpaceType:GENERAL [J]
+  OnMeter=General:InteriorLights:Electricity [J]
+  OnMeter=General:InteriorLights:Electricity:Zone:BLOCK1:ZONE4 [J]
+  OnMeter=General:InteriorLights:Electricity:SpaceType:GENERAL [J]
+
+ Meters for 289,BLOCK1:ZONE1 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:BLOCK1:ZONE1 [J]
+  OnMeter=Electricity:SpaceType:GENERAL [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:BLOCK1:ZONE1 [J]
+  OnMeter=InteriorEquipment:Electricity:SpaceType:GENERAL [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone1#02:InteriorEquipment:Electricity [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone1#02:InteriorEquipment:Electricity:Zone:BLOCK1:ZONE1 [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone1#02:InteriorEquipment:Electricity:SpaceType:GENERAL [J]
+
+ Meters for 362,BLOCK1:ZONE3 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:BLOCK1:ZONE3 [J]
+  OnMeter=Electricity:SpaceType:GENERAL [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:BLOCK1:ZONE3 [J]
+  OnMeter=InteriorEquipment:Electricity:SpaceType:GENERAL [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone3#02:InteriorEquipment:Electricity [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone3#02:InteriorEquipment:Electricity:Zone:BLOCK1:ZONE3 [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone3#02:InteriorEquipment:Electricity:SpaceType:GENERAL [J]
+
+ Meters for 411,BLOCK1:ZONE5 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:BLOCK1:ZONE5 [J]
+  OnMeter=Electricity:SpaceType:GENERAL [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:BLOCK1:ZONE5 [J]
+  OnMeter=InteriorEquipment:Electricity:SpaceType:GENERAL [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone5#02:InteriorEquipment:Electricity [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone5#02:InteriorEquipment:Electricity:Zone:BLOCK1:ZONE5 [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone5#02:InteriorEquipment:Electricity:SpaceType:GENERAL [J]
+
+ Meters for 460,BLOCK1:ZONE2 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:BLOCK1:ZONE2 [J]
+  OnMeter=Electricity:SpaceType:GENERAL [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:BLOCK1:ZONE2 [J]
+  OnMeter=InteriorEquipment:Electricity:SpaceType:GENERAL [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone2#02:InteriorEquipment:Electricity [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone2#02:InteriorEquipment:Electricity:Zone:BLOCK1:ZONE2 [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone2#02:InteriorEquipment:Electricity:SpaceType:GENERAL [J]
+
+ Meters for 509,BLOCK1:ZONE4 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:BLOCK1:ZONE4 [J]
+  OnMeter=Electricity:SpaceType:GENERAL [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:BLOCK1:ZONE4 [J]
+  OnMeter=InteriorEquipment:Electricity:SpaceType:GENERAL [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone4#02:InteriorEquipment:Electricity [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone4#02:InteriorEquipment:Electricity:Zone:BLOCK1:ZONE4 [J]
+  OnMeter=ELECTRIC EQUIPMENT#Block1:Zone4#02:InteriorEquipment:Electricity:SpaceType:GENERAL [J]
+
+ Meters for 630,BLOCK1:ZONE1:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:BLOCK1:ZONE1 [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:BLOCK1:ZONE1 [J]
+  OnMeter=General:Heating:EnergyTransfer [J]
+  OnMeter=General:Heating:EnergyTransfer:Zone:BLOCK1:ZONE1 [J]
+
+ Meters for 715,BLOCK1:ZONE1:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:BLOCK1:ZONE1 [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:BLOCK1:ZONE1 [J]
+  OnMeter=General:Cooling:EnergyTransfer [J]
+  OnMeter=General:Cooling:EnergyTransfer:Zone:BLOCK1:ZONE1 [J]
+
+ Meters for 764,BLOCK1:ZONE3:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:BLOCK1:ZONE3 [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:BLOCK1:ZONE3 [J]
+  OnMeter=General:Heating:EnergyTransfer [J]
+  OnMeter=General:Heating:EnergyTransfer:Zone:BLOCK1:ZONE3 [J]
+
+ Meters for 801,BLOCK1:ZONE3:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:BLOCK1:ZONE3 [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:BLOCK1:ZONE3 [J]
+  OnMeter=General:Cooling:EnergyTransfer [J]
+  OnMeter=General:Cooling:EnergyTransfer:Zone:BLOCK1:ZONE3 [J]
+
+ Meters for 826,BLOCK1:ZONE5:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:BLOCK1:ZONE5 [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:BLOCK1:ZONE5 [J]
+  OnMeter=General:Heating:EnergyTransfer [J]
+  OnMeter=General:Heating:EnergyTransfer:Zone:BLOCK1:ZONE5 [J]
+
+ Meters for 863,BLOCK1:ZONE5:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:BLOCK1:ZONE5 [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:BLOCK1:ZONE5 [J]
+  OnMeter=General:Cooling:EnergyTransfer [J]
+  OnMeter=General:Cooling:EnergyTransfer:Zone:BLOCK1:ZONE5 [J]
+
+ Meters for 888,BLOCK1:ZONE2:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:BLOCK1:ZONE2 [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:BLOCK1:ZONE2 [J]
+  OnMeter=General:Heating:EnergyTransfer [J]
+  OnMeter=General:Heating:EnergyTransfer:Zone:BLOCK1:ZONE2 [J]
+
+ Meters for 925,BLOCK1:ZONE2:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:BLOCK1:ZONE2 [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:BLOCK1:ZONE2 [J]
+  OnMeter=General:Cooling:EnergyTransfer [J]
+  OnMeter=General:Cooling:EnergyTransfer:Zone:BLOCK1:ZONE2 [J]
+
+ Meters for 950,BLOCK1:ZONE4:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:BLOCK1:ZONE4 [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:BLOCK1:ZONE4 [J]
+  OnMeter=General:Heating:EnergyTransfer [J]
+  OnMeter=General:Heating:EnergyTransfer:Zone:BLOCK1:ZONE4 [J]
+
+ Meters for 987,BLOCK1:ZONE4:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:BLOCK1:ZONE4 [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:BLOCK1:ZONE4 [J]
+  OnMeter=General:Cooling:EnergyTransfer [J]
+  OnMeter=General:Cooling:EnergyTransfer:Zone:BLOCK1:ZONE4 [J]
+
+ Meters for 1012,Whole Building:Facility Total Purchased Electricity Energy [J]
+  OnMeter=ElectricityPurchased:Facility [J]
+  OnMeter=ElectricityPurchased:Plant [J]
+  OnMeter=Cogeneration:ElectricityPurchased [J]
+  OnMeter=General:Cogeneration:ElectricityPurchased [J]
+
+ Meters for 1061,Whole Building:Facility Total Surplus Electricity Energy [J]
+  OnMeter=ElectricitySurplusSold:Facility [J]
+  OnMeter=ElectricitySurplusSold:Plant [J]
+  OnMeter=Cogeneration:ElectricitySurplusSold [J]
+  OnMeter=General:Cogeneration:ElectricitySurplusSold [J]
+
+ Meters for 1110,Whole Building:Facility Net Purchased Electricity Energy [J]
+  OnMeter=ElectricityNet:Facility [J]
+  OnMeter=ElectricityNet:Plant [J]
+  OnMeter=Cogeneration:ElectricityNet [J]
+  OnMeter=General:Cogeneration:ElectricityNet [J]
+
+ Meters for 1180,BLOCK1:ZONE1 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Fans:Electricity [J]
+  OnMeter=General:Fans:Electricity [J]
+
+ Meters for 1217,BLOCK1:ZONE3 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Fans:Electricity [J]
+  OnMeter=General:Fans:Electricity [J]
+
+ Meters for 1218,BLOCK1:ZONE5 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Fans:Electricity [J]
+  OnMeter=General:Fans:Electricity [J]
+
+ Meters for 1219,BLOCK1:ZONE2 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Fans:Electricity [J]
+  OnMeter=General:Fans:Electricity [J]
+
+ Meters for 1220,BLOCK1:ZONE4 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Fans:Electricity [J]
+  OnMeter=General:Fans:Electricity [J]
+
+ Meters for 1222,BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=CoolingCoils:EnergyTransfer [J]
+
+ Meters for 1248,BLOCK1:ZONE3 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=CoolingCoils:EnergyTransfer [J]
+
+ Meters for 1250,BLOCK1:ZONE5 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=CoolingCoils:EnergyTransfer [J]
+
+ Meters for 1252,BLOCK1:ZONE2 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=CoolingCoils:EnergyTransfer [J]
+
+ Meters for 1254,BLOCK1:ZONE4 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=CoolingCoils:EnergyTransfer [J]
+
+ Meters for 1256,BLOCK1:ZONE1 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=HeatingCoils:EnergyTransfer [J]
+
+ Meters for 1270,BLOCK1:ZONE3 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=HeatingCoils:EnergyTransfer [J]
+
+ Meters for 1272,BLOCK1:ZONE5 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=HeatingCoils:EnergyTransfer [J]
+
+ Meters for 1274,BLOCK1:ZONE2 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=HeatingCoils:EnergyTransfer [J]
+
+ Meters for 1276,BLOCK1:ZONE4 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=HeatingCoils:EnergyTransfer [J]
+
+ Meters for 1277,BLOCK1:ZONE1 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1302,BLOCK1:ZONE1 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1327,BLOCK1:ZONE3 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1328,BLOCK1:ZONE3 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1329,BLOCK1:ZONE5 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1330,BLOCK1:ZONE5 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1331,BLOCK1:ZONE2 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1332,BLOCK1:ZONE2 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1333,BLOCK1:ZONE4 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1334,BLOCK1:ZONE4 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1335,VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Cooling Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1336,VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Heating Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1337,VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Defrost Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1338,VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Crankcase Heater Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1339,VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Cooling Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1340,VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Heating Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1341,VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Defrost Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1342,VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Crankcase Heater Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1343,VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Heat Recovery Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=HeatRecovery:EnergyTransfer [J]
+  OnMeter=General:HeatRecovery:EnergyTransfer [J]
+
+ Meters for 1380,VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Cooling Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1381,VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Heating Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1382,VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Defrost Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1383,VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Crankcase Heater Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1384,VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Heat Recovery Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=HeatRecovery:EnergyTransfer [J]
+  OnMeter=General:HeatRecovery:EnergyTransfer [J]
+
+ Meters for 1385,VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Cooling Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1386,VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Heating Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1387,VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Defrost Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1388,VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Crankcase Heater Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1389,VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Heat Recovery Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=HeatRecovery:EnergyTransfer [J]
+  OnMeter=General:HeatRecovery:EnergyTransfer [J]
+
+ Meters for 1390,VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Cooling Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1391,VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Heating Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1392,VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Defrost Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnMeter=General:Heating:Electricity [J]
+
+ Meters for 1393,VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Crankcase Heater Electricity Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnMeter=General:Cooling:Electricity [J]
+
+ Meters for 1394,VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Heat Recovery Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=HeatRecovery:EnergyTransfer [J]
+  OnMeter=General:HeatRecovery:EnergyTransfer [J]
+
+ Meters for 1395,Site:Environmental Impact Total N2O Emissions Carbon Equivalent Mass [kg]
+  OnMeter=Carbon Equivalent:Facility [kg]
+  OnMeter=CarbonEquivalentEmissions:Carbon Equivalent [kg]
+
+ Meters for 1420,Site:Environmental Impact Total CH4 Emissions Carbon Equivalent Mass [kg]
+  OnMeter=Carbon Equivalent:Facility [kg]
+  OnMeter=CarbonEquivalentEmissions:Carbon Equivalent [kg]
+
+ Meters for 1421,Site:Environmental Impact Total CO2 Emissions Carbon Equivalent Mass [kg]
+  OnMeter=Carbon Equivalent:Facility [kg]
+  OnMeter=CarbonEquivalentEmissions:Carbon Equivalent [kg]
+
+ For Meter=Electricity:Facility [J], ResourceType=Electricity, contents are:
+  BLOCK1:ZONE1:Lights Electricity Energy
+  BLOCK1:ZONE3:Lights Electricity Energy
+  BLOCK1:ZONE5:Lights Electricity Energy
+  BLOCK1:ZONE2:Lights Electricity Energy
+  BLOCK1:ZONE4:Lights Electricity Energy
+  BLOCK1:ZONE1 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE3 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE5 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE2 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE4 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE1 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE1 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE1 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Crankcase Heater Electricity Energy
+
+ For Meter=Electricity:Building [J], ResourceType=Electricity, Group=Building, contents are:
+  BLOCK1:ZONE1:Lights Electricity Energy
+  BLOCK1:ZONE3:Lights Electricity Energy
+  BLOCK1:ZONE5:Lights Electricity Energy
+  BLOCK1:ZONE2:Lights Electricity Energy
+  BLOCK1:ZONE4:Lights Electricity Energy
+  BLOCK1:ZONE1 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE3 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE5 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE2 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE4 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=Electricity:Zone:BLOCK1:ZONE1 [J], ResourceType=Electricity, Group=Zone, contents are:
+  BLOCK1:ZONE1:Lights Electricity Energy
+  BLOCK1:ZONE1 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=Electricity:SpaceType:GENERAL [J], ResourceType=Electricity, Group=SpaceType, contents are:
+  BLOCK1:ZONE1:Lights Electricity Energy
+  BLOCK1:ZONE3:Lights Electricity Energy
+  BLOCK1:ZONE5:Lights Electricity Energy
+  BLOCK1:ZONE2:Lights Electricity Energy
+  BLOCK1:ZONE4:Lights Electricity Energy
+  BLOCK1:ZONE1 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE3 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE5 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE2 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE4 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=InteriorLights:Electricity [J], ResourceType=Electricity, EndUse=InteriorLights, contents are:
+  BLOCK1:ZONE1:Lights Electricity Energy
+  BLOCK1:ZONE3:Lights Electricity Energy
+  BLOCK1:ZONE5:Lights Electricity Energy
+  BLOCK1:ZONE2:Lights Electricity Energy
+  BLOCK1:ZONE4:Lights Electricity Energy
+
+ For Meter=InteriorLights:Electricity:Zone:BLOCK1:ZONE1 [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  BLOCK1:ZONE1:Lights Electricity Energy
+
+ For Meter=InteriorLights:Electricity:SpaceType:GENERAL [J], ResourceType=Electricity, EndUse=InteriorLights, Group=SpaceType, contents are:
+  BLOCK1:ZONE1:Lights Electricity Energy
+  BLOCK1:ZONE3:Lights Electricity Energy
+  BLOCK1:ZONE5:Lights Electricity Energy
+  BLOCK1:ZONE2:Lights Electricity Energy
+  BLOCK1:ZONE4:Lights Electricity Energy
+
+ For Meter=General:InteriorLights:Electricity [J], ResourceType=Electricity, EndUse=InteriorLights, contents are:
+  BLOCK1:ZONE1:Lights Electricity Energy
+  BLOCK1:ZONE3:Lights Electricity Energy
+  BLOCK1:ZONE5:Lights Electricity Energy
+  BLOCK1:ZONE2:Lights Electricity Energy
+  BLOCK1:ZONE4:Lights Electricity Energy
+
+ For Meter=General:InteriorLights:Electricity:Zone:BLOCK1:ZONE1 [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  BLOCK1:ZONE1:Lights Electricity Energy
+
+ For Meter=General:InteriorLights:Electricity:SpaceType:GENERAL [J], ResourceType=Electricity, EndUse=InteriorLights, Group=SpaceType, contents are:
+  BLOCK1:ZONE1:Lights Electricity Energy
+  BLOCK1:ZONE3:Lights Electricity Energy
+  BLOCK1:ZONE5:Lights Electricity Energy
+  BLOCK1:ZONE2:Lights Electricity Energy
+  BLOCK1:ZONE4:Lights Electricity Energy
+
+ For Meter=Electricity:Zone:BLOCK1:ZONE3 [J], ResourceType=Electricity, Group=Zone, contents are:
+  BLOCK1:ZONE3:Lights Electricity Energy
+  BLOCK1:ZONE3 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=InteriorLights:Electricity:Zone:BLOCK1:ZONE3 [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  BLOCK1:ZONE3:Lights Electricity Energy
+
+ For Meter=General:InteriorLights:Electricity:Zone:BLOCK1:ZONE3 [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  BLOCK1:ZONE3:Lights Electricity Energy
+
+ For Meter=Electricity:Zone:BLOCK1:ZONE5 [J], ResourceType=Electricity, Group=Zone, contents are:
+  BLOCK1:ZONE5:Lights Electricity Energy
+  BLOCK1:ZONE5 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=InteriorLights:Electricity:Zone:BLOCK1:ZONE5 [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  BLOCK1:ZONE5:Lights Electricity Energy
+
+ For Meter=General:InteriorLights:Electricity:Zone:BLOCK1:ZONE5 [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  BLOCK1:ZONE5:Lights Electricity Energy
+
+ For Meter=Electricity:Zone:BLOCK1:ZONE2 [J], ResourceType=Electricity, Group=Zone, contents are:
+  BLOCK1:ZONE2:Lights Electricity Energy
+  BLOCK1:ZONE2 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=InteriorLights:Electricity:Zone:BLOCK1:ZONE2 [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  BLOCK1:ZONE2:Lights Electricity Energy
+
+ For Meter=General:InteriorLights:Electricity:Zone:BLOCK1:ZONE2 [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  BLOCK1:ZONE2:Lights Electricity Energy
+
+ For Meter=Electricity:Zone:BLOCK1:ZONE4 [J], ResourceType=Electricity, Group=Zone, contents are:
+  BLOCK1:ZONE4:Lights Electricity Energy
+  BLOCK1:ZONE4 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=InteriorLights:Electricity:Zone:BLOCK1:ZONE4 [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  BLOCK1:ZONE4:Lights Electricity Energy
+
+ For Meter=General:InteriorLights:Electricity:Zone:BLOCK1:ZONE4 [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  BLOCK1:ZONE4:Lights Electricity Energy
+
+ For Meter=InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  BLOCK1:ZONE1 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE3 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE5 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE2 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE4 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=InteriorEquipment:Electricity:Zone:BLOCK1:ZONE1 [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  BLOCK1:ZONE1 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=InteriorEquipment:Electricity:SpaceType:GENERAL [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=SpaceType, contents are:
+  BLOCK1:ZONE1 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE3 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE5 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE2 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+  BLOCK1:ZONE4 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone1#02:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  BLOCK1:ZONE1 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone1#02:InteriorEquipment:Electricity:Zone:BLOCK1:ZONE1 [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  BLOCK1:ZONE1 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone1#02:InteriorEquipment:Electricity:SpaceType:GENERAL [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=SpaceType, contents are:
+  BLOCK1:ZONE1 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=InteriorEquipment:Electricity:Zone:BLOCK1:ZONE3 [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  BLOCK1:ZONE3 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone3#02:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  BLOCK1:ZONE3 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone3#02:InteriorEquipment:Electricity:Zone:BLOCK1:ZONE3 [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  BLOCK1:ZONE3 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone3#02:InteriorEquipment:Electricity:SpaceType:GENERAL [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=SpaceType, contents are:
+  BLOCK1:ZONE3 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=InteriorEquipment:Electricity:Zone:BLOCK1:ZONE5 [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  BLOCK1:ZONE5 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone5#02:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  BLOCK1:ZONE5 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone5#02:InteriorEquipment:Electricity:Zone:BLOCK1:ZONE5 [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  BLOCK1:ZONE5 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone5#02:InteriorEquipment:Electricity:SpaceType:GENERAL [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=SpaceType, contents are:
+  BLOCK1:ZONE5 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=InteriorEquipment:Electricity:Zone:BLOCK1:ZONE2 [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  BLOCK1:ZONE2 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone2#02:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  BLOCK1:ZONE2 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone2#02:InteriorEquipment:Electricity:Zone:BLOCK1:ZONE2 [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  BLOCK1:ZONE2 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone2#02:InteriorEquipment:Electricity:SpaceType:GENERAL [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=SpaceType, contents are:
+  BLOCK1:ZONE2 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=InteriorEquipment:Electricity:Zone:BLOCK1:ZONE4 [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  BLOCK1:ZONE4 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone4#02:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  BLOCK1:ZONE4 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone4#02:InteriorEquipment:Electricity:Zone:BLOCK1:ZONE4 [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  BLOCK1:ZONE4 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=ELECTRIC EQUIPMENT#Block1:Zone4#02:InteriorEquipment:Electricity:SpaceType:GENERAL [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=SpaceType, contents are:
+  BLOCK1:ZONE4 MISCELLANEOUS GAIN 1:Other Equipment Electricity Energy
+
+ For Meter=EnergyTransfer:Facility [J], ResourceType=EnergyTransfer, contents are:
+  BLOCK1:ZONE1:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE1:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE3:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE3:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE5:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE5:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE2:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE2:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE4:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE4:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE1 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Heat Recovery Energy
+
+ For Meter=EnergyTransfer:Building [J], ResourceType=EnergyTransfer, Group=Building, contents are:
+  BLOCK1:ZONE1:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE1:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE3:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE3:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE5:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE5:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE2:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE2:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE4:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE4:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:BLOCK1:ZONE1 [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  BLOCK1:ZONE1:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE1:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=Heating, contents are:
+  BLOCK1:ZONE1:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE3:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE5:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE2:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE4:Zone Air System Sensible Heating Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:BLOCK1:ZONE1 [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  BLOCK1:ZONE1:Zone Air System Sensible Heating Energy
+
+ For Meter=General:Heating:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=Heating, contents are:
+  BLOCK1:ZONE1:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE3:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE5:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE2:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE4:Zone Air System Sensible Heating Energy
+
+ For Meter=General:Heating:EnergyTransfer:Zone:BLOCK1:ZONE1 [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  BLOCK1:ZONE1:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=Cooling, contents are:
+  BLOCK1:ZONE1:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE3:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE5:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE2:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE4:Zone Air System Sensible Cooling Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:BLOCK1:ZONE1 [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  BLOCK1:ZONE1:Zone Air System Sensible Cooling Energy
+
+ For Meter=General:Cooling:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=Cooling, contents are:
+  BLOCK1:ZONE1:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE3:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE5:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE2:Zone Air System Sensible Cooling Energy
+  BLOCK1:ZONE4:Zone Air System Sensible Cooling Energy
+
+ For Meter=General:Cooling:EnergyTransfer:Zone:BLOCK1:ZONE1 [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  BLOCK1:ZONE1:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:BLOCK1:ZONE3 [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  BLOCK1:ZONE3:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE3:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:BLOCK1:ZONE3 [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  BLOCK1:ZONE3:Zone Air System Sensible Heating Energy
+
+ For Meter=General:Heating:EnergyTransfer:Zone:BLOCK1:ZONE3 [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  BLOCK1:ZONE3:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:BLOCK1:ZONE3 [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  BLOCK1:ZONE3:Zone Air System Sensible Cooling Energy
+
+ For Meter=General:Cooling:EnergyTransfer:Zone:BLOCK1:ZONE3 [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  BLOCK1:ZONE3:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:BLOCK1:ZONE5 [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  BLOCK1:ZONE5:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE5:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:BLOCK1:ZONE5 [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  BLOCK1:ZONE5:Zone Air System Sensible Heating Energy
+
+ For Meter=General:Heating:EnergyTransfer:Zone:BLOCK1:ZONE5 [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  BLOCK1:ZONE5:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:BLOCK1:ZONE5 [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  BLOCK1:ZONE5:Zone Air System Sensible Cooling Energy
+
+ For Meter=General:Cooling:EnergyTransfer:Zone:BLOCK1:ZONE5 [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  BLOCK1:ZONE5:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:BLOCK1:ZONE2 [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  BLOCK1:ZONE2:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE2:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:BLOCK1:ZONE2 [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  BLOCK1:ZONE2:Zone Air System Sensible Heating Energy
+
+ For Meter=General:Heating:EnergyTransfer:Zone:BLOCK1:ZONE2 [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  BLOCK1:ZONE2:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:BLOCK1:ZONE2 [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  BLOCK1:ZONE2:Zone Air System Sensible Cooling Energy
+
+ For Meter=General:Cooling:EnergyTransfer:Zone:BLOCK1:ZONE2 [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  BLOCK1:ZONE2:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:BLOCK1:ZONE4 [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  BLOCK1:ZONE4:Zone Air System Sensible Heating Energy
+  BLOCK1:ZONE4:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:BLOCK1:ZONE4 [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  BLOCK1:ZONE4:Zone Air System Sensible Heating Energy
+
+ For Meter=General:Heating:EnergyTransfer:Zone:BLOCK1:ZONE4 [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  BLOCK1:ZONE4:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:BLOCK1:ZONE4 [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  BLOCK1:ZONE4:Zone Air System Sensible Cooling Energy
+
+ For Meter=General:Cooling:EnergyTransfer:Zone:BLOCK1:ZONE4 [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  BLOCK1:ZONE4:Zone Air System Sensible Cooling Energy
+
+ For Meter=ElectricityPurchased:Facility [J], ResourceType=ElectricityPurchased, contents are:
+  Whole Building:Facility Total Purchased Electricity Energy
+
+ For Meter=ElectricityPurchased:Plant [J], ResourceType=ElectricityPurchased, Group=Plant, contents are:
+  Whole Building:Facility Total Purchased Electricity Energy
+
+ For Meter=Cogeneration:ElectricityPurchased [J], ResourceType=ElectricityPurchased, EndUse=Cogeneration, contents are:
+  Whole Building:Facility Total Purchased Electricity Energy
+
+ For Meter=General:Cogeneration:ElectricityPurchased [J], ResourceType=ElectricityPurchased, EndUse=Cogeneration, contents are:
+  Whole Building:Facility Total Purchased Electricity Energy
+
+ For Meter=ElectricitySurplusSold:Facility [J], ResourceType=ElectricitySurplusSold, contents are:
+  Whole Building:Facility Total Surplus Electricity Energy
+
+ For Meter=ElectricitySurplusSold:Plant [J], ResourceType=ElectricitySurplusSold, Group=Plant, contents are:
+  Whole Building:Facility Total Surplus Electricity Energy
+
+ For Meter=Cogeneration:ElectricitySurplusSold [J], ResourceType=ElectricitySurplusSold, EndUse=Cogeneration, contents are:
+  Whole Building:Facility Total Surplus Electricity Energy
+
+ For Meter=General:Cogeneration:ElectricitySurplusSold [J], ResourceType=ElectricitySurplusSold, EndUse=Cogeneration, contents are:
+  Whole Building:Facility Total Surplus Electricity Energy
+
+ For Meter=ElectricityNet:Facility [J], ResourceType=ElectricityNet, contents are:
+  Whole Building:Facility Net Purchased Electricity Energy
+
+ For Meter=ElectricityNet:Plant [J], ResourceType=ElectricityNet, Group=Plant, contents are:
+  Whole Building:Facility Net Purchased Electricity Energy
+
+ For Meter=Cogeneration:ElectricityNet [J], ResourceType=ElectricityNet, EndUse=Cogeneration, contents are:
+  Whole Building:Facility Net Purchased Electricity Energy
+
+ For Meter=General:Cogeneration:ElectricityNet [J], ResourceType=ElectricityNet, EndUse=Cogeneration, contents are:
+  Whole Building:Facility Net Purchased Electricity Energy
+
+ For Meter=Electricity:HVAC [J], ResourceType=Electricity, Group=HVAC, contents are:
+  BLOCK1:ZONE1 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE1 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE1 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Crankcase Heater Electricity Energy
+
+ For Meter=Fans:Electricity [J], ResourceType=Electricity, EndUse=Fans, contents are:
+  BLOCK1:ZONE1 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+
+ For Meter=General:Fans:Electricity [J], ResourceType=Electricity, EndUse=Fans, contents are:
+  BLOCK1:ZONE1 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT SUPPLY FAN:Fan Electricity Energy
+
+ For Meter=EnergyTransfer:HVAC [J], ResourceType=EnergyTransfer, Group=HVAC, contents are:
+  BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE1 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+
+ For Meter=CoolingCoils:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=CoolingCoils, contents are:
+  BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Energy
+
+ For Meter=HeatingCoils:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=HeatingCoils, contents are:
+  BLOCK1:ZONE1 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Energy
+
+ For Meter=Cooling:Electricity [J], ResourceType=Electricity, EndUse=Cooling, contents are:
+  BLOCK1:ZONE1 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Crankcase Heater Electricity Energy
+
+ For Meter=General:Cooling:Electricity [J], ResourceType=Electricity, EndUse=Cooling, contents are:
+  BLOCK1:ZONE1 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT:Zone VRF Air Terminal Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Crankcase Heater Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Cooling Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Crankcase Heater Electricity Energy
+
+ For Meter=Heating:Electricity [J], ResourceType=Electricity, EndUse=Heating, contents are:
+  BLOCK1:ZONE1 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Defrost Electricity Energy
+
+ For Meter=General:Heating:Electricity [J], ResourceType=Electricity, EndUse=Heating, contents are:
+  BLOCK1:ZONE1 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE3 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE5 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE2 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  BLOCK1:ZONE4 VRF INDOOR UNIT:Zone VRF Air Terminal Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Defrost Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Heating Electricity Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Defrost Electricity Energy
+
+ For Meter=EnergyTransfer:Plant [J], ResourceType=EnergyTransfer, Group=Plant, contents are:
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Heat Recovery Energy
+
+ For Meter=HeatRecovery:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=HeatRecovery, contents are:
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Heat Recovery Energy
+
+ For Meter=General:HeatRecovery:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=HeatRecovery, contents are:
+  VRF OUTDOOR UNIT_BLOCK1:ZONE3:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE5:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE2:VRF Heat Pump Heat Recovery Energy
+  VRF OUTDOOR UNIT_BLOCK1:ZONE4:VRF Heat Pump Heat Recovery Energy
+
+ For Meter=Carbon Equivalent:Facility [kg], ResourceType=Carbon Equivalent, contents are:
+  Site:Environmental Impact Total N2O Emissions Carbon Equivalent Mass
+  Site:Environmental Impact Total CH4 Emissions Carbon Equivalent Mass
+  Site:Environmental Impact Total CO2 Emissions Carbon Equivalent Mass
+
+ For Meter=CarbonEquivalentEmissions:Carbon Equivalent [kg], ResourceType=Carbon Equivalent, EndUse=CarbonEquivalentEmissions, contents are:
+  Site:Environmental Impact Total N2O Emissions Carbon Equivalent Mass
+  Site:Environmental Impact Total CH4 Emissions Carbon Equivalent Mass
+  Site:Environmental Impact Total CO2 Emissions Carbon Equivalent Mass

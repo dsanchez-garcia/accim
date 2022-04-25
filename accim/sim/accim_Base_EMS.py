@@ -1115,17 +1115,20 @@ def addOutputVariablesBase(
     #        print([output for output in self.idf1.idfobjects['Output:Variable'] if output.Variable_Name == outputvariable])
 
     for addittionaloutput in addittionaloutputs:
-        self.idf1.newidfobject(
-            'Output:Variable',
-            Key_Value='*',
-            Variable_Name=addittionaloutput,
-            Reporting_Frequency='Hourly',
-            Schedule_Name=''
-            )
-        if verboseMode:
-            print('Added - '+addittionaloutput+' Output:Variable data')
+        if addittionaloutput in outputlist:
+            if verboseMode:
+                print('Not added - '+addittionaloutput+' Output:Variable data')
+        else:
+            self.idf1.newidfobject(
+                'Output:Variable',
+                Key_Value='*',
+                Variable_Name=addittionaloutput,
+                Reporting_Frequency='Hourly',
+                Schedule_Name=''
+                )
+            if verboseMode:
+                print('Added - '+addittionaloutput+' Output:Variable data')
 
-    del outputvariablelist, outputlist, addittionaloutputs,
 
     siteAddOutputs = [
         'Site Outdoor Air Drybulb Temperature',
@@ -1174,15 +1177,19 @@ def addOutputVariablesBase(
     ]
 
     for addittionaloutput in siteAddOutputs:
-        self.idf1.newidfobject(
-            'Output:Variable',
-            Key_Value='Environment',
-            Variable_Name=addittionaloutput,
-            Reporting_Frequency='Hourly',
-            Schedule_Name=''
-            )
-        if verboseMode:
-            print('Added - '+addittionaloutput+' Output:Variable data')
+        if addittionaloutput in outputlist:
+            if verboseMode:
+                print('Not added - '+addittionaloutput+' Output:Variable data')
+        else:
+            self.idf1.newidfobject(
+                'Output:Variable',
+                Key_Value='Environment',
+                Variable_Name=addittionaloutput,
+                Reporting_Frequency='Hourly',
+                Schedule_Name=''
+                )
+            if verboseMode:
+                print('Added - '+addittionaloutput+' Output:Variable data')
 
     for zonename in self.zonenames:
         self.idf1.newidfobject(
@@ -1205,16 +1212,16 @@ def addOutputVariablesBase(
         if verboseMode:
             print('Added - FORSCRIPT_ACST_'+zonename+' Output:Variable data')
 
-    for zonename in self.zonenames_orig:
-        self.idf1.newidfobject(
-            'Output:Variable',
-            Key_Value=zonename,
-            Variable_Name='Zone Operative Temperature',
-            Reporting_Frequency='Hourly',
-            Schedule_Name=''
-            )
-        if verboseMode:
-            print('Added - '+zonename+' Zone Operative Temperature Output:Variable data')
+    # for zonename in self.zonenames_orig:
+    #     self.idf1.newidfobject(
+    #         'Output:Variable',
+    #         Key_Value=zonename,
+    #         Variable_Name='Zone Operative Temperature',
+    #         Reporting_Frequency='Hourly',
+    #         Schedule_Name=''
+    #         )
+    #     if verboseMode:
+    #         print('Added - '+zonename+' Zone Operative Temperature Output:Variable data')
 
     if ScriptType.lower() == 'vrf':
         VRFoutputs = [
@@ -1253,6 +1260,8 @@ def addOutputVariablesBase(
             )
             if verboseMode:
                 print('Added - ' + zonename + ' VRF Indoor Unit DX Heating Coil Output:Variable data')
+
+    del outputvariablelist, outputlist, addittionaloutputs,
 
 
 def addOutputVariablesTimestep(self, verboseMode: bool = True):

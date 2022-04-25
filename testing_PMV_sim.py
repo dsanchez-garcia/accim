@@ -18,14 +18,15 @@ from accim.sim import accis
 #     )
 
 accis.addAccis(
-    ScriptType='vrf',
+    ScriptType='ex_ac',
     Outputs='standard',
     EnergyPlus_version='ep96',
     TempCtrl='pmv',
     AdapStand=[3],
     CAT=[90],
     ComfMod=[3],
-    HVACmode=[2],
-    VentCtrl=[0],
+    # HVACmode=[2],
+    # VentCtrl=[0],
+    NameSuffix='ex_ac'
 )
 

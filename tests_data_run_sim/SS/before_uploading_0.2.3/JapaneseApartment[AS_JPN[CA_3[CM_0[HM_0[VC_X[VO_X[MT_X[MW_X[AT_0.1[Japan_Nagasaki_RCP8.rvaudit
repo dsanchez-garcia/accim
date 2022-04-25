@@ -1,0 +1,13 @@
+ ReadVarsESO
+ processing:C:\Python\accim\tests_data_run_sim\before_uploading_0.2.3\multi_runs\idf_1\in.rvi
+ input file:C:\Python\accim\tests_data_run_sim\before_uploading_0.2.3\JapaneseApartment[AS_JPN[CA_3[CM_0[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[Japan_Nagasaki_RCP8.eso
+ output file:C:\Python\accim\tests_data_run_sim\before_uploading_0.2.3\JapaneseApartment[AS_JPN[CA_3[CM_0[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[Japan_Nagasaki_RCP8.csv
+ getting all vars from:C:\Python\accim\tests_data_run_sim\before_uploading_0.2.3\JapaneseApartment[AS_JPN[CA_3[CM_0[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[Japan_Nagasaki_RCP8.eso
+  number variables requested for output=         115
+ ReadVars Run Time=00hr 00min  4.11sec
+ ReadVarsESO program completed successfully.
+ ReadVarsESO
+ processing:C:\Python\accim\tests_data_run_sim\before_uploading_0.2.3\multi_runs\idf_1\in.mvi
+ Requested ESO file=C:\Python\accim\tests_data_run_sim\before_uploading_0.2.3\JapaneseApartment[AS_JPN[CA_3[CM_0[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[Japan_Nagasaki_RCP8.mtr
+ does not exist.  ReadVarsESO program terminated.
+ ReadVarsESO program terminated.

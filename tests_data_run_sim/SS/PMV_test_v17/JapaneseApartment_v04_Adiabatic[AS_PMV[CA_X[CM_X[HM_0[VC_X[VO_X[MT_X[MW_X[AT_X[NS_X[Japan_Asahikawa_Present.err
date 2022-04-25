@@ -1,0 +1,63 @@
+Program Version,EnergyPlus, Version 9.6.0-f420c06a69, YMD=2022.04.22 11:11,
+   ** Warning ** Timestep: Requested number (2) is less than the suggested minimum of 4.
+   **   ~~~   ** Please see entry for Timestep in Input/Output Reference for discussion of considerations.
+   ************* Beginning Zone Sizing Calculations
+   ** Warning ** GetSurfaceData: Entered Zone Floor Areas differ from calculated Zone Floor Area(s).
+   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual zones.
+   ** Warning ** CalcSurfaceCentroid: 26 Surfaces have the Z coordinate < 0.
+   **   ~~~   ** ...in any calculations, Wind Speed will be 0.0 for these surfaces.
+   **   ~~~   ** ...in any calculations, Outside temperatures will be the outside temperature + 9.750E-003 for these surfaces.
+   **   ~~~   ** ...that is, these surfaces will have conditions as though at ground level.
+   ************* Note that the following warning(s) may/will occur if you have not enclosed your zone completely.
+   ** Warning ** Entered Zone Volumes differ from calculated zone volume(s).
+   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual zones.
+   ** Warning ** CalculateZoneVolume: 1 zone is not fully enclosed. For more details use:  Output:Diagnostics,DisplayExtrawarnings; 
+   ** Warning ** CheckUsedConstructions: There are 9 nominally unused constructions in input.
+   **   ~~~   ** For explicit details on each unused construction, use Output:Diagnostics,DisplayExtraWarnings;
+   ** Severe  ** GetRuntimeLanguageUserInput: EnergyManagementSystem:OutputVariable="Zone Floor Area_Block1_Zone1 invalid field.
+   **   ~~~   ** Invalid EMS Variable Name=ZONEFLOORAREA_BLOCK1_ZONE1
+   **   ~~~   ** EMS variable not found among global variables.
+   ** Severe  ** GetRuntimeLanguageUserInput: EnergyManagementSystem:OutputVariable="Zone Air Volume_Block1_Zone1 invalid field.
+   **   ~~~   ** Invalid EMS Variable Name=ZONEAIRVOLUME_BLOCK1_ZONE1
+   **   ~~~   ** EMS variable not found among global variables.
+   ** Severe  ** GetRuntimeLanguageUserInput: EnergyManagementSystem:OutputVariable="Zone Floor Area_Block1_Zone3 invalid field.
+   **   ~~~   ** Invalid EMS Variable Name=ZONEFLOORAREA_BLOCK1_ZONE3
+   **   ~~~   ** EMS variable not found among global variables.
+   ** Severe  ** GetRuntimeLanguageUserInput: EnergyManagementSystem:OutputVariable="Zone Air Volume_Block1_Zone3 invalid field.
+   **   ~~~   ** Invalid EMS Variable Name=ZONEAIRVOLUME_BLOCK1_ZONE3
+   **   ~~~   ** EMS variable not found among global variables.
+   ** Severe  ** GetRuntimeLanguageUserInput: EnergyManagementSystem:OutputVariable="Zone Floor Area_Block1_Zone5 invalid field.
+   **   ~~~   ** Invalid EMS Variable Name=ZONEFLOORAREA_BLOCK1_ZONE5
+   **   ~~~   ** EMS variable not found among global variables.
+   ** Severe  ** GetRuntimeLanguageUserInput: EnergyManagementSystem:OutputVariable="Zone Air Volume_Block1_Zone5 invalid field.
+   **   ~~~   ** Invalid EMS Variable Name=ZONEAIRVOLUME_BLOCK1_ZONE5
+   **   ~~~   ** EMS variable not found among global variables.
+   ** Severe  ** GetRuntimeLanguageUserInput: EnergyManagementSystem:OutputVariable="Zone Floor Area_Block1_Zone2 invalid field.
+   **   ~~~   ** Invalid EMS Variable Name=ZONEFLOORAREA_BLOCK1_ZONE2
+   **   ~~~   ** EMS variable not found among global variables.
+   ** Severe  ** GetRuntimeLanguageUserInput: EnergyManagementSystem:OutputVariable="Zone Air Volume_Block1_Zone2 invalid field.
+   **   ~~~   ** Invalid EMS Variable Name=ZONEAIRVOLUME_BLOCK1_ZONE2
+   **   ~~~   ** EMS variable not found among global variables.
+   ** Severe  ** GetRuntimeLanguageUserInput: EnergyManagementSystem:OutputVariable="Zone Floor Area_Block1_Zone4 invalid field.
+   **   ~~~   ** Invalid EMS Variable Name=ZONEFLOORAREA_BLOCK1_ZONE4
+   **   ~~~   ** EMS variable not found among global variables.
+   ** Severe  ** GetRuntimeLanguageUserInput: EnergyManagementSystem:OutputVariable="Zone Air Volume_Block1_Zone4 invalid field.
+   **   ~~~   ** Invalid EMS Variable Name=ZONEAIRVOLUME_BLOCK1_ZONE4
+   **   ~~~   ** EMS variable not found among global variables.
+   **  Fatal  ** Errors found in getting EMS Runtime Language input. Preceding condition causes termination.
+   ...Summary of Errors that led to program termination:
+   ..... Reference severe error count=10
+   ..... Last severe error=GetRuntimeLanguageUserInput: EnergyManagementSystem:OutputVariable="Zone Air Volume_Block1_Zone4 invalid field.
+   ************* Warning:  Node connection errors not checked - most system input has not been read (see previous warning).
+   ************* Fatal error -- final processing.  Program exited before simulations began.  See previous error messages.
+   *************
+   ************* ===== Final Error Summary =====
+   ************* The following error categories occurred.  Consider correcting or noting.
+   ************* Nominally Unused Constructions
+   ************* ..The nominally unused constructions warning is provided to alert you to potential conditions that can cause
+   ************* ..extra time during simulation. Each construction is calculated by the algorithm indicated in the HeatBalanceAlgorithm
+   ************* ..object. You may remove the constructions indicated (when you use the DisplayExtraWarnings option).
+   *************
+   ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Sizing Error Summary. During Sizing: 5 Warning; 10 Severe Errors.
+   ************* EnergyPlus Terminated--Fatal Error Detected. 6 Warning; 10 Severe Errors; Elapsed Time=00hr 00min  0.17sec

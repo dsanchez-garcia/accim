@@ -1,0 +1,162 @@
+Program Version,EnergyPlus, Version 9.6.0-f420c06a69, YMD=2022.04.25 09:14
+1,5,Environment Title[],Latitude[deg],Longitude[deg],Time Zone[],Elevation[m]
+2,8,Day of Simulation[],Month[],Day of Month[],DST Indicator[1=yes 0=no],Hour[],StartMinute[],EndMinute[],DayType
+3,5,Cumulative Day of Simulation[],Month[],Day of Month[],DST Indicator[1=yes 0=no],DayType  ! When Daily Report Variables Requested
+4,2,Cumulative Days of Simulation[],Month[]  ! When Monthly Report Variables Requested
+5,1,Cumulative Days of Simulation[] ! When Run Period Report Variables Requested
+6,1,Calendar Year of Simulation[] ! When Annual Report Variables Requested
+7,1,Environment,Site Outdoor Air Drybulb Temperature [C] !Hourly
+8,1,Environment,Site Outdoor Air Dewpoint Temperature [C] !Hourly
+9,1,Environment,Site Outdoor Air Relative Humidity [%] !Hourly
+10,1,Environment,Site Outdoor Air Barometric Pressure [Pa] !Hourly
+11,1,Environment,Site Wind Speed [m/s] !Hourly
+12,1,Environment,Site Wind Direction [deg] !Hourly
+13,1,Environment,Site Diffuse Solar Radiation Rate per Area [W/m2] !Hourly
+14,1,Environment,Site Direct Solar Radiation Rate per Area [W/m2] !Hourly
+15,1,Environment,Site Solar Azimuth Angle [deg] !Hourly
+16,1,Environment,Site Solar Altitude Angle [deg] !Hourly
+17,1,BLOCK1:ZONE1,Zone Total Internal Latent Gain Energy [J] !Hourly
+18,1,BLOCK1:ZONE3,Zone Total Internal Latent Gain Energy [J] !Hourly
+19,1,BLOCK1:ZONE5,Zone Total Internal Latent Gain Energy [J] !Hourly
+20,1,BLOCK1:ZONE2,Zone Total Internal Latent Gain Energy [J] !Hourly
+21,1,BLOCK1:ZONE4,Zone Total Internal Latent Gain Energy [J] !Hourly
+22,1,BLOCK1:ZONE1,Zone People Sensible Heating Rate [W] !Hourly
+23,1,BLOCK1:ZONE3,Zone People Sensible Heating Rate [W] !Hourly
+24,1,BLOCK1:ZONE5,Zone People Sensible Heating Rate [W] !Hourly
+25,1,BLOCK1:ZONE2,Zone People Sensible Heating Rate [W] !Hourly
+26,1,BLOCK1:ZONE4,Zone People Sensible Heating Rate [W] !Hourly
+27,1,BLOCK1:ZONE1,Lights Total Heating Rate [W] !Hourly
+149,1,BLOCK1:ZONE3,Lights Total Heating Rate [W] !Hourly
+187,1,BLOCK1:ZONE5,Lights Total Heating Rate [W] !Hourly
+225,1,BLOCK1:ZONE2,Lights Total Heating Rate [W] !Hourly
+263,1,BLOCK1:ZONE4,Lights Total Heating Rate [W] !Hourly
+301,1,BLOCK1:ZONE1,Zone Lights Electricity Rate [W] !Hourly
+302,1,BLOCK1:ZONE3,Zone Lights Electricity Rate [W] !Hourly
+303,1,BLOCK1:ZONE5,Zone Lights Electricity Rate [W] !Hourly
+304,1,BLOCK1:ZONE2,Zone Lights Electricity Rate [W] !Hourly
+305,1,BLOCK1:ZONE4,Zone Lights Electricity Rate [W] !Hourly
+379,1,BLOCK1:ZONE1 MISCELLANEOUS GAIN 1,Other Equipment Total Heating Rate [W] !Hourly
+429,1,BLOCK1:ZONE3 MISCELLANEOUS GAIN 1,Other Equipment Total Heating Rate [W] !Hourly
+479,1,BLOCK1:ZONE5 MISCELLANEOUS GAIN 1,Other Equipment Total Heating Rate [W] !Hourly
+529,1,BLOCK1:ZONE2 MISCELLANEOUS GAIN 1,Other Equipment Total Heating Rate [W] !Hourly
+579,1,BLOCK1:ZONE4 MISCELLANEOUS GAIN 1,Other Equipment Total Heating Rate [W] !Hourly
+580,1,BLOCK1:ZONE1,Zone Other Equipment Total Heating Rate [W] !Hourly
+581,1,BLOCK1:ZONE3,Zone Other Equipment Total Heating Rate [W] !Hourly
+582,1,BLOCK1:ZONE5,Zone Other Equipment Total Heating Rate [W] !Hourly
+583,1,BLOCK1:ZONE2,Zone Other Equipment Total Heating Rate [W] !Hourly
+584,1,BLOCK1:ZONE4,Zone Other Equipment Total Heating Rate [W] !Hourly
+585,1,EMS,Comfort Temperature [C] !Hourly
+586,1,EMS,Adaptive Cooling Setpoint Temperature [C] !Hourly
+587,1,EMS,Adaptive Heating Setpoint Temperature [C] !Hourly
+588,1,EMS,Adaptive Cooling Setpoint Temperature_No Tolerance [C] !Hourly
+589,1,EMS,Adaptive Heating Setpoint Temperature_No Tolerance [C] !Hourly
+590,1,EMS,Comfortable Hours_No Applicability_BLOCK1_ZONE1 [H] !Hourly
+591,1,EMS,Comfortable Hours_No Applicability_BLOCK1_ZONE3 [H] !Hourly
+592,1,EMS,Comfortable Hours_No Applicability_BLOCK1_ZONE5 [H] !Hourly
+593,1,EMS,Comfortable Hours_No Applicability_BLOCK1_ZONE2 [H] !Hourly
+594,1,EMS,Comfortable Hours_No Applicability_BLOCK1_ZONE4 [H] !Hourly
+595,1,EMS,Comfortable Hours_Applicability_BLOCK1_ZONE1 [H] !Hourly
+596,1,EMS,Comfortable Hours_Applicability_BLOCK1_ZONE3 [H] !Hourly
+597,1,EMS,Comfortable Hours_Applicability_BLOCK1_ZONE5 [H] !Hourly
+598,1,EMS,Comfortable Hours_Applicability_BLOCK1_ZONE2 [H] !Hourly
+599,1,EMS,Comfortable Hours_Applicability_BLOCK1_ZONE4 [H] !Hourly
+600,1,EMS,Discomfortable Applicable Hot Hours_BLOCK1_ZONE1 [H] !Hourly
+601,1,EMS,Discomfortable Applicable Hot Hours_BLOCK1_ZONE3 [H] !Hourly
+602,1,EMS,Discomfortable Applicable Hot Hours_BLOCK1_ZONE5 [H] !Hourly
+603,1,EMS,Discomfortable Applicable Hot Hours_BLOCK1_ZONE2 [H] !Hourly
+604,1,EMS,Discomfortable Applicable Hot Hours_BLOCK1_ZONE4 [H] !Hourly
+605,1,EMS,Discomfortable Applicable Cold Hours_BLOCK1_ZONE1 [H] !Hourly
+606,1,EMS,Discomfortable Applicable Cold Hours_BLOCK1_ZONE3 [H] !Hourly
+607,1,EMS,Discomfortable Applicable Cold Hours_BLOCK1_ZONE5 [H] !Hourly
+608,1,EMS,Discomfortable Applicable Cold Hours_BLOCK1_ZONE2 [H] !Hourly
+609,1,EMS,Discomfortable Applicable Cold Hours_BLOCK1_ZONE4 [H] !Hourly
+610,1,EMS,Discomfortable Non Applicable Hot Hours_BLOCK1_ZONE1 [H] !Hourly
+611,1,EMS,Discomfortable Non Applicable Hot Hours_BLOCK1_ZONE3 [H] !Hourly
+612,1,EMS,Discomfortable Non Applicable Hot Hours_BLOCK1_ZONE5 [H] !Hourly
+613,1,EMS,Discomfortable Non Applicable Hot Hours_BLOCK1_ZONE2 [H] !Hourly
+614,1,EMS,Discomfortable Non Applicable Hot Hours_BLOCK1_ZONE4 [H] !Hourly
+615,1,EMS,Discomfortable Non Applicable Cold Hours_BLOCK1_ZONE1 [H] !Hourly
+616,1,EMS,Discomfortable Non Applicable Cold Hours_BLOCK1_ZONE3 [H] !Hourly
+617,1,EMS,Discomfortable Non Applicable Cold Hours_BLOCK1_ZONE5 [H] !Hourly
+618,1,EMS,Discomfortable Non Applicable Cold Hours_BLOCK1_ZONE2 [H] !Hourly
+619,1,EMS,Discomfortable Non Applicable Cold Hours_BLOCK1_ZONE4 [H] !Hourly
+620,1,EMS,Zone Floor Area_BLOCK1_ZONE1 [m2] !Hourly
+621,1,EMS,Zone Floor Area_BLOCK1_ZONE3 [m2] !Hourly
+622,1,EMS,Zone Floor Area_BLOCK1_ZONE5 [m2] !Hourly
+623,1,EMS,Zone Floor Area_BLOCK1_ZONE2 [m2] !Hourly
+624,1,EMS,Zone Floor Area_BLOCK1_ZONE4 [m2] !Hourly
+625,1,EMS,Zone Air Volume_BLOCK1_ZONE1 [m3] !Hourly
+626,1,EMS,Zone Air Volume_BLOCK1_ZONE3 [m3] !Hourly
+627,1,EMS,Zone Air Volume_BLOCK1_ZONE5 [m3] !Hourly
+628,1,EMS,Zone Air Volume_BLOCK1_ZONE2 [m3] !Hourly
+629,1,EMS,Zone Air Volume_BLOCK1_ZONE4 [m3] !Hourly
+630,1,BLOCK1:ZONE1,Zone Mean Radiant Temperature [C] !Hourly,ON
+631,1,BLOCK1:ZONE3,Zone Mean Radiant Temperature [C] !Hourly,ON
+632,1,BLOCK1:ZONE5,Zone Mean Radiant Temperature [C] !Hourly,ON
+633,1,BLOCK1:ZONE2,Zone Mean Radiant Temperature [C] !Hourly,ON
+634,1,BLOCK1:ZONE4,Zone Mean Radiant Temperature [C] !Hourly,ON
+635,1,BLOCK1:ZONE1,Zone Windows Total Transmitted Solar Radiation Rate [W] !Hourly
+636,1,BLOCK1:ZONE1,Zone Interior Windows Total Transmitted Beam Solar Radiation Rate [W] !Hourly
+637,1,BLOCK1:ZONE1,Zone Interior Windows Total Transmitted Diffuse Solar Radiation Rate [W] !Hourly
+638,1,BLOCK1:ZONE3,Zone Windows Total Transmitted Solar Radiation Rate [W] !Hourly
+639,1,BLOCK1:ZONE3,Zone Interior Windows Total Transmitted Beam Solar Radiation Rate [W] !Hourly
+640,1,BLOCK1:ZONE3,Zone Interior Windows Total Transmitted Diffuse Solar Radiation Rate [W] !Hourly
+641,1,BLOCK1:ZONE5,Zone Windows Total Transmitted Solar Radiation Rate [W] !Hourly
+642,1,BLOCK1:ZONE5,Zone Interior Windows Total Transmitted Beam Solar Radiation Rate [W] !Hourly
+643,1,BLOCK1:ZONE5,Zone Interior Windows Total Transmitted Diffuse Solar Radiation Rate [W] !Hourly
+644,1,BLOCK1:ZONE2,Zone Windows Total Transmitted Solar Radiation Rate [W] !Hourly
+645,1,BLOCK1:ZONE2,Zone Interior Windows Total Transmitted Beam Solar Radiation Rate [W] !Hourly
+646,1,BLOCK1:ZONE2,Zone Interior Windows Total Transmitted Diffuse Solar Radiation Rate [W] !Hourly
+647,1,BLOCK1:ZONE4,Zone Windows Total Transmitted Solar Radiation Rate [W] !Hourly
+648,1,BLOCK1:ZONE4,Zone Interior Windows Total Transmitted Beam Solar Radiation Rate [W] !Hourly
+649,1,BLOCK1:ZONE4,Zone Interior Windows Total Transmitted Diffuse Solar Radiation Rate [W] !Hourly
+650,1,BLOCK1:ZONE1,Zone Mean Air Temperature [C] !Hourly,ON
+651,1,BLOCK1:ZONE1,Zone Operative Temperature [C] !Hourly
+652,1,BLOCK1:ZONE1,Zone Operative Temperature [C] !Hourly,ON
+653,1,BLOCK1:ZONE1,Zone Operative Temperature [C] !Hourly
+654,1,BLOCK1:ZONE3,Zone Mean Air Temperature [C] !Hourly,ON
+655,1,BLOCK1:ZONE3,Zone Operative Temperature [C] !Hourly
+656,1,BLOCK1:ZONE3,Zone Operative Temperature [C] !Hourly,ON
+657,1,BLOCK1:ZONE3,Zone Operative Temperature [C] !Hourly
+658,1,BLOCK1:ZONE5,Zone Mean Air Temperature [C] !Hourly,ON
+659,1,BLOCK1:ZONE5,Zone Operative Temperature [C] !Hourly
+660,1,BLOCK1:ZONE5,Zone Operative Temperature [C] !Hourly,ON
+661,1,BLOCK1:ZONE5,Zone Operative Temperature [C] !Hourly
+662,1,BLOCK1:ZONE2,Zone Mean Air Temperature [C] !Hourly,ON
+663,1,BLOCK1:ZONE2,Zone Operative Temperature [C] !Hourly
+664,1,BLOCK1:ZONE2,Zone Operative Temperature [C] !Hourly,ON
+665,1,BLOCK1:ZONE2,Zone Operative Temperature [C] !Hourly
+666,1,BLOCK1:ZONE4,Zone Mean Air Temperature [C] !Hourly,ON
+667,1,BLOCK1:ZONE4,Zone Operative Temperature [C] !Hourly
+668,1,BLOCK1:ZONE4,Zone Operative Temperature [C] !Hourly,ON
+669,1,BLOCK1:ZONE4,Zone Operative Temperature [C] !Hourly
+670,1,BLOCK1:ZONE1,AFN Zone Infiltration Sensible Heat Gain Rate [W] !Hourly
+671,1,BLOCK1:ZONE1,AFN Zone Mixing Sensible Heat Gain Rate [W] !Hourly
+672,1,BLOCK1:ZONE1,AFN Zone Infiltration Sensible Heat Loss Rate [W] !Hourly
+673,1,BLOCK1:ZONE1,AFN Zone Mixing Sensible Heat Loss Rate [W] !Hourly
+674,1,BLOCK1:ZONE3,AFN Zone Infiltration Sensible Heat Gain Rate [W] !Hourly
+675,1,BLOCK1:ZONE3,AFN Zone Mixing Sensible Heat Gain Rate [W] !Hourly
+676,1,BLOCK1:ZONE3,AFN Zone Infiltration Sensible Heat Loss Rate [W] !Hourly
+677,1,BLOCK1:ZONE3,AFN Zone Mixing Sensible Heat Loss Rate [W] !Hourly
+678,1,BLOCK1:ZONE5,AFN Zone Infiltration Sensible Heat Gain Rate [W] !Hourly
+679,1,BLOCK1:ZONE5,AFN Zone Mixing Sensible Heat Gain Rate [W] !Hourly
+680,1,BLOCK1:ZONE5,AFN Zone Infiltration Sensible Heat Loss Rate [W] !Hourly
+681,1,BLOCK1:ZONE5,AFN Zone Mixing Sensible Heat Loss Rate [W] !Hourly
+682,1,BLOCK1:ZONE2,AFN Zone Infiltration Sensible Heat Gain Rate [W] !Hourly
+683,1,BLOCK1:ZONE2,AFN Zone Mixing Sensible Heat Gain Rate [W] !Hourly
+684,1,BLOCK1:ZONE2,AFN Zone Infiltration Sensible Heat Loss Rate [W] !Hourly
+685,1,BLOCK1:ZONE2,AFN Zone Mixing Sensible Heat Loss Rate [W] !Hourly
+686,1,BLOCK1:ZONE4,AFN Zone Infiltration Sensible Heat Gain Rate [W] !Hourly
+687,1,BLOCK1:ZONE4,AFN Zone Mixing Sensible Heat Gain Rate [W] !Hourly
+688,1,BLOCK1:ZONE4,AFN Zone Infiltration Sensible Heat Loss Rate [W] !Hourly
+689,1,BLOCK1:ZONE4,AFN Zone Mixing Sensible Heat Loss Rate [W] !Hourly
+690,1,BLOCK1:ZONE1,AFN Zone Infiltration Volume [m3] !Hourly
+691,1,BLOCK1:ZONE1,AFN Zone Infiltration Air Change Rate [ach] !Hourly
+692,1,BLOCK1:ZONE3,AFN Zone Infiltration Volume [m3] !Hourly
+693,1,BLOCK1:ZONE3,AFN Zone Infiltration Air Change Rate [ach] !Hourly
+694,1,BLOCK1:ZONE5,AFN Zone Infiltration Volume [m3] !Hourly
+695,1,BLOCK1:ZONE5,AFN Zone Infiltration Air Change Rate [ach] !Hourly
+696,1,BLOCK1:ZONE2,AFN Zone Infiltration Volume [m3] !Hourly
+697,1,BLOCK1:ZONE2,AFN Zone Infiltration Air Change Rate [ach] !Hourly
+698,1,BLOCK1:ZONE4,AFN Zone Infiltration Volume [m3] !Hourly
+699,1,BLOCK1:ZONE4,AFN Zone Infiltration Air Change Rate [ach] !Hourly

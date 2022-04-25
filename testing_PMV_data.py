@@ -16,7 +16,7 @@ totalcsv = csvfiles + csvfiles_2
 
 z = Table(
     # todo con csvfiles_2, es decir, pmv, hay que reemplazar : por _; averiguar por qué
-    datasets=CSVfile,
+    # datasets=CSVfile,
     frequency='runperiod',
     sum_or_mean='sum',
     standard_outputs=True,
@@ -25,7 +25,7 @@ z = Table(
     split_epw_names=True,
     normalised_energy_units=True,
 )
-# z.df.to_excel('to be deleted_hourly.xlsx')
+z.df.to_excel('to be deleted.xlsx')
 
 # print(*z.df.columns, sep="\n")
 

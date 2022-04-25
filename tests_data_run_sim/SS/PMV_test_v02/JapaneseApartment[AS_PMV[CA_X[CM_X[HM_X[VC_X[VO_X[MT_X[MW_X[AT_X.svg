@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<svg width="250mm" height="200mm" viewBox="0 0 2500 1500"
+     xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:ev="http://www.w3.org/2001/xml-events">
+<g font-family="Verdana" font-size="8">
+  <rect x="950" y="20" width="200" height="20" style="fill:chartreuse; stroke: black;"/>1
+  <text x="952" y="33">BLOCK1:ZONE1</text>
+  <rect x="700" y="20" width="200" height="20" style="fill:silver; stroke: black;"/>16
+  <text  x="702" y="28">BLOCK1:ZONE1 VRF INDOOR UNIT SUPPLY
+  <tspan x="702" y="36">FAN</tspan></text>
+  <rect x="700" y="100" width="200" height="20" style="fill:silver; stroke: black;"/>17
+  <text  x="702" y="108">BLOCK1:ZONE3 VRF INDOOR UNIT SUPPLY
+  <tspan x="702" y="116">FAN</tspan></text>
+  <rect x="700" y="180" width="200" height="20" style="fill:silver; stroke: black;"/>18
+  <text  x="702" y="188">BLOCK1:ZONE5 VRF INDOOR UNIT SUPPLY
+  <tspan x="702" y="196">FAN</tspan></text>
+  <rect x="700" y="260" width="200" height="20" style="fill:silver; stroke: black;"/>19
+  <text  x="702" y="268">BLOCK1:ZONE2 VRF INDOOR UNIT SUPPLY
+  <tspan x="702" y="276">FAN</tspan></text>
+  <rect x="700" y="340" width="200" height="20" style="fill:silver; stroke: black;"/>20
+  <text  x="702" y="348">BLOCK1:ZONE4 VRF INDOOR UNIT SUPPLY
+  <tspan x="702" y="356">FAN</tspan></text>
+  <rect x="200" y="20" width="200" height="20" style="fill:aliceblue; stroke: black;"/>21
+  <text  x="202" y="28">BLOCK1:ZONE1 VRF INDOOR UNIT DX
+  <tspan x="202" y="36">COOLING COIL</tspan></text>
+  <rect x="200" y="100" width="200" height="20" style="fill:aliceblue; stroke: black;"/>22
+  <text  x="202" y="108">BLOCK1:ZONE3 VRF INDOOR UNIT DX
+  <tspan x="202" y="116">COOLING COIL</tspan></text>
+  <rect x="200" y="180" width="200" height="20" style="fill:aliceblue; stroke: black;"/>23
+  <text  x="202" y="188">BLOCK1:ZONE5 VRF INDOOR UNIT DX
+  <tspan x="202" y="196">COOLING COIL</tspan></text>
+  <rect x="200" y="260" width="200" height="20" style="fill:aliceblue; stroke: black;"/>24
+  <text  x="202" y="268">BLOCK1:ZONE2 VRF INDOOR UNIT DX
+  <tspan x="202" y="276">COOLING COIL</tspan></text>
+  <rect x="200" y="340" width="200" height="20" style="fill:aliceblue; stroke: black;"/>25
+  <text  x="202" y="348">BLOCK1:ZONE4 VRF INDOOR UNIT DX
+  <tspan x="202" y="356">COOLING COIL</tspan></text>
+  <rect x="450" y="20" width="200" height="20" style="fill:aliceblue; stroke: black;"/>26
+  <text  x="452" y="28">BLOCK1:ZONE1 VRF INDOOR UNIT DX
+  <tspan x="452" y="36">HEATING COIL</tspan></text>
+  <rect x="450" y="100" width="200" height="20" style="fill:aliceblue; stroke: black;"/>27
+  <text  x="452" y="108">BLOCK1:ZONE3 VRF INDOOR UNIT DX
+  <tspan x="452" y="116">HEATING COIL</tspan></text>
+  <rect x="450" y="180" width="200" height="20" style="fill:aliceblue; stroke: black;"/>28
+  <text  x="452" y="188">BLOCK1:ZONE5 VRF INDOOR UNIT DX
+  <tspan x="452" y="196">HEATING COIL</tspan></text>
+  <rect x="450" y="260" width="200" height="20" style="fill:aliceblue; stroke: black;"/>29
+  <text  x="452" y="268">BLOCK1:ZONE2 VRF INDOOR UNIT DX
+  <tspan x="452" y="276">HEATING COIL</tspan></text>
+  <rect x="450" y="340" width="200" height="20" style="fill:aliceblue; stroke: black;"/>30
+  <text  x="452" y="348">BLOCK1:ZONE4 VRF INDOOR UNIT DX
+  <tspan x="452" y="356">HEATING COIL</tspan></text>
+  <rect x="950" y="100" width="200" height="20" style="fill:chartreuse; stroke: black;"/>31
+  <text x="952" y="113">BLOCK1:ZONE3</text>
+  <rect x="950" y="180" width="200" height="20" style="fill:chartreuse; stroke: black;"/>32
+  <text x="952" y="193">BLOCK1:ZONE5</text>
+  <rect x="950" y="260" width="200" height="20" style="fill:chartreuse; stroke: black;"/>33
+  <text x="952" y="273">BLOCK1:ZONE2</text>
+  <rect x="950" y="340" width="200" height="20" style="fill:chartreuse; stroke: black;"/>34
+  <text x="952" y="353">BLOCK1:ZONE4</text>
+  <line x1="900" y1="30" x2="950" y2="30" style="stroke:black;"/>
+  <line x1="900" y1="110" x2="950" y2="110" style="stroke:black;"/>
+  <line x1="900" y1="190" x2="950" y2="190" style="stroke:black;"/>
+  <line x1="900" y1="270" x2="950" y2="270" style="stroke:black;"/>
+  <line x1="900" y1="350" x2="950" y2="350" style="stroke:black;"/>
+  <line x1="400" y1="30" x2="450" y2="30" style="stroke:black;"/>
+  <line x1="400" y1="110" x2="450" y2="110" style="stroke:black;"/>
+  <line x1="400" y1="190" x2="450" y2="190" style="stroke:black;"/>
+  <line x1="400" y1="270" x2="450" y2="270" style="stroke:black;"/>
+  <line x1="400" y1="350" x2="450" y2="350" style="stroke:black;"/>
+  <line x1="650" y1="30" x2="700" y2="30" style="stroke:black;"/>
+  <line x1="650" y1="110" x2="700" y2="110" style="stroke:black;"/>
+  <line x1="650" y1="190" x2="700" y2="190" style="stroke:black;"/>
+  <line x1="650" y1="270" x2="700" y2="270" style="stroke:black;"/>
+  <line x1="650" y1="350" x2="700" y2="350" style="stroke:black;"/>
+  <line x1="200" y1="30" x2="175" y2="30" style="stroke:black;"/>
+  <line x1="175" y1="30" x2="175" y2="0" style="stroke:black;"/>
+  <line x1="175" y1="0" x2="1175" y2="0" style="stroke:black;"/>
+  <line x1="1175" y1="0" x2="1175" y2="30" style="stroke:black;"/>
+  <line x1="1175" y1="30" x2="1150" y2="30" style="stroke:black;"/>
+  <line x1="200" y1="110" x2="175" y2="110" style="stroke:black;"/>
+  <line x1="175" y1="110" x2="175" y2="80" style="stroke:black;"/>
+  <line x1="175" y1="80" x2="1175" y2="80" style="stroke:black;"/>
+  <line x1="1175" y1="80" x2="1175" y2="110" style="stroke:black;"/>
+  <line x1="1175" y1="110" x2="1150" y2="110" style="stroke:black;"/>
+  <line x1="200" y1="190" x2="175" y2="190" style="stroke:black;"/>
+  <line x1="175" y1="190" x2="175" y2="160" style="stroke:black;"/>
+  <line x1="175" y1="160" x2="1175" y2="160" style="stroke:black;"/>
+  <line x1="1175" y1="160" x2="1175" y2="190" style="stroke:black;"/>
+  <line x1="1175" y1="190" x2="1150" y2="190" style="stroke:black;"/>
+  <line x1="200" y1="270" x2="175" y2="270" style="stroke:black;"/>
+  <line x1="175" y1="270" x2="175" y2="240" style="stroke:black;"/>
+  <line x1="175" y1="240" x2="1175" y2="240" style="stroke:black;"/>
+  <line x1="1175" y1="240" x2="1175" y2="270" style="stroke:black;"/>
+  <line x1="1175" y1="270" x2="1150" y2="270" style="stroke:black;"/>
+  <line x1="200" y1="350" x2="175" y2="350" style="stroke:black;"/>
+  <line x1="175" y1="350" x2="175" y2="320" style="stroke:black;"/>
+  <line x1="175" y1="320" x2="1175" y2="320" style="stroke:black;"/>
+  <line x1="1175" y1="320" x2="1175" y2="350" style="stroke:black;"/>
+  <line x1="1175" y1="350" x2="1150" y2="350" style="stroke:black;"/>
+  <text x="200" y="400">Unused Non-Parent Objects:</text>
+  <text x="220" y="420">OutdoorAir:NodeList</text>
+  <text x="220" y="440">OutdoorAir:NodeList</text>
+  <text x="220" y="460">OutdoorAir:NodeList</text>
+  <text x="220" y="480">OutdoorAir:NodeList</text>
+  <text x="220" y="500">OutdoorAir:NodeList</text>
+  <text x="220" y="520">VRF OUTDOOR UNIT_BLOCK1:ZONE1</text>
+  <text x="220" y="540">VRF OUTDOOR UNIT_BLOCK1:ZONE3</text>
+  <text x="220" y="560">VRF OUTDOOR UNIT_BLOCK1:ZONE5</text>
+  <text x="220" y="580">VRF OUTDOOR UNIT_BLOCK1:ZONE2</text>
+  <text x="220" y="600">VRF OUTDOOR UNIT_BLOCK1:ZONE4</text>
+  <text x="200" y="640">
+The following are not supported: objects related to controls or ZoneHVAC:IdealLoadsAirSystem</text>
+</g>
+</svg>

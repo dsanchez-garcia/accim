@@ -194,6 +194,7 @@ def addAccis(
             z.checkVentIsOn(verboseMode=verboseMode)
             z.addForscriptSchVRFsystem(verboseMode=verboseMode)
         elif 'ex' in ScriptType.lower():
+            # todo check if PMV can work with ex_ac
             z.addForscriptSchExistHVAC(verboseMode=verboseMode)
 
         z.addEMSProgramsBase(ScriptType=ScriptType, verboseMode=verboseMode)

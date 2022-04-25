@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<svg width="250mm" height="200mm" viewBox="0 0 2500 1500"
+     xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xmlns:ev="http://www.w3.org/2001/xml-events">
+<g font-family="Verdana" font-size="8">
+  <rect x="950" y="20" width="200" height="20" style="fill:chartreuse; stroke: black;"/>1
+  <text x="952" y="33">BLOCK1:ZONE2</text>
+  <rect x="700" y="20" width="200" height="20" style="fill:silver; stroke: black;"/>7
+  <text  x="702" y="28">BLOCK1:ZONE2 VRF INDOOR UNIT SUPPLY
+  <tspan x="702" y="36">FAN</tspan></text>
+  <rect x="700" y="100" width="200" height="20" style="fill:silver; stroke: black;"/>8
+  <text  x="702" y="108">BLOCK1:ZONE1 VRF INDOOR UNIT SUPPLY
+  <tspan x="702" y="116">FAN</tspan></text>
+  <rect x="200" y="20" width="200" height="20" style="fill:aliceblue; stroke: black;"/>9
+  <text  x="202" y="28">BLOCK1:ZONE2 VRF INDOOR UNIT DX
+  <tspan x="202" y="36">COOLING COIL</tspan></text>
+  <rect x="200" y="100" width="200" height="20" style="fill:aliceblue; stroke: black;"/>10
+  <text  x="202" y="108">BLOCK1:ZONE1 VRF INDOOR UNIT DX
+  <tspan x="202" y="116">COOLING COIL</tspan></text>
+  <rect x="450" y="20" width="200" height="20" style="fill:aliceblue; stroke: black;"/>11
+  <text  x="452" y="28">BLOCK1:ZONE2 VRF INDOOR UNIT DX
+  <tspan x="452" y="36">HEATING COIL</tspan></text>
+  <rect x="450" y="100" width="200" height="20" style="fill:aliceblue; stroke: black;"/>12
+  <text  x="452" y="108">BLOCK1:ZONE1 VRF INDOOR UNIT DX
+  <tspan x="452" y="116">HEATING COIL</tspan></text>
+  <rect x="950" y="100" width="200" height="20" style="fill:chartreuse; stroke: black;"/>13
+  <text x="952" y="113">BLOCK1:ZONE1</text>
+  <line x1="900" y1="30" x2="950" y2="30" style="stroke:black;"/>
+  <line x1="900" y1="110" x2="950" y2="110" style="stroke:black;"/>
+  <line x1="400" y1="30" x2="450" y2="30" style="stroke:black;"/>
+  <line x1="400" y1="110" x2="450" y2="110" style="stroke:black;"/>
+  <line x1="650" y1="30" x2="700" y2="30" style="stroke:black;"/>
+  <line x1="650" y1="110" x2="700" y2="110" style="stroke:black;"/>
+  <line x1="200" y1="30" x2="175" y2="30" style="stroke:black;"/>
+  <line x1="175" y1="30" x2="175" y2="0" style="stroke:black;"/>
+  <line x1="175" y1="0" x2="1175" y2="0" style="stroke:black;"/>
+  <line x1="1175" y1="0" x2="1175" y2="30" style="stroke:black;"/>
+  <line x1="1175" y1="30" x2="1150" y2="30" style="stroke:black;"/>
+  <line x1="200" y1="110" x2="175" y2="110" style="stroke:black;"/>
+  <line x1="175" y1="110" x2="175" y2="80" style="stroke:black;"/>
+  <line x1="175" y1="80" x2="1175" y2="80" style="stroke:black;"/>
+  <line x1="1175" y1="80" x2="1175" y2="110" style="stroke:black;"/>
+  <line x1="1175" y1="110" x2="1150" y2="110" style="stroke:black;"/>
+  <text x="200" y="160">Unused Non-Parent Objects:</text>
+  <text x="220" y="180">OutdoorAir:NodeList</text>
+  <text x="220" y="200">OutdoorAir:NodeList</text>
+  <text x="220" y="220">VRF OUTDOOR UNIT_BLOCK1:ZONE2</text>
+  <text x="220" y="240">VRF OUTDOOR UNIT_BLOCK1:ZONE1</text>
+  <text x="200" y="280">
+The following are not supported: objects related to controls or ZoneHVAC:IdealLoadsAirSystem</text>
+</g>
+</svg>

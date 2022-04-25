@@ -10,7 +10,8 @@ class accimJob():
         genIDF
     from accim.sim.accim_Base import \
         setComfFieldsPeople, \
-        saveaccim
+        saveaccim, \
+        setPMVsetpoint
     from accim.sim.accim_Base_EMS import \
         addEMSActuatorsBase, \
         addEMSOutputVariableBase, \
@@ -34,8 +35,7 @@ class accimJob():
         addOpTempTherm, \
         addVRFsystemSch, \
         checkVentIsOn, \
-        setAvailSchOn, \
-        setPMVsetpoint
+        setAvailSchOn
     from accim.sim.accim_VRFsystem_EMS import \
         addEMSSensorsVRFsystem
 
