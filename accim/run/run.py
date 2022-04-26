@@ -146,10 +146,10 @@ def removefiles():
     """
     Delete all files except '.py', '.idf', '.epw', '.csv' and '.eso'.
 
-    'Table.csv', 'Zsz.csv' files are deleted as well.
+    'Table.csv', 'Meter.csv', 'Zsz.csv' files are deleted as well.
     """
     extensions = ('.py', '.idf', '.epw', '.csv', '.eso')
-    csvextensions = ('Table.csv', 'Zsz.csv')
+    csvextensions = ('Table.csv', 'Meter.csv', 'Zsz.csv')
     deletelist = ([file for file in os.listdir() if not file.endswith(extensions)])
     for file in deletelist:
         os.remove(file)

@@ -233,6 +233,7 @@ class Table:
 
     def __init__(self,
                  datasets: list = None,
+                 source_concatenated_csv_filepath: str = None,
                  frequency: str = None,
                  sum_or_mean: str = None,
                  standard_outputs: bool = None,
@@ -244,6 +245,7 @@ class Table:
                  normalised_energy_units: bool = True,
                  rename_cols: bool = True,
                  energy_units_in_kwh: bool = True,
+                 concatenated_csv_name: str = None
                  ):
         """
         Generates a table or dataframe using the EnergyPlus simulation results CSV files
@@ -272,8 +274,11 @@ class Table:
         purposes.
         :param energy_units_in_kwh: A bool, can be True or False. If True, energy units will be in kWh or kWh/m2,
         otherwise these will be in Wh or Wh/m2.
+        :param concatenated_csv_name: A string used as the name for the concatenated csv file.
+
 
         """
+        # todo energy consumption is not being processed in temp controlled
         if datasets is None:
             datasets = []
         if level_sum_or_mean is None:
@@ -294,128 +299,17 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
+        if source_concatenated_csv_filepath is None:
+            if len(datasets) > 0:
+                source_files = datasets
+            else:
+                allfiles = glob.glob('*.csv', recursive=True)
+                source_files = [f for f in allfiles if 'Table.csv' not in f and 'Meter.csv' not in f and 'Zsz.csv' not in f]
+                # todo check if glob.glob works with in terms of package, if not switch back to sorted
+                # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
-        if len(datasets) > 0:
-            source_files = datasets
-        else:
-            allfiles = glob.glob('*.csv', recursive=True)
-            source_files = [f for f in allfiles if 'Table.csv' not in f and 'Zsz.csv' not in f]
-            # todo check if glob.glob works with in terms of package, if not switch back to sorted
-            # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
-
-        cleaned_columns = [
-            'Date/Time',
-            'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
-            'Environment:Site Wind Speed [m/s](Hourly)',
-            'Environment:Site Outdoor Air Relative Humidity [%](Hourly)',
-            'EMS:Comfort Temperature [C](Hourly)',
-            'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
-            'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
-            'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)',
-            'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
-            'EMS:Ventilation Setpoint Temperature [C](Hourly)',
-            'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
-            'EMS:Comfortable Hours_No Applicability',
-            'EMS:Comfortable Hours_Applicability',
-            'EMS:Discomfortable Applicable Hot Hours',
-            'EMS:Discomfortable Applicable Cold Hours',
-            'EMS:Discomfortable Non Applicable Hot Hours',
-            'EMS:Discomfortable Non Applicable Cold Hours',
-            'EMS:Ventilation Hours',
-            'AFN Zone Infiltration Volume [m3](Hourly)',
-            'AFN Zone Infiltration Air Change Rate [ach](Hourly)',
-            # 'Zone Thermostat Operative Temperature [C](Hourly)',
-            'Zone Operative Temperature [C](Hourly)',
-            'Zone Operative Temperature',
-            'Whole Building:Facility Total HVAC Electricity Demand Rate [W](Hourly)',
-            'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
-            'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
-            'FORSCRIPT',
-            'VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate [W](Hourly)',
-            'VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Rate [W](Hourly)',
-            # 'VRF OUTDOOR UNIT',
-            'VRF Heat Pump Cooling Electricity Rate',
-            'VRF Heat Pump Heating Electricity Rate',
-            'Heating Coil Heating Rate [W](Hourly)',
-            'Cooling Coil Total Cooling Rate [W](Hourly)',
-            'Zone Air Volume',
-            'Zone Floor Area',
-            'Zone Thermal Comfort Fanger Model PMV',
-            'Zone Thermal Comfort Fanger Model PPD'
-        ]
-
-        summed_dataframes = []
-
-        for file in source_files:
-
-            # with open(file) as csv_file:
-            #     csv_reader = csv.reader(csv_file, delimiter=',')
-            #     df = pd.DataFrame([csv_reader], index=True)
-
-            df = pd.DataFrame(pd.read_csv(file))
-
-            if standard_outputs:
-                keeplist = []
-                for i in cleaned_columns:
-                    for j in df.columns:
-                        if i in j:
-                            keeplist.append(j)
-                keeplist = list(dict.fromkeys(keeplist))
-                droplist = list(set(df.columns) - set(keeplist))
-                df = df.drop(droplist, axis=1)
-
-            # df['Source'] = file.name
-            df['Source'] = file
-
-            # df['Date/Time_orig'] = df['Date/Time'].copy()
-
-            df[['TBD1', 'Month/Day', 'TBD2', 'Hour']] = df['Date/Time'].str.split(' ', expand=True)
-            df = df.drop(['TBD1', 'TBD2'], axis=1)
-            df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
-            df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
-
-
-
-            constantcols = []
-            for i in [
-                'Zone Air Volume',
-                'Zone Floor Area'
-            ]:
-                for j in df.columns:
-                    if i in j:
-                        constantcols.append(j)
-            constantcols = list(dict.fromkeys(constantcols))
-
-            constantcolsdict = {}
-
-            for i in range(len(constantcols)):
-                tempdict = {constantcols[i]: df[constantcols[i]][0]}
-                constantcolsdict.update(tempdict)
-
-            minute_df_len = len(
-                df[
-                    (df['Minute'] != '00') &
-                    (df['Minute'].astype(str) != 'None') &
-                    (df['Minute'] != '')
-                    ]
-            )
-
-            agg_dict = {}
-            aggregation_list_first = [
+            cleaned_columns = [
                 'Date/Time',
-                'Source',
-                'Month/Day',
-                'Month',
-                'Day',
-                'Hour',
-                'Minute',
-                'Second'
-            ]
-
-            for i in aggregation_list_first:
-                agg_dict.update({i: 'first'})
-
-            aggregation_list_mean = [
                 'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
                 'Environment:Site Wind Speed [m/s](Hourly)',
                 'Environment:Site Outdoor Air Relative Humidity [%](Hourly)',
@@ -426,54 +320,194 @@ class Table:
                 'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
                 'EMS:Ventilation Setpoint Temperature [C](Hourly)',
                 'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
+                'EMS:Comfortable Hours_No Applicability',
+                'EMS:Comfortable Hours_Applicability',
+                'EMS:Discomfortable Applicable Hot Hours',
+                'EMS:Discomfortable Applicable Cold Hours',
+                'EMS:Discomfortable Non Applicable Hot Hours',
+                'EMS:Discomfortable Non Applicable Cold Hours',
+                'EMS:Ventilation Hours',
+                'AFN Zone Infiltration Volume [m3](Hourly)',
+                'AFN Zone Infiltration Air Change Rate [ach](Hourly)',
                 # 'Zone Thermostat Operative Temperature [C](Hourly)',
                 'Zone Operative Temperature [C](Hourly)',
                 'Zone Operative Temperature',
+                'Whole Building:Facility Total HVAC Electricity Demand Rate [W](Hourly)',
                 'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
                 'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
+                'FORSCRIPT',
+                'VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate [W](Hourly)',
+                'VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Rate [W](Hourly)',
+                # 'VRF OUTDOOR UNIT',
+                'VRF Heat Pump Cooling Electricity Rate',
+                'VRF Heat Pump Heating Electricity Rate',
+                'Heating Coil Heating Rate [W](Hourly)',
+                'Cooling Coil Total Cooling Rate [W](Hourly)',
+                'Zone Air Volume',
+                'Zone Floor Area',
                 'Zone Thermal Comfort Fanger Model PMV',
                 'Zone Thermal Comfort Fanger Model PPD'
             ]
 
-            for i in df.columns:
-                for j in aggregation_list_mean:
-                    if j in i:
-                        agg_dict.update({i: 'mean'})
+            summed_dataframes = []
 
-            for i in df.columns:
-                if i not in agg_dict:
-                    agg_dict.update({i: sum_or_mean})
+            for file in source_files:
 
-            # todo timestep frequency to be tested
-            if frequency == 'timestep':
-                df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(agg_dict)
-                print(f'Input data frequency in file {file} is timestep '
-                      f'and requested frequency is also timestep, '
-                      f'therefore no aggregation will be performed. '
-                      f'The user needs to check the output rows number is correct.')
+                # with open(file) as csv_file:
+                #     csv_reader = csv.reader(csv_file, delimiter=',')
+                #     df = pd.DataFrame([csv_reader], index=True)
 
-            if frequency == 'hourly':
-                if minute_df_len > 0:
-                    df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(agg_dict)
+                df = pd.DataFrame(pd.read_csv(file))
+
+                if standard_outputs:
+                    keeplist = []
+                    for i in cleaned_columns:
+                        for j in df.columns:
+                            if i in j:
+                                keeplist.append(j)
+                    keeplist = list(dict.fromkeys(keeplist))
+                    droplist = list(set(df.columns) - set(keeplist))
+                    df = df.drop(droplist, axis=1)
+
+                # df['Source'] = file.name
+                df['Source'] = file
+
+                # df['Date/Time_orig'] = df['Date/Time'].copy()
+
+                df[['TBD1', 'Month/Day', 'TBD2', 'Hour']] = df['Date/Time'].str.split(' ', expand=True)
+                df = df.drop(['TBD1', 'TBD2'], axis=1)
+                df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
+                df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
+
+
+
+                constantcols = []
+                for i in [
+                    'Zone Air Volume',
+                    'Zone Floor Area'
+                ]:
+                    for j in df.columns:
+                        if i in j:
+                            constantcols.append(j)
+                constantcols = list(dict.fromkeys(constantcols))
+
+                constantcolsdict = {}
+
+                for i in range(len(constantcols)):
+                    tempdict = {constantcols[i]: df[constantcols[i]][0]}
+                    constantcolsdict.update(tempdict)
+
+                minute_df_len = len(
+                    df[
+                        (df['Minute'] != '00') &
+                        (df['Minute'].astype(str) != 'None') &
+                        (df['Minute'] != '')
+                        ]
+                )
+
+                agg_dict = {}
+                aggregation_list_first = [
+                    'Date/Time',
+                    'Source',
+                    'Month/Day',
+                    'Month',
+                    'Day',
+                    'Hour',
+                    'Minute',
+                    'Second'
+                ]
+
+                for i in aggregation_list_first:
+                    agg_dict.update({i: 'first'})
+
+                df['count'] = 'count'
+                agg_dict.update({'count': 'count'})
+
+                aggregation_list_mean = [
+                    'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
+                    'Environment:Site Wind Speed [m/s](Hourly)',
+                    'Environment:Site Outdoor Air Relative Humidity [%](Hourly)',
+                    'EMS:Comfort Temperature [C](Hourly)',
+                    'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
+                    'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
+                    'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)',
+                    'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
+                    'EMS:Ventilation Setpoint Temperature [C](Hourly)',
+                    'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
+                    # 'Zone Thermostat Operative Temperature [C](Hourly)',
+                    'Zone Operative Temperature [C](Hourly)',
+                    'Zone Operative Temperature',
+                    'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
+                    'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
+                    'Zone Thermal Comfort Fanger Model PMV',
+                    'Zone Thermal Comfort Fanger Model PPD'
+                ]
+
+                for i in df.columns:
+                    for j in aggregation_list_mean:
+                        if j in i:
+                            agg_dict.update({i: 'mean'})
+
+                for i in df.columns:
+                    if i not in agg_dict:
+                        agg_dict.update({i: sum_or_mean})
+
+                # todo timestep frequency to be tested
+                if frequency == 'timestep':
+                    df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(agg_dict)
                     print(f'Input data frequency in file {file} is timestep '
-                          f'and requested frequency is hourly, '
-                          f'therefore aggregation will be performed. '
+                          f'and requested frequency is also timestep, '
+                          f'therefore no aggregation will be performed. '
                           f'The user needs to check the output rows number is correct.')
-                else:
-                    print(f'Input data frequency in file {file} is hourly, therefore no aggregation will be performed.')
-            if frequency == 'daily':
-                df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(agg_dict)
-            if frequency == 'monthly':
-                df = df.groupby(['Source', 'Month'], as_index=False).agg(agg_dict)
-            if frequency == 'runperiod':
-                df = df.groupby(['Source'], as_index=False).agg(agg_dict)
 
-            for i in constantcolsdict:
-                df[i] = constantcolsdict[i]
+                if frequency == 'hourly':
+                    if minute_df_len > 0:
+                        df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(agg_dict)
+                        print(f'Input data frequency in file {file} is timestep '
+                              f'and requested frequency is hourly, '
+                              f'therefore aggregation will be performed. '
+                              f'The user needs to check the output rows number is correct.')
+                    else:
+                        print(f'Input data frequency in file {file} is hourly, therefore no aggregation will be performed.')
+                if frequency == 'daily':
+                    df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(agg_dict)
+                if frequency == 'monthly':
+                    df = df.groupby(['Source', 'Month'], as_index=False).agg(agg_dict)
+                if frequency == 'runperiod':
+                    df = df.groupby(['Source'], as_index=False).agg(agg_dict)
 
-            summed_dataframes.append(df)
+                for i in constantcolsdict:
+                    df[i] = constantcolsdict[i]
 
-        df = pd.concat(summed_dataframes)
+                summed_dataframes.append(df)
+
+            df = pd.concat(summed_dataframes)
+
+        else:
+            # todo amend order of columns
+            df = pd.read_csv(filepath_or_buffer=source_concatenated_csv_filepath)
+            df = df.drop(columns=df.columns[0])
+            for i in source_concatenated_csv_filepath.split('['):
+                if i.startswith('freq'):
+                    frequency = i.split('-')[1]
+                    self.frequency = frequency
+                elif i.startswith('sum_or_mean'):
+                    sum_or_mean = i.split('-')[1]
+                elif i.startswith('standard_outputs'):
+                    standard_outputs = i.split('-')[1]
+            # frequency = source_concatenated_csv_filepath.split('[')[1].split('-')[1]
+            # sum_or_mean = source_concatenated_csv_filepath.split('[')[1].split('-')[1]
+
+        is_NaN = df.isna()
+        row_has_NaN = is_NaN.any(axis=1)
+        rows_with_NaN = df[row_has_NaN]
+        if len(rows_with_NaN) > 0:
+            print('The following rows have NaN values:')
+            print(rows_with_NaN)
+
+        if concatenated_csv_name is not None:
+            df.to_excel(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-{sum_or_mean}[standard_outputs-{standard_outputs}.xlsx')
+            df.to_csv(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-{sum_or_mean}[standard_outputs-{standard_outputs}.csv')
         # df.to_excel('checkpoint_00.xlsx')
 
 
@@ -754,9 +788,10 @@ class Table:
                     if df.loc[j, i] is None:
                         df.loc[j, i] = str(int((int(df.loc[j - 1, i]) + int(df.loc[j + 1, i])) / 2))
                     # if df.loc[j, i] == '':
-                    if len(df.loc[j, i]) == 0:
+                    if len(str(df.loc[j, i])) == 0:
                         df.loc[j, i] = str(int((int(df.loc[j - 1, i]) + int(df.loc[j + 1, i])) / 2))
-                df[i] = df[i].str.pad(width=2, side='left', fillchar='0')
+
+                df[i] = df[i].astype(str).str.pad(width=2, side='left', fillchar='0')
 
         df = df.set_index([pd.RangeIndex(len(df))])
 
@@ -937,11 +972,11 @@ class Table:
 
         # todo timestep frequency to be considered
         if self.frequency == 'runperiod':
-            adj_extension = -3
-        if self.frequency == 'monthly':
             adj_extension = -4
-        if self.frequency == 'daily':
+        if self.frequency == 'monthly':
             adj_extension = -5
+        if self.frequency == 'daily':
+            adj_extension = -6
         if self.frequency == 'hourly':
             adj_extension = -6
 
@@ -1097,6 +1132,9 @@ class Table:
         self.available_vars_to_gather = available_vars_to_gather
         self.block_list = block_list
         self.df = df
+
+        self.frequency = frequency
+
 
         # df.to_excel('checkpoint_04.xlsx')
 
