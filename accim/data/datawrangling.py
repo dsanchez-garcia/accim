@@ -434,7 +434,7 @@ class Table:
                 for i in aggregation_list_first:
                     agg_dict.update({i: 'first'})
 
-                df['count'] = 'count'
+                df['count'] = 1
                 agg_dict.update({'count': 'count'})
 
                 aggregation_list_mean = [
@@ -520,6 +520,12 @@ class Table:
         if len(rows_with_NaN) > 0:
             print('The following rows have NaN values:')
             print(rows_with_NaN)
+
+        if self.frequency == 'hourly':
+            not_correct_agg = df[df['count'] != 1]
+            if len(not_correct_agg) > 0:
+                print('The following rows have not been correctly aggregated:')
+                print(not_correct_agg)
 
         if self.frequency == 'daily':
             not_correct_agg = df[df['count'] != 24]
