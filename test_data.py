@@ -6,7 +6,7 @@ z = Table(
     # level=['building'],
     # level_sum_or_mean=['sum', 'mean'],
     # split_epw_names=True,
-    concatenated_csv_name='testing'
+    concatenated_csv_name='testing_03'
 )
 
 ##

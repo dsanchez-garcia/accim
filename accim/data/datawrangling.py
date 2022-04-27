@@ -312,7 +312,10 @@ class Table:
                                 'Table.csv' not in f and
                                 'Meter.csv' not in f and
                                 'Zsz.csv' not in f and
-                                '[CSVconcatenated.csv' not in f]
+                                '[CSVconcatenated.csv' not in f and
+                                '[Rows_not_corr_agg.csv' not in f and
+                                '[Rows_with_NaNs.csv' not in f
+                                ]
                 # todo check if glob.glob works with in terms of package, if not switch back to sorted
                 # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
@@ -561,8 +564,49 @@ class Table:
 
 
         if concatenated_csv_name is not None:
-            df.to_excel(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-{sum_or_mean}[standard_outputs-{standard_outputs}[CSVconcatenated.xlsx')
-            df.to_csv(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-{sum_or_mean}[standard_outputs-{standard_outputs}[CSVconcatenated.csv')
+            df.to_excel(
+                f'{concatenated_csv_name}'
+                f'[freq-{frequency}'
+                f'[sum_or_mean-{sum_or_mean}'
+                f'[standard_outputs-{standard_outputs}'
+                f'[CSVconcatenated.xlsx'
+            )
+            df.to_csv(
+                f'{concatenated_csv_name}'
+                f'[freq-{frequency}'
+                f'[sum_or_mean-{sum_or_mean}'
+                f'[standard_outputs-{standard_outputs}'
+                f'[CSVconcatenated.csv'
+            )
+            if len(rows_with_NaN) > 0:
+                rows_with_NaN.to_csv(
+                    f'{concatenated_csv_name}'
+                    f'[freq-{frequency}'
+                    f'[sum_or_mean-{sum_or_mean}'
+                    f'[standard_outputs-{standard_outputs}'
+                    f'[Rows_with_NaNs.csv'
+                )
+            if len(not_correct_agg) > 0:
+                not_correct_agg.to_csv(
+                    f'{concatenated_csv_name}'
+                    f'[freq-{frequency}'
+                    f'[sum_or_mean-{sum_or_mean}'
+                    f'[standard_outputs-{standard_outputs}'
+                    f'[Rows_not_corr_agg.csv'
+                )
+
+        # if len(rows_with_NaN) > 0 or len(not_correct_agg) > 0:
+            #     f = open(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-{sum_or_mean}[standard_outputs-{standard_outputs}[Report.txt', "w+")
+            #     if len(rows_with_NaN) > 0:
+            #         f.write('The following rows have NaN values:\r\n')
+            #         dfAsString = rows_with_NaN.to_string(header=True, index=True)
+            #         f.write(dfAsString)
+            #     if len(not_correct_agg) > 0:
+            #         f.write('The following rows have not been correctly aggregate:\r\n')
+            #         dfAsString = not_correct_agg.to_string(header=True, index=True)
+            #         f.write(dfAsString)
+            #     f.close()
+
         # df.to_excel('checkpoint_00.xlsx')
 
         # Step: scanning zones for occupied_zone_list
@@ -1198,6 +1242,10 @@ class Table:
                 'EPW_Scenario',
                 'EPW_Year'
             ])
+
+        # todo Step: remove PMV-PPD columns if the column only have null values
+
+
 
         self.hvac_zone_list = hvac_zone_list
         self.occupied_zone_list = occupied_zone_list
