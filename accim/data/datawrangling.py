@@ -278,7 +278,6 @@ class Table:
 
 
         """
-        # todo energy consumption is not being processed in temp controlled
         if datasets is None:
             datasets = []
         if level_sum_or_mean is None:
@@ -309,7 +308,11 @@ class Table:
                 source_files = datasets
             else:
                 allfiles = glob.glob('*.csv', recursive=True)
-                source_files = [f for f in allfiles if 'Table.csv' not in f and 'Meter.csv' not in f and 'Zsz.csv' not in f and '[CSVconcatenated' not in f]
+                source_files = [f for f in allfiles if
+                                'Table.csv' not in f and
+                                'Meter.csv' not in f and
+                                'Zsz.csv' not in f and
+                                '[CSVconcatenated.csv' not in f]
                 # todo check if glob.glob works with in terms of package, if not switch back to sorted
                 # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
@@ -346,6 +349,8 @@ class Table:
                 # 'VRF OUTDOOR UNIT',
                 'VRF Heat Pump Cooling Electricity Rate',
                 'VRF Heat Pump Heating Electricity Rate',
+                'VRF Heat Pump Cooling Electricity Energy',
+                'VRF Heat Pump Heating Electricity Energy',
                 'Heating Coil Heating Rate [W](Hourly)',
                 'Cooling Coil Total Cooling Rate [W](Hourly)',
                 'Zone Air Volume',
@@ -520,15 +525,25 @@ class Table:
                 print(not_correct_agg)
 
         if self.frequency == 'monthly':
+
             # not_correct_agg_list = []
             # from calendar import monthrange
             # for i in range(1, 13):
             #     monthly_df = df[
-            #         (df['Month'] == i) &
-            #         (df['count'] != (monthrange(2022, i)[1])*24)
+            #         (
+            #                 (df['Month'] == i) &
+            #                 (df['count'] != (monthrange(2022, i)[1])*24)
+            #         ) |
+            #         (
+            #                 (df['Month'] == i) &
+            #                 (df['count'] != 28 * 24) &
+            #                 (df['count'] != 30 * 24) &
+            #                 (df['count'] != 31 * 24)
+            #         )
             #     ]
             #     not_correct_agg_list.append(monthly_df)
             # not_correct_agg = pd.concat(not_correct_agg_list)
+
             not_correct_agg = df[
                 (df['count'] != 28 * 24) &
                 (df['count'] != 30 * 24) &
@@ -635,7 +650,6 @@ class Table:
             'VRF INDOOR UNIT': 'Total Energy Demand (Wh)',
             'VRF OUTDOOR UNIT': 'Total Energy Consumption (Wh)'
         }
-        # todo check energy consumption here
         for output in BZoutputDict:
             for block_zone in hvac_zone_list:
                 df[f'{block_zone}' + '_' + BZoutputDict[output] + ' [summed]_pymod'] = df[
@@ -660,8 +674,12 @@ class Table:
             'AFN Zone Infiltration Air Change Rate': 'AFN Zone Infiltration Air Change Rate (ach)',
             'Cooling Coil Total Cooling Rate': 'Cooling Coil Total Cooling Rate (Wh)',
             'Heating Coil Heating Rate': 'Heating Coil Heating Rate (Wh)',
+
+            # 'VRF Heat Pump Cooling Electricity Rate': 'VRF Heat Pump Cooling Electricity Rate (Wh)',
+            # 'VRF Heat Pump Heating Electricity Rate': 'VRF Heat Pump Heating Electricity Rate (Wh)',
             'VRF Heat Pump Cooling Electricity Energy': 'VRF Heat Pump Cooling Electricity Energy (Wh)',
             'VRF Heat Pump Heating Electricity Energy': 'VRF Heat Pump Heating Electricity Energy (Wh)',
+
             'Coil': 'Total Energy Demand (Wh)',
             'VRF OUTDOOR UNIT': 'Total Energy Consumption (Wh)',
             'Zone Air Volume': 'Zone Air Volume (m3)',
@@ -1128,7 +1146,6 @@ class Table:
                 'Cooling Coil Total Cooling Rate': 'Cooling Energy Demand'
             }
 
-            # todo it looks like this only works for energy-related columns, but what for other such as comfort hours or PMV-PPD?
             for col in df.columns:
                 for crit in renaming_criteria_block:
                     for block in block_list:
