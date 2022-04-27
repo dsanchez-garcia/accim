@@ -600,6 +600,7 @@ class Table:
                     f'[standard_outputs-{standard_outputs}'
                     f'[Rows_not_corr_agg.csv'
                 )
+            return
 
         # if len(rows_with_NaN) > 0 or len(not_correct_agg) > 0:
             #     f = open(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-{sum_or_mean}[standard_outputs-{standard_outputs}[Report.txt', "w+")
