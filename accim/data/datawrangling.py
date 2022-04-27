@@ -299,12 +299,17 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
+        # Step: generating concatenated dataframe.
+        # If source_concatenated_csv_filepath is None, then specified csv files on list format
+        # are considered, otherwise all csv in the folder are considered.
+        # If source_concatenated_csv_filepath is not None, then the csv path is considered to
+        # build the dataframe.
         if source_concatenated_csv_filepath is None:
             if len(datasets) > 0:
                 source_files = datasets
             else:
                 allfiles = glob.glob('*.csv', recursive=True)
-                source_files = [f for f in allfiles if 'Table.csv' not in f and 'Meter.csv' not in f and 'Zsz.csv' not in f]
+                source_files = [f for f in allfiles if 'Table.csv' not in f and 'Meter.csv' not in f and 'Zsz.csv' not in f and '[CSVconcatenated' not in f]
                 # todo check if glob.glob works with in terms of package, if not switch back to sorted
                 # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
@@ -359,6 +364,7 @@ class Table:
 
                 df = pd.DataFrame(pd.read_csv(file))
 
+                # Step: filtering outputs to only standards
                 if standard_outputs:
                     keeplist = []
                     for i in cleaned_columns:
@@ -380,7 +386,7 @@ class Table:
                 df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
 
 
-
+                # Step: managing different aggregations on columns
                 constantcols = []
                 for i in [
                     'Zone Air Volume',
@@ -495,9 +501,11 @@ class Table:
                     sum_or_mean = i.split('-')[1]
                 elif i.startswith('standard_outputs'):
                     standard_outputs = i.split('-')[1]
-            # frequency = source_concatenated_csv_filepath.split('[')[1].split('-')[1]
-            # sum_or_mean = source_concatenated_csv_filepath.split('[')[1].split('-')[1]
+            cols = df.columns.tolist()
+            cols = cols[-1:] + cols[:-1]
+            df = df[cols]
 
+        # Step: checking for NaNs and not correct aggregations based on count
         is_NaN = df.isna()
         row_has_NaN = is_NaN.any(axis=1)
         rows_with_NaN = df[row_has_NaN]
@@ -505,12 +513,44 @@ class Table:
             print('The following rows have NaN values:')
             print(rows_with_NaN)
 
+        if self.frequency == 'daily':
+            not_correct_agg = df[df['count'] != 24]
+            if len(not_correct_agg) > 0:
+                print('The following rows have not been correctly aggregated:')
+                print(not_correct_agg)
+
+        if self.frequency == 'monthly':
+            # not_correct_agg_list = []
+            # from calendar import monthrange
+            # for i in range(1, 13):
+            #     monthly_df = df[
+            #         (df['Month'] == i) &
+            #         (df['count'] != (monthrange(2022, i)[1])*24)
+            #     ]
+            #     not_correct_agg_list.append(monthly_df)
+            # not_correct_agg = pd.concat(not_correct_agg_list)
+            not_correct_agg = df[
+                (df['count'] != 28 * 24) &
+                (df['count'] != 30 * 24) &
+                (df['count'] != 31 * 24)
+                ]
+            if len(not_correct_agg) > 0:
+                print('The following rows have not been correctly aggregated:')
+                print(not_correct_agg)
+
+        if self.frequency == 'runperiod':
+            not_correct_agg = df[df['count'] != 8760]
+            if len(not_correct_agg) > 0:
+                print('The following rows have not been correctly aggregated:')
+                print(not_correct_agg)
+
+
         if concatenated_csv_name is not None:
-            df.to_excel(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-{sum_or_mean}[standard_outputs-{standard_outputs}.xlsx')
-            df.to_csv(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-{sum_or_mean}[standard_outputs-{standard_outputs}.csv')
+            df.to_excel(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-{sum_or_mean}[standard_outputs-{standard_outputs}[CSVconcatenated.xlsx')
+            df.to_csv(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-{sum_or_mean}[standard_outputs-{standard_outputs}[CSVconcatenated.csv')
         # df.to_excel('checkpoint_00.xlsx')
 
-
+        # Step: scanning zones for occupied_zone_list
         # OpTempColumn = [i for i in df.columns if 'Zone Thermostat Operative Temperature [C](Hourly)' in i]
         # if len(OpTempColumn) == 0:
         #     OpTempColumn = [i for i in df.columns if 'Zone Operative Temperature [C](Hourly)' in i]
@@ -549,6 +589,7 @@ class Table:
 
         occBZlist_underscore = [i.replace(':', '_') for i in occupied_zone_list]
 
+        # Step: scanning zones for hvac_zone_list
         hvac_zone_list = [i.split(' ')[0]
                                for i
                                in [i
@@ -561,9 +602,11 @@ class Table:
         hvac_zone_list = list(dict.fromkeys(hvac_zone_list))
         hvac_zone_list_underscore = [i.replace(':', '_') for i in hvac_zone_list]
 
+        # Step: scanning blocks for block_list
         block_list = [i.split(':')[0] for i in occupied_zone_list]
         block_list = list(dict.fromkeys(block_list))
 
+        # Step: renaming all columns containing BlockX_ZoneX patterns to BlockX:ZoneX.
         renamezonesdict = {}
         for i in range(len(occBZlist_underscore)):
             for j in df.columns:
@@ -573,6 +616,7 @@ class Table:
 
         df = df.rename(columns=renamezonesdict)
 
+        # Step: converting jules to Wh if any
         for i in df.columns:
             if 'VRF OUTDOOR UNIT' in i and '[J]' in i:
                 df[i] = df[i]/3600
@@ -586,11 +630,12 @@ class Table:
 
         df = df.rename(columns=renamedict)
 
+        # Step: generating total (heating+cooling) energy consumption columns
         BZoutputDict = {
             'VRF INDOOR UNIT': 'Total Energy Demand (Wh)',
             'VRF OUTDOOR UNIT': 'Total Energy Consumption (Wh)'
         }
-
+        # todo check energy consumption here
         for output in BZoutputDict:
             for block_zone in hvac_zone_list:
                 df[f'{block_zone}' + '_' + BZoutputDict[output] + ' [summed]_pymod'] = df[
@@ -599,6 +644,7 @@ class Table:
                 ].sum(axis=1)
         # df.to_excel('checkpoint_01.xlsx')
 
+        # Step: generating block and or building summed or mean columns
         outputdict = {
             # 'Zone Thermostat Operative Temperature [C](Hourly)': 'Zone Thermostat Operative Temperature (°C)',
             # 'Zone Operative Temperature [C](Hourly)': 'Zone Operative Temperature (°C)',
@@ -656,6 +702,7 @@ class Table:
 
         # df.to_excel('checkpoint_02.xlsx')
 
+        # Step: renaming energy units
         renamedict = {}
         for i in df.columns:
             if '[W]' in i:
@@ -674,6 +721,7 @@ class Table:
             else:
                 energy_units = '(Wh)'
 
+        # Step: normalising energy units if requested
         if normalised_energy_units:
             for i in df.columns:
                 if '(Wh)' in i:
@@ -705,6 +753,7 @@ class Table:
 
         # df.to_excel('checkpoint_03-0.xlsx')
 
+        # Step: converting Wh to kWh if requested
         if energy_units_in_kwh:
             for col in df.columns:
                 if '(Wh)' in col:
@@ -721,12 +770,14 @@ class Table:
 
         # df.to_excel('checkpoint_03-2.xlsx')
 
-
+        # Step: removing '_pymod' from columns
         df.set_axis(
             labels=[c[:-6] if c.endswith('_pymod') else c for c in df],
             axis=1,
             inplace=True
         )
+
+        # Step: splitting and managing column names
         fixed_columns = [
             'Model',
             'Adaptive Standard',
@@ -757,6 +808,7 @@ class Table:
         df['EPW'] = df['EPW'].str[:-4]
         df['Source'] = df['Source'].str[:-4]
 
+        # Step: splitting EPW names if requested
         if split_epw_names:
             df[[
                 'EPW_Country_name',
@@ -776,6 +828,7 @@ class Table:
 
         df = df.set_index([pd.RangeIndex(len(df))])
 
+        # Step: do not know what it is this for
         frequency_dict = {
             'monthly': ['Month'],
             'daily': ['Day', 'Month'],
@@ -821,6 +874,7 @@ class Table:
 
         df = df.set_index([pd.RangeIndex(len(df))])
 
+        # Step: managing EPW names if requested
         if manage_epw_names:
             rcpdict = {
                 'Present': ['Presente', 'Actual', 'Present', 'Current'],
@@ -857,6 +911,7 @@ class Table:
 
                 df.loc[i, 'EPW_Year'] = np.nan
 
+        # Step: matching cities if requested
         isEPWformatValid = False
         if match_cities:
             package_cities = datapackage.Package('https://datahub.io/core/world-cities/datapackage.json')
@@ -956,7 +1011,7 @@ class Table:
 
             df = df.drop(['EPW_mod'], axis=1)
 
-        # reorder of the columns
+        # Step: re-ordering the columns
         cols = df.columns.tolist()
 
         if self.frequency == 'runperiod':
@@ -972,11 +1027,11 @@ class Table:
 
         # todo timestep frequency to be considered
         if self.frequency == 'runperiod':
-            adj_extension = -4
+            adj_extension = -3
         if self.frequency == 'monthly':
-            adj_extension = -5
+            adj_extension = -4
         if self.frequency == 'daily':
-            adj_extension = -6
+            adj_extension = -5
         if self.frequency == 'hourly':
             adj_extension = -6
 
