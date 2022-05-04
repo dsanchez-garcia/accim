@@ -1268,7 +1268,8 @@ class Table:
 
     def format_table(self,
                      type_of_table: str = 'all',
-                     custom_cols=None,
+                     custom_cols: list = None,
+                     custom_rows: list = None,
                      split_epw_names: bool = False
                      ):
         """
@@ -1283,6 +1284,11 @@ class Table:
         """
         if custom_cols is None:
             custom_cols = []
+        if custom_rows is None:
+            custom_rows = []
+
+
+        self.split_epw_names = split_epw_names
 
         self.indexcols = [
             'Date/Time',
@@ -1375,10 +1381,24 @@ class Table:
     # def block_list(self):
     #     return block_list()
 
+
+    def unstacked_table(self,
+                        vars_to_gather=None,
+                        baseline: str = None,
+                        comparison_cols=None):
+        pass
+        if vars_to_gather is None:
+            vars_to_gather = []
+        if comparison_cols is None:
+            comparison_cols = []
+
+
+
     def wrangled_table(self,
-                       vars_to_gather=None,
+                       reshaping: str = None,
+                       vars_to_gather: list = None,
                        baseline: str = None,
-                       comparison_cols=None):
+                       comparison_cols: list = None):
         """
         Creates a table based on the arguments.
 
@@ -1412,64 +1432,75 @@ class Table:
 
         self.df['col_to_pivot'] = self.wrangled_df['col_to_pivot']
 
-        self.wrangled_df = self.wrangled_df.pivot_table(
-            index=self.indexcols.remove('col_to_pivot'),
-            columns='col_to_pivot',
-            values=self.val_cols,
-            aggfunc=np.sum,
-            fill_value=0)
+        if reshaping == 'pivot':
+            self.wrangled_df = self.wrangled_df.pivot_table(
+                index=self.indexcols.remove('col_to_pivot'),
+                columns='col_to_pivot',
+                values=self.val_cols,
+                aggfunc=np.sum,
+                fill_value=0)
 
-        var_to_gather_values = list(dict.fromkeys(self.df['col_to_pivot']))
+            var_to_gather_values = list(dict.fromkeys(self.df['col_to_pivot']))
 
-        if baseline not in var_to_gather_values:
-            print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
-            print(var_to_gather_values)
-            baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
+            if baseline not in var_to_gather_values:
+                print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
+                print(var_to_gather_values)
+                baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
 
-        other_than_baseline = list(set(var_to_gather_values) - set([baseline]))
+            other_than_baseline = list(set(var_to_gather_values) - set([baseline]))
 
-        self.df = self.df.drop('col_to_pivot', axis=1)
+            self.df = self.df.drop('col_to_pivot', axis=1)
 
-        # summing monthly values to make runperiod
+            # summing monthly values to make runperiod
 
-        if 'Month' in self.df.columns:
-            for i in var_to_gather_values:
-                self.wrangled_df[f'{i}_Runperiod_Total'] = self.wrangled_df[
-                    [j for j in self.wrangled_df.columns
-                     if i in j]
-                ].sum(axis=1)
+            if 'Month' in self.df.columns:
+                for i in var_to_gather_values:
+                    self.wrangled_df[f'{i}_Runperiod_Total'] = self.wrangled_df[
+                        [j for j in self.wrangled_df.columns
+                         if i in j]
+                    ].sum(axis=1)
 
-            for j in other_than_baseline:
-                for i in list(dict.fromkeys(self.df['Month'])):
+                for j in other_than_baseline:
+                    for i in list(dict.fromkeys(self.df['Month'])):
+                        if any('relative' in k for k in comparison_cols):
+                            self.wrangled_df[f'1-({j}/{baseline})_{i}_Month'] = (
+                                    1 -
+                                    (self.wrangled_df[j + f'_{i}_Month'] / self.wrangled_df[baseline + f'_{i}_Month'])
+                            )
+                        if any('absolute' in k for k in comparison_cols):
+                            self.wrangled_df[f'{baseline}-{j}_{i}_Month'] = (
+                                    self.wrangled_df[baseline + f'_{i}_Month'] - self.wrangled_df[j + f'_{i}_Month']
+                            )
                     if any('relative' in k for k in comparison_cols):
-                        self.wrangled_df[f'1-({j}/{baseline})_{i}_Month'] = (
+                        self.wrangled_df[f'1-({j}/{baseline})_Runperiod_Total'] = (
                                 1 -
-                                (self.wrangled_df[j + f'_{i}_Month'] / self.wrangled_df[baseline + f'_{i}_Month'])
+                                (self.wrangled_df[j + '_Runperiod_Total'] / self.wrangled_df[baseline + '_Runperiod_Total'])
                         )
                     if any('absolute' in k for k in comparison_cols):
-                        self.wrangled_df[f'{baseline}-{j}_{i}_Month'] = (
-                                self.wrangled_df[baseline + f'_{i}_Month'] - self.wrangled_df[j + f'_{i}_Month']
+                        self.wrangled_df[f'{baseline} - {j}_Runperiod_Total'] = (
+                                self.wrangled_df[baseline + '_Runperiod_Total'] - self.wrangled_df[j + '_Runperiod_Total']
                         )
-                if any('relative' in k for k in comparison_cols):
-                    self.wrangled_df[f'1-({j}/{baseline})_Runperiod_Total'] = (
-                            1 -
-                            (self.wrangled_df[j + '_Runperiod_Total'] / self.wrangled_df[baseline + '_Runperiod_Total'])
-                    )
-                if any('absolute' in k for k in comparison_cols):
-                    self.wrangled_df[f'{baseline} - {j}_Runperiod_Total'] = (
-                            self.wrangled_df[baseline + '_Runperiod_Total'] - self.wrangled_df[j + '_Runperiod_Total']
-                    )
-        else:
-            for j in other_than_baseline:
-                if any('relative' in k for k in comparison_cols):
-                    self.wrangled_df[f'1-({j}/{baseline})'] = (
-                            1 -
-                            (self.wrangled_df[j] / self.wrangled_df[baseline])
-                    )
-                if any('absolute' in k for k in comparison_cols):
-                    self.wrangled_df[f'{baseline} - {j}'] = (
-                            self.wrangled_df[baseline] - self.wrangled_df[j]
-                    )
+            else:
+                for j in other_than_baseline:
+                    if any('relative' in k for k in comparison_cols):
+                        self.wrangled_df[f'1-({j}/{baseline})'] = (
+                                1 -
+                                (self.wrangled_df[j] / self.wrangled_df[baseline])
+                        )
+                    if any('absolute' in k for k in comparison_cols):
+                        self.wrangled_df[f'{baseline} - {j}'] = (
+                                self.wrangled_df[baseline] - self.wrangled_df[j]
+                        )
+        elif reshaping == 'unstack':
+            self.wrangled_df = self.wrangled_df.drop(['Source'])
+            self.indexcols.remove('Source')
+            if self.split_epw_names:
+                self.wrangled_df = self.wrangled_df.drop(['EPW', 'EPW_Scenario-Year'])
+                self.indexcols.remove('EPW')
+                self.indexcols.remove('EPW_Scenario-Year')
+
+            pass
+
 
     def enter_vars_to_gather(
             self,
