@@ -20,7 +20,7 @@ z.format_table(
     type_of_table='custom',
     custom_cols=[i for i in z.df.columns if
                  'Building_Total' in i
-                 and '[summed]' in i
+                 and '(summed)' in i
                  and 'Energy Demand' in i
                  ],
     split_epw_names=True
@@ -48,25 +48,23 @@ df_testing = df_backup.copy()
 vars_to_gather = [
     'Adaptive Standard',
     'Comfort mode',
-    
 ]
 
 
 
-df_testing['col_to_pivot'] = 'temp'
-
-z.indexcols.append('col_to_pivot')
+# df_testing['col_to_pivot'] = 'temp'
+# z.indexcols.append('col_to_pivot')
 
 # z.enter_vars_to_gather(vars_to_gather)
 
 # z.wrangled_df = df_testing.copy()
 
-if 'Month' in df_testing.columns:
-    df_testing['col_to_pivot'] = (df_testing[vars_to_gather].agg('['.join, axis=1) + '_' +
-                                        df_testing['Month'].astype(str) +
-                                        '[Month')
-else:
-    df_testing['col_to_pivot'] = df_testing[vars_to_gather].agg('['.join, axis=1)
+# if 'Month' in df_testing.columns:
+#     df_testing['col_to_pivot'] = (df_testing[vars_to_gather].agg('['.join, axis=1) + '_' +
+#                                         df_testing['Month'].astype(str) +
+#                                         '[Month')
+# else:
+#     df_testing['col_to_pivot'] = df_testing[vars_to_gather].agg('['.join, axis=1)
 
 # df_testing['col_to_pivot'] = df_testing['col_to_pivot']
 
@@ -84,16 +82,34 @@ df_testing = df_testing[
     (df_testing['Category'].isin(['CA_80']))
     &
     (
-        (df_testing['Adaptive Standard'].isin(['AS_ASHRAE55']))
+        (
+            (df_testing['Adaptive Standard'].isin(['AS_ASHRAE55']))
+            &
+            (df_testing['Comfort mode'].isin(['CM_0']))
+        )
         |
-        (df_testing['Adaptive Standard'].isin(['AS_JPN']))
+        (
+            (df_testing['Adaptive Standard'].isin(['AS_JPN']))
+            &
+            (
+                (df_testing['Comfort mode'].isin(['CM_0']))
+                |
+                (df_testing['Comfort mode'].isin(['CM_3']))
+            )
+        )
     )
-    &
-    (
-        (df_testing['Comfort mode'].isin(['CM_0']))
-        |
-        (df_testing['Comfort mode'].isin(['CM_3']))
-    )
+
+    # (
+    #     (df_testing['Adaptive Standard'].isin(['AS_ASHRAE55']))
+    #     |
+    #     (df_testing['Adaptive Standard'].isin(['AS_JPN']))
+    # )
+    # &
+    # (
+    #     (df_testing['Comfort mode'].isin(['CM_0']))
+    #     |
+    #     (df_testing['Comfort mode'].isin(['CM_3']))
+    # )
 
         # (df_testing['Adaptive Standard'].isin(['AS_JPN']))
     # &
@@ -114,6 +130,7 @@ df_testing = df_testing[
     #     (df_testing['Comfort mode'].isin(['CM_0']))
     # )
     ]
+
 
 df_testing = df_testing.set_index([pd.RangeIndex(len(df_testing))])
 
@@ -141,15 +158,74 @@ for i in z.indexcols:
 
 df_testing = df_testing.drop(cols_to_clean, axis=1)
 
+cols_for_values = list(set(df_testing.columns) - set(cols_for_multiindex))
+
 df_testing = df_testing.set_index(cols_for_multiindex)
 
-df_testing_unstacked = df_testing.unstack([
-    # 'Adaptive Standard',
+vars_to_gather = [
+    'Adaptive Standard',
     'Comfort mode',
+]
+
+df_testing_unstacked = df_testing.unstack(
+    vars_to_gather
     # not working
     # 'col_to_pivot'
-])
+)
 # df_testing.index
+
+df_testing_unstacked.to_excel('temp_unstacked_levels.xlsx')
+
+df_testing_unstacked.columns
+
+baseline = 'AS_ASHRAE55[CM_0'
+# baseline = baseline.split('[')
+
+
+# df_testing_unstacked[('Building_Total_Cooling Energy Demand (kWh/m2) (summed)', 'AS_ASHRAE55', 'CM_0')]
+
+comparison_cols = ['relative']
+
+# df_testing_unstacked_temp = df_testing_unstacked.copy()
+
+df_testing_unstacked.columns = ['['.join(col).strip('[') for col in df_testing_unstacked.columns.values]
+
+other_than_baseline = [i.split('[', maxsplit=1)[1] for i in df_testing_unstacked.columns if baseline not in i]
+other_than_baseline = list(dict.fromkeys(other_than_baseline))
+
+baseline_col = [col for col in df_testing_unstacked.columns if baseline in col][0]
+
+# cols_to_transfer = []
+# in this case the months are located in rows, so no need to add months to columns
+for i in cols_for_values:
+    for j in other_than_baseline:
+        for x in [col for col in df_testing_unstacked.columns if i in col and j in col]:
+            if any('relative' in k for k in comparison_cols):
+                df_testing_unstacked[f'{i}[1-({j}/{baseline})'] = (
+                        1 -
+                        (df_testing_unstacked[x] / df_testing_unstacked[baseline_col])
+                )
+                # cols_to_transfer.append(f'{i}[1-({j}/{baseline})')
+            if any('absolute' in k for k in comparison_cols):
+                df_testing_unstacked[f'{i}[{baseline} - {j}'] = (
+                        df_testing_unstacked[baseline_col] - df_testing_unstacked[x]
+                )
+                # cols_to_transfer.append(f'{i}[{baseline} - {j}')
+
+# for i in cols_for_values:
+#     for j in cols_to_transfer:
+#         if i in j:
+#             df_testing_unstacked[(i, 'AS_JPN', 'CM_0')] = df_testing_unstacked_temp[j]
+#             df_testing_unstacked[(i, j.split('[', maxsplit=1)[1]), 'x'] = df_testing_unstacked_temp[j]
+
+# levels_list
+#
+# for i in cols_for_values:
+#     for
+#
+# df_testing_unstacked_temp.to_excel('temp_unstacked_no levels_computed.xlsx')
+
+
 
 ##
 # 3.1.	Full air-conditioning energy performance

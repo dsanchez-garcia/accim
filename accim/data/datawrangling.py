@@ -703,7 +703,7 @@ class Table:
         }
         for output in BZoutputDict:
             for block_zone in hvac_zone_list:
-                df[f'{block_zone}' + '_' + BZoutputDict[output] + ' [summed]_pymod'] = df[
+                df[f'{block_zone}' + '_' + BZoutputDict[output] + ' (summed)_pymod'] = df[
                     [i for i in df.columns
                      if block_zone.lower() in i.lower() and output in i and '_pymod' not in i]
                 ].sum(axis=1)
@@ -743,28 +743,28 @@ class Table:
             for output in outputdict:
                 for block in block_list:
                     if any('sum' in j for j in level_sum_or_mean):
-                        df[f'{block}' + '_Total_' + outputdict[output] + ' [summed]_pymod'] = df[
+                        df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
                             [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i]
                         ].sum(axis=1)
                     if any('mean' in j for j in level_sum_or_mean):
                         if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                             continue
                         else:
-                            df[f'{block}' + '_Total_' + outputdict[output] + ' [mean]_pymod'] = df[
+                            df[f'{block}' + '_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
                                 [i for i in df.columns
                                  if block.lower() in i.lower() and output in i and '_pymod' not in i]
                             ].mean(axis=1)
         if any('building' in i for i in level):
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
-                    df['Building_Total_' + outputdict[output] + ' [summed]_pymod'] = df[
+                    df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
                         [i for i in df.columns if output in i and '_pymod' not in i]
                     ].sum(axis=1)
                 if any('mean' in j for j in level_sum_or_mean):
                     if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                         continue
                     else:
-                        df['Building_Total_' + outputdict[output] + ' [mean]_pymod'] = df[
+                        df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
                             [i for i in df.columns
                              if output in i and '_pymod' not in i]
                         ].mean(axis=1)
@@ -1168,7 +1168,7 @@ class Table:
 
             for col in df.columns:
                 for crit in renaming_criteria_bz:
-                    if '[summed]' not in col and '[mean]' not in col:
+                    if '(summed)' not in col and '(mean)' not in col:
                         if crit in col:
                             for block_zone in occupied_zone_list:
                                 if block_zone in col:
@@ -1181,7 +1181,7 @@ class Table:
 
             for col in df.columns:
                 for crit in renaming_criteria:
-                    if '[summed]' not in col and '[mean]' not in col:
+                    if '(summed)' not in col and '(mean)' not in col:
                         if crit in col:
                             if energy_units in col:
                                 temp = {col: renaming_criteria[crit] + ' ' + energy_units}
@@ -1201,18 +1201,18 @@ class Table:
                 for crit in renaming_criteria_block:
                     for block in block_list:
                         if block + '_Total_' + crit in col:
-                            if '[summed]' in col:
-                                temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} [summed]'}
+                            if '(summed)' in col:
+                                temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} (summed)'}
                                 all_cols_renamed.update(temp)
-                            elif '[mean]' in col:
-                                temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} [mean]'}
+                            elif '(mean)' in col:
+                                temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} (mean)'}
                                 all_cols_renamed.update(temp)
                     if 'Building_Total_' + crit in col:
-                        if '[summed]' in col:
-                            temp = {col: f'Building_Total_{renaming_criteria_block[crit]} {energy_units} [summed]'}
+                        if '(summed)' in col:
+                            temp = {col: f'Building_Total_{renaming_criteria_block[crit]} {energy_units} (summed)'}
                             all_cols_renamed.update(temp)
-                        if '[mean]' in col:
-                            temp = {col: f'Building_Total_{renaming_criteria_block[crit]} {energy_units} [mean]'}
+                        if '(mean)' in col:
+                            temp = {col: f'Building_Total_{renaming_criteria_block[crit]} {energy_units} (mean)'}
                             all_cols_renamed.update(temp)
 
             df = df.rename(columns=all_cols_renamed)
@@ -1421,19 +1421,20 @@ class Table:
 
         self.enter_vars_to_gather(vars_to_gather)
 
-        self.wrangled_df = self.df.copy()
+        wrangled_df = self.df.copy()
 
-        if 'Month' in self.wrangled_df.columns:
-            self.wrangled_df['col_to_pivot'] = (self.wrangled_df[vars_to_gather].agg('['.join, axis=1) + '_' +
-                                                self.wrangled_df['Month'].astype(str) +
-                                                '[Month')
-        else:
-            self.wrangled_df['col_to_pivot'] = self.wrangled_df[vars_to_gather].agg('['.join, axis=1)
-
-        self.df['col_to_pivot'] = self.wrangled_df['col_to_pivot']
 
         if reshaping == 'pivot':
-            self.wrangled_df = self.wrangled_df.pivot_table(
+            if 'Month' in wrangled_df.columns:
+                wrangled_df['col_to_pivot'] = (wrangled_df[vars_to_gather].agg('['.join, axis=1) + '_' +
+                                                    wrangled_df['Month'].astype(str) +
+                                                    '[Month')
+            else:
+                wrangled_df['col_to_pivot'] = wrangled_df[vars_to_gather].agg('['.join, axis=1)
+
+            self.df['col_to_pivot'] = wrangled_df['col_to_pivot']
+
+            wrangled_df = wrangled_df.pivot_table(
                 index=self.indexcols.remove('col_to_pivot'),
                 columns='col_to_pivot',
                 values=self.val_cols,
@@ -1455,52 +1456,99 @@ class Table:
 
             if 'Month' in self.df.columns:
                 for i in var_to_gather_values:
-                    self.wrangled_df[f'{i}_Runperiod_Total'] = self.wrangled_df[
-                        [j for j in self.wrangled_df.columns
+                    wrangled_df[f'{i}_Runperiod_Total'] = wrangled_df[
+                        [j for j in wrangled_df.columns
                          if i in j]
                     ].sum(axis=1)
 
                 for j in other_than_baseline:
                     for i in list(dict.fromkeys(self.df['Month'])):
                         if any('relative' in k for k in comparison_cols):
-                            self.wrangled_df[f'1-({j}/{baseline})_{i}_Month'] = (
+                            wrangled_df[f'1-({j}/{baseline})_{i}_Month'] = (
                                     1 -
-                                    (self.wrangled_df[j + f'_{i}_Month'] / self.wrangled_df[baseline + f'_{i}_Month'])
+                                    (wrangled_df[j + f'_{i}_Month'] / wrangled_df[baseline + f'_{i}_Month'])
                             )
                         if any('absolute' in k for k in comparison_cols):
-                            self.wrangled_df[f'{baseline}-{j}_{i}_Month'] = (
-                                    self.wrangled_df[baseline + f'_{i}_Month'] - self.wrangled_df[j + f'_{i}_Month']
+                            wrangled_df[f'{baseline}-{j}_{i}_Month'] = (
+                                    wrangled_df[baseline + f'_{i}_Month'] - wrangled_df[j + f'_{i}_Month']
                             )
                     if any('relative' in k for k in comparison_cols):
-                        self.wrangled_df[f'1-({j}/{baseline})_Runperiod_Total'] = (
+                        wrangled_df[f'1-({j}/{baseline})_Runperiod_Total'] = (
                                 1 -
-                                (self.wrangled_df[j + '_Runperiod_Total'] / self.wrangled_df[baseline + '_Runperiod_Total'])
+                                (wrangled_df[j + '_Runperiod_Total'] / wrangled_df[baseline + '_Runperiod_Total'])
                         )
                     if any('absolute' in k for k in comparison_cols):
-                        self.wrangled_df[f'{baseline} - {j}_Runperiod_Total'] = (
-                                self.wrangled_df[baseline + '_Runperiod_Total'] - self.wrangled_df[j + '_Runperiod_Total']
+                        wrangled_df[f'{baseline} - {j}_Runperiod_Total'] = (
+                                wrangled_df[baseline + '_Runperiod_Total'] - wrangled_df[j + '_Runperiod_Total']
                         )
             else:
                 for j in other_than_baseline:
                     if any('relative' in k for k in comparison_cols):
-                        self.wrangled_df[f'1-({j}/{baseline})'] = (
+                        wrangled_df[f'1-({j}/{baseline})'] = (
                                 1 -
-                                (self.wrangled_df[j] / self.wrangled_df[baseline])
+                                (wrangled_df[j] / wrangled_df[baseline])
                         )
                     if any('absolute' in k for k in comparison_cols):
-                        self.wrangled_df[f'{baseline} - {j}'] = (
-                                self.wrangled_df[baseline] - self.wrangled_df[j]
+                        wrangled_df[f'{baseline} - {j}'] = (
+                                wrangled_df[baseline] - wrangled_df[j]
                         )
         elif reshaping == 'unstack':
-            self.wrangled_df = self.wrangled_df.drop(['Source'])
+            wrangled_df = wrangled_df.drop(['col_to_pivot'], axis=1)
+            self.indexcols.remove('col_to_pivot')
+            wrangled_df = wrangled_df.drop(['Source'], axis=1)
             self.indexcols.remove('Source')
             if self.split_epw_names:
-                self.wrangled_df = self.wrangled_df.drop(['EPW', 'EPW_Scenario-Year'])
+                wrangled_df = wrangled_df.drop(['EPW', 'EPW_Scenario-Year'], axis=1)
                 self.indexcols.remove('EPW')
                 self.indexcols.remove('EPW_Scenario-Year')
 
-            pass
+            cols_to_clean = []
+            cols_for_multiindex = []
+            for i in self.indexcols:
+                if (wrangled_df[i][0] == wrangled_df[i]).all():
+                    cols_to_clean.append(i)
+                else:
+                    cols_for_multiindex.append(i)
 
+            wrangled_df = wrangled_df.drop(cols_to_clean, axis=1)
+
+            cols_for_values = list(set(wrangled_df.columns) - set(cols_for_multiindex))
+
+            wrangled_df = wrangled_df.set_index(cols_for_multiindex)
+
+            wrangled_df = wrangled_df.unstack(vars_to_gather)
+
+            # df_testing_unstacked_temp = wrangled_df.copy()
+
+            wrangled_df.columns = ['['.join(col).strip('[') for col in wrangled_df.columns.values]
+
+            var_to_gather_values = [i.split('[', maxsplit=1)[1] for i in wrangled_df.columns]
+            var_to_gather_values = list(dict.fromkeys(var_to_gather_values))
+
+            if baseline not in var_to_gather_values:
+                print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
+                print(var_to_gather_values)
+                baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
+
+            other_than_baseline = [i.split('[', maxsplit=1)[1] for i in wrangled_df.columns if baseline not in i]
+            other_than_baseline = list(dict.fromkeys(other_than_baseline))
+
+            baseline_col = [col for col in wrangled_df.columns if baseline in col][0]
+
+            # in this case the months are located in rows, so no need to add months to columns
+            for i in cols_for_values:
+                for j in other_than_baseline:
+                    for x in [col for col in wrangled_df.columns if i in col and j in col]:
+                        if any('relative' in k for k in comparison_cols):
+                            wrangled_df[f'{i}[1-({j}/{baseline})'] = (
+                                    1 -
+                                    (wrangled_df[x] / wrangled_df[baseline_col])
+                            )
+                        if any('absolute' in k for k in comparison_cols):
+                            wrangled_df[f'{i}[{baseline} - {j}'] = (
+                                    wrangled_df[baseline_col] - wrangled_df[x]
+                            )
+        self.wrangled_df = wrangled_df
 
     def enter_vars_to_gather(
             self,
