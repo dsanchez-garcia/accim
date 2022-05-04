@@ -44,12 +44,16 @@ df_backup = z.df.copy()
 
 # Testing reshaping
 
+z.df = z.df[
+    ~z.df['Adaptive Standard'].isin(['AS_PMV'])
+]
+
 z.wrangled_table(reshaping='unstack',
                  vars_to_gather=[
                      'Adaptive Standard',
                      'Comfort mode'
                     ],
-                 baseline='x',
+                 baseline='AS_ASHRAE55[CM_0',
                  comparison_cols=['relative', 'absolute']
                  )
 
