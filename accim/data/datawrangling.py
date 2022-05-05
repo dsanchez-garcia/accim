@@ -1369,8 +1369,22 @@ class Table:
 
 
 
-    def returndf(self):
-        return self.df
+    def custom_order(
+            self,
+            ordered_list: list = None,
+            column_to_order: str = None,
+    ):
+        from pandas.api.types import CategoricalDtype
+
+        if ordered_list is None:
+            ordered_list = []
+
+        custom_order = CategoricalDtype(
+            ordered_list,
+            ordered=True
+        )
+
+        self.df[column_to_order] = self.df[column_to_order].astype(custom_order)
 
     # def hvac_zone_list(self):
     #     return self.hvac_zone_list
@@ -1380,18 +1394,6 @@ class Table:
     #
     # def block_list(self):
     #     return block_list()
-
-
-    def unstacked_table(self,
-                        vars_to_gather=None,
-                        baseline: str = None,
-                        comparison_cols=None):
-        pass
-        if vars_to_gather is None:
-            vars_to_gather = []
-        if comparison_cols is None:
-            comparison_cols = []
-
 
 
     def wrangled_table(self,
@@ -1425,16 +1427,20 @@ class Table:
 
 
         if reshaping == 'pivot':
-            if 'Month' in wrangled_df.columns:
-                wrangled_df['col_to_pivot'] = (wrangled_df[vars_to_gather].agg('['.join, axis=1) + '_' +
-                                                    wrangled_df['Month'].astype(str) +
+            
+            wrangled_df_pivoted = wrangled_df.copy()
+            del wrangled_df
+            
+            if 'Month' in wrangled_df_pivoted.columns:
+                wrangled_df_pivoted['col_to_pivot'] = (wrangled_df_pivoted[vars_to_gather].agg('['.join, axis=1) + '_' +
+                                                    wrangled_df_pivoted['Month'].astype(str) +
                                                     '[Month')
             else:
-                wrangled_df['col_to_pivot'] = wrangled_df[vars_to_gather].agg('['.join, axis=1)
+                wrangled_df_pivoted['col_to_pivot'] = wrangled_df_pivoted[vars_to_gather].agg('['.join, axis=1)
 
-            self.df['col_to_pivot'] = wrangled_df['col_to_pivot']
+            self.df['col_to_pivot'] = wrangled_df_pivoted['col_to_pivot']
 
-            wrangled_df = wrangled_df.pivot_table(
+            wrangled_df_pivoted = wrangled_df_pivoted.pivot_table(
                 index=self.indexcols.remove('col_to_pivot'),
                 columns='col_to_pivot',
                 values=self.val_cols,
@@ -1456,73 +1462,79 @@ class Table:
 
             if 'Month' in self.df.columns:
                 for i in var_to_gather_values:
-                    wrangled_df[f'{i}_Runperiod_Total'] = wrangled_df[
-                        [j for j in wrangled_df.columns
+                    wrangled_df_pivoted[f'{i}_Runperiod_Total'] = wrangled_df_pivoted[
+                        [j for j in wrangled_df_pivoted.columns
                          if i in j]
                     ].sum(axis=1)
 
                 for j in other_than_baseline:
                     for i in list(dict.fromkeys(self.df['Month'])):
                         if any('relative' in k for k in comparison_cols):
-                            wrangled_df[f'1-({j}/{baseline})_{i}_Month'] = (
+                            wrangled_df_pivoted[f'1-({j}/{baseline})_{i}_Month'] = (
                                     1 -
-                                    (wrangled_df[j + f'_{i}_Month'] / wrangled_df[baseline + f'_{i}_Month'])
+                                    (wrangled_df_pivoted[j + f'_{i}_Month'] / wrangled_df_pivoted[baseline + f'_{i}_Month'])
                             )
                         if any('absolute' in k for k in comparison_cols):
-                            wrangled_df[f'{baseline}-{j}_{i}_Month'] = (
-                                    wrangled_df[baseline + f'_{i}_Month'] - wrangled_df[j + f'_{i}_Month']
+                            wrangled_df_pivoted[f'{baseline}-{j}_{i}_Month'] = (
+                                    wrangled_df_pivoted[baseline + f'_{i}_Month'] - wrangled_df_pivoted[j + f'_{i}_Month']
                             )
                     if any('relative' in k for k in comparison_cols):
-                        wrangled_df[f'1-({j}/{baseline})_Runperiod_Total'] = (
+                        wrangled_df_pivoted[f'1-({j}/{baseline})_Runperiod_Total'] = (
                                 1 -
-                                (wrangled_df[j + '_Runperiod_Total'] / wrangled_df[baseline + '_Runperiod_Total'])
+                                (wrangled_df_pivoted[j + '_Runperiod_Total'] / wrangled_df_pivoted[baseline + '_Runperiod_Total'])
                         )
                     if any('absolute' in k for k in comparison_cols):
-                        wrangled_df[f'{baseline} - {j}_Runperiod_Total'] = (
-                                wrangled_df[baseline + '_Runperiod_Total'] - wrangled_df[j + '_Runperiod_Total']
+                        wrangled_df_pivoted[f'{baseline} - {j}_Runperiod_Total'] = (
+                                wrangled_df_pivoted[baseline + '_Runperiod_Total'] - wrangled_df_pivoted[j + '_Runperiod_Total']
                         )
             else:
                 for j in other_than_baseline:
                     if any('relative' in k for k in comparison_cols):
-                        wrangled_df[f'1-({j}/{baseline})'] = (
+                        wrangled_df_pivoted[f'1-({j}/{baseline})'] = (
                                 1 -
-                                (wrangled_df[j] / wrangled_df[baseline])
+                                (wrangled_df_pivoted[j] / wrangled_df_pivoted[baseline])
                         )
                     if any('absolute' in k for k in comparison_cols):
-                        wrangled_df[f'{baseline} - {j}'] = (
-                                wrangled_df[baseline] - wrangled_df[j]
+                        wrangled_df_pivoted[f'{baseline} - {j}'] = (
+                                wrangled_df_pivoted[baseline] - wrangled_df_pivoted[j]
                         )
+            self.wrangled_df_pivoted = wrangled_df_pivoted
+            
         elif reshaping == 'unstack':
-            wrangled_df = wrangled_df.drop(['col_to_pivot'], axis=1)
+            
+            wrangled_df_unstacked = wrangled_df.copy()
+            del wrangled_df
+            
+            wrangled_df_unstacked = wrangled_df_unstacked.drop(['col_to_pivot'], axis=1)
             self.indexcols.remove('col_to_pivot')
-            wrangled_df = wrangled_df.drop(['Source'], axis=1)
+            wrangled_df_unstacked = wrangled_df_unstacked.drop(['Source'], axis=1)
             self.indexcols.remove('Source')
             if self.split_epw_names:
-                wrangled_df = wrangled_df.drop(['EPW', 'EPW_Scenario-Year'], axis=1)
+                wrangled_df_unstacked = wrangled_df_unstacked.drop(['EPW', 'EPW_Scenario-Year'], axis=1)
                 self.indexcols.remove('EPW')
                 self.indexcols.remove('EPW_Scenario-Year')
 
             cols_to_clean = []
             cols_for_multiindex = []
             for i in self.indexcols:
-                if (wrangled_df[i][0] == wrangled_df[i]).all():
+                if (wrangled_df_unstacked[i][0] == wrangled_df_unstacked[i]).all():
                     cols_to_clean.append(i)
                 else:
                     cols_for_multiindex.append(i)
 
-            wrangled_df = wrangled_df.drop(cols_to_clean, axis=1)
+            wrangled_df_unstacked = wrangled_df_unstacked.drop(cols_to_clean, axis=1)
 
-            cols_for_values = list(set(wrangled_df.columns) - set(cols_for_multiindex))
+            cols_for_values = list(set(wrangled_df_unstacked.columns) - set(cols_for_multiindex))
 
-            wrangled_df = wrangled_df.set_index(cols_for_multiindex)
+            wrangled_df_unstacked = wrangled_df_unstacked.set_index(cols_for_multiindex)
 
-            wrangled_df = wrangled_df.unstack(vars_to_gather)
+            wrangled_df_unstacked = wrangled_df_unstacked.unstack(vars_to_gather)
 
-            # df_testing_unstacked_temp = wrangled_df.copy()
+            # df_testing_unstacked_temp = wrangled_df_unstacked.copy()
 
-            wrangled_df.columns = ['['.join(col).strip('[') for col in wrangled_df.columns.values]
+            wrangled_df_unstacked.columns = ['['.join(col).strip('[') for col in wrangled_df_unstacked.columns.values]
 
-            var_to_gather_values = [i.split('[', maxsplit=1)[1] for i in wrangled_df.columns]
+            var_to_gather_values = [i.split('[', maxsplit=1)[1] for i in wrangled_df_unstacked.columns]
             var_to_gather_values = list(dict.fromkeys(var_to_gather_values))
 
             if baseline not in var_to_gather_values:
@@ -1530,25 +1542,25 @@ class Table:
                 print(var_to_gather_values)
                 baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
 
-            other_than_baseline = [i.split('[', maxsplit=1)[1] for i in wrangled_df.columns if baseline not in i]
+            other_than_baseline = [i.split('[', maxsplit=1)[1] for i in wrangled_df_unstacked.columns if baseline not in i]
             other_than_baseline = list(dict.fromkeys(other_than_baseline))
 
-            baseline_col = [col for col in wrangled_df.columns if baseline in col][0]
+            baseline_col = [col for col in wrangled_df_unstacked.columns if baseline in col][0]
 
             # in this case the months are located in rows, so no need to add months to columns
             for i in cols_for_values:
                 for j in other_than_baseline:
-                    for x in [col for col in wrangled_df.columns if i in col and j in col]:
+                    for x in [col for col in wrangled_df_unstacked.columns if i in col and j in col]:
                         if any('relative' in k for k in comparison_cols):
-                            wrangled_df[f'{i}[1-({j}/{baseline})'] = (
+                            wrangled_df_unstacked[f'{i}[1-({j}/{baseline})'] = (
                                     1 -
-                                    (wrangled_df[x] / wrangled_df[baseline_col])
+                                    (wrangled_df_unstacked[x] / wrangled_df_unstacked[baseline_col])
                             )
                         if any('absolute' in k for k in comparison_cols):
-                            wrangled_df[f'{i}[{baseline} - {j}'] = (
-                                    wrangled_df[baseline_col] - wrangled_df[x]
+                            wrangled_df_unstacked[f'{i}[{baseline} - {j}'] = (
+                                    wrangled_df_unstacked[baseline_col] - wrangled_df_unstacked[x]
                             )
-        self.wrangled_df = wrangled_df
+            self.wrangled_df_unstacked = wrangled_df_unstacked
 
     def enter_vars_to_gather(
             self,
