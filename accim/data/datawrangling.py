@@ -1415,6 +1415,7 @@ class Table:
             comparison_cols = []
 
         import numpy as np
+        import pandas as pd
 
         self.df['col_to_pivot'] = 'temp'
 
@@ -1508,19 +1509,33 @@ class Table:
             wrangled_df_unstacked = wrangled_df_unstacked.drop(['col_to_pivot'], axis=1)
             self.indexcols.remove('col_to_pivot')
             wrangled_df_unstacked = wrangled_df_unstacked.drop(['Source'], axis=1)
-            self.indexcols.remove('Source')
+            try:
+                self.indexcols.remove('Source')
+            except ValueError:
+                print('Since this is not the first time you run wrangled_table, '
+                      '"Source" is trying to be removed from indexcols, but has been previously removed.')
             if self.split_epw_names:
                 wrangled_df_unstacked = wrangled_df_unstacked.drop(['EPW', 'EPW_Scenario-Year'], axis=1)
-                self.indexcols.remove('EPW')
-                self.indexcols.remove('EPW_Scenario-Year')
-
+                try:
+                    self.indexcols.remove('EPW')
+                    self.indexcols.remove('EPW_Scenario-Year')
+                except ValueError:
+                    print('Since this is not the first time you run wrangled_table, '
+                          '"EPW" and "EPW_Scenario-Year" are trying to be removed from indexcols, but has been previously removed.')
             cols_to_clean = []
             cols_for_multiindex = []
             for i in self.indexcols:
-                if (wrangled_df_unstacked[i][0] == wrangled_df_unstacked[i]).all():
-                    cols_to_clean.append(i)
-                else:
-                    cols_for_multiindex.append(i)
+                try:
+                    if (wrangled_df_unstacked[i][0] == wrangled_df_unstacked[i]).all():
+                        cols_to_clean.append(i)
+                    else:
+                        cols_for_multiindex.append(i)
+                except KeyError:
+                    wrangled_df_unstacked = wrangled_df_unstacked.set_index([pd.RangeIndex(len(wrangled_df_unstacked))])
+                    if (wrangled_df_unstacked[i][0] == wrangled_df_unstacked[i]).all():
+                        cols_to_clean.append(i)
+                    else:
+                        cols_for_multiindex.append(i)
 
             wrangled_df_unstacked = wrangled_df_unstacked.drop(cols_to_clean, axis=1)
 
@@ -1529,8 +1544,6 @@ class Table:
             wrangled_df_unstacked = wrangled_df_unstacked.set_index(cols_for_multiindex)
 
             wrangled_df_unstacked = wrangled_df_unstacked.unstack(vars_to_gather)
-
-            # df_testing_unstacked_temp = wrangled_df_unstacked.copy()
 
             wrangled_df_unstacked.columns = ['['.join(col).strip('[') for col in wrangled_df_unstacked.columns.values]
 
@@ -1545,10 +1558,11 @@ class Table:
             other_than_baseline = [i.split('[', maxsplit=1)[1] for i in wrangled_df_unstacked.columns if baseline not in i]
             other_than_baseline = list(dict.fromkeys(other_than_baseline))
 
-            baseline_col = [col for col in wrangled_df_unstacked.columns if baseline in col][0]
+            # baseline_col = [col for col in wrangled_df_unstacked.columns if baseline in col][0]
 
             # in this case the months are located in rows, so no need to add months to columns
             for i in cols_for_values:
+                baseline_col = [col for col in wrangled_df_unstacked.columns if baseline in col and i in col][0]
                 for j in other_than_baseline:
                     for x in [col for col in wrangled_df_unstacked.columns if i in col and j in col]:
                         if any('relative' in k for k in comparison_cols):
@@ -1560,6 +1574,10 @@ class Table:
                             wrangled_df_unstacked[f'{i}[{baseline} - {j}'] = (
                                     wrangled_df_unstacked[baseline_col] - wrangled_df_unstacked[x]
                             )
+            # todo allow an argument to create the multiindex
+
+
+
             self.wrangled_df_unstacked = wrangled_df_unstacked
 
     def enter_vars_to_gather(

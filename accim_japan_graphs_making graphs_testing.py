@@ -26,14 +26,14 @@ z.format_table(
     split_epw_names=True
 )
 
-cities_order = CategoricalDtype(
-    ['Asahikawa', 'Sapporo', 'Morioka', 'Niigata', 'Maebashi', 'Tokyo', 'Kagoshima', 'Naha'],
-    ordered=True
-)
-
-z.df['EPW_City_or_subcountry'] = z.df['EPW_City_or_subcountry'].astype(cities_order)
-z.df['EPW_City_or_subcountry']
-z.df = z.df.sort_values(['EPW_City_or_subcountry', 'Adaptive Standard', 'Category', 'Comfort mode'])
+# cities_order = CategoricalDtype(
+#     ['Asahikawa', 'Sapporo', 'Morioka', 'Niigata', 'Maebashi', 'Tokyo', 'Kagoshima', 'Naha'],
+#     ordered=True
+# )
+#
+# z.df['EPW_City_or_subcountry'] = z.df['EPW_City_or_subcountry'].astype(cities_order)
+# z.df['EPW_City_or_subcountry']
+# z.df = z.df.sort_values(['EPW_City_or_subcountry', 'Adaptive Standard', 'Category', 'Comfort mode'])
 
 
 df_backup = z.df.copy()
@@ -41,20 +41,48 @@ df_backup = z.df.copy()
 # cities_order = ['Asahikawa', 'Sapporo', 'Morioka', 'Niigata', 'Maebashi', 'Tokyo', 'Kagoshima', 'Naha']
 
 ##
+z.custom_order(
+    ordered_list=['Asahikawa', 'Sapporo', 'Morioka', 'Niigata', 'Maebashi', 'Tokyo', 'Kagoshima', 'Naha'],
+    column_to_order='EPW_City_or_subcountry',
+
+)
+z.df = z.df.sort_values(['EPW_City_or_subcountry', 'Adaptive Standard', 'Category', 'Comfort mode'])
+
+##
 
 # Testing reshaping
 
+# z.df = z.df[
+#     ~z.df['Adaptive Standard'].isin(['AS_PMV'])
+# ]
+
 z.df = z.df[
-    ~z.df['Adaptive Standard'].isin(['AS_PMV'])
+    (z.df['EPW_Scenario-Year'].isin(['Present']))
+    &
+    (z.df['HVAC mode'].isin(['HM_0']))
+    &
+    (z.df['Category'].isin(['CA_80']))
+    &
+    (z.df['Adaptive Standard'].isin(['AS_JPN'])
+    &
+        (
+            (z.df['Comfort mode'].isin(['CM_0']))
+            |
+            (z.df['Comfort mode'].isin(['CM_3']))
+        )
+    )
 ]
+
 
 z.wrangled_table(reshaping='unstack',
                  vars_to_gather=[
-                     'Adaptive Standard',
+                     # 'Adaptive Standard',
                      'Comfort mode'
                     ],
-                 baseline='AS_ASHRAE55[CM_0',
+                 baseline='CM_0',
                  comparison_cols=['relative', 'absolute']
                  )
+
+z.wrangled_df_unstacked.to_excel('temp_unstacked_amended.xlsx')
 
 ##
