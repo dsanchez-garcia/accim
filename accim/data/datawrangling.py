@@ -1422,7 +1422,8 @@ class Table:
 
         self.indexcols.append('col_to_pivot')
 
-        self.enter_vars_to_gather(vars_to_gather)
+        if reshaping == 'pivot' or reshaping == 'unstack':
+            self.enter_vars_to_gather(vars_to_gather)
 
         wrangled_df = self.df.copy()
 
@@ -1584,11 +1585,8 @@ class Table:
 
             elif reshaping == 'stack':
                 wrangled_df_stacked = wrangled_df_unstacked_or_stacked.copy()
-                # del wrangled_df_unstacked_or_stacked
-                # todo not working: ValueError: level should contain all level names or all level numbers, not a mixture of the two.
-                wrangled_df_stacked = wrangled_df_stacked.stack(
-                    # vars_to_gather
-                )
+                del wrangled_df_unstacked_or_stacked
+                wrangled_df_stacked = wrangled_df_stacked.stack()
                 wrangled_df_stacked = wrangled_df_stacked.to_frame()
                 wrangled_df_stacked.columns = ['values']
                 cols_for_multiindex.append('Variable')

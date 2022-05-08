@@ -75,10 +75,10 @@ z.df = z.df[
 ##
 
 z.wrangled_table(reshaping='stack',
-                 vars_to_gather=[
-                     # 'Adaptive Standard',
-                     'Comfort mode'
-                    ],
+                 # vars_to_gather=[
+                 #     # 'Adaptive Standard',
+                 #     'Comfort mode'
+                 #    ],
                  # baseline='CM_0',
                  # comparison_cols=['relative', 'absolute']
                  )
