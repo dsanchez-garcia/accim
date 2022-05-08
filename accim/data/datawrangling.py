@@ -1501,21 +1501,21 @@ class Table:
                         )
             self.wrangled_df_pivoted = wrangled_df_pivoted
             
-        elif reshaping == 'unstack':
+        elif reshaping == 'unstack' or reshaping == 'stack':
             
-            wrangled_df_unstacked = wrangled_df.copy()
+            wrangled_df_unstacked_or_stacked = wrangled_df.copy()
             del wrangled_df
             
-            wrangled_df_unstacked = wrangled_df_unstacked.drop(['col_to_pivot'], axis=1)
+            wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['col_to_pivot'], axis=1)
             self.indexcols.remove('col_to_pivot')
-            wrangled_df_unstacked = wrangled_df_unstacked.drop(['Source'], axis=1)
+            wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['Source'], axis=1)
             try:
                 self.indexcols.remove('Source')
             except ValueError:
                 print('Since this is not the first time you run wrangled_table, '
                       '"Source" is trying to be removed from indexcols, but has been previously removed.')
             if self.split_epw_names:
-                wrangled_df_unstacked = wrangled_df_unstacked.drop(['EPW', 'EPW_Scenario-Year'], axis=1)
+                wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['EPW', 'EPW_Scenario-Year'], axis=1)
                 try:
                     self.indexcols.remove('EPW')
                     self.indexcols.remove('EPW_Scenario-Year')
@@ -1526,59 +1526,69 @@ class Table:
             cols_for_multiindex = []
             for i in self.indexcols:
                 try:
-                    if (wrangled_df_unstacked[i][0] == wrangled_df_unstacked[i]).all():
+                    if (wrangled_df_unstacked_or_stacked[i][0] == wrangled_df_unstacked_or_stacked[i]).all():
                         cols_to_clean.append(i)
                     else:
                         cols_for_multiindex.append(i)
                 except KeyError:
-                    wrangled_df_unstacked = wrangled_df_unstacked.set_index([pd.RangeIndex(len(wrangled_df_unstacked))])
-                    if (wrangled_df_unstacked[i][0] == wrangled_df_unstacked[i]).all():
+                    wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.set_index([pd.RangeIndex(len(wrangled_df_unstacked_or_stacked))])
+                    if (wrangled_df_unstacked_or_stacked[i][0] == wrangled_df_unstacked_or_stacked[i]).all():
                         cols_to_clean.append(i)
                     else:
                         cols_for_multiindex.append(i)
 
-            wrangled_df_unstacked = wrangled_df_unstacked.drop(cols_to_clean, axis=1)
+            wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(cols_to_clean, axis=1)
 
-            cols_for_values = list(set(wrangled_df_unstacked.columns) - set(cols_for_multiindex))
+            cols_for_values = list(set(wrangled_df_unstacked_or_stacked.columns) - set(cols_for_multiindex))
 
-            wrangled_df_unstacked = wrangled_df_unstacked.set_index(cols_for_multiindex)
+            wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.set_index(cols_for_multiindex)
 
-            wrangled_df_unstacked = wrangled_df_unstacked.unstack(vars_to_gather)
+            if reshaping == 'unstack':
+                wrangled_df_unstacked = wrangled_df_unstacked_or_stacked.copy()
+                del wrangled_df_unstacked_or_stacked
 
-            wrangled_df_unstacked.columns = ['['.join(col).strip('[') for col in wrangled_df_unstacked.columns.values]
+                wrangled_df_unstacked = wrangled_df_unstacked.unstack(vars_to_gather)
 
-            var_to_gather_values = [i.split('[', maxsplit=1)[1] for i in wrangled_df_unstacked.columns]
-            var_to_gather_values = list(dict.fromkeys(var_to_gather_values))
+                wrangled_df_unstacked.columns = ['['.join(col).strip('[') for col in wrangled_df_unstacked.columns.values]
 
-            if baseline not in var_to_gather_values:
-                print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
-                print(var_to_gather_values)
-                baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
+                var_to_gather_values = [i.split('[', maxsplit=1)[1] for i in wrangled_df_unstacked.columns]
+                var_to_gather_values = list(dict.fromkeys(var_to_gather_values))
 
-            other_than_baseline = [i.split('[', maxsplit=1)[1] for i in wrangled_df_unstacked.columns if baseline not in i]
-            other_than_baseline = list(dict.fromkeys(other_than_baseline))
+                if baseline not in var_to_gather_values:
+                    print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
+                    print(var_to_gather_values)
+                    baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
 
-            # baseline_col = [col for col in wrangled_df_unstacked.columns if baseline in col][0]
+                other_than_baseline = [i.split('[', maxsplit=1)[1] for i in wrangled_df_unstacked.columns if baseline not in i]
+                other_than_baseline = list(dict.fromkeys(other_than_baseline))
 
-            # in this case the months are located in rows, so no need to add months to columns
-            for i in cols_for_values:
-                baseline_col = [col for col in wrangled_df_unstacked.columns if baseline in col and i in col][0]
-                for j in other_than_baseline:
-                    for x in [col for col in wrangled_df_unstacked.columns if i in col and j in col]:
-                        if any('relative' in k for k in comparison_cols):
-                            wrangled_df_unstacked[f'{i}[1-({j}/{baseline})'] = (
-                                    1 -
-                                    (wrangled_df_unstacked[x] / wrangled_df_unstacked[baseline_col])
-                            )
-                        if any('absolute' in k for k in comparison_cols):
-                            wrangled_df_unstacked[f'{i}[{baseline} - {j}'] = (
-                                    wrangled_df_unstacked[baseline_col] - wrangled_df_unstacked[x]
-                            )
-            # todo allow an argument to create the multiindex
+                # baseline_col = [col for col in wrangled_df_unstacked.columns if baseline in col][0]
+
+                # in this case the months are located in rows, so no need to add months to columns
+                for i in cols_for_values:
+                    baseline_col = [col for col in wrangled_df_unstacked.columns if baseline in col and i in col][0]
+                    for j in other_than_baseline:
+                        for x in [col for col in wrangled_df_unstacked.columns if i in col and j in col]:
+                            if any('relative' in k for k in comparison_cols):
+                                wrangled_df_unstacked[f'{i}[1-({j}/{baseline})'] = (
+                                        1 -
+                                        (wrangled_df_unstacked[x] / wrangled_df_unstacked[baseline_col])
+                                )
+                            if any('absolute' in k for k in comparison_cols):
+                                wrangled_df_unstacked[f'{i}[{baseline} - {j}'] = (
+                                        wrangled_df_unstacked[baseline_col] - wrangled_df_unstacked[x]
+                                )
+                # todo allow an argument to create the multiindex
+
+                self.wrangled_df_unstacked = wrangled_df_unstacked
+
+            elif reshaping == 'stack':
+                wrangled_df_stacked = wrangled_df_unstacked_or_stacked.copy()
+                del wrangled_df_unstacked_or_stacked
+                # todo not working: ValueError: level should contain all level names or all level numbers, not a mixture of the two.
+                wrangled_df_stacked = wrangled_df_stacked.stack(vars_to_gather)
 
 
-
-            self.wrangled_df_unstacked = wrangled_df_unstacked
 
     def enter_vars_to_gather(
             self,

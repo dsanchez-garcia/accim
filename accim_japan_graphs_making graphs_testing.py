@@ -72,17 +72,17 @@ z.df = z.df[
         )
     )
 ]
+##
 
-
-z.wrangled_table(reshaping='unstack',
+z.wrangled_table(reshaping='stack',
                  vars_to_gather=[
                      # 'Adaptive Standard',
                      'Comfort mode'
                     ],
-                 baseline='CM_0',
-                 comparison_cols=['relative', 'absolute']
+                 # baseline='CM_0',
+                 # comparison_cols=['relative', 'absolute']
                  )
 
-z.wrangled_df_unstacked.to_excel('temp_unstacked_amended.xlsx')
+z.wrangled_df_unstacked.to_excel('temp_stacked.xlsx')
 
 ##
