@@ -570,13 +570,13 @@ class Table:
 
 
         if concatenated_csv_name is not None:
-            df.to_excel(
-                f'{concatenated_csv_name}'
-                f'[freq-{frequency}'
-                f'[sum_or_mean-{sum_or_mean}'
-                f'[standard_outputs-{standard_outputs}'
-                f'[CSVconcatenated.xlsx'
-            )
+            # df.to_excel(
+            #     f'{concatenated_csv_name}'
+            #     f'[freq-{frequency}'
+            #     f'[sum_or_mean-{sum_or_mean}'
+            #     f'[standard_outputs-{standard_outputs}'
+            #     f'[CSVconcatenated.xlsx'
+            # )
             df.to_csv(
                 f'{concatenated_csv_name}'
                 f'[freq-{frequency}'
