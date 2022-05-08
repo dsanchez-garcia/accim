@@ -83,6 +83,8 @@ z.wrangled_table(reshaping='stack',
                  # comparison_cols=['relative', 'absolute']
                  )
 
-z.wrangled_df_unstacked.to_excel('temp_stacked.xlsx')
+# z.wrangled_df_unstacked.to_excel('temp_stacked.xlsx')
 
-##
+# z.wrangled_df_stacked.columns = ['values']
+# z.wrangled_df_stacked.index = z.wrangled_df_stacked.index.set_names(['ComfMod', 'City', 'Variable'])
+z.wrangled_df_stacked.index

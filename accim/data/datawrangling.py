@@ -1584,9 +1584,18 @@ class Table:
 
             elif reshaping == 'stack':
                 wrangled_df_stacked = wrangled_df_unstacked_or_stacked.copy()
-                del wrangled_df_unstacked_or_stacked
+                # del wrangled_df_unstacked_or_stacked
                 # todo not working: ValueError: level should contain all level names or all level numbers, not a mixture of the two.
-                wrangled_df_stacked = wrangled_df_stacked.stack(vars_to_gather)
+                wrangled_df_stacked = wrangled_df_stacked.stack(
+                    # vars_to_gather
+                )
+                wrangled_df_stacked = wrangled_df_stacked.to_frame()
+                wrangled_df_stacked.columns = ['values']
+                cols_for_multiindex.append('Variable')
+                wrangled_df_stacked.index = wrangled_df_stacked.index.set_names(cols_for_multiindex)
+                cols_for_multiindex.remove('Variable')
+                self.wrangled_df_stacked = wrangled_df_stacked
+
 
 
 
