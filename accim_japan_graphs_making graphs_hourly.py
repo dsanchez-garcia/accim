@@ -44,12 +44,13 @@ z.format_table(
     split_epw_names=True
 )
 
-# z.custom_order(
-#     ordered_list=['Asahikawa', 'Sapporo', 'Morioka', 'Niigata', 'Maebashi', 'Tokyo', 'Kagoshima', 'Naha'],
-#     column_to_order='EPW_City_or_subcountry'
-# )
-#
-# z.df = z.df.sort_values(['EPW_City_or_subcountry', 'Adaptive Standard', 'Category', 'Comfort mode'])
+z.custom_order(
+    # ordered_list=['Asahikawa', 'Sapporo', 'Morioka', 'Niigata', 'Maebashi', 'Tokyo', 'Kagoshima', 'Naha'],
+    ordered_list=['Kagoshima', 'Asahikawa'],
+    column_to_order='EPW_City_or_subcountry'
+)
+
+z.df = z.df.sort_values(['EPW_City_or_subcountry', 'Adaptive Standard', 'Category', 'Comfort mode'])
 
 for i in range(len(z.df)):
     if z.df.loc[i, 'Building_Total_Zone Operative Temperature (°C) (mean)'] < z.df.loc[i, 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)']:
@@ -94,92 +95,92 @@ z.scatter_plot(
 
 
 
-##
-
-z.wrangled_table(reshaping='multiindex')
-
-df_testing = z.wrangled_df_multiindex.copy()
-
-df_testing = df_testing.melt(
-    'BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)',
-    var_name='temp',
-    value_name='values',
-    ignore_index=False
-)
-
-df_testing = df_testing.reset_index()
-
-
-##
-
-z.wrangled_table(reshaping='stack')
-
-df_testing = z.wrangled_df_stacked.unstack()
-df_testing = df_testing.droplevel(0, axis=1)
-
-
-df_testing = df_testing.melt(
-    'BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)',
-    var_name='temp',
-    value_name='values',
-    ignore_index=False
-)
-
-df_testing = df_testing.reset_index()
-
-
-
-##
-
-# df_testing_2 = df_backup.copy()
-
-
-import seaborn as sns
-
-
-color_dict = {
-    'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)': 'blue',
-    'Adaptive Heating Setpoint Temperature_No Tolerance (°C)': 'red',
-    'Building_Total_Zone Operative Temperature (°C) (mean)': 'green'
-}
-
-temp_plot = sns.FacetGrid(
-    df_testing,
-    row='EPW_City_or_subcountry',
-    col='Comfort mode',
-    margin_titles=True,
-    legend_out=True,
-)
-
-temp_plot.map_dataframe(
-    sns.scatterplot,
-    x='BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)',
-    y='values',
-    # c='Building_Total_Total Energy Demand (kWh/m2) [summed]',
-    # s='Site Wind Speed (m/s)',
-    alpha=0.5,
-
-    # cmap='rainbow',
-    hue='temp',
-    legend='full',
-    palette=color_dict,
-    s=1
-)
-temp_plot.set_axis_labels(x_var='PMOT (°C)', y_var='Temperature (°C)')
-temp_plot.set_titles(col_template='{col_name}', row_template='{row_name}')
-temp_plot.add_legend()
-
-# sns.move_legend(temp_plot, "lower center")
-temp_plot.tight_layout()
-temp_plot.savefig('temp_x_2.png')
-
-##
-
-
-##
-z.wrangled_table(
-    reshaping='unstack',
-)
-
-
-##
+# ##
+#
+# z.wrangled_table(reshaping='multiindex')
+#
+# df_testing = z.wrangled_df_multiindex.copy()
+#
+# df_testing = df_testing.melt(
+#     'BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)',
+#     var_name='temp',
+#     value_name='values',
+#     ignore_index=False
+# )
+#
+# df_testing = df_testing.reset_index()
+#
+#
+# ##
+#
+# z.wrangled_table(reshaping='stack')
+#
+# df_testing = z.wrangled_df_stacked.unstack()
+# df_testing = df_testing.droplevel(0, axis=1)
+#
+#
+# df_testing = df_testing.melt(
+#     'BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)',
+#     var_name='temp',
+#     value_name='values',
+#     ignore_index=False
+# )
+#
+# df_testing = df_testing.reset_index()
+#
+#
+#
+# ##
+#
+# # df_testing_2 = df_backup.copy()
+#
+#
+# import seaborn as sns
+#
+#
+# color_dict = {
+#     'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)': 'blue',
+#     'Adaptive Heating Setpoint Temperature_No Tolerance (°C)': 'red',
+#     'Building_Total_Zone Operative Temperature (°C) (mean)': 'green'
+# }
+#
+# temp_plot = sns.FacetGrid(
+#     df_testing,
+#     row='EPW_City_or_subcountry',
+#     col='Comfort mode',
+#     margin_titles=True,
+#     legend_out=True,
+# )
+#
+# temp_plot.map_dataframe(
+#     sns.scatterplot,
+#     x='BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)',
+#     y='values',
+#     # c='Building_Total_Total Energy Demand (kWh/m2) [summed]',
+#     # s='Site Wind Speed (m/s)',
+#     alpha=0.5,
+#
+#     # cmap='rainbow',
+#     hue='temp',
+#     legend='full',
+#     palette=color_dict,
+#     s=1
+# )
+# temp_plot.set_axis_labels(x_var='PMOT (°C)', y_var='Temperature (°C)')
+# temp_plot.set_titles(col_template='{col_name}', row_template='{row_name}')
+# temp_plot.add_legend()
+#
+# # sns.move_legend(temp_plot, "lower center")
+# temp_plot.tight_layout()
+# temp_plot.savefig('temp_x_2.png')
+#
+# ##
+#
+#
+# ##
+# z.wrangled_table(
+#     reshaping='unstack',
+# )
+#
+#
+# ##

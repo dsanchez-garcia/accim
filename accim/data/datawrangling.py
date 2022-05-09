@@ -1391,6 +1391,8 @@ class Table:
         if ordered_list is None:
             ordered_list = []
 
+        self.ordered_list = ordered_list
+
         custom_order = CategoricalDtype(
             ordered_list,
             ordered=True
@@ -1685,7 +1687,7 @@ class Table:
         self.df_for_graph['col_to_gather_in_rows'] = 'temp'
 
         if len(vars_to_gather_rows) == 0:
-            print('In relation to the variables to be gathered in self.rows,')
+            print('In relation to the variables to be gathered in rows,')
             self.enter_vars_to_gather(vars_to_gather_cols)
         if len(vars_to_gather_cols) == 0:
             print('In relation to the variables to be gathered in columns,')
@@ -1695,11 +1697,15 @@ class Table:
         self.df_for_graph['col_to_gather_in_cols'] = self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1)
 
         all_cols = list(set(self.df_for_graph['col_to_gather_in_cols']))
-        self.rows = list(set(self.df_for_graph['col_to_gather_in_rows']))
+        rows = list(set(self.df_for_graph['col_to_gather_in_rows']))
+
 
         all_cols.sort()
         self.cols = all_cols
-        self.rows.sort()
+
+
+        rows.sort()
+
 
         while not(all(i in self.cols for i in detailed_cols)):
             print('Some of the detailed data to be gathered in columns based on the argument '
@@ -1710,20 +1716,20 @@ class Table:
                                    for var
                                    in input("Please enter the requested data to be arranged "
                                             "in columns separated by semicolon: ").split(';')))
-        while not(all(i in self.rows for i in detailed_rows)):
-            print('Some of the detailed data to be gathered in self.rows based on the argument '
+        while not(all(i in rows for i in detailed_rows)):
+            print('Some of the detailed data to be gathered in rows based on the argument '
                   'vars_to_gather_rows is not available. '
-                  'Only the following data is available for self.rows:')
-            print(self.rows)
+                  'Only the following data is available for rows:')
+            print(rows)
             detailed_rows = (list(str(var)
                                    for var
                                    in input("Please enter the requested data to be arranged "
-                                            "in self.rows separated by semicolon: ").split(';')))
+                                            "in rows separated by semicolon: ").split(';')))
 
         if len(detailed_cols) > 0:
             self.cols = detailed_cols
         if len(detailed_rows) > 0:
-            self.rows = detailed_rows
+            rows = detailed_rows
 
 
         if len(adap_vs_stat_data_y_main) > 0:
@@ -1741,13 +1747,13 @@ class Table:
 
 
         self.cols.sort()
-        self.rows.sort()
+        # rows.sort()
 
         cols_list_to_filter = self.cols + [baseline]
 
         self.df_for_graph = self.df_for_graph[
             (self.df_for_graph['col_to_gather_in_cols'].isin(cols_list_to_filter)) &
-            (self.df_for_graph['col_to_gather_in_rows'].isin(self.rows))
+            (self.df_for_graph['col_to_gather_in_rows'].isin(rows))
         ]
 
         # if baseline is not None and len(adap_vs_stat_data_y_main) > 0:
@@ -1816,38 +1822,48 @@ class Table:
         self.df_for_graph.columns = self.df_for_graph.columns.map('['.join)
 
         # making lists for figure
+        # ordered_rows = []
+        # for i in self.ordered_list:
+        #     for j in rows:
+        #         if j == i:
+        #             ordered_rows.append(j)
+        #
+        # rows = sorted(ordered_rows, key=ordered_rows.index)
+        ordered_rows = [ele for ele in self.ordered_list if ele in rows]
+        rows = ordered_rows
+
         self.x_list = []
-        for i in range(len(self.rows)):
+        for i in range(len(rows)):
             temp_row = []
             for j in range(len(self.cols)):
                 if len(adap_vs_stat_data_y_main) > 0:
                     temp = [
                         [i, j],
-                        f'{self.rows[i]}_{self.cols[j]}',
+                        f'{rows[i]}_{self.cols[j]}',
                         [
-                            self.df_for_graph[[x for x in self.df_for_graph.columns if self.rows[i] in x and baseline in x and dataset in x]]
+                            self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and baseline in x and dataset in x]]
                             for dataset in adap_vs_stat_data_y_main
                         ]
                     ]
                 else:
                     temp = [
                         [i, j],
-                        f'{self.rows[i]}_{self.cols[j]}',
-                        self.df_for_graph[[x for x in self.df_for_graph.columns if self.rows[i] in x and self.cols[j] in x and data_on_x_axis in x]]
+                        f'{rows[i]}_{self.cols[j]}',
+                        self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and self.cols[j] in x and data_on_x_axis in x]]
                     ]
                 temp_row.append(temp)
             self.x_list.append(temp_row)
 
         self.y_list_main = []
-        for i in range(len(self.rows)):
+        for i in range(len(rows)):
             temp_row = []
             if baseline is not None and len(adap_vs_stat_data_y_main) > 0:
                 for j in range(len(self.cols)):
                     temp = [
                         [i, j],
-                        f'{self.rows[i]}_{self.cols[j]}',
+                        f'{rows[i]}_{self.cols[j]}',
                         [
-                            self.df_for_graph[[x for x in self.df_for_graph.columns if self.rows[i] in x and self.cols[j] in x and dataset in x]]
+                            self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and self.cols[j] in x and dataset in x]]
                             for dataset in adap_vs_stat_data_y_main
                         ],
                         [dataset for dataset in adap_vs_stat_data_y_main],
@@ -1861,10 +1877,10 @@ class Table:
                     for k in range(len(self.data_on_y_main_axis)):
                         temp = {
                             'axis': [i, j],
-                            'title': f'{self.rows[i]}_{self.cols[j]}',
+                            'title': f'{rows[i]}_{self.cols[j]}',
                             'dataframe': [
                                 self.df_for_graph[[x for x in self.df_for_graph.columns if
-                                                   self.rows[i] in x and self.cols[j] in x and dataset in x]]
+                                                   rows[i] in x and self.cols[j] in x and dataset in x]]
                                 for dataset in self.data_on_y_main_axis[k][1]
                             ],
                             'label': [dataset for dataset in self.data_on_y_main_axis[k][1]],
@@ -1875,7 +1891,7 @@ class Table:
                 self.y_list_main.append(temp_row)
 
         self.y_list_sec = []
-        for i in range(len(self.rows)):
+        for i in range(len(rows)):
             temp_row = []
             for j in range(len(self.cols)):
                 temp_col = []
@@ -1883,9 +1899,9 @@ class Table:
                     # if baseline is not None and len(adap_vs_stat_data_y_sec) > 0:
                     #     temp = [
                     #         [i, j],
-                    #         f'{self.rows[i]}_{self.cols[j]}',
+                    #         f'{rows[i]}_{self.cols[j]}',
                     #         [
-                    #             self.df_for_graph[[x for x in self.df_for_graph.columns if self.rows[i] in x and self.cols[j] in x and dataset in x]]
+                    #             self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and self.cols[j] in x and dataset in x]]
                     #             for dataset in adap_vs_stat_data_y_sec
                     #         ],
                     #         [dataset for dataset in adap_vs_stat_data_y_sec],
@@ -1894,9 +1910,9 @@ class Table:
                     # else:
                     temp = {
                         'axis':[i, j],
-                        'title': f'{self.rows[i]}_{self.cols[j]}',
+                        'title': f'{rows[i]}_{self.cols[j]}',
                         'dataframe': [
-                            self.df_for_graph[[x for x in self.df_for_graph.columns if self.rows[i] in x and self.cols[j] in x and dataset in x]]
+                            self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and self.cols[j] in x and dataset in x]]
                             for dataset in data_on_y_sec_axis[k][1]
                             ],
                         'label':[dataset for dataset in data_on_y_sec_axis[k][1]],
@@ -1905,6 +1921,8 @@ class Table:
                     temp_col.append(temp)
                 temp_row.append(temp_col)
             self.y_list_sec.append(temp_row)
+
+        self.rows = rows
 
 
     def scatter_plot(
@@ -1918,10 +1936,23 @@ class Table:
         import numpy as np
         import matplotlib.pyplot as plt
 
-        print(f'The number of self.rows and the list of these is going to be:')
-        print(f'No. of self.rows = {len(self.rows)}')
-        print(f'List of self.rows:')
-        print(*self.rows, sep='\n')
+        rows = self.rows
+
+        # ordered_rows = []
+        # for i in self.ordered_list:
+        #     for j in rows:
+        #         if j == i:
+        #             ordered_rows.append(j)
+        #
+        # rows = sorted(ordered_rows, key=ordered_rows.index)
+        # todo specify the ordering (if city or some other variable such as Adapptive Standard, custom order, otherwise increasing)
+        ordered_rows = [ele for ele in self.ordered_list if ele in rows]
+        rows = ordered_rows
+
+        print(f'The number of rows and the list of these is going to be:')
+        print(f'No. of rows = {len(rows)}')
+        print(f'List of rows:')
+        print(*rows, sep='\n')
 
         print(f'The number of columns and the list of these is going to be:')
         print(f'No. of columns = {len(self.cols)}')
@@ -1936,17 +1967,17 @@ class Table:
                 confirm_graph = False
 
         if confirm_graph:
-            fig, ax = plt.subplots(nrows=len(self.rows),
+            fig, ax = plt.subplots(nrows=len(rows),
                                    ncols=len(self.cols),
                                    sharex=True,
                                    sharey=True,
                                    constrained_layout=True,
-                                   figsize=(figsize * len(self.cols), ratio_height_to_width * figsize * len(self.rows)))
+                                   figsize=(figsize * len(self.cols), ratio_height_to_width * figsize * len(rows)))
 
             main_y_axis = []
             sec_y_axis = []
 
-            for i in range(len(self.rows)):
+            for i in range(len(rows)):
                 main_y_axis_temp_rows = []
                 sec_y_axis_temp_rows = []
                 for j in range(len(self.cols)):
@@ -1954,7 +1985,7 @@ class Table:
                     main_y_axis_temp_cols = []
                     sec_y_axis_temp_cols = []
 
-                    if len(self.rows) == 1 and len(self.cols) == 1:
+                    if len(rows) == 1 and len(self.cols) == 1:
                         for k in range(len(self.data_on_y_main_axis)):
                             main_y_axis_temp_cols.append(ax)
                         main_y_axis_temp_rows.append(main_y_axis_temp_cols)
@@ -1962,7 +1993,7 @@ class Table:
                             for k in range(len(self.data_on_y_sec_axis)):
                                 sec_y_axis_temp_cols.append(ax.twinx())
                             sec_y_axis_temp_rows.append(sec_y_axis_temp_cols)
-                    elif len(self.cols) == 1 and len(self.rows) > 1:
+                    elif len(self.cols) == 1 and len(rows) > 1:
                         for k in range(len(self.data_on_y_main_axis)):
                             main_y_axis_temp_cols.append(ax[i])
                         main_y_axis_temp_rows.append(main_y_axis_temp_cols)
@@ -1981,7 +2012,7 @@ class Table:
                 main_y_axis.append(main_y_axis_temp_rows)
                 sec_y_axis.append(sec_y_axis_temp_rows)
 
-            for i in range(len(self.rows)):
+            for i in range(len(rows)):
                 for j in range(len(self.cols)):
                     for k in range(len(self.y_list_main[i][j])):
                         main_y_axis[i][j][k].grid(True, linestyle='-.')
@@ -2011,7 +2042,7 @@ class Table:
                                     alpha=0.5,
                                 )
 
-            for i in range(len(self.rows)):
+            for i in range(len(rows)):
                 for j in range(len(self.cols)):
                     for k in range(len(self.y_list_sec[i][j])):
                         sec_y_axis[0][0][k].get_shared_y_axes().join(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
@@ -2045,22 +2076,22 @@ class Table:
                                     alpha=0.5,
                                 )
 
-            if len(self.rows) == 1:
+            if len(rows) == 1:
                 if len(self.cols) == 1:
-                    for i in range(len(self.rows)):
-                        ax.set_ylabel(self.rows[i], rotation=90, size='large')
+                    for i in range(len(rows)):
+                        ax.set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
                         ax.set_title(self.cols[j])
 
-            if len(self.rows) > 1:
+            if len(rows) > 1:
                 if len(self.cols) == 1:
-                    for i in range(len(self.rows)):
-                        ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
+                    for i in range(len(rows)):
+                        ax[i].set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
                         ax[0].set_title(self.cols[j])
                 else:
-                    for i in range(len(self.rows)):
-                        ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
+                    for i in range(len(rows)):
+                        ax[i, 0].set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
                         ax[0, j].set_title(self.cols[j])
 
@@ -2096,6 +2127,11 @@ class Table:
 
             plt.show()
 
+        self.rows = rows
+
+
+
+
     def scatter_plot_adap_vs_stat(self,
                                   supxlabel: str = None,
                                   supylabel: str = None,
@@ -2107,8 +2143,8 @@ class Table:
         import matplotlib.pyplot as plt
         import matplotlib.lines as lines
         
-        print(f'The number of self.rows and the list of these is going to be:')
-        print(f'No. of self.rows = {len(self.rows)}')
+        print(f'The number of rows and the list of these is going to be:')
+        print(f'No. of rows = {len(self.rows)}')
         print(f'List of self.rows:')
         print(*self.rows, sep='\n')
 
