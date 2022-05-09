@@ -49,11 +49,22 @@ df_backup = z.df.copy()
 z.wrangled_table(reshaping='stack')
 df_testing = z.wrangled_df_stacked.unstack()
 df_testing = df_testing.droplevel(0, axis=1)
+# df_testing = pd.melt(
+#     df_testing,
+#     'BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)',
+#     var_name='temp',
+#     value_name='values',
+#     ignore_index=False
+# )
+
 df_testing = df_testing.melt(
     'BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)',
     var_name='temp',
-    value_name='values'
+    value_name='values',
+    ignore_index=False
 )
+
+df_testing = df_testing.reset_index()
 
 
 
@@ -61,6 +72,8 @@ df_testing = df_testing.melt(
 
 
 import seaborn as sns
+
+# todo amend points not meeting setpoints
 
 temp_plot = sns.FacetGrid(
     df_testing,
