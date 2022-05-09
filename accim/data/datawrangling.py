@@ -1269,7 +1269,7 @@ class Table:
     def format_table(self,
                      type_of_table: str = 'all',
                      custom_cols: list = None,
-                     custom_rows: list = None,
+                     # custom_rows: list = None,
                      split_epw_names: bool = False
                      ):
         """
@@ -1284,8 +1284,8 @@ class Table:
         """
         if custom_cols is None:
             custom_cols = []
-        if custom_rows is None:
-            custom_rows = []
+        # if custom_rows is None:
+        #     custom_rows = []
 
 
         self.split_epw_names = split_epw_names
@@ -1351,6 +1351,18 @@ class Table:
                         or 'Discomfortable Non Applicable Hot Hours' in col
                         or 'Discomfortable Non Applicable Cold Hours' in col
                         or 'Ventilation Hours' in col]
+        elif type_of_table == 'temperature':
+            self.val_cols = [
+                col for col in self.df.columns
+                if 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)' in col
+                or 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)' in col
+                or 'Building_Total_Zone Operative Temperature (°C) (mean)' in col
+            ]
+            RMOT_col = [
+                col for col in self.df.columns
+                if 'Running mean outdoor temperature' in col
+            ][0]
+            self.val_cols.extend([RMOT_col])
         # elif type_of_table == 'all':
         #     # self.val_cols = list(set(self.df.columns) - set(self.indexcols))
         #     self.val_cols = []
@@ -1502,7 +1514,7 @@ class Table:
                         )
             self.wrangled_df_pivoted = wrangled_df_pivoted
             
-        elif reshaping == 'unstack' or reshaping == 'stack':
+        elif reshaping == 'unstack' or reshaping == 'stack' or reshaping == 'multiindex':
             
             wrangled_df_unstacked_or_stacked = wrangled_df.copy()
             del wrangled_df
@@ -1593,6 +1605,12 @@ class Table:
                 wrangled_df_stacked.index = wrangled_df_stacked.index.set_names(cols_for_multiindex)
                 cols_for_multiindex.remove('Variable')
                 self.wrangled_df_stacked = wrangled_df_stacked
+
+            elif reshaping == 'multiindex':
+                self.wrangled_df_multiindex = wrangled_df_unstacked_or_stacked.copy()
+                del wrangled_df_unstacked_or_stacked
+
+                print('Any reshaping method has been applied, only multiindexing.')
 
 
 
@@ -1840,16 +1858,16 @@ class Table:
             else:
                 for j in range(len(self.cols)):
                     temp_col = []
-                    for k in range(len(data_on_y_main_axis)):
+                    for k in range(len(self.data_on_y_main_axis)):
                         temp = {
                             'axis': [i, j],
                             'title': f'{self.rows[i]}_{self.cols[j]}',
                             'dataframe': [
                                 self.df_for_graph[[x for x in self.df_for_graph.columns if
                                                    self.rows[i] in x and self.cols[j] in x and dataset in x]]
-                                for dataset in data_on_y_main_axis[k][1]
+                                for dataset in self.data_on_y_main_axis[k][1]
                             ],
-                            'label': [dataset for dataset in data_on_y_main_axis[k][1]],
+                            'label': [dataset for dataset in self.data_on_y_main_axis[k][1]],
                             'color': [color for color in colorlist_y_main_axis[k][1]]
                         }
                         temp_col.append(temp)
