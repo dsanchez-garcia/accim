@@ -74,6 +74,33 @@ z.df = z.df[
 ]
 ##
 
+z.generate_fig_data(
+    vars_to_gather_cols=['Confort mode'],
+    vars_to_gather_rows=['EPW_City_or_subcountry'],
+    data_on_x_axis='BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)',
+    data_on_y_main_axis=[
+        'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+        'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
+        'BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)',
+    ],
+    colorlist_y_main_axis=[
+        'b',
+        'r',
+        'g',
+    ]
+)
+
+z.scatter_plot(
+    supxlabel='Comfort mode',
+    figname='WIP_scatterplot_PMOT_v00.png',
+    figsize=3,
+    ratio_height_to_width=0.5,
+)
+
+
+
+##
+
 z.wrangled_table(reshaping='stack',
                  # vars_to_gather=[
                  #     # 'Adaptive Standard',
