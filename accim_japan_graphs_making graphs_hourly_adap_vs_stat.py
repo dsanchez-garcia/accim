@@ -40,7 +40,7 @@ z = Table(
 ##
 
 z.format_table(
-    type_of_table='temperature',
+    type_of_table='energy demand',
     split_epw_names=True
 )
 
@@ -52,11 +52,11 @@ z.format_table(
 #
 # z.df = z.df.sort_values(['EPW_City_or_subcountry', 'Adaptive Standard', 'Category', 'Comfort mode'])
 
-for i in range(len(z.df)):
-    if z.df.loc[i, 'Building_Total_Zone Operative Temperature (°C) (mean)'] < z.df.loc[i, 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)']:
-        z.df.loc[i, 'Building_Total_Zone Operative Temperature (°C) (mean)'] = z.df.loc[i, 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)']
-    if z.df.loc[i, 'Building_Total_Zone Operative Temperature (°C) (mean)'] > z.df.loc[i, 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)']:
-        z.df.loc[i, 'Building_Total_Zone Operative Temperature (°C) (mean)'] = z.df.loc[i, 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)']
+# for i in range(len(z.df)):
+#     if z.df.loc[i, 'Building_Total_Zone Operative Temperature (°C) (mean)'] < z.df.loc[i, 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)']:
+#         z.df.loc[i, 'Building_Total_Zone Operative Temperature (°C) (mean)'] = z.df.loc[i, 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)']
+#     if z.df.loc[i, 'Building_Total_Zone Operative Temperature (°C) (mean)'] > z.df.loc[i, 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)']:
+#         z.df.loc[i, 'Building_Total_Zone Operative Temperature (°C) (mean)'] = z.df.loc[i, 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)']
 
 
 df_backup = z.df.copy()
@@ -64,38 +64,43 @@ df_backup = z.df.copy()
 ##
 
 z.generate_fig_data(
-    vars_to_gather_cols=['Comfort mode'],
+    vars_to_gather_cols=['HVAC mode'],
     vars_to_gather_rows=['EPW_City_or_subcountry'],
-    custom_rows_order=['Kagoshima', 'Asahikawa'],
-    custom_cols_order=['CM_3', 'CM_0'],
-    data_on_x_axis='BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)',
-    data_on_y_main_axis=[
-        ['Temperature',[
-            'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
-            'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
-            'Building_Total_Zone Operative Temperature (°C) (mean)',
-        ]
-         ],
+
+    # adap_vs_stat_data_y_main=
+    # [
+    #     'Temperature (°C)', [
+    #         'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
+    #         'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
+    #         'Building_Total_Total Energy Demand (kWh/m2) (summed)',
+    #     ]
+    # ],
+    # colorlist_adap_vs_stat_data=
+    # [
+    #     'Temperature (°C)', [
+    #     'b',
+    #     'r',
+    #     'y',
+    #     ]
+    # ]
+    adap_vs_stat_data_y_main=[
+        'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
+        'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
+        'Building_Total_Total Energy Demand (kWh/m2) (summed)',
     ],
-    colorlist_y_main_axis=[
-        ['Temperature',[
-            'b',
-            'r',
-            'g',
-            ]
-         ],
-    ],
+    colorlist_adap_vs_stat_data=[
+        'b',
+        'r',
+        'y',
+    ]
+
 )
 
-
-z.scatter_plot(
-    # custom_rows_order=['Kagoshima', 'Asahikawa'],
-    # custom_cols_order=['CM_3', 'CM_0'],
-    supxlabel='Comfort mode',
-    figname='WIP_scatterplot_PMOT_v04',
-    figsize=6,
-    ratio_height_to_width=0.33,
-    confirm_graph=True
+z.scatter_plot_adap_vs_stat(
+    supxlabel='Static Energy Demand (kWh/m2·year)',
+    supylabel='Adaptive Energy Demand (kWh/m2·year)',
+    figname='WIP_scatterplot_adap_vs_stat_v00',
+    figsize=4
 )
 
 ##
