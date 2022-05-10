@@ -64,8 +64,10 @@ df_backup = z.df.copy()
 ##
 
 z.generate_fig_data(
-    vars_to_gather_cols=['HVAC mode'],
+    vars_to_gather_cols=['Comfort mode'],
     vars_to_gather_rows=['EPW_City_or_subcountry'],
+    custom_cols_order=['CM_3', 'CM_2', 'CM_1'],
+    custom_rows_order=['Kagoshima', 'Asahikawa'],
 
     # adap_vs_stat_data_y_main=
     # [
@@ -86,7 +88,7 @@ z.generate_fig_data(
     adap_vs_stat_data_y_main=[
         'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
         'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
-        'Building_Total_Total Energy Demand (kWh/m2) (summed)',
+        # 'Building_Total_Total Energy Demand (kWh/m2) (summed)',
     ],
     colorlist_adap_vs_stat_data=[
         'b',
@@ -99,8 +101,8 @@ z.generate_fig_data(
 z.scatter_plot_adap_vs_stat(
     supxlabel='Static Energy Demand (kWh/m2·year)',
     supylabel='Adaptive Energy Demand (kWh/m2·year)',
-    figname='WIP_scatterplot_adap_vs_stat_v00',
-    figsize=4
+    figname='WIP_scatterplot_adap_vs_stat_v01',
+    figsize=2
 )
 
 ##

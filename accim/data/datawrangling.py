@@ -1687,10 +1687,10 @@ class Table:
         import matplotlib.pyplot as plt
         import matplotlib.lines as lines
 
-        self.df_for_graph = self.df.copy()
+        df_for_graph = self.df.copy()
 
-        self.df_for_graph['col_to_gather_in_cols'] = 'temp'
-        self.df_for_graph['col_to_gather_in_rows'] = 'temp'
+        df_for_graph['col_to_gather_in_cols'] = 'temp'
+        df_for_graph['col_to_gather_in_rows'] = 'temp'
 
         if len(vars_to_gather_rows) == 0:
             print('In relation to the variables to be gathered in rows,')
@@ -1699,11 +1699,11 @@ class Table:
             print('In relation to the variables to be gathered in columns,')
             self.enter_vars_to_gather(vars_to_gather_cols)
 
-        self.df_for_graph['col_to_gather_in_rows'] = self.df_for_graph[vars_to_gather_rows].agg('['.join, axis=1)
-        self.df_for_graph['col_to_gather_in_cols'] = self.df_for_graph[vars_to_gather_cols].agg('['.join, axis=1)
+        df_for_graph['col_to_gather_in_rows'] = df_for_graph[vars_to_gather_rows].agg('['.join, axis=1)
+        df_for_graph['col_to_gather_in_cols'] = df_for_graph[vars_to_gather_cols].agg('['.join, axis=1)
 
-        all_cols = list(set(self.df_for_graph['col_to_gather_in_cols']))
-        rows = list(set(self.df_for_graph['col_to_gather_in_rows']))
+        all_cols = list(set(df_for_graph['col_to_gather_in_cols']))
+        rows = list(set(df_for_graph['col_to_gather_in_rows']))
 
 
         all_cols.sort()
@@ -1757,13 +1757,13 @@ class Table:
 
         cols_list_to_filter = cols + [baseline]
 
-        self.df_for_graph = self.df_for_graph[
-            (self.df_for_graph['col_to_gather_in_cols'].isin(cols_list_to_filter)) &
-            (self.df_for_graph['col_to_gather_in_rows'].isin(rows))
+        df_for_graph = df_for_graph[
+            (df_for_graph['col_to_gather_in_cols'].isin(cols_list_to_filter)) &
+            (df_for_graph['col_to_gather_in_rows'].isin(rows))
         ]
 
         # if baseline is not None and len(adap_vs_stat_data_y_main) > 0:
-        self.df_for_graph['col_to_unstack'] = self.df_for_graph[
+        df_for_graph['col_to_unstack'] = df_for_graph[
             ['col_to_gather_in_cols', 'col_to_gather_in_rows']].agg('['.join, axis=1)
 
 
@@ -1794,7 +1794,7 @@ class Table:
         if 'timestep' in self.frequency:
             columns_to_drop.extend(['Month', 'Day', 'Hour', 'Minute'])
 
-        self.df_for_graph = self.df_for_graph.drop(
+        df_for_graph = df_for_graph.drop(
             columns=columns_to_drop
         )
 
@@ -1803,9 +1803,9 @@ class Table:
             'col_to_unstack'
         ]
 
-        self.df_for_graph.set_index(multi_index, inplace=True)
+        df_for_graph.set_index(multi_index, inplace=True)
         if len(adap_vs_stat_data_y_main) > 0:
-            self.max_value = max([self.df_for_graph[dataset].max() for dataset in adap_vs_stat_data_y_main])
+            self.max_value = max([df_for_graph[dataset].max() for dataset in adap_vs_stat_data_y_main])
 
         standard_units = ['(°C)', '(h)', '(m3)', '(m2)', '(ach)', '(Wh)', '(kWh)', '(Wh/m2)', '(kWh/m2)']
 
@@ -1823,9 +1823,9 @@ class Table:
                     [u, [d for d in self.data_on_y_sec_axis if u in d]]
                 )
 
-        self.df_for_graph = self.df_for_graph.unstack('col_to_unstack')
+        df_for_graph = df_for_graph.unstack('col_to_unstack')
 
-        self.df_for_graph.columns = self.df_for_graph.columns.map('['.join)
+        df_for_graph.columns = df_for_graph.columns.map('['.join)
 
         if len(custom_rows_order) > 0:
             ordered_rows = [ele for ele in custom_rows_order if ele in rows]
@@ -1843,7 +1843,7 @@ class Table:
                         [i, j],
                         f'{rows[i]}_{cols[j]}',
                         [
-                            self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and baseline in x and dataset in x]]
+                            df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and baseline in x and dataset in x]]
                             for dataset in adap_vs_stat_data_y_main
                         ]
                     ]
@@ -1851,7 +1851,7 @@ class Table:
                     temp = [
                         [i, j],
                         f'{rows[i]}_{cols[j]}',
-                        self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and cols[j] in x and data_on_x_axis in x]]
+                        df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and cols[j] in x and data_on_x_axis in x]]
                     ]
                 temp_row.append(temp)
             self.x_list.append(temp_row)
@@ -1865,7 +1865,7 @@ class Table:
                         [i, j],
                         f'{rows[i]}_{cols[j]}',
                         [
-                            self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
+                            df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
                             for dataset in adap_vs_stat_data_y_main
                         ],
                         [dataset for dataset in adap_vs_stat_data_y_main],
@@ -1881,7 +1881,7 @@ class Table:
                             'axis': [i, j],
                             'title': f'{rows[i]}_{cols[j]}',
                             'dataframe': [
-                                self.df_for_graph[[x for x in self.df_for_graph.columns if
+                                df_for_graph[[x for x in df_for_graph.columns if
                                                    rows[i] in x and cols[j] in x and dataset in x]]
                                 for dataset in self.data_on_y_main_axis[k][1]
                             ],
@@ -1903,7 +1903,7 @@ class Table:
                     #         [i, j],
                     #         f'{rows[i]}_{cols[j]}',
                     #         [
-                    #             self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
+                    #             df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
                     #             for dataset in adap_vs_stat_data_y_sec
                     #         ],
                     #         [dataset for dataset in adap_vs_stat_data_y_sec],
@@ -1914,7 +1914,7 @@ class Table:
                         'axis':[i, j],
                         'title': f'{rows[i]}_{cols[j]}',
                         'dataframe': [
-                            self.df_for_graph[[x for x in self.df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
+                            df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
                             for dataset in data_on_y_sec_axis[k][1]
                             ],
                         'label':[dataset for dataset in data_on_y_sec_axis[k][1]],
@@ -1924,6 +1924,7 @@ class Table:
                 temp_row.append(temp_col)
             self.y_list_sec.append(temp_row)
 
+        self.df_for_graph = df_for_graph
         self.rows = rows
         self.cols = cols
 
@@ -2509,7 +2510,7 @@ class Table:
             }
 
             start_date = datetime.datetime.strptime(self.df_for_graph['Date/Time'][0], freq_graph_dict[self.frequency][1])
-            # end_date = datetime.datetime.strptime(self.df_for_graph['Date/Time'][len(self.df_for_graph)-1], "%d/%m %H:%M")
+            # end_date = datetime.datetime.strptime(df_for_graph['Date/Time'][len(self.df_for_graph)-1], "%d/%m %H:%M")
             # (end_date-start_date).days
 
             self.df_for_graph['Date/Time'] = pd.date_range(
