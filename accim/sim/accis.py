@@ -124,9 +124,10 @@ def addAccis(
         while EnergyPlus_version not in fullEPversionsList:
             EnergyPlus_version = input("EnergyPlus version was not correct. "
                                        "Please, enter the EnergyPlus version (ep91 to ep96): ")
+        TempCtrl = input('Enter the Temperature Control method (temperature or pmv): ')
         while TempCtrl not in fullTempCtrllist:
             TempCtrl = input("Temperature Control method was not correct. "
-                                       "Please, enter the Temperature Control method (temperature or pmv: ")
+                                       "Please, enter the Temperature Control method (temperature or pmv): ")
 
     if verboseMode:
         print('ScriptType is: '+ScriptType)
@@ -285,8 +286,13 @@ def addAccis(
                 confirmGen=confirmGen
                 )
         else:
-            z.inputData(ScriptType=ScriptType)
-            z.genIDF(ScriptType=ScriptType)
+            z.inputData(
+                ScriptType=ScriptType,
+            )
+            z.genIDF(
+                ScriptType=ScriptType,
+                TempCtrl=TempCtrl,
+            )
     elif ScriptType.lower() == 'ex_ac':
         if all(args_needed_ac):
             z.genIDF(
@@ -308,8 +314,13 @@ def addAccis(
                 confirmGen=confirmGen
                 )
         else:
-            z.inputData(ScriptType=ScriptType)
-            z.genIDF(ScriptType=ScriptType)
+            z.inputData(
+                ScriptType=ScriptType,
+            )
+            z.genIDF(
+                ScriptType=ScriptType,
+                TempCtrl=TempCtrl,
+            )
 
     if verboseMode:
         print('''\n=======================END OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')
