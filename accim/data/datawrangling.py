@@ -1595,6 +1595,21 @@ class Table:
                                 )
                 # todo allow an argument to create the multiindex
 
+                ordered_columns = []
+                for i in self.val_cols:
+                    for j in wrangled_df_unstacked.columns:
+                        if i in j:
+                            ordered_columns.append(j)
+
+                wrangled_df_unstacked = wrangled_df_unstacked.reindex(columns=ordered_columns)
+
+                wrangled_df_unstacked.columns = pd.MultiIndex.from_arrays(
+                    [
+                        [x[0] for x in wrangled_df_unstacked.columns.get_level_values(0).str.split('[', n=1)],
+                        [x[1] for x in wrangled_df_unstacked.columns.get_level_values(0).str.split('[', n=1)]
+                    ]
+                )
+
                 self.wrangled_df_unstacked = wrangled_df_unstacked
 
             elif reshaping == 'stack':
