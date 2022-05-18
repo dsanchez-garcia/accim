@@ -34,11 +34,19 @@ df_fullAC = df_backup.copy()
 # print(*df_fullAC, sep='\n')
 
 df_fullAC = df_fullAC[
-    (df_fullAC['HVAC mode'].isin(['HM_0']))
-    &
-    (df_fullAC['Category'].isin(['CA_80']))
-    &
-    (df_fullAC['EPW_Scenario-Year'].isin(['Present']))
+    # (
+    #     (df_fullAC['Adaptive Standard'].isin(['AS_PMV']))
+    #     &
+    #     (df_fullAC['EPW_Scenario-Year'].isin(['Present']))
+    # )
+    # |
+    (
+            (df_fullAC['HVAC mode'].isin(['HM_0']))
+            &
+            (df_fullAC['Category'].isin(['CA_80']))
+            &
+            (df_fullAC['EPW_Scenario-Year'].isin(['Present']))
+    )
     ]
 
 df_fullAC = df_fullAC[
@@ -59,19 +67,29 @@ df_fullAC = df_fullAC[
             &
             (df_fullAC['Comfort mode'].isin(['CM_0']))
     )
-
+    # |
+    # (
+    #         (df_fullAC['Adaptive Standard'].isin(['AS_PMV']))
+    # )
     ]
 
 df_fullAC = df_fullAC.set_index([pd.RangeIndex(len(df_fullAC))])
 
 
 ##
-vars_to_gather = ['Adaptive Standard', 'Comfort mode']
+# df_fullAC = df_fullAC.drop(columns=['Category', 'ASTtol'])
+# z.indexcols.remove('Category')
+# z.indexcols.remove('ASTtol')
+
+##
 z.df = df_fullAC
 z.wrangled_table(
     reshaping='unstack',
-    vars_to_gather=vars_to_gather,
+    vars_to_gather=['Adaptive Standard', 'Comfort mode'],
     baseline='AS_JPN[CM_3',
     comparison_cols=['relative', 'absolute']
 )
-z.wrangled_df_unstacked.to_excel('section1_unstacked_test_3.xlsx')
+
+
+##
+z.wrangled_df_unstacked.to_excel('section1_unstacked_test_4.xlsx')
