@@ -87,9 +87,10 @@ z.wrangled_table(
     reshaping='unstack',
     vars_to_gather=['Adaptive Standard', 'Comfort mode'],
     baseline='AS_JPN[CM_3',
+    comparison_mode='baseline compared to others',
     comparison_cols=['relative', 'absolute']
 )
 
 
 ##
-z.wrangled_df_unstacked.to_excel('section1_unstacked_test_4.xlsx')
+z.wrangled_df_unstacked.to_excel('section1_unstacked_test_6.xlsx')

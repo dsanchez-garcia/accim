@@ -1414,6 +1414,7 @@ class Table:
                        reshaping: str = None,
                        vars_to_gather: list = None,
                        baseline: str = None,
+                       comparison_mode: str = 'others compared to baseline',
                        comparison_cols: list = None):
         """
         Creates a table based on the arguments.
@@ -1584,15 +1585,26 @@ class Table:
                     baseline_col = [col for col in wrangled_df_unstacked.columns if baseline in col and i in col][0]
                     for j in other_than_baseline:
                         for x in [col for col in wrangled_df_unstacked.columns if i in col and j in col]:
-                            if any('relative' in k for k in comparison_cols):
-                                wrangled_df_unstacked[f'{i}[1-({j}/{baseline})'] = (
-                                        1 -
-                                        (wrangled_df_unstacked[x] / wrangled_df_unstacked[baseline_col])
-                                )
-                            if any('absolute' in k for k in comparison_cols):
-                                wrangled_df_unstacked[f'{i}[{baseline} - {j}'] = (
-                                        wrangled_df_unstacked[baseline_col] - wrangled_df_unstacked[x]
-                                )
+                            if comparison_mode == 'others compared to baseline':
+                                if any('relative' in k for k in comparison_cols):
+                                    wrangled_df_unstacked[f'{i}[1-({j}/{baseline})'] = (
+                                            1 -
+                                            (wrangled_df_unstacked[x] / wrangled_df_unstacked[baseline_col])
+                                    )
+                                if any('absolute' in k for k in comparison_cols):
+                                    wrangled_df_unstacked[f'{i}[{baseline} - {j}'] = (
+                                            wrangled_df_unstacked[baseline_col] - wrangled_df_unstacked[x]
+                                    )
+                            elif comparison_mode == 'baseline compared to others':
+                                if any('relative' in k for k in comparison_cols):
+                                    wrangled_df_unstacked[f'{i}[1-({baseline}/{j})'] = (
+                                            1 -
+                                            (wrangled_df_unstacked[baseline_col] / wrangled_df_unstacked[x])
+                                    )
+                                if any('absolute' in k for k in comparison_cols):
+                                    wrangled_df_unstacked[f'{i}[{j} - {baseline}'] = (
+                                            wrangled_df_unstacked[x] - wrangled_df_unstacked[baseline_col]
+                                    )
                 # todo allow an argument to create the multiindex
 
                 ordered_columns = []
