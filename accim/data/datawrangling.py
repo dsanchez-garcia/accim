@@ -1415,7 +1415,10 @@ class Table:
                        vars_to_gather: list = None,
                        baseline: str = None,
                        comparison_mode: str = 'others compared to baseline',
-                       comparison_cols: list = None):
+                       comparison_cols: list = None,
+                       vars_to_keep: list = None,
+                       check_index_and_cols: bool = False
+                       ):
         """
         Creates a table based on the arguments.
 
@@ -1428,6 +1431,8 @@ class Table:
             vars_to_gather = []
         if comparison_cols is None:
             comparison_cols = []
+        if vars_to_keep is None:
+            vars_to_keep = []
 
         import numpy as np
         import pandas as pd
@@ -1553,6 +1558,26 @@ class Table:
                     else:
                         cols_for_multiindex.append(i)
 
+            if check_index_and_cols:
+                print('The multiindex should contain only the variables you want to compare '
+                      '(i.e. the variables you might intend to keep in the rows, '
+                      'and the variables you might intend to move to the columns). '
+                      'The variables and values you are going to use for the multiindex are:')
+                for i in cols_for_multiindex:
+                    print(f'{i}: {list(dict.fromkeys(wrangled_df_unstacked_or_stacked[i]))}')
+                proceed = input('If some variable is not relevant for the comparison, it should be removed. '
+                      'Do you want to remove any? [y/n]: ')
+                if 'y' in proceed:
+                    if len(vars_to_keep) > 0:
+                        print('The variables to keep you specified in the arguments will be overriden.')
+                    vars_to_keep = list(str(num) for num in input("Enter the variables you want to keep separated by semicolon: ").split(';'))
+
+            if len(vars_to_keep) > 0:
+                add_vars_to_remove = list(set(cols_for_multiindex) - set(vars_to_keep))
+                for i in add_vars_to_remove:
+                    cols_to_clean.append(i)
+                    cols_for_multiindex.remove(i)
+
             wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(cols_to_clean, axis=1)
 
             cols_for_values = list(set(wrangled_df_unstacked_or_stacked.columns) - set(cols_for_multiindex))
@@ -1640,8 +1665,6 @@ class Table:
                 del wrangled_df_unstacked_or_stacked
 
                 print('Any reshaping method has been applied, only multiindexing.')
-
-
 
 
     def enter_vars_to_gather(
