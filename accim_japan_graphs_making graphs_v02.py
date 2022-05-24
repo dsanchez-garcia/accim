@@ -28,6 +28,8 @@ z.custom_order(
 )
 df_backup = z.df.copy()
 
+
+
 ## Section 1
 #
 # df_fullAC = df_backup.copy()
@@ -35,13 +37,13 @@ df_backup = z.df.copy()
 #
 # df_fullAC = df_fullAC[
 #     # (
-#     #     (df_fullAC['Adaptive Standard'].isin(['AS_PMV']))
+#     #     (df_fullAC['AdapStand'].isin(['AS_PMV']))
 #     #     &
 #     #     (df_fullAC['EPW_Scenario-Year'].isin(['Present']))
 #     # )
 #     # |
 #     (
-#             (df_fullAC['HVAC mode'].isin(['HM_0']))
+#             (df_fullAC['HVACmode'].isin(['HM_0']))
 #             &
 #             (df_fullAC['Category'].isin(['CA_80']))
 #             &
@@ -51,25 +53,25 @@ df_backup = z.df.copy()
 #
 # df_fullAC = df_fullAC[
 #     (
-#             (df_fullAC['Adaptive Standard'].isin(['AS_ASHRAE55']))
+#             (df_fullAC['AdapStand'].isin(['AS_ASHRAE55']))
 #             &
-#             (df_fullAC['Comfort mode'].isin(['CM_3']))
+#             (df_fullAC['ComfMod'].isin(['CM_3']))
 #     )
 #     |
 #     (
-#             (df_fullAC['Adaptive Standard'].isin(['AS_JPN']))
+#             (df_fullAC['AdapStand'].isin(['AS_JPN']))
 #             &
-#             (df_fullAC['Comfort mode'].isin(['CM_3']))
+#             (df_fullAC['ComfMod'].isin(['CM_3']))
 #     )
 #     |
 #     (
-#             (df_fullAC['Adaptive Standard'].isin(['AS_JPN']))
+#             (df_fullAC['AdapStand'].isin(['AS_JPN']))
 #             &
-#             (df_fullAC['Comfort mode'].isin(['CM_0']))
+#             (df_fullAC['ComfMod'].isin(['CM_0']))
 #     )
 #     # |
 #     # (
-#     #         (df_fullAC['Adaptive Standard'].isin(['AS_PMV']))
+#     #         (df_fullAC['AdapStand'].isin(['AS_PMV']))
 #     # )
 #     ]
 #
@@ -78,7 +80,7 @@ df_backup = z.df.copy()
 # z.df = df_fullAC
 # z.wrangled_table(
 #     reshaping='unstack',
-#     vars_to_gather=['Adaptive Standard', 'Comfort mode'],
+#     vars_to_gather=['AdapStand', 'ComfMod'],
 #     baseline='AS_JPN[CM_3',
 #     comparison_mode='baseline compared to others',
 #     comparison_cols=['relative', 'absolute']
@@ -100,27 +102,27 @@ df_MM = df_MM[
     &
     (
         (
-                (df_MM['Adaptive Standard'].isin(['AS_ASHRAE55']))
+                (df_MM['AdapStand'].isin(['AS_ASHRAE55']))
                 &
-                (df_MM['Comfort mode'].isin(['CM_3']))
+                (df_MM['ComfMod'].isin(['CM_3']))
                 &
-                (df_MM['HVAC mode'].isin(['HM_0']))
+                (df_MM['HVACmode'].isin(['HM_0']))
         )
         |
         (
-                (df_MM['Adaptive Standard'].isin(['AS_JPN']))
+                (df_MM['AdapStand'].isin(['AS_JPN']))
                 &
-                (df_MM['Comfort mode'].isin(['CM_0']))
+                (df_MM['ComfMod'].isin(['CM_0']))
                 &
-                (df_MM['HVAC mode'].isin(['HM_0']))
+                (df_MM['HVACmode'].isin(['HM_0']))
         )
         |
         (
-                (df_MM['Adaptive Standard'].isin(['AS_JPN']))
+                (df_MM['AdapStand'].isin(['AS_JPN']))
                 &
-                (df_MM['Comfort mode'].isin(['CM_3']))
+                (df_MM['ComfMod'].isin(['CM_3']))
                 &
-                (df_MM['HVAC mode'].isin(['HM_2']))
+                (df_MM['HVACmode'].isin(['HM_2']))
         )
 
     )
@@ -137,7 +139,7 @@ df_MM = df_MM.set_index([pd.RangeIndex(len(df_MM))])
 z.df = df_MM
 z.wrangled_table(
     reshaping='unstack',
-    vars_to_gather=['Adaptive Standard', 'Comfort mode', 'HVAC mode'],
+    vars_to_gather=['AdapStand', 'ComfMod', 'HVACmode'],
     baseline='AS_JPN[CM_3[HM_2',
     comparison_mode='baseline compared to others',
     comparison_cols=['relative', 'absolute'],
@@ -148,3 +150,5 @@ z.wrangled_table(
 )
 
 z.wrangled_df_unstacked.to_excel('section2_unstacked_test_00.xlsx')
+
+

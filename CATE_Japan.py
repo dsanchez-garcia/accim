@@ -44,7 +44,7 @@ z.df = z.df[
     &
     (z.df['Category'].isin(['CA_80']))
     &
-    (z.df['Adaptive Standard'].isin(['AS_JPN'])
+    (z.df['AdapStand'].isin(['AS_JPN'])
     &
         (
             (z.df['Comfort mode'].isin(['CM_0']))

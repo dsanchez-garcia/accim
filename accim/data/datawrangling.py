@@ -849,11 +849,11 @@ class Table:
         # Step: splitting and managing column names
         fixed_columns = [
             'Model',
-            'Adaptive Standard',
+            'AdapStand',
             'Category',
-            'Comfort mode',
-            'HVAC mode',
-            'Ventilation control',
+            'ComfMod',
+            'HVACmode',
+            'VentCtrl',
             'VSToffset',
             'MinOToffset',
             'MaxWindSpeed',
@@ -864,12 +864,12 @@ class Table:
 
         df[fixed_columns] = df['Source'].str.split('[', expand=True)
 
-        df['Model'] = df['Model'].str[:-6]
-        # df['Adaptive Standard'] = df['Adaptive Standard'].str[3:]
+        # df['Model'] = df['Model'].str[:-6]
+        # df['AdapStand'] = df['AdapStand'].str[3:]
         # df['Category'] = df['Category'].str[3:]
-        # df['Comfort mode'] = df['Comfort mode'].str[3:]
-        # df['HVAC mode'] = df['HVAC mode'].str[3:]
-        # df['Ventilation control'] = df['Ventilation control'].str[3:]
+        # df['ComfMod'] = df['ComfMod'].str[3:]
+        # df['HVACmode'] = df['HVACmode'].str[3:]
+        # df['VentCtrl'] = df['VentCtrl'].str[3:]
         # df['VSToffset'] = df['VSToffset'].str[3:]
         # df['MinOToffset'] = df['MinOToffset'].str[3:]
         # df['MaxWindSpeed'] = df['MaxWindSpeed'].str[3:]
@@ -1228,11 +1228,11 @@ class Table:
 
         available_vars_to_gather = [
             'Model',
-            'Adaptive Standard',
+            'AdapStand',
             'Category',
-            'Comfort mode',
-            'HVAC mode',
-            'Ventilation control',
+            'ComfMod',
+            'HVACmode',
+            'VentCtrl',
             'VSToffset',
             'MinOToffset',
             'MaxWindSpeed',
@@ -1293,11 +1293,11 @@ class Table:
         self.indexcols = [
             'Date/Time',
             'Model',
-            'Adaptive Standard',
+            'AdapStand',
             'Category',
-            'Comfort mode',
-            'HVAC mode',
-            'Ventilation control',
+            'ComfMod',
+            'HVACmode',
+            'VentCtrl',
             'VSToffset',
             'MinOToffset',
             'MaxWindSpeed',
@@ -1818,11 +1818,11 @@ class Table:
         columns_to_drop = [
             # 'Date/Time',
             'Model',
-            'Adaptive Standard',
+            'AdapStand',
             'Category',
-            'Comfort mode',
-            'HVAC mode',
-            'Ventilation control',
+            'ComfMod',
+            'HVACmode',
+            'VentCtrl',
             'VSToffset',
             'MinOToffset',
             'MaxWindSpeed',

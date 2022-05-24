@@ -149,12 +149,12 @@ z.format_table(type_of_table='custom',
 z.generate_fig_data(
     vars_to_gather_rows=[
         'EPW',
-        # 'Adaptive Standard',
+        # 'AdapStand',
         # 'Category'
     ],
     vars_to_gather_cols=[
         # 'EPW',
-        'Adaptive Standard',
+        'AdapStand',
         'Category'
     ],
     detailed_rows=[

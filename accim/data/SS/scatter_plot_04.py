@@ -94,7 +94,7 @@ z.format_table(type_of_table='custom',
 
 z.generate_fig_data(
     vars_to_gather_rows=['EPW'],
-    vars_to_gather_cols=['Adaptive Standard', 'Category'],
+    vars_to_gather_cols=['AdapStand', 'Category'],
     detailed_rows=[
         'London_RCP85_2100',
         'London_Present'
