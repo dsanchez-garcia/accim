@@ -84,7 +84,7 @@ df_backup = z.df.copy()
 #     comparison_cols=['relative', 'absolute']
 # )
 #
-# z.wrangled_df_unstacked.to_excel('section1_unstacked_test_6.xlsx')
+# z.wrangled_df_unstacked.to_excel('section1_unstacked_test_9.xlsx')
 
 ## Section 2
 
@@ -131,8 +131,8 @@ df_MM = df_MM.set_index([pd.RangeIndex(len(df_MM))])
 # dict_tree = {}
 # for i in z.indexcols:
 #     for j in range(len(df_MM)):
-df_MM = df_MM.set_index(z.indexcols)
-print(*df_MM.index, sep='\n')
+# df_MM = df_MM.set_index(z.indexcols)
+# print(*df_MM.index, sep='\n')
 
 z.df = df_MM
 z.wrangled_table(
@@ -147,4 +147,4 @@ z.wrangled_table(
     ]
 )
 
-z.wrangled_df_unstacked.to_excel('section1_unstacked_test_8.xlsx')
+z.wrangled_df_unstacked.to_excel('section2_unstacked_test_00.xlsx')
