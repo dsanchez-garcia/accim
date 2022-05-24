@@ -1559,12 +1559,11 @@ class Table:
                         cols_for_multiindex.append(i)
 
             if check_index_and_cols:
-                print('The multiindex should contain only the variables you want to compare '
-                      '(i.e. the variables you might intend to keep in the rows, '
-                      'and the variables you might intend to move to the columns). '
-                      'The variables and values you are going to use for the multiindex are:')
+                print('The multiindex should contain only the variables you want to compare. '
+                      'The variables and values you are going to use for the multiindex, except those already specified in vars_to_gather argument, are:')
                 for i in cols_for_multiindex:
-                    print(f'{i}: {list(dict.fromkeys(wrangled_df_unstacked_or_stacked[i]))}')
+                    if all([i not in j for j in vars_to_gather]):
+                        print(f'{i}: {list(dict.fromkeys(wrangled_df_unstacked_or_stacked[i]))}')
                 proceed = input('If some variable is not relevant for the comparison, it should be removed. '
                       'Do you want to remove any? [y/n]: ')
                 if 'y' in proceed:
@@ -1573,7 +1572,7 @@ class Table:
                     vars_to_keep = list(str(num) for num in input("Enter the variables you want to keep separated by semicolon: ").split(';'))
 
             if len(vars_to_keep) > 0:
-                add_vars_to_remove = list(set(cols_for_multiindex) - set(vars_to_keep))
+                add_vars_to_remove = list(set(cols_for_multiindex) - set(vars_to_gather) - set(vars_to_keep))
                 for i in add_vars_to_remove:
                     cols_to_clean.append(i)
                     cols_for_multiindex.remove(i)
@@ -1630,7 +1629,6 @@ class Table:
                                     wrangled_df_unstacked[f'{i}[{j} - {baseline}'] = (
                                             wrangled_df_unstacked[x] - wrangled_df_unstacked[baseline_col]
                                     )
-                # todo allow an argument to create the multiindex
 
                 ordered_columns = []
                 for i in self.val_cols:

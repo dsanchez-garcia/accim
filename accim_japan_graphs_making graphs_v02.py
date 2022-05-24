@@ -128,7 +128,11 @@ df_MM = df_MM[
 
 df_MM = df_MM.set_index([pd.RangeIndex(len(df_MM))])
 
-
+# dict_tree = {}
+# for i in z.indexcols:
+#     for j in range(len(df_MM)):
+df_MM = df_MM.set_index(z.indexcols)
+print(*df_MM.index, sep='\n')
 
 z.df = df_MM
 z.wrangled_table(
@@ -138,7 +142,9 @@ z.wrangled_table(
     comparison_mode='baseline compared to others',
     comparison_cols=['relative', 'absolute'],
     # check_index_and_cols=True,
-    vars_to_keep=['Adaptive Standard', 'Comfort mode', 'HVAC mode', 'EPW_City_or_subcountry']
+    vars_to_keep=[
+        'EPW_City_or_subcountry'
+    ]
 )
 
 z.wrangled_df_unstacked.to_excel('section1_unstacked_test_8.xlsx')
