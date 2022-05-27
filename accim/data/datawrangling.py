@@ -1847,9 +1847,11 @@ class Table:
         )
 
         multi_index = [
-            'Date/Time',
             'col_to_unstack'
         ]
+        if self.frequency != 'runperiod':
+            multi_index.append('Date/Time')
+
 
         df_for_graph.set_index(multi_index, inplace=True)
         if len(adap_vs_stat_data_y_main) > 0:
