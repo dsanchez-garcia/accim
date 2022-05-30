@@ -1,8 +1,7 @@
 
+## Runperiod dataframe
 from accim.data.datawrangling import Table
 import pandas as pd
-
-## Runperiod dataframe
 data_runperiod = Table(
     source_concatenated_csv_filepath='Japan_graphs[freq-runperiod[sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv',
     level=['building'],
@@ -32,6 +31,9 @@ data_runperiod.custom_order(
 df_runperiod_backup = data_runperiod.df.copy()
 
 ## Runperiod dataframe - venthours
+from accim.data.datawrangling import Table
+import pandas as pd
+
 data_runperiod_venthours = Table(
     source_concatenated_csv_filepath='Japan_graphs[freq-runperiod[sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv',
     level=['building'],
@@ -65,6 +67,9 @@ df_runperiod_backup = data_runperiod_venthours.df.copy()
 
 
 ## Daily dataframe
+from accim.data.datawrangling import Table
+import pandas as pd
+
 data_daily = Table(
     source_concatenated_csv_filepath='Japan_graphs[freq-daily[sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv',
     level=['building'],
@@ -495,205 +500,254 @@ df_runperiod_backup = data_monthly.df.copy()
 
 
 ## Section 3 Figure 2: promedio de ach en cada hora; en columnas, o los meses de verano, o presente y los RCP; en filas, las zonas climáticas
-# df_MM_hourly = data_hourly.df.copy()
-# df_MM_hourly = df_MM_hourly[
-#     (df_MM_hourly.Month.isin(['6.0']))
-#     |
-#     (df_MM_hourly.Month.isin(['7.0']))
-#     |
-#     (df_MM_hourly.Month.isin(['8.0']))
-#     |
-#     (df_MM_hourly.Month.isin(['9.0']))
+df_MM_hourly = data_hourly.df.copy()
+df_MM_hourly = df_MM_hourly[
+    (df_MM_hourly.Month.isin(['6.0']))
+    |
+    (df_MM_hourly.Month.isin(['7.0']))
+    |
+    (df_MM_hourly.Month.isin(['8.0']))
+    |
+    (df_MM_hourly.Month.isin(['9.0']))
+    ]
+df_MM_hourly = df_MM_hourly.drop(columns=list(
+    set(df_MM_hourly.columns.to_list()) - set(['Month', 'Hour', 'EPW_City_or_subcountry', 'EPW_Scenario-Year', 'EPW_Scenario', 'EPW_Year']) - set(data_hourly.val_cols)
+))
+df_MM_hourly = df_MM_hourly.set_index([pd.RangeIndex(len(df_MM_hourly))])
+
+df_MM_hourly.Month = [int(float(i)) for i in df_MM_hourly.Month]
+df_MM_hourly.Hour = [int(float(i)) for i in df_MM_hourly.Hour]
+##
+import seaborn as sns
+import matplotlib.pyplot as plt
+sns.set_theme(context='paper')
+sns.set_style('whitegrid', {"grid.color": "0.8"})
+
+g = sns.FacetGrid(
+    data=df_MM_hourly,
+    col='Month',
+    row='EPW_City_or_subcountry',
+    hue='EPW_Scenario-Year',
+    # row_order=data_hourly.ordered_list,
+    row_order=['Asahikawa', 'Maebashi', 'Naha'],
+    legend_out=True,
+    sharex=True,
+    # sharey=False,
+    sharey=True,
+
+)
+g.map_dataframe(
+    sns.lineplot,
+    x='Hour',
+    y='AFN Zone Infiltration Air Change Rate (ach) (summed)',
+    estimator='mean',
+    ci=None,
+
+)
+g.set_titles(col_template="Month {col_name}", row_template="{row_name}")
+g.set_axis_labels(x_var='Hour', y_var='Air Change Rate (ach)')
+plt.xticks(list(range(0, 24, 2)))
+g.add_legend()
+g.savefig('temp_v00.png')
+
+##
+import seaborn as sns
+import matplotlib.pyplot as plt
+sns.set_theme(context='paper')
+sns.set_style('whitegrid', {"grid.color": "0.8"})
+g = sns.FacetGrid(
+    data=df_MM_hourly,
+    col='EPW_Scenario',
+    row='EPW_City_or_subcountry',
+    row_order=['Asahikawa', 'Maebashi', 'Naha'],
+    legend_out=True
+
+)
+g.map_dataframe(
+    sns.lineplot,
+    x='Hour',
+    y='AFN Zone Infiltration Air Change Rate (ach) (summed)',
+    hue='EPW_Year',
+    style='Month',
+    estimator='mean',
+    ci=None,
+
+)
+g.set_titles(col_template="{col_name}", row_template="{row_name}")
+g.set_axis_labels(x_var='Hour', y_var='Air Change Rate (ach)')
+plt.xticks(list(range(0, 24, 2)))
+g.add_legend()
+g.savefig('temp_v01.png')
+
+##
+import seaborn as sns
+import matplotlib.pyplot as plt
+sns.set_theme(context='paper')
+sns.set_style('whitegrid', {"grid.color": "0.8"})
+
+g = sns.FacetGrid(
+    data=df_MM_hourly,
+    col='Month',
+    row='EPW_City_or_subcountry',
+    hue='EPW_Scenario-Year',
+    # row_order=data_hourly.ordered_list,
+    row_order=['Asahikawa', 'Maebashi', 'Naha'],
+    legend_out=True,
+    sharex=True,
+    # sharey=False,
+    sharey=True,
+
+)
+g.map_dataframe(
+    sns.scatterplot,
+    x='Site Outdoor Air Drybulb Temperature (°C)',
+    y='AFN Zone Infiltration Air Change Rate (ach) (summed)',
+    alpha=0.5
+
+)
+g.set_titles(col_template="Month {col_name}", row_template="{row_name}")
+g.set_axis_labels(x_var='Outdoor temperature (°C)', y_var='Air Change Rate (ach)')
+
+g.add_legend()
+g.savefig('temp_v02.png')
+
+##
+import seaborn as sns
+import matplotlib.pyplot as plt
+sns.set_theme(context='paper')
+sns.set_style('whitegrid', {"grid.color": "0.8"})
+
+g = sns.FacetGrid(
+    data=df_MM_hourly,
+    col='EPW_City_or_subcountry',
+    row='EPW_Scenario-Year',
+    hue='Month',
+    # row_order=data_hourly.ordered_list,
+    col_order=['Asahikawa', 'Maebashi', 'Naha'],
+    legend_out=True,
+    sharex=True,
+    # sharey=False,
+    sharey=True,
+
+)
+g.map_dataframe(
+    sns.scatterplot,
+    x='Site Outdoor Air Drybulb Temperature (°C)',
+    y='AFN Zone Infiltration Air Change Rate (ach) (summed)',
+    alpha=0.5
+
+)
+g.set_titles(col_template="{col_name}", row_template="{row_name}")
+g.set_axis_labels(x_var='Outdoor temperature (°C)', y_var='Air Change Rate (ach)')
+
+g.add_legend()
+g.savefig('temp_v03.png')
+
+##
+import seaborn as sns
+import matplotlib.pyplot as plt
+sns.set_theme(context='paper')
+sns.set_style('whitegrid', {"grid.color": "0.8"})
+
+g = sns.FacetGrid(
+    data=df_MM_hourly,
+    col='EPW_Scenario',
+    row='EPW_City_or_subcountry',
+    hue='EPW_Year',
+    # row_order=data_hourly.ordered_list,
+    row_order=['Asahikawa', 'Maebashi', 'Naha'],
+    legend_out=True,
+    sharex=True,
+    # sharey=False,
+    sharey=True,
+
+)
+g.map_dataframe(
+    sns.scatterplot,
+    x='Site Outdoor Air Drybulb Temperature (°C)',
+    y='AFN Zone Infiltration Air Change Rate (ach) (summed)',
+    alpha=0.5
+
+)
+g.set_titles(col_template="{col_name}", row_template="{row_name}")
+g.set_axis_labels(x_var='Outdoor temperature (°C)', y_var='Air Change Rate (ach)')
+
+g.add_legend()
+g.savefig('temp_v04.png')
+
+##
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+sns.set_theme(context='paper')
+# sns.set_style('darkgrid', {"grid.color": "0.5", "grid.linestyle": ":"})
+sns.set_style('whitegrid', {
+    'axes.facecolor': '0.9',
+    "grid.color": "0.5",
+    "grid.linestyle": ":",
+    'axes.spines.left': True,
+    'axes.spines.bottom': True,
+    'axes.spines.right': True,
+    'axes.spines.top': True
+    }
+)
+# sns.axes_style(
+# {'axes.facecolor': 'grey'}
+# )
+
+g = sns.FacetGrid(
+    data=df_MM_hourly,
+    col='EPW_City_or_subcountry',
+    row='Month',
+    hue='EPW_Scenario-Year',
+    # row_order=data_hourly.ordered_list,
+    col_order=['Asahikawa', 'Maebashi', 'Naha'],
+    legend_out=True,
+    sharex=True,
+    # sharey=False,
+    sharey=True,
+    margin_titles=True,
+    despine=False
+
+)
+g.map_dataframe(
+    sns.lineplot,
+    x='Hour',
+    y='AFN Zone Infiltration Air Change Rate (ach) (summed)',
+    estimator='mean',
+    ci=None,
+
+)
+g.set_titles(col_template="{col_name}", row_template="Month {row_name}")
+g.set_axis_labels(x_var='Hour', y_var='Air Change Rate (ach)')
+plt.xticks(list(range(0, 24, 2)))
+g.add_legend()
+g.savefig('temp_v05.png')
+
+
+# ValueError: Index contains duplicate entries, cannot reshape. Probably because of the different scenarios on the same plot
+# data_hourly.generate_fig_data(
+#     vars_to_gather_cols=['Month'],
+#     vars_to_gather_rows=['EPW_City_or_subcountry'],
+#     detailed_cols=[6, 7, 8, 9],
+#     custom_rows_order=data_hourly.ordered_list,
+#     data_on_x_axis='Hour',
+#     data_on_y_main_axis=[
+#         'Air changes (ach)',
+#         [
+#             'Building_Total_AFN Zone Infiltration Air Change Rate (ach) (summed)',
+#         ]
+#     ],
+#     colorlist_y_main_axis=[
+#         'Air changes (ach)',
+#         ['r']
 #     ]
-# df_MM_hourly = df_MM_hourly.drop(columns=list(
-#     set(df_MM_hourly.columns.to_list()) - set(['Month', 'Hour', 'EPW_City_or_subcountry', 'EPW_Scenario-Year', 'EPW_Scenario', 'EPW_Year']) - set(data_hourly.val_cols)
-# ))
-# df_MM_hourly = df_MM_hourly.set_index([pd.RangeIndex(len(df_MM_hourly))])
-# 
-# df_MM_hourly.Month = [int(float(i)) for i in df_MM_hourly.Month]
-# df_MM_hourly.Hour = [int(float(i)) for i in df_MM_hourly.Hour]
-# ##
-# import seaborn as sns
-# import matplotlib.pyplot as plt
-# sns.set_theme(context='paper')
-# sns.set_style('whitegrid', {"grid.color": "0.8"})
-# 
-# g = sns.FacetGrid(
-#     data=df_MM_hourly,
-#     col='Month',
-#     row='EPW_City_or_subcountry',
-#     hue='EPW_Scenario-Year',
-#     # row_order=data_hourly.ordered_list,
-#     row_order=['Asahikawa', 'Maebashi', 'Naha'],
-#     legend_out=True,
-#     sharex=True,
-#     # sharey=False,
-#     sharey=True,
-# 
 # )
-# g.map_dataframe(
-#     sns.lineplot,
-#     x='Hour',
-#     y='AFN Zone Infiltration Air Change Rate (ach) (summed)',
-#     estimator='mean',
-#     ci=None,
-# 
+# data_hourly.scatter_plot(
+#     supxlabel='Month',
+#     figname='temp_hourly_data',
+#     figsize=3
 # )
-# g.set_titles(col_template="Month {col_name}", row_template="{row_name}")
-# g.set_axis_labels(x_var='Hour', y_var='Air Change Rate (ach)')
-# plt.xticks(list(range(0, 24, 2)))
-# g.add_legend()
-# g.savefig('temp_v00.png')
-# 
-# ##
-# import seaborn as sns
-# import matplotlib.pyplot as plt
-# sns.set_theme(context='paper')
-# sns.set_style('whitegrid', {"grid.color": "0.8"})
-# g = sns.FacetGrid(
-#     data=df_MM_hourly,
-#     col='EPW_Scenario',
-#     row='EPW_City_or_subcountry',
-#     row_order=['Asahikawa', 'Maebashi', 'Naha'],
-#     legend_out=True
-# 
-# )
-# g.map_dataframe(
-#     sns.lineplot,
-#     x='Hour',
-#     y='AFN Zone Infiltration Air Change Rate (ach) (summed)',
-#     hue='EPW_Year',
-#     style='Month',
-#     estimator='mean',
-#     ci=None,
-# 
-# )
-# g.set_titles(col_template="{col_name}", row_template="{row_name}")
-# g.set_axis_labels(x_var='Hour', y_var='Air Change Rate (ach)')
-# plt.xticks(list(range(0, 24, 2)))
-# g.add_legend()
-# g.savefig('temp_v01.png')
-# 
-# ##
-# import seaborn as sns
-# import matplotlib.pyplot as plt
-# sns.set_theme(context='paper')
-# sns.set_style('whitegrid', {"grid.color": "0.8"})
-# 
-# g = sns.FacetGrid(
-#     data=df_MM_hourly,
-#     col='Month',
-#     row='EPW_City_or_subcountry',
-#     hue='EPW_Scenario-Year',
-#     # row_order=data_hourly.ordered_list,
-#     row_order=['Asahikawa', 'Maebashi', 'Naha'],
-#     legend_out=True,
-#     sharex=True,
-#     # sharey=False,
-#     sharey=True,
-# 
-# )
-# g.map_dataframe(
-#     sns.scatterplot,
-#     x='Site Outdoor Air Drybulb Temperature (°C)',
-#     y='AFN Zone Infiltration Air Change Rate (ach) (summed)',
-#     alpha=0.5
-# 
-# )
-# g.set_titles(col_template="Month {col_name}", row_template="{row_name}")
-# g.set_axis_labels(x_var='Outdoor temperature (°C)', y_var='Air Change Rate (ach)')
-# 
-# g.add_legend()
-# g.savefig('temp_v02.png')
-# 
-# ##
-# import seaborn as sns
-# import matplotlib.pyplot as plt
-# sns.set_theme(context='paper')
-# sns.set_style('whitegrid', {"grid.color": "0.8"})
-# 
-# g = sns.FacetGrid(
-#     data=df_MM_hourly,
-#     col='EPW_City_or_subcountry',
-#     row='EPW_Scenario-Year',
-#     hue='Month',
-#     # row_order=data_hourly.ordered_list,
-#     col_order=['Asahikawa', 'Maebashi', 'Naha'],
-#     legend_out=True,
-#     sharex=True,
-#     # sharey=False,
-#     sharey=True,
-# 
-# )
-# g.map_dataframe(
-#     sns.scatterplot,
-#     x='Site Outdoor Air Drybulb Temperature (°C)',
-#     y='AFN Zone Infiltration Air Change Rate (ach) (summed)',
-#     alpha=0.5
-# 
-# )
-# g.set_titles(col_template="{col_name}", row_template="{row_name}")
-# g.set_axis_labels(x_var='Outdoor temperature (°C)', y_var='Air Change Rate (ach)')
-# 
-# g.add_legend()
-# g.savefig('temp_v03.png')
-# 
-# ##
-# import seaborn as sns
-# import matplotlib.pyplot as plt
-# sns.set_theme(context='paper')
-# sns.set_style('whitegrid', {"grid.color": "0.8"})
-# 
-# g = sns.FacetGrid(
-#     data=df_MM_hourly,
-#     col='EPW_Scenario',
-#     row='EPW_City_or_subcountry',
-#     hue='EPW_Year',
-#     # row_order=data_hourly.ordered_list,
-#     row_order=['Asahikawa', 'Maebashi', 'Naha'],
-#     legend_out=True,
-#     sharex=True,
-#     # sharey=False,
-#     sharey=True,
-# 
-# )
-# g.map_dataframe(
-#     sns.scatterplot,
-#     x='Site Outdoor Air Drybulb Temperature (°C)',
-#     y='AFN Zone Infiltration Air Change Rate (ach) (summed)',
-#     alpha=0.5
-# 
-# )
-# g.set_titles(col_template="{col_name}", row_template="{row_name}")
-# g.set_axis_labels(x_var='Outdoor temperature (°C)', y_var='Air Change Rate (ach)')
-# 
-# g.add_legend()
-# g.savefig('temp_v04.png')
-# 
-# 
-# # ValueError: Index contains duplicate entries, cannot reshape. Probably because of the different scenarios on the same plot
-# # data_hourly.generate_fig_data(
-# #     vars_to_gather_cols=['Month'],
-# #     vars_to_gather_rows=['EPW_City_or_subcountry'],
-# #     detailed_cols=[6, 7, 8, 9],
-# #     custom_rows_order=data_hourly.ordered_list,
-# #     data_on_x_axis='Hour',
-# #     data_on_y_main_axis=[
-# #         'Air changes (ach)',
-# #         [
-# #             'Building_Total_AFN Zone Infiltration Air Change Rate (ach) (summed)',
-# #         ]
-# #     ],
-# #     colorlist_y_main_axis=[
-# #         'Air changes (ach)',
-# #         ['r']
-# #     ]
-# # )
-# # data_hourly.scatter_plot(
-# #     supxlabel='Month',
-# #     figname='temp_hourly_data',
-# #     figsize=3
-# # )
 
 ## Section 3 Table 2
 
@@ -709,16 +763,17 @@ df_runperiod_venthours = df_runperiod_venthours[
     ]
 
 # df_runperiod_venthours = df_runperiod_venthours.set_index([pd.RangeIndex(len(df_runperiod_venthours))])
-df_runperiod_venthours = df_runperiod_venthours.copy()
 
 data_runperiod_venthours.df = df_runperiod_venthours
 data_runperiod_venthours.wrangled_table(
     reshaping='unstack',
-    vars_to_gather=['EPW_Scenario-Year'],
-    baseline='Present',
+    vars_to_gather=['EPW_Scenario', 'EPW_Year'],
+    baseline='Present[Present',
     comparison_cols=['relative', 'absolute'],
     vars_to_keep=['EPW_City_or_subcountry']
 )
+
+data_runperiod_venthours.wrangled_df_unstacked.to_excel('temp_venthours.xlsx')
 
 # NaNs in months
 # df_monthly = data_monthly.df.copy()
