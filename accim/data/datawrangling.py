@@ -245,7 +245,8 @@ class Table:
                  normalised_energy_units: bool = True,
                  rename_cols: bool = True,
                  energy_units_in_kwh: bool = True,
-                 concatenated_csv_name: str = None
+                 concatenated_csv_name: str = None,
+                 drop_nan: bool = False
                  ):
         """
         Generates a table or dataframe using the EnergyPlus simulation results CSV files
@@ -577,6 +578,9 @@ class Table:
             #     f'[standard_outputs-{standard_outputs}'
             #     f'[CSVconcatenated.xlsx'
             # )
+            if drop_nan == True:
+                df = df.dropna(axis='columns', how='all')
+                df = df.dropna(axis='index', how='any')
             df.to_csv(
                 f'{concatenated_csv_name}'
                 f'[freq-{frequency}'
@@ -897,6 +901,12 @@ class Table:
 
         df = df.set_index([pd.RangeIndex(len(df))])
 
+        if drop_nan == True:
+            df = df.dropna(axis='columns', how='all')
+            df = df.dropna(axis='index', how='any')
+            df = df.set_index([pd.RangeIndex(len(df))])
+
+
         # Step: do not know what it is this for
         frequency_dict = {
             'monthly': ['Month'],
@@ -914,6 +924,7 @@ class Table:
                         df.loc[j, i] = str(int((int(df.loc[j - 1, i]) + int(df.loc[j + 1, i])) / 2))
 
                 df[i] = df[i].astype(str).str.pad(width=2, side='left', fillchar='0')
+
 
         df = df.set_index([pd.RangeIndex(len(df))])
 
@@ -1259,6 +1270,7 @@ class Table:
         self.available_vars_to_gather = available_vars_to_gather
         self.block_list = block_list
         self.df = df
+        self.df_backup = df
 
         self.frequency = frequency
 
@@ -1287,6 +1299,7 @@ class Table:
         # if custom_rows is None:
         #     custom_rows = []
 
+        self.df = self.df_backup
 
         self.split_epw_names = split_epw_names
 
@@ -1686,21 +1699,21 @@ class Table:
     # todo testing
     
     def generate_fig_data(self,
-                          vars_to_gather_cols=None,
-                          vars_to_gather_rows=None,
-                          detailed_cols=None,
-                          detailed_rows=None,
+                          vars_to_gather_cols: list = None,
+                          vars_to_gather_rows: list = None,
+                          detailed_cols: list = None,
+                          detailed_rows: list = None,
                           custom_cols_order: list = None,
                           custom_rows_order: list = None,
-                          adap_vs_stat_data_y_main=None,
+                          adap_vs_stat_data_y_main: list = None,
                           # adap_vs_stat_data_y_sec=None,
                           baseline: str = None,
                           colorlist_adap_vs_stat_data=None,
                           data_on_x_axis: str = None,
-                          data_on_y_main_axis=None,
-                          data_on_y_sec_axis=None,
-                          colorlist_y_main_axis=None,
-                          colorlist_y_sec_axis=None,
+                          data_on_y_main_axis: list = None,
+                          data_on_y_sec_axis: list = None,
+                          colorlist_y_main_axis: list = None,
+                          colorlist_y_sec_axis: list = None,
                           ):
         if vars_to_gather_cols is None:
             vars_to_gather_cols = []
