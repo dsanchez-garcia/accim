@@ -278,75 +278,75 @@ data_daily.scatter_plot_adap_vs_stat(
 
 ##Generating df
 # df_MM = df_runperiod_backup.copy()
-# # df_MM = df_daily_backup.copy()
-# # print(*df_MM, sep='\n')
-#
-# df_MM = df_MM[
-#     (
-#         (df_MM['Category'].isin(['CA_80']))
-#         &
-#         (df_MM['EPW_Scenario-Year'].isin(['Present']))
-#     )
-#     &
-#     (
-#         (
-#                 (df_MM['AdapStand'].isin(['AS_ASHRAE55']))
-#                 &
-#                 (df_MM['ComfMod'].isin(['CM_3']))
-#                 &
-#                 (df_MM['HVACmode'].isin(['HM_0']))
-#         )
-#         |
-#         (
-#                 (df_MM['AdapStand'].isin(['AS_JPN']))
-#                 &
-#                 (df_MM['ComfMod'].isin(['CM_0']))
-#                 &
-#                 (df_MM['HVACmode'].isin(['HM_0']))
-#         )
-#         |
-#         (
-#                 (df_MM['AdapStand'].isin(['AS_JPN']))
-#                 &
-#                 (df_MM['ComfMod'].isin(['CM_3']))
-#                 &
-#                 (df_MM['HVACmode'].isin(['HM_0']))
-#         )
-#         |
-#         (
-#                 (df_MM['AdapStand'].isin(['AS_JPN']))
-#                 &
-#                 (df_MM['ComfMod'].isin(['CM_3']))
-#                 &
-#                 (df_MM['HVACmode'].isin(['HM_2']))
-#         )
-#
-#     )
-#     ]
-#
-# df_MM = df_MM.set_index([pd.RangeIndex(len(df_MM))])
+df_MM = df_daily_backup.copy()
+# print(*df_MM, sep='\n')
+
+df_MM = df_MM[
+    (
+        (df_MM['Category'].isin(['CA_80']))
+        &
+        (df_MM['EPW_Scenario-Year'].isin(['Present']))
+    )
+    &
+    (
+        (
+                (df_MM['AdapStand'].isin(['AS_ASHRAE55']))
+                &
+                (df_MM['ComfMod'].isin(['CM_3']))
+                &
+                (df_MM['HVACmode'].isin(['HM_0']))
+        )
+        |
+        (
+                (df_MM['AdapStand'].isin(['AS_JPN']))
+                &
+                (df_MM['ComfMod'].isin(['CM_0']))
+                &
+                (df_MM['HVACmode'].isin(['HM_0']))
+        )
+        |
+        (
+                (df_MM['AdapStand'].isin(['AS_JPN']))
+                &
+                (df_MM['ComfMod'].isin(['CM_3']))
+                &
+                (df_MM['HVACmode'].isin(['HM_0']))
+        )
+        |
+        (
+                (df_MM['AdapStand'].isin(['AS_JPN']))
+                &
+                (df_MM['ComfMod'].isin(['CM_3']))
+                &
+                (df_MM['HVACmode'].isin(['HM_2']))
+        )
+
+    )
+    ]
+
+df_MM = df_MM.set_index([pd.RangeIndex(len(df_MM))])
 
 ## Section 2 Figure 1
-# data_daily.df = df_MM
-# data_daily.generate_fig_data(
-#     vars_to_gather_cols=['AdapStand', 'ComfMod', 'HVACmode'],
-#     vars_to_gather_rows=['EPW_City_or_subcountry'],
-#     detailed_rows=['Asahikawa', 'Maebashi', 'Naha'],
-#     custom_rows_order=data_daily.ordered_list,
-#     adap_vs_stat_data_y_main=data_daily.val_cols,
-#     baseline='AS_JPN[CM_3[HM_2',
-#     colorlist_adap_vs_stat_data=['b', 'r'],
-#
-# )
-#
-# data_daily.scatter_plot_adap_vs_stat(
-#     supxlabel='AS_JPN[CM_3[HM_2 Energy Demand (kWh/m2)',
-#     supylabel='Reference Energy Demand (kWh/m2)',
-#     figname='temp_section2_fig1_v00',
-#     figsize=3,
-#     confirm_graph=True
-#
-# )
+data_daily.df = df_MM
+data_daily.generate_fig_data(
+    vars_to_gather_cols=['AdapStand', 'ComfMod', 'HVACmode'],
+    vars_to_gather_rows=['EPW_City_or_subcountry'],
+    detailed_rows=['Asahikawa', 'Maebashi', 'Naha'],
+    custom_rows_order=data_daily.ordered_list,
+    adap_vs_stat_data_y_main=data_daily.val_cols,
+    baseline='AS_JPN[CM_3[HM_2',
+    colorlist_adap_vs_stat_data=['b', 'r'],
+
+)
+
+data_daily.scatter_plot_adap_vs_stat(
+    supxlabel='AS_JPN[CM_3[HM_2 Daily Energy Demand (kWh/m2·day)',
+    supylabel='Reference Daily Energy Demand (kWh/m2·day)',
+    figname='temp_section2_fig1_v01',
+    figsize=3,
+    confirm_graph=True
+
+)
 
 
 
