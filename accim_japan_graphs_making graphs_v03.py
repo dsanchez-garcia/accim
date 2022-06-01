@@ -372,42 +372,50 @@ data_daily.scatter_plot_adap_vs_stat(
 ## Section 3
 
 ## Generating df
-# df_CC = df_runperiod_backup.copy()
-# # print(*df_CC, sep='\n')
-#
-# df_CC = df_CC[
-#     (df_CC['Category'].isin(['CA_80']))
-#     &
-#     (
-#         (
-#                 (df_CC['AdapStand'].isin(['AS_ASHRAE55']))
-#                 &
-#                 (df_CC['ComfMod'].isin(['CM_3']))
-#                 &
-#                 (df_CC['HVACmode'].isin(['HM_0']))
-#         )
-#         |
-#         (
-#                 (df_CC['AdapStand'].isin(['AS_JPN']))
-#                 &
-#                 (df_CC['ComfMod'].isin(['CM_0']))
-#                 &
-#                 (df_CC['HVACmode'].isin(['HM_0']))
-#         )
-#         |
-#         (
-#                 (df_CC['AdapStand'].isin(['AS_JPN']))
-#                 &
-#                 (df_CC['ComfMod'].isin(['CM_3']))
-#                 &
-#                 (df_CC['HVACmode'].isin(['HM_2']))
-#         )
-#
-#     )
-#     ]
-#
-# df_CC = df_CC.set_index([pd.RangeIndex(len(df_CC))])
-# df_CC_backup = df_CC.copy()
+df_CC = df_runperiod_backup.copy()
+# print(*df_CC, sep='\n')
+
+df_CC = df_CC[
+    (df_CC['Category'].isin(['CA_80']))
+    &
+    (
+        (
+                (df_CC['AdapStand'].isin(['AS_ASHRAE55']))
+                &
+                (df_CC['ComfMod'].isin(['CM_3']))
+                &
+                (df_CC['HVACmode'].isin(['HM_0']))
+        )
+        |
+        (
+                (df_CC['AdapStand'].isin(['AS_JPN']))
+                &
+                (df_CC['ComfMod'].isin(['CM_0']))
+                &
+                (df_CC['HVACmode'].isin(['HM_0']))
+        )
+        |
+        (
+                (df_CC['AdapStand'].isin(['AS_JPN']))
+                &
+                (df_CC['ComfMod'].isin(['CM_3']))
+                &
+                (df_CC['HVACmode'].isin(['HM_0']))
+        )
+        |
+        (
+                (df_CC['AdapStand'].isin(['AS_JPN']))
+                &
+                (df_CC['ComfMod'].isin(['CM_3']))
+                &
+                (df_CC['HVACmode'].isin(['HM_2']))
+        )
+
+    )
+    ]
+
+df_CC = df_CC.set_index([pd.RangeIndex(len(df_CC))])
+df_CC_backup = df_CC.copy()
 #
 
 ## Section 3 Figure 1
@@ -474,8 +482,8 @@ data_daily.scatter_plot_adap_vs_stat(
 # )
 #
 # data_runperiod.wrangled_df_unstacked.to_excel('section3_unstacked_v00_01.xlsx')
-#
-#
+
+
 # # V01
 # data_runperiod.df = df_CC
 # data_runperiod.wrangled_table(
@@ -497,6 +505,31 @@ data_daily.scatter_plot_adap_vs_stat(
 # )
 #
 # data_runperiod.wrangled_df_unstacked.to_excel('section3_unstacked_v01_01.xlsx')
+
+# V02
+data_runperiod.df = df_CC
+data_runperiod.wrangled_table(
+    reshaping='unstack',
+    vars_to_gather=[
+        'EPW_Scenario',
+        'EPW_Year'
+    ],
+    baseline='Present[Present',
+    comparison_mode='baseline compared to others',
+    comparison_cols=[
+        'relative',
+        'absolute'
+    ],
+    # check_index_and_cols=True,
+    vars_to_keep=[
+        'EPW_City_or_subcountry',
+        'AdapStand',
+        'ComfMod',
+        'HVACmode'
+    ]
+)
+
+data_runperiod.wrangled_df_unstacked.to_excel('section3_unstacked_v02_04.xlsx')
 
 
 ## Section 3 Figure 2: promedio de ach en cada hora; en columnas, o los meses de verano, o presente y los RCP; en filas, las zonas climáticas
