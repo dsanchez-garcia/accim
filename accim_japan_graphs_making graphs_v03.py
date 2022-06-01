@@ -35,7 +35,7 @@ from accim.data.datawrangling import Table
 import pandas as pd
 
 data_runperiod_venthours = Table(
-    source_concatenated_csv_filepath='Japan_graphs[freq-runperiod[sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv',
+    source_concatenated_csv_filepath='Japan_graphs_MM[freq-runperiod[sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv',
     level=['building'],
     level_sum_or_mean=['sum', 'mean'],
     manage_epw_names=False,
