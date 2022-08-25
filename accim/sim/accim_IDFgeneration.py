@@ -7,7 +7,7 @@
 def inputData(self, ScriptType: str = None):
     """Input data for IDF generation."""
     print('The information you will be required to enter below will be used to generate the customised output IDFs:')
-    fullAdapStandList = [0, 1, 2, 3]
+    fullAdapStandList = [0, 1, 2, 3, 4, 5, 6, 7]
     self.AdapStand_List = list(int(num) for num in input("Enter the Adaptive Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55; 3 = JPN): ").split())
     while len(self.AdapStand_List) == 0 or not all(elem in fullAdapStandList for elem in self.AdapStand_List):
         print('          Adaptive Standard numbers are not correct. Please enter the numbers again.')
@@ -18,7 +18,7 @@ def inputData(self, ScriptType: str = None):
             print('          Adaptive Standard numbers are not correct. Please enter the numbers again.')
             self.AdapStand_List = list(int(num) for num in input("     Enter the Adaptive Standard numbers separated by space: ").split())
 
-    fullCATlist = [1, 2, 3, 80, 90]
+    fullCATlist = [1, 2, 3, 80, 85, 90]
     self.CAT_List = list(int(num) for num in input("Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT): ").split())
     while len(self.CAT_List) == 0 or not all(elem in fullCATlist for elem in self.CAT_List):
         print('          Category numbers are not correct. Please enter the numbers again.')
@@ -204,7 +204,11 @@ def genIDF(self,
         0: '[AS_CTE',
         1: '[AS_EN16798',
         2: '[AS_ASHRAE55',
-        3: '[AS_JPN'
+        3: '[AS_JPN',
+        4: '[AS_GBT50785Cold',
+        5: '[AS_GBT50785HotMild',
+        6: '[AS_IMACNV',
+        7: '[AS_IMACMM'
     }
 
     outputlist = []
@@ -252,9 +256,11 @@ def genIDF(self,
                                                     + '.idf'
                                                     )
                                                 outputlist.append(outputname)
-                elif AdapStand_value == 1:
+                elif AdapStand_value in [1, 4, 5]:
                     for CAT_value in self.CAT_List:
-                        if CAT_value not in range(0, 4):
+                        if AdapStand_value in [1] and CAT_value not in range(0, 4):
+                            continue
+                        elif AdapStand_value in [4, 5] and CAT_value not in [1, 2]:
                             continue
                         else:
                             for ComfMod_value in self.ComfMod_List:
@@ -297,9 +303,11 @@ def genIDF(self,
                                                                 + '.idf'
                                                                 )
                                                             outputlist.append(outputname)
-                elif AdapStand_value == 2 or AdapStand_value == 3:
+                elif AdapStand_value in [2, 3, 6, 7]:
                     for CAT_value in self.CAT_List:
-                        if CAT_value not in range(80, 91, 10):
+                        if AdapStand_value in [2, 3] and CAT_value not in range(80, 91, 10):
+                            continue
+                        elif AdapStand_value in [6, 7] and CAT_value not in range(80, 91, 5):
                             continue
                         else:
                             for ComfMod_value in self.ComfMod_List:
@@ -450,9 +458,11 @@ def genIDF(self,
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
                                                     idf1.savecopy(outputname)
-                    elif AdapStand_value == 1:
+                    elif AdapStand_value in [1, 4, 5]:
                         for CAT_value in self.CAT_List:
-                            if CAT_value not in range(0, 4):
+                            if AdapStand_value in [1] and CAT_value not in range(0, 4):
+                                continue
+                            elif AdapStand_value in [4, 5] and CAT_value not in [1, 2]:
                                 continue
                             else:
                                 SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
@@ -514,9 +524,11 @@ def genIDF(self,
                                                                     # time.sleep(0.1)
                                                                     # pbar.update(1)
                                                                 idf1.savecopy(outputname)
-                    elif AdapStand_value == 2 or AdapStand_value == 3:
+                    elif AdapStand_value in [2, 3, 6, 7]:
                         for CAT_value in self.CAT_List:
-                            if CAT_value not in range(80, 91, 10):
+                            if AdapStand_value in [2, 3] and CAT_value not in range(80, 91, 10):
+                                continue
+                            elif AdapStand_value in [6, 7] and CAT_value not in range(80, 91, 5):
                                 continue
                             else:
                                 SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)

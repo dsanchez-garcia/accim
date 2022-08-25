@@ -1196,11 +1196,11 @@ def addDetHVACobj(self, EnergyPlus_version: str = None, verboseMode: bool = True
             Zone_Cooling_Design_Supply_Air_Temperature_Input_Method=
             supply_air_temp_input_method,
             Zone_Cooling_Design_Supply_Air_Temperature=14,
-            Zone_Cooling_Design_Supply_Air_Temperature_Difference=0.5,
+            Zone_Cooling_Design_Supply_Air_Temperature_Difference=5,
             Zone_Heating_Design_Supply_Air_Temperature_Input_Method=
             supply_air_temp_input_method,
             Zone_Heating_Design_Supply_Air_Temperature=50,
-            Zone_Heating_Design_Supply_Air_Temperature_Difference=0.5,
+            Zone_Heating_Design_Supply_Air_Temperature_Difference=5,
             Zone_Cooling_Design_Supply_Air_Humidity_Ratio=0.009,
             Zone_Heating_Design_Supply_Air_Humidity_Ratio=0.004,
             Design_Specification_Outdoor_Air_Object_Name=
