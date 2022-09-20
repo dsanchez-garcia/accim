@@ -853,7 +853,7 @@ class Table:
         # Step: splitting and managing column names
         fixed_columns = [
             'Model',
-            'AdapStand',
+            'ComfStand',
             'Category',
             'ComfMod',
             'HVACmode',
@@ -869,7 +869,7 @@ class Table:
         df[fixed_columns] = df['Source'].str.split('[', expand=True)
 
         # df['Model'] = df['Model'].str[:-6]
-        # df['AdapStand'] = df['AdapStand'].str[3:]
+        # df['ComfStand'] = df['ComfStand'].str[3:]
         # df['Category'] = df['Category'].str[3:]
         # df['ComfMod'] = df['ComfMod'].str[3:]
         # df['HVACmode'] = df['HVACmode'].str[3:]
@@ -1239,7 +1239,7 @@ class Table:
 
         available_vars_to_gather = [
             'Model',
-            'AdapStand',
+            'ComfStand',
             'Category',
             'ComfMod',
             'HVACmode',
@@ -1306,7 +1306,7 @@ class Table:
         self.indexcols = [
             'Date/Time',
             'Model',
-            'AdapStand',
+            'ComfStand',
             'Category',
             'ComfMod',
             'HVACmode',
@@ -1831,7 +1831,7 @@ class Table:
         columns_to_drop = [
             # 'Date/Time',
             'Model',
-            'AdapStand',
+            'ComfStand',
             'Category',
             'ComfMod',
             'HVACmode',

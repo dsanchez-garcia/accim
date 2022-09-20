@@ -29,7 +29,7 @@ def test_addGlobVarListSingleZone(IDFobject):
     assert obj[0].Erl_Variable_2_Name == 'AHST'
     assert obj[0].Erl_Variable_3_Name == 'ACSTnoTol'
     assert obj[0].Erl_Variable_4_Name == 'AHSTnoTol'
-    assert obj[0].Erl_Variable_5_Name == 'AdapStand'
+    assert obj[0].Erl_Variable_5_Name == 'ComfStand'
     assert obj[0].Erl_Variable_6_Name == 'ACSTaul'
     assert obj[0].Erl_Variable_7_Name == 'ACSTall'
     assert obj[0].Erl_Variable_8_Name == 'AHSTaul'
@@ -129,7 +129,7 @@ def test_addEMSProgramsSingleZone(IDFobject):
             in idf1.idfobjects['EnergyManagementSystem:Program']
             if x.Name == 'SetInputData'])
     assert obj[0].Name == 'SetInputData'
-    assert obj[0].Program_Line_1 == 'set AdapStand = 1'
+    assert obj[0].Program_Line_1 == 'set ComfStand = 1'
     assert obj[0].Program_Line_2 == 'set CAT = 1'
     assert obj[0].Program_Line_3 == 'set ComfMod = 1'
     assert obj[0].Program_Line_4 == 'set ACSTtol = -0.25'

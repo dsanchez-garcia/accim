@@ -68,7 +68,7 @@ def test_genIDFMultipleZone():
         [program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetInputData'])
 
         for AdapStand_value in AdapStand_List:
-            assert SetInputData[0].Program_Line_1 == 'set AdapStand = ' + repr(AdapStand_value)
+            assert SetInputData[0].Program_Line_1 == 'set ComfStand = ' + repr(AdapStand_value)
             if AdapStand_value == 0:
                 assert SetInputData[0].Program_Line_2 == 'set CAT = 1'
                 assert SetInputData[0].Program_Line_3 == 'set ComfMod = 0'

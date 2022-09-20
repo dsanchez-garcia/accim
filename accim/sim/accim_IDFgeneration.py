@@ -7,16 +7,16 @@
 def inputData(self, ScriptType: str = None):
     """Input data for IDF generation."""
     print('The information you will be required to enter below will be used to generate the customised output IDFs:')
-    fullAdapStandList = [0, 1, 2, 3, 4, 5, 6, 7]
-    self.AdapStand_List = list(int(num) for num in input("Enter the Adaptive Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55; 3 = JPN): ").split())
-    while len(self.AdapStand_List) == 0 or not all(elem in fullAdapStandList for elem in self.AdapStand_List):
-        print('          Adaptive Standard numbers are not correct. Please enter the numbers again.')
-        self.AdapStand_List = list(int(num) for num in input("     Enter the Adaptive Standard numbers separated by space: ").split())
+    fullComfStandList = list(range(16+1))
+    self.ComfStand_List = list(int(num) for num in input("Enter the Comfort Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55; 3 = JPN): ").split())
+    while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
+        print('          Comfort Standard numbers are not correct. Please enter the numbers again.')
+        self.ComfStand_List = list(int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
     while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
-        self.AdapStand_List = list(int(num) for num in input("     Enter the Adaptive Standard numbers separated by space: ").split())
-        while len(self.AdapStand_List) == 0 or not all(elem in fullAdapStandList for elem in self.AdapStand_List):
-            print('          Adaptive Standard numbers are not correct. Please enter the numbers again.')
-            self.AdapStand_List = list(int(num) for num in input("     Enter the Adaptive Standard numbers separated by space: ").split())
+        self.ComfStand_List = list(int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
+        while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
+            print('          Comfort Standard numbers are not correct. Please enter the numbers again.')
+            self.ComfStand_List = list(int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
 
     fullCATlist = [1, 2, 3, 80, 85, 90]
     self.CAT_List = list(int(num) for num in input("Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT): ").split())
@@ -127,7 +127,7 @@ def inputData(self, ScriptType: str = None):
 def genIDF(self,
            ScriptType: str = None,
            TempCtrl: str = None,
-           AdapStand=None,
+           ComfStand=None,
            CAT=None,
            ComfMod=None,
            HVACmode=None,
@@ -151,7 +151,7 @@ def genIDF(self,
     # import time
     # from tqdm import tqdm
 
-    arguments = (AdapStand is None,
+    arguments = (ComfStand is None,
                  CAT is None,
                  ComfMod is None,
                  HVACmode is None,
@@ -172,7 +172,7 @@ def genIDF(self,
         self.ASTtol_value_to = round(self.ASTtol_value_to, 2)
         self.ASTtol_value_steps = round(self.ASTtol_value_steps, 2)
     else:
-        self.AdapStand_List = AdapStand
+        self.ComfStand_List = ComfStand
         self.CAT_List = CAT
         self.ComfMod_List = ComfMod
         self.HVACmode_List = HVACmode
@@ -200,29 +200,39 @@ def genIDF(self,
     filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])
     # print(filelist_pymod)
 
-    AdapStand_dict = {
-        0: '[AS_CTE',
-        1: '[AS_EN16798',
-        2: '[AS_ASHRAE55',
-        3: '[AS_JPN',
-        4: '[AS_GBT50785Cold',
-        5: '[AS_GBT50785HotMild',
-        6: '[AS_IMACNV',
-        7: '[AS_IMACMM'
+    # Characters not admitted: & ^ , = % " / \ : * ? " < > |
+    ComfStand_dict = {
+        0: '[CS_CTE',
+        1: '[CS_EN16798',
+        2: '[CS_ASHRAE55',
+        3: '[CS_JPN·Rijal',
+        4: '[CS_GBT50785·Cold',
+        5: '[CS_GBT50785·HotMild',
+        6: '[CS_CHN·Yang',
+        7: '[CS_IMAC·C·NV',
+        8: '[CS_IMAC·C·MM',
+        9: '[CS_IMAC·R·7DRM',
+        10: '[CS_IMAC·R·30DRM',
+        11: '[CS_IND·Dhaka',
+        12: '[CS_ROM·Udrea',
+        13: '[CS_AUS·Williamson',
+        14: '[CS_AUS·DeDear',
+        15: '[CS_BRA·Rupp·NV',
+        16: '[CS_BRA·Rupp·AC',
     }
 
     outputlist = []
     for file in filelist_pymod:
         filename = file.replace('_pymod', '')
         if TempCtrl.lower() == 'temp' or TempCtrl.lower() == 'temperature':
-            for AdapStand_value in self.AdapStand_List:
-                if AdapStand_value == 0:
+            for ComfStand_value in self.ComfStand_List:
+                if ComfStand_value == 0:
                     for HVACmode_value in self.HVACmode_List:
                         if HVACmode_value == 0:
                             for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                                 outputname = (
                                     filename
-                                    + AdapStand_dict[AdapStand_value]
+                                    + ComfStand_dict[ComfStand_value]
                                     + '[CA_X'
                                     + '[CM_X'
                                     + '[HM_' + repr(HVACmode_value)
@@ -243,7 +253,7 @@ def genIDF(self,
                                             for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                                                 outputname = (
                                                     filename
-                                                    + AdapStand_dict[AdapStand_value]
+                                                    + ComfStand_dict[ComfStand_value]
                                                     + '[CA_X'
                                                     + '[CM_X'
                                                     + '[HM_' + repr(HVACmode_value)
@@ -256,11 +266,11 @@ def genIDF(self,
                                                     + '.idf'
                                                     )
                                                 outputlist.append(outputname)
-                elif AdapStand_value in [1, 4, 5]:
+                elif ComfStand_value in [1, 4, 5]:
                     for CAT_value in self.CAT_List:
-                        if AdapStand_value in [1] and CAT_value not in range(0, 4):
+                        if ComfStand_value in [1] and CAT_value not in range(0, 4):
                             continue
-                        elif AdapStand_value in [4, 5] and CAT_value not in [1, 2]:
+                        elif ComfStand_value in [4, 5] and CAT_value not in [1, 2]:
                             continue
                         else:
                             for ComfMod_value in self.ComfMod_List:
@@ -269,7 +279,7 @@ def genIDF(self,
                                         for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                                             outputname = (
                                                 filename
-                                                + AdapStand_dict[AdapStand_value]
+                                                + ComfStand_dict[ComfStand_value]
                                                 + '[CA_' + repr(CAT_value)
                                                 + '[CM_' + repr(ComfMod_value)
                                                 + '[HM_' + repr(HVACmode_value)
@@ -290,7 +300,7 @@ def genIDF(self,
                                                         for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                                                             outputname = (
                                                                 filename
-                                                                + AdapStand_dict[AdapStand_value]
+                                                                + ComfStand_dict[ComfStand_value]
                                                                 + '[CA_' + repr(CAT_value)
                                                                 + '[CM_' + repr(ComfMod_value)
                                                                 + '[HM_' + repr(HVACmode_value)
@@ -303,11 +313,11 @@ def genIDF(self,
                                                                 + '.idf'
                                                                 )
                                                             outputlist.append(outputname)
-                elif AdapStand_value in [2, 3, 6, 7]:
+                elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]:
                     for CAT_value in self.CAT_List:
-                        if AdapStand_value in [2, 3] and CAT_value not in range(80, 91, 10):
+                        if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16] and CAT_value not in range(80, 91, 10):
                             continue
-                        elif AdapStand_value in [6, 7] and CAT_value not in range(80, 91, 5):
+                        elif ComfStand_value in [7, 8] and CAT_value not in range(80, 91, 5):
                             continue
                         else:
                             for ComfMod_value in self.ComfMod_List:
@@ -316,7 +326,7 @@ def genIDF(self,
                                         for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                                             outputname = (
                                                 filename
-                                                + AdapStand_dict[AdapStand_value]
+                                                + ComfStand_dict[ComfStand_value]
                                                 + '[CA_' + repr(CAT_value)
                                                 + '[CM_' + repr(ComfMod_value)
                                                 + '[HM_' + repr(HVACmode_value)
@@ -337,7 +347,7 @@ def genIDF(self,
                                                         for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
                                                             outputname = (
                                                                 filename
-                                                                + AdapStand_dict[AdapStand_value]
+                                                                + ComfStand_dict[ComfStand_value]
                                                                 + '[CA_' + repr(CAT_value)
                                                                 + '[CM_' + repr(ComfMod_value)
                                                                 + '[HM_' + repr(HVACmode_value)
@@ -353,7 +363,7 @@ def genIDF(self,
         elif TempCtrl.lower() == 'pmv':
             outputname = (
                     filename
-                    + '[AS_PMV'
+                    + '[CS_PMV'
                     + '[CA_X'
                     + '[CM_X'
                     + '[HM_X'
@@ -397,9 +407,9 @@ def genIDF(self,
             SetInputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
                              program.Name == 'SetInputData'])
             if TempCtrl.lower() == 'temp' or TempCtrl.lower() == 'temperature':
-                for AdapStand_value in self.AdapStand_List:
-                    SetInputData[0].Program_Line_1 = 'set AdapStand = '+repr(AdapStand_value)
-                    if AdapStand_value == 0:
+                for ComfStand_value in self.ComfStand_List:
+                    SetInputData[0].Program_Line_1 = 'set ComfStand = '+repr(ComfStand_value)
+                    if ComfStand_value == 0:
                         SetInputData[0].Program_Line_2 = 'set CAT = 1'
                         SetInputData[0].Program_Line_3 = 'set ComfMod = 0'
                         for HVACmode_value in self.HVACmode_List:
@@ -410,7 +420,7 @@ def genIDF(self,
                                     SetInputData[0].Program_Line_6 = 'set AHSTtol = '+repr(ASTtol_value)
                                     outputname = (
                                         filename
-                                        + AdapStand_dict[AdapStand_value]
+                                        + ComfStand_dict[ComfStand_value]
                                         + '[CA_X'
                                         + '[CM_X'
                                         + '[HM_' + repr(HVACmode_value)
@@ -441,7 +451,7 @@ def genIDF(self,
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
                                                     outputname = (
                                                         filename
-                                                        + AdapStand_dict[AdapStand_value]
+                                                        + ComfStand_dict[ComfStand_value]
                                                         + '[CA_X'
                                                         + '[CM_X'
                                                         + '[HM_' + repr(HVACmode_value)
@@ -458,11 +468,11 @@ def genIDF(self,
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
                                                     idf1.savecopy(outputname)
-                    elif AdapStand_value in [1, 4, 5]:
+                    elif ComfStand_value in [1, 4, 5]:
                         for CAT_value in self.CAT_List:
-                            if AdapStand_value in [1] and CAT_value not in range(0, 4):
+                            if ComfStand_value in [1] and CAT_value not in range(0, 4):
                                 continue
-                            elif AdapStand_value in [4, 5] and CAT_value not in [1, 2]:
+                            elif ComfStand_value in [4, 5] and CAT_value not in [1, 2]:
                                 continue
                             else:
                                 SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
@@ -476,7 +486,7 @@ def genIDF(self,
                                                 SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
                                                 outputname = (
                                                     filename
-                                                    + AdapStand_dict[AdapStand_value]
+                                                    + ComfStand_dict[ComfStand_value]
                                                     + '[CA_' + repr(CAT_value)
                                                     + '[CM_' + repr(ComfMod_value)
                                                     + '[HM_' + repr(HVACmode_value)
@@ -507,7 +517,7 @@ def genIDF(self,
                                                                 SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
                                                                 outputname = (
                                                                     filename
-                                                                    + AdapStand_dict[AdapStand_value]
+                                                                    + ComfStand_dict[ComfStand_value]
                                                                     + '[CA_' + repr(CAT_value)
                                                                     + '[CM_' + repr(ComfMod_value)
                                                                     + '[HM_' + repr(HVACmode_value)
@@ -524,11 +534,11 @@ def genIDF(self,
                                                                     # time.sleep(0.1)
                                                                     # pbar.update(1)
                                                                 idf1.savecopy(outputname)
-                    elif AdapStand_value in [2, 3, 6, 7]:
+                    elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]:
                         for CAT_value in self.CAT_List:
-                            if AdapStand_value in [2, 3] and CAT_value not in range(80, 91, 10):
+                            if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16] and CAT_value not in range(80, 91, 10):
                                 continue
-                            elif AdapStand_value in [6, 7] and CAT_value not in range(80, 91, 5):
+                            elif ComfStand_value in [7, 8] and CAT_value not in range(80, 91, 5):
                                 continue
                             else:
                                 SetInputData[0].Program_Line_2 = 'set CAT = '+repr(CAT_value)
@@ -542,7 +552,7 @@ def genIDF(self,
                                                 SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
                                                 outputname = (
                                                     filename
-                                                    + AdapStand_dict[AdapStand_value]
+                                                    + ComfStand_dict[ComfStand_value]
                                                     + '[CA_' + repr(CAT_value)
                                                     + '[CM_' + repr(ComfMod_value)
                                                     + '[HM_' + repr(HVACmode_value)
@@ -573,7 +583,7 @@ def genIDF(self,
                                                                 SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
                                                                 outputname = (
                                                                     filename
-                                                                    + AdapStand_dict[AdapStand_value]
+                                                                    + ComfStand_dict[ComfStand_value]
                                                                     + '[CA_' + repr(CAT_value)
                                                                     + '[CM_' + repr(ComfMod_value)
                                                                     + '[HM_' + repr(HVACmode_value)
@@ -594,7 +604,7 @@ def genIDF(self,
                 SetInputData[0].Program_Line_4 = 'set HVACmode = 0'
                 outputname = (
                     filename
-                    + '[AS_PMV'
+                    + '[CS_PMV'
                     + '[CA_X'
                     + '[CM_X'
                     + '[HM_0'

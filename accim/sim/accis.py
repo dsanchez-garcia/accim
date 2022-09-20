@@ -11,7 +11,7 @@ def addAccis(
         Outputs: str = None,
         EnergyPlus_version: str = None,
         TempCtrl: str = None,
-        AdapStand: any = None,
+        ComfStand: any = None,
         CAT: any = None,
         ComfMod: any = None,
         HVACmode: any = None,
@@ -30,7 +30,7 @@ def addAccis(
     :param ScriptType: The default is None.'vrf' for VRFsystem, 'ex_ac' for ExistingHVAC only with full air-conditioning mode, and 'ex_mm' for ExistingHVAC with mixed-mode..
     :param Outputs: The default is None. Can be 'standard', 'simplified' or 'timestep'.
     :param EnergyPlus_version: The default is None. Can be 'ep91', 'ep92', 'ep93', 'ep94', 'ep95' or 'ep96'.
-    :param AdapStand: The default is None.
+    :param ComfStand: The default is None.
     (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55; 3 = JPN)
     :param CAT: The default is None.
     (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT)
@@ -253,7 +253,7 @@ def addAccis(
         print('''\n=======================START OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')
 
     args_needed_mm = (
-        AdapStand is not None,
+        ComfStand is not None,
         CAT is not None,
         ComfMod is not None,
         HVACmode is not None,
@@ -261,7 +261,7 @@ def addAccis(
     )
 
     args_needed_ac = (
-        AdapStand is not None,
+        ComfStand is not None,
         CAT is not None,
         ComfMod is not None,
     )
@@ -270,7 +270,7 @@ def addAccis(
             z.genIDF(
                 ScriptType=ScriptType,
                 TempCtrl=TempCtrl,
-                AdapStand=AdapStand,
+                ComfStand=ComfStand,
                 CAT=CAT,
                 ComfMod=ComfMod,
                 HVACmode=HVACmode,
@@ -298,7 +298,7 @@ def addAccis(
             z.genIDF(
                 ScriptType=ScriptType,
                 TempCtrl=TempCtrl,
-                AdapStand=AdapStand,
+                ComfStand=ComfStand,
                 CAT=CAT,
                 ComfMod=ComfMod,
                 HVACmode=[0],
