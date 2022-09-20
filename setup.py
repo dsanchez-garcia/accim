@@ -1,11 +1,13 @@
 import setuptools
 from os import path
-from setuptools import setup
 from setuptools.command.install import install
+
 
 
 class PostInstallCommand(install):
     """Post-installation for installation mode."""
+    messages = []
+
     def run(self):
         install.run(self)
         # PUT YOUR POST-INSTALL SCRIPT HERE or CALL A FUNCTION
@@ -24,17 +26,23 @@ class PostInstallCommand(install):
 
         new_lines_no = 1500
 
+        # global messages
+        # messages = []
+
         # Iterating through EnergyPlus versions
         for i in dict_lines:
             # Renaming the original IDD file to keep it as a backup
             try:
                 os.rename(dict_lines[i][0], dict_lines[i][1])
             except FileExistsError:
-                print(
-                    f'The file Energy+_backup.idd already exists, therefore this script has already been run for {i}.')
+                message = f'The file Energy+_backup.idd already exists, therefore this script has already been run for {i}.'
+                print(message)
+                PostInstallCommand.messages.append(message)
                 continue
             except FileNotFoundError:
-                print(f'The file Energy+.idd has not been found, therefore {i} is not installed at defalut path.')
+                message = f'The file Energy+.idd has not been found, therefore {i} is not installed at defalut path.'
+                print(message)
+                PostInstallCommand.messages.append(message)
                 continue
             # Reading the content of the IDD
             with open(dict_lines[i][1], 'r') as file:
@@ -53,8 +61,10 @@ class PostInstallCommand(install):
             # Overwriting the IDD with the amendments in variable data
             with open(dict_lines[i][0], 'w') as file:
                 file.writelines(data)
-            print(
-                f"{i}'s IDD has been correctly modified. {new_lines_no} lines have been added to the object EnergyManagementSystem:Program.")
+                message = f"{i}'s IDD has been correctly modified. {new_lines_no} lines have been added to the object EnergyManagementSystem:Program."
+            print(message)
+            PostInstallCommand.messages.append(message)
+
 
 
 this_directory = path.abspath(path.dirname(__file__))
@@ -114,3 +124,6 @@ setuptools.setup(
         'install': PostInstallCommand
     }
     )
+
+# print('IDD modifications:')
+# print(PostInstallCommand.messages, sep='\n')
