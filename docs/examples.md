@@ -70,7 +70,7 @@ Enter the Comfort Standard numbers separated by space (
           Are you sure the numbers are correct? [y or [] / n]:
 Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT): 1 2 3
           Are you sure the numbers are correct? [y or [] / n]:
-Enter the Comfort Mode numbers separated by space (0 = Static; 1, 2, 3 = Adaptive; refer to full table of setpoint temperatures): 0 1 2 3
+Enter the Comfort Mode numbers separated by space (0 = Static; 1, 2, 3 = Adaptive; Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/img_1.png): 0 1 2 3
           Are you sure the numbers are correct? [y or [] / n]:
 Enter the HVAC Mode numbers separated by space (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode): 2
           Are you sure the numbers are correct? [y or [] / n]:
@@ -93,18 +93,18 @@ Enter the ASTtol value steps (if omitted, will be 0.1):
 Afterwards, ACCIS will let us know which the output IDFs are going to be, the total number of them and will ask for our confirmation to proceed:
 ```
 The list of output IDFs is going to be:
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
 And the total number of output IDFs is going to be 12
 Do you still want to run ACCIS? [y/n]: y
 ```
@@ -112,36 +112,36 @@ If we entered `n`, the whole process would shut down. Otherwise, if we entered '
 As you can see, we are going to use the EN16798-1, all categories (1, 2 and 3), all Comfort Modes, Mixed Mode, and we just went ahead with the remaining default values.
 ```
 Generating the following output IDF files:
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
 
 =======================END OF OUTPUT IDF FILES GENERATION PROCESS=======================
 ```
 If you enter `exit()` to quit python and enter `dir` on windows command line, you'll be able to see the output IDFs accim has created:
 ```
 25/02/2021  19:58           234,027 TestModel_onlyGeometryForVRFsystem.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
-12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_1[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_2[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+12/03/2021  07:57           500,044 TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
 
 ```
 Afterwards, you just need to run the simulation. In my opinion, The easiest and quickest way to do it is by using EP-Launch. Once you have run the simulations you need, you'll get the files you usually get when you run any simulation, including the hourly results on a CSV file.
