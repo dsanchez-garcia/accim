@@ -52,7 +52,7 @@ Enter the Comfort Standard numbers separated by space (
 0 = CTE;
 1 = EN16798-1;
 2 = ASHRAE 55;
-3 = JPN;
+3 = JPN·Rijal;
 4 = GBT50785·Cold;
 5 = GBT50785·HotMild;
 6 = CHN·Yang;
@@ -68,9 +68,9 @@ Enter the Comfort Standard numbers separated by space (
 16 = BRA·Rupp·AC;
 ): 1
           Are you sure the numbers are correct? [y or [] / n]:
-Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT): 1 2 3
+Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT; Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png): 1 2 3
           Are you sure the numbers are correct? [y or [] / n]:
-Enter the Comfort Mode numbers separated by space (0 = Static; 1, 2, 3 = Adaptive; Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/img_1.png): 0 1 2 3
+Enter the Comfort Mode numbers separated by space (0 = Static; 1, 2, 3 = Adaptive; Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png): 0 1 2 3
           Are you sure the numbers are correct? [y or [] / n]:
 Enter the HVAC Mode numbers separated by space (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode): 2
           Are you sure the numbers are correct? [y or [] / n]:
