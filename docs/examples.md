@@ -14,18 +14,20 @@ When we hit enter, we'll be asked to enter some information regarding the Script
 Enter the ScriptType (for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning mode: ex_ac): vrf
 Enter the Output (standard, simplified or timestep): standard
 Enter the EnergyPlus version (ep91 to ep96): ep96
+Enter the Temperature Control method (temperature or pmv): temperature
 ```
 When we hit enter, it's going to add all the EnergyPlus objects needed, and afterwards ask us to enter the required information:
 ```
 ScriptType is: vrf
 Outputs are: standard
 EnergyPlus version is: ep96
+Temperature Control method is: temperature
 
 =======================START OF GENERIC IDF FILE GENERATION PROCESS=======================
 
 Starting with file:
 TestModel_onlyGeometryForVRFsystem
-IDD location is: C:/EnergyPlusV9-5-0/Energy+.idd
+IDD location is: C:/EnergyPlusV9-6-0/Energy+.idd
 The occupied zones in the model TestModel_onlyGeometryForVRFsystem are:
 Block1:Zone2
 Block1:Zone1
@@ -46,11 +48,29 @@ None
 =======================START OF OUTPUT IDF FILES GENERATION PROCESS=======================
 
 The information you will be required to enter below will be used to generate the customised output IDFs:
-Enter the Adaptive Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55): 1
+Enter the Comfort Standard numbers separated by space (
+0 = CTE;
+1 = EN16798-1;
+2 = ASHRAE 55;
+3 = JPN;
+4 = GBT50785·Cold;
+5 = GBT50785·HotMild;
+6 = CHN·Yang;
+7 = IMAC·C·NV;
+8 = IMAC·C·MM;
+9 = IMAC·R·7DRM;
+10 = IMAC·R·30DRM;
+11 = IND·Dhaka;
+12 = ROM·Udrea;
+13 = AUS·Williamson;
+14 = AUS·DeDear;
+15 = BRA·Rupp·NV;
+16 = BRA·Rupp·AC;
+): 1
           Are you sure the numbers are correct? [y or [] / n]:
 Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT): 1 2 3
           Are you sure the numbers are correct? [y or [] / n]:
-Enter the Comfort Mode numbers separated by space (0 = Static; 1 = OUT-CTE; 2 = OUT-SEN16798/SASHRAE55; 3 = OUT-AEN16798/AASHRAE55): 0 1 2 3
+Enter the Comfort Mode numbers separated by space (0 = Static; 1, 2, 3 = Adaptive; refer to full table of setpoint temperatures): 0 1 2 3
           Are you sure the numbers are correct? [y or [] / n]:
 Enter the HVAC Mode numbers separated by space (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode): 2
           Are you sure the numbers are correct? [y or [] / n]:

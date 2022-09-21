@@ -30,15 +30,17 @@ Then you'll be asked in the prompt to enter some information so that python know
 Enter the ScriptType (for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning mode: ex_ac): vrf
 Enter the Output (standard, simplified or timestep): standard
 Enter the EnergyPlus version (ep91 to ep96): ep96
+Enter the Temperature Control method (temperature or pmv): temperature
 ```
 where
 - ScriptType can be 'vrf', 'ex_mm' or 'ex_ac', and it refers to the type of functions as explained above
 - Outputs can be 'standard', 'simplified' or 'timestep', and it refers to the simulation results: 'standard' means that results will contain the full selection; 'simplified' means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and 'timestep' means that results are going to be the full selection in Timestep frequency, so this is only recommended for tests, or small number of simulations.
 - EnergyPlus_version can be 'ep91', 'ep92', 'ep93', 'ep94', 'ep95' or 'ep96'. It is the version of EnergyPlus you have installed in your computer. If you enter 'ep91', accim will look for the E+9.1.0 IDD file in path "C:\\EnergyPlusV9-1-0".
+- Temperature Control method can be 'temperature' or 'temp', or 'pmv'. If 'temp' is used, the setpoint will be the operative temperature, otherwise if 'pmv' is used, the setpoint will be the PMV index.
 
 Besides, `addAccis()` can take the same values we entered before in the prompt command as arguments. The usage of this function will be detailed below. An example of this, to get the same results as shown in the command prompt would be:
 ```
->>> accis.addAccis('vrf','standard','ep96')
+>>> accis.addAccis('vrf','standard','ep96', 'temp')
 ```
 accis will show on the prompt command dialog all the objects it adds, and those that doesn't need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled 'Setting up the target IDFs'.
 
@@ -52,7 +54,8 @@ If you run `accis.addAccis(whateverScriptType, whateverOutputs, whateverEPversio
 >>> accis.addAccis(str, # ScriptType: 'vrf', 'ex_mm', 'ex_ac'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
 >>>                str, # EnergyPlus_version: 'ep91', 'ep92', 'ep93', 'ep94', 'ep95' or 'ep96'
->>>                list, # ComfStand, which is the Adaptive Standard
+>>>                str, # TempCtrl: 'temperature' or 'temp', or 'pmv'
+>>>                list, # ComfStand, which is the Comfort Standard
 >>>                list, # CAT, which is the Category
 >>>                list, # ComfMod, which is Comfort Mode
 >>>                list, # HVACmode, which is the HVAC mode
@@ -73,6 +76,7 @@ Some example of the usage could be:
 >>> accis.addAccis(ScriptType='vrf', # ScriptType: 'vrf', 'ex_mm', 'ex_ac'
 >>>                Outputs='standard', # Outputs: 'simplified', 'standard' or 'timestep'
 >>>                EnergyPlus_version='ep95', # EnergyPlus_version: 'ep91', 'ep92', 'ep93', 'ep94','ep95' or 'ep96'
+>>>                TempCtrl='temp', # Temperature Control: 'temperature' or 'temp', or 'pmv'
 >>>                ComfStand=[0, 1, 2, 3], # ComfStand, which is the Adaptive Standard
 >>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category
 >>>                ComfMod=[0, 1, 2, 3], # ComfMod, which is Comfort Mode
@@ -87,7 +91,7 @@ Some example of the usage could be:
 >>>                NameSuffix='standard' # Name Suffix: for example, just in case you want to clarify the outputs
 >>>                )
 ```
-If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs, ComfStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
+If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs, EnergyPlus_version, TempCtrl, ComfStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
 Each argument is explained below:
 
 - ComfStand: and refers to the thermal comfort model to be applied. Enter 0 for CTE, 1 for EN16798-1, 2 for ASHRAE 55 and 3 for Japanese adaptive comfort model. For example, if you enter '0 1 2 3', you'll get IDFs for all the models. If you don't enter any number, or if some of the numbers entered are not 0, 1, 2 or 3, it'll ask you to enter the numbers again.
@@ -120,15 +124,15 @@ In static mode, static (or PMV-based) setpoint temperatures are applied all the 
 
 So, below you can see a sample name of an IDF created by using accim's VRFsystem functions. The package takes the original IDF file as a reference, saves a copy, run all the functions so that setpoint temperatures are transformed from static to adaptive, an changes its name based on the values previously entered:
 
-__TestModel_onlyGeometryForVRFsystem_pymod[AS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[standard__
+__TestModel_onlyGeometryForVRFsystem_pymod[CS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[standard__
 
 where:
 
 - 'TestModel_onlyGeometryForVRFsystem' is the name of the original IDF, which is copied with the suffix '_pymod' so that the original file stays unmodified.
 
-- AS refers to the Comfort Standard, and it's followed by the thermal comfort standard applied (could be 'CTE', 'EN16798', 'ASHRAE55' or 'JPN').
+- CS refers to the Comfort Standard, and it's followed by the thermal comfort standard applied (could be 'CTE', 'EN16798', 'ASHRAE55' or 'JPN').
 
-- CA refers to the Category, which could be 1, 2 or 3 if AS is EN16798, or 80 or 90 if AS is ASHRAE55.
+- CA refers to the Category, which could be 1, 2 or 3 if CS is EN16798, or 80 or 90 if CS is ASHRAE55.
 
 - CM refers to the Comfort Mode, which could be 0 (Static), 1 (OUT-CTE), 2 (OUT-SEN16798 or OUT-SASHRAE55), OR 3 (OUT-AEN16798 or OUT-AASHRAE55).
 - HM refers to the HVAC Mode, which could be 0 (Full air conditioning), 1 (Naturally ventilated), or 2 (Mixed Mode).
@@ -145,9 +149,9 @@ where:
 
 - 'standard' is the suffix, which can be whatever you want. For example, this allows you to make a for loop with 'standard', 'simplified' and 'timestep' and run the simulations with all type of outputs.
 
-If some inputs are not used or don't make sense, you'll be able to se an 'X' in the output IDF file. For example, if you use CTE as Comfort Standard, then the inputs for Category and Comfort Mode (which are only for EN16798-1 and ASHRAE 55) are not used in the process, and the output IDF would contain in its name 'AS_CTE[CA_X[CM_X'. Another similar case occurs if you use Full air-conditioning HVAC Mode (i.e. enter '0' for HVAC Mode), or if you use the 'ex_ac' ScriptType, where the output IDF would contain in its name '[HM_0[VC_X[VO_X[MT_X[MW_X'.
+If some inputs are not used or don't make sense, you'll be able to se an 'X' in the output IDF file. For example, if you use CTE as Comfort Standard, then the inputs for Category and Comfort Mode (which are only for EN16798-1 and ASHRAE 55) are not used in the process, and the output IDF would contain in its name 'CS_CTE[CA_X[CM_X'. Another similar case occurs if you use Full air-conditioning HVAC Mode (i.e. enter '0' for HVAC Mode), or if you use the 'ex_ac' ScriptType, where the output IDF would contain in its name '[HM_0[VC_X[VO_X[MT_X[MW_X'.
 
-##Full list of setpoint temperatures
+## Full list of setpoint temperatures
 Depending on the arguments ComfStand, CAT and ComfMod, cooling and heating setpoint temperatures will be the following:
 
 ![img.png](img.png)
