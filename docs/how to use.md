@@ -49,7 +49,7 @@ Once you run the simulations, you might get some EnergyPlus warnings and severe 
 ## Setting up the target IDFs
 
 
-If you run `accis.addAccis(whateverScriptType, whateverOutputs, whateverEPversion)`, you will be asked in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
+If you run `accis.addAccis(whateverScriptType, whateverOutputs, whateverEPversion, whateverTempCtrl)`, you will be asked in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
 ```
 >>> accis.addAccis(str, # ScriptType: 'vrf', 'ex_mm', 'ex_ac'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
@@ -94,7 +94,7 @@ Some example of the usage could be:
 If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs, EnergyPlus_version, TempCtrl, ComfStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
 Each argument is explained below:
 
-- ComfStand: refers to the thermal comfort standard or model to be applied. Enter any number from 0 to 16 to select the comfort standard or model to be used; you can see which model is each number in the table below. Readthedocs doesn't render it properly, so please take a look at the github repository. For example, if you enter '0 1 2 3', you'll get IDFs for CTE, EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for Japanese dwellings. If you don't enter any number, or if some of the numbers entered are not 0, 1, 2 or 3, it'll ask you to enter the numbers again.
+- ComfStand: refers to the thermal comfort standard or model to be applied. Enter any number from 0 to 16 to select the comfort standard or model to be used; you can see which model is each number in the table below. Readthedocs doesn't render it properly, so please take a look at the github repository: https://github.com/dsanchez-garcia/accim/blob/master/docs/how%20to%20use.md. For example, if you enter '0 1 2 3', you'll get IDFs for CTE, EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for Japanese dwellings. If you don't enter any number, or if some of the numbers entered are not 0, 1, 2 or 3, it'll ask you to enter the numbers again.
 
 | ComfStand No. | ComfStand Name | Area | Reference  |
 |:--- |:--- |:--- |:--- |
@@ -175,5 +175,5 @@ If some inputs are not used or don't make sense, you'll be able to se an 'X' in 
 ## Full list of setpoint temperatures
 Depending on the arguments ComfStand, CAT and ComfMod, cooling and heating setpoint temperatures will be the following:
 
-![img.png](images/full_table.png)
+![full_table.png](images/full_table.png)
 
