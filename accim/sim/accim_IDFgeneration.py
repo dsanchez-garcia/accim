@@ -8,7 +8,27 @@ def inputData(self, ScriptType: str = None):
     """Input data for IDF generation."""
     print('The information you will be required to enter below will be used to generate the customised output IDFs:')
     fullComfStandList = list(range(16+1))
-    self.ComfStand_List = list(int(num) for num in input("Enter the Comfort Standard numbers separated by space (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55; 3 = JPN): ").split())
+    self.ComfStand_List = list(int(num) for num in input(
+        'Enter the Comfort Standard numbers separated by space (\n'
+        '0 = CTE;\n'
+        '1 = EN16798-1;\n'
+        '2 = ASHRAE 55;\n'
+        '3 = JPN;\n'
+        '4 = GBT50785·Cold;\n'
+        '5 = GBT50785·HotMild;\n'
+        '6 = CHN·Yang;\n'
+        '7 = IMAC·C·NV;\n'
+        '8 = IMAC·C·MM;\n'
+        '9 = IMAC·R·7DRM;\n'
+        '10 = IMAC·R·30DRM;\n'
+        '11 = IND·Dhaka;\n'
+        '12 = ROM·Udrea;\n'
+        '13 = AUS·Williamson;\n'
+        '14 = AUS·DeDear;\n'
+        '15 = BRA·Rupp·NV;\n'
+        '16 = BRA·Rupp·AC;\n'
+        '): '
+    ).split())
     while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
         print('          Comfort Standard numbers are not correct. Please enter the numbers again.')
         self.ComfStand_List = list(int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())

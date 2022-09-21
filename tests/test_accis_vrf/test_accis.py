@@ -14,7 +14,7 @@ def test_addAccis():
                     ScriptType=i,
                     Outputs=j,
                     EnergyPlus_version=k,
-                    AdapStand=[1],
+                    ComfStand=[1],
                     CAT=[1],
                     ComfMod=[1],
                     HVACmode=[2],

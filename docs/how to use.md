@@ -2,11 +2,11 @@
 ## First steps
 There has been developed 3 main branches of functions, which are:
 
-- VRFsystem: Adds standard VRF systems for each occupied zone and applies the adaptive setpoint temperatures.
+- VRFsystem: Adds standard VRF systems for each occupied zone and applies the adaptive or PMV-based setpoint temperatures.
 
-- ExistingHVAC only with full air-conditioning mode: Keeps the existing HVAC systems and modify the existing setpoint temperatures to adaptive setpoint temperatures. However, mixed-mode and naturally ventilated modes are not available in this mode. 
+- ExistingHVAC only with full air-conditioning mode: Keeps the existing HVAC systems and modify the existing setpoint temperatures to adaptive or PMV-based setpoint temperatures. However, mixed-mode and naturally ventilated modes are not available in this mode. 
 
-- ExistingHVAC with mixed mode: UNDER DEVELOPMENT. IT IS NOT ADVISABLE TO USE IT YET. Keeps the existing HVAC systems and modify the existing setpoint temperatures to adaptive setpoint temperatures, considering mixed-mode. In order to properly work, there must be only one object for heating and another for cooling that can be used to monitor if these are turned on at any timestep (such as `Coil:Cooling:Water` and `Coil:Heating:Water`). Also, these objects must be named following the pattern "Zone name" "Object name". For instance, an `Coil:Heating:Electric` object could be named `Block1:Zone1 PTAC Heating Coil`, given that `Block1:Zone1` is a valid zone name. On the other hand, a `Coil:Cooling:Water` object named `Main Cooling Coil 1` would not be valid, since in this case the room would be `Main`; this is the typical case of some equipment shared by multiple rooms. If this condition is not met, accim will not generate the output IDF files for that input IDF file. For instance, if there are `Coil:Heating:Electric` and `Coil:Heating:DX:SingleSpeed` objects in the same model, simulation will crash. Also, if there is just an `ZoneHVAC:Baseboard:RadiantConvective:Water` used for heating, and cooling is not monitored, simulation will also crash.
+- ExistingHVAC with mixed mode: UNDER DEVELOPMENT. IT IS NOT ADVISABLE TO USE IT YET. Keeps the existing HVAC systems and modify the existing setpoint temperatures to adaptive or PMV-based setpoint temperatures, considering mixed-mode. In order to properly work, there must be only one object for heating and another for cooling that can be used to monitor if these are turned on at any timestep (such as `Coil:Cooling:Water` and `Coil:Heating:Water`). Also, these objects must be named following the pattern "Zone name" "Object name". For instance, an `Coil:Heating:Electric` object could be named `Block1:Zone1 PTAC Heating Coil`, given that `Block1:Zone1` is a valid zone name. On the other hand, a `Coil:Cooling:Water` object named `Main Cooling Coil 1` would not be valid, since in this case the room would be `Main`; this is the typical case of some equipment shared by multiple rooms. If this condition is not met, accim will not generate the output IDF files for that input IDF file. For instance, if there are `Coil:Heating:Electric` and `Coil:Heating:DX:SingleSpeed` objects in the same model, simulation will crash. Also, if there is just an `ZoneHVAC:Baseboard:RadiantConvective:Water` used for heating, and cooling is not monitored, simulation will also crash.
 
 Therefore, if you are going to use the VRFsystem script, you're supposed to have one or multiple IDFs with fixed setpoint temperature, or even without any HVAC objects at all (it doesn't matter, since the module is going to add a standard VRF system for each zone, and the simulation is going to be calculated with these VRF systems), and with Calculated Natural Ventilation if you're going to use the Mixed Mode.
 On the other hand, if you are going to use any ExistingHVAC script, again you're supposed to have one or multiple IDFs, however in this case there must be a fully functional HVAC system. Therefore, you must be able to successfully run a simulation with fixed setpoint temperatures in order for the accim package to work. The main difference between ExistingHVAC only with full air-conditioning and with mixed mode is that in the latter, the existing HVAC system needs to be mapped in order to monitor if it needs to be activated or not, and windows need to be actuated in case conditions for natural ventilation are favourable.
@@ -52,7 +52,7 @@ If you run `accis.addAccis(whateverScriptType, whateverOutputs, whateverEPversio
 >>> accis.addAccis(str, # ScriptType: 'vrf', 'ex_mm', 'ex_ac'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
 >>>                str, # EnergyPlus_version: 'ep91', 'ep92', 'ep93', 'ep94', 'ep95' or 'ep96'
->>>                list, # AdapStand, which is the Adaptive Standard
+>>>                list, # ComfStand, which is the Adaptive Standard
 >>>                list, # CAT, which is the Category
 >>>                list, # ComfMod, which is Comfort Mode
 >>>                list, # HVACmode, which is the HVAC mode
@@ -73,7 +73,7 @@ Some example of the usage could be:
 >>> accis.addAccis(ScriptType='vrf', # ScriptType: 'vrf', 'ex_mm', 'ex_ac'
 >>>                Outputs='standard', # Outputs: 'simplified', 'standard' or 'timestep'
 >>>                EnergyPlus_version='ep95', # EnergyPlus_version: 'ep91', 'ep92', 'ep93', 'ep94','ep95' or 'ep96'
->>>                AdapStand=[0, 1, 2, 3], # AdapStand, which is the Adaptive Standard
+>>>                ComfStand=[0, 1, 2, 3], # ComfStand, which is the Adaptive Standard
 >>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category
 >>>                ComfMod=[0, 1, 2, 3], # ComfMod, which is Comfort Mode
 >>>                HVACmode=[0, 1, 2], # HVACmode, which is the HVAC mode
@@ -87,15 +87,15 @@ Some example of the usage could be:
 >>>                NameSuffix='standard' # Name Suffix: for example, just in case you want to clarify the outputs
 >>>                )
 ```
-If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs, AdapStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
+If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs, ComfStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
 Each argument is explained below:
 
-- AdapStand: and refers to the adaptive thermal comfort model to be applied. Enter 0 for CTE, 1 for EN16798-1, 2 for ASHRAE 55 and 3 for Japanese adaptive comfort model. For example, if you enter '0 1 2 3', you'll get IDFs for all the models. If you don't enter any number, or if some of the numbers entered are not 0, 1, 2 or 3, it'll ask you to enter the numbers again.
+- ComfStand: and refers to the thermal comfort model to be applied. Enter 0 for CTE, 1 for EN16798-1, 2 for ASHRAE 55 and 3 for Japanese adaptive comfort model. For example, if you enter '0 1 2 3', you'll get IDFs for all the models. If you don't enter any number, or if some of the numbers entered are not 0, 1, 2 or 3, it'll ask you to enter the numbers again.
 
-- CAT: and refers to the category of the adaptive thermal comfort model applied. Enter 1 for CAT I, 2 for CAT II,  and 3 for CAT III of EN16798; 80 for 80% acceptability and 90 for 90% acceptability in ASHRAE55. So, for example, if you enter '1 2 3 80 90' you'll get all categories for EN16798 and ASHRAE55 models, or if you enter '1 2 80' you'll get categories 1 and 2 for EN16798, and 80% acceptability for ASHRAE55. Please note that the Category values must be consistent with the Adaptive Standard values previously entered. If, for instance, you enter '1' in the Adaptive Standard value (means you're asking for EN16798 model), but then enter '80' or '90' in the Category value (which are categories used in ASHRAE55), you won't get the results you want.
+- CAT: and refers to the category of the thermal comfort model applied. Enter 1 for CAT I, 2 for CAT II,  and 3 for CAT III of EN16798; 80 for 80% acceptability and 90 for 90% acceptability in ASHRAE55. So, for example, if you enter '1 2 3 80 90' you'll get all categories for EN16798 and ASHRAE55 models, or if you enter '1 2 80' you'll get categories 1 and 2 for EN16798, and 80% acceptability for ASHRAE55. Please note that the Category values must be consistent with the Adaptive Standard values previously entered. If, for instance, you enter '1' in the Adaptive Standard value (means you're asking for EN16798 model), but then enter '80' or '90' in the Category value (which are categories used in ASHRAE55), you won't get the results you want.
 
 - ComfMod: is the Comfort Mode, and refers to the comfort modes used in accim, which can be explained as follows:
-In static mode, static (or PMV-based) setpoint temperatures are applied all the time; in OUT-CTE mode, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, CTE (which is the Spanish Technical Building Code) setpoint temperatures (which are static) are applied; in OUT-SEN16798/SASHRAE55, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, EN16798-1 or ASHRAE 55 static setpoint temperatures are applied; and in OUT-AEN16798/AASHRAE55, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, EN16798-1 or ASHRAE 55 highest and lowest adaptive comfort limits are horizontally extended. Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Therefore, enter 0 for Static; 1 for OUT-CTE, 2 for OUT-SEN16798/SASHRAE55 and 3 for OUT-AEN16798/AASHRAE55). For example, if you enter '0 1 2 3' you'll be getting all different Comfort Modes. Figure below shows the variation of setpoint temperatures when ComfMod 0 (upper left), 1 (upper right), 2 (lower left) and 3 (lower right), when AdapStand is 1 (EN 16798-1, although figure shows the superseded standard, but the setpoint behaviour is similar)
+In static mode, static (or PMV-based) setpoint temperatures are applied all the time; in OUT-CTE mode, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, CTE (which is the Spanish Technical Building Code) setpoint temperatures (which are static) are applied; in OUT-SEN16798/SASHRAE55, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, EN16798-1 or ASHRAE 55 static setpoint temperatures are applied; and in OUT-AEN16798/AASHRAE55, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, EN16798-1 or ASHRAE 55 highest and lowest adaptive comfort limits are horizontally extended. Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Therefore, enter 0 for Static; 1 for OUT-CTE, 2 for OUT-SEN16798/SASHRAE55 and 3 for OUT-AEN16798/AASHRAE55). For example, if you enter '0 1 2 3' you'll be getting all different Comfort Modes. Figure below shows the variation of setpoint temperatures when ComfMod 0 (upper left), 1 (upper right), 2 (lower left) and 3 (lower right), when ComfStand is 1 (EN 16798-1, although figure shows the superseded standard, but the setpoint behaviour is similar)
 
 ![ComfMod](https://www.mdpi.com/energies/energies-12-01498/article_deploy/html/images/energies-12-01498-g002.png)
 
@@ -126,7 +126,7 @@ where:
 
 - 'TestModel_onlyGeometryForVRFsystem' is the name of the original IDF, which is copied with the suffix '_pymod' so that the original file stays unmodified.
 
-- AS refers to the Adaptive Standard, and it's followed by the adaptive thermal comfort applied (could be 'CTE', 'EN16798', 'ASHRAE55' or 'JPN').
+- AS refers to the Comfort Standard, and it's followed by the thermal comfort standard applied (could be 'CTE', 'EN16798', 'ASHRAE55' or 'JPN').
 
 - CA refers to the Category, which could be 1, 2 or 3 if AS is EN16798, or 80 or 90 if AS is ASHRAE55.
 
@@ -145,4 +145,10 @@ where:
 
 - 'standard' is the suffix, which can be whatever you want. For example, this allows you to make a for loop with 'standard', 'simplified' and 'timestep' and run the simulations with all type of outputs.
 
-If some inputs are not used or don't make sense, you'll be able to se an 'X' in the output IDF file. For example, if you use CTE as Adaptive Standard, then the inputs for Category and Comfort Mode (which are only for EN16798-1 and ASHRAE 55) are not used in the process, and the output IDF would contain in its name 'AS_CTE[CA_X[CM_X'. Another similar case occurs if you use Full air-conditioning HVAC Mode (i.e. enter '0' for HVAC Mode), or if you use the 'ex_ac' ScriptType, where the output IDF would contain in its name '[HM_0[VC_X[VO_X[MT_X[MW_X'.
+If some inputs are not used or don't make sense, you'll be able to se an 'X' in the output IDF file. For example, if you use CTE as Comfort Standard, then the inputs for Category and Comfort Mode (which are only for EN16798-1 and ASHRAE 55) are not used in the process, and the output IDF would contain in its name 'AS_CTE[CA_X[CM_X'. Another similar case occurs if you use Full air-conditioning HVAC Mode (i.e. enter '0' for HVAC Mode), or if you use the 'ex_ac' ScriptType, where the output IDF would contain in its name '[HM_0[VC_X[VO_X[MT_X[MW_X'.
+
+##Full list of setpoint temperatures
+Depending on the arguments ComfStand, CAT and ComfMod, cooling and heating setpoint temperatures will be the following:
+
+![img.png](img.png)
+
