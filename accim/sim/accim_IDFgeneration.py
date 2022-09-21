@@ -39,7 +39,7 @@ def inputData(self, ScriptType: str = None):
             self.ComfStand_List = list(int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
 
     fullCATlist = [1, 2, 3, 80, 85, 90]
-    self.CAT_List = list(int(num) for num in input("Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT): ").split())
+    self.CAT_List = list(int(num) for num in input("Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT; Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png): ").split())
     while len(self.CAT_List) == 0 or not all(elem in fullCATlist for elem in self.CAT_List):
         print('          Category numbers are not correct. Please enter the numbers again.')
         self.CAT_List = list(int(num) for num in input("Enter the Category numbers separated by space: ").split())
@@ -50,7 +50,7 @@ def inputData(self, ScriptType: str = None):
             self.CAT_List = list(int(num) for num in input("Enter the Category numbers separated by space: ").split())
 
     fullComfModList = [0, 1, 2, 3]
-    self.ComfMod_List = list(int(num) for num in input("Enter the Comfort Mode numbers separated by space (0 = Static; 1, 2, 3 = Adaptive; Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/img_1.png): ").split())
+    self.ComfMod_List = list(int(num) for num in input("Enter the Comfort Mode numbers separated by space (0 = Static; 1, 2, 3 = Adaptive; Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png): ").split())
     while len(self.ComfMod_List) == 0 or not all(elem in fullComfModList for elem in self.ComfMod_List):
         print('          Comfort Mode numbers are not correct. Please enter the numbers again.')
         self.ComfMod_List = list(int(num) for num in input("     Enter the Comfort Mode numbers separated by space: ").split())

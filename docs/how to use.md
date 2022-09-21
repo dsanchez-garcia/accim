@@ -118,9 +118,7 @@ Each argument is explained below:
 
 - CAT: refers to the category of the thermal comfort model applied. Most of the Comfort Standards work with 80 and 90% acceptability levels, except the European EN 16798-1 (works with Categories 1, 2 and 3), the Chinese GB/T 50785 (works with categories 1 and 2), and the India Model for Adaptive Comfort - Commercial (which works with 80, 85 and 90% acceptability levels). So, for example, if you are going to use the EN16798-1 (ComfStand = 1), you can enter '1 2 3' to generate setpoint temperatures for Categories 1, 2 and 3. Or, if you are going to use the IMAC Commercial in naturally ventilated mode (ComfStand = 7), you can enter '80 85 90' to generate setpoint temperatures for these acceptability levels. All categories are referenced in the full setpoint table at the end of this section, or directly at https://github.com/dsanchez-garcia/accim/blob/master/docs/img_1.png. Please note that the Category values must be consistent with the Comfort Standard values previously entered. If, for instance, you enter '1' in the Comfort Standard value (means you're asking for EN16798 model), but then enter '80' or '90' in the Category value (which are categories used in ASHRAE55), you won't get the results you want.
 
-- ComfMod: is the Comfort Mode, and refers to the comfort modes used in accim. It controls if the setpoints are PMV-based (when ComfMod = 0) or adaptive (when ComfMod = 1, 2 or 3). When they are adaptive, it also controls the comfort model applied when the adaptive model is not applicable (that is, when the running mean outdoor temperature limits are exceeded), in which case a PMV-based model is applied.
-- , which can be explained as follows:
-In static mode, static (or PMV-based) setpoint temperatures are applied all the time; in OUT-CTE mode, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, CTE (which is the Spanish Technical Building Code) setpoint temperatures (which are static) are applied; in OUT-SEN16798/SASHRAE55, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, EN16798-1 or ASHRAE 55 static setpoint temperatures are applied; and in OUT-AEN16798/AASHRAE55, adaptive setpoint temperatures are applied as long as the adaptive comfort model is applicable; otherwise, EN16798-1 or ASHRAE 55 highest and lowest adaptive comfort limits are horizontally extended. Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Therefore, enter 0 for Static; 1 for OUT-CTE, 2 for OUT-SEN16798/SASHRAE55 and 3 for OUT-AEN16798/AASHRAE55). For example, if you enter '0 1 2 3' you'll be getting all different Comfort Modes. Figure below shows the variation of setpoint temperatures when ComfMod 0 (upper left), 1 (upper right), 2 (lower left) and 3 (lower right), when ComfStand is 1 (EN 16798-1, although figure shows the superseded standard, but the setpoint behaviour is similar)
+- ComfMod: is the Comfort Mode, and refers to the comfort modes used in accim. It controls if the setpoints are PMV-based (when ComfMod = 0) or adaptive (when ComfMod = 1, 2 or 3). When they are adaptive, it also controls the comfort model applied when the adaptive model is not applicable (that is, when the running mean outdoor temperature limits are exceeded), in which case a PMV-based model is applied. Each ComfMod for each ComfStand and CAT is referenced at the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png. Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Figure below shows the variation of setpoint temperatures when ComfMod 0 (upper left), 1 (upper right), 2 (lower left) and 3 (lower right), when ComfStand is 1 (EN 16798-1, although figure shows the superseded standard, but the setpoint behaviour is similar)
 
 ![ComfMod](https://www.mdpi.com/energies/energies-12-01498/article_deploy/html/images/energies-12-01498-g002.png)
 
@@ -145,17 +143,18 @@ In static mode, static (or PMV-based) setpoint temperatures are applied all the 
 
 So, below you can see a sample name of an IDF created by using accim's VRFsystem functions. The package takes the original IDF file as a reference, saves a copy, run all the functions so that setpoint temperatures are transformed from static to adaptive, an changes its name based on the values previously entered:
 
-__TestModel_onlyGeometryForVRFsystem_pymod[CS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[standard__
+__TestModel_onlyGeometryForVRFsystem[CS_EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[standard__
 
 where:
 
-- 'TestModel_onlyGeometryForVRFsystem' is the name of the original IDF, which is copied with the suffix '_pymod' so that the original file stays unmodified.
+- 'TestModel_onlyGeometryForVRFsystem' is the name of the original IDF.
 
 - CS refers to the Comfort Standard, and it's followed by the thermal comfort standard applied (could be 'CTE', 'EN16798', 'ASHRAE55' or 'JPN').
 
 - CA refers to the Category, which could be 1, 2 or 3 if CS is EN16798, or 80 or 90 if CS is ASHRAE55.
 
 - CM refers to the Comfort Mode, which could be 0 (Static), 1 (OUT-CTE), 2 (OUT-SEN16798 or OUT-SASHRAE55), OR 3 (OUT-AEN16798 or OUT-AASHRAE55).
+
 - HM refers to the HVAC Mode, which could be 0 (Full air conditioning), 1 (Naturally ventilated), or 2 (Mixed Mode).
 
 - VC refers to the Ventilation Control, which could be 0 (ventilates above neutral temperature), or 1 (ventilates above upper comfort limit).
