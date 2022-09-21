@@ -154,5 +154,5 @@ If some inputs are not used or don't make sense, you'll be able to se an 'X' in 
 ## Full list of setpoint temperatures
 Depending on the arguments ComfStand, CAT and ComfMod, cooling and heating setpoint temperatures will be the following:
 
-![img.png](img.png)
+![img_1.png](img_1.png)
 
