@@ -175,5 +175,7 @@ If some inputs are not used or don't make sense, you'll be able to se an 'X' in 
 ## Full list of setpoint temperatures
 Depending on the arguments ComfStand, CAT and ComfMod, cooling and heating setpoint temperatures will be the following:
 
+(If it is too small, you can look at it also at the [Github repository](https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png))
+
 ![full_table.png](images/full_table.png)
 
