@@ -56,9 +56,9 @@ Once you run this code, you will be asked to enter some information at the termi
         ASTtol_start=float, # it is the start of the tolerance sequence. For instance: ASTtol_start=0,
         ASTtol_end_input=float, # it is the end of the tolerance sequence. For instance: ASTtol_start=2,
         ASTtol_steps=float, # these are the steps of the tolerance sequence. For instance: ASTtol_steps=0.25,
-        NameSuffix=str # NameSuffix: some text you might want to add at the end of the output IDF file name
-        verboseMode=bool # verboseMode: True to print all process in screen, False to not to print it. Default is True.
-        bool # confirmGen: True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. 
+        NameSuffix=str # NameSuffix: some text you might want to add at the end of the output IDF file name. For instance: NameSuffix='whatever',
+        verboseMode=bool # verboseMode: True to print all process in screen, False to not to print it. Default is True. For instance: verboseMode=True,
+        confirmGen=bool # True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. For instance: confirmGen=False,
     )
 
 ### Documentation
