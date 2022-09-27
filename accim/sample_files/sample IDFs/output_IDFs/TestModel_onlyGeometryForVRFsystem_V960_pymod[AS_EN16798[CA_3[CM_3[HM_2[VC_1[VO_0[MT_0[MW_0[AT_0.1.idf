@@ -1399,7 +1399,7 @@ SCHEDULE:COMPACT,
     24;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    FORSCRIPT_AHST_BLOCK1_ZONE2,    !- Name
+    AHST_Sch_BLOCK1_ZONE2,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -1407,7 +1407,7 @@ SCHEDULE:COMPACT,
     20;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    FORSCRIPT_ACST_BLOCK1_ZONE2,    !- Name
+    ACST_Sch_BLOCK1_ZONE2,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -1415,7 +1415,7 @@ SCHEDULE:COMPACT,
     24;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    FORSCRIPT_AHST_BLOCK1_ZONE1,    !- Name
+    AHST_Sch_BLOCK1_ZONE1,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -1423,7 +1423,7 @@ SCHEDULE:COMPACT,
     20;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    FORSCRIPT_ACST_BLOCK1_ZONE1,    !- Name
+    ACST_Sch_BLOCK1_ZONE1,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -1431,7 +1431,7 @@ SCHEDULE:COMPACT,
     24;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    FORSCRIPT_AHST_BLOCK2_ZONE2,    !- Name
+    AHST_Sch_BLOCK2_ZONE2,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -1439,7 +1439,7 @@ SCHEDULE:COMPACT,
     20;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    FORSCRIPT_ACST_BLOCK2_ZONE2,    !- Name
+    ACST_Sch_BLOCK2_ZONE2,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -1447,7 +1447,7 @@ SCHEDULE:COMPACT,
     24;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    FORSCRIPT_AHST_BLOCK2_ZONE1,    !- Name
+    AHST_Sch_BLOCK2_ZONE1,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -1455,7 +1455,7 @@ SCHEDULE:COMPACT,
     20;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    FORSCRIPT_ACST_BLOCK2_ZONE1,    !- Name
+    ACST_Sch_BLOCK2_ZONE1,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -4539,23 +4539,23 @@ ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
 
 THERMOSTATSETPOINT:DUALSETPOINT,
     BLOCK1:ZONE2 Dual SP,     !- Name
-    FORSCRIPT_AHST_BLOCK1_ZONE2,    !- Heating Setpoint Temperature Schedule Name
-    FORSCRIPT_ACST_BLOCK1_ZONE2;    !- Cooling Setpoint Temperature Schedule Name
+    AHST_Sch_BLOCK1_ZONE2,    !- Heating Setpoint Temperature Schedule Name
+    ACST_Sch_BLOCK1_ZONE2;    !- Cooling Setpoint Temperature Schedule Name
 
 THERMOSTATSETPOINT:DUALSETPOINT,
     BLOCK1:ZONE1 Dual SP,     !- Name
-    FORSCRIPT_AHST_BLOCK1_ZONE1,    !- Heating Setpoint Temperature Schedule Name
-    FORSCRIPT_ACST_BLOCK1_ZONE1;    !- Cooling Setpoint Temperature Schedule Name
+    AHST_Sch_BLOCK1_ZONE1,    !- Heating Setpoint Temperature Schedule Name
+    ACST_Sch_BLOCK1_ZONE1;    !- Cooling Setpoint Temperature Schedule Name
 
 THERMOSTATSETPOINT:DUALSETPOINT,
     BLOCK2:ZONE2 Dual SP,     !- Name
-    FORSCRIPT_AHST_BLOCK2_ZONE2,    !- Heating Setpoint Temperature Schedule Name
-    FORSCRIPT_ACST_BLOCK2_ZONE2;    !- Cooling Setpoint Temperature Schedule Name
+    AHST_Sch_BLOCK2_ZONE2,    !- Heating Setpoint Temperature Schedule Name
+    ACST_Sch_BLOCK2_ZONE2;    !- Cooling Setpoint Temperature Schedule Name
 
 THERMOSTATSETPOINT:DUALSETPOINT,
     BLOCK2:ZONE1 Dual SP,     !- Name
-    FORSCRIPT_AHST_BLOCK2_ZONE1,    !- Heating Setpoint Temperature Schedule Name
-    FORSCRIPT_ACST_BLOCK2_ZONE1;    !- Cooling Setpoint Temperature Schedule Name
+    AHST_Sch_BLOCK2_ZONE1,    !- Heating Setpoint Temperature Schedule Name
+    ACST_Sch_BLOCK2_ZONE1;    !- Cooling Setpoint Temperature Schedule Name
 
 ZoneHVAC:IdealLoadsAirSystem,
     Block1:Zone2 Ideal Loads Air,    !- Name
@@ -5517,50 +5517,50 @@ ENERGYMANAGEMENTSYSTEM:SENSOR,
     Heating Coil Heating Rate;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    FORSCRIPT_AHST_Sch_BLOCK1_ZONE2,    !- Name
-    FORSCRIPT_AHST_BLOCK1_ZONE2,    !- Actuated Component Unique Name
+    AHST_Act_BLOCK1_ZONE2,    !- Name
+    AHST_Sch_BLOCK1_ZONE2,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    FORSCRIPT_ACST_Sch_BLOCK1_ZONE2,    !- Name
-    FORSCRIPT_ACST_BLOCK1_ZONE2,    !- Actuated Component Unique Name
+    ACST_Act_BLOCK1_ZONE2,    !- Name
+    ACST_Sch_BLOCK1_ZONE2,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    FORSCRIPT_AHST_Sch_BLOCK1_ZONE1,    !- Name
-    FORSCRIPT_AHST_BLOCK1_ZONE1,    !- Actuated Component Unique Name
+    AHST_Act_BLOCK1_ZONE1,    !- Name
+    AHST_Sch_BLOCK1_ZONE1,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    FORSCRIPT_ACST_Sch_BLOCK1_ZONE1,    !- Name
-    FORSCRIPT_ACST_BLOCK1_ZONE1,    !- Actuated Component Unique Name
+    ACST_Act_BLOCK1_ZONE1,    !- Name
+    ACST_Sch_BLOCK1_ZONE1,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    FORSCRIPT_AHST_Sch_BLOCK2_ZONE2,    !- Name
-    FORSCRIPT_AHST_BLOCK2_ZONE2,    !- Actuated Component Unique Name
+    AHST_Act_BLOCK2_ZONE2,    !- Name
+    AHST_Sch_BLOCK2_ZONE2,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    FORSCRIPT_ACST_Sch_BLOCK2_ZONE2,    !- Name
-    FORSCRIPT_ACST_BLOCK2_ZONE2,    !- Actuated Component Unique Name
+    ACST_Act_BLOCK2_ZONE2,    !- Name
+    ACST_Sch_BLOCK2_ZONE2,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    FORSCRIPT_AHST_Sch_BLOCK2_ZONE1,    !- Name
-    FORSCRIPT_AHST_BLOCK2_ZONE1,    !- Actuated Component Unique Name
+    AHST_Act_BLOCK2_ZONE1,    !- Name
+    AHST_Sch_BLOCK2_ZONE1,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    FORSCRIPT_ACST_Sch_BLOCK2_ZONE1,    !- Name
-    FORSCRIPT_ACST_BLOCK2_ZONE1,    !- Actuated Component Unique Name
+    ACST_Act_BLOCK2_ZONE1,    !- Name
+    ACST_Sch_BLOCK2_ZONE1,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
@@ -6465,15 +6465,15 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     endif,                    !- Program Line 73
     endif,                    !- Program Line 74
     if HVACmode == 0,         !- Program Line 75
-    set FORSCRIPT_ACST_Sch_BLOCK1_ZONE2 = ACST,    !- Program Line 76
-    set FORSCRIPT_AHST_Sch_BLOCK1_ZONE2 = AHST,    !- Program Line 77
+    set ACST_Act_BLOCK1_ZONE2 = ACST,    !- Program Line 76
+    set AHST_Act_BLOCK1_ZONE2 = AHST,    !- Program Line 77
     elseif HVACmode == 1,     !- Program Line 78
-    Set FORSCRIPT_ACST_Sch_BLOCK1_ZONE2 = 100,    !- Program Line 79
-    Set FORSCRIPT_AHST_Sch_BLOCK1_ZONE2 = -100,    !- Program Line 80
+    Set ACST_Act_BLOCK1_ZONE2 = 100,    !- Program Line 79
+    Set AHST_Act_BLOCK1_ZONE2 = -100,    !- Program Line 80
     elseif HVACmode == 2,     !- Program Line 81
     if Ventilates_HVACmode2_BLOCK1_ZONE2 == 0,    !- Program Line 82
-    set FORSCRIPT_ACST_Sch_BLOCK1_ZONE2 = ACST,    !- Program Line 83
-    set FORSCRIPT_AHST_Sch_BLOCK1_ZONE2 = AHST,    !- Program Line 84
+    set ACST_Act_BLOCK1_ZONE2 = ACST,    !- Program Line 83
+    set AHST_Act_BLOCK1_ZONE2 = AHST,    !- Program Line 84
     endif,                    !- Program Line 85
     endif;                    !- Program Line 86
 
@@ -6554,15 +6554,15 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     endif,                    !- Program Line 73
     endif,                    !- Program Line 74
     if HVACmode == 0,         !- Program Line 75
-    set FORSCRIPT_ACST_Sch_BLOCK1_ZONE1 = ACST,    !- Program Line 76
-    set FORSCRIPT_AHST_Sch_BLOCK1_ZONE1 = AHST,    !- Program Line 77
+    set ACST_Act_BLOCK1_ZONE1 = ACST,    !- Program Line 76
+    set AHST_Act_BLOCK1_ZONE1 = AHST,    !- Program Line 77
     elseif HVACmode == 1,     !- Program Line 78
-    Set FORSCRIPT_ACST_Sch_BLOCK1_ZONE1 = 100,    !- Program Line 79
-    Set FORSCRIPT_AHST_Sch_BLOCK1_ZONE1 = -100,    !- Program Line 80
+    Set ACST_Act_BLOCK1_ZONE1 = 100,    !- Program Line 79
+    Set AHST_Act_BLOCK1_ZONE1 = -100,    !- Program Line 80
     elseif HVACmode == 2,     !- Program Line 81
     if Ventilates_HVACmode2_BLOCK1_ZONE1 == 0,    !- Program Line 82
-    set FORSCRIPT_ACST_Sch_BLOCK1_ZONE1 = ACST,    !- Program Line 83
-    set FORSCRIPT_AHST_Sch_BLOCK1_ZONE1 = AHST,    !- Program Line 84
+    set ACST_Act_BLOCK1_ZONE1 = ACST,    !- Program Line 83
+    set AHST_Act_BLOCK1_ZONE1 = AHST,    !- Program Line 84
     endif,                    !- Program Line 85
     endif;                    !- Program Line 86
 
@@ -6643,15 +6643,15 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     endif,                    !- Program Line 73
     endif,                    !- Program Line 74
     if HVACmode == 0,         !- Program Line 75
-    set FORSCRIPT_ACST_Sch_BLOCK2_ZONE2 = ACST,    !- Program Line 76
-    set FORSCRIPT_AHST_Sch_BLOCK2_ZONE2 = AHST,    !- Program Line 77
+    set ACST_Act_BLOCK2_ZONE2 = ACST,    !- Program Line 76
+    set AHST_Act_BLOCK2_ZONE2 = AHST,    !- Program Line 77
     elseif HVACmode == 1,     !- Program Line 78
-    Set FORSCRIPT_ACST_Sch_BLOCK2_ZONE2 = 100,    !- Program Line 79
-    Set FORSCRIPT_AHST_Sch_BLOCK2_ZONE2 = -100,    !- Program Line 80
+    Set ACST_Act_BLOCK2_ZONE2 = 100,    !- Program Line 79
+    Set AHST_Act_BLOCK2_ZONE2 = -100,    !- Program Line 80
     elseif HVACmode == 2,     !- Program Line 81
     if Ventilates_HVACmode2_BLOCK2_ZONE2 == 0,    !- Program Line 82
-    set FORSCRIPT_ACST_Sch_BLOCK2_ZONE2 = ACST,    !- Program Line 83
-    set FORSCRIPT_AHST_Sch_BLOCK2_ZONE2 = AHST,    !- Program Line 84
+    set ACST_Act_BLOCK2_ZONE2 = ACST,    !- Program Line 83
+    set AHST_Act_BLOCK2_ZONE2 = AHST,    !- Program Line 84
     endif,                    !- Program Line 85
     endif;                    !- Program Line 86
 
@@ -6732,15 +6732,15 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     endif,                    !- Program Line 73
     endif,                    !- Program Line 74
     if HVACmode == 0,         !- Program Line 75
-    set FORSCRIPT_ACST_Sch_BLOCK2_ZONE1 = ACST,    !- Program Line 76
-    set FORSCRIPT_AHST_Sch_BLOCK2_ZONE1 = AHST,    !- Program Line 77
+    set ACST_Act_BLOCK2_ZONE1 = ACST,    !- Program Line 76
+    set AHST_Act_BLOCK2_ZONE1 = AHST,    !- Program Line 77
     elseif HVACmode == 1,     !- Program Line 78
-    Set FORSCRIPT_ACST_Sch_BLOCK2_ZONE1 = 100,    !- Program Line 79
-    Set FORSCRIPT_AHST_Sch_BLOCK2_ZONE1 = -100,    !- Program Line 80
+    Set ACST_Act_BLOCK2_ZONE1 = 100,    !- Program Line 79
+    Set AHST_Act_BLOCK2_ZONE1 = -100,    !- Program Line 80
     elseif HVACmode == 2,     !- Program Line 81
     if Ventilates_HVACmode2_BLOCK2_ZONE1 == 0,    !- Program Line 82
-    set FORSCRIPT_ACST_Sch_BLOCK2_ZONE1 = ACST,    !- Program Line 83
-    set FORSCRIPT_AHST_Sch_BLOCK2_ZONE1 = AHST,    !- Program Line 84
+    set ACST_Act_BLOCK2_ZONE1 = ACST,    !- Program Line 83
+    set AHST_Act_BLOCK2_ZONE1 = AHST,    !- Program Line 84
     endif,                    !- Program Line 85
     endif;                    !- Program Line 86
 
@@ -8086,49 +8086,49 @@ OUTPUT:VARIABLE,
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    FORSCRIPT_AHST_BLOCK1_ZONE2,    !- Key Value
+    AHST_Sch_BLOCK1_ZONE2,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    FORSCRIPT_ACST_BLOCK1_ZONE2,    !- Key Value
+    ACST_Sch_BLOCK1_ZONE2,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    FORSCRIPT_AHST_BLOCK1_ZONE1,    !- Key Value
+    AHST_Sch_BLOCK1_ZONE1,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    FORSCRIPT_ACST_BLOCK1_ZONE1,    !- Key Value
+    ACST_Sch_BLOCK1_ZONE1,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    FORSCRIPT_AHST_BLOCK2_ZONE2,    !- Key Value
+    AHST_Sch_BLOCK2_ZONE2,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    FORSCRIPT_ACST_BLOCK2_ZONE2,    !- Key Value
+    ACST_Sch_BLOCK2_ZONE2,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    FORSCRIPT_AHST_BLOCK2_ZONE1,    !- Key Value
+    AHST_Sch_BLOCK2_ZONE1,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    FORSCRIPT_ACST_BLOCK2_ZONE1,    !- Key Value
+    ACST_Sch_BLOCK2_ZONE1,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name

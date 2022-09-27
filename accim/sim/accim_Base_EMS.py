@@ -1881,11 +1881,11 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
                     Program_Line_57='endif',
                     Program_Line_58='endif',
                     Program_Line_59='if HVACmode == 0',
-                    Program_Line_60='set FORSCRIPT_ACST_Sch_' + zonename + ' = ACST',
-                    Program_Line_61='set FORSCRIPT_AHST_Sch_' + zonename + ' = AHST',
+                    Program_Line_60='set ACST_Act_' + zonename + ' = ACST',
+                    Program_Line_61='set AHST_Act_' + zonename + ' = AHST',
                     Program_Line_62='elseif HVACmode == 1',
-                    Program_Line_63='Set FORSCRIPT_ACST_Sch_' + zonename + ' = 100',
-                    Program_Line_64='Set FORSCRIPT_AHST_Sch_' + zonename + ' = -100',
+                    Program_Line_63='Set ACST_Act_' + zonename + ' = 100',
+                    Program_Line_64='Set AHST_Act_' + zonename + ' = -100',
                     Program_Line_65='if Ventilates_HVACmode1_' + zonename + ' == 1',
                     Program_Line_66='set VentHours_' + zonename + ' = 1',
                     Program_Line_67='else',
@@ -1896,8 +1896,8 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
                     Program_Line_72='set VentHours_' + zonename + ' = 1',
                     Program_Line_73='elseif Ventilates_HVACmode2_' + zonename + ' == 0',
                     Program_Line_74='set VentHours_' + zonename + ' = 0',
-                    Program_Line_75='set FORSCRIPT_ACST_Sch_' + zonename + ' = ACST',
-                    Program_Line_76='set FORSCRIPT_AHST_Sch_' + zonename + ' = AHST',
+                    Program_Line_75='set ACST_Act_' + zonename + ' = ACST',
+                    Program_Line_76='set AHST_Act_' + zonename + ' = AHST',
                     Program_Line_77='endif',
                     Program_Line_78='endif'
                 )
@@ -2001,8 +2001,8 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
                 self.idf1.newidfobject(
                     'EnergyManagementSystem:Program',
                     Name='ApplyAST_'+zonename,
-                    Program_Line_1='set FORSCRIPT_ACST_Sch_' + zonename + ' = ACST',
-                    Program_Line_2='set FORSCRIPT_AHST_Sch_' + zonename + ' = AHST'
+                    Program_Line_1='set ACST_Act_' + zonename + ' = ACST',
+                    Program_Line_2='set AHST_Act_' + zonename + ' = AHST'
                     )
 
     del programlist
@@ -2390,23 +2390,23 @@ def addOutputVariablesBase(
     for zonename in self.zonenames:
         self.idf1.newidfobject(
             'Output:Variable',
-            Key_Value='FORSCRIPT_AHST_'+zonename,
+            Key_Value='AHST_Sch_'+zonename,
             Variable_Name='Schedule Value',
             Reporting_Frequency='Hourly',
             Schedule_Name=''
             )
         if verboseMode:
-            print('Added - FORSCRIPT_AHST_'+zonename+' Output:Variable data')
+            print('Added - AHST_Sch_'+zonename+' Output:Variable data')
 
         self.idf1.newidfobject(
             'Output:Variable',
-            Key_Value='FORSCRIPT_ACST_'+zonename,
+            Key_Value='ACST_Sch_'+zonename,
             Variable_Name='Schedule Value',
             Reporting_Frequency='Hourly',
             Schedule_Name=''
             )
         if verboseMode:
-            print('Added - FORSCRIPT_ACST_'+zonename+' Output:Variable data')
+            print('Added - ACST_Sch_'+zonename+' Output:Variable data')
 
     # for zonename in self.zonenames_orig:
     #     self.idf1.newidfobject(
@@ -2703,35 +2703,35 @@ def addEMSActuatorsBase(self, ScriptType: str = None, verboseMode: bool = True):
     actuatorlist = ([actuator.Name for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator']])
 
     for zonename in self.zonenames:
-        if 'FORSCRIPT_AHST_Schedule_'+zonename in actuatorlist:
+        if 'AHST_Act_'+zonename in actuatorlist:
             if verboseMode:
-                print('Not added - FORSCRIPT_AHST_Sch_'+zonename+' Actuator')
+                print('Not added - AHST_Act_'+zonename+' Actuator')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Actuator',
-                Name='FORSCRIPT_AHST_Sch_'+zonename,
-                Actuated_Component_Unique_Name='FORSCRIPT_AHST_'+zonename,
+                Name='AHST_Act_'+zonename,
+                Actuated_Component_Unique_Name='AHST_Sch_'+zonename,
                 Actuated_Component_Type='Schedule:Compact',
                 Actuated_Component_Control_Type='Schedule Value'
                 )
             if verboseMode:
-                print('Added - FORSCRIPT_AHST_Sch_'+zonename+' Actuator')
-        #    print([actuator for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator'] if actuator.Name=='FORSCRIPT_AHST_Schedule_'+zonename])
+                print('Added - AHST_Act_'+zonename+' Actuator')
+        #    print([actuator for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator'] if actuator.Name=='AHST_Act_'+zonename])
 
-        if 'FORSCRIPT_ACST_Schedule_'+zonename in actuatorlist:
+        if 'ACST_Act_'+zonename in actuatorlist:
             if verboseMode:
-                print('Not added - FORSCRIPT_ACST_Sch_'+zonename+' Actuator')
+                print('Not added - ACST_Act_'+zonename+' Actuator')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Actuator',
-                Name='FORSCRIPT_ACST_Sch_'+zonename,
-                Actuated_Component_Unique_Name='FORSCRIPT_ACST_'+zonename,
+                Name='ACST_Act_'+zonename,
+                Actuated_Component_Unique_Name='ACST_Sch_'+zonename,
                 Actuated_Component_Type='Schedule:Compact',
                 Actuated_Component_Control_Type='Schedule Value'
                 )
             if verboseMode:
-                print('Added - FORSCRIPT_ACST_Sch_'+zonename+' Actuator')
-        #    print([actuator for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator'] if actuator.Name=='FORSCRIPT_ACST_Schedule_'+zonename])
+                print('Added - ACST_Act_'+zonename+' Actuator')
+        #    print([actuator for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator'] if actuator.Name=='ACST_Act_'+zonename])
 
     if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
         for i in range(len(self.windownamelist)):

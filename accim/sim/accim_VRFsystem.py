@@ -69,7 +69,7 @@ def addVRFsystemSch(self, verboseMode: bool = True):
     Amend Schedule:Compact objects for VRFsystem.
 
     Add Schedule:Compact objects needed for VRFsystem to work,
-    other than FORSCRIPT Schedules.
+    other than AHST_Sch and ACST_Sch Schedules.
     """
     addVRFsystemSch_dict = {
         'On 24/7': 'Until: 24:00,1',
@@ -1496,39 +1496,39 @@ def addDetHVACobj(self, EnergyPlus_version: str = None, verboseMode: bool = True
 def addForscriptSchVRFsystem(self, verboseMode: bool = True):
     """Add FORSCRIPT Schedules for each zone for VRFsystem."""
     for zn in self.zonenames:
-        if "FORSCRIPT_AHST_"+zn in [sch.Name
+        if "AHST_Sch_"+zn in [sch.Name
                                     for sch
                                     in self.idf1.idfobjects['Schedule:Compact']]:
             if verboseMode:
-                print('FORSCRIPT_AHST_'+zn+' Schedule already was in the model')
+                print('AHST_Sch_'+zn+' Schedule already was in the model')
         else:
             self.idf1.newidfobject(
                 'Schedule:Compact',
-                Name="FORSCRIPT_AHST_"+zn,
+                Name="AHST_Sch_"+zn,
                 Schedule_Type_Limits_Name="Any Number",
                 Field_1='Through: 12/31',
                 Field_2='For: AllDays',
                 Field_3='Until: 24:00,20'
                 )
             if verboseMode:
-                print('FORSCRIPT_AHST_'+zn+' Schedule has been added')
+                print('AHST_Sch_'+zn+' Schedule has been added')
 
-        if "FORSCRIPT_ACST_"+zn in [sch.Name
+        if "ACST_Sch_"+zn in [sch.Name
                                     for sch
                                     in self.idf1.idfobjects['Schedule:Compact']]:
             if verboseMode:
-                print('FORSCRIPT_ACST_'+zn+' Schedule already was in the model')
+                print('ACST_Sch_'+zn+' Schedule already was in the model')
         else:
             self.idf1.newidfobject(
                 'Schedule:Compact',
-                Name="FORSCRIPT_ACST_"+zn,
+                Name="ACST_Sch_"+zn,
                 Schedule_Type_Limits_Name="Any Number",
                 Field_1='Through: 12/31',
                 Field_2='For: AllDays',
                 Field_3='Until: 24:00,24'
                 )
             if verboseMode:
-                print('FORSCRIPT_ACST_'+zn+' Schedule has been added')
+                print('ACST_Sch_'+zn+' Schedule has been added')
 
     # allschedules=([i for i in self.idf1.idfobjects['Schedule:Compact']])
     # print(allschedules)
@@ -1549,9 +1549,9 @@ def addForscriptSchVRFsystem(self, verboseMode: bool = True):
             'ThermostatSetpoint:DualSetpoint',
             Name=self.zonenames_orig[i]+' Dual SP',
             Heating_Setpoint_Temperature_Schedule_Name=
-            "FORSCRIPT_AHST_"+self.zonenames[i],
+            "AHST_Sch_"+self.zonenames[i],
             Cooling_Setpoint_Temperature_Schedule_Name=
-            "FORSCRIPT_ACST_"+self.zonenames[i]
+            "ACST_Sch_"+self.zonenames[i]
             )
 
 
