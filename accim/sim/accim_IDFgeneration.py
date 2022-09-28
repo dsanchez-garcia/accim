@@ -436,8 +436,8 @@ def genIDF(self,
                             SetInputData[0].Program_Line_4 = 'set HVACmode = '+repr(HVACmode_value)
                             if HVACmode_value == 0:
                                 for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to, self.ASTtol_value_steps):
-                                    SetInputData[0].Program_Line_5 = 'set ACSTtol = '+repr(-ASTtol_value)
-                                    SetInputData[0].Program_Line_6 = 'set AHSTtol = '+repr(ASTtol_value)
+                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = '+repr(-ASTtol_value)
+                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = '+repr(ASTtol_value)
                                     outputname = (
                                         filename
                                         + ComfStand_dict[ComfStand_value]
