@@ -1,0 +1,13 @@
+ ReadVarsESO
+ processing:C:\Python\accim\tests_data_run_sim\testing_gbt\MM\cold\multi_runs\idf_1\in.rvi
+ input file:C:\Python\accim\tests_data_run_sim\testing_gbt\MM\cold\TestModel[CS_CHN·GBT50785·Cold[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[China_Tianjin_Present_Cold.eso
+ output file:C:\Python\accim\tests_data_run_sim\testing_gbt\MM\cold\TestModel[CS_CHN·GBT50785·Cold[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[China_Tianjin_Present_Cold.csv
+ getting all vars from:C:\Python\accim\tests_data_run_sim\testing_gbt\MM\cold\TestModel[CS_CHN·GBT50785·Cold[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[China_Tianjin_Present_Cold.eso
+  number variables requested for output=          91
+ ReadVars Run Time=00hr 00min  1.45sec
+ ReadVarsESO program completed successfully.
+ ReadVarsESO
+ processing:C:\Python\accim\tests_data_run_sim\testing_gbt\MM\cold\multi_runs\idf_1\in.mvi
+ Requested ESO file=C:\Python\accim\tests_data_run_sim\testing_gbt\MM\cold\TestModel[CS_CHN·GBT50785·Cold[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[China_Tianjin_Present_Cold.mtr
+ does not exist.  ReadVarsESO program terminated.
+ ReadVarsESO program terminated.

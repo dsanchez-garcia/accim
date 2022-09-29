@@ -2,6 +2,7 @@ from accim.sim import accis
 accis.addAccis(ScriptType='ex_mm',
                Outputs='standard',
                EnergyPlus_version='ep95',
+               TempCtrl='temp',
                ComfStand=[1],
                CAT=[1, 2, 3],
                ComfMod=[3],

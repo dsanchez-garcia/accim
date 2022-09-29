@@ -8,6 +8,7 @@ for i in STlist:
         accis.addAccis(ScriptType='ex_ac',
                        Outputs='standard',
                        EnergyPlus_version='ep95',
+                       TempCtrl='temp',
                        ComfStand=[1],
                        CAT=[3],
                        ComfMod=[3],

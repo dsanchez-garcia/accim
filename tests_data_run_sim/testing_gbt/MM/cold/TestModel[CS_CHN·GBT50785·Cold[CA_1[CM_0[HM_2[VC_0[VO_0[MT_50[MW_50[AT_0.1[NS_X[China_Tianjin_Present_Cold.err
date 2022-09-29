@@ -1,0 +1,276 @@
+Program Version,EnergyPlus, Version 9.6.0-f420c06a69, YMD=2022.09.29 15:23,
+   ** Warning ** Timestep: Requested number (2) is less than the suggested minimum of 4.
+   **   ~~~   ** Please see entry for Timestep in Input/Output Reference for discussion of considerations.
+   ************* Beginning Zone Sizing Calculations
+   ** Warning ** Weather file location will be used rather than entered (IDF) Location object.
+   **   ~~~   ** ..Location object=UNTITLED (O1-O1:31-12)  (01-01:31-12)
+   **   ~~~   ** ..Weather File Location=Tianjin Tianjin CHN CSWD WMO#=545270
+   **   ~~~   ** ..due to location differences, Latitude difference=[1.37] degrees, Longitude difference=[120.62] degrees.
+   **   ~~~   ** ..Time Zone difference=[7.0] hour(s), Elevation difference=[99.57] percent, [579.50] meters.
+   ** Warning ** GetSurfaceData: Construction PROJECT PARTITION of interzone surface BLOCK1:ZONE2_PARTITION_5_0_0 does not have the same materials in the reverse order as the construction PROJECT PARTITION_REV of adjacent surface BLOCK1:ZONE1_PARTITION_3_0_10001
+   **   ~~~   ** or the properties of the reversed layers are not correct due to differing layer front and back side values
+   **   ~~~   ** ...but Nominal U values are similar, diff=[0.0000] ... simulation proceeds.
+   **   ~~~   ** ...if the two zones are expected to have significantly different temperatures, the proper "reverse" construction should be created.
+   **   ~~~   ** ...this problem for this pair will not be reported again.
+   ** Warning ** GetSurfaceData: Entered Zone Floor Areas differ from calculated Zone Floor Area(s).
+   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual zones.
+   ************* Note that the following warning(s) may/will occur if you have not enclosed your zone completely.
+   ** Warning ** Entered Zone Volumes differ from calculated zone volume(s).
+   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual zones.
+   ** Warning ** CheckUsedConstructions: There are 5 nominally unused constructions in input.
+   **   ~~~   ** For explicit details on each unused construction, use Output:Diagnostics,DisplayExtraWarnings;
+   ** Warning ** Calculated design cooling load for zone=BLOCK1:ZONE2 is zero.
+   **   ~~~   ** Check Sizing:Zone and ZoneControl:Thermostat inputs.
+   ** Warning ** Calculated design heating load for zone=BLOCK1:ZONE2 is zero.
+   **   ~~~   ** Check Sizing:Zone and ZoneControl:Thermostat inputs.
+   ** Warning ** Calculated design cooling load for zone=BLOCK1:ZONE1 is zero.
+   **   ~~~   ** Check Sizing:Zone and ZoneControl:Thermostat inputs.
+   ** Warning ** Calculated design heating load for zone=BLOCK1:ZONE1 is zero.
+   **   ~~~   ** Check Sizing:Zone and ZoneControl:Thermostat inputs.
+   ** Warning ** Calculated design cooling load for zone=BLOCK2:ZONE2 is zero.
+   **   ~~~   ** Check Sizing:Zone and ZoneControl:Thermostat inputs.
+   ** Warning ** Calculated design heating load for zone=BLOCK2:ZONE2 is zero.
+   **   ~~~   ** Check Sizing:Zone and ZoneControl:Thermostat inputs.
+   ** Warning ** Calculated design cooling load for zone=BLOCK2:ZONE1 is zero.
+   **   ~~~   ** Check Sizing:Zone and ZoneControl:Thermostat inputs.
+   ** Warning ** Calculated design heating load for zone=BLOCK2:ZONE1 is zero.
+   **   ~~~   ** Check Sizing:Zone and ZoneControl:Thermostat inputs.
+   ** Warning ** GetVRFInput: AirConditioner:VariableRefrigerantFlow="VRF OUTDOOR UNIT_BLOCK1:ZONE2" curve values
+   **   ~~~   ** ... Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name = VRFCOOLCAPFT output is not equal to 1.0 (+ or - 10%) at rated conditions.
+   **   ~~~   ** ... Curve output at rated conditions = 1.136
+   ** Warning ** AirConditioner:VariableRefrigerantFlow = "VRF OUTDOOR UNIT_BLOCK1:ZONE2", Minimum Condenser Inlet Node Temperature in Heat Recovery Mode is less than the minimum temperature in heat pump mode.
+   **   ~~~   ** ...Minimum Condenser Inlet Node Temperature in Heat Recovery Mode = -9.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Cooling Mode = -5.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Heating Mode = -19.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Heat Recovery Mode reset to greater of cooling or heating minimum temperature and simulation continues.
+   **   ~~~   ** ... adjusted Minimum Condenser Inlet Node Temperature in Heat Recovery Mode = -5.99 C
+   ** Warning ** GetVRFInput: AirConditioner:VariableRefrigerantFlow="VRF OUTDOOR UNIT_BLOCK1:ZONE1" curve values
+   **   ~~~   ** ... Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name = VRFCOOLCAPFT output is not equal to 1.0 (+ or - 10%) at rated conditions.
+   **   ~~~   ** ... Curve output at rated conditions = 1.136
+   ** Warning ** AirConditioner:VariableRefrigerantFlow = "VRF OUTDOOR UNIT_BLOCK1:ZONE1", Minimum Condenser Inlet Node Temperature in Heat Recovery Mode is less than the minimum temperature in heat pump mode.
+   **   ~~~   ** ...Minimum Condenser Inlet Node Temperature in Heat Recovery Mode = -9.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Cooling Mode = -5.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Heating Mode = -19.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Heat Recovery Mode reset to greater of cooling or heating minimum temperature and simulation continues.
+   **   ~~~   ** ... adjusted Minimum Condenser Inlet Node Temperature in Heat Recovery Mode = -5.99 C
+   ** Warning ** GetVRFInput: AirConditioner:VariableRefrigerantFlow="VRF OUTDOOR UNIT_BLOCK2:ZONE2" curve values
+   **   ~~~   ** ... Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name = VRFCOOLCAPFT output is not equal to 1.0 (+ or - 10%) at rated conditions.
+   **   ~~~   ** ... Curve output at rated conditions = 1.136
+   ** Warning ** AirConditioner:VariableRefrigerantFlow = "VRF OUTDOOR UNIT_BLOCK2:ZONE2", Minimum Condenser Inlet Node Temperature in Heat Recovery Mode is less than the minimum temperature in heat pump mode.
+   **   ~~~   ** ...Minimum Condenser Inlet Node Temperature in Heat Recovery Mode = -9.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Cooling Mode = -5.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Heating Mode = -19.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Heat Recovery Mode reset to greater of cooling or heating minimum temperature and simulation continues.
+   **   ~~~   ** ... adjusted Minimum Condenser Inlet Node Temperature in Heat Recovery Mode = -5.99 C
+   ** Warning ** GetVRFInput: AirConditioner:VariableRefrigerantFlow="VRF OUTDOOR UNIT_BLOCK2:ZONE1" curve values
+   **   ~~~   ** ... Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name = VRFCOOLCAPFT output is not equal to 1.0 (+ or - 10%) at rated conditions.
+   **   ~~~   ** ... Curve output at rated conditions = 1.136
+   ** Warning ** AirConditioner:VariableRefrigerantFlow = "VRF OUTDOOR UNIT_BLOCK2:ZONE1", Minimum Condenser Inlet Node Temperature in Heat Recovery Mode is less than the minimum temperature in heat pump mode.
+   **   ~~~   ** ...Minimum Condenser Inlet Node Temperature in Heat Recovery Mode = -9.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Cooling Mode = -5.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Heating Mode = -19.99 C
+   **   ~~~   ** ...Minimum Outdoor Temperature in Heat Recovery Mode reset to greater of cooling or heating minimum temperature and simulation continues.
+   **   ~~~   ** ... adjusted Minimum Condenser Inlet Node Temperature in Heat Recovery Mode = -5.99 C
+   ** Warning ** GetDXCoils: Coil:Cooling:DX:VariableRefrigerantFlow="BLOCK1:ZONE2 VRF INDOOR UNIT DX COOLING COIL" curve values
+   **   ~~~   ** ... Cooling Capacity Ratio Modifier Function of Temperature Curve Name = VRFTUCOOLCAPFT output is not equal to 1.0 (+ or - 10%) at rated conditions.
+   **   ~~~   ** ... Curve output at rated conditions = 1.136
+   ** Warning ** GetDXCoils: Coil:Cooling:DX:VariableRefrigerantFlow="BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL" curve values
+   **   ~~~   ** ... Cooling Capacity Ratio Modifier Function of Temperature Curve Name = VRFTUCOOLCAPFT output is not equal to 1.0 (+ or - 10%) at rated conditions.
+   **   ~~~   ** ... Curve output at rated conditions = 1.136
+   ** Warning ** GetDXCoils: Coil:Cooling:DX:VariableRefrigerantFlow="BLOCK2:ZONE2 VRF INDOOR UNIT DX COOLING COIL" curve values
+   **   ~~~   ** ... Cooling Capacity Ratio Modifier Function of Temperature Curve Name = VRFTUCOOLCAPFT output is not equal to 1.0 (+ or - 10%) at rated conditions.
+   **   ~~~   ** ... Curve output at rated conditions = 1.136
+   ** Warning ** GetDXCoils: Coil:Cooling:DX:VariableRefrigerantFlow="BLOCK2:ZONE1 VRF INDOOR UNIT DX COOLING COIL" curve values
+   **   ~~~   ** ... Cooling Capacity Ratio Modifier Function of Temperature Curve Name = VRFTUCOOLCAPFT output is not equal to 1.0 (+ or - 10%) at rated conditions.
+   **   ~~~   ** ... Curve output at rated conditions = 1.136
+   ** Warning ** ZoneTerminalUnitList "VRF OUTDOOR UNIT_BLOCK1:ZONE2 ZONE LIST"
+   ** Warning ** ...Only 1 Terminal Unit connected to system and heat recovery is selected.
+   **   ~~~   ** ...Heat recovery will be disabled.
+   ************* Testing Individual Branch Integrity
+   ************* All Branches passed integrity testing
+   ************* Testing Individual Supply Air Path Integrity
+   ************* All Supply Air Paths passed integrity testing
+   ************* Testing Individual Return Air Path Integrity
+   ************* All Return Air Paths passed integrity testing
+   ************* No node connection errors were found.
+   ************* Beginning Simulation
+   ** Warning ** In Output:Table:Monthly 'EndUseEnergyConsumptionOtherFuelsMonthly' invalid Variable or Meter Name 'EXTERIOREQUIPMENT:OTHERFUEL1'
+   ** Warning ** In Output:Table:Monthly 'EndUseEnergyConsumptionOtherFuelsMonthly' invalid Variable or Meter Name 'COOLING:OTHERFUEL1'
+   ** Warning ** In Output:Table:Monthly 'EndUseEnergyConsumptionOtherFuelsMonthly' invalid Variable or Meter Name 'HEATING:OTHERFUEL1'
+   ** Warning ** In Output:Table:Monthly 'EndUseEnergyConsumptionOtherFuelsMonthly' invalid Variable or Meter Name 'WATERSYSTEMS:OTHERFUEL1'
+   ** Warning ** In Output:Table:Monthly 'EndUseEnergyConsumptionOtherFuelsMonthly' invalid Variable or Meter Name 'COGENERATION:OTHERFUEL1'
+   ** Warning ** In Output:Table:Monthly 'EndUseEnergyConsumptionOtherFuelsMonthly' invalid Variable or Meter Name 'EXTERIOREQUIPMENT:OTHERFUEL2'
+   ** Warning ** In Output:Table:Monthly 'EndUseEnergyConsumptionOtherFuelsMonthly' invalid Variable or Meter Name 'COOLING:OTHERFUEL2'
+   ** Warning ** In Output:Table:Monthly 'EndUseEnergyConsumptionOtherFuelsMonthly' invalid Variable or Meter Name 'HEATING:OTHERFUEL2'
+   ** Warning ** In Output:Table:Monthly 'EndUseEnergyConsumptionOtherFuelsMonthly' invalid Variable or Meter Name 'WATERSYSTEMS:OTHERFUEL2'
+   ** Warning ** In Output:Table:Monthly 'EndUseEnergyConsumptionOtherFuelsMonthly' invalid Variable or Meter Name 'COGENERATION:OTHERFUEL2'
+   ** Warning ** In Output:Table:Monthly 'PeakEnergyEndUseOtherFuelsMonthly' invalid Variable or Meter Name 'EXTERIOREQUIPMENT:OTHERFUEL1'
+   ** Warning ** In Output:Table:Monthly 'PeakEnergyEndUseOtherFuelsMonthly' invalid Variable or Meter Name 'COOLING:OTHERFUEL1'
+   ** Warning ** In Output:Table:Monthly 'PeakEnergyEndUseOtherFuelsMonthly' invalid Variable or Meter Name 'HEATING:OTHERFUEL1'
+   ** Warning ** In Output:Table:Monthly 'PeakEnergyEndUseOtherFuelsMonthly' invalid Variable or Meter Name 'WATERSYSTEMS:OTHERFUEL1'
+   ** Warning ** In Output:Table:Monthly 'PeakEnergyEndUseOtherFuelsMonthly' invalid Variable or Meter Name 'COGENERATION:OTHERFUEL1'
+   ** Warning ** In Output:Table:Monthly 'PeakEnergyEndUseOtherFuelsMonthly' invalid Variable or Meter Name 'EXTERIOREQUIPMENT:OTHERFUEL2'
+   ** Warning ** In Output:Table:Monthly 'PeakEnergyEndUseOtherFuelsMonthly' invalid Variable or Meter Name 'COOLING:OTHERFUEL2'
+   ** Warning ** In Output:Table:Monthly 'PeakEnergyEndUseOtherFuelsMonthly' invalid Variable or Meter Name 'HEATING:OTHERFUEL2'
+   ** Warning ** In Output:Table:Monthly 'PeakEnergyEndUseOtherFuelsMonthly' invalid Variable or Meter Name 'WATERSYSTEMS:OTHERFUEL2'
+   ** Warning ** In Output:Table:Monthly 'PeakEnergyEndUseOtherFuelsMonthly' invalid Variable or Meter Name 'COGENERATION:OTHERFUEL2'
+   ** Warning ** Processing Monthly Tabular Reports: Variable names not valid for this simulation
+   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual variables.
+   ** Warning ** Temperature out of range [-100. to 200.] (PsyPsatFnTemp)
+   **   ~~~   **  Routine=PsyTwbFnTdbWPb, Environment=UNTITLED (O1-O1:31-12), at Simulation time=02/15 08:24 - 08:26
+   **   ~~~   **  Input Temperature=-2906.36
+   ** Warning ** Coil:Cooling:DX:VariableRefrigerantFlow "BLOCK2:ZONE1 VRF INDOOR UNIT DX COOLING COIL" - Air volume flow rate per watt of rated total cooling capacity is out of range at 6.719E-005 m3/s/W.
+   **   ~~~   **  Environment=UNTITLED (O1-O1:31-12), at Simulation time=05/22 14:30 - 15:00
+   **   ~~~   ** ...Expected range for VolumeFlowPerRatedTotalCapacity=[2.684E-005--6.713E-005]
+   **   ~~~   ** ...Possible causes include inconsistent air flow rates in system components,
+   **   ~~~   ** ...or mixing manual inputs with autosize inputs. Also check the following values and calculations.
+   **   ~~~   ** ...Volume Flow Rate per Rated Total Capacity = Volume Flow Rate / Rated Total Capacity
+   **   ~~~   ** ...Volume Flow Rate = Air Mass Flow Rate / Air Density
+   **   ~~~   ** ...Data used for calculations:
+   **   ~~~   ** ...Rated Total Capacity = 234.61 W.
+   **   ~~~   ** ...Volume Flow Rate = Air Mass Flow Rate / Air Density
+   **   ~~~   ** ...Volume Flow Rate   = 1.57639154E-002 m3/s.
+   **   ~~~   ** ...Air Mass Flow Rate = 1.70634943E-002 kg/s.
+   **   ~~~   ** ...Air Density        = 1.08244010 kg/m3.
+   **   ~~~   ** ...Data used for air density calculation:
+   **   ~~~   ** ...Outdoor Air Pressure     = 101220.000 Pa.
+   **   ~~~   ** ...Inlet Air Dry-Bulb Temp  = 42.361 C.
+   **   ~~~   ** ...Inlet Air Humidity Ratio = 2.03267789E-002 kgWater/kgDryAir.
+   ** Warning ** Coil:Cooling:DX:VariableRefrigerantFlow "BLOCK2:ZONE2 VRF INDOOR UNIT DX COOLING COIL" - Air volume flow rate per watt of rated total cooling capacity is out of range at 6.724E-005 m3/s/W.
+   **   ~~~   **  Environment=UNTITLED (O1-O1:31-12), at Simulation time=05/22 15:00 - 15:30
+   **   ~~~   ** ...Expected range for VolumeFlowPerRatedTotalCapacity=[2.684E-005--6.713E-005]
+   **   ~~~   ** ...Possible causes include inconsistent air flow rates in system components,
+   **   ~~~   ** ...or mixing manual inputs with autosize inputs. Also check the following values and calculations.
+   **   ~~~   ** ...Volume Flow Rate per Rated Total Capacity = Volume Flow Rate / Rated Total Capacity
+   **   ~~~   ** ...Volume Flow Rate = Air Mass Flow Rate / Air Density
+   **   ~~~   ** ...Data used for calculations:
+   **   ~~~   ** ...Rated Total Capacity = 632.66 W.
+   **   ~~~   ** ...Volume Flow Rate = Air Mass Flow Rate / Air Density
+   **   ~~~   ** ...Volume Flow Rate   = 4.25387519E-002 m3/s.
+   **   ~~~   ** ...Air Mass Flow Rate = 4.60139491E-002 kg/s.
+   **   ~~~   ** ...Air Density        = 1.08169486 kg/m3.
+   **   ~~~   ** ...Data used for air density calculation:
+   **   ~~~   ** ...Outdoor Air Pressure     = 101220.000 Pa.
+   **   ~~~   ** ...Inlet Air Dry-Bulb Temp  = 42.208 C.
+   **   ~~~   ** ...Inlet Air Humidity Ratio = 2.10802716E-002 kgWater/kgDryAir.
+   ** Warning ** Coil:Cooling:DX:VariableRefrigerantFlow "BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL" - Air volume flow rate per watt of rated total cooling capacity is out of range at 6.718E-005 m3/s/W.
+   **   ~~~   **  Environment=UNTITLED (O1-O1:31-12), at Simulation time=05/22 16:12 - 16:18
+   **   ~~~   ** ...Expected range for VolumeFlowPerRatedTotalCapacity=[2.684E-005--6.713E-005]
+   **   ~~~   ** ...Possible causes include inconsistent air flow rates in system components,
+   **   ~~~   ** ...or mixing manual inputs with autosize inputs. Also check the following values and calculations.
+   **   ~~~   ** ...Volume Flow Rate per Rated Total Capacity = Volume Flow Rate / Rated Total Capacity
+   **   ~~~   ** ...Volume Flow Rate = Air Mass Flow Rate / Air Density
+   **   ~~~   ** ...Data used for calculations:
+   **   ~~~   ** ...Rated Total Capacity = 633.97 W.
+   **   ~~~   ** ...Volume Flow Rate = Air Mass Flow Rate / Air Density
+   **   ~~~   ** ...Volume Flow Rate   = 4.25909900E-002 m3/s.
+   **   ~~~   ** ...Air Mass Flow Rate = 4.61087866E-002 kg/s.
+   **   ~~~   ** ...Air Density        = 1.08259486 kg/m3.
+   **   ~~~   ** ...Data used for air density calculation:
+   **   ~~~   ** ...Outdoor Air Pressure     = 101220.000 Pa.
+   **   ~~~   ** ...Inlet Air Dry-Bulb Temp  = 43.445 C.
+   **   ~~~   ** ...Inlet Air Humidity Ratio = 1.80367894E-002 kgWater/kgDryAir.
+   ** Warning ** Coil:Cooling:DX:VariableRefrigerantFlow "BLOCK1:ZONE2 VRF INDOOR UNIT DX COOLING COIL" - Air volume flow rate per watt of rated total cooling capacity is out of range at 6.716E-005 m3/s/W.
+   **   ~~~   **  Environment=UNTITLED (O1-O1:31-12), at Simulation time=05/31 16:15 - 16:22
+   **   ~~~   ** ...Expected range for VolumeFlowPerRatedTotalCapacity=[2.684E-005--6.713E-005]
+   **   ~~~   ** ...Possible causes include inconsistent air flow rates in system components,
+   **   ~~~   ** ...or mixing manual inputs with autosize inputs. Also check the following values and calculations.
+   **   ~~~   ** ...Volume Flow Rate per Rated Total Capacity = Volume Flow Rate / Rated Total Capacity
+   **   ~~~   ** ...Volume Flow Rate = Air Mass Flow Rate / Air Density
+   **   ~~~   ** ...Data used for calculations:
+   **   ~~~   ** ...Rated Total Capacity = 233.31 W.
+   **   ~~~   ** ...Volume Flow Rate = Air Mass Flow Rate / Air Density
+   **   ~~~   ** ...Volume Flow Rate   = 1.56686958E-002 m3/s.
+   **   ~~~   ** ...Air Mass Flow Rate = 1.69686568E-002 kg/s.
+   **   ~~~   ** ...Air Density        = 1.08296549 kg/m3.
+   **   ~~~   ** ...Data used for air density calculation:
+   **   ~~~   ** ...Outdoor Air Pressure     = 101130.000 Pa.
+   **   ~~~   ** ...Inlet Air Dry-Bulb Temp  = 42.210 C.
+   **   ~~~   ** ...Inlet Air Humidity Ratio = 1.97507408E-002 kgWater/kgDryAir.
+   ** Warning ** Temperature out of range [-100. to 200.] (PsyTwbFnTdbWPb)
+   **   ~~~   **  Routine=ReportCoilSelection::doFinalProcessingOfCoilData
+   **   ~~~   **  Environment=UNTITLED (O1-O1:31-12), at Simulation time=12/31 24:00 - 24:15
+   **   ~~~   **  Input Temperature=-99.99
+   **   ~~~   **  Resultant Temperature= -88.74
+   ************* Simulation Error Summary *************
+   ** Warning ** The following Report Variables were requested but not generated -- check.rdd file
+   **   ~~~   ** Either the IDF did not contain these elements, the variable name is misspelled,
+   **   ~~~   ** or the requested variable is an advanced output which requires Output : Diagnostics, DisplayAdvancedReportVariables;
+   ************* Key=*, VarName=FACILITY TOTAL HVAC ELECTRIC DEMAND POWER, Frequency=Hourly
+   ************* Key=BLOCK1_ZONE2 VRF Indoor Unit DX Cooling Coil, VarName=COOLING COIL TOTAL COOLING RATE, Frequency=Hourly
+   ************* Key=BLOCK1_ZONE2 VRF Indoor Unit DX Heating Coil, VarName=HEATING COIL HEATING RATE, Frequency=Hourly
+   ************* Key=BLOCK1_ZONE1 VRF Indoor Unit DX Cooling Coil, VarName=COOLING COIL TOTAL COOLING RATE, Frequency=Hourly
+   ************* Key=BLOCK1_ZONE1 VRF Indoor Unit DX Heating Coil, VarName=HEATING COIL HEATING RATE, Frequency=Hourly
+   ************* Key=BLOCK2_ZONE2 VRF Indoor Unit DX Cooling Coil, VarName=COOLING COIL TOTAL COOLING RATE, Frequency=Hourly
+   ************* Key=BLOCK2_ZONE2 VRF Indoor Unit DX Heating Coil, VarName=HEATING COIL HEATING RATE, Frequency=Hourly
+   ************* Key=BLOCK2_ZONE1 VRF Indoor Unit DX Cooling Coil, VarName=COOLING COIL TOTAL COOLING RATE, Frequency=Hourly
+   ************* Key=BLOCK2_ZONE1 VRF Indoor Unit DX Heating Coil, VarName=HEATING COIL HEATING RATE, Frequency=Hourly
+   ** Severe  ** Orphaned ZoneHVAC object found.  This was object never referenced in the input, and was not used.
+   **   ~~~   **  -- Object type: ZoneHVAC:IdealLoadsAirSystem
+   **   ~~~   **  -- Object name: Block1:Zone1 Ideal Loads Air
+   ** Severe  ** Orphaned ZoneHVAC object found.  This was object never referenced in the input, and was not used.
+   **   ~~~   **  -- Object type: ZoneHVAC:IdealLoadsAirSystem
+   **   ~~~   **  -- Object name: Block1:Zone2 Ideal Loads Air
+   ** Severe  ** Orphaned ZoneHVAC object found.  This was object never referenced in the input, and was not used.
+   **   ~~~   **  -- Object type: ZoneHVAC:IdealLoadsAirSystem
+   **   ~~~   **  -- Object name: Block2:Zone1 Ideal Loads Air
+   ** Severe  ** Orphaned ZoneHVAC object found.  This was object never referenced in the input, and was not used.
+   **   ~~~   **  -- Object type: ZoneHVAC:IdealLoadsAirSystem
+   **   ~~~   **  -- Object name: Block2:Zone2 Ideal Loads Air
+   ************* There are 5 unused objects in input.
+   ************* Use Output:Diagnostics,DisplayUnusedObjects; to see them.
+   ************* There are 31 unused schedules in input.
+   ************* There are 5 unused week schedules in input.
+   ************* There are 7 unused day schedules in input.
+   ************* Use Output:Diagnostics,DisplayUnusedSchedules; to see them.
+   *************
+   ************* ===== Recurring Error Summary =====
+   ************* The following recurring error messages occurred.
+   *************
+   *************  ** Warning ** Temperature out of range [-100. to 200.] (PsyPsatFnTemp)
+   *************  **   ~~~   **   This error occurred 4 total times;
+   *************  **   ~~~   **   during Warmup 0 times;
+   *************  **   ~~~   **   during Sizing 0 times.
+   *************  **   ~~~   **   Max=-100. C  Min=-2906.360107 C
+   *************
+   *************  ** Warning ** Coil:Cooling:DX:VariableRefrigerantFlow "BLOCK2:ZONE1 VRF INDOOR UNIT DX COOLING COIL" - Air volume flow rate per watt of rated total cooling capacity is out of range error continues...
+   *************  **   ~~~   **   This error occurred 8418 total times;
+   *************  **   ~~~   **   during Warmup 0 times;
+   *************  **   ~~~   **   during Sizing 0 times.
+   *************  **   ~~~   **   Max=6.933098E-005  Min=6.713110E-005
+   *************
+   *************  ** Warning ** Coil:Cooling:DX:VariableRefrigerantFlow "BLOCK2:ZONE2 VRF INDOOR UNIT DX COOLING COIL" - Air volume flow rate per watt of rated total cooling capacity is out of range error continues...
+   *************  **   ~~~   **   This error occurred 8322 total times;
+   *************  **   ~~~   **   during Warmup 0 times;
+   *************  **   ~~~   **   during Sizing 0 times.
+   *************  **   ~~~   **   Max=6.944127E-005  Min=6.713113E-005
+   *************
+   *************  ** Warning ** Coil:Cooling:DX:VariableRefrigerantFlow "BLOCK1:ZONE1 VRF INDOOR UNIT DX COOLING COIL" - Air volume flow rate per watt of rated total cooling capacity is out of range error continues...
+   *************  **   ~~~   **   This error occurred 5229 total times;
+   *************  **   ~~~   **   during Warmup 0 times;
+   *************  **   ~~~   **   during Sizing 0 times.
+   *************  **   ~~~   **   Max=6.893220E-005  Min=6.713104E-005
+   *************
+   *************  ** Warning ** Coil:Cooling:DX:VariableRefrigerantFlow "BLOCK1:ZONE2 VRF INDOOR UNIT DX COOLING COIL" - Air volume flow rate per watt of rated total cooling capacity is out of range error continues...
+   *************  **   ~~~   **   This error occurred 3000 total times;
+   *************  **   ~~~   **   during Warmup 0 times;
+   *************  **   ~~~   **   during Sizing 0 times.
+   *************  **   ~~~   **   Max=6.844222E-005  Min=6.713051E-005
+   *************
+   *************  ** Warning ** Temperature out of range [-100. to 200.] (PsyTwbFnTdbWPb)
+   *************  **   ~~~   **   This error occurred 1 total times;
+   *************  **   ~~~   **   during Warmup 0 times;
+   *************  **   ~~~   **   during Sizing 0 times.
+   *************  **   ~~~   **   Max=-100. C  Min=-100. C
+   *************
+   *************
+   ************* ===== Final Error Summary =====
+   ************* The following error categories occurred.  Consider correcting or noting.
+   ************* Nominally Unused Constructions
+   ************* ..The nominally unused constructions warning is provided to alert you to potential conditions that can cause
+   ************* ..extra time during simulation. Each construction is calculated by the algorithm indicated in the HeatBalanceAlgorithm
+   ************* ..object. You may remove the constructions indicated (when you use the DisplayExtraWarnings option).
+   *************
+   ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.
+   ************* EnergyPlus Sizing Error Summary. During Sizing: 27 Warning; 0 Severe Errors.
+   ************* EnergyPlus Completed Successfully-- 25024 Warning; 4 Severe Errors; Elapsed Time=00hr 00min 54.93sec

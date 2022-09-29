@@ -13,6 +13,7 @@ for i in scriptTypeList:
                 ScriptType=i,
                 Outputs=j,
                 EnergyPlus_version=k,
+                TempCtrl='temp',
                 ComfStand=[1],
                 CAT=[1],
                 ComfMod=[1],
