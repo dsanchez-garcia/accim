@@ -7,7 +7,7 @@
 def inputData(self, ScriptType: str = None):
     """Input data for IDF generation."""
     print('The information you will be required to enter below will be used to generate the customised output IDFs:')
-    fullComfStandList = list(range(16+1))
+    fullComfStandList = list(range(20+1))
     self.ComfStand_List = list(int(num) for num in input(
         'Enter the Comfort Standard numbers separated by space (\n'
         '0 = CTE;\n'
@@ -27,6 +27,10 @@ def inputData(self, ScriptType: str = None):
         '14 = AUS·DeDear;\n'
         '15 = BRA·Rupp·NV;\n'
         '16 = BRA·Rupp·AC;\n'
+        '17 = MEX·Oropeza·Arid;\n'
+        '18 = MEX·Oropeza·DryTropic;\n'
+        '19 = MEX·Oropeza·Temperate;\n'
+        '20 = MEX·Oropeza·HumTropic;\n'
         '): '
     ).split())
     while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
@@ -239,6 +243,10 @@ def genIDF(self,
         14: '[CS_AUS·DeDear',
         15: '[CS_BRA·Rupp·NV',
         16: '[CS_BRA·Rupp·AC',
+        17: '[CS_MEX·Oropeza·Arid',
+        18: '[CS_MEX·Oropeza·DryTropic',
+        19: '[CS_MEX·Oropeza·Temperate',
+        20: '[CS_MEX·Oropeza·HumTropic',
     }
 
     outputlist = []
@@ -333,9 +341,9 @@ def genIDF(self,
                                                                 + '.idf'
                                                                 )
                                                             outputlist.append(outputname)
-                elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]:
+                elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]:
                     for CAT_value in self.CAT_List:
-                        if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16] and CAT_value not in range(80, 91, 10):
+                        if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] and CAT_value not in range(80, 91, 10):
                             continue
                         elif ComfStand_value in [7, 8] and CAT_value not in range(80, 91, 5):
                             continue
@@ -554,9 +562,9 @@ def genIDF(self,
                                                                     # time.sleep(0.1)
                                                                     # pbar.update(1)
                                                                 idf1.savecopy(outputname)
-                    elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]:
+                    elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]:
                         for CAT_value in self.CAT_List:
-                            if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16] and CAT_value not in range(80, 91, 10):
+                            if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] and CAT_value not in range(80, 91, 10):
                                 continue
                             elif ComfStand_value in [7, 8] and CAT_value not in range(80, 91, 5):
                                 continue

@@ -24,7 +24,7 @@ class PostInstallCommand(install):
             'EnergyPlus 9.0.0': [r"C:\EnergyPlusV9-0-0\Energy+.idd", r"C:\EnergyPlusV9-0-0\Energy+_backup.idd", 78635],
         }
 
-        new_lines_no = 1500
+        new_lines_no = 10000
 
         # global messages
         # messages = []
