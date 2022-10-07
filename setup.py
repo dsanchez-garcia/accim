@@ -12,6 +12,7 @@ class PostInstallCommand(install):
         install.run(self)
         # PUT YOUR POST-INSTALL SCRIPT HERE or CALL A FUNCTION
         import os
+        import shutil
 
         # Creating a dictionary with IDD paths, IDD backups paths and the first line to modify
         dict_lines = {
@@ -24,7 +25,7 @@ class PostInstallCommand(install):
             'EnergyPlus 9.0.0': [r"C:\EnergyPlusV9-0-0\Energy+.idd", r"C:\EnergyPlusV9-0-0\Energy+_backup.idd", 78635],
         }
 
-        new_lines_no = 10000
+        new_lines_no = 7500
 
         # global messages
         # messages = []
@@ -38,9 +39,12 @@ class PostInstallCommand(install):
                 message = f'The file Energy+_backup.idd already exists, therefore this script has already been run for {i}.'
                 print(message)
                 PostInstallCommand.messages.append(message)
-                continue
+                os.remove(dict_lines[i][0])
+                # os.rename(dict_lines[i][1], dict_lines[i][0])
+                shutil.copy(dict_lines[i][1], dict_lines[i][0])
+                # continue
             except FileNotFoundError:
-                message = f'The file Energy+.idd has not been found, therefore {i} is not installed at defalut path.'
+                message = f'The file Energy+.idd has not been found, therefore {i} is not installed at default path.'
                 print(message)
                 PostInstallCommand.messages.append(message)
                 continue
