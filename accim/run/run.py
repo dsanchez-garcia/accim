@@ -46,7 +46,8 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_vers
         'ep93',
         'ep94',
         'ep95',
-        'ep96'
+        'ep96',
+        'ep22.2'
     ]
 
     if EnergyPlus_version is None:
@@ -66,6 +67,8 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_vers
         iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
     elif EnergyPlus_version.lower() == 'ep96':
         iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == 'ep22.2':
+        iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
     else:
         while EnergyPlus_version.lower() not in fullEPversionsList:
             print(f'{EnergyPlus_version} is not available. You must enter one of the following list:')

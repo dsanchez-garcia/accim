@@ -60,6 +60,7 @@ def addAccis(
     """
     import accim.sim.accim_Main as accim_Main
     from os import listdir, remove
+    import accim
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
                  and not '[' in file])
@@ -99,7 +100,8 @@ def addAccis(
         'Ep95',
         'ep95',
         'Ep96',
-        'ep96'
+        'ep96',
+        'ep22.2'
     ]
 
     fullTempCtrllist = [
@@ -123,13 +125,16 @@ def addAccis(
         EnergyPlus_version = input("Enter the EnergyPlus version (ep91 to ep96): ")
         while EnergyPlus_version not in fullEPversionsList:
             EnergyPlus_version = input("EnergyPlus version was not correct. "
-                                       "Please, enter the EnergyPlus version (ep91 to ep96): ")
+                                       "Please, enter the EnergyPlus version (ep91 to ep96, or ep22.2): ")
         TempCtrl = input('Enter the Temperature Control method (temperature or pmv): ')
         while TempCtrl not in fullTempCtrllist:
             TempCtrl = input("Temperature Control method was not correct. "
                                        "Please, enter the Temperature Control method (temperature or pmv): ")
 
+
     if verboseMode:
+        print('Basic input data:')
+        # print(f'accim version: {accim.__version__}')
         print('ScriptType is: '+ScriptType)
     if ScriptType not in fullScriptTypeList:
         print('Valid ScriptTypes: ')

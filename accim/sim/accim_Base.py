@@ -11,7 +11,7 @@ def setComfFieldsPeople(self, EnergyPlus_version: str = None, verboseMode: bool 
     """
     ppl = ([people for people in self.idf1.idfobjects['PEOPLE']])
     for i in range(len(ppl)):
-        if EnergyPlus_version.lower() == 'ep96':
+        if EnergyPlus_version.lower() == 'ep96' or EnergyPlus_version.lower() == 'ep22.2':
             self.idf1.newidfobject(
                 'PEOPLE',
                 Name=ppl[i].Name,

@@ -895,7 +895,7 @@ def addDetHVACobj(self, EnergyPlus_version: str = None, verboseMode: bool = True
                       ' AirConditioner:VariableRefrigerantFlow '
                       'Object already was in the model')
         else:
-            if EnergyPlus_version.lower() == 'ep96':
+            if EnergyPlus_version.lower() == 'ep96' or EnergyPlus_version.lower() == 'ep22.2':
                 self.idf1.newidfobject(
                     'AirConditioner:VariableRefrigerantFlow',
                     Heat_Pump_Name='VRF Outdoor Unit_'+zn,

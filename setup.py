@@ -16,6 +16,7 @@ class PostInstallCommand(install):
 
         # Creating a dictionary with IDD paths, IDD backups paths and the first line to modify
         dict_lines = {
+            'EnergyPlus 22.2.0': [r"C:\EnergyPlusV22-2-0\Energy+.idd", r"C:\EnergyPlusV22-2-0\Energy+_backup.idd", 82643],
             'EnergyPlus 9.6.0': [r"C:\EnergyPlusV9-6-0\Energy+.idd", r"C:\EnergyPlusV9-6-0\Energy+_backup.idd", 81798],
             'EnergyPlus 9.5.0': [r"C:\EnergyPlusV9-5-0\Energy+.idd", r"C:\EnergyPlusV9-5-0\Energy+_backup.idd", 80493],
             'EnergyPlus 9.4.0': [r"C:\EnergyPlusV9-4-0\Energy+.idd", r"C:\EnergyPlusV9-4-0\Energy+_backup.idd", 80526],
@@ -77,7 +78,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
     name='accim',
-    version='0.2.5',
+    version='0.2.6',
     description='Transforms PMV-based into adaptive setpoint temperature EnergyPlus building energy models',
     long_description=long_description,
     long_description_content_type='text/markdown',

@@ -62,10 +62,12 @@ class accimJob():
             iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
         elif EnergyPlus_version.lower() == 'ep96':
             iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
+        elif EnergyPlus_version.lower() == 'ep22.2':
+            iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
         else:
             raise ValueError("""EnergyPlus version not supported.\n
                                      Only works for versions between EnergyPlus 9.1 (enter ep91) and
-                                     EnergyPlus 9.6(enter ep96).""")
+                                     EnergyPlus 9.6(enter ep96) and EnergyPlus 22.2.""")
         if verboseMode:
             print('IDD location is: '+iddfile)
         IDF.setiddname(iddfile)
