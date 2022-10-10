@@ -44,6 +44,7 @@ class accimJob():
                  ScriptType: str = None,
                  EnergyPlus_version: str = None,
                  TempCtrl: str = None,
+                 ModelOrigin: str = 'dsb',
                  verboseMode: bool = True,
                  accimNotWorking: bool = False):
         from eppy import modeleditor
@@ -62,6 +63,8 @@ class accimJob():
             iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
         elif EnergyPlus_version.lower() == 'ep96':
             iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
+        elif EnergyPlus_version.lower() == 'ep22.1':
+            iddfile = 'C:\EnergyPlusV22-1-0\Energy+.idd'
         elif EnergyPlus_version.lower() == 'ep22.2':
             iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
         else:
@@ -84,17 +87,34 @@ class accimJob():
         # print(self.filename)
 
         self.occupiedZones_orig = []
-        for i in self.idf1.idfobjects['ZONE']:
-            for k in self.idf1.idfobjects['PEOPLE']:
-                if i.Name in k.Name:
-                    self.occupiedZones_orig.append(i.Name.upper())
-        self.occupiedZones = [i.replace(':', '_') for i in self.occupiedZones_orig]
+        if ModelOrigin == 'dsb':
+            for i in self.idf1.idfobjects['ZONE']:
+                for k in self.idf1.idfobjects['PEOPLE']:
+                    if i.Name in k.Name:
+                        self.occupiedZones_orig.append(i.Name.upper())
+            self.occupiedZones = [i.replace(':', '_') for i in self.occupiedZones_orig]
+
+        elif ModelOrigin == 'osm':
+            if len(self.idf1.idfobjects['zone']) == 1:
+                no_of_zones = range(1, 2)
+            else:
+                no_of_zones = range(1, len(self.idf1.idfobjects['zone']))
+
+            for i in no_of_zones:
+                for j in self.idf1.idfobjects['zonelist']:
+                    for k in self.idf1.idfobjects['zone']:
+                        if k.Name in j[f'Zone_{i}_Name']:
+                            self.occupiedZones_orig.append(k.Name)
+            self.occupiedZones = [i.replace(' ', '_') for i in self.occupiedZones_orig]
+
+
+
         if verboseMode:
             print(f'The occupied zones in the model {filename_temp} are:')
             print(*self.occupiedZones_orig, sep="\n")
 
         if (ScriptType.lower() == 'vrfsystem' or
-            ScriptType.lower() == 'vrf' or
+            ScriptType.lower() == 'vrf_mm' or
             ScriptType.lower() == 'existinghvac_mm' or
             ScriptType.lower() == 'ex_mm'
         ):
@@ -118,7 +138,7 @@ class accimJob():
                 print(f'The windows in the model {filename_temp} are:')
                 print(*self.windownamelist, sep="\n")
 
-        if ScriptType.lower() == 'vrfsystem' or ScriptType.lower() == 'vrf':
+        if 'vrf' in ScriptType.lower():
             self.zonenames = self.occupiedZones
             self.zonenames_orig = self.occupiedZones_orig
             if verboseMode:
@@ -145,7 +165,10 @@ class accimJob():
                     for j in range(len(self.ZCTlist)):
                         if self.ZCTlist[j].Control_1_Object_Type in TSPtypes[i]:
                             temp1.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper())
-                            temp2.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper().replace(":", "_"))
+                            if ModelOrigin == 'dsb':
+                                temp2.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper().replace(":", "_"))
+                            if ModelOrigin == 'osm':
+                                temp2.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper().replace(" ", "_"))
                             temp3.append(self.ZCTlist[j].Control_1_Name)
                 self.HVACzonelist.append([TSPtypes[i], temp1, temp2, temp3])
             del temp1, temp2, temp3
@@ -171,8 +194,10 @@ class accimJob():
                         continue
                     else:
                         self.zonenames_orig.append(self.HVACzonelist[i][1][k])
-
-            self.zonenames = [i.replace(':', '_') for i in self.zonenames_orig]
+            if ModelOrigin == 'dsb':
+                self.zonenames = [i.replace(':', '_') for i in self.zonenames_orig]
+            elif ModelOrigin == 'osm':
+                self.zonenames = [i.replace(' ', '_') for i in self.zonenames_orig]
 
             if ScriptType.lower() == 'existinghvac_mm' or ScriptType.lower() == 'ex_mm':
 

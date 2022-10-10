@@ -2504,7 +2504,7 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
         if verboseMode:
             print('Added - SetInputData Program')
 
-    if (ScriptType.lower() == 'vrf' or
+    if (ScriptType.lower() == 'vrf_mm' or
         ScriptType.lower() == 'ex_mm'):
         if 'SetVST' in programlist:
             if verboseMode:
@@ -2728,7 +2728,7 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
                 if verboseMode:
                     print('Added - SetWindowOperation_'+windowname+' Program')
             #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetWindowOperation_'+windowname])
-    elif ScriptType.lower() == 'ex_ac':
+    elif ScriptType.lower() == 'ex_ac' or ScriptType.lower() == 'vrf_ac':
         for zonename in self.zonenames:
             if 'ApplyAST_'+zonename in programlist:
                 if verboseMode:
@@ -2793,7 +2793,7 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
         'Ventilation Setpoint Temperature': ['VST', 'C'],
         'Minimum Outdoor Temperature for ventilation': ['MinOutTemp', 'C']
         }
-    if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
+    if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
         EMSOutputVariableAvg_dict.update(EMSOutputVariableAvgMM_dict)
 
     outputvariablelist = ([outvar.Name
@@ -2851,7 +2851,7 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
                           + zonename + ' Output Variable')
                 # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i+'_'+zonename'])
 
-    if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
+    if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
         EMSOutputVariableIDFzones_dict = {
             'Ventilation Hours': 'VentHours'
             }
@@ -2924,7 +2924,7 @@ def addGlobVarList(self, ScriptType: str = None, verboseMode: bool = True):
 
         )
 
-    if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
+    if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
         self.idf1.newidfobject(
             'EnergyManagementSystem:GlobalVariable',
             Erl_Variable_1_Name='VST',
@@ -2981,7 +2981,7 @@ def addOutputVariablesBase(
     outputmeterlist = ([output for output in self.idf1.idfobjects['Output:Meter']])
     alloutputs = ([output for output in self.idf1.idfobjects['Output:Variable']])
 
-    if ScriptType.lower() == 'vrf':
+    if 'vrf' in ScriptType.lower():
         for i in range(len(EnvironmentalImpactFactorslist)):
             firstEnvironmentalImpactFactor = self.idf1.idfobjects['Output:EnvironmentalImpactFactors'][-1]
             self.idf1.removeidfobject(firstEnvironmentalImpactFactor)
@@ -3155,7 +3155,7 @@ def addOutputVariablesBase(
     #     if verboseMode:
     #         print('Added - '+zonename+' Zone Operative Temperature Output:Variable data')
 
-    if ScriptType.lower() == 'vrf':
+    if 'vrf' in ScriptType.lower():
         VRFoutputs = [
             'VRF Heat Pump Cooling Electricity Energy',
             'VRF Heat Pump Heating Electricity Energy',
@@ -3290,9 +3290,14 @@ def addSimplifiedOutputVariables(
     del addittionaloutputs
 
 
-def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
+def addEMSSensorsBase(self, ScriptType: str = None, ModelOrigin: str = None, verboseMode: bool = True):
     """Add EMS sensors for accim."""
     sensorlist = ([sensor.Name for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor']])
+    ppl_key_name = [i for i in self.idf1.idfobjects['PEOPLE']][0].Name
+    # if ModelOrigin == 'dsb':
+    #     ppl_key_name = 'People '+self.zonenames_orig[0]
+    # elif ModelOrigin == 'osm':
+    #     ppl_key_name = self.zonenames_orig[0]
 
     if 'RMOT' in sensorlist:
         if verboseMode:
@@ -3301,7 +3306,7 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
         self.idf1.newidfobject(
             'EnergyManagementSystem:Sensor',
             Name='RMOT',
-            OutputVariable_or_OutputMeter_Index_Key_Name='People '+self.zonenames_orig[0],
+            OutputVariable_or_OutputMeter_Index_Key_Name=ppl_key_name,
             OutputVariable_or_OutputMeter_Name='Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature'
             )
         if verboseMode:
@@ -3315,7 +3320,7 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
         self.idf1.newidfobject(
             'EnergyManagementSystem:Sensor',
             Name='PMOT',
-            OutputVariable_or_OutputMeter_Index_Key_Name='People '+self.zonenames_orig[0],
+            OutputVariable_or_OutputMeter_Index_Key_Name=ppl_key_name,
             OutputVariable_or_OutputMeter_Name='Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature'
             )
         if verboseMode:
@@ -3336,7 +3341,7 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
             if verboseMode:
                 print('Added - '+self.zonenames[i]+'_OpT Sensor')
     #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_OpT'])
-        if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
+        if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
             if self.zonenames[i]+'_WindSpeed' in sensorlist:
                 if verboseMode:
                     print('Not added - '+self.zonenames[i]+'_WindSpeed Sensor')
@@ -3364,7 +3369,7 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
                     print('Added - '+self.zonenames[i]+'_OutT Sensor')
         #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_OutT']
 
-    if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
+    if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
         for i in range(len(self.windownamelist)):
             if self.windownamelist[i]+'_OpT' in sensorlist:
                 if verboseMode:
@@ -3469,7 +3474,7 @@ def addEMSActuatorsBase(self, ScriptType: str = None, verboseMode: bool = True):
                 print('Added - ACST_Act_'+zonename+' Actuator')
         #    print([actuator for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator'] if actuator.Name=='ACST_Act_'+zonename])
 
-    if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
+    if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
         for i in range(len(self.windownamelist)):
             if self.windownamelist[i]+'_VentOpenFact' in actuatorlist:
                 if verboseMode:

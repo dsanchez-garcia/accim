@@ -10,6 +10,7 @@ def addAccis(
         ScriptType: str = None,
         Outputs: str = None,
         EnergyPlus_version: str = None,
+        ModelOrigin: str = 'dsb',
         TempCtrl: str = None,
         ComfStand: any = None,
         CAT: any = None,
@@ -71,10 +72,12 @@ def addAccis(
         ScriptType is not None,
         Outputs is not None,
         EnergyPlus_version is not None,
-        TempCtrl is not None
+        TempCtrl is not None,
+        ModelOrigin is not None
     )
 
-    fullScriptTypeList = ['vrf',
+    fullScriptTypeList = ['vrf_ac',
+                          'vrf_mm',
                           'ex_mm',
                           'ex_ac',
                           ]
@@ -101,6 +104,7 @@ def addAccis(
         'ep95',
         'Ep96',
         'ep96',
+        'ep22.1',
         'ep22.2'
     ]
 
@@ -108,6 +112,14 @@ def addAccis(
         'temperature',
         'temp',
         'pmv'
+    ]
+
+    fullModelOriginList = [
+        'designbuilder',
+        'dsb',
+        'openstudio',
+        'open studio',
+        'osm'
     ]
 
     if all(objArgsDef):
@@ -177,6 +189,7 @@ def addAccis(
             ScriptType=ScriptType,
             EnergyPlus_version=EnergyPlus_version,
             TempCtrl=TempCtrl,
+            ModelOrigin=ModelOrigin,
             verboseMode=verboseMode
         )
 
@@ -185,9 +198,9 @@ def addAccis(
             notWorkingIDFs.append(file)
             continue
 
-        z.setComfFieldsPeople(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode)
+        z.setComfFieldsPeople(EnergyPlus_version=EnergyPlus_version, TempCtrl=TempCtrl, verboseMode=verboseMode)
 
-        if ScriptType.lower() == 'vrf':
+        if 'vrf' in ScriptType.lower():
             if TempCtrl.lower() == 'temperature' or TempCtrl.lower() == 'temp':
                 z.addOpTempTherm(verboseMode=verboseMode)
             elif TempCtrl.lower() == 'pmv':
@@ -197,7 +210,8 @@ def addAccis(
             z.addVRFsystemSch(verboseMode=verboseMode)
             z.addCurveObj(verboseMode=verboseMode)
             z.addDetHVACobj(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode, TempCtrl=TempCtrl)
-            z.checkVentIsOn(verboseMode=verboseMode)
+            if ScriptType.lower() == 'vrf_mm':
+                z.checkVentIsOn(verboseMode=verboseMode)
             z.addForscriptSchVRFsystem(verboseMode=verboseMode)
         elif 'ex' in ScriptType.lower():
             # todo check if PMV can work with ex_ac
@@ -210,8 +224,8 @@ def addAccis(
         z.addEMSSensorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
         z.addEMSActuatorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
 
-        if ScriptType.lower() == 'vrf':
-            z.addEMSSensorsVRFsystem(verboseMode=verboseMode)
+        if 'vrf' in ScriptType.lower():
+            z.addEMSSensorsVRFsystem(ScriptType=ScriptType, verboseMode=verboseMode)
         elif ScriptType.lower() == 'ex_mm':
             z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
 
@@ -270,7 +284,7 @@ def addAccis(
         CAT is not None,
         ComfMod is not None,
     )
-    if ScriptType.lower() == 'vrf' or ScriptType.lower() == 'ex_mm':
+    if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
         if all(args_needed_mm):
             z.genIDF(
                 ScriptType=ScriptType,
@@ -298,7 +312,7 @@ def addAccis(
                 ScriptType=ScriptType,
                 TempCtrl=TempCtrl,
             )
-    elif ScriptType.lower() == 'ex_ac':
+    elif ScriptType.lower() == 'ex_ac' or ScriptType.lower() == 'vrf_ac':
         if all(args_needed_ac):
             z.genIDF(
                 ScriptType=ScriptType,

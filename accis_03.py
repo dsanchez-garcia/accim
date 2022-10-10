@@ -1,13 +1,18 @@
 from accim.sim import accis
+import os
+##
 accis.addAccis(
-    ScriptType='vrf',
+    ScriptType='ex_ac',
+    # ScriptType='vrf_ac',
     Outputs='standard',
-    EnergyPlus_version='ep22.2',
+    EnergyPlus_version='ep22.1',
     TempCtrl='temp',
+    ModelOrigin='osm',
+    # ModelOrigin='dsb',
     ComfStand=[1],
     CAT=[3],
     ComfMod=[3],
-    HVACmode=[2],
+    HVACmode=[0],
     VentCtrl=[0],
     # VSToffset=[0],
     # MinOToffset=[0],
@@ -15,5 +20,29 @@ accis.addAccis(
     # ASTtol_steps=0.1,
     # ASTtol_start=0.1,
     # ASTtol_end_input=0.1,
-    # confirmGen=True
+    NameSuffix='ex_ac',
+    confirmGen=True
 )
+##
+# try:
+#     accis.addAccis(
+#         ScriptType='vrf_ac',
+#         Outputs='standard',
+#         EnergyPlus_version='ep22.1',
+#         TempCtrl='temp',
+#         ModelOrigin='osm',
+#         ComfStand=[1],
+#         CAT=[3],
+#         ComfMod=[3],
+#         HVACmode=[0],
+#         VentCtrl=[0],
+#         # VSToffset=[0],
+#         # MinOToffset=[0],
+#         # MaxWindSpeed=[0],
+#         # ASTtol_steps=0.1,
+#         # ASTtol_start=0.1,
+#         # ASTtol_end_input=0.1,
+#         # confirmGen=True
+#     )
+# except:
+#     os.remove(r'C:\Users\user\PycharmProjects\accim\accim\OSM_Example_00_pymod.idf')

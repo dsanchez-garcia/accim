@@ -17,6 +17,7 @@ class PostInstallCommand(install):
         # Creating a dictionary with IDD paths, IDD backups paths and the first line to modify
         dict_lines = {
             'EnergyPlus 22.2.0': [r"C:\EnergyPlusV22-2-0\Energy+.idd", r"C:\EnergyPlusV22-2-0\Energy+_backup.idd", 82643],
+            'EnergyPlus 22.1.0': [r"C:\EnergyPlusV22-1-0\Energy+.idd", r"C:\EnergyPlusV22-1-0\Energy+_backup.idd", 81925],
             'EnergyPlus 9.6.0': [r"C:\EnergyPlusV9-6-0\Energy+.idd", r"C:\EnergyPlusV9-6-0\Energy+_backup.idd", 81798],
             'EnergyPlus 9.5.0': [r"C:\EnergyPlusV9-5-0\Energy+.idd", r"C:\EnergyPlusV9-5-0\Energy+_backup.idd", 80493],
             'EnergyPlus 9.4.0': [r"C:\EnergyPlusV9-4-0\Energy+.idd", r"C:\EnergyPlusV9-4-0\Energy+_backup.idd", 80526],

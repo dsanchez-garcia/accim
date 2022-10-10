@@ -47,6 +47,23 @@ def addBaseSchedules(self, verboseMode : bool = True):
             )
         if verboseMode:
             print("On Schedule has been added")
+    
+    if "TypOperativeTempControlSch" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
+        if verboseMode:
+            print("TypOperativeTempControlSch Schedule already was in the model")
+    else:
+        self.idf1.newidfobject(
+            'Schedule:Compact',
+            Name="TypOperativeTempControlSch",
+            Schedule_Type_Limits_Name="Temperature",
+            Field_1='Through: 12/31',
+            Field_2='For: SummerDesignDay WinterDesignDay',
+            Field_3='Until: 24:00,0',
+            Field_4='For: AllOtherDays',
+            Field_5='Until: 24:00, 0.5',
+            )
+        if verboseMode:
+            print("TypOperativeTempControlSch Schedule has been added")
 
 
 def setAvailSchOn(self, verboseMode: bool = True):
@@ -895,7 +912,7 @@ def addDetHVACobj(self, EnergyPlus_version: str = None, verboseMode: bool = True
                       ' AirConditioner:VariableRefrigerantFlow '
                       'Object already was in the model')
         else:
-            if EnergyPlus_version.lower() == 'ep96' or EnergyPlus_version.lower() == 'ep22.2':
+            if EnergyPlus_version.lower() == 'ep96' or 'ep22' in EnergyPlus_version.lower():
                 self.idf1.newidfobject(
                     'AirConditioner:VariableRefrigerantFlow',
                     Heat_Pump_Name='VRF Outdoor Unit_'+zn,
