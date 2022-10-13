@@ -1,7 +1,7 @@
 """Add EnergyPlus objects in common to both ExistingHVAC and VRFsystem."""
 
 
-def setComfFieldsPeople(self, EnergyPlus_version: str = None, ModelOrigin: str = None, TempCtrl: str = None, verboseMode: bool = True):
+def setComfFieldsPeople(self, EnergyPlus_version: str = None, TempCtrl: str = None, verboseMode: bool = True):
     """
     Amend PEOPLE objects so that accim can work.
 

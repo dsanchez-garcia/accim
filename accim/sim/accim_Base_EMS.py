@@ -3290,7 +3290,7 @@ def addSimplifiedOutputVariables(
     del addittionaloutputs
 
 
-def addEMSSensorsBase(self, ScriptType: str = None, ModelOrigin: str = None, verboseMode: bool = True):
+def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
     """Add EMS sensors for accim."""
     sensorlist = ([sensor.Name for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor']])
 
@@ -3298,15 +3298,6 @@ def addEMSSensorsBase(self, ScriptType: str = None, ModelOrigin: str = None, ver
         ppl_key_name = self.occupiedZones_orig[0] + ' People'
     else:
         ppl_key_name = [i for i in self.idf1.idfobjects['PEOPLE']][0].Name
-
-    # if ModelOrigin == 'dsb':
-    #     ppl_key_name = 'People '+self.zonenames_orig[0]
-    # elif ModelOrigin == 'osm':
-    #     ppl_key_name = self.zonenames_orig[0]
-
-
-    # todo if people zone or zonelist field is a zonelist, filter and add the sensor for a zone
-    # todo check if the same fields as dsb need to be filled
 
     spacelist = [i for i in self.idf1.idfobjects['spacelist']]
 

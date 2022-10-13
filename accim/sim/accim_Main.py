@@ -44,7 +44,6 @@ class accimJob():
                  ScriptType: str = None,
                  EnergyPlus_version: str = None,
                  TempCtrl: str = None,
-                 # ModelOrigin: str = 'dsb',
                  verboseMode: bool = True,
                  accimNotWorking: bool = False):
         from eppy import modeleditor
@@ -85,7 +84,6 @@ class accimJob():
         self.filename = filename_temp+'_pymod'
 
         # print(self.filename)
-        # todo try to assess the situation with try and delete the modelorigin argument
         self.occupiedZones_orig = []
 
         occupiedZones_orig_osm = []
@@ -111,7 +109,7 @@ class accimJob():
                 if i.Name in k.Name:
                     occupiedZones_orig_dsb.append(i.Name.upper())
 
-        if any(':' in [i for i in occupiedZones_orig_dsb]):
+        if any([':' in i for i in occupiedZones_orig_dsb]):
             self.occupiedZones_orig = occupiedZones_orig_dsb
             self.occupiedZones = [i.replace(':', '_') for i in self.occupiedZones_orig]
             self.origin_dsb = True
@@ -206,7 +204,7 @@ class accimJob():
                         continue
                     else:
                         self.zonenames_orig.append(self.HVACzonelist[i][1][k])
-            if any(':' in [i for i in self.zonenames_orig]):
+            if self.origin_dsb:
                 self.zonenames = [i.replace(':', '_') for i in self.zonenames_orig]
             else:
                 self.zonenames = [i.replace(' ', '_') for i in self.zonenames_orig]
