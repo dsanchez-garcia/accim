@@ -44,7 +44,7 @@ class accimJob():
                  ScriptType: str = None,
                  EnergyPlus_version: str = None,
                  TempCtrl: str = None,
-                 ModelOrigin: str = 'dsb',
+                 # ModelOrigin: str = 'dsb',
                  verboseMode: bool = True,
                  accimNotWorking: bool = False):
         from eppy import modeleditor
@@ -85,16 +85,11 @@ class accimJob():
         self.filename = filename_temp+'_pymod'
 
         # print(self.filename)
-
+        # todo try to assess the situation with try and delete the modelorigin argument
         self.occupiedZones_orig = []
-        if ModelOrigin == 'dsb':
-            for i in self.idf1.idfobjects['ZONE']:
-                for k in self.idf1.idfobjects['PEOPLE']:
-                    if i.Name in k.Name:
-                        self.occupiedZones_orig.append(i.Name.upper())
-            self.occupiedZones = [i.replace(':', '_') for i in self.occupiedZones_orig]
 
-        elif ModelOrigin == 'osm':
+        occupiedZones_orig_osm = []
+        if len([h for h in self.idf1.idfobjects['zonelist']]) > 0:
             if len(self.idf1.idfobjects['zone']) == 1:
                 no_of_zones = range(1, 2)
             else:
@@ -104,9 +99,26 @@ class accimJob():
                 for j in self.idf1.idfobjects['zonelist']:
                     for k in self.idf1.idfobjects['zone']:
                         if k.Name in j[f'Zone_{i}_Name']:
-                            self.occupiedZones_orig.append(k.Name)
-            self.occupiedZones = [i.replace(' ', '_') for i in self.occupiedZones_orig]
+                            occupiedZones_orig_osm.append(k.Name)
 
+            # for i in self.idf1.idfobjects['zone']:
+            #     if all(i.Name not in [j for j in occupiedZones_orig_osm]):
+            #         occupiedZones_orig_osm.append(i.Name)
+
+        occupiedZones_orig_dsb = []
+        for i in self.idf1.idfobjects['ZONE']:
+            for k in self.idf1.idfobjects['PEOPLE']:
+                if i.Name in k.Name:
+                    occupiedZones_orig_dsb.append(i.Name.upper())
+
+        if any(':' in [i for i in occupiedZones_orig_dsb]):
+            self.occupiedZones_orig = occupiedZones_orig_dsb
+            self.occupiedZones = [i.replace(':', '_') for i in self.occupiedZones_orig]
+            self.origin_dsb = True
+        else:
+            self.occupiedZones_orig = occupiedZones_orig_osm
+            self.occupiedZones = [i.replace(' ', '_') for i in self.occupiedZones_orig]
+            self.origin_dsb = False
 
 
         if verboseMode:
@@ -165,9 +177,9 @@ class accimJob():
                     for j in range(len(self.ZCTlist)):
                         if self.ZCTlist[j].Control_1_Object_Type in TSPtypes[i]:
                             temp1.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper())
-                            if ModelOrigin == 'dsb':
+                            if ':' in self.ZCTlist[j].Zone_or_ZoneList_Name:
                                 temp2.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper().replace(":", "_"))
-                            if ModelOrigin == 'osm':
+                            else:
                                 temp2.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper().replace(" ", "_"))
                             temp3.append(self.ZCTlist[j].Control_1_Name)
                 self.HVACzonelist.append([TSPtypes[i], temp1, temp2, temp3])
@@ -194,9 +206,9 @@ class accimJob():
                         continue
                     else:
                         self.zonenames_orig.append(self.HVACzonelist[i][1][k])
-            if ModelOrigin == 'dsb':
+            if any(':' in [i for i in self.zonenames_orig]):
                 self.zonenames = [i.replace(':', '_') for i in self.zonenames_orig]
-            elif ModelOrigin == 'osm':
+            else:
                 self.zonenames = [i.replace(' ', '_') for i in self.zonenames_orig]
 
             if ScriptType.lower() == 'existinghvac_mm' or ScriptType.lower() == 'ex_mm':

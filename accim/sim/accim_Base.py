@@ -1,7 +1,7 @@
 """Add EnergyPlus objects in common to both ExistingHVAC and VRFsystem."""
 
 
-def setComfFieldsPeople(self, EnergyPlus_version: str = None, TempCtrl: str = None, verboseMode: bool = True):
+def setComfFieldsPeople(self, EnergyPlus_version: str = None, ModelOrigin: str = None, TempCtrl: str = None, verboseMode: bool = True):
     """
     Amend PEOPLE objects so that accim can work.
 
@@ -147,6 +147,18 @@ def setComfFieldsPeople(self, EnergyPlus_version: str = None, TempCtrl: str = No
                 self.idf1.removeidfobject(firstpeopleobject)
 
     ppl = ([people for people in self.idf1.idfobjects['PEOPLE']])
+
+    if len([i for i in self.idf1.idfobjects['zonelist']]) > 0:
+        # zonelist = [i for i in self.idf1.idfobjects['zonelist']]
+        # spacelist = [i for i in self.idf1.idfobjects['spacelist']]
+        ppl = [i for i in self.idf1.idfobjects['people']]
+        # todo if people zone or zonelist field is a zonelist, add a people object for a zone
+        newppl = ppl[-1]
+        newppl = self.idf1.copyidfobject(newppl)
+        newppl.Name = self.occupiedZones_orig[0] + ' People'
+        newppl.Zone_or_ZoneList_or_Space_or_SpaceList_Name = self.occupiedZones_orig[0]
+        self.newppl = newppl
+
     if verboseMode:
         print('The people objects in the model have been amended.')
         # print(*peoplelist,sep="\n")

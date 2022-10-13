@@ -1,13 +1,58 @@
 from eppy import modeleditor
 from eppy.modeleditor import IDF
-iddfile = r"C:\EnergyPlusV22-2-0\Energy+.idd"
-fname1_home = r'C:\Python\accim\OSM_02.idf'
+iddfile = r"C:\EnergyPlusV22-1-0\Energy+.idd"
+fname1_home = r'C:\Python\accim\OSM_5_noEMS.idf'
 # fname1_uni = r'C:\Users\user\PycharmProjects\accim\accim\OSM_03.idf'
-fname1_uni = r'C:\Users\user\PycharmProjects\accim\accim\OSM_Example_00.idf'
+# fname1_uni = r'C:\Users\user\PycharmProjects\accim\accim\OSM_Example_00.idf'
+
 
 
 IDF.setiddname(iddfile)
-idf1 = IDF(fname1_uni)
+idf1 = IDF(fname1_home)
+##
+zonelist = [i.Name for i in idf1.idfobjects['zonelist']]
+# if len(zonelist) > 0:
+
+
+
+
+
+
+##
+zones = [i for i in idf1.idfobjects['zone']]
+zonelist = [i.Name for i in idf1.idfobjects['zonelist']]
+spacelist = [i for i in idf1.idfobjects['spacelist']]
+ppl = [i for i in idf1.idfobjects['people']]
+
+for i in ppl:
+    # if any(ppl.Zone_or_ZoneList_or_Space_or_SpaceList_Name in i for i zonelist):
+
+
+newppl = ppl[-1]
+newppl = idf1.copyidfobject(newppl)
+newppl.Name = zones[0].Name + 'People'
+newppl.Zone_or_ZoneList_or_Space_or_SpaceList_Name = zones[0].Name
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ##
 zonelist = []

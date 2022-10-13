@@ -10,7 +10,7 @@ def addAccis(
         ScriptType: str = None,
         Outputs: str = None,
         EnergyPlus_version: str = None,
-        ModelOrigin: str = 'dsb',
+        # ModelOrigin: str = 'dsb',
         TempCtrl: str = None,
         ComfStand: any = None,
         CAT: any = None,
@@ -73,7 +73,7 @@ def addAccis(
         Outputs is not None,
         EnergyPlus_version is not None,
         TempCtrl is not None,
-        ModelOrigin is not None
+        # ModelOrigin is not None
     )
 
     fullScriptTypeList = ['vrf_ac',
@@ -114,13 +114,13 @@ def addAccis(
         'pmv'
     ]
 
-    fullModelOriginList = [
-        'designbuilder',
-        'dsb',
-        'openstudio',
-        'open studio',
-        'osm'
-    ]
+    # fullModelOriginList = [
+    #     'designbuilder',
+    #     'dsb',
+    #     'openstudio',
+    #     'open studio',
+    #     'osm'
+    # ]
 
     if all(objArgsDef):
         pass
@@ -189,7 +189,7 @@ def addAccis(
             ScriptType=ScriptType,
             EnergyPlus_version=EnergyPlus_version,
             TempCtrl=TempCtrl,
-            ModelOrigin=ModelOrigin,
+            # ModelOrigin=ModelOrigin,
             verboseMode=verboseMode
         )
 
