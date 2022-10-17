@@ -50,26 +50,25 @@ class accimJob():
         from eppy.modeleditor import IDF
         self.accimNotWorking = accimNotWorking
 
-        if EnergyPlus_version.lower() == 'ep91':
+        if EnergyPlus_version.lower() == '9.1':
             iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == 'ep92':
+        elif EnergyPlus_version.lower() == '9.2':
             iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == 'ep93':
+        elif EnergyPlus_version.lower() == '9.3':
             iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == 'ep94':
+        elif EnergyPlus_version.lower() == '9.4':
             iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == 'ep95':
+        elif EnergyPlus_version.lower() == '9.5':
             iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == 'ep96':
+        elif EnergyPlus_version.lower() == '9.6':
             iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == 'ep22.1':
+        elif EnergyPlus_version.lower() == '22.1':
             iddfile = 'C:\EnergyPlusV22-1-0\Energy+.idd'
-        elif EnergyPlus_version.lower() == 'ep22.2':
+        elif EnergyPlus_version.lower() == '22.2':
             iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
         else:
             raise ValueError("""EnergyPlus version not supported.\n
-                                     Only works for versions between EnergyPlus 9.1 (enter ep91) and
-                                     EnergyPlus 9.6(enter ep96) and EnergyPlus 22.2.""")
+                                     Only works for versions between EnergyPlus 9.1 (enter 9.1) and EnergyPlus 22.2 (enter 22.2)""")
         if verboseMode:
             print('IDD location is: '+iddfile)
         IDF.setiddname(iddfile)
@@ -123,7 +122,7 @@ class accimJob():
             print(f'The occupied zones in the model {filename_temp} are:')
             print(*self.occupiedZones_orig, sep="\n")
 
-        if (ScriptType.lower() == 'vrfsystem' or
+        if (ScriptType.lower() == 'vrfsystem_mm' or
             ScriptType.lower() == 'vrf_mm' or
             ScriptType.lower() == 'existinghvac_mm' or
             ScriptType.lower() == 'ex_mm'

@@ -27,15 +27,43 @@ def addAccis(
         confirmGen: bool = None):
     """
     Parameters
-    :param ScriptType: The default is None.'vrf' for VRFsystem, 'ex_ac' for ExistingHVAC only with full air-conditioning mode, and 'ex_mm' for ExistingHVAC with mixed-mode..
+    :param ScriptType: The default is None.
+    'vrf_ac' for VRFsystem with full air-conditionin mode, 
+    'vrf_mm' for VRFsystem with mixed-mode, 
+    'ex_ac' for ExistingHVAC only with full air-conditioning mode, 
+    'ex_mm' for ExistingHVAC with mixed-mode.
     :param Outputs: The default is None. Can be 'standard', 'simplified' or 'timestep'.
-    :param EnergyPlus_version: The default is None. Can be 'ep91', 'ep92', 'ep93', 'ep94', 'ep95' or 'ep96'.
+    :param EnergyPlus_version: The default is None. Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1' or '22.2'.
+    :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
     :param ComfStand: The default is None.
-    (0 = CTE; 1 = EN16798-1; 2 = ASHRAE 55; 3 = JPN)
+        '0 = ESP CTE;
+        '1 = INT EN16798;
+        '2 = INT ASHRAE55;
+        '3 = JPN Rijal;
+        '4 = CHN GBT50785 Cold;
+        '5 = CHN GBT50785 HotMild;
+        '6 = CHN Yang;
+        '7 = IND IMAC C NV;
+        '8 = IND IMAC C MM;
+        '9 = IND IMAC R 7DRM;
+        '10 = IND IMAC R 30DRM;
+        '11 = IND Dhaka;
+        '12 = ROM Udrea;
+        '13 = AUS Williamson;
+        '14 = AUS DeDear;
+        '15 = BRA Rupp NV;
+        '16 = BRA Rupp AC;
+        '17 = MEX Oropeza Arid;
+        '18 = MEX Oropeza DryTropic;
+        '19 = MEX Oropeza Temperate;
+        '20 = MEX Oropeza HumTropic;
     :param CAT: The default is None.
-    (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 90 = 90% ACCEPT)
+    (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT)
     :param ComfMod: The default is None.
-    (0 = Static; 1 = OUT-CTE; 2 = OUT-SEN16798/SASHRAE55; 3 = OUT-AEN16798/AASHRAE55)
+    (0 = Static;
+    1 = Adaptive when applicable, otherwise relevant local static model;
+    2 = Adaptive when applicable, otherwise relevant international static model
+    3 = Adaptive when applicable, otherwise horizontal extention of adaptive setpoints)
     :param HVACmode: The default is None.
     (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
     :param VentCtrl: The default is None.
@@ -52,8 +80,8 @@ def addAccis(
 
     Exceptions
             DESCRIPTION. EnergyPlus version not supported.
-        Only works for versions between EnergyPlus 9.1 (enter ep91) and
-        EnergyPlus 9.6 (enter ep96).
+        Only works for versions between EnergyPlus 9.1 (enter 9.1) and
+        EnergyPlus 22.2 (enter 22.2).
 
     :return:
     Returns nothing. Output IDFs are generated in the source folder, where input IDFs were located.
@@ -90,20 +118,14 @@ def addAccis(
     ]
 
     fullEPversionsList = [
-        'Ep91',
-        'ep91',
-        'Ep92',
-        'ep92',
-        'Ep93',
-        'ep93',
-        'Ep94',
-        'ep94',
-        'Ep95',
-        'ep95',
-        'Ep96',
-        'ep96',
-        'ep22.1',
-        'ep22.2'
+        '9.1',
+        '9.2',
+        '9.3',
+        '9.4',
+        '9.5',
+        '9.6',
+        '22.1',
+        '22.2'
     ]
 
     fullTempCtrllist = [
@@ -115,23 +137,32 @@ def addAccis(
     if all(objArgsDef):
         pass
     else:
-        ScriptType = input("Enter the ScriptType (for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning mode: ex_ac): ")
+        ScriptType = input("Enter the ScriptType (\n"
+                           "for VRFsystem with full air-conditioning mode: vrf_ac;\n"
+                           "for VRFsystem with mixed-mode: vrf_mm;\n"
+                           "for ExistingHVAC with mixed mode: ex_mm;\n"
+                           "for ExistingHVAC with full air-conditioning mode: ex_a\n"
+                           "): ")
         while ScriptType not in fullScriptTypeList:
-            ScriptType = input("ScriptType was not correct. "
-                               "Please, enter the ScriptType "
-                               "(for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning mode: ex_ac): ")
+            ScriptType = input("    ScriptType was not correct. "
+                               "    Enter the ScriptType (\n"
+                               "    for VRFsystem with full air-conditioning mode: vrf_ac;\n"
+                               "    for VRFsystem with mixed-mode: vrf_mm;\n"
+                               "    for ExistingHVAC with mixed mode: ex_mm;\n"
+                               "    for ExistingHVAC with full air-conditioning mode: ex_ac\n"
+                               "    ): ")
         Outputs = input("Enter the Output (standard, simplified or timestep): ")
         while Outputs not in fullOutputsList:
-            Outputs = input("Output was not correct. "
+            Outputs = input("   Output was not correct. "
                             "Please, enter the Output (standard, simplified or timestep): ")
-        EnergyPlus_version = input("Enter the EnergyPlus version (ep91 to ep96): ")
+        EnergyPlus_version = input("Enter the EnergyPlus version (9.1 to 22.2): ")
         while EnergyPlus_version not in fullEPversionsList:
-            EnergyPlus_version = input("EnergyPlus version was not correct. "
-                                       "Please, enter the EnergyPlus version (ep91 to ep96, or ep22.2): ")
+            EnergyPlus_version = input("    EnergyPlus version was not correct. "
+                                       "Please, enter the EnergyPlus version (9.1 to 22.2): ")
         TempCtrl = input('Enter the Temperature Control method (temperature or pmv): ')
         while TempCtrl not in fullTempCtrllist:
-            TempCtrl = input("Temperature Control method was not correct. "
-                                       "Please, enter the Temperature Control method (temperature or pmv): ")
+            TempCtrl = input("  Temperature Control method was not correct. "
+                             "Please, enter the Temperature Control method (temperature or pmv): ")
 
 
     if verboseMode:

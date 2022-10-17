@@ -12,7 +12,7 @@ def setComfFieldsPeople(self, EnergyPlus_version: str = None, TempCtrl: str = No
     ppl = ([people for people in self.idf1.idfobjects['PEOPLE']])
     for i in range(len(ppl)):
         if TempCtrl == 'pmv':
-            if EnergyPlus_version.lower() == 'ep96' or 'ep22' in EnergyPlus_version.lower():
+            if EnergyPlus_version.lower() == '9.6' or '22' in EnergyPlus_version.lower():
                 self.idf1.newidfobject(
                     'PEOPLE',
                     Name=ppl[i].Name,
@@ -79,7 +79,7 @@ def setComfFieldsPeople(self, EnergyPlus_version: str = None, TempCtrl: str = No
                 firstpeopleobject = self.idf1.idfobjects['PEOPLE'][0]
                 self.idf1.removeidfobject(firstpeopleobject)
         else:
-            if EnergyPlus_version.lower() == 'ep96' or 'ep22' in EnergyPlus_version.lower():
+            if EnergyPlus_version.lower() == '9.6' or '22' in EnergyPlus_version.lower():
                 self.idf1.newidfobject(
                     'PEOPLE',
                     Name=ppl[i].Name,
