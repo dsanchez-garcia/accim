@@ -141,7 +141,7 @@ def addAccis(
                            "for VRFsystem with full air-conditioning mode: vrf_ac;\n"
                            "for VRFsystem with mixed-mode: vrf_mm;\n"
                            "for ExistingHVAC with mixed mode: ex_mm;\n"
-                           "for ExistingHVAC with full air-conditioning mode: ex_a\n"
+                           "for ExistingHVAC with full air-conditioning mode: ex_ac\n"
                            "): ")
         while ScriptType not in fullScriptTypeList:
             ScriptType = input("    ScriptType was not correct. "

@@ -3,46 +3,7 @@
 
 def inputData(self, ScriptType: str = None):
     """Input data for IDF generation."""
-    print('The information you will be required to enter below will be used to generate the customised output IDFs:')
-    fullComfStandList = list(range(20 + 1))
-    self.ComfStand_List = list(int(num) for num in input(
-        'Enter the Comfort Standard numbers separated by space (\n'
-        '0 = ESP CTE;\n'
-        '1 = INT EN16798-1;\n'
-        '2 = INT ASHRAE55;\n'
-        '3 = JPN Rijal;\n'
-        '4 = CHN GBT50785 Cold;\n'
-        '5 = CHN GBT50785 HotMild;\n'
-        '6 = CHN Yang;\n'
-        '7 = IND IMAC C NV;\n'
-        '8 = IND IMAC C MM;\n'
-        '9 = IND IMAC R 7DRM;\n'
-        '10 = IND IMAC R 30DRM;\n'
-        '11 = IND Dhaka;\n'
-        '12 = ROM Udrea;\n'
-        '13 = AUS Williamson;\n'
-        '14 = AUS DeDear;\n'
-        '15 = BRA Rupp NV;\n'
-        '16 = BRA Rupp AC;\n'
-        '17 = MEX Oropeza Arid;\n'
-        '18 = MEX Oropeza DryTropic;\n'
-        '19 = MEX Oropeza Temperate;\n'
-        '20 = MEX Oropeza HumTropic;\n'
-        '): '
-    ).split())
-    while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
-        print('          Comfort Standard numbers are not correct. Please enter the numbers again.')
-        self.ComfStand_List = list(
-            int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
-    while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
-        self.ComfStand_List = list(
-            int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
-        while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
-            print('          Comfort Standard numbers are not correct. Please enter the numbers again.')
-            self.ComfStand_List = list(
-                int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
-
-    CS_CA_CM_data_dict = {
+    CS_CA_CM_list_dict = {
         '0 = ESP CTE': [['n/a'], ['n/a']],
         '1 = INT EN16798-1': [[1, 2, 3], [0, 1, 2, 3]],
         '2 = INT ASHRAE55': [[80, 90], [0, 1, 2, 3]],
@@ -342,10 +303,61 @@ def inputData(self, ScriptType: str = None):
         },
     }
 
+    print('The information you will be required to enter below will be used to generate the customised output IDFs:')
+    fullComfStandList = list(range(20 + 1))
+    self.ComfStand_List = list(int(num) for num in input(
+        'Enter the Comfort Standard numbers separated by space (\n'
+        '0 = ESP CTE;\n'
+        '1 = INT EN16798-1;\n'
+        '2 = INT ASHRAE55;\n'
+        '3 = JPN Rijal;\n'
+        '4 = CHN GBT50785 Cold;\n'
+        '5 = CHN GBT50785 HotMild;\n'
+        '6 = CHN Yang;\n'
+        '7 = IND IMAC C NV;\n'
+        '8 = IND IMAC C MM;\n'
+        '9 = IND IMAC R 7DRM;\n'
+        '10 = IND IMAC R 30DRM;\n'
+        '11 = IND Dhaka;\n'
+        '12 = ROM Udrea;\n'
+        '13 = AUS Williamson;\n'
+        '14 = AUS DeDear;\n'
+        '15 = BRA Rupp NV;\n'
+        '16 = BRA Rupp AC;\n'
+        '17 = MEX Oropeza Arid;\n'
+        '18 = MEX Oropeza DryTropic;\n'
+        '19 = MEX Oropeza Temperate;\n'
+        '20 = MEX Oropeza HumTropic;\n'
+        '): '
+    ).split())
+    while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
+        print('          Comfort Standard numbers are not correct. Please enter the numbers again.')
+        self.ComfStand_List = list(
+            int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
+    while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
+        self.ComfStand_List = list(
+            int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
+        while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
+            print('          Comfort Standard numbers are not correct. Please enter the numbers again.')
+            self.ComfStand_List = list(
+                int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
+
+    for i in self.ComfStand_List:
+        print('For the comfort standard ' + CS_CA_CM_data_dict[i]['name'] + ', the available categories you can choose are: ')
+        for j in CS_CA_CM_data_dict[i]['CAT']:
+            print(str(j) + ' = ' + CS_CA_CM_data_dict[i]['CAT'][j])
 
     fullCATlist = [1, 2, 3, 80, 85, 90]
     self.CAT_List = list(int(num) for num in input(
-        "Enter the Category numbers separated by space (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT; Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png): ").split())
+        "Enter the Category numbers separated by space (\n"
+        "1 = CAT I;\n"
+        "2 = CAT II;\n"
+        "3 = CAT III;\n"
+        "80 = 80% ACCEPT;\n"
+        "85 = 85% ACCEPT;\n"
+        "90 = 90% ACCEPT;\n"
+        "Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png\n"
+        "): ").split())
     while len(self.CAT_List) == 0 or not all(elem in fullCATlist for elem in self.CAT_List):
         print('          Category numbers are not correct. Please enter the numbers again.')
         self.CAT_List = list(int(num) for num in input("Enter the Category numbers separated by space: ").split())
@@ -355,9 +367,18 @@ def inputData(self, ScriptType: str = None):
             print('          Category numbers are not correct. Please enter the numbers again.')
             self.CAT_List = list(int(num) for num in input("Enter the Category numbers separated by space: ").split())
 
+    for i in self.ComfStand_List:
+        print('For the comfort standard ' + CS_CA_CM_data_dict[i]['name'] + ', the available ComfMods you can choose are: ')
+        for j in CS_CA_CM_data_dict[i]['ComfMod']:
+            print(str(j) + ' = ' + CS_CA_CM_data_dict[i]['ComfMod'][j])
+
     fullComfModList = [0, 1, 2, 3]
     self.ComfMod_List = list(int(num) for num in input(
-        "Enter the Comfort Mode numbers separated by space (0 = Static; 1, 2, 3 = Adaptive; Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png): ").split())
+        "Enter the Comfort Mode numbers separated by space (\n"
+        "0 = Static;\n"
+        "1, 2, 3 = Adaptive;\n"
+        "Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png\n"
+        "): ").split())
     while len(self.ComfMod_List) == 0 or not all(elem in fullComfModList for elem in self.ComfMod_List):
         print('          Comfort Mode numbers are not correct. Please enter the numbers again.')
         self.ComfMod_List = list(
@@ -373,7 +394,11 @@ def inputData(self, ScriptType: str = None):
     if 'mm' in ScriptType.lower():
         fullHVACmodeList = [0, 1, 2]
         self.HVACmode_List = list(int(num) for num in input(
-            "Enter the HVAC Mode numbers separated by space (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode): ").split())
+            "Enter the HVAC Mode numbers separated by space (\n"
+            "0 = Fully Air-conditioned;\n"
+            "1 = Naturally ventilated;\n"
+            "2 = Mixed Mode;\n"
+            "): ").split())
         while len(self.HVACmode_List) == 0 or not all(elem in fullHVACmodeList for elem in self.HVACmode_List):
             print('          HVACmode numbers are not correct. Please enter the numbers again.')
             self.HVACmode_List = list(
@@ -388,7 +413,10 @@ def inputData(self, ScriptType: str = None):
 
         fullVentCtrlList = [0, 1]
         self.VentCtrl_List = list(int(num) for num in input(
-            "Enter the Ventilation Control numbers separated by space (0 = Ventilates above neutral temperature; 1 = Ventilates above upper comfort limit): ").split())
+            "Enter the Ventilation Control numbers separated by space (\n"
+            "0 = Ventilates above neutral temperature;\n"
+            "1 = Ventilates above upper comfort limit;\n"
+            "): ").split())
         while len(self.VentCtrl_List) == 0 or not all(elem in fullVentCtrlList for elem in self.VentCtrl_List):
             print('          Ventilation Control numbers are not correct. Please enter the numbers again.')
             self.VentCtrl_List = list(
@@ -528,7 +556,7 @@ def genIDF(self,
         self.ASTtol_value_to = round(ASTtol_end, 2)
         self.ASTtol_value_steps = round(ASTtol_steps, 2)
 
-    if 'ac' in ScriptType.lower:
+    if 'ac' in ScriptType.lower():
         self.HVACmode_List = [0]
         self.VentCtrl_List = [0]
         self.VSToffset_List = [0]
