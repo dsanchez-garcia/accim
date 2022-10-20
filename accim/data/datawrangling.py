@@ -5,6 +5,15 @@ class rename_epw_files:
         confirm_renaming=None,
         confirm_deletion=None
     ):
+        """
+        Renames the EPW files following the name convention 'Country_City_RCPscenario-Year'.
+        The Country and City fields are computed based on the coordinates of the EPW,
+        and the RCPscenario and Year are taken from the original name.
+        If no reference is found, the EPWs are considered to be  for Present scenario.
+        :param filelist: A list of the EPW files. If omitted, it will rename all EPWs in that folder.
+        :param confirm_renaming: True or False, #to skip renaming confirmation on prompt command or console
+        :param confirm_deletion: True or False #to skip deletion confirmation on prompt command or console
+        """
         import glob
         import pandas as pd
         import datapackage
