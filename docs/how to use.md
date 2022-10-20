@@ -1,8 +1,10 @@
 # How to use
 ## First steps
-There has been developed 3 main branches of functions, which are:
+There has been developed 4 main branches of functions, which are:
 
-- VRFsystem: Adds standard VRF systems for each occupied zone and applies the adaptive or PMV-based setpoint temperatures.
+- VRFsystem with full air-conditioning mode: This mode has been developed mainly to support models originated with OpenStudio, which up to date does not support Airflow Network objects and subsequently Calculated Natural Ventilation. It adds standard VRF systems for each occupied zone and applies the adaptive or PMV-based setpoint temperatures, but only works with full air-conditioning mode.
+
+- VRFsystem with mixed mode: It adds standard VRF systems for each occupied zone and applies the adaptive or PMV-based setpoint temperatures. Works with Calculated Natural Ventilation, although full air-conditioning mode can also be used. If mixed mode is used, the model must be generally developed with DesignBuilder.
 
 - ExistingHVAC only with full air-conditioning mode: Keeps the existing HVAC systems and modify the existing setpoint temperatures to adaptive or PMV-based setpoint temperatures. However, mixed-mode and naturally ventilated modes are not available in this mode. 
 
@@ -27,20 +29,25 @@ And then, you just need to call the accis function:
 ```
 Then you'll be asked in the prompt to enter some information so that python knows how do you want to set up the output IDFs:
 ```
-Enter the ScriptType (for VRFsystem: vrf; for ExistingHVAC with mixed mode: ex_mm; or for ExistingHVAC only with full air-conditioning mode: ex_ac): vrf
+Enter the ScriptType (
+for VRFsystem with full air-conditioning mode: vrf_ac;
+for VRFsystem with mixed-mode: vrf_mm;
+for ExistingHVAC with mixed mode: ex_mm;
+for ExistingHVAC with full air-conditioning mode: ex_ac
+): vrf_mm
 Enter the Output (standard, simplified or timestep): standard
-Enter the EnergyPlus version (ep91 to ep96): ep96
-Enter the Temperature Control method (temperature or pmv): temperature
+Enter the EnergyPlus version (9.1 to 22.2): 22.2
+Enter the Temperature Control method (temperature or pmv): temp
 ```
 where
-- ScriptType can be 'vrf', 'ex_mm' or 'ex_ac', and it refers to the type of functions as explained above
+- ScriptType can be 'vrf_mm', 'vrf_ac', 'ex_mm' or 'ex_ac', and it refers to the type of functions as explained above
 - Outputs can be 'standard', 'simplified' or 'timestep', and it refers to the simulation results: 'standard' means that results will contain the full selection; 'simplified' means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and 'timestep' means that results are going to be the full selection in Timestep frequency, so this is only recommended for tests, or small number of simulations.
-- EnergyPlus_version can be 'ep91', 'ep92', 'ep93', 'ep94', 'ep95' or 'ep96'. It is the version of EnergyPlus you have installed in your computer. If you enter 'ep91', accim will look for the E+9.1.0 IDD file in path "C:\\EnergyPlusV9-1-0".
+- EnergyPlus_version can be '9.1' to '9.6', '22.1' or '22.2'. It is the version of EnergyPlus you have installed in your computer. If you enter '9.1', accim will look for the E+9.1.0 IDD file in path "C:\\EnergyPlusV9-1-0".
 - Temperature Control method can be 'temperature' or 'temp', or 'pmv'. If 'temp' is used, the setpoint will be the operative temperature, otherwise if 'pmv' is used, the setpoint will be the PMV index.
 
 Besides, `addAccis()` can take the same values we entered before in the prompt command as arguments. The usage of this function will be detailed below. An example of this, to get the same results as shown in the command prompt would be:
 ```
->>> accis.addAccis('vrf','standard','ep96', 'temp')
+>>> accis.addAccis('vrf_mm','standard','9.6', 'temp')
 ```
 accis will show on the prompt command dialog all the objects it adds, and those that doesn't need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled 'Setting up the target IDFs'.
 
@@ -51,9 +58,9 @@ Once you run the simulations, you might get some EnergyPlus warnings and severe 
 
 If you run `accis.addAccis(whateverScriptType, whateverOutputs, whateverEPversion, whateverTempCtrl)`, you will be asked in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
 ```
->>> accis.addAccis(str, # ScriptType: 'vrf', 'ex_mm', 'ex_ac'
+>>> accis.addAccis(str, # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'
 >>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
->>>                str, # EnergyPlus_version: 'ep91', 'ep92', 'ep93', 'ep94', 'ep95' or 'ep96'
+>>>                str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', or '22.2'
 >>>                str, # TempCtrl: 'temperature' or 'temp', or 'pmv'
 >>>                list, # ComfStand, which is the Comfort Standard
 >>>                list, # CAT, which is the Category
@@ -73,9 +80,9 @@ If you run `accis.addAccis(whateverScriptType, whateverOutputs, whateverEPversio
 ```
 Some example of the usage could be:
 ```
->>> accis.addAccis(ScriptType='vrf', # ScriptType: 'vrf', 'ex_mm', 'ex_ac'
+>>> accis.addAccis(ScriptType='vrf', # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'
 >>>                Outputs='standard', # Outputs: 'simplified', 'standard' or 'timestep'
->>>                EnergyPlus_version='ep95', # EnergyPlus_version: 'ep91', 'ep92', 'ep93', 'ep94','ep95' or 'ep96'
+>>>                EnergyPlus_version='ep95', # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', or '22.2'
 >>>                TempCtrl='temp', # Temperature Control: 'temperature' or 'temp', or 'pmv'
 >>>                ComfStand=[0, 1, 2, 3], # ComfStand, which is the Comfort Standard
 >>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category

@@ -94,3 +94,6 @@ Mode                 LastWriteTime         Length Name
 -a---l        27/02/2021     16:47        2017070 TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0[Bilbao_2016.csv
 ```
 As you can see, `removefiles()` removes everything except EPW files, IDFs, .py scripts and the hourly CSV values which contains the results of the simulations.
+
+## Renaming EPWs for later data analysis
+

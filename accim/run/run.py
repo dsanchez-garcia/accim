@@ -41,13 +41,14 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_vers
     """
 
     fullEPversionsList = [
-        'ep91',
-        'ep92',
-        'ep93',
-        'ep94',
-        'ep95',
-        'ep96',
-        'ep22.2'
+        '9.1',
+        '9.2',
+        '9.3',
+        '9.4',
+        '9.5',
+        '9.6',
+        '22.1',
+        '22.2'
     ]
 
     if EnergyPlus_version is None:
@@ -55,19 +56,21 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_vers
         print(fullEPversionsList)
         EnergyPlus_version = input('Please enter the desired EnergyPlus version: ')
 
-    if EnergyPlus_version.lower() == 'ep91':
+    if EnergyPlus_version.lower() == '9.1':
         iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == 'ep92':
+    elif EnergyPlus_version.lower() == '9.2':
         iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == 'ep93':
+    elif EnergyPlus_version.lower() == '9.3':
         iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == 'ep94':
+    elif EnergyPlus_version.lower() == '9.4':
         iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == 'ep95':
+    elif EnergyPlus_version.lower() == '9.5':
         iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == 'ep96':
+    elif EnergyPlus_version.lower() == '9.6':
         iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == 'ep22.2':
+    elif EnergyPlus_version.lower() == '22.1':
+        iddfile = 'C:\EnergyPlusV22-1-0\Energy+.idd'
+    elif EnergyPlus_version.lower() == '22.2':
         iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
     else:
         while EnergyPlus_version.lower() not in fullEPversionsList:

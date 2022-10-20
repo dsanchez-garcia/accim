@@ -244,7 +244,7 @@ class Table:
                  datasets: list = None,
                  source_concatenated_csv_filepath: str = None,
                  frequency: str = None,
-                 sum_or_mean: str = None,
+                 frequency_sum_or_mean: str = None,
                  standard_outputs: bool = None,
                  level: list = None,
                  level_sum_or_mean: list = None,
@@ -263,7 +263,7 @@ class Table:
 
         :param frequency: A list of strings.
         Strings can be 'timestep', 'hourly', 'daily', 'monthly' and/or 'runperiod'.
-        :param sum_or_mean: A string. Can be 'sum' or 'mean'.
+        :param frequency_sum_or_mean: A string. Can be 'sum' or 'mean'.
         Aggregates the rows based on the defined frequency by sum or mean.
         :param standard_outputs: A bool, can be True or False.
         Used to consider only standard outputs from accim.
@@ -273,10 +273,14 @@ class Table:
         Used to create the columns for levels preciously stated by summing and/or averaging.
         :param match_cities: A bool, can be True or False.
         Used to try to match the cities in the EPW file name with actual cities.
+        To be used if EPWs have not been previously renamed with rename_epw_files().
         :param manage_epw_names: A bool, can be True or False.
         Used to detect climate change scenario, country and sub-country codes and city.
         If a large number of CSVs is going to be computed
         or hourly values are going to be considered, it is recommended to be False.
+        To be used if EPWs have not been previously renamed with rename_epw_files().
+        :param split_epw_names: It splits the EPW name into Country_City_RCPscenario-Year format.
+        To be used if EPWs do have been previously renamed with rename_epw_files().
         :param normalised_energy_units: A bool, can be True or False.
         Used to show Wh or Wh/m2 units.
         :param rename_cols: A bool, can be True or False.
@@ -474,7 +478,7 @@ class Table:
 
                 for i in df.columns:
                     if i not in agg_dict:
-                        agg_dict.update({i: sum_or_mean})
+                        agg_dict.update({i: frequency_sum_or_mean})
 
                 # todo timestep frequency to be tested
                 if frequency == 'timestep':
@@ -515,8 +519,8 @@ class Table:
                 if i.startswith('freq'):
                     frequency = i.split('-')[1]
                     self.frequency = frequency
-                elif i.startswith('sum_or_mean'):
-                    sum_or_mean = i.split('-')[1]
+                elif i.startswith('frequency_sum_or_mean'):
+                    frequency_sum_or_mean = i.split('-')[1]
                 elif i.startswith('standard_outputs'):
                     standard_outputs = i.split('-')[1]
             cols = df.columns.tolist()
@@ -583,7 +587,7 @@ class Table:
             # df.to_excel(
             #     f'{concatenated_csv_name}'
             #     f'[freq-{frequency}'
-            #     f'[sum_or_mean-{sum_or_mean}'
+            #     f'[frequency_sum_or_mean-{frequency_sum_or_mean}'
             #     f'[standard_outputs-{standard_outputs}'
             #     f'[CSVconcatenated.xlsx'
             # )
@@ -593,7 +597,7 @@ class Table:
             df.to_csv(
                 f'{concatenated_csv_name}'
                 f'[freq-{frequency}'
-                f'[sum_or_mean-{sum_or_mean}'
+                f'[frequency_sum_or_mean-{frequency_sum_or_mean}'
                 f'[standard_outputs-{standard_outputs}'
                 f'[CSVconcatenated.csv'
             )
@@ -601,7 +605,7 @@ class Table:
                 rows_with_NaN.to_csv(
                     f'{concatenated_csv_name}'
                     f'[freq-{frequency}'
-                    f'[sum_or_mean-{sum_or_mean}'
+                    f'[frequency_sum_or_mean-{frequency_sum_or_mean}'
                     f'[standard_outputs-{standard_outputs}'
                     f'[Rows_with_NaNs.csv'
                 )
@@ -609,14 +613,14 @@ class Table:
                 not_correct_agg.to_csv(
                     f'{concatenated_csv_name}'
                     f'[freq-{frequency}'
-                    f'[sum_or_mean-{sum_or_mean}'
+                    f'[frequency_sum_or_mean-{frequency_sum_or_mean}'
                     f'[standard_outputs-{standard_outputs}'
                     f'[Rows_not_corr_agg.csv'
                 )
             return
 
         # if len(rows_with_NaN) > 0 or len(not_correct_agg) > 0:
-            #     f = open(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-{sum_or_mean}[standard_outputs-{standard_outputs}[Report.txt', "w+")
+            #     f = open(f'{concatenated_csv_name}[freq-{frequency}[frequency_sum_or_mean-{frequency_sum_or_mean}[standard_outputs-{standard_outputs}[Report.txt', "w+")
             #     if len(rows_with_NaN) > 0:
             #         f.write('The following rows have NaN values:\r\n')
             #         dfAsString = rows_with_NaN.to_string(header=True, index=True)
@@ -891,6 +895,7 @@ class Table:
         df['Source'] = df['Source'].str[:-4]
 
         # Step: splitting EPW names if requested
+        self.split_epw_names = split_epw_names
         if split_epw_names:
             df[[
                 'EPW_Country_name',
@@ -1291,7 +1296,7 @@ class Table:
                      type_of_table: str = 'all',
                      custom_cols: list = None,
                      # custom_rows: list = None,
-                     split_epw_names: bool = False
+                     # split_epw_names: bool = False
                      ):
         """
 
@@ -1339,7 +1344,8 @@ class Table:
             self.indexcols.extend(['Month', 'Day', 'Hour'])
         if 'timestep' in self.frequency:
             self.indexcols.extend(['Month', 'Day', 'Hour', 'Minute'])
-        if split_epw_names:
+            # todo change split_epw_names for a true or false variable
+        if self.split_epw_names:
             self.indexcols.extend([
                 'EPW_Country_name',
                 'EPW_City_or_subcountry',
