@@ -517,12 +517,12 @@ class Table:
             df = pd.read_csv(filepath_or_buffer=source_concatenated_csv_filepath)
             df = df.drop(columns=df.columns[0])
             for i in source_concatenated_csv_filepath.split('['):
-                if i.startswith('freq'):
+                if i.split('-')[0] == 'freq':
                     frequency = i.split('-')[1]
                     self.frequency = frequency
-                elif i.startswith('frequency_sum_or_mean'):
+                elif i.split('-')[0] == 'frequency_sum_or_mean':
                     frequency_sum_or_mean = i.split('-')[1]
-                elif i.startswith('standard_outputs'):
+                elif i.split('-')[0] == 'standard_outputs':
                     standard_outputs = i.split('-')[1]
             cols = df.columns.tolist()
             cols = cols[-1:] + cols[:-1]
