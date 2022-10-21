@@ -358,6 +358,7 @@ class Table:
                 'Zone Operative Temperature [C](Hourly)',
                 'Zone Operative Temperature',
                 'Whole Building:Facility Total HVAC Electricity Demand Rate [W](Hourly)',
+                'Whole Building Facility Total HVAC Electricity Demand Rate (kWh)',
                 'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
                 'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
                 '_Sch',
@@ -763,6 +764,12 @@ class Table:
                         df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
                             [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i]
                         ].sum(axis=1)
+                    else:
+                        if normalised_energy_units:
+                            if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
+                                df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
+                                    [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i]
+                                    ].sum(axis=1)
                     if any('mean' in j for j in level_sum_or_mean):
                         if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                             continue
@@ -774,17 +781,16 @@ class Table:
         if any('building' in i for i in level):
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
-                    df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                        [i for i in df.columns if output in i and '_pymod' not in i]
-                    ].sum(axis=1)
+                    df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i]].sum(axis=1)
+                else:
+                    if normalised_energy_units:
+                        if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
+                            df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i]].sum(axis=1)
                 if any('mean' in j for j in level_sum_or_mean):
                     if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                         continue
                     else:
-                        df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
-                            [i for i in df.columns
-                             if output in i and '_pymod' not in i]
-                        ].mean(axis=1)
+                        df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i]].mean(axis=1)
 
         # df.to_excel('checkpoint_02.xlsx')
 
@@ -831,11 +837,18 @@ class Table:
                              if 'Zone Floor Area' in i
                              and 'Building_Total_'.lower() in i.lower()][0]]
                     if any('building' in x for x in level):
+                        # try:
                         if 'Whole Building:Facility Total HVAC Electricity Demand Rate' in i:
-                            df[i] = df[i] / df[
-                                [i for i in df.columns
-                                 if 'Zone Floor Area' in i
-                                 and 'Building_Total_'.lower() in i.lower()][0]]
+                            df[i] = df[i] / df[[i for i in df.columns if 'Zone Floor Area' in i and 'Building_Total_'.lower() in i.lower()][0]]
+                        # except IndexError:
+                        #     try:
+                        #         if 'Whole Building Facility Total HVAC Electricity Demand Rate' in i:
+                        #             df[i] = df[i] / df[
+                        #                 [i for i in df.columns
+                        #                  if 'Zone Floor Area' in i
+                        #                  and 'Building_Total_'.lower() in i.lower()][0]]
+                        #     except IndexError:
+                        #         print('Facility Total HVAC Electricity Demand Rate has not been computed in normalisez energy consumption.')
 
         # df.to_excel('checkpoint_03-0.xlsx')
 
@@ -1291,6 +1304,8 @@ class Table:
 
         # df.to_excel('checkpoint_04.xlsx')
 
+    def df(self):
+        return self.df
 
     def format_table(self,
                      type_of_table: str = 'all',
@@ -1315,7 +1330,7 @@ class Table:
 
         self.df = self.df_backup
 
-        self.split_epw_names = split_epw_names
+        # self.split_epw_names = split_epw_names
 
         self.indexcols = [
             'Date/Time',

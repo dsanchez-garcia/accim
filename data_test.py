@@ -1,4 +1,7 @@
 from accim.data.datawrangling import Table
+# import os
+# os.listdir()
+
 dataset_hourly = Table(
     frequency='hourly',
     frequency_sum_or_mean='sum',
@@ -9,5 +12,4 @@ dataset_hourly = Table(
     # normalised_energy_units=False
 )
 
-import os
-os.listdir()
+dataset_hourly.df
