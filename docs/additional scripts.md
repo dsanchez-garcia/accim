@@ -97,3 +97,5 @@ As you can see, `removefiles()` removes everything except EPW files, IDFs, .py s
 
 ## Renaming EPWs for later data analysis
 
+You can interact with the code in the following link of Binder:
+https://hub.gke2.mybinder.org/user/dsanchez-garcia-accim-puea0let/lab/tree/docs/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
