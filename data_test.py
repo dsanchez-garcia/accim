@@ -69,8 +69,11 @@ dataset_hourly.format_table(
 ## Figures
 
 dataset_hourly.generate_fig_data(
-    vars_to_gather_rows=['ComfMod'],
+    vars_to_gather_rows=['ComfMod', 'Category'],
     vars_to_gather_cols=['EPW_City_or_subcountry'],
+
+    detailed_rows=['CM_0[CA_3', 'CM_3[CA_3'],
+
     data_on_x_axis='BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)',
     data_on_y_main_axis=[
         [
@@ -136,12 +139,12 @@ dataset_hourly.scatter_plot(
 
 dataset_hourly.generate_fig_data(
     vars_to_gather_rows=['EPW_City_or_subcountry'],
-    vars_to_gather_cols=['ComfMod'],
+    vars_to_gather_cols=['ComfMod', 'Category'],
     adap_vs_stat_data_y_main=[
         'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
         'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
     ],
-    # baseline='CM_0',
+    baseline='CM_0[CA_1',
     colorlist_adap_vs_stat_data=[
         'b',
         'r',
