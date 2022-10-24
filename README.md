@@ -61,19 +61,26 @@ Once you run this code, you will be asked to enter some information at the termi
         confirmGen=bool # True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. For instance: confirmGen=False,
     )
 
+You can see and execute a Jupyter Notebook in the link below:  
+https://hub.gke2.mybinder.org/user/dsanchez-garcia-accim-ae791agc/lab/tree/docs/jupyter_notebooks/addAccis/using_addAccis.ipynb
+
+
 #### Usage: renaming epw files for later data analysis
 
-You can see a Jupyter notebook in the link below:
+You can see and execute a Jupyter notebook in the link below:  
 https://hub.gke2.mybinder.org/user/dsanchez-garcia-accim-ae791agc/lab/tree/docs/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
 
 
 #### Usage: running simulations
 
-
+You can see the documentation at readthedocs:  
+https://accim.readthedocs.io/en/latest/additional%20scripts.html#running-accim-output-idfs
 
 #### Usage: functions and methods for data analysis; making figures and tables
 
+You can see and execute a Jupyter Notebook in the link below:  
 
+https://hub.gke2.mybinder.org/user/dsanchez-garcia-accim-ae791agc/lab/tree/docs/jupyter_notebooks/Table/using_Table.ipynb
 
 ### Documentation
 
