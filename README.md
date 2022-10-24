@@ -23,7 +23,7 @@ First of all, you need to install the package:
 
     pip install accim
 
-#### Usage
+#### Usage: transforming PMV-based into adaptive setpoint temperatures
 
 This is a very brief explanation of the usage. Therefore, if you don't get the results you expected or get some error, I would recommend reading the 'how to use' section at the documentation in the link below.
 
@@ -60,6 +60,20 @@ Once you run this code, you will be asked to enter some information at the termi
         verboseMode=bool # verboseMode: True to print all process in screen, False to not to print it. Default is True. For instance: verboseMode=True,
         confirmGen=bool # True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. For instance: confirmGen=False,
     )
+
+#### Usage: renaming epw files for later data analysis
+
+You can see a Jupyter notebook in the link below:
+https://hub.gke2.mybinder.org/user/dsanchez-garcia-accim-ae791agc/lab/tree/docs/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
+
+
+#### Usage: running simulations
+
+
+
+#### Usage: functions and methods for data analysis; making figures and tables
+
+
 
 ### Documentation
 
