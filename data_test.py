@@ -39,6 +39,34 @@ dataset_hourly.format_table(
 )
 
 ## Wrangled table
+from accim.data.datawrangling import Table
+dataset_monthly = Table(
+    #datasets=list Since we are not specifying any list, it will use all available CSVs in the folder
+    frequency='monthly',
+    frequency_sum_or_mean='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    standard_outputs=True,
+    level=['building'],
+    level_sum_or_mean=['sum'],
+    #match_cities=bool Only used when EPW file has NOT been previously renamed
+    #manage_epw_names=bool Only used when EPW file has NOT been previously renamed
+    split_epw_names=True, #to split EPW names based on the format Country_City_RCPscenario-YEar
+)
+
+dataset_monthly.format_table(
+    type_of_table='custom',
+    custom_cols=[
+        'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
+        'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
+    ]
+)
+
+dataset_monthly.wrangled_table(
+    reshaping='unstack',
+    vars_to_gather=['ComfMod', 'Category'],
+    baseline='CM_0[CA_1',
+    comparison_mode='baseline compared to others',
+    comparison_cols=['relative', 'absolute']
+)
 
 # dataset_hourly.wrangled_table(
 #     reshaping='unstack',
@@ -60,9 +88,71 @@ dataset_hourly.format_table(
 #         'HVACmode'
 #     ]
 # )
+##
 
+dataset_runperiod = Table(
+    #datasets=list Since we are not specifying any list, it will use all available CSVs in the folder
+    frequency='runperiod',
+    frequency_sum_or_mean='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    standard_outputs=True,
+    level=['building'],
+    level_sum_or_mean=['sum'],
+    #match_cities=bool Only used when EPW file has NOT been previously renamed
+    #manage_epw_names=bool Only used when EPW file has NOT been previously renamed
+    split_epw_names=True, #to split EPW names based on the format Country_City_RCPscenario-YEar
+)
 
+dataset_runperiod.format_table(
+    type_of_table='custom',
+    custom_cols=[
+        'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
+        'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
+    ]
+)
 
+dataset_runperiod.wrangled_table(
+    reshaping='pivot',
+    vars_to_gather=['ComfMod', 'Category'],
+    baseline='CM_0[CA_1',
+    comparison_mode='baseline compared to others',
+    comparison_cols=['relative', 'absolute']
+)
+
+dataset_runperiod.wrangled_df_pivoted
+
+##
+import os
+from accim.data.datawrangling import Table
+
+dataset = [i for i in os.listdir() if i.endswith('.csv') and 'CA_3' in i]
+dataset_runperiod_simplified_1 = Table(
+    datasets=dataset,
+    frequency='runperiod',
+    frequency_sum_or_mean='sum',
+    # this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    standard_outputs=True,
+    level=['building'],
+    level_sum_or_mean=['sum'],
+    # match_cities=bool Only used when EPW file has NOT been previously renamed
+    # manage_epw_names=bool Only used when EPW file has NOT been previously renamed
+    split_epw_names=True,  # to split EPW names based on the format Country_City_RCPscenario-YEar
+)
+
+dataset_runperiod_simplified_1.format_table(
+    type_of_table='custom',
+    custom_cols=[
+        'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
+        'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
+    ]
+)
+
+dataset_runperiod_simplified_1.wrangled_table(
+    reshaping='pivot',
+    vars_to_gather=['ComfMod'],
+    baseline='CM_0',
+    comparison_mode='baseline compared to others',
+    comparison_cols=['relative', 'absolute']
+)
 
 
 
