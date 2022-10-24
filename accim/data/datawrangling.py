@@ -1785,7 +1785,7 @@ class Table:
 
         if len(vars_to_gather_rows) == 0:
             print('In relation to the variables to be gathered in rows,')
-            self.enter_vars_to_gather(vars_to_gather_cols)
+            self.enter_vars_to_gather(vars_to_gather_rows)
         if len(vars_to_gather_cols) == 0:
             print('In relation to the variables to be gathered in columns,')
             self.enter_vars_to_gather(vars_to_gather_cols)
@@ -2136,8 +2136,8 @@ class Table:
                         if len(self.data_on_y_sec_axis) > 1:
                             if len(self.y_list_sec[i][j]) >= 1:
                                 if j < (len(cols) - 1):
-                                    # sec_y_axis[i][j][k].set_yticklabels([])
-                                    sec_y_axis[i][j][k].set_yticks([], [])
+                                    sec_y_axis[i][j][k].set_yticklabels([])
+                                    sec_y_axis[i][j][k].set_yticks([])
                                 if j == (len(cols) - 1):
                                     sec_y_axis[i][j][k].set_ylabel(self.data_on_y_sec_axis[k][0])
                                     sec_y_axis[i][j][k].spines["right"].set_position(("axes", 1 + k * 0.15))
