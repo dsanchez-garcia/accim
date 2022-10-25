@@ -3,7 +3,7 @@
 ### Renaming epw files for later data analysis
 
 You can see a Jupyter Notebook in the link below:  
-`https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb <https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb>`_
+[https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb](https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb)
 
 You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb  
 The path should be something like this, with your username instead of YOUR_USERNAME:  
