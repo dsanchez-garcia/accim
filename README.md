@@ -32,7 +32,7 @@ This is a very brief explanation of the usage. Therefore, if you don't get the r
 accim will take as input IDF files those located at the same path as the script. You only need to run the following code:
 
 
-#### 2.2.1.1 Quick version
+#### 2.2.1.1 Short version
 
     from accim.sim import accis
     accis.addAccis()
