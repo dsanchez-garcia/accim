@@ -7,16 +7,19 @@ You can see a Jupyter Notebook in the link below:
 
 You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb  
 The path should be something like this, with your username instead of YOUR_USERNAME:  
-C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\rename_epw_files\using_rename_epw_files.ipynb
+
+_C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\rename_epw_files\using_rename_epw_files.ipynb_
 
 ### Running simulations
 
 You can see a Jupyter Notebook in the link below:  
-https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
+
+[https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb](https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb)
 
 You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb  
 The path should be something like this, with your username instead of YOUR_USERNAME:  
-C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\runEp\using_runEp.ipynb
+
+_C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\runEp\using_runEp.ipynb_
 
 This script has been created by eppy's development team (https://eppy.readthedocs.io/en/latest/runningeplus.html, specifically from section 'Running in parallel processes using Generators'), however I did some changes. Anyway, you probably should check out eppy package, since it's absolutely awesome.
 
@@ -114,8 +117,9 @@ As you can see, `removefiles()` removes everything except EPW files, IDFs, .py s
 ### Functions and methods for data analysis; making figures and tables
 
 You can see a Jupyter Notebook in the link below:  
-https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
+[https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb](https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb)
 
 You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb  
 The path should be something like this, with your username instead of YOUR_USERNAME:  
-C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\Table\using_Table.ipynb
+
+_C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\Table\using_Table.ipynb_
