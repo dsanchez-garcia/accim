@@ -2,9 +2,9 @@
 
 from accim.sim import accis
 
-scriptTypeList = ['vrf']
+scriptTypeList = ['vrf_mm']
 outputsList = ['simplified', 'standard', 'timestep']
-EPlist = ['ep95']
+EPlist = ['22.2']
 
 for i in scriptTypeList:
     for j in outputsList:

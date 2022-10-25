@@ -9,8 +9,8 @@ class rename_epw_files:
         Renames the EPW files following the name convention 'Country_City_RCPscenario-Year'.
         The Country and City fields are computed based on the coordinates of the EPW,
         and the RCPscenario and Year are taken from the original name.
-        If no reference is found, the EPWs are considered to be  for Present scenario.
-        :param filelist: A list of the EPW files. If omitted, it will rename all EPWs in that folder.
+        If no reference is found, the sample_EPWs are considered to be  for Present scenario.
+        :param filelist: A list of the EPW files. If omitted, it will rename all sample_EPWs in that folder.
         :param confirm_renaming: True or False, #to skip renaming confirmation on prompt command or console
         :param confirm_deletion: True or False #to skip deletion confirmation on prompt command or console
         """
@@ -273,14 +273,14 @@ class Table:
         Used to create the columns for levels preciously stated by summing and/or averaging.
         :param match_cities: A bool, can be True or False.
         Used to try to match the cities in the EPW file name with actual cities.
-        To be used if EPWs have not been previously renamed with rename_epw_files().
+        To be used if sample_EPWs have not been previously renamed with rename_epw_files().
         :param manage_epw_names: A bool, can be True or False.
         Used to detect climate change scenario, country and sub-country codes and city.
         If a large number of CSVs is going to be computed
         or hourly values are going to be considered, it is recommended to be False.
-        To be used if EPWs have not been previously renamed with rename_epw_files().
+        To be used if sample_EPWs have not been previously renamed with rename_epw_files().
         :param split_epw_names: It splits the EPW name into Country_City_RCPscenario-Year format.
-        To be used if EPWs do have been previously renamed with rename_epw_files().
+        To be used if sample_EPWs do have been previously renamed with rename_epw_files().
         :param normalised_energy_units: A bool, can be True or False.
         Used to show Wh or Wh/m2 units.
         :param rename_cols: A bool, can be True or False.

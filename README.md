@@ -11,33 +11,35 @@ In research terms, this is a proposal for a paradigm shift, from using fixed PMV
 
 In terms of code, this is a python package that transforms fixed setpoint temperature building energy models into adaptive setpoint temperature energy models by adding the Adaptive Comfort Control Implementation Script (ACCIS). This package has been developed to be used in EnergyPlus building energy performance simulations.
 
-### Citation
+# 1. Citation
 
 If you use this package, please cite us:
 
 <div class="csl-entry">Sánchez-García, D., Bienvenido-Huertas, D., &#38; Rubio-Bellido, C. (2021). Computational approach to extend the air-conditioning usage to adaptive comfort: Adaptive-Comfort-Control-Implementation Script. <i>Automation in Construction</i>, <i>131</i>, 103900. https://doi.org/10.1016/j.autcon.2021.103900</div>
 
-### How to use
-#### Installation
+# 2. How to use
+## 2.1 Installation
 First of all, you need to install the package:
 
     pip install accim
 
-#### Usage: transforming PMV-based into adaptive setpoint temperatures
+## 2.2 Usage
+
+### 2.2.1 Transforming PMV-based into adaptive setpoint temperatures
 
 This is a very brief explanation of the usage. Therefore, if you don't get the results you expected or get some error, I would recommend reading the 'how to use' section at the documentation in the link below.
 
 accim will take as input IDF files those located at the same path as the script. You only need to run the following code:
 
 
-##### Quick version
+#### 2.2.1.1 Quick version
 
     from accim.sim import accis
     accis.addAccis()
 
 Once you run this code, you will be asked to enter some information at the terminal or python console to generate the output IDF files.
 
-##### Longer version
+#### 2.2.1.2 Longer version
 
     from accim.sim import accis
     accis.addAccis(
@@ -65,27 +67,27 @@ You can see and execute a Jupyter Notebook in the link below:
 https://hub.gke2.mybinder.org/user/dsanchez-garcia-accim-ae791agc/lab/tree/docs/jupyter_notebooks/addAccis/using_addAccis.ipynb
 
 
-#### Usage: renaming epw files for later data analysis
+### 2.2.2 Renaming epw files for later data analysis
 
 You can see and execute a Jupyter notebook in the link below:  
 https://hub.gke2.mybinder.org/user/dsanchez-garcia-accim-ae791agc/lab/tree/docs/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
 
 
-#### Usage: running simulations
+### 2.2.3 Running simulations
 
 You can see the documentation at readthedocs:  
 https://accim.readthedocs.io/en/latest/additional%20scripts.html#running-accim-output-idfs
 
-#### Usage: functions and methods for data analysis; making figures and tables
+### 2.2.4 Functions and methods for data analysis; making figures and tables
 
 You can see and execute a Jupyter Notebook in the link below:  
 
 https://hub.gke2.mybinder.org/user/dsanchez-garcia-accim-ae791agc/lab/tree/docs/jupyter_notebooks/Table/using_Table.ipynb
 
-### Documentation
+# 3. Documentation
 
 The documentation is at: https://accim.readthedocs.io/en/master/
 
-### Credits
+# 4. Credits
 
 It wouldn't have been possible to develop this python package without eppy, so thank you for such an awesome work.

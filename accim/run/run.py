@@ -4,7 +4,7 @@ Multiprocessing runs.
 using generators instead of a list
 when you are running a 100 files you have to use generators
 original script: https://eppy.readthedocs.io/en/latest/runningeplus.html
-slightly modified so that takes multiple EPWs located in the local folder
+slightly modified so that takes multiple sample_EPWs located in the local folder
 """
 
 import os
@@ -111,9 +111,9 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_vers
     print(f'The IDFs we are going to run are:')
     print(*idfnames, sep="\n")
     print(f' and the No. of IDFs is going to be {len(idfnames)}')
-    print(f'The EPWs we are going to run are:')
+    print(f'The sample_EPWs we are going to run are:')
     print(*epwnames, sep="\n")
-    print(f' and the No. of EPWs is going to be {len(epwnames)}')
+    print(f' and the No. of sample_EPWs is going to be {len(epwnames)}')
 
     print('Therefore, the simulations are going to be:')
     idfs = []

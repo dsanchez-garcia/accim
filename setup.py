@@ -105,7 +105,8 @@ setuptools.setup(
            '*.jpg',
            '*.png',
            '*.xlsx',
-           '*.xls'
+           '*.xls',
+           '*.ipynb'
             ]
        },
     python_requires='<3.10',
