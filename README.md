@@ -47,7 +47,7 @@ Once you run this code, you will be asked to enter some information at the termi
         Outputs=str, # Outputs: 'simplified', 'standard' or 'timestep'. For instance: Outputs='standard',
         EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', or '22.2'. For instance: EnergyPlus_version='22.2',
         TempCtrl=str, # TempCtrl: 'temperature' or 'temp', or 'pmv'. For instance: TempCtrl='temp',
-        ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 16. For instance: ComfStand=[0, 1, 2, 3],
+        ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 20. For instance: ComfStand=[0, 1, 2, 3],
         CAT=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: CAT=[3, 80],
         ComfMod=list, # it is Comfort Mode. Can be 0, 1, 2 or 3. For instance: ComfMod=[0, 3],
         HVACmode=list, # it is the HVAC mode. 0 for Full AC, 1 for NV and 2 for MM. For instance: HVACmode=[0, 2],
@@ -63,15 +63,21 @@ Once you run this code, you will be asked to enter some information at the termi
         confirmGen=bool # True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. For instance: confirmGen=False,
     )
 
-You can see and execute a Jupyter Notebook in the link below:  
-https://hub.gke2.mybinder.org/user/dsanchez-garcia-accim-ae791agc/lab/tree/docs/jupyter_notebooks/addAccis/using_addAccis.ipynb
+You can see a Jupyter Notebook in the link below:  
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb  
 
+You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb  
+The path should be something like this, with your username instead of YOUR_USERNAME:  
+C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\addAccis\using_addAccis.ipynb
 
 ### 2.2.2 Renaming epw files for later data analysis
 
-You can see and execute a Jupyter notebook in the link below:  
-https://hub.gke2.mybinder.org/user/dsanchez-garcia-accim-ae791agc/lab/tree/docs/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
+You can see a Jupyter Notebook in the link below:  
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
 
+You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb  
+The path should be something like this, with your username instead of YOUR_USERNAME:  
+C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\rename_epw_files\using_rename_epw_files.ipynb
 
 ### 2.2.3 Running simulations
 
@@ -80,13 +86,16 @@ https://accim.readthedocs.io/en/latest/additional%20scripts.html#running-accim-o
 
 ### 2.2.4 Functions and methods for data analysis; making figures and tables
 
-You can see and execute a Jupyter Notebook in the link below:  
+You can see a Jupyter Notebook in the link below:  
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
 
-https://hub.gke2.mybinder.org/user/dsanchez-garcia-accim-ae791agc/lab/tree/docs/jupyter_notebooks/Table/using_Table.ipynb
+You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb  
+The path should be something like this, with your username instead of YOUR_USERNAME:  
+C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\Table\using_Table.ipynb
 
 # 3. Documentation
 
-The documentation is at: https://accim.readthedocs.io/en/master/
+Detailed documentation, including the explanation of the different arguments, is at: https://accim.readthedocs.io/en/master/
 
 # 4. Credits
 
