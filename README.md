@@ -81,8 +81,12 @@ C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\
 
 ### 2.2.3 Running simulations
 
-You can see the documentation at readthedocs:  
-https://accim.readthedocs.io/en/latest/additional%20scripts.html#running-accim-output-idfs
+You can see a Jupyter Notebook in the link below:  
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
+
+You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb  
+The path should be something like this, with your username instead of YOUR_USERNAME:  
+C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\runEp\using_runEp.ipynb
 
 ### 2.2.4 Functions and methods for data analysis; making figures and tables
 
