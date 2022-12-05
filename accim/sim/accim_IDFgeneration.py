@@ -25,6 +25,8 @@ def inputData(self, ScriptType: str = None):
         '18 = MEX Oropeza DryTropic': [[80, 90], [0, 1, 2, 3]],
         '19 = MEX Oropeza Temperate': [[80, 90], [0, 1, 2, 3]],
         '20 = MEX Oropeza HumTropic': [[80, 90], [0, 1, 2, 3]],
+        '21 = CHL Perez-Fargallo': [[80, 90], [2, 3]],
+
     }
 
 
@@ -61,7 +63,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'ASHRAE 55 Static setpoints (calculated with Clima Tool)',
                 1: 'ASHRAE 55 Adaptive setpoints when applicable, otherwise CTE',
-                2: 'ASHRAE 55 Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'ASHRAE 55 Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'ASHRAE 55 Adaptive setpoints when applicable, otherwise ASHRAE 55 Adaptive setpoints horizontally extended',
             }
         },
@@ -74,7 +76,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'COOLBIZ Static setpoints',
                 1: 'Rijal Model Adaptive setpoints when applicable, otherwise COOLBIZ Static setpoints',
-                2: 'Rijal Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'Rijal Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'Rijal Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -87,7 +89,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 # 0: 'X Static setpoints',
                 # 1: 'GBT50785 Cold Model Adaptive setpoints when applicable, otherwise X Static setpoints',
-                # 2: 'GBT50785 Cold Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                # 2: 'GBT50785 Cold Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'GBT50785 Cold Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -100,7 +102,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 # 0: 'X Static setpoints',
                 # 1: 'GBT50785 HotMild Model Adaptive setpoints when applicable, otherwise X Static setpoints',
-                # 2: 'GBT50785 HotMild Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                # 2: 'GBT50785 HotMild Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'GBT50785 HotMild Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -113,7 +115,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 # 0: 'X Static setpoints',
                 # 1: 'Yang Model Adaptive setpoints when applicable, otherwise X Static setpoints',
-                2: 'Yang Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'Yang Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'Yang Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -127,7 +129,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'Indian Building Code Static setpoints',
                 1: 'IMAC C NV Model Adaptive setpoints when applicable, otherwise Indian Building Code Static setpoints',
-                2: 'IMAC C NV Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'IMAC C NV Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'IMAC C NV Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -141,7 +143,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'Indian Building Code Static setpoints',
                 1: 'IMAC C MM Model Adaptive setpoints when applicable, otherwise Indian Building Code Static setpoints',
-                2: 'IMAC C MM Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'IMAC C MM Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'IMAC C MM Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -154,7 +156,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'Indian Building Code Static setpoints',
                 1: 'IMAC R 7DRM Model Adaptive setpoints when applicable, otherwise Indian Building Code Static setpoints',
-                2: 'IMAC R 7DRM Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'IMAC R 7DRM Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'IMAC R 7DRM Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -167,7 +169,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'Indian Building Code Static setpoints',
                 1: 'IMAC R 30DRM Model Adaptive setpoints when applicable, otherwise Indian Building Code Static setpoints',
-                2: 'IMAC R 30DRM Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'IMAC R 30DRM Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'IMAC R 30DRM Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -180,7 +182,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'Indian Building Code Static setpoints',
                 1: 'Dhaka Model Adaptive setpoints when applicable, otherwise Indian Building Code Static setpoints',
-                2: 'Dhaka Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'Dhaka Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'Dhaka Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -193,7 +195,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'Romanian Building Code Static setpoints',
                 1: 'Udrea Model Adaptive setpoints when applicable, otherwise Romanian Building Code Static setpoints',
-                2: 'Udrea Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'Udrea Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'Udrea Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -206,7 +208,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'Australian Building Code Static setpoints',
                 1: 'Williamson Model Adaptive setpoints when applicable, otherwise Australian Building Code Static setpoints',
-                2: 'Williamson Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'Williamson Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'Williamson Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -219,7 +221,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'Australian Building Code Static setpoints',
                 1: 'DeDear Model Adaptive setpoints when applicable, otherwise Australian Building Code Static setpoints',
-                2: 'DeDear Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'DeDear Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'DeDear Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -232,7 +234,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'Brazilian Building Code Static setpoints',
                 1: 'Rupp NV Model Adaptive setpoints when applicable, otherwise Brazilian Building Code Static setpoints',
-                2: 'Rupp NV Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'Rupp NV Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'Rupp NV Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -245,7 +247,7 @@ def inputData(self, ScriptType: str = None):
             'ComfMod': {
                 0: 'Brazilian Building Code Static setpoints',
                 1: 'Rupp AC Model Adaptive setpoints when applicable, otherwise Brazilian Building Code Static setpoints',
-                2: 'Rupp AC Model Adaptive setpoints when applicable, otherwise ASHRAE 55 Static setpoints',
+                2: 'Rupp AC Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'Rupp AC Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
@@ -301,10 +303,22 @@ def inputData(self, ScriptType: str = None):
                 3: 'Oropeza HumTropic Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
+        21: {
+            'name': '21 = CHL Perez-Fargallo',
+            'CAT': {
+                80: '80% acceptability',
+                90: '90% acceptability',
+            },
+            'ComfMod': {
+                2: 'Perez-Fargallo Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
+                3: 'Perez-Fargallo Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
+            }
+        },
+
     }
 
     print('The information you will be required to enter below will be used to generate the customised output IDFs:')
-    fullComfStandList = list(range(20 + 1))
+    fullComfStandList = list(range(len(CS_CA_CM_list_dict)))
     self.ComfStand_List = list(int(num) for num in input(
         'Enter the Comfort Standard numbers separated by space (\n'
         '0 = ESP CTE;\n'
@@ -328,6 +342,7 @@ def inputData(self, ScriptType: str = None):
         '18 = MEX Oropeza DryTropic;\n'
         '19 = MEX Oropeza Temperate;\n'
         '20 = MEX Oropeza HumTropic;\n'
+        '21 = CHL Perez-Fargallo;\n'
         '): '
     ).split())
     while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
@@ -595,6 +610,7 @@ def genIDF(self,
         18: '[CS_MEX Oropeza DryTropic',
         19: '[CS_MEX Oropeza Temperate',
         20: '[CS_MEX Oropeza HumTropic',
+        21: '[CS_CHL Perez-Fargallo',
     }
 
     outputlist = []
@@ -695,10 +711,10 @@ def genIDF(self,
                                                                     + '.idf'
                                                             )
                                                             outputlist.append(outputname)
-                elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]:
+                elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]:
                     for CAT_value in self.CAT_List:
                         if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-                                               20] and CAT_value not in range(80, 91, 10):
+                                               20, 21] and CAT_value not in range(80, 91, 10):
                             continue
                         elif ComfStand_value in [7, 8] and CAT_value not in range(80, 91, 5):
                             continue
@@ -940,10 +956,10 @@ def genIDF(self,
                                                                     # time.sleep(0.1)
                                                                     # pbar.update(1)
                                                                 idf1.savecopy(outputname)
-                    elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]:
+                    elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]:
                         for CAT_value in self.CAT_List:
                             if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-                                                   20] and CAT_value not in range(80, 91, 10):
+                                                   20, 21] and CAT_value not in range(80, 91, 10):
                                 continue
                             elif ComfStand_value in [7, 8] and CAT_value not in range(80, 91, 5):
                                 continue
