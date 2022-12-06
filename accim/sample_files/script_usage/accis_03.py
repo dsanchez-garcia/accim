@@ -1,6 +1,6 @@
 from accim.sim import accis
 accis.addAccis(
-    ScriptType='vrf',
+    ScriptType='vrf_mm',
     Outputs='standard',
     EnergyPlus_version='9.6',
     TempCtrl='temp',
