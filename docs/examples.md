@@ -80,6 +80,7 @@ Enter the Comfort Standard numbers separated by space (
 18 = MEX Oropeza DryTropic;
 19 = MEX Oropeza Temperate;
 20 = MEX Oropeza HumTropic;
+21 = CHL Perez-Fargallo;
 ): 1 2 7
           Are you sure the numbers are correct? [y or [] / n]: 
 For the comfort standard 1 = INT EN16798, the available categories you can choose are: 
