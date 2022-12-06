@@ -2,7 +2,7 @@ from accim.sim import accis
 accis.addAccis(
     ScriptType='vrf',
     Outputs='standard',
-    EnergyPlus_version='ep96',
+    EnergyPlus_version='9.6',
     TempCtrl='temp',
     ComfStand=[0, 1, 2, 3],
     CAT=[1, 2, 3, 80, 90],
