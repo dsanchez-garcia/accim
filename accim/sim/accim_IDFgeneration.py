@@ -232,7 +232,7 @@ def inputData(self, ScriptType: str = None):
                 90: '90% acceptability',
             },
             'ComfMod': {
-                0: 'Brazilian Building Code Static setpoints',
+                0: 'Brazilian Building Code Static setpoints (ABNT NBR 16401-2 Standard (2008))',
                 1: 'Rupp NV Model Adaptive setpoints when applicable, otherwise Brazilian Building Code Static setpoints',
                 2: 'Rupp NV Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'Rupp NV Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
@@ -245,7 +245,7 @@ def inputData(self, ScriptType: str = None):
                 90: '90% acceptability',
             },
             'ComfMod': {
-                0: 'Brazilian Building Code Static setpoints',
+                0: 'Brazilian Building Code Static setpoints (ABNT NBR 16401-2 Standard (2008))',
                 1: 'Rupp AC Model Adaptive setpoints when applicable, otherwise Brazilian Building Code Static setpoints',
                 2: 'Rupp AC Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'Rupp AC Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
