@@ -47,7 +47,7 @@ Once you run this code, you will be asked to enter some information at the termi
         Outputs=str, # Outputs: 'simplified', 'standard' or 'timestep'. For instance: Outputs='standard',
         EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', or '22.2'. For instance: EnergyPlus_version='22.2',
         TempCtrl=str, # TempCtrl: 'temperature' or 'temp', or 'pmv'. For instance: TempCtrl='temp',
-        ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 20. For instance: ComfStand=[0, 1, 2, 3],
+        ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 21. For instance: ComfStand=[0, 1, 2, 3],
         CAT=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: CAT=[3, 80],
         ComfMod=list, # it is Comfort Mode. Can be 0, 1, 2 or 3. For instance: ComfMod=[0, 3],
         HVACmode=list, # it is the HVAC mode. 0 for Full AC, 1 for NV and 2 for MM. For instance: HVACmode=[0, 2],
