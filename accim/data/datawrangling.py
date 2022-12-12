@@ -243,6 +243,7 @@ class Table:
     def __init__(self,
                  datasets: list = None,
                  source_concatenated_csv_filepath: str = None,
+                 csv_frequency: str = None,
                  frequency: str = None,
                  frequency_sum_or_mean: str = None,
                  standard_outputs: bool = None,
