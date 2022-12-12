@@ -114,7 +114,9 @@ def addAccis(
         'Simplified',
         'simplified',
         'Timestep',
-        'timestep'
+        'timestep',
+        'Runperiod',
+        'runperiod'
     ]
 
     fullEPversionsList = [
@@ -151,10 +153,10 @@ def addAccis(
                                "    for ExistingHVAC with mixed mode: ex_mm;\n"
                                "    for ExistingHVAC with full air-conditioning mode: ex_ac\n"
                                "    ): ")
-        Outputs = input("Enter the Output (standard, simplified or timestep): ")
+        Outputs = input("Enter the Output (standard, simplified, timestep or runperiod): ")
         while Outputs not in fullOutputsList:
             Outputs = input("   Output was not correct. "
-                            "Please, enter the Output (standard, simplified or timestep): ")
+                            "Please, enter the Output (standard, simplified, timestep or runperiod): ")
         EnergyPlus_version = input("Enter the EnergyPlus version (9.1 to 22.2): ")
         while EnergyPlus_version not in fullEPversionsList:
             EnergyPlus_version = input("    EnergyPlus version was not correct. "
@@ -265,6 +267,12 @@ def addAccis(
 
         if Outputs.lower() == 'timestep':
             z.addOutputVariablesTimestep(verboseMode=verboseMode)
+
+        if Outputs.lower() == 'runperiod':
+            z.addOutputVariablesRunperiod(
+                ScriptType=ScriptType,
+                verboseMode=verboseMode
+            )
 
         z.saveaccim(verboseMode=verboseMode)
         if verboseMode:

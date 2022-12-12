@@ -3266,6 +3266,73 @@ def addOutputVariablesBase(
     del EMSoutputvariablenamelist, outputnamelist, addittionaloutputs,
 
 
+def addOutputVariablesRunperiod(
+        self,
+        ScriptType: str = None,
+        verboseMode: bool = True
+):
+
+    """Add Output:Variable Runperiod objects for accim."""
+    runperiod_outputs = [
+        'Cooling Coil Total Cooling Rate',
+        'Heating Coil Heating Rate',
+        'Facility Total HVAC Electric Demand Power',
+        'Facility Total HVAC Electricity Demand Rate',
+        'Comfortable Hours_No Applicability',
+        'Comfortable Hours_Applicability',
+        'Discomfortable Applicable Hot Hours',
+        'Discomfortable Applicable Cold Hours',
+        'Discomfortable Non Applicable Hot Hours',
+        'Discomfortable Non Applicable Cold Hours',
+        'Ventilation Hours',
+        'AFN Zone Infiltration Volume',
+        'AFN Zone Infiltration Air Change Rate',
+        'Cooling Coil Total Cooling Rate',
+        'Heating Coil Heating Rate',
+
+    ]
+    if 'vrf' in ScriptType.lower():
+        runperiod_outputs.extend(
+            [
+                # todo if Rate exists, do not add Energy
+                # 'VRF Heat Pump Cooling Electricity Rate',
+                # 'VRF Heat Pump Heating Electricity Rate',
+                'VRF Heat Pump Cooling Electricity Energy',
+                'VRF Heat Pump Heating Electricity Energy',
+            ]
+        )
+
+    outputVariableNames = ([i.Variable_Name for i in self.idf1.idfobjects['Output:Variable']])
+
+    for outputvariable in runperiod_outputs:
+        if outputvariable in outputVariableNames:
+            if verboseMode:
+                print('Not added - '+outputvariable+' Output:Variable data')
+        elif outputvariable.startswith("WIP"):
+            if verboseMode:
+                print('Not added - '+outputvariable+' Output:Variable data because its WIP')
+        elif outputvariable.startswith('Adaptive Thermal Comfort Cost Index'):
+            if verboseMode:
+                print('Not added - '+outputvariable+' Output:Variable data because its ATCCI')
+        else:
+            self.idf1.newidfobject(
+                'Output:Variable',
+                Key_Value='*',
+                Variable_Name=outputvariable,
+                Reporting_Frequency='Runperiod',
+                Schedule_Name=''
+                )
+            if verboseMode:
+                print('Added - '+outputvariable+' Output:Variable data')
+    #        print([output for output in self.idf1.idfobjects['Output:Variable'] if output.Variable_Name == outputvariable])
+
+    if 'vrf' in ScriptType.lower():
+        outputs_to_remove = ([i for i in self.idf1.idfobjects['Output:Variable'] if 'runperiod' not in i.Reporting_Frequency.lower()])
+        for i in range(len(outputs_to_remove)):
+            firstoutput = self.idf1.idfobjects['Output:Variable'][-1]
+            self.idf1.removeidfobject(firstoutput)
+
+
 def addOutputVariablesTimestep(self, verboseMode: bool = True):
     """
     Add Output:Variable objects in timestep frequency.
