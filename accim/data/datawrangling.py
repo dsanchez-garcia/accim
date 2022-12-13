@@ -381,6 +381,7 @@ class Table:
             summed_dataframes = []
 
             for file in source_files:
+                #todo reduce number of decimals
 
                 # with open(file) as csv_file:
                 #     csv_reader = csv.reader(csv_file, delimiter=',')
