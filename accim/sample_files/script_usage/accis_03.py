@@ -1,7 +1,9 @@
 from accim.sim import accis
 accis.addAccis(
     ScriptType='vrf_mm',
-    Outputs='standard',
+    Outputs_keep_existing=False,
+    Output_type='standard',
+    Output_freqs=['hourly'],
     EnergyPlus_version='9.6',
     TempCtrl='temp',
     ComfStand=[0, 1, 2, 3],

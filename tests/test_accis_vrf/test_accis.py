@@ -12,7 +12,7 @@ def test_addAccis():
             for k in EPlist:
                 accis.addAccis(
                     ScriptType=i,
-                    Outputs=j,
+                    Output_type=j,
                     EnergyPlus_version=k,
                     ComfStand=[1],
                     CAT=[1],

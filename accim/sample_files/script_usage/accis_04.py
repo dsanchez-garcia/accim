@@ -3,7 +3,7 @@
 from accim.sim import accis
 
 scriptTypeList = ['vrf_mm']
-outputsList = ['simplified', 'standard', 'timestep']
+outputsList = ['simplified', 'standard']
 EPlist = ['22.2']
 
 for i in scriptTypeList:
@@ -11,7 +11,9 @@ for i in scriptTypeList:
         for k in EPlist:
             accis.addAccis(
                 ScriptType=i,
-                Outputs=j,
+                Outputs_keep_existing=False,
+                Output_type=j,
+                Output_freqs=['daily'],
                 EnergyPlus_version=k,
                 TempCtrl='temp',
                 ComfStand=[1],

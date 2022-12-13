@@ -35,13 +35,15 @@ for VRFsystem with mixed-mode: vrf_mm;
 for ExistingHVAC with mixed mode: ex_mm;
 for ExistingHVAC with full air-conditioning mode: ex_ac
 ): vrf_mm
-Enter the Output (standard, simplified or timestep): standard
-Enter the EnergyPlus version (9.1 to 22.2): 22.2
-Enter the Temperature Control method (temperature or pmv): temp
+Do you want to keep the existing outputs (true or false)?: false
+Enter the Output type (standard, simplified or existing): standard
+Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): hourly runperiod
 ```
 where
 - ScriptType can be 'vrf_mm', 'vrf_ac', 'ex_mm' or 'ex_ac', and it refers to the type of functions as explained above
-- Outputs can be 'standard', 'simplified' or 'timestep', and it refers to the simulation results: 'standard' means that results will contain the full selection; 'simplified' means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and 'timestep' means that results are going to be the full selection in Timestep frequency, so this is only recommended for tests, or small number of simulations.
+- Existing outputs in the IDF can be kept if entered 'true'. Otherwise, if entered 'false', it will be removed for clarity purposes at results stage.
+- Output type can be 'standard', 'simplified' or 'existing', and it refers to the simulation results: 'standard' means that results will contain the full selection relevant to accim; 'simplified' means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and 'existing' means that results are going to be only the existings, so no additional output is going to be added.
+- Output frequencies can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies. In case of output type 'existing', the frequency won't have any effect.
 - EnergyPlus_version can be '9.1' to '9.6', '22.1' or '22.2'. It is the version of EnergyPlus you have installed in your computer. If you enter '9.1', accim will look for the E+9.1.0 IDD file in path "C:\\EnergyPlusV9-1-0".
 - Temperature Control method can be 'temperature' or 'temp', or 'pmv'. If 'temp' is used, the setpoint will be the operative temperature, otherwise if 'pmv' is used, the setpoint will be the PMV index.
 
@@ -59,7 +61,9 @@ Once you run the simulations, you might get some EnergyPlus warnings and severe 
 If you run `accis.addAccis(whateverScriptType, whateverOutputs, whateverEPversion, whateverTempCtrl)`, you will be asked in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
 ```
 >>> accis.addAccis(str, # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'
->>>                str, # Outputs: 'simplified', 'standard' or 'timestep'
+>>>                bool, # Outputs_keep_existing: True or False
+>>>                str, # Outputs_type: 'simplified', 'standard' or 'existing'
+>>>                list, # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
 >>>                str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', or '22.2'
 >>>                str, # TempCtrl: 'temperature' or 'temp', or 'pmv'
 >>>                list, # ComfStand, which is the Comfort Standard
@@ -81,8 +85,10 @@ If you run `accis.addAccis(whateverScriptType, whateverOutputs, whateverEPversio
 Some example of the usage could be:
 ```
 >>> accis.addAccis(ScriptType='vrf', # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'
->>>                Outputs='standard', # Outputs: 'simplified', 'standard' or 'timestep'
->>>                EnergyPlus_version='ep95', # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', or '22.2'
+>>>                Outputs_keep_existing=False, # Outputs: 'simplified', 'standard' or 'timestep'
+>>>                Output_type='standard', # Outputs: 'simplified', 'standard' or 'timestep'
+>>>                Output_freqs=['hourly', 'runperiod'], # Outputs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
+>>>                EnergyPlus_version='9.5', # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', or '22.2'
 >>>                TempCtrl='temp', # Temperature Control: 'temperature' or 'temp', or 'pmv'
 >>>                ComfStand=[0, 1, 2, 3], # ComfStand, which is the Comfort Standard
 >>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category
@@ -98,7 +104,7 @@ Some example of the usage could be:
 >>>                NameSuffix='standard' # Name Suffix: for example, just in case you want to clarify the outputs
 >>>                )
 ```
-If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs, EnergyPlus_version, TempCtrl, ComfStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
+If you specify the arguments when you call the function, you need to specify at least: ScriptType, Outputs_keep_existing, Output_type, Output_freqs, EnergyPlus_version, TempCtrl, ComfStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
 Each argument is explained below:
 
 - ComfStand: refers to the thermal comfort standard or model to be applied. Enter any number from 0 to 21 to select the comfort standard or model to be used; you can see which model is each number in the table below. Readthedocs doesn't render it properly, so please take a look at the [Github repository](https://github.com/dsanchez-garcia/accim/blob/master/docs/how%20to%20use.md). For example, if you enter '0 1 2 3', you'll get IDFs for CTE, EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for Japanese dwellings. If you don't enter any number, or if some of the numbers entered are not 0, 1, 2 or 3, it'll ask you to enter the numbers again.

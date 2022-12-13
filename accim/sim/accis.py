@@ -8,7 +8,10 @@ by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 
 def addAccis(
         ScriptType: str = None,
-        Outputs: str = None,
+        Output_type: str = None,
+        # todo
+        Output_freqs: any = None,
+        Outputs_keep_existing: bool = None,
         EnergyPlus_version: str = None,
         TempCtrl: str = None,
         ComfStand: any = None,
@@ -32,7 +35,7 @@ def addAccis(
     'vrf_mm' for VRFsystem with mixed-mode, 
     'ex_ac' for ExistingHVAC only with full air-conditioning mode, 
     'ex_mm' for ExistingHVAC with mixed-mode.
-    :param Outputs: The default is None. Can be 'standard', 'simplified' or 'timestep'.
+    :param Output_type: The default is None. Can be 'standard', 'simplified' or 'timestep'.
     :param EnergyPlus_version: The default is None. Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1' or '22.2'.
     :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
     :param ComfStand: The default is None.
@@ -97,7 +100,9 @@ def addAccis(
 
     objArgsDef = (
         ScriptType is not None,
-        Outputs is not None,
+        Output_type is not None,
+        Output_freqs is not None,
+        Outputs_keep_existing is not None,
         EnergyPlus_version is not None,
         TempCtrl is not None,
     )
@@ -108,13 +113,29 @@ def addAccis(
                           'ex_ac',
                           ]
 
-    fullOutputsList = [
+    fullOutputsTypeList = [
         'Standard',
         'standard',
         'Simplified',
         'simplified',
+        'Existing',
+        'existing',
+
         'Timestep',
         'timestep',
+        'Runperiod',
+        'runperiod'
+    ]
+
+    fullOutputsFreqList = [
+        'Timestep',
+        'timestep',
+        'Hourly',
+        'hourly',
+        'Daily',
+        'daily',
+        'Monthly',
+        'monthly',
         'Runperiod',
         'runperiod'
     ]
@@ -153,10 +174,21 @@ def addAccis(
                                "    for ExistingHVAC with mixed mode: ex_mm;\n"
                                "    for ExistingHVAC with full air-conditioning mode: ex_ac\n"
                                "    ): ")
-        Outputs = input("Enter the Output (standard, simplified, timestep or runperiod): ")
-        while Outputs not in fullOutputsList:
-            Outputs = input("   Output was not correct. "
-                            "Please, enter the Output (standard, simplified, timestep or runperiod): ")
+        Outputs_keep_existing = input('Do you want to keep the existing outputs (true or false)?: ')
+        while Outputs_keep_existing.lower() not in ['true', 'false']:
+            Outputs_keep_existing = input('The answer you entered is not valid. '
+                                          'Do you want to keep the existing outputs (true or false)?: ')
+        Output_type = input("Enter the Output type (standard, simplified or existing): ")
+        while Output_type not in fullOutputsTypeList:
+            Output_type = input("   Output type was not correct. "
+                            "Please, enter the Output type (standard, simplified or existing): ")
+        Output_freqs = list(freq for freq in input(
+            "Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): ").split())
+        while (not(all(elem in fullOutputsFreqList for elem in Output_freqs))):
+            Output_freqs = list(freq for freq in input(
+                "Some of the Output frequencies are not correct. "
+                "Please, enter the Output frequencies again separated by space "
+                "(timestep, hourly, daily, monthly, runperiod): ").split())
         EnergyPlus_version = input("Enter the EnergyPlus version (9.1 to 22.2): ")
         while EnergyPlus_version not in fullEPversionsList:
             EnergyPlus_version = input("    EnergyPlus version was not correct. "
@@ -177,12 +209,20 @@ def addAccis(
         raise ValueError(ScriptType + " is not a valid ScriptType. "
                                       "You must choose a ScriptType from the list above.")
     if verboseMode:
-        print('Outputs are: '+Outputs)
-    if Outputs not in fullOutputsList:
-        print('Valid Outputs: ')
-        print(fullOutputsList)
-        raise ValueError(Outputs + " is not a valid Output. "
+        print('Output type is: ' + Output_type)
+    if Output_type not in fullOutputsTypeList:
+        print('Valid Output type: ')
+        print(fullOutputsTypeList)
+        raise ValueError(Output_type + " is not a valid Output. "
                                    "You must choose a Output from the list above.")
+    if verboseMode:
+        print('Output frequencies are: ')
+        print(Output_freqs)
+    if not (all(elem in fullOutputsFreqList for elem in Output_freqs)):
+        print('Valid Output freqs: ')
+        print(fullOutputsFreqList)
+        raise ValueError('Some of the Output frequencies in '+Output_freqs + " is not a valid Output. "
+                                   "All Output frequencies must be included in the list above.")
     if verboseMode:
         print('EnergyPlus version is: '+EnergyPlus_version)
     if EnergyPlus_version not in fullEPversionsList:
@@ -252,27 +292,52 @@ def addAccis(
             z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
 
         z.addEMSPCMBase(verboseMode=verboseMode)
+        #todo continue here
+        if Outputs_keep_existing == 'true':
+            Outputs_keep_existing = True
+        elif Outputs_keep_existing == 'false':
+            Outputs_keep_existing = False
+        if Outputs_keep_existing is True:
+            pass
+        else:
+            z.removeExistingOutputVariables()
 
-        if Outputs.lower() == 'simplified':
-            z.addSimplifiedOutputVariables(
+        if Output_type.lower() == 'simplified':
+            z.addOutputVariablesSimplified(
+                Output_freqs=Output_freqs,
                 TempCtrl=TempCtrl,
                 verboseMode=verboseMode
             )
-        elif Outputs.lower() == 'standard':
-            z.addOutputVariablesBase(
+        elif Output_type.lower() == 'standard':
+            z.addOutputVariablesStandard(
+                Outputs_freq=Output_freqs,
                 ScriptType=ScriptType,
                 TempCtrl=TempCtrl,
                 verboseMode=verboseMode
             )
 
-        if Outputs.lower() == 'timestep':
-            z.addOutputVariablesTimestep(verboseMode=verboseMode)
+        # if Output_type.lower() == 'simplified':
+        #     z.addSimplifiedOutputVariables(
+        #         TempCtrl=TempCtrl,
+        #         verboseMode=verboseMode
+        #     )
+        # elif Output_type.lower() == 'standard':
+        #     z.addOutputVariablesBase(
+        #         ScriptType=ScriptType,
+        #         TempCtrl=TempCtrl,
+        #         verboseMode=verboseMode
+        #     )
+        #
+        # if Output_type.lower() == 'timestep':
+        #     z.addOutputVariablesTimestep(verboseMode=verboseMode)
+        #
+        # if Output_type.lower() == 'runperiod':
+        #     z.addOutputVariablesRunperiod(
+        #         ScriptType=ScriptType,
+        #         verboseMode=verboseMode
+        #     )
 
-        if Outputs.lower() == 'runperiod':
-            z.addOutputVariablesRunperiod(
-                ScriptType=ScriptType,
-                verboseMode=verboseMode
-            )
+        z.removeDuplicatedOutputVariables()
 
         z.saveaccim(verboseMode=verboseMode)
         if verboseMode:

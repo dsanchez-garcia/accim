@@ -1,13 +1,15 @@
 from accim.sim import accis
 
 STlist = ['ex_ac', 'ex_mm']
-outputlist = ['standard', 'simplified', 'timestep']
+outputlist = ['standard', 'simplified']
 
 for i in STlist:
     for j in outputlist:
         accis.addAccis(
             ScriptType='ex_ac',
-            Outputs='standard',
+            Outputs_keep_existing=True,
+            Output_type=j,
+            Output_freqs=['hourly'],
             EnergyPlus_version='22.2',
             TempCtrl='temp',
             ComfStand=[1],

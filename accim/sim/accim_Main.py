@@ -23,7 +23,12 @@ class accimJob():
         addOutputVariablesBase, \
         addOutputVariablesTimestep, \
         addSimplifiedOutputVariables, \
-        addOutputVariablesRunperiod
+        addOutputVariablesRunperiod, \
+        addOutputVariablesStandard, \
+        addOutputVariablesSimplified, \
+        removeExistingOutputVariables, \
+        removeDuplicatedOutputVariables
+
     from accim.sim.accim_ExistingHVAC import \
         addForscriptSchExistHVAC
     from accim.sim.accim_ExistingHVAC_EMS import \

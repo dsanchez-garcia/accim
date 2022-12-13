@@ -3041,6 +3041,7 @@ def addIntVarList(self, verboseMode: bool = True):
         print("Internal variables objects have been added")
 
 # todo add argument for mm outputvariables
+# todo to be removed
 def addOutputVariablesBase(
         self,
         ScriptType: str = None,
@@ -3265,7 +3266,7 @@ def addOutputVariablesBase(
 
     del EMSoutputvariablenamelist, outputnamelist, addittionaloutputs,
 
-
+# todo to be removed
 def addOutputVariablesRunperiod(
         self,
         ScriptType: str = None,
@@ -3332,7 +3333,7 @@ def addOutputVariablesRunperiod(
             firstoutput = self.idf1.idfobjects['Output:Variable'][-1]
             self.idf1.removeidfobject(firstoutput)
 
-
+# todo to be removed
 def addOutputVariablesTimestep(self, verboseMode: bool = True):
     """
     Add Output:Variable objects in timestep frequency.
@@ -3366,7 +3367,7 @@ def addOutputVariablesTimestep(self, verboseMode: bool = True):
 
     del fulloutputlist, outputlist
 
-
+# todo to be removed
 def addSimplifiedOutputVariables(
         self,
         TempCtrl: str = None,
@@ -3425,6 +3426,326 @@ def addSimplifiedOutputVariables(
             print('Added - '+addittionaloutput+' Output:Variable data')
 
     del addittionaloutputs
+
+
+
+def removeExistingOutputVariables(
+        self,
+):
+    """Remove existing Output:Variable objects for accim."""
+    EnvironmentalImpactFactorslist = ([output for output in self.idf1.idfobjects['Output:EnvironmentalImpactFactors']])
+    outputmeterlist = ([output for output in self.idf1.idfobjects['Output:Meter']])
+    alloutputs = ([output for output in self.idf1.idfobjects['Output:Variable']])
+
+    for i in range(len(EnvironmentalImpactFactorslist)):
+        firstEnvironmentalImpactFactor = self.idf1.idfobjects['Output:EnvironmentalImpactFactors'][-1]
+        self.idf1.removeidfobject(firstEnvironmentalImpactFactor)
+    for i in range(len(outputmeterlist)):
+        firstoutputmeter = self.idf1.idfobjects['Output:Meter'][-1]
+        self.idf1.removeidfobject(firstoutputmeter)
+    for i in range(len(alloutputs)):
+        firstoutput = self.idf1.idfobjects['Output:Variable'][-1]
+        self.idf1.removeidfobject(firstoutput)
+
+    del EnvironmentalImpactFactorslist, outputmeterlist, alloutputs, \
+        # firstEnvironmentalImpactFactor, firstoutputmeter, firstoutput
+
+def removeDuplicatedOutputVariables(
+        self,
+):
+    """Remove duplicated Output:Variable objects for accim."""
+    for freq in ['Timestep', 'Hourly', 'Daily', 'Monthly', 'Runperiod']:
+        alloutputs = (
+            [
+                output
+                for output
+                in self.idf1.idfobjects['Output:Variable']
+                if freq == output.Reporting_Frequency
+            ]
+        )
+        unique_list = []
+        duplicated_list = []
+        for i in alloutputs:
+            if i.Variable_Name not in unique_list:
+                unique_list.append(i)
+            else:
+                duplicated_list.append(i)
+        for j in range(len(duplicated_list)):
+            firstoutput = self.idf1.idfobjects['Output:Variable'][-1]
+            self.idf1.removeidfobject(firstoutput)
+    # del alloutputs, firstoutput, unique_list, duplicated_list
+
+
+def addOutputVariablesSimplified(
+        self,
+        Outputs_freq: any = None,
+        TempCtrl: str = None,
+        verboseMode: bool = True
+):
+    """
+    Add simplified Output:Variable objects for accim.
+
+    Remove all outputs and add only VFR outdoor unit consumption
+    and operative temperature.
+    """
+
+    additionaloutputs = [
+        # 'Zone Thermostat Operative Temperature',
+        'Zone Operative Temperature',
+        'Cooling Coil Total Cooling Rate',
+        'Heating Coil Heating Rate',
+    ]
+
+    if TempCtrl.lower() == 'pmv':
+        additionaloutputs.extend([
+            'Zone Thermal Comfort Fanger Model PMV',
+            'Zone Thermal Comfort Fanger Model PPD'
+        ])
+
+    for freq in Outputs_freq:
+        for addittionaloutput in additionaloutputs:
+            self.idf1.newidfobject(
+                'Output:Variable',
+                Key_Value='*',
+                Variable_Name=addittionaloutput,
+                Reporting_Frequency=freq.capitalize(),
+                Schedule_Name=''
+                )
+            if verboseMode:
+                print('Added - '+addittionaloutput+' Output:Variable data')
+
+    del additionaloutputs
+
+
+def addOutputVariablesStandard(
+        self,
+        Outputs_freq: any = None,
+        ScriptType: str = None,
+        TempCtrl: str = None,
+        verboseMode: bool = True):
+    """Add Output:Variable objects for accim."""
+
+    EMSoutputvariablenamelist = ([outputvariable.Name
+                           for outputvariable
+                           in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']])
+    addittionaloutputs = [
+        # 'Zone Thermostat Operative Temperature',
+        'Zone Operative Temperature',
+        'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
+        'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',
+        'Cooling Coil Total Cooling Rate',
+        'Heating Coil Heating Rate',
+        'Facility Total HVAC Electric Demand Power',
+        'Facility Total HVAC Electricity Demand Rate',
+        # todo maybe create a new output type to include this variable, to be used in case of tests
+        # 'AFN Surface Venting Window or Door Opening Factor',
+        'AFN Zone Infiltration Air Change Rate',
+        'AFN Zone Infiltration Volume'
+    ]
+    if TempCtrl.lower() == 'pmv':
+        addittionaloutputs.extend([
+            'Zone Thermal Comfort Fanger Model PMV',
+            'Zone Thermal Comfort Fanger Model PPD'
+        ])
+
+    for freq in Outputs_freq:
+        outputnamelist = (
+            [
+                output.Variable_Name
+                for output
+                in self.idf1.idfobjects['Output:Variable']
+                if output.Reporting_Frequency == freq.capitalize()
+            ]
+        )
+        for outputvariable in EMSoutputvariablenamelist:
+            if outputvariable in outputnamelist:
+                if verboseMode:
+                    print('Not added - '+outputvariable+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+            elif outputvariable.startswith("WIP"):
+                if verboseMode:
+                    print('Not added - '+outputvariable+' Output:Variable data because its WIP')
+            elif outputvariable.startswith('Adaptive Thermal Comfort Cost Index'):
+                if verboseMode:
+                    print('Not added - '+outputvariable+' Output:Variable data because its ATCCI')
+            else:
+                self.idf1.newidfobject(
+                    'Output:Variable',
+                    Key_Value='*',
+                    Variable_Name=outputvariable,
+                    Reporting_Frequency=freq.capitalize(),
+                    Schedule_Name=''
+                    )
+                if verboseMode:
+                    print('Added - '+outputvariable+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+        #        print([output for output in self.idf1.idfobjects['Output:Variable'] if output.Variable_Name == outputvariable])
+
+        for addittionaloutput in addittionaloutputs:
+            if addittionaloutput in outputnamelist:
+                if verboseMode:
+                    print('Not added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+            else:
+                self.idf1.newidfobject(
+                    'Output:Variable',
+                    Key_Value='*',
+                    Variable_Name=addittionaloutput,
+                    Reporting_Frequency=freq.capitalize(),
+                    Schedule_Name=''
+                    )
+                if verboseMode:
+                    print('Added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+
+        outputlist = (
+            [
+                output
+                for output
+                in self.idf1.idfobjects['Output:Variable']
+                if output.Reporting_Frequency == freq.capitalize()
+            ]
+        )
+        for i in outputlist:
+            for addittionaloutput in addittionaloutputs:
+                if addittionaloutput in i.Variable_Name:
+                    i.Schedule_Name = ''
+
+        siteAddOutputs = [
+            'Site Outdoor Air Drybulb Temperature',
+            'Site Wind Speed',
+            'Site Outdoor Air Relative Humidity'
+        ]
+
+        # other_site_outputs = [
+        #     'Site Outdoor Air Drybulb Temperature [C]',
+        #     'Site Outdoor Air Dewpoint Temperature [C]',
+        #     'Site Outdoor Air Wetbulb Temperature [C]',
+        #     'Site Outdoor Air Humidity Ratio [kgWater/kgAir]',
+        #     'Site Outdoor Air Relative Humidity [%]',
+        #     'Site Outdoor Air Barometric Pressure [Pa]',
+        #     'Site Wind Speed [m/s]',
+        #     'Site Wind Direction [deg]',
+        #     'Site Sky Temperature [C]',
+        #     'Site Horizontal Infrared Radiation Rate per Area [W/m2]',
+        #     'Site Difuse Solar Radiation Rate per Area [W/m2]',
+        #     'Site Direct Solar Radiation Rate per Area [W/m2]',
+        #     'Site Total Sky Cover []',
+        #     'Site Opaque Sky Cover []',
+        #     'Site Precipitation Depth [m]',
+        #     'Site Ground Refected Solar Radiation Rate per Area [W/m2]',
+        #     'Site Ground Temperature [C]',
+        #     'Site Surface Ground Temperature [C]',
+        #     'Site Deep Ground Temperature [C]',
+        #     'Site Simple Factor Model Ground Temperature [C]',
+        #     'Site Outdoor Air Enthalpy [J/kg]',
+        #     'Site Outdoor Air Density [kg/m3]',
+        #     'Site Solar Azimuth Angle [deg]',
+        #     'Site Solar Altitude Angle [deg]',
+        #     'Site Solar Hour Angle [deg]',
+        #     'Site Rain Status []',
+        #     'Site Snow on Ground Status []',
+        #     'Site Exterior Horizontal Sky Illuminance [lux]',
+        #     'Site Exterior Horizontal Beam Illuminance [lux]',
+        #     'Site Exterior Beam Normal Illuminance [lux]',
+        #     'Site Sky Difuse Solar Radiation Luminous Eﬀcacy [lum/W]',
+        #     'Site Beam Solar Radiation Luminous Eﬀcacy [lum/W]',
+        #     'Site Daylighting Model Sky Clearness []',
+        #     'Sky Brightness for Daylighting Calculation []',
+        #     'Site Daylight Saving Time Status []',
+        #     'Site Day Type Index []',
+        #     'Site Mains Water Temperature [C]',
+        # ]
+
+        for addittionaloutput in siteAddOutputs:
+            if addittionaloutput in outputnamelist:
+                if verboseMode:
+                    print('Not added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+            else:
+                self.idf1.newidfobject(
+                    'Output:Variable',
+                    Key_Value='Environment',
+                    Variable_Name=addittionaloutput,
+                    Reporting_Frequency=freq.capitalize(),
+                    Schedule_Name=''
+                    )
+                if verboseMode:
+                    print('Added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+
+        for zonename in self.zonenames:
+            self.idf1.newidfobject(
+                'Output:Variable',
+                Key_Value='AHST_Sch_'+zonename,
+                Variable_Name='Schedule Value',
+                Reporting_Frequency=freq.capitalize(),
+                Schedule_Name=''
+                )
+            if verboseMode:
+                print('Added - AHST_Sch_'+zonename+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+
+            self.idf1.newidfobject(
+                'Output:Variable',
+                Key_Value='ACST_Sch_'+zonename,
+                Variable_Name='Schedule Value',
+                Reporting_Frequency=freq.capitalize(),
+                Schedule_Name=''
+                )
+            if verboseMode:
+                print('Added - ACST_Sch_'+zonename+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+
+        # for zonename in self.zonenames_orig:
+        #     self.idf1.newidfobject(
+        #         'Output:Variable',
+        #         Key_Value=zonename,
+        #         Variable_Name='Zone Operative Temperature',
+        #         Reporting_Frequency=freq.capitalize(),
+        #         Schedule_Name=''
+        #         )
+        #     if verboseMode:
+        #         print('Added - '+zonename+' Reporting Frequency'+freq.capitalize()+' Zone Operative Temperature Output:Variable data')
+
+        if 'vrf' in ScriptType.lower():
+            VRFoutputs = [
+                'VRF Heat Pump Cooling Electricity Energy',
+                'VRF Heat Pump Heating Electricity Energy',
+            ]
+
+            for addittionaloutput in VRFoutputs:
+                self.idf1.newidfobject(
+                    'Output:Variable',
+                    Key_Value='*',
+                    Variable_Name=addittionaloutput,
+                    Reporting_Frequency=freq.capitalize(),
+                    Schedule_Name=''
+                )
+                if verboseMode:
+                    print('Added - ' + addittionaloutput +' Reporting Frequency'+freq.capitalize() + ' Output:Variable data')
+
+            for zonename in self.zonenames:
+                self.idf1.newidfobject(
+                    'Output:Variable',
+                    Key_Value=zonename + ' VRF Indoor Unit DX Cooling Coil',
+                    Variable_Name='Cooling Coil Total Cooling Rate',
+                    Reporting_Frequency=freq.capitalize(),
+                    Schedule_Name=''
+                )
+                if verboseMode:
+                    print('Added - ' + zonename + ' VRF Indoor Unit DX Cooling Coil'+' Reporting Frequency'+freq.capitalize() + ' Output:Variable data')
+
+                self.idf1.newidfobject(
+                    'Output:Variable',
+                    Key_Value=zonename + ' VRF Indoor Unit DX Heating Coil',
+                    Variable_Name='Heating Coil Heating Rate',
+                    Reporting_Frequency=freq.capitalize(),
+                    Schedule_Name=''
+                )
+                if verboseMode:
+                    print('Added - ' + zonename + ' VRF Indoor Unit DX Heating Coil'+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+
+    del EMSoutputvariablenamelist, outputnamelist, addittionaloutputs,
+
+
+
+
+
+
+
 
 
 def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
