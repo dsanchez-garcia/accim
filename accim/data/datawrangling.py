@@ -1,3 +1,70 @@
+def genCSVconcatenated(
+        frequency: str = None,
+        datasets_per_chunk: int = 50,
+        concatenated_csv_name: str = None,
+):
+    import pandas as pd
+    from accim.data.datawrangling import Table
+    from time import time
+    import os
+    import gc
+
+    start = time()
+
+    # freq = 'runperiod'
+
+    datasetlist_all = [
+        i for i in os.listdir() if
+        i.endswith('.csv')
+        and 'CSVconcatenated' not in i
+        and '[Rows_with_NaNs' not in i
+        and '[Rows_not_corr_agg' not in i
+    ]
+
+    chunklist = []
+    # datasets_per_chunk = 50
+    for i in range(0, len(datasetlist_all), datasets_per_chunk):
+        templist = datasetlist_all[i:i + datasets_per_chunk]
+        chunklist.append(templist)
+
+    # len(chunklist[-2])
+    len(chunklist)
+    for i in range(len(chunklist)):
+        z = Table(
+            datasets=chunklist[i],
+            frequency=frequency,
+            frequency_sum_or_mean='sum',
+            standard_outputs=True,
+            concatenated_csv_name=f'{concatenated_csv_name}_Part{str(i).zfill(4)}'
+        )
+        del z
+        gc.collect()
+
+
+    datasetlist_to_merge = [
+        i for i in os.listdir() if
+        i.endswith('.csv')
+        and f'{concatenated_csv_name}_Part' in i
+        and '[Rows_with_NaNs' not in i
+        and '[Rows_not_corr_agg' not in i
+        and frequency in i
+    ]
+
+    merged_datasets = []
+    for i in datasetlist_to_merge:
+        tempdf = pd.read_csv(i)
+        merged_datasets.append(tempdf)
+
+    concatenated_df = pd.concat(merged_datasets)
+    concatenated_df.to_csv(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv')
+
+    for i in datasetlist_to_merge:
+        os.remove(i)
+
+    end = time()
+    print('Time taken in seconds:')
+    print(end - start)
+
 class rename_epw_files:
     def __init__(
         self,
@@ -241,6 +308,8 @@ class rename_epw_files:
 class Table:
 
     def __init__(self,
+                 #todo si no hay path, os.listdir(), pero si hay os.listdir(path)
+                 path: str = None,
                  datasets: list = None,
                  source_concatenated_csv_filepath: str = None,
                  csv_frequency: str = None,
