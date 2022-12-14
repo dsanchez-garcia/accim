@@ -312,7 +312,7 @@ class Table:
                  path: str = None,
                  datasets: list = None,
                  source_concatenated_csv_filepath: str = None,
-                 csv_frequency: str = None,
+                 source_frequency: str = None,
                  frequency: str = None,
                  frequency_sum_or_mean: str = None,
                  standard_outputs: bool = None,
@@ -382,6 +382,9 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
+        if source_frequency not in ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']:
+            raise KeyError('The source frequency entered must be timestep, hourly, daily, monthly or runperiod.')
+
         # Step: generating concatenated dataframe.
         # If source_concatenated_csv_filepath is None, then specified csv files on list format
         # are considered, otherwise all csv in the folder are considered.
@@ -391,7 +394,11 @@ class Table:
             if len(datasets) > 0:
                 source_files = datasets
             else:
-                allfiles = glob.glob('*.csv', recursive=True)
+                # allfiles = glob.glob('*.csv', recursive=True)
+                if path is None:
+                    allfiles = [i for i in os.listdir() if i.endswith('.csv')]
+                else:
+                    allfiles = [i for i in os.listdir(path) if i.endswith('.csv')]
                 source_files = [f for f in allfiles if
                                 'Table.csv' not in f and
                                 'Meter.csv' not in f and
@@ -404,17 +411,18 @@ class Table:
                 # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
             cleaned_columns = [
+                #todo adding the {source_frequency} helps to filter the desired frequency
                 'Date/Time',
-                'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
-                'Environment:Site Wind Speed [m/s](Hourly)',
-                'Environment:Site Outdoor Air Relative Humidity [%](Hourly)',
-                'EMS:Comfort Temperature [C](Hourly)',
-                'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
-                'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
-                'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)',
-                'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
-                'EMS:Ventilation Setpoint Temperature [C](Hourly)',
-                'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
+                'Environment:Site Outdoor Air Drybulb Temperature',
+                'Environment:Site Wind Speed',
+                'Environment:Site Outdoor Air Relative Humidity',
+                'EMS:Comfort Temperature',
+                'EMS:Adaptive Cooling Setpoint Temperature',
+                'EMS:Adaptive Heating Setpoint Temperature',
+                'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance',
+                'EMS:Adaptive Heating Setpoint Temperature_No Tolerance',
+                'EMS:Ventilation Setpoint Temperature',
+                'EMS:Minimum Outdoor Temperature for ventilation',
                 'EMS:Comfortable Hours_No Applicability',
                 'EMS:Comfortable Hours_Applicability',
                 'EMS:Discomfortable Applicable Hot Hours',
@@ -422,25 +430,25 @@ class Table:
                 'EMS:Discomfortable Non Applicable Hot Hours',
                 'EMS:Discomfortable Non Applicable Cold Hours',
                 'EMS:Ventilation Hours',
-                'AFN Zone Infiltration Volume [m3](Hourly)',
-                'AFN Zone Infiltration Air Change Rate [ach](Hourly)',
+                'AFN Zone Infiltration Volume',
+                'AFN Zone Infiltration Air Change Rate',
                 # 'Zone Thermostat Operative Temperature [C](Hourly)',
-                'Zone Operative Temperature [C](Hourly)',
+                # 'Zone Operative Temperature [C](Hourly)',
                 'Zone Operative Temperature',
-                'Whole Building:Facility Total HVAC Electricity Demand Rate [W](Hourly)',
-                'Whole Building Facility Total HVAC Electricity Demand Rate (kWh)',
-                'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
-                'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
+                'Whole Building:Facility Total HVAC Electricity Demand Rate',
+                # 'Whole Building Facility Total HVAC Electricity Demand Rate (kWh)',
+                'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
+                'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',
                 '_Sch',
-                'VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate [W](Hourly)',
-                'VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Rate [W](Hourly)',
+                'VRF INDOOR UNIT DX COOLING COIL:Cooling Coil Total Cooling Rate',
+                'VRF INDOOR UNIT DX HEATING COIL:Heating Coil Heating Rate',
                 # 'VRF OUTDOOR UNIT',
                 'VRF Heat Pump Cooling Electricity Rate',
                 'VRF Heat Pump Heating Electricity Rate',
                 'VRF Heat Pump Cooling Electricity Energy',
                 'VRF Heat Pump Heating Electricity Energy',
-                'Heating Coil Heating Rate [W](Hourly)',
-                'Cooling Coil Total Cooling Rate [W](Hourly)',
+                'Heating Coil Heating Rate',
+                'Cooling Coil Total Cooling Rate',
                 'Zone Air Volume',
                 'Zone Floor Area',
                 'Zone Thermal Comfort Fanger Model PMV',
@@ -473,12 +481,18 @@ class Table:
                 df['Source'] = file
 
                 # df['Date/Time_orig'] = df['Date/Time'].copy()
-
-                df[['TBD1', 'Month/Day', 'TBD2', 'Hour']] = df['Date/Time'].str.split(' ', expand=True)
-                df = df.drop(['TBD1', 'TBD2'], axis=1)
-                df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
-                df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
-
+                if source_frequency in ['timestep', 'hourly']:
+                    df[['TBD1', 'Month/Day', 'TBD2', 'Hour']] = df['Date/Time'].str.split(' ', expand=True)
+                    df = df.drop(['TBD1', 'TBD2'], axis=1)
+                    df[['Month', 'Day']] = df['Month/Day'].str.split('/', expand=True)
+                    df[['Hour', 'Minute', 'Second']] = df['Hour'].str.split(':', expand=True)
+                elif source_frequency == 'daily':
+                    df['Month/Day'] = df['Date/Time']
+                    df[['Month', 'Day']] = df['Date/Time'].str.split('/', expand=True)
+                elif source_frequency == 'monthly':
+                    df['Month'] = df['Date/Time']
+                elif source_frequency == 'runperiod':
+                    pass
 
                 # Step: managing different aggregations on columns
                 constantcols = []
@@ -490,55 +504,80 @@ class Table:
                         if i in j:
                             constantcols.append(j)
                 constantcols = list(dict.fromkeys(constantcols))
-
+                #todo ahora mismo el area y el volumen se están sumando; probar a meterlo en first
                 constantcolsdict = {}
 
                 for i in range(len(constantcols)):
                     tempdict = {constantcols[i]: df[constantcols[i]][0]}
                     constantcolsdict.update(tempdict)
 
-                minute_df_len = len(
-                    df[
-                        (df['Minute'] != '00') &
-                        (df['Minute'].astype(str) != 'None') &
-                        (df['Minute'] != '')
-                        ]
-                )
+                if source_frequency in ['timestep', 'hourly']:
+                    minute_df_len = len(
+                        df[
+                            (df['Minute'] != '00') &
+                            (df['Minute'].astype(str) != 'None') &
+                            (df['Minute'] != '')
+                            ]
+                    )
 
                 agg_dict = {}
-                aggregation_list_first = [
-                    'Date/Time',
-                    'Source',
-                    'Month/Day',
-                    'Month',
-                    'Day',
-                    'Hour',
-                    'Minute',
-                    'Second'
-                ]
+                if source_frequency in ['timestep', 'hourly']:
+                    aggregation_list_first = [
+                        'Date/Time',
+                        'Source',
+                        'Month/Day',
+                        'Month',
+                        'Day',
+                        'Hour',
+                        'Minute',
+                        'Second'
+                    ]
+                elif source_frequency == 'daily':
+                    aggregation_list_first = [
+                        'Date/Time',
+                        'Source',
+                        'Month/Day',
+                        'Month',
+                        'Day',
+                    ]
+                elif source_frequency == 'monthly':
+                    aggregation_list_first = [
+                        'Date/Time',
+                        'Source',
+                        'Month/Day',
+                        'Month',
+                    ]
+                elif source_frequency == 'runperiod':
+                    aggregation_list_first = [
+                        'Date/Time',
+                        'Source',
+                    ]
 
                 for i in aggregation_list_first:
+                    agg_dict.update({i: 'first'})
+
+                for i in constantcols:
                     agg_dict.update({i: 'first'})
 
                 df['count'] = 1
                 agg_dict.update({'count': 'count'})
 
                 aggregation_list_mean = [
-                    'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)',
-                    'Environment:Site Wind Speed [m/s](Hourly)',
-                    'Environment:Site Outdoor Air Relative Humidity [%](Hourly)',
-                    'EMS:Comfort Temperature [C](Hourly)',
-                    'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)',
-                    'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)',
-                    'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)',
-                    'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)',
-                    'EMS:Ventilation Setpoint Temperature [C](Hourly)',
-                    'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)',
-                    # 'Zone Thermostat Operative Temperature [C](Hourly)',
-                    'Zone Operative Temperature [C](Hourly)',
+                    'Environment:Site Outdoor Air Drybulb Temperature',
+                    'Environment:Site Wind Speed',
+                    'Environment:Site Outdoor Air Relative Humidity',
+                    'EMS:Comfort Temperature',
+                    'EMS:Adaptive Cooling Setpoint Temperature',
+                    'EMS:Adaptive Heating Setpoint Temperature',
+                    'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance',
+                    'EMS:Adaptive Heating Setpoint Temperature_No Tolerance',
+                    'EMS:Ventilation Setpoint Temperature',
+                    'EMS:Minimum Outdoor Temperature for ventilation',
+                    # 'Zone Thermostat Operative Temperature',
+                    # 'Zone Operative Temperature',
                     'Zone Operative Temperature',
-                    'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
-                    'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)',
+                    'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
+                    'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',
                     'Zone Thermal Comfort Fanger Model PMV',
                     'Zone Thermal Comfort Fanger Model PPD'
                 ]
@@ -552,36 +591,59 @@ class Table:
                     if i not in agg_dict:
                         agg_dict.update({i: frequency_sum_or_mean})
 
+
+                if source_frequency == 'timestep' or source_frequency == 'hourly':
                 # todo timestep frequency to be tested
-                if frequency == 'timestep':
-                    df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(agg_dict)
-                    print(f'Input data frequency in file {file} is timestep '
-                          f'and requested frequency is also timestep, '
-                          f'therefore no aggregation will be performed. '
-                          f'The user needs to check the output rows number is correct.')
-
-                if frequency == 'hourly':
-                    if minute_df_len > 0:
-                        df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(agg_dict)
+                    if frequency == 'timestep':
+                        df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(agg_dict)
                         print(f'Input data frequency in file {file} is timestep '
-                              f'and requested frequency is hourly, '
-                              f'therefore aggregation will be performed. '
+                              f'and requested frequency is also timestep, '
+                              f'therefore no aggregation will be performed. '
                               f'The user needs to check the output rows number is correct.')
-                    else:
-                        print(f'Input data frequency in file {file} is hourly, therefore no aggregation will be performed.')
-                if frequency == 'daily':
-                    df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(agg_dict)
-                if frequency == 'monthly':
-                    df = df.groupby(['Source', 'Month'], as_index=False).agg(agg_dict)
-                if frequency == 'runperiod':
-                    df = df.groupby(['Source'], as_index=False).agg(agg_dict)
-
-                for i in constantcolsdict:
-                    df[i] = constantcolsdict[i]
-
-                summed_dataframes.append(df)
-
+                    if frequency == 'hourly':
+                        if minute_df_len > 0:
+                            df = df.groupby(['Source', 'Month', 'Day', 'Hour'], as_index=False).agg(agg_dict)
+                            print(f'Input data frequency in file {file} is timestep '
+                                  f'and requested frequency is hourly, '
+                                  f'therefore aggregation will be performed. '
+                                  f'The user needs to check the output rows number is correct.')
+                        else:
+                            print(f'Input data frequency in file {file} is hourly, therefore no aggregation will be performed.')
+                    if frequency == 'daily':
+                        df = df.groupby(['Source', 'Month', 'Day'], as_index=False).agg(agg_dict)
+                    if frequency == 'monthly':
+                        df = df.groupby(['Source', 'Month'], as_index=False).agg(agg_dict)
+                    if frequency == 'runperiod':
+                        df = df.groupby(['Source'], as_index=False).agg(agg_dict)
+                    for i in constantcolsdict:
+                        df[i] = constantcolsdict[i]
+                    summed_dataframes.append(df)
+                elif source_frequency == 'daily':
+                    if frequency in ['timestep', 'hourly']:
+                        print(f'Source frequency in file {file} is daily, therefore timestep or hourly aggregations cannot be performed.')
+                    elif frequency == 'daily':
+                        print(f'Source frequency in file {file} is daily, therefore no aggregation will be performed.')
+                    elif frequency == 'monthly':
+                        df = df.groupby(['Source', 'Month'], as_index=False).agg(agg_dict)
+                    elif frequency == 'runperiod':
+                        df = df.groupby(['Source'], as_index=False).agg(agg_dict)
+                    summed_dataframes.append(df)
+                elif source_frequency == 'monthly':
+                    if frequency in ['timestep', 'hourly', 'daily']:
+                        print(f'Source frequency in file {file} is monthly, therefore timestep, hourly or daily aggregations cannot be performed.')
+                    elif frequency == 'monthly':
+                        print(f'Source frequency in file {file} is monthly, therefore no aggregation will be performed.')
+                    elif frequency == 'runperiod':
+                        df = df.groupby(['Source'], as_index=False).agg(agg_dict)
+                    summed_dataframes.append(df)
+                elif source_frequency == 'runperiod':
+                    if frequency in ['timestep', 'hourly', 'daily', 'monthly']:
+                        print(f'Source frequency in file {file} is runperiod, therefore timestep, hourly, daily or monthly aggregations cannot be performed.')
+                    elif frequency == 'runperiod':
+                        print(f'Source frequency in file {file} is runperiod, therefore no aggregation will be performed.')
+                    summed_dataframes.append(df)
             df = pd.concat(summed_dataframes)
+            df = df.round(decimals=2)
 
         else:
             # todo amend order of columns
@@ -1233,14 +1295,14 @@ class Table:
                 'Zone Air Volume': 'Zone Air Volume (m3)',
                 'Zone Floor Area': 'Zone Floor Area (m2)',
                 'EMS:Ventilation Hours': 'Ventilation Hours (h)',
-                'AFN Zone Infiltration Volume [m3](Hourly)': 'AFN Zone Infiltration Volume (m3)',
-                'AFN Zone Infiltration Air Change Rate [ach](Hourly)': 'AFN Zone Infiltration Air Change Rate (ach)',
-                # 'Zone Thermostat Operative Temperature [C](Hourly)': 'Zone Thermostat Operative Temperature (°C)',
-                'Zone Operative Temperature [C](Hourly)': 'Zone Operative Temperature (°C)',
+                f'AFN Zone Infiltration Volume [m3]({source_frequency.capitalize()})': 'AFN Zone Infiltration Volume (m3)',
+                f'AFN Zone Infiltration Air Change Rate [ach]({source_frequency.capitalize()})': 'AFN Zone Infiltration Air Change Rate (ach)',
+                # f'Zone Thermostat Operative Temperature [C]({source_frequency.capitalize()})': 'Zone Thermostat Operative Temperature (°C)',
+                f'Zone Operative Temperature [C]({source_frequency.capitalize()})': 'Zone Operative Temperature (°C)',
                 'Zone Operative Temperature': 'Zone Operative Temperature (°C)',
-                'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)':
+                f'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C]({source_frequency.capitalize()})':
                     'EN16798-1 Running mean outdoor temperature (°C)',
-                'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C](Hourly)':
+                f'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C]({source_frequency.capitalize()})':
                     'ASHRAE 55 Running mean outdoor temperature (°C)',
                 'AHST_Sch': 'AHST_Sch',
                 'ACST_Sch': 'ACST_Sch',
@@ -1254,20 +1316,20 @@ class Table:
 
             renaming_criteria = {
                 # 'Date/Time',
-                'Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)':
+                f'Environment:Site Outdoor Air Drybulb Temperature [C]({source_frequency.capitalize()})':
                     'Site Outdoor Air Drybulb Temperature (°C)',
-                'Environment:Site Wind Speed [m/s](Hourly)': 'Site Wind Speed (m/s)',
-                'Environment:Site Outdoor Air Relative Humidity [%](Hourly)':
+                f'Environment:Site Wind Speed [m/s]({source_frequency.capitalize()})': 'Site Wind Speed (m/s)',
+                f'Environment:Site Outdoor Air Relative Humidity [%]({source_frequency.capitalize()})':
                     'Site Outdoor Air Relative Humidity (%)',
-                'EMS:Comfort Temperature [C](Hourly)': 'Comfort Temperature (°C)',
-                'EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)': 'Adaptive Cooling Setpoint Temperature (°C)',
-                'EMS:Adaptive Heating Setpoint Temperature [C](Hourly)': 'Adaptive Heating Setpoint Temperature (°C)',
-                'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)':
+                f'EMS:Comfort Temperature [C]({source_frequency.capitalize()})': 'Comfort Temperature (°C)',
+                f'EMS:Adaptive Cooling Setpoint Temperature [C]({source_frequency.capitalize()})': 'Adaptive Cooling Setpoint Temperature (°C)',
+                f'EMS:Adaptive Heating Setpoint Temperature [C]({source_frequency.capitalize()})': 'Adaptive Heating Setpoint Temperature (°C)',
+                f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C]({source_frequency.capitalize()})':
                     'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
-                'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)':
+                f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C]({source_frequency.capitalize()})':
                     'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
-                'EMS:Ventilation Setpoint Temperature [C](Hourly)': 'Ventilation Setpoint Temperature (°C)',
-                'EMS:Minimum Outdoor Temperature for ventilation [C](Hourly)':
+                f'EMS:Ventilation Setpoint Temperature [C]({source_frequency.capitalize()})': 'Ventilation Setpoint Temperature (°C)',
+                f'EMS:Minimum Outdoor Temperature for ventilation [C]({source_frequency.capitalize()})':
                     'Minimum Outdoor Temperature for ventilation (°C)',
                 'Whole Building:Facility Total HVAC Electricity Demand Rate':
                     'Whole Building Facility Total HVAC Electricity Demand Rate',
@@ -1359,9 +1421,10 @@ class Table:
                 'EPW_Year'
             ])
 
+
         # todo Step: remove PMV-PPD columns if the column only have null values
 
-
+        df = df.round(decimals=2)
 
         self.hvac_zone_list = hvac_zone_list
         self.occupied_zone_list = occupied_zone_list
@@ -1420,6 +1483,7 @@ class Table:
             'Source',
             # 'col_to_pivot'
         ]
+        #todo to be updated with source frequency
         if 'runperiod' in self.frequency:
             self.indexcols.remove('Date/Time')
         if 'monthly' in self.frequency:

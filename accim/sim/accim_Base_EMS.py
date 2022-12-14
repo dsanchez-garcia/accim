@@ -2888,18 +2888,18 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
                 print('Added - '+i+' Output Variable')
             # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i])
 
-    EMSOutputVariableSum_dict = {
-        'Comfortable Hours_No Applicability': ['ComfHoursNoApp', 'H'],
-        'Comfortable Hours_Applicability': ['ComfHours', 'H'],
-        'Discomfortable Applicable Hot Hours': ['DiscomfAppHotHours', 'H'],
-        'Discomfortable Applicable Cold Hours': ['DiscomfAppColdHours', 'H'],
-        'Discomfortable Non Applicable Hot Hours': ['DiscomfNonAppHotHours', 'H'],
-        'Discomfortable Non Applicable Cold Hours': ['DiscomfNonAppColdHours', 'H'],
-        'Zone Floor Area': ['ZoneFloorArea', 'm2'],
-        'Zone Air Volume': ['ZoneAirVolume', 'm3'],
+    EMSOutputVariableZone_dict = {
+        'Comfortable Hours_No Applicability': ['ComfHoursNoApp', 'H', 'Summed'],
+        'Comfortable Hours_Applicability': ['ComfHours', 'H', 'Summed'],
+        'Discomfortable Applicable Hot Hours': ['DiscomfAppHotHours', 'H', 'Summed'],
+        'Discomfortable Applicable Cold Hours': ['DiscomfAppColdHours', 'H', 'Summed'],
+        'Discomfortable Non Applicable Hot Hours': ['DiscomfNonAppHotHours', 'H', 'Summed'],
+        'Discomfortable Non Applicable Cold Hours': ['DiscomfNonAppColdHours', 'H', 'Summed'],
+        'Zone Floor Area': ['ZoneFloorArea', 'm2', 'Averaged'],
+        'Zone Air Volume': ['ZoneAirVolume', 'm3', 'Averaged'],
     }
 
-    for i in EMSOutputVariableSum_dict:
+    for i in EMSOutputVariableZone_dict:
         for zonename in self.occupiedZones:
             if i+'_'+zonename in outputvariablelist:
                 if verboseMode:
@@ -2909,12 +2909,12 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
                 self.idf1.newidfobject(
                     'EnergyManagementSystem:OutputVariable',
                     Name=i + '_' + zonename,
-                    EMS_Variable_Name=EMSOutputVariableSum_dict[i][0]+'_'
+                    EMS_Variable_Name=EMSOutputVariableZone_dict[i][0]+'_'
                     + zonename,
-                    Type_of_Data_in_Variable='Summed',
+                    Type_of_Data_in_Variable=EMSOutputVariableZone_dict[i][2],
                     Update_Frequency='ZoneTimestep',
                     EMS_Program_or_Subroutine_Name='',
-                    Units=EMSOutputVariableSum_dict[i][1]
+                    Units=EMSOutputVariableZone_dict[i][1]
                     )
                 if verboseMode:
                     print('Added - '+i+'_'
