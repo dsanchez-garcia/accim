@@ -382,6 +382,14 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
+        SFdict = {
+            'timestep': 'Timestep',
+            'hourly': 'Hourly',
+            'daily': 'Daily',
+            'monthly': 'Monthly',
+            'runperiod': 'RunPeriod'
+        }
+
         if source_frequency not in ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']:
             raise KeyError('The source frequency entered must be timestep, hourly, daily, monthly or runperiod.')
 
@@ -412,7 +420,8 @@ class Table:
 
             cleaned_columns = [
                 #todo adding the {source_frequency} helps to filter the desired frequency
-                'Date/Time',
+
+                # 'Date/Time',
                 'Environment:Site Outdoor Air Drybulb Temperature',
                 'Environment:Site Wind Speed',
                 'Environment:Site Outdoor Air Relative Humidity',
@@ -472,8 +481,10 @@ class Table:
                     for i in cleaned_columns:
                         for j in df.columns:
                             if i in j:
-                                keeplist.append(j)
+                                if SFdict[source_frequency] in j:
+                                    keeplist.append(j)
                     keeplist = list(dict.fromkeys(keeplist))
+                    keeplist.append('Date/Time')
                     droplist = list(set(df.columns) - set(keeplist))
                     df = df.drop(droplist, axis=1)
 
@@ -544,7 +555,7 @@ class Table:
                     aggregation_list_first = [
                         'Date/Time',
                         'Source',
-                        'Month/Day',
+                        # 'Month/Day',
                         'Month',
                     ]
                 elif source_frequency == 'runperiod':
@@ -711,10 +722,19 @@ class Table:
                 print(not_correct_agg)
 
         if self.frequency == 'runperiod':
-            not_correct_agg = df[df['count'] != 8760]
+            if source_frequency == 'hourly':
+                not_correct_agg = df[df['count'] != 8760]
+            if source_frequency == 'daily':
+                not_correct_agg = df[df['count'] != 365]
+            if source_frequency == 'daily':
+                not_correct_agg = df[df['count'] != 12]
+            if source_frequency == 'runperiod':
+                not_correct_agg = df[df['count'] != 1]
+        #todo continue testing
             if len(not_correct_agg) > 0:
                 print('The following rows have not been correctly aggregated:')
                 print(not_correct_agg)
+                df_not_corr_agg = not_correct_agg
 
 
         if concatenated_csv_name is not None:
@@ -1042,17 +1062,20 @@ class Table:
 
         # Step: splitting EPW names if requested
         self.split_epw_names = split_epw_names
+
         if split_epw_names:
-            df[[
+            cols_epw_base = [
                 'EPW_Country_name',
                 'EPW_City_or_subcountry',
                 'EPW_Scenario-Year'
-            ]] = df['EPW'].str.split('_', expand=True)
+            ]
+            df[cols_epw_base] = df['EPW'].str.split('_', expand=True)
             try:
-                df[[
+                cols_epw_ext = [
                     'EPW_Scenario',
                     'EPW_Year',
-                ]] = df['EPW_Scenario-Year'].str.split('-', expand=True)
+                ]
+                df[cols_epw_ext] = df['EPW_Scenario-Year'].str.split('-', expand=True)
             except ValueError:
                 print('All CSVs are for present scenario.')
                 df['EPW_Scenario'] = 'Present'
@@ -1252,34 +1275,64 @@ class Table:
             df = df.drop(['EPW_mod'], axis=1)
 
         # Step: re-ordering the columns
-        cols = df.columns.tolist()
+        # cols = df.columns.tolist()
+        #
+        # if self.frequency == 'runperiod':
+        #     # this 1 is Source
+        #     freq_extension = 1
+        # else:
+        #     freq_extension = 1 + len(frequency_dict[self.frequency])
+        #
+        # if split_epw_names:
+        #     epw_extension = 5
+        # else:
+        #     epw_extension = 0
+        #
+        # # todo timestep frequency to be considered
+        # if self.frequency == 'runperiod':
+        #     adj_extension = -3
+        # if self.frequency == 'monthly':
+        #     adj_extension = -4
+        # if self.frequency == 'daily':
+        #     adj_extension = -5
+        # if self.frequency == 'hourly':
+        #     adj_extension = -6
+        #
+        # # if source_frequency == 'daily':
+        # #     adj_source_freq = 5
+        # # else:
+        # #     adj_source_freq = 0
+        #
+        # # the 2 is for Date/Time and Month/Day
+        # temp_num = -(len(fixed_columns) + 2 + freq_extension + epw_extension + adj_extension)
+        # cols = cols[temp_num:] + cols[:temp_num]
+        # # cols = cols[5:] + cols[:5]
+        # df = df[cols]
 
-        if self.frequency == 'runperiod':
-            # this 1 is Source
-            freq_extension = 1
-        else:
-            freq_extension = 1 + len(frequency_dict[self.frequency])
+        # num_cols = df._get_numeric_data().columns.to_list()
+        # num_cols.remove('count')
+        # num_cols = sorted(num_cols)
+
+        cols_model = ['Source'] + fixed_columns + ['count']
+
+        cols_date = aggregation_list_first.copy()
+        cols_date.remove('Source')
 
         if split_epw_names:
-            epw_extension = 5
+            cols_cat = cols_model+cols_epw_base+cols_epw_ext+cols_date
         else:
-            epw_extension = 0
+            cols_cat = cols_model+cols_date
 
-        # todo timestep frequency to be considered
-        if self.frequency == 'runperiod':
-            adj_extension = -3
-        if self.frequency == 'monthly':
-            adj_extension = -4
-        if self.frequency == 'daily':
-            adj_extension = -5
-        if self.frequency == 'hourly':
-            adj_extension = -6
+        cols_num = [i for i in df.columns if i not in cols_cat]
 
-        # the 2 is for Date/Time and Month/Day
-        temp_num = -(len(fixed_columns) + 2 + freq_extension + epw_extension + adj_extension)
-        cols = cols[temp_num:] + cols[:temp_num]
-        # cols = cols[5:] + cols[:5]
-        df = df[cols]
+
+        df = df[cols_cat+cols_num]
+
+        # if split_epw_names:
+        #     df = df[cols_model+cols_epw_base+cols_epw_ext+cols_date+num_cols]
+        # else:
+        #     df = df[cols_model+cols_date+num_cols]
+
         df = df.set_index([pd.RangeIndex(len(df))])
 
         self.rename_cols = rename_cols
@@ -1295,14 +1348,14 @@ class Table:
                 'Zone Air Volume': 'Zone Air Volume (m3)',
                 'Zone Floor Area': 'Zone Floor Area (m2)',
                 'EMS:Ventilation Hours': 'Ventilation Hours (h)',
-                f'AFN Zone Infiltration Volume [m3]({source_frequency.capitalize()})': 'AFN Zone Infiltration Volume (m3)',
-                f'AFN Zone Infiltration Air Change Rate [ach]({source_frequency.capitalize()})': 'AFN Zone Infiltration Air Change Rate (ach)',
-                # f'Zone Thermostat Operative Temperature [C]({source_frequency.capitalize()})': 'Zone Thermostat Operative Temperature (°C)',
-                f'Zone Operative Temperature [C]({source_frequency.capitalize()})': 'Zone Operative Temperature (°C)',
+                f'AFN Zone Infiltration Volume [m3]({SFdict[source_frequency]})': 'AFN Zone Infiltration Volume (m3)',
+                f'AFN Zone Infiltration Air Change Rate [ach]({SFdict[source_frequency]})': 'AFN Zone Infiltration Air Change Rate (ach)',
+                # f'Zone Thermostat Operative Temperature [C]({SFdict[source_frequency]})': 'Zone Thermostat Operative Temperature (°C)',
+                f'Zone Operative Temperature [C]({SFdict[source_frequency]})': 'Zone Operative Temperature (°C)',
                 'Zone Operative Temperature': 'Zone Operative Temperature (°C)',
-                f'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C]({source_frequency.capitalize()})':
+                f'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C]({SFdict[source_frequency]})':
                     'EN16798-1 Running mean outdoor temperature (°C)',
-                f'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C]({source_frequency.capitalize()})':
+                f'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C]({SFdict[source_frequency]})':
                     'ASHRAE 55 Running mean outdoor temperature (°C)',
                 'AHST_Sch': 'AHST_Sch',
                 'ACST_Sch': 'ACST_Sch',
@@ -1316,20 +1369,20 @@ class Table:
 
             renaming_criteria = {
                 # 'Date/Time',
-                f'Environment:Site Outdoor Air Drybulb Temperature [C]({source_frequency.capitalize()})':
+                f'Environment:Site Outdoor Air Drybulb Temperature [C]({SFdict[source_frequency]})':
                     'Site Outdoor Air Drybulb Temperature (°C)',
-                f'Environment:Site Wind Speed [m/s]({source_frequency.capitalize()})': 'Site Wind Speed (m/s)',
-                f'Environment:Site Outdoor Air Relative Humidity [%]({source_frequency.capitalize()})':
+                f'Environment:Site Wind Speed [m/s]({SFdict[source_frequency]})': 'Site Wind Speed (m/s)',
+                f'Environment:Site Outdoor Air Relative Humidity [%]({SFdict[source_frequency]})':
                     'Site Outdoor Air Relative Humidity (%)',
-                f'EMS:Comfort Temperature [C]({source_frequency.capitalize()})': 'Comfort Temperature (°C)',
-                f'EMS:Adaptive Cooling Setpoint Temperature [C]({source_frequency.capitalize()})': 'Adaptive Cooling Setpoint Temperature (°C)',
-                f'EMS:Adaptive Heating Setpoint Temperature [C]({source_frequency.capitalize()})': 'Adaptive Heating Setpoint Temperature (°C)',
-                f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C]({source_frequency.capitalize()})':
+                f'EMS:Comfort Temperature [C]({SFdict[source_frequency]})': 'Comfort Temperature (°C)',
+                f'EMS:Adaptive Cooling Setpoint Temperature [C]({SFdict[source_frequency]})': 'Adaptive Cooling Setpoint Temperature (°C)',
+                f'EMS:Adaptive Heating Setpoint Temperature [C]({SFdict[source_frequency]})': 'Adaptive Heating Setpoint Temperature (°C)',
+                f'EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C]({SFdict[source_frequency]})':
                     'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
-                f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C]({source_frequency.capitalize()})':
+                f'EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C]({SFdict[source_frequency]})':
                     'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
-                f'EMS:Ventilation Setpoint Temperature [C]({source_frequency.capitalize()})': 'Ventilation Setpoint Temperature (°C)',
-                f'EMS:Minimum Outdoor Temperature for ventilation [C]({source_frequency.capitalize()})':
+                f'EMS:Ventilation Setpoint Temperature [C]({SFdict[source_frequency]})': 'Ventilation Setpoint Temperature (°C)',
+                f'EMS:Minimum Outdoor Temperature for ventilation [C]({SFdict[source_frequency]})':
                     'Minimum Outdoor Temperature for ventilation (°C)',
                 'Whole Building:Facility Total HVAC Electricity Demand Rate':
                     'Whole Building Facility Total HVAC Electricity Demand Rate',
