@@ -11,7 +11,7 @@ for i in scriptTypeList:
         for k in EPlist:
             accis.addAccis(
                 ScriptType=i,
-                Outputs_keep_existing=False,
+                Output_keep_existing=False,
                 Output_type='standard',
                 Output_freqs=outputsFreqList[j],
                 EnergyPlus_version=k,

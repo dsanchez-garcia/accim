@@ -7,7 +7,7 @@ for i in STlist:
     for j in outputlist:
         accis.addAccis(
             ScriptType='ex_ac',
-            Outputs_keep_existing=True,
+            Output_keep_existing=True,
             Output_type=j,
             Output_freqs=['hourly'],
             EnergyPlus_version='22.2',

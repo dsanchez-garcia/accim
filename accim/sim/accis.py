@@ -11,7 +11,7 @@ def addAccis(
         Output_type: str = None,
         # todo
         Output_freqs: any = None,
-        Outputs_keep_existing: bool = None,
+        Output_keep_existing: bool = None,
         EnergyPlus_version: str = None,
         TempCtrl: str = None,
         ComfStand: any = None,
@@ -102,7 +102,7 @@ def addAccis(
         ScriptType is not None,
         Output_type is not None,
         Output_freqs is not None,
-        Outputs_keep_existing is not None,
+        Output_keep_existing is not None,
         EnergyPlus_version is not None,
         TempCtrl is not None,
     )
@@ -174,9 +174,9 @@ def addAccis(
                                "    for ExistingHVAC with mixed mode: ex_mm;\n"
                                "    for ExistingHVAC with full air-conditioning mode: ex_ac\n"
                                "    ): ")
-        Outputs_keep_existing = input('Do you want to keep the existing outputs (true or false)?: ')
-        while Outputs_keep_existing.lower() not in ['true', 'false']:
-            Outputs_keep_existing = input('The answer you entered is not valid. '
+        Output_keep_existing = input('Do you want to keep the existing outputs (true or false)?: ')
+        while Output_keep_existing.lower() not in ['true', 'false']:
+            Output_keep_existing = input('The answer you entered is not valid. '
                                           'Do you want to keep the existing outputs (true or false)?: ')
         Output_type = input("Enter the Output type (standard, simplified or existing): ")
         while Output_type not in fullOutputsTypeList:
@@ -293,11 +293,11 @@ def addAccis(
 
         z.addEMSPCMBase(verboseMode=verboseMode)
         #todo continue here
-        if Outputs_keep_existing == 'true':
-            Outputs_keep_existing = True
-        elif Outputs_keep_existing == 'false':
-            Outputs_keep_existing = False
-        if Outputs_keep_existing is True:
+        if Output_keep_existing == 'true':
+            Output_keep_existing = True
+        elif Output_keep_existing == 'false':
+            Output_keep_existing = False
+        if Output_keep_existing is True:
             pass
         else:
             z.removeExistingOutputVariables()
