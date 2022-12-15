@@ -325,7 +325,9 @@ class Table:
                  rename_cols: bool = True,
                  energy_units_in_kwh: bool = True,
                  concatenated_csv_name: str = None,
-                 drop_nan: bool = False
+                 drop_nan: bool = False,
+                 name_export_rows_with_NaN: str = None,
+                 name_export_rows_not_corr_agg: str = None
                  ):
         """
         Generates a table or dataframe using the EnergyPlus simulation results CSV files
@@ -392,6 +394,23 @@ class Table:
 
         if source_frequency not in ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']:
             raise KeyError('The source frequency entered must be timestep, hourly, daily, monthly or runperiod.')
+
+        if source_frequency == 'runperiod':
+            if frequency in ['timestep', 'hourly', 'daily', 'monthly']:
+                raise KeyError(f'Source frequency is {source_frequency}, therefore '
+                                 f'monthly, daily, hourly or timestep output frequency cannot be selected.')
+        if source_frequency == 'monthly':
+            if frequency in ['timestep', 'hourly', 'daily']:
+                raise KeyError(f'Source frequency is {source_frequency}, therefore '
+                               f'daily, hourly or timestep output frequency cannot be selected.')
+        if source_frequency == 'daily':
+            if frequency in ['timestep', 'hourly']:
+                raise KeyError(f'Source frequency is {source_frequency}, therefore '
+                               f'hourly or timestep output frequency cannot be selected.')
+        if source_frequency == 'hourly':
+            if frequency in ['timestep']:
+                raise KeyError(f'Source frequency is {source_frequency}, therefore '
+                               f'timestep output frequency cannot be selected.')
 
         # Step: generating concatenated dataframe.
         # If source_concatenated_csv_filepath is None, then specified csv files on list format
@@ -677,20 +696,26 @@ class Table:
         row_has_NaN = is_NaN.any(axis=1)
         rows_with_NaN = df[row_has_NaN]
         if len(rows_with_NaN) > 0:
-            print('The following rows have NaN values:')
+            print('Please bear in mind if you are using CSVs with multiple frequencies, you will get NaNs. The following rows have NaN values:')
             print(rows_with_NaN)
+            if name_export_rows_with_NaN is not None:
+                rows_with_NaN.to_excel(f'{name_export_rows_with_NaN}[source_freq-{source_frequency}[freq-{frequency}[Rows_with_NaNs.xlsx')
 
         if self.frequency == 'hourly':
             not_correct_agg = df[df['count'] != 1]
-            if len(not_correct_agg) > 0:
-                print('The following rows have not been correctly aggregated:')
-                print(not_correct_agg)
+            # if len(not_correct_agg) > 0:
+            #     print('The following rows have not been correctly aggregated:')
+            #     print(not_correct_agg)
 
         if self.frequency == 'daily':
-            not_correct_agg = df[df['count'] != 24]
-            if len(not_correct_agg) > 0:
-                print('The following rows have not been correctly aggregated:')
-                print(not_correct_agg)
+            if source_frequency == 'hourly':
+                not_correct_agg = df[df['count'] != 24]
+            if source_frequency == 'daily':
+                not_correct_agg = df[df['count'] != 1]
+
+            # if len(not_correct_agg) > 0:
+            #     print('The following rows have not been correctly aggregated:')
+            #     print(not_correct_agg)
 
         if self.frequency == 'monthly':
 
@@ -712,29 +737,45 @@ class Table:
             #     not_correct_agg_list.append(monthly_df)
             # not_correct_agg = pd.concat(not_correct_agg_list)
 
-            not_correct_agg = df[
-                (df['count'] != 28 * 24) &
-                (df['count'] != 30 * 24) &
-                (df['count'] != 31 * 24)
-                ]
-            if len(not_correct_agg) > 0:
-                print('The following rows have not been correctly aggregated:')
-                print(not_correct_agg)
+            if source_frequency == 'hourly':
+                not_correct_agg = df[
+                    (df['count'] != 28 * 24) &
+                    (df['count'] != 30 * 24) &
+                    (df['count'] != 31 * 24)
+                    ]
+            if source_frequency == 'daily':
+                not_correct_agg = df[
+                    (df['count'] != 28) &
+                    (df['count'] != 30) &
+                    (df['count'] != 31)
+                    ]
+            # if len(not_correct_agg) > 0:
+            #     print('The following rows have not been correctly aggregated:')
+            #     print(not_correct_agg)
 
         if self.frequency == 'runperiod':
             if source_frequency == 'hourly':
                 not_correct_agg = df[df['count'] != 8760]
             if source_frequency == 'daily':
                 not_correct_agg = df[df['count'] != 365]
-            if source_frequency == 'daily':
+            if source_frequency == 'monthly':
                 not_correct_agg = df[df['count'] != 12]
             if source_frequency == 'runperiod':
                 not_correct_agg = df[df['count'] != 1]
         #todo continue testing
+            # if len(not_correct_agg) > 0:
+            #     print('The following rows have not been correctly aggregated:')
+            #     print(not_correct_agg)
+
+        try:
             if len(not_correct_agg) > 0:
                 print('The following rows have not been correctly aggregated:')
                 print(not_correct_agg)
-                df_not_corr_agg = not_correct_agg
+                if name_export_rows_not_corr_agg is not None:
+                    not_correct_agg.to_excel(
+                        f'{name_export_rows_not_corr_agg}[source_freq-{source_frequency}[freq-{frequency}[Rows_not_corr_agg.xlsx')
+        except UnboundLocalError:
+            print('All rows have been correctly aggregated')
 
 
         if concatenated_csv_name is not None:
