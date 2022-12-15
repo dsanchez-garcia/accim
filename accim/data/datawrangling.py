@@ -411,6 +411,38 @@ class Table:
                 raise KeyError(f'Source frequency is {source_frequency}, therefore '
                                f'timestep output frequency cannot be selected.')
 
+        if source_frequency in ['timestep', 'hourly']:
+            aggregation_list_first = [
+                'Date/Time',
+                'Source',
+                'Month/Day',
+                'Month',
+                'Day',
+                'Hour',
+                'Minute',
+                'Second'
+            ]
+        elif source_frequency == 'daily':
+            aggregation_list_first = [
+                'Date/Time',
+                'Source',
+                'Month/Day',
+                'Month',
+                'Day',
+            ]
+        elif source_frequency == 'monthly':
+            aggregation_list_first = [
+                'Date/Time',
+                'Source',
+                # 'Month/Day',
+                'Month',
+            ]
+        elif source_frequency == 'runperiod':
+            aggregation_list_first = [
+                'Date/Time',
+                'Source',
+            ]
+
         # Step: generating concatenated dataframe.
         # If source_concatenated_csv_filepath is None, then specified csv files on list format
         # are considered, otherwise all csv in the folder are considered.
@@ -549,37 +581,6 @@ class Table:
                     )
 
                 agg_dict = {}
-                if source_frequency in ['timestep', 'hourly']:
-                    aggregation_list_first = [
-                        'Date/Time',
-                        'Source',
-                        'Month/Day',
-                        'Month',
-                        'Day',
-                        'Hour',
-                        'Minute',
-                        'Second'
-                    ]
-                elif source_frequency == 'daily':
-                    aggregation_list_first = [
-                        'Date/Time',
-                        'Source',
-                        'Month/Day',
-                        'Month',
-                        'Day',
-                    ]
-                elif source_frequency == 'monthly':
-                    aggregation_list_first = [
-                        'Date/Time',
-                        'Source',
-                        # 'Month/Day',
-                        'Month',
-                    ]
-                elif source_frequency == 'runperiod':
-                    aggregation_list_first = [
-                        'Date/Time',
-                        'Source',
-                    ]
 
                 for i in aggregation_list_first:
                     agg_dict.update({i: 'first'})
@@ -1353,6 +1354,8 @@ class Table:
         # num_cols = sorted(num_cols)
 
         cols_model = ['Source'] + fixed_columns + ['count']
+
+
 
         cols_date = aggregation_list_first.copy()
         cols_date.remove('Source')
