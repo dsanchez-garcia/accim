@@ -308,8 +308,7 @@ class rename_epw_files:
 class Table:
 
     def __init__(self,
-                 #todo si no hay path, os.listdir(), pero si hay os.listdir(path)
-                 path: str = None,
+                 # path: str = None,
                  datasets: list = None,
                  source_concatenated_csv_filepath: str = None,
                  source_frequency: str = None,
@@ -421,11 +420,11 @@ class Table:
             if len(datasets) > 0:
                 source_files = datasets
             else:
-                # allfiles = glob.glob('*.csv', recursive=True)
-                if path is None:
-                    allfiles = [i for i in os.listdir() if i.endswith('.csv')]
-                else:
-                    allfiles = [i for i in os.listdir(path) if i.endswith('.csv')]
+                allfiles = glob.glob('*.csv', recursive=True)
+                # if path is None:
+                #     allfiles = [i for i in os.listdir() if i.endswith('.csv')]
+                # else:
+                #     allfiles = [i for i in os.listdir(path) if i.endswith('.csv')]
                 source_files = [f for f in allfiles if
                                 'Table.csv' not in f and
                                 'Meter.csv' not in f and
@@ -486,7 +485,6 @@ class Table:
             summed_dataframes = []
 
             for file in source_files:
-                #todo reduce number of decimals
 
                 # with open(file) as csv_file:
                 #     csv_reader = csv.reader(csv_file, delimiter=',')
