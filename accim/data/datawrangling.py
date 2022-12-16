@@ -70,7 +70,8 @@ class rename_epw_files:
         self,
         filelist=None,
         confirm_renaming=None,
-        confirm_deletion=None
+        confirm_deletion=None,
+        location_method: str = None
     ):
         """
         Renames the EPW files following the name convention 'Country_City_RCPscenario-Year'.
@@ -93,7 +94,8 @@ class rename_epw_files:
         if filelist is None:
             filelist = []
 
-        match_cities = True
+        if location_method == 'match cities':
+            match_cities = True
 
         if len(filelist) > 0:
             epw_files_to_rename = filelist
@@ -101,14 +103,14 @@ class rename_epw_files:
             # todo same as Table
             epw_files_to_rename = glob.glob('*.epw', recursive=True)
 
-        self.epw_df = pd.DataFrame(data=epw_files_to_rename,
+        epw_df = pd.DataFrame(data=epw_files_to_rename,
                               index=list(range(len(epw_files_to_rename))),
                               columns=['EPW_file_names'])
 
-        for i in range(len(self.epw_df)):
-            self.epw_df.loc[i, 'EPW_abs_path'] = os.path.abspath(self.epw_df.loc[i, 'EPW_file_names'])
+        for i in range(len(epw_df)):
+            epw_df.loc[i, 'EPW_abs_path'] = os.path.abspath(epw_df.loc[i, 'EPW_file_names'])
 
-        self.epw_df['EPW_names'] = self.epw_df['EPW_file_names'].str.replace('.epw', '')
+        epw_df['EPW_names'] = epw_df['EPW_file_names'].str.replace('.epw', '')
 
         rcpdict = {
             'Present': ['Presente', 'Actual', 'Present', 'Current'],
@@ -118,48 +120,48 @@ class rename_epw_files:
             'RCP85': ['RCP8.5', 'RCP85']
         }
 
-        for i in range(len(self.epw_df['EPW_names'])):
+        for i in range(len(epw_df['EPW_names'])):
             for j in rcpdict:
                 for k in rcpdict[j]:
-                    if k.lower() in self.epw_df.loc[i, 'EPW_names'].lower():
-                        self.epw_df.loc[i, 'EPW_scenario'] = j
+                    if k.lower() in epw_df.loc[i, 'EPW_names'].lower():
+                        epw_df.loc[i, 'EPW_scenario'] = j
 
         rcp_not_found_list = []
 
-        for i in range(len(self.epw_df['EPW_names'])):
+        for i in range(len(epw_df['EPW_names'])):
             try:
-                if type(self.epw_df.loc[i, 'EPW_scenario']) is float:
-                    self.epw_df.loc[i, 'EPW_scenario'] = 'Present'
-                    rcp_not_found_list.append(self.epw_df.loc[i, 'EPW_file_names'])
+                if type(epw_df.loc[i, 'EPW_scenario']) is float:
+                    epw_df.loc[i, 'EPW_scenario'] = 'Present'
+                    rcp_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
             except KeyError:
-                self.epw_df.loc[i, 'EPW_scenario'] = 'Present'
-                rcp_not_found_list.append(self.epw_df.loc[i, 'EPW_file_names'])
+                epw_df.loc[i, 'EPW_scenario'] = 'Present'
+                rcp_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
 
         if len(rcp_not_found_list) > 0:
             print('Since no match has been found between scenarios and EPW file name, '
                   'Present scenario has been assigned to the following EPW files:')
             print(*rcp_not_found_list, sep='\n')
 
-        for i in range(len(self.epw_df['EPW_names'])):
-            for j in range(2000, 2101, 1):
-                if str(j) in self.epw_df.loc[i, 'EPW_names']:
-                    self.epw_df.loc[i, 'EPW_year'] = str(j)
+        for i in range(len(epw_df['EPW_names'])):
+            for j in range(2000, 2101, 10):
+                if str(j) in epw_df.loc[i, 'EPW_names']:
+                    epw_df.loc[i, 'EPW_year'] = str(j)
 
-        for i in range(len(self.epw_df['EPW_names'])):
-            if self.epw_df.loc[i, 'EPW_scenario'] == 'Present':
-                self.epw_df.loc[i, 'EPW_scenario_year'] = 'Present'
+        for i in range(len(epw_df['EPW_names'])):
+            if epw_df.loc[i, 'EPW_scenario'] == 'Present':
+                epw_df.loc[i, 'EPW_scenario_year'] = 'Present'
             else:
-                self.epw_df.loc[i, 'EPW_scenario_year'] = self.epw_df.loc[i, 'EPW_scenario'] + '-' + self.epw_df.loc[i, 'EPW_year']
+                epw_df.loc[i, 'EPW_scenario_year'] = epw_df.loc[i, 'EPW_scenario'] + '-' + epw_df.loc[i, 'EPW_year']
 
         year_not_found_list = []
-        for i in range(len(self.epw_df['EPW_names'])):
+        for i in range(len(epw_df['EPW_names'])):
             try:
-                if type(self.epw_df.loc[i, 'EPW_year']) is float:
-                    self.epw_df.loc[i, 'EPW_year'] = 'Present'
-                    year_not_found_list.append(self.epw_df.loc[i, 'EPW_file_names'])
+                if type(epw_df.loc[i, 'EPW_year']) is float:
+                    epw_df.loc[i, 'EPW_year'] = 'Present'
+                    year_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
             except KeyError:
-                self.epw_df.loc[i, 'EPW_year'] = 'Present'
-                year_not_found_list.append(self.epw_df.loc[i, 'EPW_file_names'])
+                epw_df.loc[i, 'EPW_year'] = 'Present'
+                year_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
         if len(year_not_found_list) > 0:
             print('Since no match has been found between scenarios and EPW file name, '
                   'Present year has been assigned to the following EPW files:')
@@ -178,18 +180,18 @@ class rename_epw_files:
             # f.close()
 
         for i in range(len(new_list)):
-            self.epw_df.loc[i, 'EPW_latitude'] = new_list[i][0][6]
-            self.epw_df.loc[i, 'EPW_longitude'] = new_list[i][0][7]
+            epw_df.loc[i, 'EPW_latitude'] = new_list[i][0][6]
+            epw_df.loc[i, 'EPW_longitude'] = new_list[i][0][7]
 
         geolocator = Nominatim(user_agent="geoapiExercises")
-        for i in range(len(self.epw_df)):
-            location = geolocator.reverse(self.epw_df.loc[i, 'EPW_latitude'] + "," + self.epw_df.loc[i, 'EPW_longitude'])
+        for i in range(len(epw_df)):
+            location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
             # print(location)
-            self.epw_df.loc[i, 'EPW_country_code'] = location.raw['address'].get('country_code').upper()
-            # self.epw_df.loc[i, 'EPW_city'] = location.raw['address'].get('city', '')
+            epw_df.loc[i, 'EPW_country_code'] = location.raw['address'].get('country_code').upper()
+            # epw_df.loc[i, 'EPW_city'] = location.raw['address'].get('city', '')
 
-        self.epw_df['EPW_mod'] = self.epw_df['EPW_names'].str.replace('-', '_').str.replace('.', '_').str.split('_')
-
+        epw_df['EPW_mod'] = epw_df['EPW_names'].str.replace('-', '_').str.replace('.', '_').str.split('_')
+        #todo here
         isEPWformatValid = False
         if match_cities:
             package_cities = datapackage.Package('https://datahub.io/core/world-cities/datapackage.json')
@@ -200,7 +202,7 @@ class rename_epw_files:
                 if resource.tabular:
                     data_cities = pd.read_csv(resource.descriptor['path'])
 
-            self.epw_df = self.epw_df.set_index([pd.RangeIndex(len(self.epw_df))])
+            epw_df = epw_df.set_index([pd.RangeIndex(len(epw_df))])
 
             #  if len <1
             data_cities['subcountry'] = data_cities['subcountry'].astype(str)
@@ -211,7 +213,7 @@ class rename_epw_files:
                     rcp.append(rcpdict[i][j])
 
             locations = []
-            for i in list(self.epw_df['EPW_mod']):
+            for i in list(epw_df['EPW_mod']):
                 for j in i:
                     if j in rcp:
                         continue
@@ -246,41 +248,41 @@ class rename_epw_files:
                     if len(temp_df) == 0:
                         temp_df = data_cities.query('subcountry.str.lower() == "%s"' % i.lower())
                     cities_df_list.append(temp_df)
-                self.location_matches_df = pd.concat(cities_df_list)
-                self.location_matches_df = self.location_matches_df.set_index([pd.RangeIndex(len(self.location_matches_df))])
-                self.location_matches_df['country'] = self.location_matches_df['country'].astype(str)
+                location_matches_df = pd.concat(cities_df_list)
+                location_matches_df = location_matches_df.set_index([pd.RangeIndex(len(location_matches_df))])
+                location_matches_df['country'] = location_matches_df['country'].astype(str)
                 isEPWformatValid = True
             except ValueError:
                 isEPWformatValid = False
                 print('EPW files are not correctly named')
 
-            # self.epw_df['EPW_CountryCode'] = self.epw_df['EPW_CountryCode'].astype(str)
+            # epw_df['EPW_CountryCode'] = epw_df['EPW_CountryCode'].astype(str)
 
-        for i in range(len(self.epw_df['EPW_mod'])):
-            for j in self.epw_df.loc[i, 'EPW_mod']:
-                if j.lower() in [k.lower() for k in self.location_matches_df['name']]:
-                    self.epw_df.loc[i, 'EPW_City_or_subcountry'] = j.replace(' ', '-').capitalize()
-            self.epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=self.epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
+        for i in range(len(epw_df['EPW_mod'])):
+            for j in epw_df.loc[i, 'EPW_mod']:
+                if j.lower() in [k.lower() for k in location_matches_df['name']]:
+                    epw_df.loc[i, 'EPW_City_or_subcountry'] = j.replace(' ', '-').capitalize()
+            epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
 
-        for i in range(len(self.epw_df['EPW_mod'])):
-            if type(self.epw_df.loc[i, 'EPW_City_or_subcountry']) is float:
-                location = geolocator.reverse(self.epw_df.loc[i, 'EPW_latitude'] + "," + self.epw_df.loc[i, 'EPW_longitude'])
+        for i in range(len(epw_df['EPW_mod'])):
+            if type(epw_df.loc[i, 'EPW_City_or_subcountry']) is float:
+                location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
                 try:
-                    self.epw_df.loc[i, 'EPW_City_or_subcountry'] = location.raw['address'].get('city').replace(' ', '-').capitalize()
+                    epw_df.loc[i, 'EPW_City_or_subcountry'] = location.raw['address'].get('city').replace(' ', '-').capitalize()
                 except AttributeError:
-                    self.epw_df.loc[i, 'EPW_City_or_subcountry'] = location.raw['address'].get('city').capitalize()
+                    epw_df.loc[i, 'EPW_City_or_subcountry'] = location.raw['address'].get('city').capitalize()
 
         for col in ['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']:
-            for row in range(len(self.epw_df)):
-                if self.epw_df.loc[row, col] is None:
-                    self.epw_df.loc[row, col] = 'UNKNOWN'
+            for row in range(len(epw_df)):
+                if epw_df.loc[row, col] is None:
+                    epw_df.loc[row, col] = 'UNKNOWN'
 
-        self.epw_df['EPW_new_names'] = self.epw_df[['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']].agg('_'.join, axis=1)
+        epw_df['EPW_new_names'] = epw_df[['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']].agg('_'.join, axis=1)
 
         print('The previous names of the EPW files are:')
-        print(*list(self.epw_df['EPW_names']), sep='\n')
+        print(*list(epw_df['EPW_names']), sep='\n')
         print('And the new names of the EPW files are going to be:')
-        print(*list(self.epw_df['EPW_new_names']), sep='\n')
+        print(*list(epw_df['EPW_new_names']), sep='\n')
 
         if confirm_renaming is None:
             proceed = input('Do you want to rename the file or files? [y/n]:')
@@ -290,8 +292,264 @@ class rename_epw_files:
                 confirm_renaming = False
 
         if confirm_renaming:
-            for i in range(len(self.epw_df)):
-                shutil.copy(self.epw_df.loc[i, 'EPW_abs_path'], path + '/' + self.epw_df.loc[i, 'EPW_new_names'] + '.epw')
+            for i in range(len(epw_df)):
+                shutil.copy(epw_df.loc[i, 'EPW_abs_path'], path + '/' + epw_df.loc[i, 'EPW_new_names'] + '.epw')
+
+        if confirm_deletion is None:
+            proceed = input('Do you want to delete the original EPW file or files? [y/n]:')
+            if 'y' in proceed:
+                confirm_deletion = True
+            elif 'n' in proceed:
+                confirm_deletion = False
+
+        if confirm_deletion:
+            for i in epw_files_to_rename:
+                os.remove(i)
+
+
+class rename_epw_files_new:
+    def __init__(
+            self,
+            filelist=None,
+            confirm_renaming=None,
+            confirm_deletion=None,
+            location_method: str = None
+    ):
+        """
+        Renames the EPW files following the name convention 'Country_City_RCPscenario-Year'.
+        The Country and City fields are computed based on the coordinates of the EPW,
+        and the RCPscenario and Year are taken from the original name.
+        If no reference is found, the sample_EPWs are considered to be  for Present scenario.
+        :param filelist: A list of the EPW files. If omitted, it will rename all sample_EPWs in that folder.
+        :param confirm_renaming: True or False, #to skip renaming confirmation on prompt command or console
+        :param confirm_deletion: True or False #to skip deletion confirmation on prompt command or console
+        """
+        import glob
+        import pandas as pd
+        import datapackage
+        import numpy as np
+        import os
+        from geopy.geocoders import Nominatim
+        import pycountry
+        import shutil
+        from unidecode import unidecode
+
+        if filelist is None:
+            filelist = []
+
+        if location_method == 'match cities':
+            match_cities = True
+        else:
+            match_cities = False
+
+        if len(filelist) > 0:
+            epw_files_to_rename = filelist
+        else:
+            # todo same as Table
+            epw_files_to_rename = glob.glob('*.epw', recursive=True)
+
+        epw_df = pd.DataFrame(data=epw_files_to_rename,
+                              index=list(range(len(epw_files_to_rename))),
+                              columns=['EPW_file_names'])
+
+        for i in range(len(epw_df)):
+            epw_df.loc[i, 'EPW_abs_path'] = os.path.abspath(epw_df.loc[i, 'EPW_file_names'])
+
+        epw_df['EPW_names'] = epw_df['EPW_file_names'].str.replace('.epw', '')
+
+        rcpdict = {
+            'Present': ['Presente', 'Actual', 'Present', 'Current'],
+            'RCP26': ['RCP2.6', 'RCP26'],
+            'RCP45': ['RCP4.5', 'RCP45'],
+            'RCP60': ['RCP6.0', 'RCP60'],
+            'RCP85': ['RCP8.5', 'RCP85']
+        }
+
+        for i in range(len(epw_df['EPW_names'])):
+            for j in rcpdict:
+                for k in rcpdict[j]:
+                    if k.lower() in epw_df.loc[i, 'EPW_names'].lower():
+                        epw_df.loc[i, 'EPW_scenario'] = j
+
+        rcp_not_found_list = []
+
+        for i in range(len(epw_df['EPW_names'])):
+            try:
+                if type(epw_df.loc[i, 'EPW_scenario']) is float:
+                    epw_df.loc[i, 'EPW_scenario'] = 'Present'
+                    rcp_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
+            except KeyError:
+                epw_df.loc[i, 'EPW_scenario'] = 'Present'
+                rcp_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
+
+        if len(rcp_not_found_list) > 0:
+            print('Since no match has been found between scenarios and EPW file name, '
+                  'Present scenario has been assigned to the following EPW files:')
+            print(*rcp_not_found_list, sep='\n')
+
+        for i in range(len(epw_df['EPW_names'])):
+            for j in range(2000, 2101, 10):
+                if str(j) in epw_df.loc[i, 'EPW_names']:
+                    epw_df.loc[i, 'EPW_year'] = str(j)
+
+        for i in range(len(epw_df['EPW_names'])):
+            if epw_df.loc[i, 'EPW_scenario'] == 'Present':
+                epw_df.loc[i, 'EPW_scenario_year'] = 'Present'
+            else:
+                epw_df.loc[i, 'EPW_scenario_year'] = epw_df.loc[i, 'EPW_scenario'] + '-' + epw_df.loc[i, 'EPW_year']
+
+        year_not_found_list = []
+        for i in range(len(epw_df['EPW_names'])):
+            try:
+                if type(epw_df.loc[i, 'EPW_year']) is float:
+                    epw_df.loc[i, 'EPW_year'] = 'Present'
+                    year_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
+            except KeyError:
+                epw_df.loc[i, 'EPW_year'] = 'Present'
+                year_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
+        if len(year_not_found_list) > 0:
+            print('Since no match has been found between scenarios and EPW file name, '
+                  'Present year has been assigned to the following EPW files:')
+            print(*year_not_found_list, sep='\n')
+
+        # path = r'C:\Users\user\PycharmProjects\accim'
+        path = os.getcwd()
+        new_list = []
+        for file in epw_files_to_rename:
+            # open the file and then call .read() to get the text
+            with open(
+                    os.path.join(path, file),
+                    "rb") as f:
+                text = f.readline()
+                new_list.append([str(text).split(',')])
+            # f.close()
+
+        for i in range(len(new_list)):
+            epw_df.loc[i, 'EPW_latitude'] = new_list[i][0][6]
+            epw_df.loc[i, 'EPW_longitude'] = new_list[i][0][7]
+
+        geolocator = Nominatim(user_agent="geoapiExercises")
+        for i in range(len(epw_df)):
+            location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
+            # print(location)
+            epw_df.loc[i, 'EPW_country_code'] = location.raw['address'].get('country_code').upper()
+            # epw_df.loc[i, 'EPW_city'] = location.raw['address'].get('city', '')
+
+        epw_df['EPW_mod'] = epw_df['EPW_names'].str.replace('-', '_').str.replace('.', '_').str.split('_')
+
+        isEPWformatValid = False
+        if match_cities:
+            package_cities = datapackage.Package('https://datahub.io/core/world-cities/datapackage.json')
+
+            # to load only tabular data_cities
+            resources_cities = package_cities.resources
+            for resource in resources_cities:
+                if resource.tabular:
+                    data_cities = pd.read_csv(resource.descriptor['path'])
+
+            epw_df = epw_df.set_index([pd.RangeIndex(len(epw_df))])
+
+            #  if len <1
+            data_cities['subcountry'] = data_cities['subcountry'].astype(str)
+
+            rcp = []
+            for i in rcpdict:
+                for j in range(len(rcpdict[i])):
+                    rcp.append(rcpdict[i][j])
+
+            locations = []
+            for i in list(epw_df['EPW_mod']):
+                for j in i:
+                    if j in rcp:
+                        continue
+                    elif j.isnumeric():
+                        continue
+                    elif len(j) <= 2:
+                        continue
+                    else:
+                        locations.append(j.lower())
+            locations = list(dict.fromkeys(locations))
+
+            data_temp_city = []
+            for i in list(data_cities['name']):
+                data_temp_city.append(i.lower())
+
+            data_temp_subcountry = []
+            for i in list(data_cities['subcountry']):
+                data_temp_subcountry.append(i.lower())
+
+            matches_city = list(set(locations).intersection(set(data_temp_city)))
+            matches_subcountry = list(set(locations).intersection(data_temp_subcountry))
+            # matches_city = list(set(locations).intersection(set(data_cities['name'].str.lower())))
+            # matches_subcountry = list(set(locations).intersection(data_cities['subcountry'].str.lower()))
+            matches = matches_subcountry + matches_city
+            matches = list(dict.fromkeys(matches))
+
+            cities_df_list = []
+
+            try:
+                for i in matches:
+                    temp_df = data_cities.query('name.str.lower() == "%s"' % i.lower())
+                    if len(temp_df) == 0:
+                        temp_df = data_cities.query('subcountry.str.lower() == "%s"' % i.lower())
+                    cities_df_list.append(temp_df)
+                location_matches_df = pd.concat(cities_df_list)
+                location_matches_df = location_matches_df.set_index([pd.RangeIndex(len(location_matches_df))])
+                location_matches_df['country'] = location_matches_df['country'].astype(str)
+                isEPWformatValid = True
+            except ValueError:
+                isEPWformatValid = False
+                print('EPW files are not correctly named')
+
+            for i in range(len(epw_df['EPW_mod'])):
+                for j in epw_df.loc[i, 'EPW_mod']:
+                    if j.lower() in [k.lower() for k in location_matches_df['name']]:
+                        epw_df.loc[i, 'EPW_City_or_subcountry'] = j.replace(' ', '-').capitalize()
+                epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(
+                    alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
+
+            # epw_df['EPW_CountryCode'] = epw_df['EPW_CountryCode'].astype(str)
+
+        # todo here
+        for i in range(len(epw_df['EPW_mod'])):
+            for j in epw_df.loc[i, 'EPW_mod']:
+                if j.lower() in [k.lower() for k in unidecode(location.address)]:
+                    epw_df.loc[i, 'EPW_City_or_subcountry'] = j.replace(' ', '-').capitalize()
+            epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(
+                alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
+
+        for i in range(len(epw_df['EPW_mod'])):
+            if type(epw_df.loc[i, 'EPW_City_or_subcountry']) is float:
+                location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
+                try:
+                    epw_df.loc[i, 'EPW_City_or_subcountry'] = location.raw['address'].get('city').replace(' ',
+                                                                                                          '-').capitalize()
+                except AttributeError:
+                    epw_df.loc[i, 'EPW_City_or_subcountry'] = location.raw['address'].get('city').capitalize()
+
+        for col in ['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']:
+            for row in range(len(epw_df)):
+                if epw_df.loc[row, col] is None:
+                    epw_df.loc[row, col] = 'UNKNOWN'
+
+        epw_df['EPW_new_names'] = epw_df[['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']].agg('_'.join,
+                                                                                                             axis=1)
+
+        print('The previous names of the EPW files are:')
+        print(*list(epw_df['EPW_names']), sep='\n')
+        print('And the new names of the EPW files are going to be:')
+        print(*list(epw_df['EPW_new_names']), sep='\n')
+
+        if confirm_renaming is None:
+            proceed = input('Do you want to rename the file or files? [y/n]:')
+            if 'y' in proceed:
+                confirm_renaming = True
+            elif 'n' in proceed:
+                confirm_renaming = False
+
+        if confirm_renaming:
+            for i in range(len(epw_df)):
+                shutil.copy(epw_df.loc[i, 'EPW_abs_path'], path + '/' + epw_df.loc[i, 'EPW_new_names'] + '.epw')
 
         if confirm_deletion is None:
             proceed = input('Do you want to delete the original EPW file or files? [y/n]:')
