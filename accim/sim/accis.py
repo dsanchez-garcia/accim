@@ -9,7 +9,6 @@ by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 def addAccis(
         ScriptType: str = None,
         Output_type: str = None,
-        # todo
         Output_freqs: any = None,
         Output_keep_existing: bool = None,
         EnergyPlus_version: str = None,
@@ -292,7 +291,6 @@ def addAccis(
             z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
 
         z.addEMSPCMBase(verboseMode=verboseMode)
-        #todo continue here
         if Output_keep_existing == 'true':
             Output_keep_existing = True
         elif Output_keep_existing == 'false':
