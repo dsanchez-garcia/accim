@@ -44,7 +44,9 @@ Once you run this code, you will be asked to enter some information at the termi
     from accim.sim import accis
     accis.addAccis(
         ScriptType=str, # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'. For instance: ScriptType='vrf_ac',
-        Outputs=str, # Outputs: 'simplified', 'standard' or 'timestep'. For instance: Outputs='standard',
+        Output_keep_existing=bool, # Output_keep_existing: True or False. For instance: Output_keep_existing=False,
+        Output_type=str, # Output_type: 'simplified' or 'standard'. For instance: Output_type='standard',
+        Output_freqs=list, # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: Output_freqs=['hourly', 'runperiod'],
         EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', or '22.2'. For instance: EnergyPlus_version='22.2',
         TempCtrl=str, # TempCtrl: 'temperature' or 'temp', or 'pmv'. For instance: TempCtrl='temp',
         ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 21. For instance: ComfStand=[0, 1, 2, 3],
