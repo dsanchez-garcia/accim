@@ -117,13 +117,6 @@ def addAccis(
         'standard',
         'Simplified',
         'simplified',
-        'Existing',
-        'existing',
-
-        'Timestep',
-        'timestep',
-        'Runperiod',
-        'runperiod'
     ]
 
     fullOutputsFreqList = [
@@ -177,10 +170,10 @@ def addAccis(
         while Output_keep_existing.lower() not in ['true', 'false']:
             Output_keep_existing = input('The answer you entered is not valid. '
                                           'Do you want to keep the existing outputs (true or false)?: ')
-        Output_type = input("Enter the Output type (standard, simplified or existing): ")
+        Output_type = input("Enter the Output type (standard or simplified): ")
         while Output_type not in fullOutputsTypeList:
             Output_type = input("   Output type was not correct. "
-                            "Please, enter the Output type (standard, simplified or existing): ")
+                            "Please, enter the Output type (standard or simplified): ")
         Output_freqs = list(freq for freq in input(
             "Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): ").split())
         while (not(all(elem in fullOutputsFreqList for elem in Output_freqs))):
