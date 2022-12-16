@@ -20,7 +20,7 @@ x = Table(
 from accim.data.datawrangling import genCSVconcatenated, Table
 x = Table(
     source_concatenated_csv_filepath='testing[freq-monthly[frequency_sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv',
-    source_frequency='hourly',
+    # source_frequency='hourly',
     # frequency='monthly',
     # frequency_sum_or_mean='sum',
     # standard_outputs=True,

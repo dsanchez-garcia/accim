@@ -315,6 +315,7 @@ class Table:
                  frequency: str = None,
                  frequency_sum_or_mean: str = None,
                  standard_outputs: bool = None,
+                 concatenated_csv_name: str = None,
                  level: list = None,
                  level_sum_or_mean: list = None,
                  match_cities: bool = False,
@@ -323,7 +324,6 @@ class Table:
                  normalised_energy_units: bool = True,
                  rename_cols: bool = True,
                  energy_units_in_kwh: bool = True,
-                 concatenated_csv_name: str = None,
                  drop_nan: bool = False,
                  name_export_rows_with_NaN: str = None,
                  name_export_rows_not_corr_agg: str = None
@@ -331,13 +331,21 @@ class Table:
         """
         Generates a table or dataframe using the EnergyPlus simulation results CSV files
         available in the current folder.
-
-        :param frequency: A list of strings.
-        Strings can be 'timestep', 'hourly', 'daily', 'monthly' and/or 'runperiod'.
+        :param datasets: A list of strings.
+        The strings are the names of the CSV files that you want to work with, at the working directory.
+        :param source_concatenated_csv_filepath: A string used as the filepath to read the previously concatenated csv file with the argument concatenated_csv_name.
+        :param source_frequency: A string. Used to inform accim about the frequency of the input CSVs.
+        If there are multiple frequencies in a single CSV, the columns for the frequencies different to the selected one will be discarded.
+        String can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
+        :param frequency: A string. Rows will be aggregated based on this frequency.
+        For instance, if 'daily', hourly or timesteply rows will be aggregated in days.
+        String can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
         :param frequency_sum_or_mean: A string. Can be 'sum' or 'mean'.
         Aggregates the rows based on the defined frequency by sum or mean.
         :param standard_outputs: A bool, can be True or False.
         Used to consider only standard outputs from accim.
+        :param concatenated_csv_name: A string used as the name for the concatenated csv file.
+        :param drop_nan: A boolean, True or False. If True, drops the rows with NaNs before exporting the CSV using concatenated_csv_name.
         :param level: A list of strings. Strings can be 'block' and/or 'building'.
         Used to create columns with block or building values.
         :param level_sum_or_mean: A list of strings. Strings can be 'sum' and/or 'mean'.
@@ -359,8 +367,12 @@ class Table:
         purposes.
         :param energy_units_in_kwh: A bool, can be True or False. If True, energy units will be in kWh or kWh/m2,
         otherwise these will be in Wh or Wh/m2.
-        :param concatenated_csv_name: A string used as the name for the concatenated csv file.
-
+        :param name_export_rows_with_NaN: This parameter shouldn't be generally used.
+        A string used as a name to export a xlsx file with the rows with NaNs.
+        Used only to check the rows with NANs.
+        :param name_export_rows_not_corr_agg: This parameter shouldn't be generally used.
+        A string used as a name to export a xlsx file with the rows not correctly aggregated.
+        Used only to check the aggregations are correct.
 
         """
         if datasets is None:
@@ -391,8 +403,9 @@ class Table:
             'runperiod': 'RunPeriod'
         }
 
-        if source_frequency not in ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']:
-            raise KeyError('The source frequency entered must be timestep, hourly, daily, monthly or runperiod.')
+        if source_concatenated_csv_filepath is None:
+            if source_frequency not in ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']:
+                raise KeyError('The source frequency entered must be timestep, hourly, daily, monthly or runperiod.')
 
         if source_frequency == 'runperiod':
             if frequency in ['timestep', 'hourly', 'daily', 'monthly']:
@@ -410,6 +423,17 @@ class Table:
             if frequency in ['timestep']:
                 raise KeyError(f'Source frequency is {source_frequency}, therefore '
                                f'timestep output frequency cannot be selected.')
+
+        if source_concatenated_csv_filepath is not None:
+            for i in source_concatenated_csv_filepath.split('['):
+                if i.split('-')[0] == 'freq':
+                    frequency = i.split('-')[1]
+                    self.frequency = frequency
+                elif i.split('-')[0] == 'frequency_sum_or_mean':
+                    frequency_sum_or_mean = i.split('-')[1]
+                elif i.split('-')[0] == 'standard_outputs':
+                    standard_outputs = i.split('-')[1]
+            source_frequency = frequency
 
         if source_frequency in ['timestep', 'hourly']:
             aggregation_list_first = [
@@ -678,14 +702,6 @@ class Table:
             # todo amend order of columns
             df = pd.read_csv(filepath_or_buffer=source_concatenated_csv_filepath)
             df = df.drop(columns=df.columns[0])
-            for i in source_concatenated_csv_filepath.split('['):
-                if i.split('-')[0] == 'freq':
-                    frequency = i.split('-')[1]
-                    self.frequency = frequency
-                elif i.split('-')[0] == 'frequency_sum_or_mean':
-                    frequency_sum_or_mean = i.split('-')[1]
-                elif i.split('-')[0] == 'standard_outputs':
-                    standard_outputs = i.split('-')[1]
             cols = df.columns.tolist()
             cols = cols[-1:] + cols[:-1]
             df = df[cols]
@@ -761,7 +777,6 @@ class Table:
                 not_correct_agg = df[df['count'] != 12]
             if source_frequency == 'runperiod':
                 not_correct_agg = df[df['count'] != 1]
-        #todo continue testing
             # if len(not_correct_agg) > 0:
             #     print('The following rows have not been correctly aggregated:')
             #     print(not_correct_agg)
