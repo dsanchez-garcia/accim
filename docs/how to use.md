@@ -36,14 +36,14 @@ for ExistingHVAC with mixed mode: ex_mm;
 for ExistingHVAC with full air-conditioning mode: ex_ac
 ): vrf_mm
 Do you want to keep the existing outputs (true or false)?: false
-Enter the Output type (standard, simplified or existing): standard
+Enter the Output type (standard or simplified): standard
 Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): hourly runperiod
 ```
 where
 - ScriptType can be 'vrf_mm', 'vrf_ac', 'ex_mm' or 'ex_ac', and it refers to the type of functions as explained above
 - Existing outputs in the IDF can be kept if entered 'true'. Otherwise, if entered 'false', it will be removed for clarity purposes at results stage.
 - Output_type can be 'standard' or 'simplified', and it refers to the simulation results: 'standard' means that results will contain the full selection relevant to accim; and 'simplified' means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited.
-- Output_freqs (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies. In case of output type 'existing', the frequency won't have any effect.
+- Output_freqs (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies.
 - EnergyPlus_version can be '9.1' to '9.6', '22.1' or '22.2'. It is the version of EnergyPlus you have installed in your computer. If you enter '9.1', accim will look for the E+9.1.0 IDD file in path "C:\\EnergyPlusV9-1-0".
 - Temperature Control method can be 'temperature' or 'temp', or 'pmv'. If 'temp' is used, the setpoint will be the operative temperature, otherwise if 'pmv' is used, the setpoint will be the PMV index.
 
