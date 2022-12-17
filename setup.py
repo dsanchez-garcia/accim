@@ -117,6 +117,7 @@ setuptools.setup(
         'matplotlib',
         'pandas',
         'datapackage',
+        'unidecode',
         # 'shutil',
         # 'glob'
         ],

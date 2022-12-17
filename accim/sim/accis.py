@@ -35,6 +35,8 @@ def addAccis(
     'ex_ac' for ExistingHVAC only with full air-conditioning mode, 
     'ex_mm' for ExistingHVAC with mixed-mode.
     :param Output_type: The default is None. Can be 'standard', 'simplified' or 'timestep'.
+    :param Output_freqs: The default is None. A list containing the following strings: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
+    :param Output_keep_existing: The default is None. It is a boolean (True or False) to keep the existing Output:Variable objects or not.
     :param EnergyPlus_version: The default is None. Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1' or '22.2'.
     :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
     :param ComfStand: The default is None.
@@ -59,6 +61,7 @@ def addAccis(
         '18 = MEX Oropeza DryTropic;
         '19 = MEX Oropeza Temperate;
         '20 = MEX Oropeza HumTropic;
+        '21 = CHL Perez-Fargallo;
     :param CAT: The default is None.
     (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT)
     :param ComfMod: The default is None.
