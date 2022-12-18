@@ -1,7 +1,8 @@
 def genCSVconcatenated(
-        frequency: str = None,
-        datasets_per_chunk: int = 50,
-        concatenated_csv_name: str = None,
+    source_frequency: str = None,
+    frequency: str = None,
+    datasets_per_chunk: int = 50,
+    concatenated_csv_name: str = None,
 ):
     import pandas as pd
     from accim.data.datawrangling import Table
@@ -32,6 +33,7 @@ def genCSVconcatenated(
     for i in range(len(chunklist)):
         z = Table(
             datasets=chunklist[i],
+            source_frequency=source_frequency,
             frequency=frequency,
             frequency_sum_or_mean='sum',
             standard_outputs=True,
