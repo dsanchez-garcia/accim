@@ -81,7 +81,7 @@ class rename_epw_files:
         :param filelist: A list of the EPW files. If omitted, it will rename all sample_EPWs in that folder.
         :param confirm_renaming: True or False, #to skip renaming confirmation on prompt command or console
         :param confirm_deletion: True or False #to skip deletion confirmation on prompt command or console
-        :param match_cities: True or False. Default is False. It takes the possible city names and checks it is in an extensive list of cities. It's computatinally very expensive.
+        :param match_cities: True or False. Default is False. It takes the possible city names and checks it is in an extensive list of cities. It's computationally very expensive.
         """
         import glob
         import pandas as pd
@@ -342,7 +342,7 @@ class rename_epw_files:
         amendments_list = list(
             int(i)
             for i
-            in input('\nIf any of the city or subcountry names need some amendment '
+            in input('\nIf any of the city or subcountry names needs some amendment '
                      '(if you are not happy with any of the available options, '
                      'you can exclude it from renaming at the next stage), '
                      'please enter the EPW IDs separated by space:').split()
@@ -391,13 +391,13 @@ class rename_epw_files:
                 print(epw_df.loc[i, "EPW_mod_filtered"])
                 print("If you haven't found yet the correct city or subcountry, it may be in the following address:")
                 print(epw_df.loc[i, "location_address"])
-                epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter the amended city or subcountry, which must be unique: ')
+                epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter the amended city or subcountry, which must be unique: ').replace(' ', '-')
                 # todo check again if there are repeated combinations EPW_country-EPW_city_or_subcountry
                 temp_name = f'{epw_df.loc[i, "EPW_country"]}_{epw_df.loc[i, "amended_city_or_subcountry"]}_{epw_df.loc[i, "EPW_scenario_year"]}'
                 epw_df.loc[i, 'EPW_new_names'] = temp_name
                 while list(epw_df['EPW_new_names']).count(temp_name) > 1:
                     print(f"{epw_df.loc[i, 'EPW_new_names']} already exists in the EPW file list, therefore you need to select a different city or subcountry name.")
-                    epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter again the amended city or subcountry, which must be unique: ')
+                    epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter again the amended city or subcountry, which must be unique: ').replace(' ', '-')
                     temp_name = f'{epw_df.loc[i, "EPW_country"]}_{epw_df.loc[i, "amended_city_or_subcountry"]}_{epw_df.loc[i, "EPW_scenario_year"]}'
                     epw_df.loc[i, 'EPW_new_names'] = temp_name
 
@@ -406,7 +406,13 @@ class rename_epw_files:
                 print(f'ID: {i} / {epw_df.loc[i, "EPW_names"]} / {epw_df.loc[i, "EPW_new_names"]}')
 
 
-        exclusion_list = list(name for name in input('\nIf you want to exclude some EPWs from renaming, please enter the new names separated by space:').split())
+        exclusion_list = list(
+            name
+            for name
+            in input('\nIf you want to exclude some EPWs from renaming, '
+                     'please enter the new names separated by space, '
+                     'otherwise, hit enter to continue:').split()
+        )
 
         if confirm_renaming is None:
             proceed = input('\nDo you want to rename the file or files? [y/n]:')
