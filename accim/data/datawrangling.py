@@ -4,6 +4,7 @@ def genCSVconcatenated(
         frequency: str = None,
         datasets_per_chunk: int = 50,
         concatenated_csv_name: str = None,
+        drop_nan: bool = True,
 ):
     import pandas as pd
     from accim.data.datawrangling import Table
@@ -17,6 +18,14 @@ def genCSVconcatenated(
     if datasets is None:
         datasets = [
             i for i in os.listdir() if
+            i.endswith('.csv')
+            and 'CSVconcatenated' not in i
+            and '[Rows_with_NaNs' not in i
+            and '[Rows_not_corr_agg' not in i
+        ]
+    else:
+        datasets = [
+            i for i in datasets if
             i.endswith('.csv')
             and 'CSVconcatenated' not in i
             and '[Rows_with_NaNs' not in i
@@ -38,7 +47,8 @@ def genCSVconcatenated(
             frequency=frequency,
             frequency_sum_or_mean='sum',
             standard_outputs=True,
-            concatenated_csv_name=f'{concatenated_csv_name}_Part{str(i).zfill(4)}'
+            concatenated_csv_name=f'{concatenated_csv_name}_Part{str(i).zfill(4)}',
+            drop_nan=drop_nan
         )
         del z
         gc.collect()
