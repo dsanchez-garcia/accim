@@ -1,8 +1,9 @@
 def genCSVconcatenated(
-    source_frequency: str = None,
-    frequency: str = None,
-    datasets_per_chunk: int = 50,
-    concatenated_csv_name: str = None,
+        datasets: list = None,
+        source_frequency: str = None,
+        frequency: str = None,
+        datasets_per_chunk: int = 50,
+        concatenated_csv_name: str = None,
 ):
     import pandas as pd
     from accim.data.datawrangling import Table
@@ -13,19 +14,19 @@ def genCSVconcatenated(
     start = time()
 
     # freq = 'runperiod'
-
-    datasetlist_all = [
-        i for i in os.listdir() if
-        i.endswith('.csv')
-        and 'CSVconcatenated' not in i
-        and '[Rows_with_NaNs' not in i
-        and '[Rows_not_corr_agg' not in i
-    ]
+    if datasets is None:
+        datasets = [
+            i for i in os.listdir() if
+            i.endswith('.csv')
+            and 'CSVconcatenated' not in i
+            and '[Rows_with_NaNs' not in i
+            and '[Rows_not_corr_agg' not in i
+        ]
 
     chunklist = []
     # datasets_per_chunk = 50
-    for i in range(0, len(datasetlist_all), datasets_per_chunk):
-        templist = datasetlist_all[i:i + datasets_per_chunk]
+    for i in range(0, len(datasets), datasets_per_chunk):
+        templist = datasets[i:i + datasets_per_chunk]
         chunklist.append(templist)
 
     # len(chunklist[-2])
