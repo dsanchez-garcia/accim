@@ -2414,6 +2414,29 @@ class Table:
         self.rows = rows
         self.cols = cols
 
+        print(f'The number of rows and the list of these is going to be:')
+        print(f'No. of rows = {len(self.rows)}')
+        print(f'List of self.rows:')
+        print(*self.rows, sep='\n')
+
+        self.rename_rows = input('Do you want to rename the rows? [y/n]: ')
+        if self.rename_rows == 'y':
+            self.rows_new_names = []
+            for i in self.rows:
+                new_name = input(f'Please enter the new name for {i}: ')
+                self.rows_new_names.append(new_name)
+
+        print(f'The number of columns and the list of these is going to be:')
+        print(f'No. of columns = {len(self.cols)}')
+        print(f'List of columns:')
+        print(*self.cols, sep='\n')
+
+        self.rename_cols = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
+        if self.rename_cols == 'y':
+            self.cols_new_names = []
+            for i in self.cols:
+                new_name = input(f'Please enter the new name for {i}: ')
+                self.cols_new_names.append(new_name)
 
     def scatter_plot(
             self,
@@ -2429,15 +2452,15 @@ class Table:
         rows = self.rows
         cols = self.cols
 
-        print(f'The number of rows and the list of these is going to be:')
-        print(f'No. of rows = {len(rows)}')
-        print(f'List of rows:')
-        print(*rows, sep='\n')
-
-        print(f'The number of columns and the list of these is going to be:')
-        print(f'No. of columns = {len(cols)}')
-        print(f'List of columns:')
-        print(*cols, sep='\n')
+        # print(f'The number of rows and the list of these is going to be:')
+        # print(f'No. of rows = {len(rows)}')
+        # print(f'List of rows:')
+        # print(*rows, sep='\n')
+        #
+        # print(f'The number of columns and the list of these is going to be:')
+        # print(f'No. of columns = {len(cols)}')
+        # print(f'List of columns:')
+        # print(*cols, sep='\n')
 
         if confirm_graph is False:
             proceed = input('Do you want to proceed? [y/n]:')
@@ -2559,21 +2582,39 @@ class Table:
             if len(rows) == 1:
                 if len(cols) == 1:
                     for i in range(len(rows)):
-                        ax.set_ylabel(rows[i], rotation=90, size='large')
+                        if self.rename_rows == 'y':
+                            ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
+                        else:
+                            ax.set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(cols)):
-                        ax.set_title(cols[j])
+                        if self.rename_cols == 'y':
+                            ax.set_title(self.cols_new_names[j])
+                        else:
+                            ax.set_title(cols[j])
 
             if len(rows) > 1:
                 if len(cols) == 1:
                     for i in range(len(rows)):
-                        ax[i].set_ylabel(rows[i], rotation=90, size='large')
+                        if self.rename_rows == 'y':
+                            ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
+                        else:
+                            ax[i].set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(cols)):
-                        ax[0].set_title(cols[j])
+                        if self.rename_cols == 'y':
+                            ax[0].set_title(self.cols_new_names[j])
+                        else:
+                            ax[0].set_title(cols[j])
                 else:
                     for i in range(len(rows)):
-                        ax[i, 0].set_ylabel(rows[i], rotation=90, size='large')
+                        if self.rename_rows == 'y':
+                            ax[i, 0].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
+                        else:
+                            ax[i, 0].set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(cols)):
-                        ax[0, j].set_title(cols[j])
+                        if self.rename_cols == 'y':
+                            ax[0, j].set_title(self.cols_new_names[j])
+                        else:
+                            ax[0, j].set_title(cols[j])
 
             supx = fig.supxlabel(supxlabel)
             supy = fig.supylabel(self.data_on_y_main_axis[0][0])
@@ -2623,15 +2664,15 @@ class Table:
         import matplotlib.pyplot as plt
         import matplotlib.lines as lines
         
-        print(f'The number of rows and the list of these is going to be:')
-        print(f'No. of rows = {len(self.rows)}')
-        print(f'List of self.rows:')
-        print(*self.rows, sep='\n')
-
-        print(f'The number of columns and the list of these is going to be:')
-        print(f'No. of columns = {len(self.cols)}')
-        print(f'List of columns:')
-        print(*self.cols, sep='\n')
+        # print(f'The number of rows and the list of these is going to be:')
+        # print(f'No. of rows = {len(self.rows)}')
+        # print(f'List of self.rows:')
+        # print(*self.rows, sep='\n')
+        #
+        # print(f'The number of columns and the list of these is going to be:')
+        # print(f'No. of columns = {len(self.cols)}')
+        # print(f'List of columns:')
+        # print(*self.cols, sep='\n')
 
         if confirm_graph is False:
             proceed = input('Do you want to proceed? [y/n]:')
@@ -2903,9 +2944,15 @@ class Table:
                                         # adjustable='box',
                                         share=True)
                     for i in range(len(self.rows)):
-                        ax.set_ylabel(self.rows[i], rotation=90, size='large')
+                        if self.rename_rows == 'y':
+                            ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
+                        else:
+                            ax.set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        ax.set_title(self.cols[j])
+                        if self.rename_cols == 'y':
+                            ax.set_title(self.cols_new_names[j])
+                        else:
+                            ax.set_title(self.cols[j])
 
             if len(self.rows) > 1:
                 if len(self.cols) == 1:
@@ -2913,17 +2960,29 @@ class Table:
                                         # adjustable='box',
                                         share=True)
                     for i in range(len(self.rows)):
-                        ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
+                        if self.rename_rows == 'y':
+                            ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
+                        else:
+                            ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        ax[0].set_title(self.cols[j])
+                        if self.rename_cols == 'y':
+                            ax[0].set_title(self.cols_new_names[j])
+                        else:
+                            ax[0].set_title(self.cols[j])
                 else:
                     ax[0, 0].set_aspect('equal',
                                         # adjustable='box',
                                         share=True)
                     for i in range(len(self.rows)):
-                        ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
+                        if self.rename_rows == 'y':
+                            ax[i, 0].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
+                        else:
+                            ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        ax[0, j].set_title(self.cols[j])
+                        if self.rename_cols == 'y':
+                            ax[0, j].set_title(self.cols_new_names[j])
+                        else:
+                            ax[0, j].set_title(self.cols[j])
 
             supx = fig.supxlabel(supxlabel)
             supy = fig.supylabel(supylabel)

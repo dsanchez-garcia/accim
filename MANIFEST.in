@@ -2,3 +2,4 @@ include README.md
 include LICENSE.txt
 
 prune accim/sample_files/jupyter_notebooks/z_SS
+prune accim/dist
