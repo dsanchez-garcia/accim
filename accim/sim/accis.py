@@ -34,7 +34,7 @@ def addAccis(
     'vrf_mm' for VRFsystem with mixed-mode, 
     'ex_ac' for ExistingHVAC only with full air-conditioning mode, 
     'ex_mm' for ExistingHVAC with mixed-mode.
-    :param Output_type: The default is None. Can be 'standard', 'simplified' or 'timestep'.
+    :param Output_type: The default is None. Can be 'standard', 'simplified' or 'detailed'.
     :param Output_freqs: The default is None. A list containing the following strings: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
     :param Output_keep_existing: The default is None. It is a boolean (True or False) to keep the existing Output:Variable objects or not.
     :param EnergyPlus_version: The default is None. Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1' or '22.2'.
@@ -120,6 +120,8 @@ def addAccis(
         'standard',
         'Simplified',
         'simplified',
+        'Detailed',
+        'detailed'
     ]
 
     fullOutputsFreqList = [
@@ -173,10 +175,10 @@ def addAccis(
         while Output_keep_existing.lower() not in ['true', 'false']:
             Output_keep_existing = input('The answer you entered is not valid. '
                                           'Do you want to keep the existing outputs (true or false)?: ')
-        Output_type = input("Enter the Output type (standard or simplified): ")
+        Output_type = input("Enter the Output type (standard, simplified or detailed): ")
         while Output_type not in fullOutputsTypeList:
             Output_type = input("   Output type was not correct. "
-                            "Please, enter the Output type (standard or simplified): ")
+                            "Please, enter the Output type (standard, simplified or detailed): ")
         Output_freqs = list(freq for freq in input(
             "Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): ").split())
         while (not(all(elem in fullOutputsFreqList for elem in Output_freqs))):
@@ -307,6 +309,17 @@ def addAccis(
                 Outputs_freq=Output_freqs,
                 ScriptType=ScriptType,
                 TempCtrl=TempCtrl,
+                verboseMode=verboseMode
+            )
+        elif Output_type.lower() == 'detailed':
+            z.addOutputVariablesStandard(
+                Outputs_freq=Output_freqs,
+                ScriptType=ScriptType,
+                TempCtrl=TempCtrl,
+                verboseMode=verboseMode
+            )
+            z.addOutputVariablesDetailed(
+                Outputs_freq=Output_freqs,
                 verboseMode=verboseMode
             )
 

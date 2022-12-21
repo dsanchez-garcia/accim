@@ -3352,6 +3352,40 @@ def addOutputVariablesStandard(
     del EMSoutputvariablenamelist, outputnamelist, addittionaloutputs,
 
 
+def addOutputVariablesDetailed(
+        self,
+        Outputs_freq: any = None,
+        verboseMode: bool = True):
+    """Add Output:Variable objects for accim."""
+
+    addittionaloutputs = [
+        'AFN Surface Venting Window or Door Opening Factor',
+    ]
+
+    for freq in Outputs_freq:
+        outputnamelist = (
+            [
+                output.Variable_Name
+                for output
+                in self.idf1.idfobjects['Output:Variable']
+                if output.Reporting_Frequency == freq.capitalize()
+            ]
+        )
+
+        for addittionaloutput in addittionaloutputs:
+            if addittionaloutput in outputnamelist:
+                if verboseMode:
+                    print('Not added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+            else:
+                self.idf1.newidfobject(
+                    'Output:Variable',
+                    Key_Value='*',
+                    Variable_Name=addittionaloutput,
+                    Reporting_Frequency=freq.capitalize(),
+                    Schedule_Name=''
+                    )
+                if verboseMode:
+                    print('Added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
 
 
 

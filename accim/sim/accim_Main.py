@@ -22,6 +22,7 @@ class accimJob():
         addIntVarList, \
         addOutputVariablesStandard, \
         addOutputVariablesSimplified, \
+        addOutputVariablesDetailed, \
         removeExistingOutputVariables, \
         removeDuplicatedOutputVariables
 
