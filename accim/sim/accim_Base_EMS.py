@@ -3402,7 +3402,7 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
     else:
         ppl_key_name = [i for i in self.idf1.idfobjects['PEOPLE']][0].Name
 
-    spacelist = [i for i in self.idf1.idfobjects['spacelist']]
+    # spacelist = [i for i in self.idf1.idfobjects['spacelist']]
 
     if 'RMOT' in sensorlist:
         if verboseMode:
