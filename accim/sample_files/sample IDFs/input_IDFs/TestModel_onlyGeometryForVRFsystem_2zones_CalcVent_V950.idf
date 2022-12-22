@@ -6,7 +6,7 @@
 ! Zone floor area calculation method : 1-Inner
 ! Window to wall ratio method : 1-Inner
 
-  Version,22.2;
+  Version,9.5;
 
   RunPeriod,
     Untitled (01-01:31-12),  !- Name
@@ -598,11 +598,7 @@
     .000001,                 !- Absolute Airflow Convergence Tolerance {kg/s}
     -0.5,                    !- Convergence Acceleration Limit {dimensionless}
     0,                       !- Azimuth Angle of Long Axis of Building {deg}
-    1,                       !- Ratio of Building Width Along Short Axis to Width Along Long Axis
-    No,                      !- Height Dependence of External Node Temperature
-    SkylineLU,               !- Solver
-    No,                      !- Allow Unsupported Zone Equipment
-    No;                      !- Do Distribution Duct Sizing Calculation
+    1;                       !- Ratio of Building Width Along Short Axis to Width Along Long Axis
 
 ! Schedule: On 24/7
 
@@ -1063,12 +1059,12 @@
 
   PEOPLE,
     People Block1:Zone2,     !- Name
-    Block1:Zone2,            !- Zone or ZoneList or Space or SpaceList Name
+    Block1:Zone2,            !- Zone or ZoneList Name
     Office_OpenOff_Occ,      !- Number of People Schedule Name
     People/Area,             !- Number of People Calculation Method
     ,                        !- Number of People
-    .111,                    !- People per Floor Area {person/m2}
-    ,                        !- Floor Area per Person {m2/person}
+    .111,                    !- People per Zone Floor Area {person/m2}
+    ,                        !- Zone Floor Area per Person {m2/person}
     .3,                      !- Fraction Radiant
     AutoCalculate,           !- Sensible Heat Fraction
     Activity Schedule 19,    !- Activity Level Schedule Name
@@ -1104,7 +1100,7 @@
 
   Lights,
     Block1:Zone2 General lighting,  !- Name
-    Block1:Zone2,            !- Zone or ZoneList or Space or SpaceList Name
+    Block1:Zone2,            !- Zone or ZoneList Name
     Office_OpenOff_Light,    !- Schedule Name
     Watts/Area,              !- Design Level Calculation Method
     ,                        !- Lighting Level {W}
@@ -1121,7 +1117,7 @@
   OtherEquipment,
     Block1:Zone2 Equipment gain,  !- Name
     Electricity,             !- Fuel Type
-    Block1:Zone2,            !- Zone or ZoneList or Space or SpaceList Name
+    Block1:Zone2,            !- Zone or ZoneList Name
     Office_OpenOff_Equip,    !- Schedule Name
     Watts/Area,              !- Design Level Calculation Method
     ,                        !- Design Level {W}
@@ -1179,7 +1175,6 @@
     Floor,                   !- Surface Type
     Project ground floor,    !- Construction Name
     Block1:Zone2,            !- Zone Name
-    ,                        !- Space Name
     Ground,                  !- Outside Boundary Condition
     ,                        !- Outside Boundary Condition Object
     NoSun,                   !- Sun Exposure
@@ -1198,7 +1193,6 @@
     Roof,                    !- Surface Type
     Project flat roof,       !- Construction Name
     Block1:Zone2,            !- Zone Name
-    ,                        !- Space Name
     Outdoors,                !- Outside Boundary Condition
     ,                        !- Outside Boundary Condition Object
     SunExposed,              !- Sun Exposure
@@ -1246,7 +1240,6 @@
     Wall,                    !- Surface Type
     Project partition,       !- Construction Name
     Block1:Zone2,            !- Zone Name
-    ,                        !- Space Name
     Surface,                 !- Outside Boundary Condition
     Block1:Zone1_Partition_4_0_10000,  !- Outside Boundary Condition Object
     NoSun,                   !- Sun Exposure
@@ -1265,7 +1258,6 @@
     Wall,                    !- Surface Type
     Project partition_Rev,   !- Construction Name
     Block1:Zone1,            !- Zone Name
-    ,                        !- Space Name
     Surface,                 !- Outside Boundary Condition
     Block1:Zone2_Partition_2_0_0,  !- Outside Boundary Condition Object
     NoSun,                   !- Sun Exposure
@@ -1296,7 +1288,6 @@
     Wall,                    !- Surface Type
     Project wall,            !- Construction Name
     Block1:Zone2,            !- Zone Name
-    ,                        !- Space Name
     Outdoors,                !- Outside Boundary Condition
     ,                        !- Outside Boundary Condition Object
     SunExposed,              !- Sun Exposure
@@ -1420,7 +1411,6 @@
     Wall,                    !- Surface Type
     Project wall,            !- Construction Name
     Block1:Zone2,            !- Zone Name
-    ,                        !- Space Name
     Outdoors,                !- Outside Boundary Condition
     ,                        !- Outside Boundary Condition Object
     SunExposed,              !- Sun Exposure
@@ -1544,7 +1534,6 @@
     Wall,                    !- Surface Type
     Project wall,            !- Construction Name
     Block1:Zone2,            !- Zone Name
-    ,                        !- Space Name
     Outdoors,                !- Outside Boundary Condition
     ,                        !- Outside Boundary Condition Object
     SunExposed,              !- Sun Exposure
@@ -1680,12 +1669,12 @@
 
   PEOPLE,
     People Block1:Zone1,     !- Name
-    Block1:Zone1,            !- Zone or ZoneList or Space or SpaceList Name
+    Block1:Zone1,            !- Zone or ZoneList Name
     Office_OpenOff_Occ,      !- Number of People Schedule Name
     People/Area,             !- Number of People Calculation Method
     ,                        !- Number of People
-    .111,                    !- People per Floor Area {person/m2}
-    ,                        !- Floor Area per Person {m2/person}
+    .111,                    !- People per Zone Floor Area {person/m2}
+    ,                        !- Zone Floor Area per Person {m2/person}
     .3,                      !- Fraction Radiant
     AutoCalculate,           !- Sensible Heat Fraction
     Activity Schedule 26,    !- Activity Level Schedule Name
@@ -1721,7 +1710,7 @@
 
   Lights,
     Block1:Zone1 General lighting,  !- Name
-    Block1:Zone1,            !- Zone or ZoneList or Space or SpaceList Name
+    Block1:Zone1,            !- Zone or ZoneList Name
     Office_OpenOff_Light,    !- Schedule Name
     Watts/Area,              !- Design Level Calculation Method
     ,                        !- Lighting Level {W}
@@ -1738,7 +1727,7 @@
   OtherEquipment,
     Block1:Zone1 Equipment gain,  !- Name
     Electricity,             !- Fuel Type
-    Block1:Zone1,            !- Zone or ZoneList or Space or SpaceList Name
+    Block1:Zone1,            !- Zone or ZoneList Name
     Office_OpenOff_Equip,    !- Schedule Name
     Watts/Area,              !- Design Level Calculation Method
     ,                        !- Design Level {W}
@@ -1796,7 +1785,6 @@
     Floor,                   !- Surface Type
     Project ground floor,    !- Construction Name
     Block1:Zone1,            !- Zone Name
-    ,                        !- Space Name
     Ground,                  !- Outside Boundary Condition
     ,                        !- Outside Boundary Condition Object
     NoSun,                   !- Sun Exposure
@@ -1815,7 +1803,6 @@
     Roof,                    !- Surface Type
     Project flat roof,       !- Construction Name
     Block1:Zone1,            !- Zone Name
-    ,                        !- Space Name
     Outdoors,                !- Outside Boundary Condition
     ,                        !- Outside Boundary Condition Object
     SunExposed,              !- Sun Exposure
@@ -1863,7 +1850,6 @@
     Wall,                    !- Surface Type
     Project wall,            !- Construction Name
     Block1:Zone1,            !- Zone Name
-    ,                        !- Space Name
     Outdoors,                !- Outside Boundary Condition
     ,                        !- Outside Boundary Condition Object
     SunExposed,              !- Sun Exposure
@@ -1987,7 +1973,6 @@
     Wall,                    !- Surface Type
     Project wall,            !- Construction Name
     Block1:Zone1,            !- Zone Name
-    ,                        !- Space Name
     Outdoors,                !- Outside Boundary Condition
     ,                        !- Outside Boundary Condition Object
     SunExposed,              !- Sun Exposure
@@ -2111,7 +2096,6 @@
     Wall,                    !- Surface Type
     Project wall,            !- Construction Name
     Block1:Zone1,            !- Zone Name
-    ,                        !- Space Name
     Outdoors,                !- Outside Boundary Condition
     ,                        !- Outside Boundary Condition Object
     SunExposed,              !- Sun Exposure
@@ -2253,8 +2237,7 @@
     0.0,                     !- Inside Sill Depth {m}
     0.5,                     !- Inside Sill Solar Absorptance
     0.0,                     !- Inside Reveal Depth {m}
-    0.5,                     !- Inside Reveal Solar Absorptance
-    CurtainWall;             !- NFRC Product Type for Assembly Calculations
+    0.5;                     !- Inside Reveal Solar Absorptance
 
   AirflowNetwork:MultiZone:ReferenceCrackConditions,
     Reference Crack Conditions,  !- Name
@@ -2391,14 +2374,7 @@
     ,                        !- Account for Dedicated Outdoor Air System
     ,                        !- Dedicated Outdoor Air System Control Strategy
     ,                        !- Dedicated Outdoor Air Low Setpoint Temperature for Design {C}
-    ,                        !- Dedicated Outdoor Air High Setpoint Temperature for Design {C}
-    Sensible Load Only No Latent Load,  !- Zone Load Sizing Method
-    HumidityRatioDifference, !- Zone Latent Cooling Design Supply Air Humidity Ratio Input Method
-    ,                        !- Zone Dehumidification Design Supply Air Humidity Ratio {kgWater/kgDryAir}
-    0.005,                   !- Zone Cooling Design Supply Air Humidity Ratio Difference {kgWater/kgDryAir}
-    HumidityRatioDifference, !- Zone Latent Heating Design Supply Air Humidity Ratio Input Method
-    ,                        !- Zone Humidification Design Supply Air Humidity Ratio {kgWater/kgDryAir}
-    0.005;                   !- Zone Humidification Design Supply Air Humidity Ratio Difference {kgWater/kgDryAir}
+    ;                        !- Dedicated Outdoor Air High Setpoint Temperature for Design {C}
 
   DesignSpecification:ZoneAirDistribution,
     Block1:Zone2,            !- Name
@@ -2576,14 +2552,7 @@
     ,                        !- Account for Dedicated Outdoor Air System
     ,                        !- Dedicated Outdoor Air System Control Strategy
     ,                        !- Dedicated Outdoor Air Low Setpoint Temperature for Design {C}
-    ,                        !- Dedicated Outdoor Air High Setpoint Temperature for Design {C}
-    Sensible Load Only No Latent Load,  !- Zone Load Sizing Method
-    HumidityRatioDifference, !- Zone Latent Cooling Design Supply Air Humidity Ratio Input Method
-    ,                        !- Zone Dehumidification Design Supply Air Humidity Ratio {kgWater/kgDryAir}
-    0.005,                   !- Zone Cooling Design Supply Air Humidity Ratio Difference {kgWater/kgDryAir}
-    HumidityRatioDifference, !- Zone Latent Heating Design Supply Air Humidity Ratio Input Method
-    ,                        !- Zone Humidification Design Supply Air Humidity Ratio {kgWater/kgDryAir}
-    0.005;                   !- Zone Humidification Design Supply Air Humidity Ratio Difference {kgWater/kgDryAir}
+    ;                        !- Dedicated Outdoor Air High Setpoint Temperature for Design {C}
 
   DesignSpecification:ZoneAirDistribution,
     Block1:Zone1,            !- Name
