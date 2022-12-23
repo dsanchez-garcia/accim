@@ -6,7 +6,7 @@ try:
         Output_keep_existing=False,
         Output_type='detailed',
         Output_freqs=['timestep', 'hourly'],
-        EnergyPlus_version='9.4',
+        EnergyPlus_version='22.1',
         TempCtrl='temp',
         ComfStand=[15],
         CAT=[80],

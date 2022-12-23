@@ -3151,7 +3151,9 @@ def addOutputVariablesStandard(
         # todo maybe create a new output type to include this variable, to be used in case of tests
         # 'AFN Surface Venting Window or Door Opening Factor',
         'AFN Zone Infiltration Air Change Rate',
-        'AFN Zone Infiltration Volume'
+        'AFN Zone Infiltration Volume',
+        'AFN Zone Ventilation Air Change Rate',
+        'AFN Zone Ventilation Volume',
     ]
     if TempCtrl.lower() == 'pmv':
         addittionaloutputs.extend([

@@ -663,6 +663,8 @@ class Table:
                 'EMS:Ventilation Hours',
                 'AFN Zone Infiltration Volume',
                 'AFN Zone Infiltration Air Change Rate',
+                'AFN Zone Ventilation Volume',
+                'AFN Zone Ventilation Air Change Rate',
                 # 'Zone Thermostat Operative Temperature [C](Hourly)',
                 # 'Zone Operative Temperature [C](Hourly)',
                 'Zone Operative Temperature',
@@ -1097,6 +1099,9 @@ class Table:
             'Ventilation Hours': 'Ventilation Hours (h)',
             'AFN Zone Infiltration Volume': 'AFN Zone Infiltration Volume (m3)',
             'AFN Zone Infiltration Air Change Rate': 'AFN Zone Infiltration Air Change Rate (ach)',
+            'AFN Zone Ventilation Volume': 'AFN Zone Infiltration Volume (m3)',
+            'AFN Zone Ventilation Air Change Rate': 'AFN Zone Infiltration Air Change Rate (ach)',
+
             'Cooling Coil Total Cooling Rate': 'Cooling Coil Total Cooling Rate (Wh)',
             'Heating Coil Heating Rate': 'Heating Coil Heating Rate (Wh)',
 
@@ -1555,6 +1560,8 @@ class Table:
                 'EMS:Ventilation Hours': 'Ventilation Hours (h)',
                 f'AFN Zone Infiltration Volume [m3]({SFdict[source_frequency]})': 'AFN Zone Infiltration Volume (m3)',
                 f'AFN Zone Infiltration Air Change Rate [ach]({SFdict[source_frequency]})': 'AFN Zone Infiltration Air Change Rate (ach)',
+                f'AFN Zone Ventilation Volume [m3]({SFdict[source_frequency]})': 'AFN Zone Infiltration Volume (m3)',
+                f'AFN Zone Ventilation Air Change Rate [ach]({SFdict[source_frequency]})': 'AFN Zone Infiltration Air Change Rate (ach)',
                 # f'Zone Thermostat Operative Temperature [C]({SFdict[source_frequency]})': 'Zone Thermostat Operative Temperature (°C)',
                 f'Zone Operative Temperature [C]({SFdict[source_frequency]})': 'Zone Operative Temperature (°C)',
                 'Zone Operative Temperature': 'Zone Operative Temperature (°C)',
