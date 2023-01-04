@@ -1099,8 +1099,8 @@ class Table:
             'Ventilation Hours': 'Ventilation Hours (h)',
             'AFN Zone Infiltration Volume': 'AFN Zone Infiltration Volume (m3)',
             'AFN Zone Infiltration Air Change Rate': 'AFN Zone Infiltration Air Change Rate (ach)',
-            'AFN Zone Ventilation Volume': 'AFN Zone Infiltration Volume (m3)',
-            'AFN Zone Ventilation Air Change Rate': 'AFN Zone Infiltration Air Change Rate (ach)',
+            'AFN Zone Ventilation Volume': 'AFN Zone Ventilation Volume (m3)',
+            'AFN Zone Ventilation Air Change Rate': 'AFN Zone Ventilation Air Change Rate (ach)',
 
             'Cooling Coil Total Cooling Rate': 'Cooling Coil Total Cooling Rate (Wh)',
             'Heating Coil Heating Rate': 'Heating Coil Heating Rate (Wh)',
@@ -1296,7 +1296,6 @@ class Table:
             df = df.dropna(axis='columns', how='all')
             df = df.dropna(axis='index', how='any')
             df = df.set_index([pd.RangeIndex(len(df))])
-
 
         # Step: do not know what it is this for
         frequency_dict = {
@@ -1538,6 +1537,19 @@ class Table:
 
         df = df[cols_cat+cols_num]
 
+        # Step: scanning data structure
+        # temp_df_datastr = df.copy()
+        # temp_df_datastr = temp_df_datastr[fixed_columns]
+        # mindex = pd.MultiIndex.from_frame(temp_df_datast)
+
+
+        # data_structure_dict = {}
+        # temp_df_datastr = df.copy()
+        # for i in list(dict.fromkeys(df['Model'])):
+        #     temp_dict =
+        #     temp_df_datastr = temp_df_datastr[temp_df_datastr['Model'].str.isin([i])]
+        #     for j in list(dict.fromkeys(temp_df_datastr['ComfStand'])):
+
         # if split_epw_names:
         #     df = df[cols_model+cols_epw_base+cols_epw_ext+cols_date+num_cols]
         # else:
@@ -1560,8 +1572,8 @@ class Table:
                 'EMS:Ventilation Hours': 'Ventilation Hours (h)',
                 f'AFN Zone Infiltration Volume [m3]({SFdict[source_frequency]})': 'AFN Zone Infiltration Volume (m3)',
                 f'AFN Zone Infiltration Air Change Rate [ach]({SFdict[source_frequency]})': 'AFN Zone Infiltration Air Change Rate (ach)',
-                f'AFN Zone Ventilation Volume [m3]({SFdict[source_frequency]})': 'AFN Zone Infiltration Volume (m3)',
-                f'AFN Zone Ventilation Air Change Rate [ach]({SFdict[source_frequency]})': 'AFN Zone Infiltration Air Change Rate (ach)',
+                f'AFN Zone Ventilation Volume [m3]({SFdict[source_frequency]})': 'AFN Zone Ventilation Volume (m3)',
+                f'AFN Zone Ventilation Air Change Rate [ach]({SFdict[source_frequency]})': 'AFN Zone Ventilation Air Change Rate (ach)',
                 # f'Zone Thermostat Operative Temperature [C]({SFdict[source_frequency]})': 'Zone Thermostat Operative Temperature (°C)',
                 f'Zone Operative Temperature [C]({SFdict[source_frequency]})': 'Zone Operative Temperature (°C)',
                 'Zone Operative Temperature': 'Zone Operative Temperature (°C)',
@@ -2144,6 +2156,10 @@ class Table:
                           data_on_y_sec_axis: list = None,
                           colorlist_y_main_axis: list = None,
                           colorlist_y_sec_axis: list = None,
+                          rename_rows: bool = None,
+                          rename_cols: bool = None,
+                          rows_new_names: list = None,
+                          cols_new_names: list = None,
                           ):
         if vars_to_gather_cols is None:
             vars_to_gather_cols = []
@@ -2179,6 +2195,9 @@ class Table:
         import matplotlib.lines as lines
 
         df_for_graph = self.df.copy()
+
+        self.rows_new_names = rows_new_names
+        self.cols_new_names = cols_new_names
 
         df_for_graph['col_to_gather_in_cols'] = 'temp'
         df_for_graph['col_to_gather_in_rows'] = 'temp'
@@ -2426,24 +2445,49 @@ class Table:
         print(f'List of self.rows:')
         print(*self.rows, sep='\n')
 
-        self.rename_rows = input('Do you want to rename the rows? [y/n]: ')
-        if self.rename_rows == 'y':
-            self.rows_new_names = []
-            for i in self.rows:
-                new_name = input(f'Please enter the new name for {i}: ')
-                self.rows_new_names.append(new_name)
+        if rename_rows is None:
+            self.rename_rows = input('Do you want to rename the rows? [y/n]: ')
+            if self.rename_rows == 'y':
+                self.rows_new_names = []
+                for i in self.rows:
+                    new_name = input(f'Please enter the new name for {i}: ')
+                    self.rows_new_names.append(new_name)
+        elif rename_rows:
+            if len(self.rows_new_names) == 0:
+                self.rename_rows = input('Do you want to rename the rows? [y/n]: ')
+                if self.rename_rows == 'y':
+                    self.rows_new_names = []
+                    for i in self.rows:
+                        new_name = input(f'Please enter the new name for {i}: ')
+                        self.rows_new_names.append(new_name)
+        else:
+            print('Rows will not be renamed')
+
+
 
         print(f'The number of columns and the list of these is going to be:')
         print(f'No. of columns = {len(self.cols)}')
         print(f'List of columns:')
         print(*self.cols, sep='\n')
 
-        self.rename_cols = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
-        if self.rename_cols == 'y':
-            self.cols_new_names = []
-            for i in self.cols:
-                new_name = input(f'Please enter the new name for {i}: ')
-                self.cols_new_names.append(new_name)
+        if rename_cols is None:
+            self.rename_cols = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
+            if self.rename_cols == 'y':
+                self.cols_new_names = []
+                for i in self.cols:
+                    new_name = input(f'Please enter the new name for {i}: ')
+                    self.cols_new_names.append(new_name)
+        elif rename_cols:
+            if len(self.cols_new_names) == 0:
+                self.rename_cols = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
+                if self.rename_cols == 'y':
+                    self.cols_new_names = []
+                    for i in self.cols:
+                        new_name = input(f'Please enter the new name for {i}: ')
+                        self.cols_new_names.append(new_name)
+        else:
+            print('Cols will not be renamed')
+
 
     def scatter_plot(
             self,
@@ -3072,6 +3116,8 @@ class Table:
                 freq=freq_graph_dict[self.frequency][0]
             )
 
+            self.df_for_graph['Date/Time'] = pd.to_datetime(self.df_for_graph['Date/Time'])
+
             fig, ax = plt.subplots(nrows=len(self.rows),
                                    ncols=len(self.cols),
                                    sharex=True,
@@ -3109,6 +3155,14 @@ class Table:
                         if len(self.data_on_y_sec_axis) > 0:
                             for k in range(len(self.data_on_y_sec_axis)):
                                 sec_y_axis_temp_cols.append(ax[i].twinx())
+                            sec_y_axis_temp_rows.append(sec_y_axis_temp_cols)
+                    elif len(self.cols) > 1 and len(self.rows) == 1:
+                        for k in range(len(self.data_on_y_main_axis)):
+                            main_y_axis_temp_cols.append(ax[j])
+                        main_y_axis_temp_rows.append(main_y_axis_temp_cols)
+                        if len(self.data_on_y_sec_axis) > 0:
+                            for k in range(len(self.data_on_y_sec_axis)):
+                                sec_y_axis_temp_cols.append(ax[j].twinx())
                             sec_y_axis_temp_rows.append(sec_y_axis_temp_cols)
                     else:
                         for k in range(len(self.data_on_y_main_axis)):
@@ -3216,6 +3270,32 @@ class Table:
                         ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
                         ax[0, j].set_title(self.cols[j])
+
+            if len(self.rows) == 1:
+                if len(self.cols) == 1:
+                    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+                    for label in ax.get_xticklabels():
+                        label.set(rotation=90, horizontalalignment='center')
+
+            if len(self.rows) == 1 and len(self.cols) > 1:
+                for j in range(len(self.cols)):
+                    ax[j].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+                    for label in ax[j].get_xticklabels():
+                        label.set(rotation=90, horizontalalignment='center')
+
+            if len(self.rows) > 1:
+                if len(self.cols) == 1:
+                    ax[len(self.rows)-1].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+                    for label in ax[len(self.rows)-1].get_xticklabels():
+                        label.set(rotation=90, horizontalalignment='center')
+                else:
+                    for j in range(len(self.cols)):
+                        ax[len(self.rows)-1, j].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+                        for label in ax[len(self.rows)-1, j].get_xticklabels():
+                            label.set(rotation=90, horizontalalignment='center')
+
+
+            # plt.xticks(rotation=70)
 
             supx = fig.supxlabel(supxlabel)
             supy = fig.supylabel(self.data_on_y_main_axis[0][0])
