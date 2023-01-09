@@ -543,6 +543,16 @@ class Table:
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
 
+        # todo making guided steps to input data
+        # if source_concatenated_csv_filepath is None:
+        #     source_concatenated_csv_filepath = input(
+        #         'You have not entered any concatenated CSV filepath. '
+        #         'If you want to read the data from some concatenated CSV filepath, please add the filepath. '
+        #         'Otherwise, if you want to read the data from the CSVs resulting from simulation, please hit enter.'
+        #         '(filepath, or hit enter to omit): ')
+        #     if len(source_concatenated_csv_filepath) == 0:
+        #         source_concatenated_csv_filepath = None
+
         SFdict = {
             'timestep': 'Timestep',
             'hourly': 'Hourly',
