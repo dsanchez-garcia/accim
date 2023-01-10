@@ -886,9 +886,9 @@ def genIDF(self,
                                             continue
                                     else:
                                         SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
-                                        SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(MaxTempDiffVOF),
-                                        SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(MinTempDiffVOF),
-                                        SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(MultiplierVOF),
+                                        SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF[0])
+                                        SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF[0])
+                                        SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF[0])
                                     for VSToffset_value in self.VSToffset_List:
                                         SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(VSToffset_value)
                                         for MinOToffset_value in self.MinOToffset_List:
@@ -1053,9 +1053,9 @@ def genIDF(self,
                                                         continue
                                                 else:
                                                     SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
-                                                    SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + str(MaxTempDiffVOF),
-                                                    SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + str(MinTempDiffVOF),
-                                                    SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + str(MultiplierVOF),
+                                                    SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF[0])
+                                                    SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF[0])
+                                                    SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF[0])
                                                 for VSToffset_value in self.VSToffset_List:
                                                     SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(
                                                         VSToffset_value)
