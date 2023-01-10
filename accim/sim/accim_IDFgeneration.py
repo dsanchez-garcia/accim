@@ -429,7 +429,7 @@ def inputData(self, ScriptType: str = None):
         fullVentCtrlList = [0, 1, 2, 3]
         self.VentCtrl_List = list(int(num) for num in input(
             "Enter the Ventilation Control numbers separated by space (\n"
-            "If HVACmode = 1:"
+            "If HVACmode = 1:\n"
             "   0 = Ventilates above neutral temperature;\n"
             "   1 = Ventilates above upper comfort limit;\n"
             "If HVACmode = 2:\n"
@@ -451,15 +451,37 @@ def inputData(self, ScriptType: str = None):
                     "     Enter the Ventilation Control numbers separated by space: ").split())
 
         if any([i in self.VentCtrl_List for i in [2, 3]]):
-            self.MaxTempDiffVOF = float(input('Enter the maximum temperature difference number for Ventilation Opening Factor: '))
+            self.MaxTempDiffVOF = float(input('Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+            while self.MaxTempDiffVOF <= 0:
+                print('          The maximum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
+                self.MaxTempDiffVOF = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
             while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-                self.MaxTempDiffVOF = float(input('      Enter the maximum temperature difference number for Ventilation Opening Factor: '))
-            self.MinTempDiffVOF = float(input('Enter the minimum temperature difference number for Ventilation Opening Factor: '))
+                self.MaxTempDiffVOF = float(input('      Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                while self.MaxTempDiffVOF <= 0:
+                    print('          The maximum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
+                    self.MaxTempDiffVOF = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+
+            self.MinTempDiffVOF = float(input('Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+            while self.MinTempDiffVOF <= 0:
+                print('          The minimum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
+                self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
             while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-                self.MinTempDiffVOF = float(input('      Enter the minimum temperature difference number for Ventilation Opening Factor: '))
-            self.MultiplierVOF = float(input('Enter the multiplier number for Ventilation Opening Factor: '))
+                self.MinTempDiffVOF = float(input('      Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                while self.MinTempDiffVOF <= 0:
+                    print('          The minimum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
+                    self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+
+            #todo if MinTempDiffVOF > MaxTempDiffVOF
+
+            self.MultiplierVOF = float(input('Enter the multiplier number for Ventilation Opening Factor (any number larger than 0): '))
+            while self.MultiplierVOF < 0 or self.MultiplierVOF > 1:
+                print('          The multiplier number is not correct. It must be a number between 0 and 1. Please enter the number again.')
+                self.MultiplierVOF = float(input('         Enter the multiplier number for Ventilation Opening Factor (any number between 0 and 1): '))
             while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-                self.MultiplierVOF = float(input('      Enter the multiplier number for Ventilation Opening Factor: '))
+                self.MultiplierVOF = float(input('      Enter the multiplier number for Ventilation Opening Factor (any number between 0 and 1): '))
+                while self.MultiplierVOF < 0 or self.MultiplierVOF > 1:
+                    print('          The multiplier number is not correct. It must be a number between 0 and 1. Please enter the number again.')
+                    self.MultiplierVOF = float(input('         Enter the multiplier number for Ventilation Opening Factor (any number between 0 and 1): '))
 
         self.VSToffset_List = list(float(num) for num in input(
             "Enter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
@@ -493,6 +515,9 @@ def inputData(self, ScriptType: str = None):
     elif 'ac' in ScriptType.lower():
         self.HVACmode_List = [0]
         self.VentCtrl_List = [0]
+        self.MaxTempDiffVOF = 1
+        self.MinTempDiffVOF = 0
+        self.MultiplierVOF = 0
         self.VSToffset_List = [0]
         self.MinOToffset_List = [0]
         self.MaxWindSpeed_List = [0]
@@ -536,9 +561,9 @@ def genIDF(self,
            ComfMod=None,
            HVACmode=None,
            VentCtrl=None,
-           MaxTempDiffVOF=7.5,
-           MinTempDiffVOF=0,
-           MultiplierVOF=0,
+           MaxTempDiffVOF=20,
+           MinTempDiffVOF=0.5,
+           MultiplierVOF=0.25,
            VSToffset=[0],
            MinOToffset=[50],
            MaxWindSpeed=[50],
@@ -563,9 +588,9 @@ def genIDF(self,
                  ComfMod is None,
                  HVACmode is None,
                  VentCtrl is None,
-                 MaxTempDiffVOF == 7.5,
-                 MinTempDiffVOF == 0,
-                 MultiplierVOF == 0,
+                 MaxTempDiffVOF == 20,
+                 MinTempDiffVOF == 0.5,
+                 MultiplierVOF == 0.25,
                  VSToffset == [0],
                  MinOToffset == [50],
                  MaxWindSpeed == [50],
@@ -606,6 +631,19 @@ def genIDF(self,
         self.VSToffset_List = [0]
         self.MinOToffset_List = [0]
         self.MaxWindSpeed_List = [0]
+
+    if type(self.MaxTempDiffVOF) is tuple:
+        self.MaxTempDiffVOF = self.MaxTempDiffVOF[0]
+
+    if type(self.MinTempDiffVOF) is tuple:
+        self.MinTempDiffVOF = self.MinTempDiffVOF[0]
+
+    if type(self.MultiplierVOF) is tuple:
+        self.MultiplierVOF = self.MultiplierVOF[0]
+
+    self.VSToffset_List = [float(i) for i in self.VSToffset_List if type(i) is int]
+    self.MinOToffset_List = [float(i) for i in self.MinOToffset_List if type(i) is int]
+    self.MaxWindSpeed_List = [float(i) for i in self.MaxWindSpeed_List if type(i) is int]
 
     if NameSuffix == '':
         suffix = '[NS_X'
@@ -886,9 +924,9 @@ def genIDF(self,
                                             continue
                                     else:
                                         SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
-                                        SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF[0])
-                                        SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF[0])
-                                        SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF[0])
+                                        SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
+                                        SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
+                                        SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
                                     for VSToffset_value in self.VSToffset_List:
                                         SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(VSToffset_value)
                                         for MinOToffset_value in self.MinOToffset_List:
@@ -967,9 +1005,9 @@ def genIDF(self,
                                                         continue
                                                 else:
                                                     SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
-                                                    SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF[0])
-                                                    SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF[0])
-                                                    SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF[0])
+                                                    SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
+                                                    SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
+                                                    SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
                                                 for VSToffset_value in self.VSToffset_List:
                                                     SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(
                                                         VSToffset_value)
@@ -1053,9 +1091,9 @@ def genIDF(self,
                                                         continue
                                                 else:
                                                     SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
-                                                    SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF[0])
-                                                    SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF[0])
-                                                    SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF[0])
+                                                    SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
+                                                    SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
+                                                    SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
                                                 for VSToffset_value in self.VSToffset_List:
                                                     SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(
                                                         VSToffset_value)

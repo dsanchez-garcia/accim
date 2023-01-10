@@ -6294,51 +6294,54 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set ComfMod = 3,          !- Program Line 3
     set HVACmode = 2,         !- Program Line 4
     set VentCtrl = 2,         !- Program Line 5
-    set VSToffset = 0,        !- Program Line 6
-    set MinOToffset = 50,     !- Program Line 7
-    set MaxWindSpeed = 50,    !- Program Line 8
+    set VSToffset = 0.0,      !- Program Line 6
+    set MinOToffset = 50.0,    !- Program Line 7
+    set MaxWindSpeed = 50.0,    !- Program Line 8
     set ACSTtol = -0.1,       !- Program Line 9
     set AHSTtol = 0.1;        !- Program Line 10
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetVOFinputData,          !- Name
-    set MaxTempDiffVOF = 10,    !- Program Line 1
+    set MaxTempDiffVOF = 50,    !- Program Line 1
     set MinTempDiffVOF = 1,    !- Program Line 2
-    set MultiplierVOF = 0,    !- Program Line 3
-    set MultiplierVOF = 0.25;    !- Program Line 4
+    set MultiplierVOF = 0.33;    !- Program Line 3
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetVST,                   !- Name
     set MinOutTemp = AHST - MinOToffset,    !- Program Line 1
-    if ComfStand == 0,        !- Program Line 2
-    if (CurrentTime < 7),     !- Program Line 3
-    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 4
-    elseif (CurrentTime < 15),    !- Program Line 5
-    set VST = 22.5+VSToffset,    !- Program Line 6
-    elseif (CurrentTime < 23),    !- Program Line 7
-    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 8
-    elseif (CurrentTime < 24),    !- Program Line 9
-    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 10
-    endif,                    !- Program Line 11
-    elseif ComfStand == 1 || ComfStand == 10,    !- Program Line 12
-    if (RMOT >= AHSTall) && (RMOT <= ACSTaul),    !- Program Line 13
-    set VST = ComfTemp+VSToffset,    !- Program Line 14
-    else,                     !- Program Line 15
-    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 16
-    endif,                    !- Program Line 17
-    elseif ComfStand == 4 || ComfStand == 5 || ComfStand == 6,    !- Program Line 18
-    if (PMOT >= AHSTall) && (PMOT <= ACSTaul),    !- Program Line 19
-    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 20
-    else,                     !- Program Line 21
-    set VST = 0,              !- Program Line 22
-    endif,                    !- Program Line 23
-    else,                     !- Program Line 24
-    if (PMOT >= AHSTall) && (PMOT <= ACSTaul),    !- Program Line 25
-    set VST = ComfTemp+VSToffset,    !- Program Line 26
-    else,                     !- Program Line 27
-    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 28
-    endif,                    !- Program Line 29
-    endif;                    !- Program Line 30
+    if (VentCtrl == 0) || (VentCtrl==2),    !- Program Line 2
+    if ComfStand == 0,        !- Program Line 3
+    if (CurrentTime < 7),     !- Program Line 4
+    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 5
+    elseif (CurrentTime < 15),    !- Program Line 6
+    set VST = 22.5+VSToffset,    !- Program Line 7
+    elseif (CurrentTime < 23),    !- Program Line 8
+    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 9
+    elseif (CurrentTime < 24),    !- Program Line 10
+    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 11
+    endif,                    !- Program Line 12
+    elseif ComfStand == 1 || ComfStand == 10,    !- Program Line 13
+    if (RMOT >= AHSTall) && (RMOT <= ACSTaul),    !- Program Line 14
+    set VST = ComfTemp+VSToffset,    !- Program Line 15
+    else,                     !- Program Line 16
+    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 17
+    endif,                    !- Program Line 18
+    elseif ComfStand == 4 || ComfStand == 5 || ComfStand == 6,    !- Program Line 19
+    if (PMOT >= AHSTall) && (PMOT <= ACSTaul),    !- Program Line 20
+    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 21
+    else,                     !- Program Line 22
+    set VST = 0,              !- Program Line 23
+    endif,                    !- Program Line 24
+    else,                     !- Program Line 25
+    if (PMOT >= AHSTall) && (PMOT <= ACSTaul),    !- Program Line 26
+    set VST = ComfTemp+VSToffset,    !- Program Line 27
+    else,                     !- Program Line 28
+    set VST = (ACST+AHST)/2+VSToffset,    !- Program Line 29
+    endif,                    !- Program Line 30
+    endif,                    !- Program Line 31
+    elseif (VentCtrl == 1) || (VentCtrl==3),    !- Program Line 32
+    set VST = AHST+VSToffset,    !- Program Line 33
+    endif;                    !- Program Line 34
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     ApplyAST_BLOCK1_ZONE2,    !- Name
@@ -6369,85 +6372,71 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if (HVACmode == 2),       !- Program Line 28
-    if (VentCtrl == 0) || (VentCtrl==2),    !- Program Line 29
-    if BLOCK1_ZONE2_OpT>VST,    !- Program Line 30
-    set Ventilates_HVACmode2_BLOCK1_ZONE2 = 1,    !- Program Line 31
-    else,                     !- Program Line 32
-    set Ventilates_HVACmode2_BLOCK1_ZONE2 = 0,    !- Program Line 33
-    endif,                    !- Program Line 34
-    elseif (VentCtrl==1) || (VentCtrl==3),    !- Program Line 35
-    if BLOCK1_ZONE2_OpT>AHST,    !- Program Line 36
-    set Ventilates_HVACmode2_BLOCK1_ZONE2 = 1,    !- Program Line 37
-    else,                     !- Program Line 38
-    set Ventilates_HVACmode2_BLOCK1_ZONE2 = 0,    !- Program Line 39
-    endif,                    !- Program Line 40
-    else,                     !- Program Line 41
-    set Ventilates_HVACmode2_BLOCK1_ZONE2 = 0,    !- Program Line 42
-    endif,                    !- Program Line 43
-    else,                     !- Program Line 44
-    set Ventilates_HVACmode2_BLOCK1_ZONE2 = 0,    !- Program Line 45
-    endif,                    !- Program Line 46
-    else,                     !- Program Line 47
-    set Ventilates_HVACmode2_BLOCK1_ZONE2 = 0,    !- Program Line 48
-    endif,                    !- Program Line 49
-    if VentCtrl == 0,         !- Program Line 50
-    if BLOCK1_ZONE2_OutT < BLOCK1_ZONE2_OpT,    !- Program Line 51
-    if BLOCK1_ZONE2_OutT>MinOutTemp,    !- Program Line 52
-    if BLOCK1_ZONE2_OpT > VST,    !- Program Line 53
-    if BLOCK1_ZONE2_WindSpeed <= MaxWindSpeed,    !- Program Line 54
-    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 1,    !- Program Line 55
-    else,                     !- Program Line 56
-    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 57
-    endif,                    !- Program Line 58
-    else,                     !- Program Line 59
-    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 60
-    endif,                    !- Program Line 61
-    else,                     !- Program Line 62
-    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 63
-    endif,                    !- Program Line 64
-    else,                     !- Program Line 65
-    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 66
-    endif,                    !- Program Line 67
-    elseif VentCtrl == 1,     !- Program Line 68
-    if BLOCK1_ZONE2_OutT<BLOCK1_ZONE2_OpT,    !- Program Line 69
-    if BLOCK1_ZONE2_OutT>MinOutTemp,    !- Program Line 70
-    if BLOCK1_ZONE2_OpT > ACSTnoTol,    !- Program Line 71
-    if BLOCK1_ZONE2_WindSpeed <= MaxWindSpeed,    !- Program Line 72
-    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 1,    !- Program Line 73
-    else,                     !- Program Line 74
-    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 75
-    endif,                    !- Program Line 76
-    else,                     !- Program Line 77
-    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 78
-    endif,                    !- Program Line 79
-    else,                     !- Program Line 80
-    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 81
-    endif,                    !- Program Line 82
-    else,                     !- Program Line 83
-    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 84
-    endif,                    !- Program Line 85
-    endif,                    !- Program Line 86
-    if HVACmode == 0,         !- Program Line 87
-    set ACST_Act_BLOCK1_ZONE2 = ACST,    !- Program Line 88
-    set AHST_Act_BLOCK1_ZONE2 = AHST,    !- Program Line 89
-    elseif HVACmode == 1,     !- Program Line 90
-    Set ACST_Act_BLOCK1_ZONE2 = 100,    !- Program Line 91
-    Set AHST_Act_BLOCK1_ZONE2 = -100,    !- Program Line 92
-    if Ventilates_HVACmode1_BLOCK1_ZONE2 == 1,    !- Program Line 93
-    set VentHours_BLOCK1_ZONE2 = 1,    !- Program Line 94
-    else,                     !- Program Line 95
-    set VentHours_BLOCK1_ZONE2 = 0,    !- Program Line 96
-    endif,                    !- Program Line 97
-    elseif HVACmode == 2,     !- Program Line 98
-    if Ventilates_HVACmode2_BLOCK1_ZONE2 == 1,    !- Program Line 99
-    set VentHours_BLOCK1_ZONE2 = 1,    !- Program Line 100
-    elseif Ventilates_HVACmode2_BLOCK1_ZONE2 == 0,    !- Program Line 101
-    set VentHours_BLOCK1_ZONE2 = 0,    !- Program Line 102
-    set ACST_Act_BLOCK1_ZONE2 = ACST,    !- Program Line 103
-    set AHST_Act_BLOCK1_ZONE2 = AHST,    !- Program Line 104
-    endif,                    !- Program Line 105
-    endif;                    !- Program Line 106
+    if BLOCK1_ZONE2_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_BLOCK1_ZONE2 = 1,    !- Program Line 29
+    else,                     !- Program Line 30
+    set Ventilates_HVACmode2_BLOCK1_ZONE2 = 0,    !- Program Line 31
+    endif,                    !- Program Line 32
+    else,                     !- Program Line 33
+    set Ventilates_HVACmode2_BLOCK1_ZONE2 = 0,    !- Program Line 34
+    endif,                    !- Program Line 35
+    if VentCtrl == 0,         !- Program Line 36
+    if BLOCK1_ZONE2_OutT < BLOCK1_ZONE2_OpT,    !- Program Line 37
+    if BLOCK1_ZONE2_OutT>MinOutTemp,    !- Program Line 38
+    if BLOCK1_ZONE2_OpT > VST,    !- Program Line 39
+    if BLOCK1_ZONE2_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 1,    !- Program Line 41
+    else,                     !- Program Line 42
+    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 43
+    endif,                    !- Program Line 44
+    else,                     !- Program Line 45
+    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 46
+    endif,                    !- Program Line 47
+    else,                     !- Program Line 48
+    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 49
+    endif,                    !- Program Line 50
+    else,                     !- Program Line 51
+    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 52
+    endif,                    !- Program Line 53
+    elseif VentCtrl == 1,     !- Program Line 54
+    if BLOCK1_ZONE2_OutT<BLOCK1_ZONE2_OpT,    !- Program Line 55
+    if BLOCK1_ZONE2_OutT>MinOutTemp,    !- Program Line 56
+    if BLOCK1_ZONE2_OpT > ACSTnoTol,    !- Program Line 57
+    if BLOCK1_ZONE2_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 1,    !- Program Line 59
+    else,                     !- Program Line 60
+    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 61
+    endif,                    !- Program Line 62
+    else,                     !- Program Line 63
+    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 64
+    endif,                    !- Program Line 65
+    else,                     !- Program Line 66
+    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 67
+    endif,                    !- Program Line 68
+    else,                     !- Program Line 69
+    set Ventilates_HVACmode1_BLOCK1_ZONE2 = 0,    !- Program Line 70
+    endif,                    !- Program Line 71
+    endif,                    !- Program Line 72
+    if HVACmode == 0,         !- Program Line 73
+    set ACST_Act_BLOCK1_ZONE2 = ACST,    !- Program Line 74
+    set AHST_Act_BLOCK1_ZONE2 = AHST,    !- Program Line 75
+    elseif HVACmode == 1,     !- Program Line 76
+    Set ACST_Act_BLOCK1_ZONE2 = 100,    !- Program Line 77
+    Set AHST_Act_BLOCK1_ZONE2 = -100,    !- Program Line 78
+    if Ventilates_HVACmode1_BLOCK1_ZONE2 == 1,    !- Program Line 79
+    set VentHours_BLOCK1_ZONE2 = 1,    !- Program Line 80
+    else,                     !- Program Line 81
+    set VentHours_BLOCK1_ZONE2 = 0,    !- Program Line 82
+    endif,                    !- Program Line 83
+    elseif HVACmode == 2,     !- Program Line 84
+    if Ventilates_HVACmode2_BLOCK1_ZONE2 == 1,    !- Program Line 85
+    set VentHours_BLOCK1_ZONE2 = 1,    !- Program Line 86
+    elseif Ventilates_HVACmode2_BLOCK1_ZONE2 == 0,    !- Program Line 87
+    set VentHours_BLOCK1_ZONE2 = 0,    !- Program Line 88
+    set ACST_Act_BLOCK1_ZONE2 = ACST,    !- Program Line 89
+    set AHST_Act_BLOCK1_ZONE2 = AHST,    !- Program Line 90
+    endif,                    !- Program Line 91
+    endif;                    !- Program Line 92
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     ApplyAST_BLOCK1_ZONE1,    !- Name
@@ -6478,85 +6467,71 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if (HVACmode == 2),       !- Program Line 28
-    if (VentCtrl == 0) || (VentCtrl==2),    !- Program Line 29
-    if BLOCK1_ZONE1_OpT>VST,    !- Program Line 30
-    set Ventilates_HVACmode2_BLOCK1_ZONE1 = 1,    !- Program Line 31
-    else,                     !- Program Line 32
-    set Ventilates_HVACmode2_BLOCK1_ZONE1 = 0,    !- Program Line 33
-    endif,                    !- Program Line 34
-    elseif (VentCtrl==1) || (VentCtrl==3),    !- Program Line 35
-    if BLOCK1_ZONE1_OpT>AHST,    !- Program Line 36
-    set Ventilates_HVACmode2_BLOCK1_ZONE1 = 1,    !- Program Line 37
-    else,                     !- Program Line 38
-    set Ventilates_HVACmode2_BLOCK1_ZONE1 = 0,    !- Program Line 39
-    endif,                    !- Program Line 40
-    else,                     !- Program Line 41
-    set Ventilates_HVACmode2_BLOCK1_ZONE1 = 0,    !- Program Line 42
-    endif,                    !- Program Line 43
-    else,                     !- Program Line 44
-    set Ventilates_HVACmode2_BLOCK1_ZONE1 = 0,    !- Program Line 45
-    endif,                    !- Program Line 46
-    else,                     !- Program Line 47
-    set Ventilates_HVACmode2_BLOCK1_ZONE1 = 0,    !- Program Line 48
-    endif,                    !- Program Line 49
-    if VentCtrl == 0,         !- Program Line 50
-    if BLOCK1_ZONE1_OutT < BLOCK1_ZONE1_OpT,    !- Program Line 51
-    if BLOCK1_ZONE1_OutT>MinOutTemp,    !- Program Line 52
-    if BLOCK1_ZONE1_OpT > VST,    !- Program Line 53
-    if BLOCK1_ZONE1_WindSpeed <= MaxWindSpeed,    !- Program Line 54
-    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 1,    !- Program Line 55
-    else,                     !- Program Line 56
-    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 57
-    endif,                    !- Program Line 58
-    else,                     !- Program Line 59
-    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 60
-    endif,                    !- Program Line 61
-    else,                     !- Program Line 62
-    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 63
-    endif,                    !- Program Line 64
-    else,                     !- Program Line 65
-    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 66
-    endif,                    !- Program Line 67
-    elseif VentCtrl == 1,     !- Program Line 68
-    if BLOCK1_ZONE1_OutT<BLOCK1_ZONE1_OpT,    !- Program Line 69
-    if BLOCK1_ZONE1_OutT>MinOutTemp,    !- Program Line 70
-    if BLOCK1_ZONE1_OpT > ACSTnoTol,    !- Program Line 71
-    if BLOCK1_ZONE1_WindSpeed <= MaxWindSpeed,    !- Program Line 72
-    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 1,    !- Program Line 73
-    else,                     !- Program Line 74
-    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 75
-    endif,                    !- Program Line 76
-    else,                     !- Program Line 77
-    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 78
-    endif,                    !- Program Line 79
-    else,                     !- Program Line 80
-    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 81
-    endif,                    !- Program Line 82
-    else,                     !- Program Line 83
-    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 84
-    endif,                    !- Program Line 85
-    endif,                    !- Program Line 86
-    if HVACmode == 0,         !- Program Line 87
-    set ACST_Act_BLOCK1_ZONE1 = ACST,    !- Program Line 88
-    set AHST_Act_BLOCK1_ZONE1 = AHST,    !- Program Line 89
-    elseif HVACmode == 1,     !- Program Line 90
-    Set ACST_Act_BLOCK1_ZONE1 = 100,    !- Program Line 91
-    Set AHST_Act_BLOCK1_ZONE1 = -100,    !- Program Line 92
-    if Ventilates_HVACmode1_BLOCK1_ZONE1 == 1,    !- Program Line 93
-    set VentHours_BLOCK1_ZONE1 = 1,    !- Program Line 94
-    else,                     !- Program Line 95
-    set VentHours_BLOCK1_ZONE1 = 0,    !- Program Line 96
-    endif,                    !- Program Line 97
-    elseif HVACmode == 2,     !- Program Line 98
-    if Ventilates_HVACmode2_BLOCK1_ZONE1 == 1,    !- Program Line 99
-    set VentHours_BLOCK1_ZONE1 = 1,    !- Program Line 100
-    elseif Ventilates_HVACmode2_BLOCK1_ZONE1 == 0,    !- Program Line 101
-    set VentHours_BLOCK1_ZONE1 = 0,    !- Program Line 102
-    set ACST_Act_BLOCK1_ZONE1 = ACST,    !- Program Line 103
-    set AHST_Act_BLOCK1_ZONE1 = AHST,    !- Program Line 104
-    endif,                    !- Program Line 105
-    endif;                    !- Program Line 106
+    if BLOCK1_ZONE1_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_BLOCK1_ZONE1 = 1,    !- Program Line 29
+    else,                     !- Program Line 30
+    set Ventilates_HVACmode2_BLOCK1_ZONE1 = 0,    !- Program Line 31
+    endif,                    !- Program Line 32
+    else,                     !- Program Line 33
+    set Ventilates_HVACmode2_BLOCK1_ZONE1 = 0,    !- Program Line 34
+    endif,                    !- Program Line 35
+    if VentCtrl == 0,         !- Program Line 36
+    if BLOCK1_ZONE1_OutT < BLOCK1_ZONE1_OpT,    !- Program Line 37
+    if BLOCK1_ZONE1_OutT>MinOutTemp,    !- Program Line 38
+    if BLOCK1_ZONE1_OpT > VST,    !- Program Line 39
+    if BLOCK1_ZONE1_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 1,    !- Program Line 41
+    else,                     !- Program Line 42
+    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 43
+    endif,                    !- Program Line 44
+    else,                     !- Program Line 45
+    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 46
+    endif,                    !- Program Line 47
+    else,                     !- Program Line 48
+    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 49
+    endif,                    !- Program Line 50
+    else,                     !- Program Line 51
+    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 52
+    endif,                    !- Program Line 53
+    elseif VentCtrl == 1,     !- Program Line 54
+    if BLOCK1_ZONE1_OutT<BLOCK1_ZONE1_OpT,    !- Program Line 55
+    if BLOCK1_ZONE1_OutT>MinOutTemp,    !- Program Line 56
+    if BLOCK1_ZONE1_OpT > ACSTnoTol,    !- Program Line 57
+    if BLOCK1_ZONE1_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 1,    !- Program Line 59
+    else,                     !- Program Line 60
+    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 61
+    endif,                    !- Program Line 62
+    else,                     !- Program Line 63
+    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 64
+    endif,                    !- Program Line 65
+    else,                     !- Program Line 66
+    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 67
+    endif,                    !- Program Line 68
+    else,                     !- Program Line 69
+    set Ventilates_HVACmode1_BLOCK1_ZONE1 = 0,    !- Program Line 70
+    endif,                    !- Program Line 71
+    endif,                    !- Program Line 72
+    if HVACmode == 0,         !- Program Line 73
+    set ACST_Act_BLOCK1_ZONE1 = ACST,    !- Program Line 74
+    set AHST_Act_BLOCK1_ZONE1 = AHST,    !- Program Line 75
+    elseif HVACmode == 1,     !- Program Line 76
+    Set ACST_Act_BLOCK1_ZONE1 = 100,    !- Program Line 77
+    Set AHST_Act_BLOCK1_ZONE1 = -100,    !- Program Line 78
+    if Ventilates_HVACmode1_BLOCK1_ZONE1 == 1,    !- Program Line 79
+    set VentHours_BLOCK1_ZONE1 = 1,    !- Program Line 80
+    else,                     !- Program Line 81
+    set VentHours_BLOCK1_ZONE1 = 0,    !- Program Line 82
+    endif,                    !- Program Line 83
+    elseif HVACmode == 2,     !- Program Line 84
+    if Ventilates_HVACmode2_BLOCK1_ZONE1 == 1,    !- Program Line 85
+    set VentHours_BLOCK1_ZONE1 = 1,    !- Program Line 86
+    elseif Ventilates_HVACmode2_BLOCK1_ZONE1 == 0,    !- Program Line 87
+    set VentHours_BLOCK1_ZONE1 = 0,    !- Program Line 88
+    set ACST_Act_BLOCK1_ZONE1 = ACST,    !- Program Line 89
+    set AHST_Act_BLOCK1_ZONE1 = AHST,    !- Program Line 90
+    endif,                    !- Program Line 91
+    endif;                    !- Program Line 92
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone2_Wall_3_0_0_0_0_0_Win,    !- Name
@@ -6607,84 +6582,70 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if (HVACmode == 2),       !- Program Line 28
-    if (VentCtrl == 0) || (VentCtrl==2),    !- Program Line 29
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT>VST,    !- Program Line 30
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 31
-    else,                     !- Program Line 32
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 33
-    endif,                    !- Program Line 34
-    elseif (VentCtrl==1) || (VentCtrl==3),    !- Program Line 35
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT>AHST,    !- Program Line 36
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 37
-    else,                     !- Program Line 38
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 39
-    endif,                    !- Program Line 40
-    else,                     !- Program Line 41
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 42
-    endif,                    !- Program Line 43
-    else,                     !- Program Line 44
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 45
-    endif,                    !- Program Line 46
-    else,                     !- Program Line 47
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 48
-    endif,                    !- Program Line 49
-    if VentCtrl == 0,         !- Program Line 50
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT < Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 51
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 52
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT > VST,    !- Program Line 53
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 54
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 55
-    else,                     !- Program Line 56
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 57
-    endif,                    !- Program Line 58
-    else,                     !- Program Line 59
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 60
-    endif,                    !- Program Line 61
-    else,                     !- Program Line 62
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 63
-    endif,                    !- Program Line 64
-    else,                     !- Program Line 65
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 66
-    endif,                    !- Program Line 67
-    elseif VentCtrl == 1,     !- Program Line 68
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT<Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 69
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 70
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 71
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 72
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 73
-    else,                     !- Program Line 74
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 75
-    endif,                    !- Program Line 76
-    else,                     !- Program Line 77
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 78
-    endif,                    !- Program Line 79
-    else,                     !- Program Line 80
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 81
-    endif,                    !- Program Line 82
-    else,                     !- Program Line 83
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 84
-    endif,                    !- Program Line 85
-    endif,                    !- Program Line 86
-    if HVACmode == 0,         !- Program Line 87
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 88
-    elseif HVACmode == 1,     !- Program Line 89
-    if Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win == 1,    !- Program Line 90
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF,    !- Program Line 91
-    else,                     !- Program Line 92
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 93
-    endif,                    !- Program Line 94
-    elseif HVACmode == 2,     !- Program Line 95
-    if Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win == 1,    !- Program Line 96
-    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 97
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 98
-    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 99
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF,    !- Program Line 100
-    endif,                    !- Program Line 101
-    else,                     !- Program Line 102
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 103
-    endif,                    !- Program Line 104
-    endif;                    !- Program Line 105
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 29
+    else,                     !- Program Line 30
+    set Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 31
+    endif,                    !- Program Line 32
+    else,                     !- Program Line 33
+    set Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 34
+    endif,                    !- Program Line 35
+    if VentCtrl == 0,         !- Program Line 36
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT < Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 37
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 38
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT > VST,    !- Program Line 39
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 41
+    else,                     !- Program Line 42
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 43
+    endif,                    !- Program Line 44
+    else,                     !- Program Line 45
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 46
+    endif,                    !- Program Line 47
+    else,                     !- Program Line 48
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 49
+    endif,                    !- Program Line 50
+    else,                     !- Program Line 51
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 52
+    endif,                    !- Program Line 53
+    elseif VentCtrl == 1,     !- Program Line 54
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT<Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 55
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 56
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 57
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 59
+    else,                     !- Program Line 60
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 61
+    endif,                    !- Program Line 62
+    else,                     !- Program Line 63
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 64
+    endif,                    !- Program Line 65
+    else,                     !- Program Line 66
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 67
+    endif,                    !- Program Line 68
+    else,                     !- Program Line 69
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 70
+    endif,                    !- Program Line 71
+    endif,                    !- Program Line 72
+    if HVACmode == 0,         !- Program Line 73
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 74
+    elseif HVACmode == 1,     !- Program Line 75
+    if Ventilates_HVACmode1_Block1_Zone2_Wall_3_0_0_0_0_0_Win == 1,    !- Program Line 76
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF,    !- Program Line 77
+    else,                     !- Program Line 78
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 79
+    endif,                    !- Program Line 80
+    elseif HVACmode == 2,     !- Program Line 81
+    if Ventilates_HVACmode2_Block1_Zone2_Wall_3_0_0_0_0_0_Win == 1,    !- Program Line 82
+    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 83
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 84
+    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 85
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF,    !- Program Line 86
+    endif,                    !- Program Line 87
+    else,                     !- Program Line 88
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 89
+    endif,                    !- Program Line 90
+    endif;                    !- Program Line 91
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone2_Wall_4_0_0_0_0_0_Win,    !- Name
@@ -6735,84 +6696,70 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if (HVACmode == 2),       !- Program Line 28
-    if (VentCtrl == 0) || (VentCtrl==2),    !- Program Line 29
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT>VST,    !- Program Line 30
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 1,    !- Program Line 31
-    else,                     !- Program Line 32
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 33
-    endif,                    !- Program Line 34
-    elseif (VentCtrl==1) || (VentCtrl==3),    !- Program Line 35
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT>AHST,    !- Program Line 36
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 1,    !- Program Line 37
-    else,                     !- Program Line 38
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 39
-    endif,                    !- Program Line 40
-    else,                     !- Program Line 41
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 42
-    endif,                    !- Program Line 43
-    else,                     !- Program Line 44
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 45
-    endif,                    !- Program Line 46
-    else,                     !- Program Line 47
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 48
-    endif,                    !- Program Line 49
-    if VentCtrl == 0,         !- Program Line 50
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT < Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT,    !- Program Line 51
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 52
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT > VST,    !- Program Line 53
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 54
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 1,    !- Program Line 55
-    else,                     !- Program Line 56
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 57
-    endif,                    !- Program Line 58
-    else,                     !- Program Line 59
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 60
-    endif,                    !- Program Line 61
-    else,                     !- Program Line 62
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 63
-    endif,                    !- Program Line 64
-    else,                     !- Program Line 65
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 66
-    endif,                    !- Program Line 67
-    elseif VentCtrl == 1,     !- Program Line 68
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT<Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT,    !- Program Line 69
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 70
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 71
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 72
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 1,    !- Program Line 73
-    else,                     !- Program Line 74
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 75
-    endif,                    !- Program Line 76
-    else,                     !- Program Line 77
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 78
-    endif,                    !- Program Line 79
-    else,                     !- Program Line 80
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 81
-    endif,                    !- Program Line 82
-    else,                     !- Program Line 83
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 84
-    endif,                    !- Program Line 85
-    endif,                    !- Program Line 86
-    if HVACmode == 0,         !- Program Line 87
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 88
-    elseif HVACmode == 1,     !- Program Line 89
-    if Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win == 1,    !- Program Line 90
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF,    !- Program Line 91
-    else,                     !- Program Line 92
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 93
-    endif,                    !- Program Line 94
-    elseif HVACmode == 2,     !- Program Line 95
-    if Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win == 1,    !- Program Line 96
-    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 97
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 98
-    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 99
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF,    !- Program Line 100
-    endif,                    !- Program Line 101
-    else,                     !- Program Line 102
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 103
-    endif,                    !- Program Line 104
-    endif;                    !- Program Line 105
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 1,    !- Program Line 29
+    else,                     !- Program Line 30
+    set Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 31
+    endif,                    !- Program Line 32
+    else,                     !- Program Line 33
+    set Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 34
+    endif,                    !- Program Line 35
+    if VentCtrl == 0,         !- Program Line 36
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT < Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT,    !- Program Line 37
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 38
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT > VST,    !- Program Line 39
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 1,    !- Program Line 41
+    else,                     !- Program Line 42
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 43
+    endif,                    !- Program Line 44
+    else,                     !- Program Line 45
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 46
+    endif,                    !- Program Line 47
+    else,                     !- Program Line 48
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 49
+    endif,                    !- Program Line 50
+    else,                     !- Program Line 51
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 52
+    endif,                    !- Program Line 53
+    elseif VentCtrl == 1,     !- Program Line 54
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT<Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT,    !- Program Line 55
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 56
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 57
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 1,    !- Program Line 59
+    else,                     !- Program Line 60
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 61
+    endif,                    !- Program Line 62
+    else,                     !- Program Line 63
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 64
+    endif,                    !- Program Line 65
+    else,                     !- Program Line 66
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 67
+    endif,                    !- Program Line 68
+    else,                     !- Program Line 69
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win = 0,    !- Program Line 70
+    endif,                    !- Program Line 71
+    endif,                    !- Program Line 72
+    if HVACmode == 0,         !- Program Line 73
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 74
+    elseif HVACmode == 1,     !- Program Line 75
+    if Ventilates_HVACmode1_Block1_Zone2_Wall_4_0_0_0_0_0_Win == 1,    !- Program Line 76
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF,    !- Program Line 77
+    else,                     !- Program Line 78
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 79
+    endif,                    !- Program Line 80
+    elseif HVACmode == 2,     !- Program Line 81
+    if Ventilates_HVACmode2_Block1_Zone2_Wall_4_0_0_0_0_0_Win == 1,    !- Program Line 82
+    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 83
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 84
+    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 85
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF,    !- Program Line 86
+    endif,                    !- Program Line 87
+    else,                     !- Program Line 88
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 89
+    endif,                    !- Program Line 90
+    endif;                    !- Program Line 91
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone2_Wall_5_0_0_0_0_0_Win,    !- Name
@@ -6863,84 +6810,70 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if (HVACmode == 2),       !- Program Line 28
-    if (VentCtrl == 0) || (VentCtrl==2),    !- Program Line 29
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT>VST,    !- Program Line 30
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 31
-    else,                     !- Program Line 32
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 33
-    endif,                    !- Program Line 34
-    elseif (VentCtrl==1) || (VentCtrl==3),    !- Program Line 35
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT>AHST,    !- Program Line 36
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 37
-    else,                     !- Program Line 38
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 39
-    endif,                    !- Program Line 40
-    else,                     !- Program Line 41
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 42
-    endif,                    !- Program Line 43
-    else,                     !- Program Line 44
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 45
-    endif,                    !- Program Line 46
-    else,                     !- Program Line 47
-    set Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 48
-    endif,                    !- Program Line 49
-    if VentCtrl == 0,         !- Program Line 50
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT < Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 51
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 52
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT > VST,    !- Program Line 53
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 54
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 55
-    else,                     !- Program Line 56
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 57
-    endif,                    !- Program Line 58
-    else,                     !- Program Line 59
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 60
-    endif,                    !- Program Line 61
-    else,                     !- Program Line 62
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 63
-    endif,                    !- Program Line 64
-    else,                     !- Program Line 65
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 66
-    endif,                    !- Program Line 67
-    elseif VentCtrl == 1,     !- Program Line 68
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT<Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 69
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 70
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 71
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 72
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 73
-    else,                     !- Program Line 74
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 75
-    endif,                    !- Program Line 76
-    else,                     !- Program Line 77
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 78
-    endif,                    !- Program Line 79
-    else,                     !- Program Line 80
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 81
-    endif,                    !- Program Line 82
-    else,                     !- Program Line 83
-    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 84
-    endif,                    !- Program Line 85
-    endif,                    !- Program Line 86
-    if HVACmode == 0,         !- Program Line 87
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 88
-    elseif HVACmode == 1,     !- Program Line 89
-    if Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win == 1,    !- Program Line 90
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF,    !- Program Line 91
-    else,                     !- Program Line 92
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 93
-    endif,                    !- Program Line 94
-    elseif HVACmode == 2,     !- Program Line 95
-    if Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win == 1,    !- Program Line 96
-    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 97
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 98
-    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 99
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF,    !- Program Line 100
-    endif,                    !- Program Line 101
-    else,                     !- Program Line 102
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 103
-    endif,                    !- Program Line 104
-    endif;                    !- Program Line 105
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 29
+    else,                     !- Program Line 30
+    set Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 31
+    endif,                    !- Program Line 32
+    else,                     !- Program Line 33
+    set Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 34
+    endif,                    !- Program Line 35
+    if VentCtrl == 0,         !- Program Line 36
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT < Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 37
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 38
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT > VST,    !- Program Line 39
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 41
+    else,                     !- Program Line 42
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 43
+    endif,                    !- Program Line 44
+    else,                     !- Program Line 45
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 46
+    endif,                    !- Program Line 47
+    else,                     !- Program Line 48
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 49
+    endif,                    !- Program Line 50
+    else,                     !- Program Line 51
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 52
+    endif,                    !- Program Line 53
+    elseif VentCtrl == 1,     !- Program Line 54
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT<Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 55
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 56
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 57
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 59
+    else,                     !- Program Line 60
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 61
+    endif,                    !- Program Line 62
+    else,                     !- Program Line 63
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 64
+    endif,                    !- Program Line 65
+    else,                     !- Program Line 66
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 67
+    endif,                    !- Program Line 68
+    else,                     !- Program Line 69
+    set Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 70
+    endif,                    !- Program Line 71
+    endif,                    !- Program Line 72
+    if HVACmode == 0,         !- Program Line 73
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 74
+    elseif HVACmode == 1,     !- Program Line 75
+    if Ventilates_HVACmode1_Block1_Zone2_Wall_5_0_0_0_0_0_Win == 1,    !- Program Line 76
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF,    !- Program Line 77
+    else,                     !- Program Line 78
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 79
+    endif,                    !- Program Line 80
+    elseif HVACmode == 2,     !- Program Line 81
+    if Ventilates_HVACmode2_Block1_Zone2_Wall_5_0_0_0_0_0_Win == 1,    !- Program Line 82
+    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 83
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 84
+    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 85
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF,    !- Program Line 86
+    endif,                    !- Program Line 87
+    else,                     !- Program Line 88
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 89
+    endif,                    !- Program Line 90
+    endif;                    !- Program Line 91
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone1_Wall_2_0_0_0_0_0_Win,    !- Name
@@ -6991,84 +6924,70 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if (HVACmode == 2),       !- Program Line 28
-    if (VentCtrl == 0) || (VentCtrl==2),    !- Program Line 29
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT>VST,    !- Program Line 30
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 1,    !- Program Line 31
-    else,                     !- Program Line 32
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 33
-    endif,                    !- Program Line 34
-    elseif (VentCtrl==1) || (VentCtrl==3),    !- Program Line 35
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT>AHST,    !- Program Line 36
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 1,    !- Program Line 37
-    else,                     !- Program Line 38
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 39
-    endif,                    !- Program Line 40
-    else,                     !- Program Line 41
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 42
-    endif,                    !- Program Line 43
-    else,                     !- Program Line 44
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 45
-    endif,                    !- Program Line 46
-    else,                     !- Program Line 47
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 48
-    endif,                    !- Program Line 49
-    if VentCtrl == 0,         !- Program Line 50
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT < Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT,    !- Program Line 51
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 52
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT > VST,    !- Program Line 53
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 54
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 1,    !- Program Line 55
-    else,                     !- Program Line 56
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 57
-    endif,                    !- Program Line 58
-    else,                     !- Program Line 59
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 60
-    endif,                    !- Program Line 61
-    else,                     !- Program Line 62
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 63
-    endif,                    !- Program Line 64
-    else,                     !- Program Line 65
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 66
-    endif,                    !- Program Line 67
-    elseif VentCtrl == 1,     !- Program Line 68
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT<Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT,    !- Program Line 69
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 70
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 71
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 72
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 1,    !- Program Line 73
-    else,                     !- Program Line 74
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 75
-    endif,                    !- Program Line 76
-    else,                     !- Program Line 77
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 78
-    endif,                    !- Program Line 79
-    else,                     !- Program Line 80
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 81
-    endif,                    !- Program Line 82
-    else,                     !- Program Line 83
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 84
-    endif,                    !- Program Line 85
-    endif,                    !- Program Line 86
-    if HVACmode == 0,         !- Program Line 87
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 88
-    elseif HVACmode == 1,     !- Program Line 89
-    if Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win == 1,    !- Program Line 90
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF,    !- Program Line 91
-    else,                     !- Program Line 92
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 93
-    endif,                    !- Program Line 94
-    elseif HVACmode == 2,     !- Program Line 95
-    if Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win == 1,    !- Program Line 96
-    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 97
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 98
-    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 99
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF,    !- Program Line 100
-    endif,                    !- Program Line 101
-    else,                     !- Program Line 102
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 103
-    endif,                    !- Program Line 104
-    endif;                    !- Program Line 105
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 1,    !- Program Line 29
+    else,                     !- Program Line 30
+    set Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 31
+    endif,                    !- Program Line 32
+    else,                     !- Program Line 33
+    set Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 34
+    endif,                    !- Program Line 35
+    if VentCtrl == 0,         !- Program Line 36
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT < Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT,    !- Program Line 37
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 38
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT > VST,    !- Program Line 39
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 1,    !- Program Line 41
+    else,                     !- Program Line 42
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 43
+    endif,                    !- Program Line 44
+    else,                     !- Program Line 45
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 46
+    endif,                    !- Program Line 47
+    else,                     !- Program Line 48
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 49
+    endif,                    !- Program Line 50
+    else,                     !- Program Line 51
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 52
+    endif,                    !- Program Line 53
+    elseif VentCtrl == 1,     !- Program Line 54
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT<Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT,    !- Program Line 55
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 56
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 57
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 1,    !- Program Line 59
+    else,                     !- Program Line 60
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 61
+    endif,                    !- Program Line 62
+    else,                     !- Program Line 63
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 64
+    endif,                    !- Program Line 65
+    else,                     !- Program Line 66
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 67
+    endif,                    !- Program Line 68
+    else,                     !- Program Line 69
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win = 0,    !- Program Line 70
+    endif,                    !- Program Line 71
+    endif,                    !- Program Line 72
+    if HVACmode == 0,         !- Program Line 73
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 74
+    elseif HVACmode == 1,     !- Program Line 75
+    if Ventilates_HVACmode1_Block1_Zone1_Wall_2_0_0_0_0_0_Win == 1,    !- Program Line 76
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF,    !- Program Line 77
+    else,                     !- Program Line 78
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 79
+    endif,                    !- Program Line 80
+    elseif HVACmode == 2,     !- Program Line 81
+    if Ventilates_HVACmode2_Block1_Zone1_Wall_2_0_0_0_0_0_Win == 1,    !- Program Line 82
+    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 83
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 84
+    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 85
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF,    !- Program Line 86
+    endif,                    !- Program Line 87
+    else,                     !- Program Line 88
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 89
+    endif,                    !- Program Line 90
+    endif;                    !- Program Line 91
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone1_Wall_3_0_0_0_0_0_Win,    !- Name
@@ -7119,84 +7038,70 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if (HVACmode == 2),       !- Program Line 28
-    if (VentCtrl == 0) || (VentCtrl==2),    !- Program Line 29
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT>VST,    !- Program Line 30
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 31
-    else,                     !- Program Line 32
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 33
-    endif,                    !- Program Line 34
-    elseif (VentCtrl==1) || (VentCtrl==3),    !- Program Line 35
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT>AHST,    !- Program Line 36
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 37
-    else,                     !- Program Line 38
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 39
-    endif,                    !- Program Line 40
-    else,                     !- Program Line 41
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 42
-    endif,                    !- Program Line 43
-    else,                     !- Program Line 44
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 45
-    endif,                    !- Program Line 46
-    else,                     !- Program Line 47
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 48
-    endif,                    !- Program Line 49
-    if VentCtrl == 0,         !- Program Line 50
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT < Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 51
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 52
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT > VST,    !- Program Line 53
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 54
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 55
-    else,                     !- Program Line 56
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 57
-    endif,                    !- Program Line 58
-    else,                     !- Program Line 59
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 60
-    endif,                    !- Program Line 61
-    else,                     !- Program Line 62
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 63
-    endif,                    !- Program Line 64
-    else,                     !- Program Line 65
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 66
-    endif,                    !- Program Line 67
-    elseif VentCtrl == 1,     !- Program Line 68
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT<Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 69
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 70
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 71
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 72
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 73
-    else,                     !- Program Line 74
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 75
-    endif,                    !- Program Line 76
-    else,                     !- Program Line 77
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 78
-    endif,                    !- Program Line 79
-    else,                     !- Program Line 80
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 81
-    endif,                    !- Program Line 82
-    else,                     !- Program Line 83
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 84
-    endif,                    !- Program Line 85
-    endif,                    !- Program Line 86
-    if HVACmode == 0,         !- Program Line 87
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 88
-    elseif HVACmode == 1,     !- Program Line 89
-    if Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win == 1,    !- Program Line 90
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF,    !- Program Line 91
-    else,                     !- Program Line 92
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 93
-    endif,                    !- Program Line 94
-    elseif HVACmode == 2,     !- Program Line 95
-    if Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win == 1,    !- Program Line 96
-    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 97
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 98
-    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 99
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF,    !- Program Line 100
-    endif,                    !- Program Line 101
-    else,                     !- Program Line 102
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 103
-    endif,                    !- Program Line 104
-    endif;                    !- Program Line 105
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 29
+    else,                     !- Program Line 30
+    set Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 31
+    endif,                    !- Program Line 32
+    else,                     !- Program Line 33
+    set Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 34
+    endif,                    !- Program Line 35
+    if VentCtrl == 0,         !- Program Line 36
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT < Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 37
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 38
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT > VST,    !- Program Line 39
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 41
+    else,                     !- Program Line 42
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 43
+    endif,                    !- Program Line 44
+    else,                     !- Program Line 45
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 46
+    endif,                    !- Program Line 47
+    else,                     !- Program Line 48
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 49
+    endif,                    !- Program Line 50
+    else,                     !- Program Line 51
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 52
+    endif,                    !- Program Line 53
+    elseif VentCtrl == 1,     !- Program Line 54
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT<Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 55
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 56
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 57
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 1,    !- Program Line 59
+    else,                     !- Program Line 60
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 61
+    endif,                    !- Program Line 62
+    else,                     !- Program Line 63
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 64
+    endif,                    !- Program Line 65
+    else,                     !- Program Line 66
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 67
+    endif,                    !- Program Line 68
+    else,                     !- Program Line 69
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win = 0,    !- Program Line 70
+    endif,                    !- Program Line 71
+    endif,                    !- Program Line 72
+    if HVACmode == 0,         !- Program Line 73
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 74
+    elseif HVACmode == 1,     !- Program Line 75
+    if Ventilates_HVACmode1_Block1_Zone1_Wall_3_0_0_0_0_0_Win == 1,    !- Program Line 76
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF,    !- Program Line 77
+    else,                     !- Program Line 78
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 79
+    endif,                    !- Program Line 80
+    elseif HVACmode == 2,     !- Program Line 81
+    if Ventilates_HVACmode2_Block1_Zone1_Wall_3_0_0_0_0_0_Win == 1,    !- Program Line 82
+    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 83
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 84
+    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 85
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF,    !- Program Line 86
+    endif,                    !- Program Line 87
+    else,                     !- Program Line 88
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 89
+    endif,                    !- Program Line 90
+    endif;                    !- Program Line 91
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone1_Wall_5_0_0_0_0_0_Win,    !- Name
@@ -7247,84 +7152,70 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if (HVACmode == 2),       !- Program Line 28
-    if (VentCtrl == 0) || (VentCtrl==2),    !- Program Line 29
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT>VST,    !- Program Line 30
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 31
-    else,                     !- Program Line 32
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 33
-    endif,                    !- Program Line 34
-    elseif (VentCtrl==1) || (VentCtrl==3),    !- Program Line 35
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT>AHST,    !- Program Line 36
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 37
-    else,                     !- Program Line 38
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 39
-    endif,                    !- Program Line 40
-    else,                     !- Program Line 41
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 42
-    endif,                    !- Program Line 43
-    else,                     !- Program Line 44
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 45
-    endif,                    !- Program Line 46
-    else,                     !- Program Line 47
-    set Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 48
-    endif,                    !- Program Line 49
-    if VentCtrl == 0,         !- Program Line 50
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT < Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 51
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 52
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT > VST,    !- Program Line 53
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 54
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 55
-    else,                     !- Program Line 56
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 57
-    endif,                    !- Program Line 58
-    else,                     !- Program Line 59
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 60
-    endif,                    !- Program Line 61
-    else,                     !- Program Line 62
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 63
-    endif,                    !- Program Line 64
-    else,                     !- Program Line 65
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 66
-    endif,                    !- Program Line 67
-    elseif VentCtrl == 1,     !- Program Line 68
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT<Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 69
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 70
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 71
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 72
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 73
-    else,                     !- Program Line 74
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 75
-    endif,                    !- Program Line 76
-    else,                     !- Program Line 77
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 78
-    endif,                    !- Program Line 79
-    else,                     !- Program Line 80
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 81
-    endif,                    !- Program Line 82
-    else,                     !- Program Line 83
-    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 84
-    endif,                    !- Program Line 85
-    endif,                    !- Program Line 86
-    if HVACmode == 0,         !- Program Line 87
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 88
-    elseif HVACmode == 1,     !- Program Line 89
-    if Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win == 1,    !- Program Line 90
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF,    !- Program Line 91
-    else,                     !- Program Line 92
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 93
-    endif,                    !- Program Line 94
-    elseif HVACmode == 2,     !- Program Line 95
-    if Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win == 1,    !- Program Line 96
-    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 97
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 98
-    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 99
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF,    !- Program Line 100
-    endif,                    !- Program Line 101
-    else,                     !- Program Line 102
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 103
-    endif,                    !- Program Line 104
-    endif;                    !- Program Line 105
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 29
+    else,                     !- Program Line 30
+    set Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 31
+    endif,                    !- Program Line 32
+    else,                     !- Program Line 33
+    set Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 34
+    endif,                    !- Program Line 35
+    if VentCtrl == 0,         !- Program Line 36
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT < Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 37
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 38
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT > VST,    !- Program Line 39
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 41
+    else,                     !- Program Line 42
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 43
+    endif,                    !- Program Line 44
+    else,                     !- Program Line 45
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 46
+    endif,                    !- Program Line 47
+    else,                     !- Program Line 48
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 49
+    endif,                    !- Program Line 50
+    else,                     !- Program Line 51
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 52
+    endif,                    !- Program Line 53
+    elseif VentCtrl == 1,     !- Program Line 54
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT<Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 55
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT>MinOutTemp,    !- Program Line 56
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT > ACSTnoTol,    !- Program Line 57
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 1,    !- Program Line 59
+    else,                     !- Program Line 60
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 61
+    endif,                    !- Program Line 62
+    else,                     !- Program Line 63
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 64
+    endif,                    !- Program Line 65
+    else,                     !- Program Line 66
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 67
+    endif,                    !- Program Line 68
+    else,                     !- Program Line 69
+    set Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win = 0,    !- Program Line 70
+    endif,                    !- Program Line 71
+    endif,                    !- Program Line 72
+    if HVACmode == 0,         !- Program Line 73
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 74
+    elseif HVACmode == 1,     !- Program Line 75
+    if Ventilates_HVACmode1_Block1_Zone1_Wall_5_0_0_0_0_0_Win == 1,    !- Program Line 76
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF,    !- Program Line 77
+    else,                     !- Program Line 78
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 79
+    endif,                    !- Program Line 80
+    elseif HVACmode == 2,     !- Program Line 81
+    if Ventilates_HVACmode2_Block1_Zone1_Wall_5_0_0_0_0_0_Win == 1,    !- Program Line 82
+    if (VentCtrl==0) || (VentCtrl==1),    !- Program Line 83
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = 1,    !- Program Line 84
+    elseif (VentCtrl==2) || (VentCtrl==3),    !- Program Line 85
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF,    !- Program Line 86
+    endif,                    !- Program Line 87
+    else,                     !- Program Line 88
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_VentOpenFact = 0,    !- Program Line 89
+    endif,                    !- Program Line 90
+    endif;                    !- Program Line 91
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     ACST,                     !- Erl Variable 1 Name
