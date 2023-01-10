@@ -2576,6 +2576,21 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
 
     if (ScriptType.lower() == 'vrf_mm' or
         ScriptType.lower() == 'ex_mm'):
+
+        if 'SetVOFinputData' in programlist:
+            if verboseMode:
+                print('Not added - SetVOFinputData Program')
+        else:
+            self.idf1.newidfobject(
+                'EnergyManagementSystem:Program',
+                Name='SetVOFinputData',
+                Program_Line_1='set MaxTempDiffVOF = 7.5,',
+                Program_Line_2='set MinTempDiffVOF = 0',
+                Program_Line_3='set MultiplierVOF = 0.25',
+            )
+            if verboseMode:
+                print('Added - SetVOFinputData Program')
+
         if 'SetVST' in programlist:
             if verboseMode:
                 print('Not added - SetVST Program')
@@ -2748,26 +2763,23 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
                 self.idf1.newidfobject(
                     'EnergyManagementSystem:Program',
                     Name='SetMyVOF_'+windowname,
-                    Program_Line_1='set MaxTempDiffVOF = 10',
-                    Program_Line_2='set MinTempDiffVOF = 0',
-                    Program_Line_3='set MultiplierVOF = 0.25',
-                    Program_Line_4='set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF)',
-                    Program_Line_5='if ' + windowname + '_OutT > 0',
-                    Program_Line_6='set ' + windowname + '_TempDiffVOF = ' + windowname + '_OpT - ' + windowname + '_OutT',
-                    Program_Line_7='else',
-                    Program_Line_8='set ' + windowname + '_TempDiffVOF = ' + windowname + '_OpT + ' + windowname + '_OutT',
-                    Program_Line_9='endif',
-                    Program_Line_10='if ' + windowname + '_OutT > ' + windowname + '_OpT',
-                    Program_Line_11='set ' + windowname + '_MyVOF = 0',
-                    Program_Line_12='else',
-                    Program_Line_13='if ' + windowname + '_TempDiffVOF > MaxTempDiffVOF',
-                    Program_Line_14='set ' + windowname + '_MyVOF = 0.0',
-                    Program_Line_15='elseif ' + windowname + '_TempDiffVOF < MinTempDiffVOF',
-                    Program_Line_16='set ' + windowname + '_MyVOF = 1.0',
-                    Program_Line_17='else',
-                    Program_Line_18='set ' + windowname + '_MyVOF = slope*' + windowname + '_TempDiffVOF - slope*MinTempDiffVOF + 1',
-                    Program_Line_19='endif',
-                    Program_Line_20='endif',
+                    Program_Line_1='set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF)',
+                    Program_Line_2='if ' + windowname + '_OutT > 0',
+                    Program_Line_3='set ' + windowname + '_TempDiffVOF = ' + windowname + '_OpT - ' + windowname + '_OutT',
+                    Program_Line_4='else',
+                    Program_Line_5='set ' + windowname + '_TempDiffVOF = ' + windowname + '_OpT + ' + windowname + '_OutT',
+                    Program_Line_6='endif',
+                    Program_Line_7='if ' + windowname + '_OutT > ' + windowname + '_OpT',
+                    Program_Line_8='set ' + windowname + '_MyVOF = 0',
+                    Program_Line_9='else',
+                    Program_Line_10='if ' + windowname + '_TempDiffVOF > MaxTempDiffVOF',
+                    Program_Line_11='set ' + windowname + '_MyVOF = 0.0',
+                    Program_Line_12='elseif ' + windowname + '_TempDiffVOF < MinTempDiffVOF',
+                    Program_Line_13='set ' + windowname + '_MyVOF = 1.0',
+                    Program_Line_14='else',
+                    Program_Line_15='set ' + windowname + '_MyVOF = slope*' + windowname + '_TempDiffVOF - slope*MinTempDiffVOF + 1',
+                    Program_Line_16='endif',
+                    Program_Line_17='endif',
                 )
                 if verboseMode:
                     print('Added - SetMyVOF_'+windowname+' Program')

@@ -3650,6 +3650,11 @@ ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
     SetInputData;             !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
+    SetVOFinputData,          !- Name
+    BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
+    SetVOFinputData;          !- Program Name 1
+
+ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
     SetVST,                   !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
     SetVST;                   !- Program Name 1
@@ -6296,6 +6301,13 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set AHSTtol = 0.1;        !- Program Line 10
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
+    SetVOFinputData,          !- Name
+    set MaxTempDiffVOF = 10,    !- Program Line 1
+    set MinTempDiffVOF = 1,    !- Program Line 2
+    set MultiplierVOF = 0,    !- Program Line 3
+    set MultiplierVOF = 0.25;    !- Program Line 4
+
+ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetVST,                   !- Name
     set MinOutTemp = AHST - MinOToffset,    !- Program Line 1
     if ComfStand == 0,        !- Program Line 2
@@ -6548,26 +6560,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone2_Wall_3_0_0_0_0_0_Win,    !- Name
-    set MaxTempDiffVOF = 10,    !- Program Line 1
-    set MinTempDiffVOF = 0,    !- Program Line 2
-    set MultiplierVOF = 0.25,    !- Program Line 3
-    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 4
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT > 0,    !- Program Line 5
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT - Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT,    !- Program Line 6
-    else,                     !- Program Line 7
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT + Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT,    !- Program Line 8
-    endif,                    !- Program Line 9
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT > Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 10
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 11
-    else,                     !- Program Line 12
-    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 13
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 14
-    elseif Block1_Zone2_Wall_3_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 15
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 16
-    else,                     !- Program Line 17
-    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone2_Wall_3_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 18
-    endif,                    !- Program Line 19
-    endif;                    !- Program Line 20
+    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 1
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT > 0,    !- Program Line 2
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT - Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT,    !- Program Line 3
+    else,                     !- Program Line 4
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT + Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT,    !- Program Line 5
+    endif,                    !- Program Line 6
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_OutT > Block1_Zone2_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 7
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 8
+    else,                     !- Program Line 9
+    if Block1_Zone2_Wall_3_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 10
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 11
+    elseif Block1_Zone2_Wall_3_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 12
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 13
+    else,                     !- Program Line 14
+    set Block1_Zone2_Wall_3_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone2_Wall_3_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 15
+    endif,                    !- Program Line 16
+    endif;                    !- Program Line 17
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetWindowOperation_Block1_Zone2_Wall_3_0_0_0_0_0_Win,    !- Name
@@ -6679,26 +6688,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone2_Wall_4_0_0_0_0_0_Win,    !- Name
-    set MaxTempDiffVOF = 10,    !- Program Line 1
-    set MinTempDiffVOF = 0,    !- Program Line 2
-    set MultiplierVOF = 0.25,    !- Program Line 3
-    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 4
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT > 0,    !- Program Line 5
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT - Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT,    !- Program Line 6
-    else,                     !- Program Line 7
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT + Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT,    !- Program Line 8
-    endif,                    !- Program Line 9
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT > Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT,    !- Program Line 10
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 11
-    else,                     !- Program Line 12
-    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 13
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 14
-    elseif Block1_Zone2_Wall_4_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 15
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 16
-    else,                     !- Program Line 17
-    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone2_Wall_4_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 18
-    endif,                    !- Program Line 19
-    endif;                    !- Program Line 20
+    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 1
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT > 0,    !- Program Line 2
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT - Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT,    !- Program Line 3
+    else,                     !- Program Line 4
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT + Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT,    !- Program Line 5
+    endif,                    !- Program Line 6
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_OutT > Block1_Zone2_Wall_4_0_0_0_0_0_Win_OpT,    !- Program Line 7
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 8
+    else,                     !- Program Line 9
+    if Block1_Zone2_Wall_4_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 10
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 11
+    elseif Block1_Zone2_Wall_4_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 12
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 13
+    else,                     !- Program Line 14
+    set Block1_Zone2_Wall_4_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone2_Wall_4_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 15
+    endif,                    !- Program Line 16
+    endif;                    !- Program Line 17
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetWindowOperation_Block1_Zone2_Wall_4_0_0_0_0_0_Win,    !- Name
@@ -6810,26 +6816,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone2_Wall_5_0_0_0_0_0_Win,    !- Name
-    set MaxTempDiffVOF = 10,    !- Program Line 1
-    set MinTempDiffVOF = 0,    !- Program Line 2
-    set MultiplierVOF = 0.25,    !- Program Line 3
-    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 4
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT > 0,    !- Program Line 5
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT - Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT,    !- Program Line 6
-    else,                     !- Program Line 7
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT + Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT,    !- Program Line 8
-    endif,                    !- Program Line 9
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT > Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 10
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 11
-    else,                     !- Program Line 12
-    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 13
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 14
-    elseif Block1_Zone2_Wall_5_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 15
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 16
-    else,                     !- Program Line 17
-    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone2_Wall_5_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 18
-    endif,                    !- Program Line 19
-    endif;                    !- Program Line 20
+    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 1
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT > 0,    !- Program Line 2
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT - Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT,    !- Program Line 3
+    else,                     !- Program Line 4
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT + Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT,    !- Program Line 5
+    endif,                    !- Program Line 6
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_OutT > Block1_Zone2_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 7
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 8
+    else,                     !- Program Line 9
+    if Block1_Zone2_Wall_5_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 10
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 11
+    elseif Block1_Zone2_Wall_5_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 12
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 13
+    else,                     !- Program Line 14
+    set Block1_Zone2_Wall_5_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone2_Wall_5_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 15
+    endif,                    !- Program Line 16
+    endif;                    !- Program Line 17
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetWindowOperation_Block1_Zone2_Wall_5_0_0_0_0_0_Win,    !- Name
@@ -6941,26 +6944,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone1_Wall_2_0_0_0_0_0_Win,    !- Name
-    set MaxTempDiffVOF = 10,    !- Program Line 1
-    set MinTempDiffVOF = 0,    !- Program Line 2
-    set MultiplierVOF = 0.25,    !- Program Line 3
-    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 4
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT > 0,    !- Program Line 5
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT - Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT,    !- Program Line 6
-    else,                     !- Program Line 7
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT + Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT,    !- Program Line 8
-    endif,                    !- Program Line 9
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT > Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT,    !- Program Line 10
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 11
-    else,                     !- Program Line 12
-    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 13
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 14
-    elseif Block1_Zone1_Wall_2_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 15
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 16
-    else,                     !- Program Line 17
-    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone1_Wall_2_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 18
-    endif,                    !- Program Line 19
-    endif;                    !- Program Line 20
+    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 1
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT > 0,    !- Program Line 2
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT - Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT,    !- Program Line 3
+    else,                     !- Program Line 4
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT + Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT,    !- Program Line 5
+    endif,                    !- Program Line 6
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_OutT > Block1_Zone1_Wall_2_0_0_0_0_0_Win_OpT,    !- Program Line 7
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 8
+    else,                     !- Program Line 9
+    if Block1_Zone1_Wall_2_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 10
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 11
+    elseif Block1_Zone1_Wall_2_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 12
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 13
+    else,                     !- Program Line 14
+    set Block1_Zone1_Wall_2_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone1_Wall_2_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 15
+    endif,                    !- Program Line 16
+    endif;                    !- Program Line 17
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetWindowOperation_Block1_Zone1_Wall_2_0_0_0_0_0_Win,    !- Name
@@ -7072,26 +7072,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone1_Wall_3_0_0_0_0_0_Win,    !- Name
-    set MaxTempDiffVOF = 10,    !- Program Line 1
-    set MinTempDiffVOF = 0,    !- Program Line 2
-    set MultiplierVOF = 0.25,    !- Program Line 3
-    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 4
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT > 0,    !- Program Line 5
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT - Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT,    !- Program Line 6
-    else,                     !- Program Line 7
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT + Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT,    !- Program Line 8
-    endif,                    !- Program Line 9
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT > Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 10
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 11
-    else,                     !- Program Line 12
-    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 13
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 14
-    elseif Block1_Zone1_Wall_3_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 15
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 16
-    else,                     !- Program Line 17
-    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone1_Wall_3_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 18
-    endif,                    !- Program Line 19
-    endif;                    !- Program Line 20
+    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 1
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT > 0,    !- Program Line 2
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT - Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT,    !- Program Line 3
+    else,                     !- Program Line 4
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT + Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT,    !- Program Line 5
+    endif,                    !- Program Line 6
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_OutT > Block1_Zone1_Wall_3_0_0_0_0_0_Win_OpT,    !- Program Line 7
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 8
+    else,                     !- Program Line 9
+    if Block1_Zone1_Wall_3_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 10
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 11
+    elseif Block1_Zone1_Wall_3_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 12
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 13
+    else,                     !- Program Line 14
+    set Block1_Zone1_Wall_3_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone1_Wall_3_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 15
+    endif,                    !- Program Line 16
+    endif;                    !- Program Line 17
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetWindowOperation_Block1_Zone1_Wall_3_0_0_0_0_0_Win,    !- Name
@@ -7203,26 +7200,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetMyVOF_Block1_Zone1_Wall_5_0_0_0_0_0_Win,    !- Name
-    set MaxTempDiffVOF = 10,    !- Program Line 1
-    set MinTempDiffVOF = 0,    !- Program Line 2
-    set MultiplierVOF = 0.25,    !- Program Line 3
-    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 4
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT > 0,    !- Program Line 5
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT - Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT,    !- Program Line 6
-    else,                     !- Program Line 7
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT + Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT,    !- Program Line 8
-    endif,                    !- Program Line 9
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT > Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 10
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 11
-    else,                     !- Program Line 12
-    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 13
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 14
-    elseif Block1_Zone1_Wall_5_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 15
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 16
-    else,                     !- Program Line 17
-    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone1_Wall_5_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 18
-    endif,                    !- Program Line 19
-    endif;                    !- Program Line 20
+    set slope = (1 - MultiplierVOF) / (MinTempDiffVOF - MaxTempDiffVOF),    !- Program Line 1
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT > 0,    !- Program Line 2
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT - Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT,    !- Program Line 3
+    else,                     !- Program Line 4
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_TempDiffVOF = Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT + Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT,    !- Program Line 5
+    endif,                    !- Program Line 6
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_OutT > Block1_Zone1_Wall_5_0_0_0_0_0_Win_OpT,    !- Program Line 7
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF = 0,    !- Program Line 8
+    else,                     !- Program Line 9
+    if Block1_Zone1_Wall_5_0_0_0_0_0_Win_TempDiffVOF > MaxTempDiffVOF,    !- Program Line 10
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF = 0.0,    !- Program Line 11
+    elseif Block1_Zone1_Wall_5_0_0_0_0_0_Win_TempDiffVOF < MinTempDiffVOF,    !- Program Line 12
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF = 1.0,    !- Program Line 13
+    else,                     !- Program Line 14
+    set Block1_Zone1_Wall_5_0_0_0_0_0_Win_MyVOF = slope*Block1_Zone1_Wall_5_0_0_0_0_0_Win_TempDiffVOF - slope*MinTempDiffVOF + 1,    !- Program Line 15
+    endif,                    !- Program Line 16
+    endif;                    !- Program Line 17
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetWindowOperation_Block1_Zone1_Wall_5_0_0_0_0_0_Win,    !- Name

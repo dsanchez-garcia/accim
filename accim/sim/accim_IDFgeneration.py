@@ -450,6 +450,17 @@ def inputData(self, ScriptType: str = None):
                 self.VentCtrl_List = list(int(num) for num in input(
                     "     Enter the Ventilation Control numbers separated by space: ").split())
 
+        if any([i in self.VentCtrl_List for i in [2, 3]]):
+            self.MaxTempDiffVOF = float(input('Enter the maximum temperature difference number for Ventilation Opening Factor: '))
+            while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+                self.MaxTempDiffVOF = float(input('      Enter the maximum temperature difference number for Ventilation Opening Factor: '))
+            self.MinTempDiffVOF = float(input('Enter the minimum temperature difference number for Ventilation Opening Factor: '))
+            while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+                self.MinTempDiffVOF = float(input('      Enter the minimum temperature difference number for Ventilation Opening Factor: '))
+            self.MultiplierVOF = float(input('Enter the multiplier number for Ventilation Opening Factor: '))
+            while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+                self.MultiplierVOF = float(input('      Enter the multiplier number for Ventilation Opening Factor: '))
+
         self.VSToffset_List = list(float(num) for num in input(
             "Enter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
         if len(self.VSToffset_List) == 0:
@@ -525,6 +536,9 @@ def genIDF(self,
            ComfMod=None,
            HVACmode=None,
            VentCtrl=None,
+           MaxTempDiffVOF=7.5,
+           MinTempDiffVOF=0,
+           MultiplierVOF=0,
            VSToffset=[0],
            MinOToffset=[50],
            MaxWindSpeed=[50],
@@ -549,6 +563,9 @@ def genIDF(self,
                  ComfMod is None,
                  HVACmode is None,
                  VentCtrl is None,
+                 MaxTempDiffVOF == 7.5,
+                 MinTempDiffVOF == 0,
+                 MultiplierVOF == 0,
                  VSToffset == [0],
                  MinOToffset == [50],
                  MaxWindSpeed == [50],
@@ -570,6 +587,9 @@ def genIDF(self,
         self.ComfMod_List = ComfMod
         self.HVACmode_List = HVACmode
         self.VentCtrl_List = VentCtrl
+        self.MaxTempDiffVOF = MaxTempDiffVOF,
+        self.MinTempDiffVOF = MinTempDiffVOF,
+        self.MultiplierVOF = MultiplierVOF,
         self.VSToffset_List = VSToffset
         self.MinOToffset_List = MinOToffset
         self.MaxWindSpeed_List = MaxWindSpeed
@@ -580,6 +600,9 @@ def genIDF(self,
     if 'ac' in ScriptType.lower():
         self.HVACmode_List = [0]
         self.VentCtrl_List = [0]
+        self.MaxTempDiffVOF = 1,
+        self.MinTempDiffVOF = 0,
+        self.MultiplierVOF = 0,
         self.VSToffset_List = [0]
         self.MinOToffset_List = [0]
         self.MaxWindSpeed_List = [0]
@@ -822,6 +845,8 @@ def genIDF(self,
             # print(filename)
             SetInputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
                              program.Name == 'SetInputData'])
+            SetVOFinputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
+                             program.Name == 'SetVOFinputData'])
             if TempCtrl.lower() == 'temp' or TempCtrl.lower() == 'temperature':
                 for ComfStand_value in self.ComfStand_List:
                     SetInputData[0].Program_Line_1 = 'set ComfStand = ' + repr(ComfStand_value)
@@ -861,6 +886,9 @@ def genIDF(self,
                                             continue
                                     else:
                                         SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
+                                        SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(MaxTempDiffVOF),
+                                        SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(MinTempDiffVOF),
+                                        SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(MultiplierVOF),
                                     for VSToffset_value in self.VSToffset_List:
                                         SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(VSToffset_value)
                                         for MinOToffset_value in self.MinOToffset_List:
@@ -939,6 +967,9 @@ def genIDF(self,
                                                         continue
                                                 else:
                                                     SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
+                                                    SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF[0])
+                                                    SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF[0])
+                                                    SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF[0])
                                                 for VSToffset_value in self.VSToffset_List:
                                                     SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(
                                                         VSToffset_value)
@@ -1022,6 +1053,9 @@ def genIDF(self,
                                                         continue
                                                 else:
                                                     SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
+                                                    SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + str(MaxTempDiffVOF),
+                                                    SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + str(MinTempDiffVOF),
+                                                    SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + str(MultiplierVOF),
                                                 for VSToffset_value in self.VSToffset_List:
                                                     SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(
                                                         VSToffset_value)

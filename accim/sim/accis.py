@@ -18,6 +18,9 @@ def addAccis(
         ComfMod: any = None,
         HVACmode: any = None,
         VentCtrl: any = None,
+        MaxTempDiffVOF: float = None,
+        MinTempDiffVOF: float = None,
+        MultiplierVOF: float = None,
         VSToffset: any = [0],
         MinOToffset: any = [50],
         MaxWindSpeed: any = [50],
@@ -96,7 +99,8 @@ def addAccis(
     import accim
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
-                 and not '[' in file])
+                 and not '[' in file
+                 and not '_pymod' in file])
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -394,6 +398,9 @@ def addAccis(
                 ComfMod=ComfMod,
                 HVACmode=HVACmode,
                 VentCtrl=VentCtrl,
+                MaxTempDiffVOF=MaxTempDiffVOF,
+                MinTempDiffVOF=MinTempDiffVOF,
+                MultiplierVOF=MultiplierVOF,
                 VSToffset=VSToffset,
                 MinOToffset=MinOToffset,
                 MaxWindSpeed=MaxWindSpeed,
@@ -423,6 +430,9 @@ def addAccis(
                 HVACmode=[0],
                 VentCtrl=[0],
                 VSToffset=[0],
+                MaxTempDiffVOF=1,
+                MinTempDiffVOF=0,
+                MultiplierVOF=0,
                 MinOToffset=[0],
                 MaxWindSpeed=[0],
                 ASTtol_start=ASTtol_start,
