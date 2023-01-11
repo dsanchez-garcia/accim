@@ -71,6 +71,9 @@ If you run `accis.addAccis(whateverScriptType, whateverOutput_keep_existing, wha
 >>>                list, # ComfMod, which is Comfort Mode
 >>>                list, # HVACmode, which is the HVAC mode
 >>>                list, # VentCtrl, which is the Ventilation Control
+>>>                float, # MaxTempDiffVOF
+>>>                float, # MinTempDiffVOF
+>>>                float, # MultiplierVOF
 >>>                list, # VSToffset
 >>>                list, # MinOToffset
 >>>                list, # MaxWindSpeed
@@ -95,6 +98,9 @@ Some example of the usage could be:
 >>>                ComfMod=[0, 1, 2, 3], # ComfMod, which is Comfort Mode
 >>>                HVACmode=[0, 1, 2], # HVACmode, which is the HVAC mode
 >>>                VentCtrl=[0, 1], # VentCtrl, which is the Ventilation Control
+>>>                MaxTempDiffVOF=20, # When the difference of operative and outdoor temperature exceeds 20°C, windows will be opened the fraction of MultiplierVOF.
+>>>                MinTempDiffVOF=1, # When the difference of operative and outdoor temperature is smaller than 1°C, windows will be fully opened. Between min and max, windows will be linearly opened.
+>>>                MultiplierVOF=20, # Fraction of window to be opened when temperature difference exceeds MaxTempDiffVOF.
 >>>                VSToffset=[0, 1, 2], # VSToffset, which is the Ventilation Setpoint Temperature offset
 >>>                MinOToffset=[0, 1, 2], # MinOToffset, which is the Minimum Outdoor Temperature offset
 >>>                MaxWindSpeed=[10, 20, 30], # MaxWindSpeed, which is th Maximum Wind Speed
@@ -140,9 +146,16 @@ Each argument is explained below:
 ![ComfMod](https://www.mdpi.com/energies/energies-12-01498/article_deploy/html/images/energies-12-01498-g002.png)
 
 
-- HVACmode: refers to the HVAC mode applied. Enter 0 for Fully Air-conditioned, 1 for Naturally ventilated and/or 2 for Mixed Mode. Please note that Calculated natural ventilation must be enabled so that Mixed Mode works. So, for example, if you enter '0 1 2' you'll be getting all HVAC modes, or if you just enter '0 1' you'll be getting just Fully Air-conditioned and Naturally ventilated.
+- HVACmode: refers to the HVAC mode applied. Enter 0 for Fully Air-conditioned (AC), 1 for Naturally ventilated (NV) and/or 2 for Mixed Mode (MM). Please note that Calculated natural ventilation must be enabled so that Mixed Mode works. So, for example, if you enter '0 1 2' you'll be getting all HVAC modes, or if you just enter '0 1' you'll be getting just Fully Air-conditioned and Naturally ventilated.
 
-- VentCtrl: refers to the ventilation control, only used in Mixed Mode (HVAC Mode '2'). If you enter '0', ventilation will be allowed if operative temperature exceeds neutral temperature (also known as comfort temperature); if you enter '1', ventilation will be allowed if operative temperature exceeds the upper comfort limit. In other words, sets the value of the neutral temperature or the upper comfort limit to the Ventilation Setpoint Temperature (VST). Either way, if you enter '0 1' you'll be getting both ventilation control modes.
+- VentCtrl: refers to the ventilation control, only used in for NV and MM. When using NV, If you enter '0', ventilation will be allowed if operative temperature exceeds neutral temperature (also known as comfort temperature); if you enter '1', ventilation will be allowed if operative temperature exceeds the upper comfort limit. In other words, sets the value of the neutral temperature or the upper comfort limit to the Ventilation Setpoint Temperature (VST). When using MM, 0 = Ventilates above neutral temperature and fully opens doors and windows; 1 = Ventilates above lower comfort limit and fully opens doors and windows; 2 = Ventilates above neutral temperature and opens doors and windows based on the customised venting opening factor; and 3 = Ventilates above lower comfort limit and opens doors and windows based on the customised venting opening factor. Either way, if you enter '0 1' you'll be getting both ventilation control modes.
+
+- MaxTempDiffVOF: Maximum Temperature Difference for Venting Opening Factor. Maximum temperature difference between indoor operative and outdoor temperatures, which when exceeded, windows and doors are opened only the fraction specified in the MultiplierVOF argument. If temperature difference oscillates between maximum and minimum, the windows and doors are opened based on the linear equation. Follows the same operation as explained in [Designbuilder help website](https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm).
+
+- MinTempDiffVOF: Minimum Temperature Difference for Venting Opening Factor. Minimum temperature difference between indoor operative and outdoor temperatures, which when smaller, windows and doors are fully opened. If temperature difference oscillates between maximum and minimum, the windows and doors are opened based on the linear equation. Follows the same operation as explained in [Designbuilder help website](https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm).
+
+- MultiplierVOF: Multiplier for modulating the Venting Opening Factor. The fraction of the windows that will be opened when temperature difference exceeds MaxTempDiffVOF. Follows the same operation as explained in [Designbuilder help website](https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm).
+![Venting Opening Factor](images/VentingOpeningFactor.png)
 
 - VSToffset: stands for Ventilation Setpoint Temperature (VST) offset, again only used in Mixed Mode (HVAC Mode '2'). Applies the entered values as an offset to the VST, in Celsius degrees. Values entered can be positive or negative float or integers, and must be space-separated. For example, if you enter '-2 -1 0 1 2' you'll be getting offsets of -2°C, -1°C, 0°C, 1°C and 2°C to the VST. If you don't enter any number, it'll be used '0' as the default value.
 

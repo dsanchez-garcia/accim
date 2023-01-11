@@ -29,7 +29,6 @@ def inputData(self, ScriptType: str = None):
 
     }
 
-
     CS_CA_CM_data_dict = {
         0: {
             'name': '0 = ESP CTE',
@@ -461,27 +460,47 @@ def inputData(self, ScriptType: str = None):
                     print('          The maximum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
                     self.MaxTempDiffVOF = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
 
-            self.MinTempDiffVOF = float(input('Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+            self.MinTempDiffVOF = float(input('Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
             while self.MinTempDiffVOF <= 0:
-                print('          The minimum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
-                self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                print('          The minimum temperature difference number is not correct. It must be a number larger than 0 and smaller than the maximum temperature difference number. Please enter the number again.')
+                self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
             while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-                self.MinTempDiffVOF = float(input('      Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                self.MinTempDiffVOF = float(input('      Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
                 while self.MinTempDiffVOF <= 0:
-                    print('          The minimum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
-                    self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                    print('          The minimum temperature difference number is not correct. It must be a number larger than 0 and smaller than the maximum temperature difference number. Please enter the number again.')
+                    self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
 
-            #todo if MinTempDiffVOF > MaxTempDiffVOF
+            while self.MinTempDiffVOF >= self.MaxTempDiffVOF:
+                print('The minimum temperature difference number you entered is larger than or equal to the maximum temperature difference number. Please enter both maximum and minimum temperature difference numbers again.')
+                self.MaxTempDiffVOF = float(input('Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                while self.MaxTempDiffVOF <= 0:
+                    print('          The maximum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
+                    self.MaxTempDiffVOF = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+                    self.MaxTempDiffVOF = float(input('      Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                    while self.MaxTempDiffVOF <= 0:
+                        print('          The maximum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
+                        self.MaxTempDiffVOF = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+
+                self.MinTempDiffVOF = float(input('Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
+                while self.MinTempDiffVOF <= 0:
+                    print('          The minimum temperature difference number is not correct. It must be a number larger than 0 and smaller than the maximum temperature difference number. Please enter the number again.')
+                    self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
+                while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+                    self.MinTempDiffVOF = float(input('      Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
+                    while self.MinTempDiffVOF <= 0:
+                        print('          The minimum temperature difference number is not correct. It must be a number larger than 0 and smaller than the maximum temperature difference number. Please enter the number again.')
+                        self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
 
             self.MultiplierVOF = float(input('Enter the multiplier number for Ventilation Opening Factor (any number larger than 0): '))
             while self.MultiplierVOF < 0 or self.MultiplierVOF > 1:
                 print('          The multiplier number is not correct. It must be a number between 0 and 1. Please enter the number again.')
-                self.MultiplierVOF = float(input('         Enter the multiplier number for Ventilation Opening Factor (any number between 0 and 1): '))
+                self.MultiplierVOF = float(input('         Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
             while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-                self.MultiplierVOF = float(input('      Enter the multiplier number for Ventilation Opening Factor (any number between 0 and 1): '))
+                self.MultiplierVOF = float(input('      Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
                 while self.MultiplierVOF < 0 or self.MultiplierVOF > 1:
                     print('          The multiplier number is not correct. It must be a number between 0 and 1. Please enter the number again.')
-                    self.MultiplierVOF = float(input('         Enter the multiplier number for Ventilation Opening Factor (any number between 0 and 1): '))
+                    self.MultiplierVOF = float(input('         Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
 
         self.VSToffset_List = list(float(num) for num in input(
             "Enter the VSToffset numbers separated by space (if omitted, will be 0): ").split())

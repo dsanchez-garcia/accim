@@ -75,7 +75,18 @@ def addAccis(
     :param HVACmode: The default is None.
     (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
     :param VentCtrl: The default is None.
-    (0 = Ventilates above neutral temperature; 1 = Ventilates above upper comfort limit)
+    (if HVACmode = 1:
+    0 = Ventilates above neutral temperature;
+    1 = Ventilates above upper comfort limit;
+    if HVACmode = 2:
+    0 = Ventilates above neutral temperature and fully opens doors and windows;
+    1 = Ventilates above lower comfort limit and fully opens doors and windows;
+    2 = Ventilates above neutral temperature and opens doors and windows based on the customised venting opening factor;
+    3 = Ventilates above lower comfort limit and opens doors and windows based on the customised venting opening factor;
+    )
+    :param MaxTempDiffVOF: The maximum temperature difference for the Venting Opening Factor. Must be a number greater than 0.
+    :param MinTempDiffVOF: The minimum temperature difference for the Venting Opening Factor. Must be a number greater than 0 and smaller than the maximum temperature difference.
+    :param MultiplierVOF: The multiplier for the modulation of the Venting Opening Factor. Must be a number between 0 and 1.
     :param VSToffset: The default is 0. Please refer to documentation.
     :param MinOToffset: The default is 50. Please refer to documentation.
     :param MaxWindSpeed: The default is 50. Please refer to documentation.
