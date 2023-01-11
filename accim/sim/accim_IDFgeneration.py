@@ -719,7 +719,7 @@ def genIDF(self,
                                         + '[VO_X'
                                         + '[MT_X'
                                         + '[MW_X'
-                                        + '[AT_' + repr(ASTtol_value)
+                                        + '[AT_' + repr(round(ASTtol_value, 2))
                                         + suffix
                                         + '.idf'
                                 )
@@ -746,7 +746,7 @@ def genIDF(self,
                                                             + '[VO_' + repr(VSToffset_value)
                                                             + '[MT_' + repr(MinOToffset_value)
                                                             + '[MW_' + repr(MaxWindSpeed_value)
-                                                            + '[AT_' + repr(ASTtol_value)
+                                                            + '[AT_' + repr(round(ASTtol_value, 2))
                                                             + suffix
                                                             + '.idf'
                                                     )
@@ -773,7 +773,7 @@ def genIDF(self,
                                                     + '[VO_X'
                                                     + '[MT_X'
                                                     + '[MW_X'
-                                                    + '[AT_' + repr(ASTtol_value)
+                                                    + '[AT_' + repr(round(ASTtol_value, 2))
                                                     + suffix
                                                     + '.idf'
                                             )
@@ -796,7 +796,7 @@ def genIDF(self,
                                                                     + '[VO_' + repr(VSToffset_value)
                                                                     + '[MT_' + repr(MinOToffset_value)
                                                                     + '[MW_' + repr(MaxWindSpeed_value)
-                                                                    + '[AT_' + repr(ASTtol_value)
+                                                                    + '[AT_' + repr(round(ASTtol_value, 2))
                                                                     + suffix
                                                                     + '.idf'
                                                             )
@@ -824,7 +824,7 @@ def genIDF(self,
                                                     + '[VO_X'
                                                     + '[MT_X'
                                                     + '[MW_X'
-                                                    + '[AT_' + repr(ASTtol_value)
+                                                    + '[AT_' + repr(round(ASTtol_value, 2))
                                                     + suffix
                                                     + '.idf'
                                             )
@@ -851,7 +851,7 @@ def genIDF(self,
                                                                         + '[VO_' + repr(VSToffset_value)
                                                                         + '[MT_' + repr(MinOToffset_value)
                                                                         + '[MW_' + repr(MaxWindSpeed_value)
-                                                                        + '[AT_' + repr(ASTtol_value)
+                                                                        + '[AT_' + repr(round(ASTtol_value, 2))
                                                                         + suffix
                                                                         + '.idf'
                                                                 )
@@ -927,7 +927,7 @@ def genIDF(self,
                                             + '[VO_X'
                                             + '[MT_X'
                                             + '[MW_X'
-                                            + '[AT_' + repr(ASTtol_value)
+                                            + '[AT_' + repr(round(ASTtol_value, 2))
                                             + suffix
                                             + '.idf'
                                     )
@@ -971,7 +971,7 @@ def genIDF(self,
                                                             + '[VO_' + repr(VSToffset_value)
                                                             + '[MT_' + repr(MinOToffset_value)
                                                             + '[MW_' + repr(MaxWindSpeed_value)
-                                                            + '[AT_' + repr(ASTtol_value)
+                                                            + '[AT_' + repr(round(ASTtol_value, 2))
                                                             + suffix
                                                             + '.idf'
                                                     )
@@ -1008,7 +1008,7 @@ def genIDF(self,
                                                         + '[VO_X'
                                                         + '[MT_X'
                                                         + '[MW_X'
-                                                        + '[AT_' + repr(ASTtol_value)
+                                                        + '[AT_' + repr(round(ASTtol_value, 2))
                                                         + suffix
                                                         + '.idf'
                                                 )
@@ -1056,7 +1056,7 @@ def genIDF(self,
                                                                         + '[VO_' + repr(VSToffset_value)
                                                                         + '[MT_' + repr(MinOToffset_value)
                                                                         + '[MW_' + repr(MaxWindSpeed_value)
-                                                                        + '[AT_' + repr(ASTtol_value)
+                                                                        + '[AT_' + repr(round(ASTtol_value, 2))
                                                                         + suffix
                                                                         + '.idf'
                                                                 )
@@ -1094,7 +1094,7 @@ def genIDF(self,
                                                         + '[VO_X'
                                                         + '[MT_X'
                                                         + '[MW_X'
-                                                        + '[AT_' + repr(ASTtol_value)
+                                                        + '[AT_' + repr(round(ASTtol_value, 2))
                                                         + suffix
                                                         + '.idf'
                                                 )
@@ -1142,7 +1142,7 @@ def genIDF(self,
                                                                         + '[VO_' + repr(VSToffset_value)
                                                                         + '[MT_' + repr(MinOToffset_value)
                                                                         + '[MW_' + repr(MaxWindSpeed_value)
-                                                                        + '[AT_' + repr(ASTtol_value)
+                                                                        + '[AT_' + repr(round(ASTtol_value, 2))
                                                                         + suffix
                                                                         + '.idf'
                                                                 )
