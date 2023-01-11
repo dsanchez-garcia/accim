@@ -136,10 +136,22 @@ Enter the HVAC Mode numbers separated by space (
 ): 2
           Are you sure the numbers are correct? [y or [] / n]: 
 Enter the Ventilation Control numbers separated by space (
-0 = Ventilates above neutral temperature;
-1 = Ventilates above upper comfort limit;
-): 0
+If HVACmode = 1:
+   0 = Ventilates above neutral temperature;
+   1 = Ventilates above upper comfort limit;
+If HVACmode = 2:
+   0 = Ventilates above neutral temperature and fully opens doors and windows;
+   1 = Ventilates above lower comfort limit and fully opens doors and windows;
+   2 = Ventilates above neutral temperature and opens doors and windows based on the customised venting opening factor;
+   3 = Ventilates above lower comfort limit and opens doors and windows based on the customised venting opening factor;
+): 2 3
           Are you sure the numbers are correct? [y or [] / n]: 
+Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): 15
+          Are you sure the number is correct? [y or [] / n]: 1
+Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): 1
+          Are you sure the number is correct? [y or [] / n]: 
+Enter the multiplier number for Ventilation Opening Factor (any number larger than 0): 0.2
+          Are you sure the number is correct? [y or [] / n]: 
 Enter the VSToffset numbers separated by space (if omitted, will be 0): 
           Are you sure the numbers are correct? [y or [] / n]: 
 Enter the MinOToffset numbers separated by space (if omitted, will be 50): 
@@ -155,33 +167,53 @@ Enter the ASTtol value steps (if omitted, will be 0.1):
 ```
 Afterwards, ACCIS will let us know which the output IDFs are going to be, the total number of them and will ask for our confirmation to proceed:
 ```
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-And the total number of output IDFs is going to be 10
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_3[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_3[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_3[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+And the total number of output IDFs is going to be 20
 Do you still want to run ACCIS? [y/n]: y
 ```
 If we entered `n`, the whole process would shut down. Otherwise, if we entered 'y', the generation of output IDF files would start, and ACCIS would print on screen each output IDF name as it generates it. 
 As you can see, we are going to use the EN16798-1, ASHRAE 55 and IMAC Commercial for naturally ventilated buildings, categories 2 and 3 for EN16798, 90% acceptability levels for ASHRAE 55, 85 and 90% acceptability levels for IMAC C NV, all with ComfMod 0 (with static setpoint temperatures) and 3 (with adaptive setpoint temperatures when the model is applicable, otherwise horizontally extending the adaptive setpoint temperatures), Mixed Mode, and we just went ahead with the remaining default values.
 ```
 Generating the following output IDF files:
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT ASHRAE55[CA_90[CM_3[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_85[CM_3[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_IND IMAC C NV[CA_90[CM_3[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
 
 =======================END OF OUTPUT IDF FILES GENERATION PROCESS=======================
 ```

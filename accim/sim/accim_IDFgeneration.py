@@ -660,9 +660,9 @@ def genIDF(self,
     if type(self.MultiplierVOF) is tuple:
         self.MultiplierVOF = self.MultiplierVOF[0]
 
-    self.VSToffset_List = [float(i) for i in self.VSToffset_List if type(i) is int]
-    self.MinOToffset_List = [float(i) for i in self.MinOToffset_List if type(i) is int]
-    self.MaxWindSpeed_List = [float(i) for i in self.MaxWindSpeed_List if type(i) is int]
+    self.VSToffset_List = [float(i) for i in self.VSToffset_List]
+    self.MinOToffset_List = [float(i) for i in self.MinOToffset_List]
+    self.MaxWindSpeed_List = [float(i) for i in self.MaxWindSpeed_List]
 
     if NameSuffix == '':
         suffix = '[NS_X'
