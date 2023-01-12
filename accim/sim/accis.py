@@ -8,6 +8,7 @@ by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 
 def addAccis(
         ScriptType: str = None,
+        SupplyAirTempInputMethod: str = None,
         Output_type: str = None,
         Output_freqs: any = None,
         Output_keep_existing: bool = None,
@@ -29,7 +30,8 @@ def addAccis(
         ASTtol_steps: float = 0.1,
         NameSuffix: str = '',
         verboseMode: bool = True,
-        confirmGen: bool = None):
+        confirmGen: bool = None
+):
     """
     Parameters
     :param ScriptType: The default is None.
@@ -117,6 +119,7 @@ def addAccis(
 
     objArgsDef = (
         ScriptType is not None,
+        SupplyAirTempInputMethod is not None,
         Output_type is not None,
         Output_freqs is not None,
         Output_keep_existing is not None,
@@ -129,6 +132,11 @@ def addAccis(
                           'ex_mm',
                           'ex_ac',
                           ]
+
+    SupplyAirTempInputMethodList = [
+        'supply air temperature',
+        'temperature difference'
+    ]
 
     fullOutputsTypeList = [
         'Standard',
@@ -186,6 +194,18 @@ def addAccis(
                                "    for ExistingHVAC with mixed mode: ex_mm;\n"
                                "    for ExistingHVAC with full air-conditioning mode: ex_ac\n"
                                "    ): ")
+        if 'vrf' in ScriptType.lower():
+            SupplyAirTempInputMethod = input("Enter the SupplyAirTempInputMethod (\n"
+                               "for Supply Air Temperature: supply air temperature;\n"
+                               "for Temperature Difference: temperature difference;\n"
+                               "): ")
+            while SupplyAirTempInputMethod not in SupplyAirTempInputMethodList:
+                SupplyAirTempInputMethod = input(
+                    "    SupplyAirTempInputMethod was not correct. "
+                    "    Enter the SupplyAirTempInputMethod (\n"
+                               "for Supply Air Temperature: supply air temperature;\n"
+                               "for Temperature Difference: temperature difference;\n"
+                               "): ")
         Output_keep_existing = input('Do you want to keep the existing outputs (true or false)?: ')
         while Output_keep_existing.lower() not in ['true', 'false']:
             Output_keep_existing = input('The answer you entered is not valid. '
@@ -210,7 +230,6 @@ def addAccis(
             TempCtrl = input("  Temperature Control method was not correct. "
                              "Please, enter the Temperature Control method (temperature or pmv): ")
 
-
     if verboseMode:
         print('Basic input data:')
         # print(f'accim version: {accim.__version__}')
@@ -220,6 +239,14 @@ def addAccis(
         print(fullScriptTypeList)
         raise ValueError(ScriptType + " is not a valid ScriptType. "
                                       "You must choose a ScriptType from the list above.")
+    if 'vrf' in ScriptType.lower():
+        if verboseMode:
+            print('Supply Air Temperature Input Method is: '+SupplyAirTempInputMethod)
+        if SupplyAirTempInputMethod not in SupplyAirTempInputMethodList:
+            print('Valid Supply Air Temperature Input Methods: ')
+            print(SupplyAirTempInputMethod)
+            raise ValueError(SupplyAirTempInputMethod + " is not a valid Supply Air Temperature Input Method. "
+                                          "You must choose a Supply Air Temperature Input Method from the list above.")
     if verboseMode:
         print('Output type is: ' + Output_type)
     if Output_type not in fullOutputsTypeList:
@@ -283,7 +310,7 @@ def addAccis(
             z.setAvailSchOn(verboseMode=verboseMode)
             z.addVRFsystemSch(verboseMode=verboseMode)
             z.addCurveObj(verboseMode=verboseMode)
-            z.addDetHVACobj(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode, TempCtrl=TempCtrl)
+            z.addDetHVACobj(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode, SupplyAirTempInputMethod=SupplyAirTempInputMethod)
             if ScriptType.lower() == 'vrf_mm':
                 z.checkVentIsOn(verboseMode=verboseMode)
             z.addForscriptSchVRFsystem(verboseMode=verboseMode)
@@ -337,27 +364,6 @@ def addAccis(
                 Outputs_freq=Output_freqs,
                 verboseMode=verboseMode
             )
-
-        # if Output_type.lower() == 'simplified':
-        #     z.addSimplifiedOutputVariables(
-        #         TempCtrl=TempCtrl,
-        #         verboseMode=verboseMode
-        #     )
-        # elif Output_type.lower() == 'standard':
-        #     z.addOutputVariablesBase(
-        #         ScriptType=ScriptType,
-        #         TempCtrl=TempCtrl,
-        #         verboseMode=verboseMode
-        #     )
-        #
-        # if Output_type.lower() == 'timestep':
-        #     z.addOutputVariablesTimestep(verboseMode=verboseMode)
-        #
-        # if Output_type.lower() == 'runperiod':
-        #     z.addOutputVariablesRunperiod(
-        #         ScriptType=ScriptType,
-        #         verboseMode=verboseMode
-        #     )
 
         z.removeDuplicatedOutputVariables()
 

@@ -899,7 +899,12 @@ def addCurveObj(self, verboseMode: bool = True):
             print("HeatingCombRatio Curve:Linear Object has been added")
 
 
-def addDetHVACobj(self, EnergyPlus_version: str = None, verboseMode: bool = True, TempCtrl: str = None):
+def addDetHVACobj(
+        self,
+        EnergyPlus_version: str = None,
+        verboseMode: bool = True,
+        SupplyAirTempInputMethod: str = None,
+):
     """Add Detailed HVAC objects for VRFsystem to work."""
     for zn in self.zonenames_orig:
         if 'VRF Outdoor Unit_'+zn in [i.Heat_Pump_Name
@@ -1201,9 +1206,14 @@ def addDetHVACobj(self, EnergyPlus_version: str = None, verboseMode: bool = True
 
     del sizingzonelist
 
-    if TempCtrl == 'pmv':
+    # if TempCtrl == 'pmv':
+    #     supply_air_temp_input_method = 'SupplyAirTemperature'
+    # elif TempCtrl.lower() == 'temp' or TempCtrl.lower() == 'temperature':
+    #     supply_air_temp_input_method = 'TemperatureDifference'
+
+    if SupplyAirTempInputMethod == 'supply air temperature':
         supply_air_temp_input_method = 'SupplyAirTemperature'
-    elif TempCtrl.lower() == 'temp' or TempCtrl.lower() == 'temperature':
+    elif SupplyAirTempInputMethod == 'temperature difference':
         supply_air_temp_input_method = 'TemperatureDifference'
 
     for zn in self.zonenames_orig:

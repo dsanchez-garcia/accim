@@ -17,8 +17,12 @@ for VRFsystem with mixed-mode: vrf_mm;
 for ExistingHVAC with mixed mode: ex_mm;
 for ExistingHVAC with full air-conditioning mode: ex_ac
 ): vrf_mm
+Enter the SupplyAirTempInputMethod (
+for Supply Air Temperature: supply air temperature;
+for Temperature Difference: temperature difference;
+): supply air temperature
 Do you want to keep the existing outputs (true or false)?: false
-Enter the Output type (standard, simplified or existing): standard
+Enter the Output type (standard, simplified or detailed): standard
 Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): hourly runperiod
 Enter the EnergyPlus version (9.1 to 22.2): 22.2
 Enter the Temperature Control method (temperature or pmv): temperature
@@ -27,6 +31,7 @@ When we hit enter, it's going to add all the EnergyPlus objects needed:
 ```
 Basic input data:
 ScriptType is: vrf_mm
+Supply Air Temperature Input Method is: supply air temperature
 Output type is: standard
 Output frequencies are: 
 ['hourly', 'runperiod']

@@ -41,6 +41,7 @@ Enter the Output frequencies separated by space (timestep, hourly, daily, monthl
 ```
 where
 - ScriptType can be 'vrf_mm', 'vrf_ac', 'ex_mm' or 'ex_ac', and it refers to the type of functions as explained above
+- SupplyAirTempInputMethod can be 'supply air temperature' or 'temperature difference', and it is the supply air temperature input method for the VRF systems.
 - Existing outputs in the IDF can be kept if entered 'true'. Otherwise, if entered 'false', it will be removed for clarity purposes at results stage.
 - Output_type can be 'standard' or 'simplified', and it refers to the simulation results: 'standard' means that results will contain the full selection relevant to accim; and 'simplified' means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited.
 - Output_freqs (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies.
@@ -49,7 +50,7 @@ where
 
 Besides, `addAccis()` can take the same values we entered before in the prompt command as arguments. The usage of this function will be detailed below. An example of this, to get the same results as shown in the command prompt would be:
 ```
->>> accis.addAccis('vrf_mm', True, 'standard', ['hourly', 'daily'], '9.6', 'temp')
+>>> accis.addAccis('vrf_mm', 'supply air temperature', True, 'standard', ['hourly', 'daily'], '9.6', 'temp')
 ```
 accis will show on the prompt command dialog all the objects it adds, and those that doesn't need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled 'Setting up the target IDFs'.
 
@@ -58,9 +59,10 @@ Once you run the simulations, you might get some EnergyPlus warnings and severe 
 ## Setting up the target IDFs
 
 
-If you run `accis.addAccis(whateverScriptType, whateverOutput_keep_existing, whateverOutput_type, whateverOutput_freqs, whateverEPversion, whateverTempCtrl)`, you will be asked in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
+If you run `accis.addAccis(whateverScriptType, whateverSupplyAirTempInputMethod, whateverOutput_keep_existing, whateverOutput_type, whateverOutput_freqs, whateverEPversion, whateverTempCtrl)`, you will be asked in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
 ```
 >>> accis.addAccis(str, # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'
+>>>                str, # SupplyAirTempInputMethod: 'supply air temperature', 'temperature difference'
 >>>                bool, # Output_keep_existing: True or False
 >>>                str, # Output_type: 'simplified' or 'standard'
 >>>                list, # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
@@ -88,6 +90,7 @@ If you run `accis.addAccis(whateverScriptType, whateverOutput_keep_existing, wha
 Some example of the usage could be:
 ```
 >>> accis.addAccis(ScriptType='vrf', # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'
+>>>                SupplyAirTempInputMethod='supply air temperature', # SupplyAirTempInputMethod: 'supply air temperature', 'temperature difference'
 >>>                Output_keep_existing=False, # Output_keep_existing: True or False
 >>>                Output_type='standard', # Output_type: 'simplified' or 'standard'
 >>>                Output_freqs=['hourly', 'runperiod'], # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
@@ -110,7 +113,7 @@ Some example of the usage could be:
 >>>                NameSuffix='standard' # Name Suffix: for example, just in case you want to clarify the outputs
 >>>                )
 ```
-If you specify the arguments when you call the function, you need to specify at least: ScriptType, Output_keep_existing, Output_type, Output_freqs, EnergyPlus_version, TempCtrl, ComfStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
+If you specify the arguments when you call the function, you need to specify at least: ScriptType, SupplyAirTempInputMethod, Output_keep_existing, Output_type, Output_freqs, EnergyPlus_version, TempCtrl, ComfStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
 Each argument is explained below:
 
 - ComfStand: refers to the thermal comfort standard or model to be applied. Enter any number from 0 to 21 to select the comfort standard or model to be used; you can see which model is each number in the table below. Readthedocs doesn't render it properly, so please take a look at the [Github repository](https://github.com/dsanchez-garcia/accim/blob/master/docs/how%20to%20use.md). For example, if you enter '0 1 2 3', you'll get IDFs for CTE, EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for Japanese dwellings. If you don't enter any number, or if some of the numbers entered are not 0, 1, 2 or 3, it'll ask you to enter the numbers again.
@@ -187,7 +190,7 @@ where:
 
 - HM refers to the HVAC Mode, which could be 0 (Full air conditioning), 1 (Naturally ventilated), or 2 (Mixed Mode).
 
-- VC refers to the Ventilation Control, which could be 0 (ventilates above neutral temperature), or 1 (ventilates above upper comfort limit).
+- VC refers to the Ventilation Control, which could be 0, 1, 2 or 3.
 
 - VO refers to the Ventilation setpoint temperature offset, which could be any number, float or integer, positive or negative.
 
