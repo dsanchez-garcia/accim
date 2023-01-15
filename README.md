@@ -1,5 +1,5 @@
 
-![ACCIM Logo with header](docs/images/accim_logo_nohatch_w-header.svg)
+![ACCIM Logo with header](docs/images/accim_logo_nohatch_w-header.svg) ![CIBSE_BSAwards](https://github.com/dsanchez-garcia/accim/blob/master/docs/images/CIBSE%20BSG%20WINNER%202022%20(610x150px).png?raw=true)
 
 ![PyPI](https://img.shields.io/pypi/v/accim)	![PyPI - Python Version](https://img.shields.io/pypi/pyversions/accim)	![GitHub](https://img.shields.io/github/license/dsanchez-garcia/accim)	![Read the Docs](https://img.shields.io/readthedocs/accim?color=cyan)
 
