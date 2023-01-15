@@ -6,6 +6,9 @@
 .. image:: images/accim_logo_nohatch_w-header.svg
   :width: 900
 
+.. image:: images/CIBSE BSG WINNER 2022 (610x150px).png
+  :width: 900
+
 Welcome to accim's documentation!
 =================================
 
