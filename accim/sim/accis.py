@@ -470,3 +470,5 @@ def addAccis(
 
     if verboseMode:
         print('''\n=======================END OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')
+
+    #todo pop up when process ends; by defalt True

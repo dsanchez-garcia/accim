@@ -78,6 +78,9 @@ def genCSVconcatenated(
     print('Time taken in seconds:')
     print(end - start)
 
+    # todo pop up when process ends; by defalt True
+
+
 class rename_epw_files:
     def __init__(
             self,
@@ -451,6 +454,8 @@ class rename_epw_files:
             for i in epw_files_to_rename:
                 os.remove(i)
                 print(f'The file {i} has been deleted.')
+
+        #todo pop up when process ends; by defalt True
 
 
 class Table:
@@ -1724,6 +1729,9 @@ class Table:
 
 
         # df.to_excel('checkpoint_04.xlsx')
+
+        #todo pop up when process ends; by defalt True
+
 
     def df(self):
         return self.df
