@@ -924,8 +924,8 @@ def addDetHVACobj(
                     Availability_Schedule_Name='On 24/7',
                     Gross_Rated_Total_Cooling_Capacity='autosize',
                     Gross_Rated_Cooling_COP=2,
-                    Minimum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=-6,
-                    Maximum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=43,
+                    Minimum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=-20,
+                    Maximum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=80,
                     # Minimum_Outdoor_Temperature_in_Cooling_Mode=-6,
                     # Maximum_Outdoor_Temperature_in_Cooling_Mode=43,
                     Cooling_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
@@ -949,7 +949,7 @@ def addDetHVACobj(
                     Rated_Heating_Capacity_Sizing_Ratio=1,
                     Gross_Rated_Heating_COP=2.1,
                     Minimum_Condenser_Inlet_Node_Temperature_in_Heating_Mode=-20,
-                    Maximum_Condenser_Inlet_Node_Temperature_in_Heating_Mode=40,
+                    Maximum_Condenser_Inlet_Node_Temperature_in_Heating_Mode=80,
                     Heating_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
                     'VRFHeatCapFT',
                     Heating_Capacity_Ratio_Boundary_Curve_Name='VRFHeatCapFTBoundary',
@@ -1007,8 +1007,8 @@ def addDetHVACobj(
                     Basin_Heater_Setpoint_Temperature=2,
                     Basin_Heater_Operating_Schedule_Name='On 24/7',
                     Fuel_Type='Electricity',
-                    Minimum_Condenser_Inlet_Node_Temperature_in_Heat_Recovery_Mode=-10,
-                    Maximum_Condenser_Inlet_Node_Temperature_in_Heat_Recovery_Mode=40,
+                    Minimum_Condenser_Inlet_Node_Temperature_in_Heat_Recovery_Mode=-5.99,
+                    Maximum_Condenser_Inlet_Node_Temperature_in_Heat_Recovery_Mode=80,
                     Heat_Recovery_Cooling_Capacity_Modifier_Curve_Name=
                     'VRF Heat Recovery Cooling Capacity Modifier',
                     Initial_Heat_Recovery_Cooling_Capacity_Fraction=0.5,
@@ -1035,8 +1035,8 @@ def addDetHVACobj(
                     Gross_Rated_Cooling_COP=2,
                     # Minimum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=-6,
                     # Maximum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=43,
-                    Minimum_Outdoor_Temperature_in_Cooling_Mode=-6,
-                    Maximum_Outdoor_Temperature_in_Cooling_Mode=43,
+                    Minimum_Outdoor_Temperature_in_Cooling_Mode=-20,
+                    Maximum_Outdoor_Temperature_in_Cooling_Mode=80,
                     Cooling_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
                     'VRFCoolCapFT',
                     Cooling_Capacity_Ratio_Boundary_Curve_Name='VRFCoolCapFTBoundary',
@@ -1058,7 +1058,7 @@ def addDetHVACobj(
                     Rated_Heating_Capacity_Sizing_Ratio=1,
                     Gross_Rated_Heating_COP=2.1,
                     Minimum_Outdoor_Temperature_in_Heating_Mode=-20,
-                    Maximum_Outdoor_Temperature_in_Heating_Mode=40,
+                    Maximum_Outdoor_Temperature_in_Heating_Mode=80,
                     Heating_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
                     'VRFHeatCapFT',
                     Heating_Capacity_Ratio_Boundary_Curve_Name='VRFHeatCapFTBoundary',
@@ -1116,8 +1116,8 @@ def addDetHVACobj(
                     Basin_Heater_Setpoint_Temperature=2,
                     Basin_Heater_Operating_Schedule_Name='On 24/7',
                     Fuel_Type='Electricity',
-                    Minimum_Outdoor_Temperature_in_Heat_Recovery_Mode=-10,
-                    Maximum_Outdoor_Temperature_in_Heat_Recovery_Mode=40,
+                    Minimum_Outdoor_Temperature_in_Heat_Recovery_Mode=-5.99,
+                    Maximum_Outdoor_Temperature_in_Heat_Recovery_Mode=80,
                     Heat_Recovery_Cooling_Capacity_Modifier_Curve_Name=
                     'VRF Heat Recovery Cooling Capacity Modifier',
                     Initial_Heat_Recovery_Cooling_Capacity_Fraction=0.5,
