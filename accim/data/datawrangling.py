@@ -466,6 +466,7 @@ class Table:
                  concatenated_csv_name: str = None,
                  level: list = None,
                  level_sum_or_mean: list = None,
+                 level_excluded_zones: list = None,
                  match_cities: bool = False,
                  manage_epw_names: bool = False,
                  split_epw_names: bool = False,
@@ -1128,18 +1129,25 @@ class Table:
             'Zone Thermal Comfort Fanger Model PPD': 'PPD (%)'
         }
 
+        if level_excluded_zones is None:
+            print('The occupied zones are:')
+            print(occupied_zone_list)
+            print('The hvac zones zones are:')
+            print(hvac_zone_list)
+            level_excluded_zones = list(i for i in input('If you want to exclude some zones from level computations, please enter the names separated by space, otherwise hit enter:').split())
+
         if any('block' in i for i in level):
             for output in outputdict:
                 for block in block_list:
                     if any('sum' in j for j in level_sum_or_mean):
                         df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                            [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i]
+                            [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i and not(any(k in i for k in level_excluded_zones))]
                         ].sum(axis=1)
                     else:
                         if normalised_energy_units:
                             if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                                 df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                                    [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i]
+                                    [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i and not(any(k in i for k in level_excluded_zones))]
                                     ].sum(axis=1)
                     if any('mean' in j for j in level_sum_or_mean):
                         if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
@@ -1152,16 +1160,16 @@ class Table:
         if any('building' in i for i in level):
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
-                    df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i]].sum(axis=1)
+                    df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i and not(any(k in i for k in level_excluded_zones))]].sum(axis=1)
                 else:
                     if normalised_energy_units:
                         if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
-                            df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i]].sum(axis=1)
+                            df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i and not(any(k in i for k in level_excluded_zones))]].sum(axis=1)
                 if any('mean' in j for j in level_sum_or_mean):
                     if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                         continue
                     else:
-                        df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i]].mean(axis=1)
+                        df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i and not(any(k in i for k in level_excluded_zones))]].mean(axis=1)
 
         # df.to_excel('checkpoint_02.xlsx')
 
