@@ -136,7 +136,9 @@ class accimJob():
             for i in [window.Name for window in
                       self.idf1.idfobjects
                       ['AirflowNetwork:MultiZone:Component:DetailedOpening']
-                      if window.Name.endswith('_Win')]:
+                      if window.Name.endswith('_Win')
+                      or window.Name.endswith('_Door')
+                      ]:
                 for k in self.occupiedZones_orig:
                     if i.split('_')[0].lower() in k.lower():
                         self.windownamelist_orig.append(i)
@@ -147,7 +149,7 @@ class accimJob():
             self.windownamelist_orig_split = ([i.split('_') for i in self.windownamelist_orig])
             # print(self.windownamelist_orig_split)
             if verboseMode:
-                print(f'The windows in the model {filename_temp} are:')
+                print(f'The windows and doors in the model {filename_temp} are:')
                 print(*self.windownamelist, sep="\n")
 
         if 'vrf' in ScriptType.lower():
