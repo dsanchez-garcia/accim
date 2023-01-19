@@ -504,6 +504,7 @@ class Table:
         Used to create columns with block or building values.
         :param level_sum_or_mean: A list of strings. Strings can be 'sum' and/or 'mean'.
         Used to create the columns for levels preciously stated by summing and/or averaging.
+        :param level_excluded_zones: A list of strings. Strings must be the zones exluded from level computations.
         :param match_cities: A bool, can be True or False.
         Used to try to match the cities in the EPW file name with actual cities.
         To be used if sample_EPWs have not been previously renamed with rename_epw_files().
@@ -1897,16 +1898,19 @@ class Table:
                        baseline: str = None,
                        comparison_mode: str = 'others compared to baseline',
                        comparison_cols: list = None,
+                       check_index_and_cols: bool = False,
                        vars_to_keep: list = None,
-                       check_index_and_cols: bool = False
                        ):
         """
         Creates a table based on the arguments.
-
+        :param reshaping: A string. Can be 'pivot', 'unstack' or 'multiindex', to perform these actions.
         :param vars_to_gather: A list of the variables to be transposed from rows to columns.
         :param baseline: The already transposed column you want to use as a baseline for comparisons.
         If ommited, you will be asked which one to use.
         :param comparison_cols: 'absolute' to get the difference or 'relative' to get the percentage of reduction.
+        :param check_index_and_cols: A boolean. True to check index and cols, False to skip.
+        :param vars_to_keep: A list of strings. To remove all variables from the multiindex except those to be kept.
+
         """
         if vars_to_gather is None:
             vars_to_gather = []
@@ -2143,7 +2147,7 @@ class Table:
                 self.wrangled_df_multiindex = wrangled_df_unstacked_or_stacked.copy()
                 del wrangled_df_unstacked_or_stacked
 
-                print('Any reshaping method has been applied, only multiindexing.')
+                print('No reshaping method has been applied, only multiindexing.')
 
 
     def enter_vars_to_gather(
@@ -2187,6 +2191,28 @@ class Table:
                           rows_new_names: list = None,
                           cols_new_names: list = None,
                           ):
+        """
+        Generates list of data to be plotted.
+        :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
+        :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
+        :param detailed_cols: A list of strings. The list should be the specific data you want to show in subplots columns. Used to filter.
+        :param detailed_rows: A list of strings. The list should be the specific data you want to show in subplots rows. Used to filter.
+        :param custom_cols_order: A list of strings. The list should be the specific order for the items shown in subplot columns.
+        :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
+        :param adap_vs_stat_data_y_main:
+        :param baseline:
+        :param colorlist_adap_vs_stat_data:
+        :param data_on_x_axis:
+        :param data_on_y_main_axis:
+        :param data_on_y_sec_axis:
+        :param colorlist_y_main_axis:
+        :param colorlist_y_sec_axis:
+        :param rename_rows:
+        :param rename_cols:
+        :param rows_new_names:
+        :param cols_new_names:
+        :return:
+        """
         if vars_to_gather_cols is None:
             vars_to_gather_cols = []
         if vars_to_gather_rows is None:
