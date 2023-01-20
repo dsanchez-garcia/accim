@@ -651,14 +651,13 @@ def genIDF(self,
         self.MinOToffset_List = [0]
         self.MaxWindSpeed_List = [0]
 
-    if type(self.MaxTempDiffVOF) is tuple:
-        self.MaxTempDiffVOF = self.MaxTempDiffVOF[0]
-
-    if type(self.MinTempDiffVOF) is tuple:
-        self.MinTempDiffVOF = self.MinTempDiffVOF[0]
-
-    if type(self.MultiplierVOF) is tuple:
-        self.MultiplierVOF = self.MultiplierVOF[0]
+    if any([i in self.VentCtrl_List for i in [2, 3]]):
+        if type(self.MaxTempDiffVOF) is tuple:
+            self.MaxTempDiffVOF = self.MaxTempDiffVOF[0]
+        if type(self.MinTempDiffVOF) is tuple:
+            self.MinTempDiffVOF = self.MinTempDiffVOF[0]
+        if type(self.MultiplierVOF) is tuple:
+            self.MultiplierVOF = self.MultiplierVOF[0]
 
     self.VSToffset_List = [float(i) for i in self.VSToffset_List]
     self.MinOToffset_List = [float(i) for i in self.MinOToffset_List]
@@ -726,9 +725,10 @@ def genIDF(self,
                                 outputlist.append(outputname)
                         else:
                             for VentCtrl_value in self.VentCtrl_List:
-                                if HVACmode_value == 1:
-                                    if VentCtrl_value == 2 or VentCtrl_value == 3:
-                                        continue
+                                if HVACmode_value == 1 and VentCtrl_value == 2:
+                                    continue
+                                elif HVACmode_value == 1 and VentCtrl_value == 3:
+                                    continue
                                 else:
                                     for VSToffset_value in self.VSToffset_List:
                                         for MinOToffset_value in self.MinOToffset_List:
@@ -780,27 +780,32 @@ def genIDF(self,
                                             outputlist.append(outputname)
                                     else:
                                         for VentCtrl_value in self.VentCtrl_List:
-                                            for VSToffset_value in self.VSToffset_List:
-                                                for MinOToffset_value in self.MinOToffset_List:
-                                                    for MaxWindSpeed_value in self.MaxWindSpeed_List:
-                                                        for ASTtol_value in numpy.arange(self.ASTtol_value_from,
-                                                                                         self.ASTtol_value_to,
-                                                                                         self.ASTtol_value_steps):
-                                                            outputname = (
-                                                                    filename
-                                                                    + ComfStand_dict[ComfStand_value]
-                                                                    + '[CA_' + repr(CAT_value)
-                                                                    + '[CM_' + repr(ComfMod_value)
-                                                                    + '[HM_' + repr(HVACmode_value)
-                                                                    + '[VC_' + repr(VentCtrl_value)
-                                                                    + '[VO_' + repr(VSToffset_value)
-                                                                    + '[MT_' + repr(MinOToffset_value)
-                                                                    + '[MW_' + repr(MaxWindSpeed_value)
-                                                                    + '[AT_' + repr(round(ASTtol_value, 2))
-                                                                    + suffix
-                                                                    + '.idf'
-                                                            )
-                                                            outputlist.append(outputname)
+                                            if HVACmode_value == 1 and VentCtrl_value == 2:
+                                                continue
+                                            elif HVACmode_value == 1 and VentCtrl_value == 3:
+                                                continue
+                                            else:
+                                                for VSToffset_value in self.VSToffset_List:
+                                                    for MinOToffset_value in self.MinOToffset_List:
+                                                        for MaxWindSpeed_value in self.MaxWindSpeed_List:
+                                                            for ASTtol_value in numpy.arange(self.ASTtol_value_from,
+                                                                                             self.ASTtol_value_to,
+                                                                                             self.ASTtol_value_steps):
+                                                                outputname = (
+                                                                        filename
+                                                                        + ComfStand_dict[ComfStand_value]
+                                                                        + '[CA_' + repr(CAT_value)
+                                                                        + '[CM_' + repr(ComfMod_value)
+                                                                        + '[HM_' + repr(HVACmode_value)
+                                                                        + '[VC_' + repr(VentCtrl_value)
+                                                                        + '[VO_' + repr(VSToffset_value)
+                                                                        + '[MT_' + repr(MinOToffset_value)
+                                                                        + '[MW_' + repr(MaxWindSpeed_value)
+                                                                        + '[AT_' + repr(round(ASTtol_value, 2))
+                                                                        + suffix
+                                                                        + '.idf'
+                                                                )
+                                                                outputlist.append(outputname)
                 elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]:
                     for CAT_value in self.CAT_List:
                         if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -831,9 +836,10 @@ def genIDF(self,
                                             outputlist.append(outputname)
                                     else:
                                         for VentCtrl_value in self.VentCtrl_List:
-                                            if HVACmode_value == 1:
-                                                if VentCtrl_value == 2 or VentCtrl_value == 3:
-                                                    continue
+                                            if HVACmode_value == 1 and VentCtrl_value == 2:
+                                                continue
+                                            elif HVACmode_value == 1 and VentCtrl_value == 3:
+                                                continue
                                             else:
                                                 for VSToffset_value in self.VSToffset_List:
                                                     for MinOToffset_value in self.MinOToffset_List:
@@ -938,14 +944,12 @@ def genIDF(self,
                                     idf1.savecopy(outputname)
                             else:
                                 for VentCtrl_value in self.VentCtrl_List:
-                                    if HVACmode_value == 1:
+                                    SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
+                                    if HVACmode_value == 2:
                                         if VentCtrl_value == 2 or VentCtrl_value == 3:
-                                            continue
-                                    else:
-                                        SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
-                                        SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
-                                        SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
-                                        SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
+                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
+                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
+                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
                                     for VSToffset_value in self.VSToffset_List:
                                         SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(VSToffset_value)
                                         for MinOToffset_value in self.MinOToffset_List:
@@ -1019,14 +1023,12 @@ def genIDF(self,
                                                 idf1.savecopy(outputname)
                                         else:
                                             for VentCtrl_value in self.VentCtrl_List:
-                                                if HVACmode_value == 1:
+                                                SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
+                                                if HVACmode_value == 2:
                                                     if VentCtrl_value == 2 or VentCtrl_value == 3:
-                                                        continue
-                                                else:
-                                                    SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
-                                                    SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
-                                                    SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
-                                                    SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
+                                                        SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
+                                                        SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
+                                                        SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
                                                 for VSToffset_value in self.VSToffset_List:
                                                     SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(
                                                         VSToffset_value)
@@ -1105,14 +1107,12 @@ def genIDF(self,
                                                 idf1.savecopy(outputname)
                                         else:
                                             for VentCtrl_value in self.VentCtrl_List:
-                                                if HVACmode_value == 1:
+                                                SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
+                                                if HVACmode_value == 2:
                                                     if VentCtrl_value == 2 or VentCtrl_value == 3:
-                                                        continue
-                                                else:
-                                                    SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
-                                                    SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
-                                                    SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
-                                                    SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
+                                                        SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
+                                                        SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
+                                                        SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
                                                 for VSToffset_value in self.VSToffset_List:
                                                     SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(
                                                         VSToffset_value)
@@ -1120,18 +1120,12 @@ def genIDF(self,
                                                         SetInputData[0].Program_Line_7 = 'set MinOToffset = ' + repr(
                                                             MinOToffset_value)
                                                         for MaxWindSpeed_value in self.MaxWindSpeed_List:
-                                                            SetInputData[
-                                                                0].Program_Line_8 = 'set MaxWindSpeed = ' + repr(
-                                                                MaxWindSpeed_value)
+                                                            SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = ' + repr(MaxWindSpeed_value)
                                                             for ASTtol_value in numpy.arange(self.ASTtol_value_from,
                                                                                              self.ASTtol_value_to,
                                                                                              self.ASTtol_value_steps):
-                                                                SetInputData[
-                                                                    0].Program_Line_9 = 'set ACSTtol = ' + repr(
-                                                                    -ASTtol_value)
-                                                                SetInputData[
-                                                                    0].Program_Line_10 = 'set AHSTtol = ' + repr(
-                                                                    ASTtol_value)
+                                                                SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
+                                                                SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
                                                                 outputname = (
                                                                         filename
                                                                         + ComfStand_dict[ComfStand_value]
