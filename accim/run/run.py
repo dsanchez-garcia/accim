@@ -37,7 +37,8 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_vers
     :param runOnlyAccim: Default is None. Enter True to run only ACCIM output IDFs, or False to run all IDFs.
     :param confirmRun: Default is None. Enter True to run all simulations regardless the no. of them,
     or False to shut down all runs.
-    :return:
+    :param num_CPUs: An integer. The number of CPUs to be used.
+    :param EnergyPlus_version: A string. It should be the EnergyPlus version of the IDFs, from '9.0' to '22.2'.
     """
 
     fullEPversionsList = [

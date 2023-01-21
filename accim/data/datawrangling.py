@@ -53,7 +53,6 @@ def genCSVconcatenated(
         del z
         gc.collect()
 
-
     datasetlist_to_merge = [
         i for i in os.listdir() if
         i.endswith('.csv')
@@ -211,8 +210,7 @@ class rename_epw_files:
             epw_df.loc[i, 'EPW_country_code'] = location.raw['address'].get('country_code').upper()
             # epw_df.loc[i, 'EPW_city'] = location.raw['address'].get('city', '')
 
-
-        #Method: match cities
+        # Method: match cities
         isEPWformatValid = False
         if match_cities:
             package_cities = datapackage.Package('https://datahub.io/core/world-cities/datapackage.json')
@@ -286,7 +284,7 @@ class rename_epw_files:
 
             # epw_df['EPW_CountryCode'] = epw_df['EPW_CountryCode'].astype(str)
         else:
-            #Method: geolocation
+            # Method: geolocation
             for i in range(len(epw_df['EPW_mod_filtered'])):
                 location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
                 for j in epw_df.loc[i, 'EPW_mod_filtered']:
@@ -323,7 +321,6 @@ class rename_epw_files:
                     except AttributeError:
                         epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').capitalize()
 
-
         for col in ['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']:
             for row in range(len(epw_df)):
                 if epw_df.loc[row, col] is None:
@@ -338,7 +335,7 @@ class rename_epw_files:
         # print('And the new names of the EPW files are going to be:')
         # print(*list(epw_df['EPW_new_names']), sep='\n')
 
-        #Checking there are no duplicates
+        # Checking there are no duplicates
         unique_list = []
         duplicated_list = []
         duplicated_id_list = []
@@ -421,7 +418,6 @@ class rename_epw_files:
             for i in amendments_list:
                 print(f'ID: {i} / {epw_df.loc[i, "EPW_names"]} / {epw_df.loc[i, "EPW_new_names"]}')
 
-
         exclusion_list = list(
             name
             for name
@@ -455,7 +451,7 @@ class rename_epw_files:
                 os.remove(i)
                 print(f'The file {i} has been deleted.')
 
-        #todo pop up when process ends; by defalt True
+        # todo pop up when process ends; by defalt True
 
 
 class Table:
@@ -504,7 +500,7 @@ class Table:
         Used to create columns with block or building values.
         :param level_sum_or_mean: A list of strings. Strings can be 'sum' and/or 'mean'.
         Used to create the columns for levels preciously stated by summing and/or averaging.
-        :param level_excluded_zones: A list of strings. Strings must be the zones exluded from level computations.
+        :param level_excluded_zones: A list of strings. Strings must be the zones excluded from level computations.
         :param match_cities: A bool, can be True or False.
         Used to try to match the cities in the EPW file name with actual cities.
         To be used if sample_EPWs have not been previously renamed with rename_epw_files().
@@ -513,7 +509,7 @@ class Table:
         If a large number of CSVs is going to be computed
         or hourly values are going to be considered, it is recommended to be False.
         To be used if sample_EPWs have not been previously renamed with rename_epw_files().
-        :param split_epw_names: It splits the EPW name into Country_City_RCPscenario-Year format.
+        :param split_epw_names: A bool. It splits the EPW name into Country_City_RCPscenario-Year format.
         To be used if sample_EPWs do have been previously renamed with rename_epw_files().
         :param normalised_energy_units: A bool, can be True or False.
         Used to show Wh or Wh/m2 units.
@@ -575,7 +571,7 @@ class Table:
         if source_frequency == 'runperiod':
             if frequency in ['timestep', 'hourly', 'daily', 'monthly']:
                 raise KeyError(f'Source frequency is {source_frequency}, therefore '
-                                 f'monthly, daily, hourly or timestep output frequency cannot be selected.')
+                               f'monthly, daily, hourly or timestep output frequency cannot be selected.')
         if source_frequency == 'monthly':
             if frequency in ['timestep', 'hourly', 'daily']:
                 raise KeyError(f'Source frequency is {source_frequency}, therefore '
@@ -658,7 +654,7 @@ class Table:
                 # source_files = sorted(Path(os.getcwd()).glob('*.csv'))
 
             cleaned_columns = [
-                #todo adding the {source_frequency} helps to filter the desired frequency
+                # todo adding the {source_frequency} helps to filter the desired frequency
 
                 # 'Date/Time',
                 'Environment:Site Outdoor Air Drybulb Temperature',
@@ -755,7 +751,7 @@ class Table:
                         if i in j:
                             constantcols.append(j)
                 constantcols = list(dict.fromkeys(constantcols))
-                #todo ahora mismo el area y el volumen se están sumando; probar a meterlo en first
+                # todo ahora mismo el area y el volumen se están sumando; probar a meterlo en first
                 constantcolsdict = {}
 
                 for i in range(len(constantcols)):
@@ -811,9 +807,8 @@ class Table:
                     if i not in agg_dict:
                         agg_dict.update({i: frequency_sum_or_mean})
 
-
                 if source_frequency == 'timestep' or source_frequency == 'hourly':
-                # todo timestep frequency to be tested
+                    # todo timestep frequency to be tested
                     if frequency == 'timestep':
                         df = df.groupby(['Source', 'Month', 'Day', 'Hour', 'Minute'], as_index=False).agg(agg_dict)
                         print(f'Input data frequency in file {file} is timestep '
@@ -958,7 +953,6 @@ class Table:
         except UnboundLocalError:
             print('All rows have been correctly aggregated')
 
-
         if concatenated_csv_name is not None:
             # df.to_excel(
             #     f'{concatenated_csv_name}'
@@ -996,16 +990,16 @@ class Table:
             return
 
         # if len(rows_with_NaN) > 0 or len(not_correct_agg) > 0:
-            #     f = open(f'{concatenated_csv_name}[freq-{frequency}[frequency_sum_or_mean-{frequency_sum_or_mean}[standard_outputs-{standard_outputs}[Report.txt', "w+")
-            #     if len(rows_with_NaN) > 0:
-            #         f.write('The following rows have NaN values:\r\n')
-            #         dfAsString = rows_with_NaN.to_string(header=True, index=True)
-            #         f.write(dfAsString)
-            #     if len(not_correct_agg) > 0:
-            #         f.write('The following rows have not been correctly aggregate:\r\n')
-            #         dfAsString = not_correct_agg.to_string(header=True, index=True)
-            #         f.write(dfAsString)
-            #     f.close()
+        #     f = open(f'{concatenated_csv_name}[freq-{frequency}[frequency_sum_or_mean-{frequency_sum_or_mean}[standard_outputs-{standard_outputs}[Report.txt', "w+")
+        #     if len(rows_with_NaN) > 0:
+        #         f.write('The following rows have NaN values:\r\n')
+        #         dfAsString = rows_with_NaN.to_string(header=True, index=True)
+        #         f.write(dfAsString)
+        #     if len(not_correct_agg) > 0:
+        #         f.write('The following rows have not been correctly aggregate:\r\n')
+        #         dfAsString = not_correct_agg.to_string(header=True, index=True)
+        #         f.write(dfAsString)
+        #     f.close()
 
         # df.to_excel('checkpoint_00.xlsx')
 
@@ -1024,16 +1018,16 @@ class Table:
         #                        ]
         # if len(occupied_zone_list) == 0:
         occupied_zone_list = [i.split(' ')[0][:-5]
-                        for i
-                        in [i
-                            for i
-                            in df.columns
-                            if
-                            # 'Zone Operative Temperature [C](Hourly)'
-                            'Zone Operative Temperature'
-                            in i
-                            ]
-                        ]
+                              for i
+                              in [i
+                                  for i
+                                  in df.columns
+                                  if
+                                  # 'Zone Operative Temperature [C](Hourly)'
+                                  'Zone Operative Temperature'
+                                  in i
+                                  ]
+                              ]
         # if len(occupied_zone_list) == 0:
         #     occupied_zone_list = [i.split(' ')[0][:-5]
         #                     for i
@@ -1050,13 +1044,13 @@ class Table:
 
         # Step: scanning zones for hvac_zone_list
         hvac_zone_list = [i.split(' ')[0]
-                               for i
-                               in [i
-                                     for i
-                                     in df.columns
-                                     if 'Cooling Coil Total Cooling Rate' in i
-                                     ]
-                               ]
+                          for i
+                          in [i
+                              for i
+                              in df.columns
+                              if 'Cooling Coil Total Cooling Rate' in i
+                              ]
+                          ]
 
         hvac_zone_list = list(dict.fromkeys(hvac_zone_list))
         hvac_zone_list_underscore = [i.replace(':', '_') for i in hvac_zone_list]
@@ -1078,7 +1072,7 @@ class Table:
         # Step: converting jules to Wh if any
         for i in df.columns:
             if 'VRF OUTDOOR UNIT' in i and '[J]' in i:
-                df[i] = df[i]/3600
+                df[i] = df[i] / 3600
 
         renamedict = {}
 
@@ -1147,14 +1141,14 @@ class Table:
                 for block in block_list:
                     if any('sum' in j for j in level_sum_or_mean):
                         df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                            [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i and not(any(k in i for k in level_excluded_zones))]
+                            [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i and not (any(k in i for k in level_excluded_zones))]
                         ].sum(axis=1)
                     else:
                         if normalised_energy_units:
                             if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                                 df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                                    [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i and not(any(k in i for k in level_excluded_zones))]
-                                    ].sum(axis=1)
+                                    [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i and not (any(k in i for k in level_excluded_zones))]
+                                ].sum(axis=1)
                     if any('mean' in j for j in level_sum_or_mean):
                         if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                             continue
@@ -1166,16 +1160,19 @@ class Table:
         if any('building' in i for i in level):
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
-                    df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i and not(any(k in i for k in level_excluded_zones))]].sum(axis=1)
+                    df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
+                        [i for i in df.columns if output in i and '_pymod' not in i and not (any(k in i for k in level_excluded_zones))]].sum(axis=1)
                 else:
                     if normalised_energy_units:
                         if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
-                            df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i and not(any(k in i for k in level_excluded_zones))]].sum(axis=1)
+                            df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
+                                [i for i in df.columns if output in i and '_pymod' not in i and not (any(k in i for k in level_excluded_zones))]].sum(axis=1)
                 if any('mean' in j for j in level_sum_or_mean):
                     if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                         continue
                     else:
-                        df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[[i for i in df.columns if output in i and '_pymod' not in i and not(any(k in i for k in level_excluded_zones))]].mean(axis=1)
+                        df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
+                            [i for i in df.columns if output in i and '_pymod' not in i and not (any(k in i for k in level_excluded_zones))]].mean(axis=1)
 
         # df.to_excel('checkpoint_02.xlsx')
 
@@ -1339,7 +1336,6 @@ class Table:
 
                 df[i] = df[i].astype(str).str.pad(width=2, side='left', fillchar='0')
 
-
         df = df.set_index([pd.RangeIndex(len(df))])
 
         # df['Hour_mod'] = df['Hour'].copy()
@@ -1347,7 +1343,6 @@ class Table:
             df['Hour'] = (pd.to_numeric(df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
         # df['Hour_mod'] = df['Hour_mod'].str.replace('.0', '').str.pad(width=2, side='left', fillchar='0')
         # df['Hour'] = df['Hour_mod']
-
 
         # todo test timestep
         if 'monthly' in self.frequency:
@@ -1364,7 +1359,6 @@ class Table:
         #     df['Date/Time'] = (df[['Day', 'Month']].agg('/'.join, axis=1) +
         #                             ' ' +
         #                             df[['Hour', 'Minute']].agg(':'.join, axis=1))
-
 
         df = df.set_index([pd.RangeIndex(len(df))])
 
@@ -1546,26 +1540,22 @@ class Table:
 
         cols_model = ['Source'] + fixed_columns + ['count']
 
-
-
         cols_date = aggregation_list_first.copy()
         cols_date.remove('Source')
 
         if split_epw_names:
-            cols_cat = cols_model+cols_epw_base+cols_epw_ext+cols_date
+            cols_cat = cols_model + cols_epw_base + cols_epw_ext + cols_date
         else:
-            cols_cat = cols_model+cols_date
+            cols_cat = cols_model + cols_date
 
         cols_num = [i for i in df.columns if i not in cols_cat]
 
-
-        df = df[cols_cat+cols_num]
+        df = df[cols_cat + cols_num]
 
         # Step: scanning data structure
         # temp_df_datastr = df.copy()
         # temp_df_datastr = temp_df_datastr[fixed_columns]
         # mindex = pd.MultiIndex.from_frame(temp_df_datast)
-
 
         # data_structure_dict = {}
         # temp_df_datastr = df.copy()
@@ -1711,7 +1701,7 @@ class Table:
             'ASTtol',
             'NameSuffix',
             'EPW'
-            ]
+        ]
 
         if split_epw_names:
             available_vars_to_gather.extend([
@@ -1721,7 +1711,6 @@ class Table:
                 'EPW_Scenario',
                 'EPW_Year'
             ])
-
 
         # todo Step: remove PMV-PPD columns if the column only have null values
 
@@ -1736,11 +1725,9 @@ class Table:
 
         self.frequency = frequency
 
-
         # df.to_excel('checkpoint_04.xlsx')
 
-        #todo pop up when process ends; by defalt True
-
+        # todo pop up when process ends; by defalt True
 
     def df(self):
         return self.df
@@ -1752,14 +1739,10 @@ class Table:
                      # split_epw_names: bool = False
                      ):
         """
-
+        Filter the columns.
         :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours'.
         :param custom_cols: A list of strings.
         The strings will be used as a filter, and the columns that match will be selected.
-        :param split_epw_names: A bool, can be True or False.
-        Used to detect climate change scenario, country and sub-country codes and city.
-        If a large number of CSVs is going to be computed
-        or hourly values are going to be considered, it is recommended to be False.
         """
         if custom_cols is None:
             custom_cols = []
@@ -1787,7 +1770,7 @@ class Table:
             'Source',
             # 'col_to_pivot'
         ]
-        #todo to be updated with source frequency
+        # todo to be updated with source frequency
         if 'runperiod' in self.frequency:
             self.indexcols.remove('Date/Time')
         if 'monthly' in self.frequency:
@@ -1817,28 +1800,28 @@ class Table:
         elif type_of_table == 'energy demand':
             if self.rename_cols:
                 self.val_cols = [col for col in self.df.columns if
-                            'Total Energy Demand' in col or
-                            'Cooling Energy Demand' in col or
-                            'Heating Energy Demand' in col]
+                                 'Total Energy Demand' in col or
+                                 'Cooling Energy Demand' in col or
+                                 'Heating Energy Demand' in col]
             else:
                 self.val_cols = [col for col in self.df.columns if
-                            'Cooling Coil Total Cooling Rate' in col or
-                            'Heating Coil Heating Rate' in col or
-                            'Total Energy Demand' in col]
+                                 'Cooling Coil Total Cooling Rate' in col or
+                                 'Heating Coil Heating Rate' in col or
+                                 'Total Energy Demand' in col]
         elif type_of_table == 'comfort hours':
             self.val_cols = [col for col in self.df.columns if 'Comfortable Hours_No Applicability' in col
-                        or 'Comfortable Hours_Applicability' in col
-                        or 'Discomfortable Applicable Hot Hours' in col
-                        or 'Discomfortable Applicable Cold Hours' in col
-                        or 'Discomfortable Non Applicable Hot Hours' in col
-                        or 'Discomfortable Non Applicable Cold Hours' in col
-                        or 'Ventilation Hours' in col]
+                             or 'Comfortable Hours_Applicability' in col
+                             or 'Discomfortable Applicable Hot Hours' in col
+                             or 'Discomfortable Applicable Cold Hours' in col
+                             or 'Discomfortable Non Applicable Hot Hours' in col
+                             or 'Discomfortable Non Applicable Cold Hours' in col
+                             or 'Ventilation Hours' in col]
         elif type_of_table == 'temperature':
             self.val_cols = [
                 col for col in self.df.columns
                 if 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)' in col
-                or 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)' in col
-                or 'Building_Total_Zone Operative Temperature (°C) (mean)' in col
+                   or 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)' in col
+                   or 'Building_Total_Zone Operative Temperature (°C) (mean)' in col
             ]
             RMOT_col = [
                 col for col in self.df.columns
@@ -1858,16 +1841,19 @@ class Table:
                                  'Please check the columns you want to select. '
                                  'To see the full list of columns, enter print("name of class instance".df.columns)')
 
-        if not(type_of_table == 'all'):
+        if not (type_of_table == 'all'):
             self.df = self.df[self.indexcols + self.val_cols]
-
-
 
     def custom_order(
             self,
             ordered_list: list = None,
             column_to_order: str = None,
     ):
+        """
+        Used to order the string values of a column in a custom order.
+        :param ordered_list: A list os strings. Used to order the string values of a column in a custom order.
+        :param column_to_order: A string. It should be the column whose string values should be ordered.
+        """
         from pandas.api.types import CategoricalDtype
 
         if ordered_list is None:
@@ -1891,7 +1877,6 @@ class Table:
     # def block_list(self):
     #     return block_list()
 
-
     def wrangled_table(self,
                        reshaping: str = None,
                        vars_to_gather: list = None,
@@ -1906,8 +1891,9 @@ class Table:
         :param reshaping: A string. Can be 'pivot', 'unstack' or 'multiindex', to perform these actions.
         :param vars_to_gather: A list of the variables to be transposed from rows to columns.
         :param baseline: The already transposed column you want to use as a baseline for comparisons.
-        If ommited, you will be asked which one to use.
-        :param comparison_cols: 'absolute' to get the difference or 'relative' to get the percentage of reduction.
+        If omitted, you will be asked which one to use.
+        :param comparison_mode: A string. Can be 'other compared to baseline' or 'baseline compared to others'. Used to customise the comparison of variables.
+        :param comparison_cols: A list of strings. 'absolute' to get the difference or 'relative' to get the percentage of reduction.
         :param check_index_and_cols: A boolean. True to check index and cols, False to skip.
         :param vars_to_keep: A list of strings. To remove all variables from the multiindex except those to be kept.
 
@@ -1924,7 +1910,6 @@ class Table:
 
         self.df['col_to_pivot'] = 'temp'
 
-
         self.indexcols.append('col_to_pivot')
 
         if reshaping == 'pivot' or reshaping == 'unstack':
@@ -1932,16 +1917,15 @@ class Table:
 
         wrangled_df = self.df.copy()
 
-
         if reshaping == 'pivot':
-            
+
             wrangled_df_pivoted = wrangled_df.copy()
             del wrangled_df
-            
+
             if 'Month' in wrangled_df_pivoted.columns:
                 wrangled_df_pivoted['col_to_pivot'] = (wrangled_df_pivoted[vars_to_gather].agg('['.join, axis=1) + '_' +
-                                                    wrangled_df_pivoted['Month'].astype(str) +
-                                                    '[Month')
+                                                       wrangled_df_pivoted['Month'].astype(str) +
+                                                       '[Month')
             else:
                 wrangled_df_pivoted['col_to_pivot'] = wrangled_df_pivoted[vars_to_gather].agg('['.join, axis=1)
 
@@ -2006,12 +1990,12 @@ class Table:
                                 wrangled_df_pivoted[baseline] - wrangled_df_pivoted[j]
                         )
             self.wrangled_df_pivoted = wrangled_df_pivoted
-            
+
         elif reshaping == 'unstack' or reshaping == 'stack' or reshaping == 'multiindex':
-            
+
             wrangled_df_unstacked_or_stacked = wrangled_df.copy()
             del wrangled_df
-            
+
             wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['col_to_pivot'], axis=1)
             self.indexcols.remove('col_to_pivot')
             wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['Source'], axis=1)
@@ -2050,7 +2034,7 @@ class Table:
                     if all([i not in j for j in vars_to_gather]):
                         print(f'{i}: {list(dict.fromkeys(wrangled_df_unstacked_or_stacked[i]))}')
                 proceed = input('If some variable is not relevant for the comparison, it should be removed. '
-                      'Do you want to remove any? [y/n]: ')
+                                'Do you want to remove any? [y/n]: ')
                 if 'y' in proceed:
                     if len(vars_to_keep) > 0:
                         print('The variables to keep you specified in the arguments will be overriden.')
@@ -2149,7 +2133,6 @@ class Table:
 
                 print('No reshaping method has been applied, only multiindexing.')
 
-
     def enter_vars_to_gather(
             self,
             vars_to_gather=None
@@ -2157,7 +2140,7 @@ class Table:
         if vars_to_gather is None:
             vars_to_gather = []
 
-        while (not(all(elem in self.available_vars_to_gather for elem in vars_to_gather))
+        while (not (all(elem in self.available_vars_to_gather for elem in vars_to_gather))
                or len(vars_to_gather) != len(set(vars_to_gather))):
             print('Some of the variables to be gathered are not available or are duplicated:')
             print(vars_to_gather)
@@ -2169,7 +2152,7 @@ class Table:
         return vars_to_gather
 
     # todo testing
-    
+
     def generate_fig_data(self,
                           vars_to_gather_cols: list = None,
                           vars_to_gather_rows: list = None,
@@ -2199,18 +2182,20 @@ class Table:
         :param detailed_rows: A list of strings. The list should be the specific data you want to show in subplots rows. Used to filter.
         :param custom_cols_order: A list of strings. The list should be the specific order for the items shown in subplot columns.
         :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
-        :param adap_vs_stat_data_y_main:
-        :param baseline:
-        :param colorlist_adap_vs_stat_data:
-        :param data_on_x_axis:
-        :param data_on_y_main_axis:
-        :param data_on_y_sec_axis:
-        :param colorlist_y_main_axis:
-        :param colorlist_y_sec_axis:
-        :param rename_rows:
-        :param rename_cols:
-        :param rows_new_names:
-        :param cols_new_names:
+        :param adap_vs_stat_data_y_main: A list of strings. Used to select the data you want to show in the adap_vs_stat graph. Should be a list of the column names you want to plot in each subplot.
+        :param baseline: A string, used only in adap_vs_stat_data_y_main. The baseline should be one of the combinations in vars_to_gather_cols. It will be plotted in x-axis, while the reference combination for comparison in y-axis.
+        :param colorlist_adap_vs_stat_data: A list of strings. Should be the colors using the matplotlib color notation for the columns entered in adap_vs_stat_data_y_main in the same order.
+        :param data_on_x_axis: A string. The column name you want to plot in the x-axis.
+        :param data_on_y_main_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot main y-axis. It needs to follow this structure:
+        [['name_on_y_main_axis', [list of column names you want to plot]]
+        :param data_on_y_sec_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot secondary y-axis. It needs to follow this structure:
+        [['name_on_1st_y_sec_axis', [list of column names you want to plot], ['name_on_2nd_y_sec_axis', [list of column names you want to plot], etc]
+        :param colorlist_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the colors using the matplotlib notation.
+        :param colorlist_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the colors using the matplotlib notation.
+        :param rename_rows: A bool. True, to rename the rows titles, False to skip.
+        :param rename_cols: A bool. True, to rename the column titles, False to skip.
+        :param rows_new_names: A list of strings. Used to rename the rows titles.
+        :param cols_new_names: A list of strings. Used to rename the columns titles.
         :return:
         """
         if vars_to_gather_cols is None:
@@ -2242,7 +2227,7 @@ class Table:
             colorlist_y_main_axis = []
         if colorlist_y_sec_axis is None:
             colorlist_y_sec_axis = []
-            
+
         import matplotlib.pyplot as plt
         import matplotlib.lines as lines
 
@@ -2267,38 +2252,34 @@ class Table:
         all_cols = list(set(df_for_graph['col_to_gather_in_cols']))
         rows = list(set(df_for_graph['col_to_gather_in_rows']))
 
-
         all_cols.sort()
         cols = all_cols
 
-
         rows.sort()
 
-
-        while not(all(i in cols for i in detailed_cols)):
+        while not (all(i in cols for i in detailed_cols)):
             print('Some of the detailed data to be gathered in columns based on the argument '
                   'vars_to_gather_cols is not available. '
                   'Only the following data is available for columns:')
             print(cols)
             detailed_cols = (list(str(var)
-                                   for var
-                                   in input("Please enter the requested data to be arranged "
-                                            "in columns separated by semicolon: ").split(';')))
-        while not(all(i in rows for i in detailed_rows)):
+                                  for var
+                                  in input("Please enter the requested data to be arranged "
+                                           "in columns separated by semicolon: ").split(';')))
+        while not (all(i in rows for i in detailed_rows)):
             print('Some of the detailed data to be gathered in rows based on the argument '
                   'vars_to_gather_rows is not available. '
                   'Only the following data is available for rows:')
             print(rows)
             detailed_rows = (list(str(var)
-                                   for var
-                                   in input("Please enter the requested data to be arranged "
-                                            "in rows separated by semicolon: ").split(';')))
+                                  for var
+                                  in input("Please enter the requested data to be arranged "
+                                           "in rows separated by semicolon: ").split(';')))
 
         if len(detailed_cols) > 0:
             cols = detailed_cols
         if len(detailed_rows) > 0:
             rows = detailed_rows
-
 
         if len(adap_vs_stat_data_y_main) > 0:
             if baseline is None:
@@ -2306,13 +2287,12 @@ class Table:
                 print(all_cols)
                 baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
 
-            while not(any(baseline in i for i in all_cols)):
+            while not (any(baseline in i for i in all_cols)):
                 print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
                 print(all_cols)
                 baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
 
             cols = [x for x in cols if x not in set([baseline])]
-
 
         # cols.sort()
         # rows.sort()
@@ -2322,12 +2302,11 @@ class Table:
         df_for_graph = df_for_graph[
             (df_for_graph['col_to_gather_in_cols'].isin(cols_list_to_filter)) &
             (df_for_graph['col_to_gather_in_rows'].isin(rows))
-        ]
+            ]
 
         # if baseline is not None and len(adap_vs_stat_data_y_main) > 0:
         df_for_graph['col_to_unstack'] = df_for_graph[
             ['col_to_gather_in_cols', 'col_to_gather_in_rows']].agg('['.join, axis=1)
-
 
         columns_to_drop = [
             # 'Date/Time',
@@ -2366,7 +2345,6 @@ class Table:
         if self.frequency != 'runperiod':
             multi_index.append('Date/Time')
 
-
         df_for_graph.set_index(multi_index, inplace=True)
         if len(adap_vs_stat_data_y_main) > 0:
             self.max_value = max([df_for_graph[dataset].max() for dataset in adap_vs_stat_data_y_main])
@@ -2397,7 +2375,7 @@ class Table:
         if len(custom_cols_order) > 0:
             ordered_cols = [ele for ele in custom_cols_order if ele in cols]
             cols = ordered_cols
-        
+
         self.x_list = []
         for i in range(len(rows)):
             temp_row = []
@@ -2446,7 +2424,7 @@ class Table:
                             'title': f'{rows[i]}_{cols[j]}',
                             'dataframe': [
                                 df_for_graph[[x for x in df_for_graph.columns if
-                                                   rows[i] in x and cols[j] in x and dataset in x]]
+                                              rows[i] in x and cols[j] in x and dataset in x]]
                                 for dataset in self.data_on_y_main_axis[k][1]
                             ],
                             'label': [dataset for dataset in self.data_on_y_main_axis[k][1]],
@@ -2475,13 +2453,13 @@ class Table:
                     #     ]
                     # else:
                     temp = {
-                        'axis':[i, j],
+                        'axis': [i, j],
                         'title': f'{rows[i]}_{cols[j]}',
                         'dataframe': [
                             df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
                             for dataset in data_on_y_sec_axis[k][1]
-                            ],
-                        'label':[dataset for dataset in data_on_y_sec_axis[k][1]],
+                        ],
+                        'label': [dataset for dataset in data_on_y_sec_axis[k][1]],
                         'color': [color for color in colorlist_y_sec_axis[k][1]]
                     }
                     temp_col.append(temp)
@@ -2515,8 +2493,6 @@ class Table:
         else:
             print('Rows will not be renamed')
 
-
-
         print(f'The number of columns and the list of these is going to be:')
         print(f'No. of columns = {len(self.cols)}')
         print(f'List of columns:')
@@ -2540,7 +2516,6 @@ class Table:
         else:
             print('Cols will not be renamed')
 
-
     def scatter_plot(
             self,
             supxlabel: str = None,
@@ -2549,6 +2524,14 @@ class Table:
             ratio_height_to_width: float = 1,
             confirm_graph: bool = False
     ):
+        """
+        Used to plot a scatter plot once data has been created with generate_fig_data.
+        :param supxlabel: A string. The label shown in the x-axis.
+        :param figname: A string. The name of the saved figure without extension.
+        :param figsize: A float. It is the figure size.
+        :param ratio_height_to_width: A float. By default, is 1 (squared). If 0.5 is entered, the figure will be half higher than wide.
+        :param confirm_graph: A bool. True to skip confirmation step.
+        """
         import numpy as np
         import matplotlib.pyplot as plt
 
@@ -2623,8 +2606,8 @@ class Table:
                     for k in range(len(self.y_list_main[i][j])):
                         main_y_axis[i][j][k].grid(True, linestyle='-.')
                         main_y_axis[i][j][k].tick_params(axis='both',
-                                                      grid_color='black',
-                                                      grid_alpha=0.5)
+                                                         grid_color='black',
+                                                         grid_alpha=0.5)
                         main_y_axis[i][j][k].set_facecolor((0, 0, 0, 0.10))
 
                         for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
@@ -2742,7 +2725,6 @@ class Table:
             # plt.subplots_adjust(bottom=0.2)
             # plt.tight_layout()
 
-
             plt.savefig(figname + '.png',
                         dpi=1200,
                         format='png',
@@ -2753,9 +2735,6 @@ class Table:
 
         self.rows = rows
 
-
-
-
     def scatter_plot_adap_vs_stat(self,
                                   supxlabel: str = None,
                                   supylabel: str = None,
@@ -2764,9 +2743,18 @@ class Table:
                                   markersize: int = 1,
                                   confirm_graph: bool = False
                                   ):
+        """
+
+        :param supxlabel: A string. The label shown in the x-axis.
+        :param supylabel: A string. The label shown in the y-axis.
+        :param figname: A string. The name of the saved figure without extension.
+        :param figsize: A float. It is the figure size.
+        :param markersize: An integer. The size of the markers.
+        :param confirm_graph: A bool. True to skip confirmation step.
+        """
         import matplotlib.pyplot as plt
         import matplotlib.lines as lines
-        
+
         # print(f'The number of rows and the list of these is going to be:')
         # print(f'No. of rows = {len(self.rows)}')
         # print(f'List of self.rows:')
@@ -2784,14 +2772,14 @@ class Table:
             elif 'n' in proceed:
                 confirm_graph = False
 
-        if confirm_graph:   
+        if confirm_graph:
             fig, ax = plt.subplots(nrows=len(self.rows),
                                    ncols=len(self.cols),
                                    sharex=True,
                                    sharey=True,
                                    constrained_layout=True,
                                    figsize=(figsize * len(self.cols), figsize * len(self.rows)))
-    
+
             # y_list_main_scatter
             for i in range(len(self.rows)):
                 for j in range(len(self.cols)):
@@ -2799,8 +2787,8 @@ class Table:
                         # ax.set_title(f'{self.rows[i]} / {self.cols[j]}')
                         ax.grid(True, linestyle='-.')
                         ax.tick_params(axis='both',
-                                             grid_color='black',
-                                             grid_alpha=0.5)
+                                       grid_color='black',
+                                       grid_alpha=0.5)
                         ax.set_facecolor((0, 0, 0, 0.10))
                         ax.add_artist((lines.Line2D(
                             [0, self.max_value], [0, self.max_value],
@@ -2881,8 +2869,8 @@ class Table:
                         # ax[i].set_title(f'{self.rows[i]} / {self.cols[j]}')
                         ax[i].grid(True, linestyle='-.')
                         ax[i].tick_params(axis='both',
-                                             grid_color='black',
-                                             grid_alpha=0.5)
+                                          grid_color='black',
+                                          grid_alpha=0.5)
                         ax[i].set_facecolor((0, 0, 0, 0.10))
                         ax[i].add_artist((lines.Line2D(
                             [0, self.max_value], [0, self.max_value],
@@ -2996,7 +2984,7 @@ class Table:
                             linewidth=1,
                             color='gray'
                         )))
-        
+
                         for k in range(len(self.x_list[i][j][2])):
                             if i == 0 and j == 0:
                                 ax[i, j].scatter(
@@ -3040,12 +3028,12 @@ class Table:
 
                         ax[i, j].set_ylim((0, self.max_value))
                         ax[i, j].set_xlim((0, self.max_value))
-        
+
             if len(self.rows) == 1:
                 if len(self.cols) == 1:
                     ax.set_aspect('equal',
-                                        # adjustable='box',
-                                        share=True)
+                                  # adjustable='box',
+                                  share=True)
                     for i in range(len(self.rows)):
                         if self.rename_rows == 'y':
                             ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
@@ -3060,8 +3048,8 @@ class Table:
             if len(self.rows) > 1:
                 if len(self.cols) == 1:
                     ax[0].set_aspect('equal',
-                                        # adjustable='box',
-                                        share=True)
+                                     # adjustable='box',
+                                     share=True)
                     for i in range(len(self.rows)):
                         if self.rename_rows == 'y':
                             ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
@@ -3089,31 +3077,31 @@ class Table:
 
             supx = fig.supxlabel(supxlabel)
             supy = fig.supylabel(supylabel)
-    
+
             leg = fig.legend(
                 bbox_to_anchor=(0.5, 0),
                 loc='upper center',
                 fontsize='large'
                 # borderaxespad=0.1,
             )
-    
+
             for i in range(len(leg.legendHandles)):
                 leg.legendHandles[i]._sizes = [30]
-    
+
             # plt.subplots_adjust(
             #     # bottom=0.2,
             #     left=0.05
             # )
-    
+
             # plt.tight_layout()
-    
-            plt.savefig(figname+'.png',
+
+            plt.savefig(figname + '.png',
                         dpi=1200,
                         format='png',
                         bbox_extra_artists=(leg, supx, supy),
                         bbox_inches='tight'
                         )
-    
+
     def time_plot(
             self,
             supxlabel: str = None,
@@ -3122,6 +3110,15 @@ class Table:
             ratio_height_to_width: float = 1,
             confirm_graph: bool = False
     ):
+        """
+        Used to plot a timeplot once data has been created with generate_fig_data.
+        :param supxlabel: A string. The label shown in the x-axis.
+        :param figname: A string. The name of the saved figure without extension.
+        :param figsize: A float. It is the figure size.
+        :param ratio_height_to_width: A float. By default, is 1 (squared). If 0.5 is entered, the figure will be half higher than wide.
+        :param confirm_graph: A bool. True to skip confirmation step.
+
+        """
         import numpy as np
         import matplotlib.pyplot as plt
         import pandas as pd
@@ -3227,11 +3224,8 @@ class Table:
                 main_y_axis.append(main_y_axis_temp_rows)
                 sec_y_axis.append(sec_y_axis_temp_rows)
 
-
             for i in range(len(self.rows)):
                 for j in range(len(self.cols)):
-
-
 
                     for k in range(len(self.y_list_main[i][j])):
 
@@ -3241,8 +3235,8 @@ class Table:
 
                         main_y_axis[i][j][k].grid(True, linestyle='-.')
                         main_y_axis[i][j][k].tick_params(axis='both',
-                                                      grid_color='black',
-                                                      grid_alpha=0.5)
+                                                         grid_color='black',
+                                                         grid_alpha=0.5)
                         main_y_axis[i][j][k].set_facecolor((0, 0, 0, 0.10))
 
                         for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
@@ -3337,15 +3331,14 @@ class Table:
 
             if len(self.rows) > 1:
                 if len(self.cols) == 1:
-                    ax[len(self.rows)-1].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
-                    for label in ax[len(self.rows)-1].get_xticklabels():
+                    ax[len(self.rows) - 1].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+                    for label in ax[len(self.rows) - 1].get_xticklabels():
                         label.set(rotation=90, horizontalalignment='center')
                 else:
                     for j in range(len(self.cols)):
-                        ax[len(self.rows)-1, j].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
-                        for label in ax[len(self.rows)-1, j].get_xticklabels():
+                        ax[len(self.rows) - 1, j].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+                        for label in ax[len(self.rows) - 1, j].get_xticklabels():
                             label.set(rotation=90, horizontalalignment='center')
-
 
             # plt.xticks(rotation=70)
 
