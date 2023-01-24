@@ -11,20 +11,49 @@ Say you have an IDF in some folder, called 'TestModel_onlyGeometryForVRFsystem_2
 ```
 When we hit enter, we'll be asked to enter some information regarding the ScriptType, the Outputs and the EnergyPlus version:
 ```
+--------------------------------------------------------
+Adaptive-Comfort-Control-Implemented Model (ACCIM) v0.6.2
+--------------------------------------------------------
+
+This tool allows to apply adaptive setpoint temperatures.
+For further information, please read the documentation:
+https://accim.readthedocs.io/en/master/
+For a visual understanding of the tool, please visit the following jupyter notebooks:
+Using addAccis() to apply adaptive setpoint temperatures
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb
+Using rename_epw_files() to rename the EPWs for proper data analysis after simulation
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
+Using runEp() to directly run simulations with EnergyPlus
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
+Using the class Table() for data analysis
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
+
+Now, you are going to be asked to enter some information for different arguments to generate the output IDFs with adaptive setpoint temperatures.
+If you are not sure about how to use these parameters, please take a look at the documentation in the following link:
+https://accim.readthedocs.io/en/latest/how%20to%20use.html
+
+Please, enter the following information:
+
 Enter the ScriptType (
 for VRFsystem with full air-conditioning mode: vrf_ac;
 for VRFsystem with mixed-mode: vrf_mm;
 for ExistingHVAC with mixed mode: ex_mm;
 for ExistingHVAC with full air-conditioning mode: ex_ac
 ): vrf_mm
+
 Enter the SupplyAirTempInputMethod (
 for Supply Air Temperature: supply air temperature;
 for Temperature Difference: temperature difference;
 ): supply air temperature
+
 Do you want to keep the existing outputs (true or false)?: false
+
 Enter the Output type (standard, simplified or detailed): standard
+
 Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): hourly runperiod
+
 Enter the EnergyPlus version (9.1 to 22.2): 22.2
+
 Enter the Temperature Control method (temperature or pmv): temperature
 ```
 When we hit enter, it's going to add all the EnergyPlus objects needed:
@@ -92,6 +121,7 @@ Enter the Comfort Standard numbers separated by space (
 21 = CHL Perez-Fargallo;
 ): 1 2 7
           Are you sure the numbers are correct? [y or [] / n]: 
+          
 For the comfort standard 1 = INT EN16798, the available categories you can choose are: 
 1 = EN16798 Category I
 2 = EN16798 Category II
@@ -103,6 +133,7 @@ For the comfort standard 7 = IND IMAC C NV, the available categories you can cho
 80 = 80% acceptability
 85 = 85% acceptability
 90 = 90% acceptability
+
 Enter the Category numbers separated by space (
 1 = CAT I;
 2 = CAT II;
@@ -113,6 +144,7 @@ Enter the Category numbers separated by space (
 Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png
 ): 2 3 85 90
           Are you sure the numbers are correct? [y or [] / n]: 
+
 For the comfort standard 1 = INT EN16798, the available ComfMods you can choose are: 
 0 = EN16798 Static setpoints
 1 = EN16798 Adaptive setpoints when applicable, otherwise CTE
@@ -134,12 +166,14 @@ Enter the Comfort Mode numbers separated by space (
 Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png
 ): 0 3
           Are you sure the numbers are correct? [y or [] / n]: 
+          
 Enter the HVAC Mode numbers separated by space (
 0 = Fully Air-conditioned;
 1 = Naturally ventilated;
 2 = Mixed Mode;
 ): 2
           Are you sure the numbers are correct? [y or [] / n]: 
+          
 Enter the Ventilation Control numbers separated by space (
 If HVACmode = 1:
    0 = Ventilates above neutral temperature;
@@ -151,18 +185,25 @@ If HVACmode = 2:
    3 = Ventilates above lower comfort limit and opens doors and windows based on the customised venting opening factor;
 ): 2 3
           Are you sure the numbers are correct? [y or [] / n]: 
+          
 Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): 15
-          Are you sure the number is correct? [y or [] / n]: 1
+          Are you sure the number is correct? [y or [] / n]:
+          
 Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): 1
           Are you sure the number is correct? [y or [] / n]: 
+          
 Enter the multiplier number for Ventilation Opening Factor (any number larger than 0): 0.2
           Are you sure the number is correct? [y or [] / n]: 
+          
 Enter the VSToffset numbers separated by space (if omitted, will be 0): 
           Are you sure the numbers are correct? [y or [] / n]: 
+          
 Enter the MinOToffset numbers separated by space (if omitted, will be 50): 
           Are you sure the numbers are correct? [y or [] / n]: 
+          
 Enter the MaxWindSpeed numbers separated by space (if omitted, will be 50): 
           Are you sure the numbers are correct? [y or [] / n]: 
+          
 Enter the ASTtol value from (if omitted, will be 0.1): 
           Are you sure the numbers are correct? [y or [] / n]: 
 Enter the ASTtol value to (if omitted, will be 0.1): 

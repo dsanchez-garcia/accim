@@ -29,6 +29,29 @@ And then, you just need to call the accis function:
 ```
 Then you'll be asked in the prompt to enter some information so that python knows how do you want to set up the output IDFs:
 ```
+--------------------------------------------------------
+Adaptive-Comfort-Control-Implemented Model (ACCIM) v0.6.2
+--------------------------------------------------------
+
+This tool allows to apply adaptive setpoint temperatures.
+For further information, please read the documentation:
+https://accim.readthedocs.io/en/master/
+For a visual understanding of the tool, please visit the following jupyter notebooks:
+Using addAccis() to apply adaptive setpoint temperatures
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb
+Using rename_epw_files() to rename the EPWs for proper data analysis after simulation
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
+Using runEp() to directly run simulations with EnergyPlus
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
+Using the class Table() for data analysis
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
+
+Now, you are going to be asked to enter some information for different arguments to generate the output IDFs with adaptive setpoint temperatures.
+If you are not sure about how to use these parameters, please take a look at the documentation in the following link:
+https://accim.readthedocs.io/en/latest/how%20to%20use.html
+
+Please, enter the following information:
+
 Enter the ScriptType (
 for VRFsystem with full air-conditioning mode: vrf_ac;
 for VRFsystem with mixed-mode: vrf_mm;
