@@ -4,3 +4,4 @@ include LICENSE.txt
 prune accim/sample_files/jupyter_notebooks/z_SS
 prune accim/dist
 prune accim/dist/Superseded
+prune accim/docs

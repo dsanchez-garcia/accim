@@ -5,7 +5,7 @@ accis.addAccis(
     Output_keep_existing=False,
     Output_type='standard',
     Output_freqs=['hourly'],
-    EnergyPlus_version='9.6',
+    EnergyPlus_version='22.2',
     TempCtrl='temp',
     ComfStand=[0, 1, 2, 3],
     CAT=[1, 2, 3, 80, 90],
@@ -18,5 +18,5 @@ accis.addAccis(
     ASTtol_steps=0.1,
     ASTtol_start=0.1,
     ASTtol_end_input=0.1,
-    confirmGen=True
+    # confirmGen=True
 )

@@ -355,9 +355,9 @@ def inputData(self, ScriptType: str = None):
             print('          Comfort Standard numbers are not correct. Please enter the numbers again.')
             self.ComfStand_List = list(
                 int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
-
+    print('\n')
     for i in self.ComfStand_List:
-        print('\nFor the comfort standard ' + CS_CA_CM_data_dict[i]['name'] + ', the available categories you can choose are: ')
+        print('For the comfort standard ' + CS_CA_CM_data_dict[i]['name'] + ', the available categories you can choose are: ')
         for j in CS_CA_CM_data_dict[i]['CAT']:
             print(str(j) + ' = ' + CS_CA_CM_data_dict[i]['CAT'][j])
 
@@ -380,9 +380,9 @@ def inputData(self, ScriptType: str = None):
         while len(self.CAT_List) == 0 or not all(elem in fullCATlist for elem in self.CAT_List):
             print('          Category numbers are not correct. Please enter the numbers again.')
             self.CAT_List = list(int(num) for num in input("Enter the Category numbers separated by space: ").split())
-
+    print('\n')
     for i in self.ComfStand_List:
-        print('\nFor the comfort standard ' + CS_CA_CM_data_dict[i]['name'] + ', the available ComfMods you can choose are: ')
+        print('For the comfort standard ' + CS_CA_CM_data_dict[i]['name'] + ', the available ComfMods you can choose are: ')
         for j in CS_CA_CM_data_dict[i]['ComfMod']:
             print(str(j) + ' = ' + CS_CA_CM_data_dict[i]['ComfMod'][j])
 
