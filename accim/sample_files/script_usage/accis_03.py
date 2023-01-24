@@ -1,6 +1,7 @@
 from accim.sim import accis
 accis.addAccis(
     ScriptType='vrf_mm',
+    SupplyAirTempInputMethod='temperature difference',
     Output_keep_existing=False,
     Output_type='standard',
     Output_freqs=['hourly'],

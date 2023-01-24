@@ -177,28 +177,34 @@ def addAccis(
         'pmv'
     ]
 
+    print(
+        '\n--------------------------------------------------------'
+        '\nAdaptive-Comfort-Control-Implemented Model (ACCIM) v0.6.2'
+        '\n--------------------------------------------------------'
+        '\n\nThis tool allows to apply adaptive setpoint temperatures. '
+        '\nFor further information, please read the documentation: '
+        '\nhttps://accim.readthedocs.io/en/master/'
+        '\nFor a visual understanding of the tool, please visit the following jupyter notebooks:'
+        '\nUsing addAccis() to apply adaptive setpoint temperatures'
+        '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb'
+        '\nUsing rename_epw_files() to rename the EPWs for proper data analysis after simulation'
+        '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb'
+        '\nUsing runEp() to directly run simulations with EnergyPlus'
+        '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb'
+        '\nUsing the class Table() for data analysis'
+        '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb'
+    )
+
     if all(objArgsDef):
         pass
     else:
         print(
-            '\n--------------------------------------------------------'
-            '\nAdaptive-Comfort-Control-Implemented Model (ACCIM) v0.6.2'
-            '\n--------------------------------------------------------'
-            '\n\nThis tool allows to apply adaptive setpoint temperatures. '
-            'Now, you are going to be asked to enter some information for different arguments '
+            '\nNow, you are going to be asked to enter some information for different arguments '
             'to generate the output IDFs with adaptive setpoint temperatures. '
             '\nIf you are not sure about how to use these parameters, please take a look at the documentation in the following link: '
             '\nhttps://accim.readthedocs.io/en/latest/how%20to%20use.html'
-            '\nFor a visual understanding of the tool, please visit the following jupyter notebooks:'
-            '\nUsing addAccis() to apply adaptive setpoint temperatures'
-            '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb'
-            '\nUsing rename_epw_files() to rename the EPWs for proper data analysis after simulation'
-            '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb'
-            '\nUsing runEp() to directly run simulations with EnergyPlus'
-            '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb'
-            '\nUsing the class Table() for data analysis'
-            '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb'
-            '\n\nPlease, enter the following information:')
+            '\n\nPlease, enter the following information:'
+        )
         ScriptType = input("\nEnter the ScriptType (\n"
                            "for VRFsystem with full air-conditioning mode: vrf_ac;\n"
                            "for VRFsystem with mixed-mode: vrf_mm;\n"
