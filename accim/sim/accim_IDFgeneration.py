@@ -357,7 +357,7 @@ def inputData(self, ScriptType: str = None):
                 int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
 
     for i in self.ComfStand_List:
-        print('For the comfort standard ' + CS_CA_CM_data_dict[i]['name'] + ', the available categories you can choose are: ')
+        print('\nFor the comfort standard ' + CS_CA_CM_data_dict[i]['name'] + ', the available categories you can choose are: ')
         for j in CS_CA_CM_data_dict[i]['CAT']:
             print(str(j) + ' = ' + CS_CA_CM_data_dict[i]['CAT'][j])
 
@@ -370,7 +370,7 @@ def inputData(self, ScriptType: str = None):
         "80 = 80% ACCEPT;\n"
         "85 = 85% ACCEPT;\n"
         "90 = 90% ACCEPT;\n"
-        "Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png\n"
+        "Please refer to the full list of setpoint temperatures at https://raw.githubusercontent.com/dsanchez-garcia/accim/master/docs/images/full_table.png\n"
         "): ").split())
     while len(self.CAT_List) == 0 or not all(elem in fullCATlist for elem in self.CAT_List):
         print('          Category numbers are not correct. Please enter the numbers again.')
@@ -382,7 +382,7 @@ def inputData(self, ScriptType: str = None):
             self.CAT_List = list(int(num) for num in input("Enter the Category numbers separated by space: ").split())
 
     for i in self.ComfStand_List:
-        print('For the comfort standard ' + CS_CA_CM_data_dict[i]['name'] + ', the available ComfMods you can choose are: ')
+        print('\nFor the comfort standard ' + CS_CA_CM_data_dict[i]['name'] + ', the available ComfMods you can choose are: ')
         for j in CS_CA_CM_data_dict[i]['ComfMod']:
             print(str(j) + ' = ' + CS_CA_CM_data_dict[i]['ComfMod'][j])
 
@@ -391,7 +391,7 @@ def inputData(self, ScriptType: str = None):
         "Enter the Comfort Mode numbers separated by space (\n"
         "0 = Static;\n"
         "1, 2, 3 = Adaptive;\n"
-        "Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png\n"
+        "Please refer to the full list of setpoint temperatures at https://raw.githubusercontent.com/dsanchez-garcia/accim/master/docs/images/full_table.png\n"
         "): ").split())
     while len(self.ComfMod_List) == 0 or not all(elem in fullComfModList for elem in self.ComfMod_List):
         print('          Comfort Mode numbers are not correct. Please enter the numbers again.')
@@ -408,7 +408,7 @@ def inputData(self, ScriptType: str = None):
     if 'mm' in ScriptType.lower():
         fullHVACmodeList = [0, 1, 2]
         self.HVACmode_List = list(int(num) for num in input(
-            "Enter the HVAC Mode numbers separated by space (\n"
+            "\nEnter the HVAC Mode numbers separated by space (\n"
             "0 = Fully Air-conditioned;\n"
             "1 = Naturally ventilated;\n"
             "2 = Mixed Mode;\n"
@@ -427,7 +427,7 @@ def inputData(self, ScriptType: str = None):
 
         fullVentCtrlList = [0, 1, 2, 3]
         self.VentCtrl_List = list(int(num) for num in input(
-            "Enter the Ventilation Control numbers separated by space (\n"
+            "\nEnter the Ventilation Control numbers separated by space (\n"
             "If HVACmode = 1:\n"
             "   0 = Ventilates above neutral temperature;\n"
             "   1 = Ventilates above upper comfort limit;\n"
@@ -503,7 +503,7 @@ def inputData(self, ScriptType: str = None):
                     self.MultiplierVOF = float(input('         Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
 
         self.VSToffset_List = list(float(num) for num in input(
-            "Enter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
+            "\nEnter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
         if len(self.VSToffset_List) == 0:
             self.VSToffset_List = [float(0)]
         while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
@@ -513,7 +513,7 @@ def inputData(self, ScriptType: str = None):
                 self.VSToffset_List = [float(0)]
 
         self.MinOToffset_List = list(float(num) for num in input(
-            "Enter the MinOToffset numbers separated by space (if omitted, will be 50): ").split())
+            "\nEnter the MinOToffset numbers separated by space (if omitted, will be 50): ").split())
         if len(self.MinOToffset_List) == 0:
             self.MinOToffset_List = [float(50)]
         while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
@@ -523,7 +523,7 @@ def inputData(self, ScriptType: str = None):
                 self.MinOToffset_List = [float(50)]
 
         self.MaxWindSpeed_List = list(float(num) for num in input(
-            "Enter the MaxWindSpeed numbers separated by space (if omitted, will be 50): ").split())
+            "\nEnter the MaxWindSpeed numbers separated by space (if omitted, will be 50): ").split())
         if len(self.MaxWindSpeed_List) == 0:
             self.MaxWindSpeed_List = [float(50)]
         while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':
@@ -542,7 +542,7 @@ def inputData(self, ScriptType: str = None):
         self.MaxWindSpeed_List = [0]
 
     try:
-        self.ASTtol_value_from = float(input('Enter the ASTtol value from (if omitted, will be 0.1): '))
+        self.ASTtol_value_from = float(input('\nEnter the ASTtol value from (if omitted, will be 0.1): '))
     except ValueError:
         self.ASTtol_value_from = float(0.1)
     while input('          Are you sure the numbers are correct? [y or [] / n]: ') == 'n':

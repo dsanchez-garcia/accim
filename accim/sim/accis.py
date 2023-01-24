@@ -180,7 +180,26 @@ def addAccis(
     if all(objArgsDef):
         pass
     else:
-        ScriptType = input("Enter the ScriptType (\n"
+        print(
+            '\n--------------------------------------------------------'
+            '\nAdaptive-Comfort-Control-Implemented Model (ACCIM) v0.6.2'
+            '\n--------------------------------------------------------'
+            '\n\nThis tool allows to apply adaptive setpoint temperatures. '
+            'Now, you are going to be asked to enter some information for different arguments '
+            'to generate the output IDFs with adaptive setpoint temperatures. '
+            '\nIf you are not sure about how to use these parameters, please take a look at the documentation in the following link: '
+            '\nhttps://accim.readthedocs.io/en/latest/how%20to%20use.html'
+            '\nFor a visual understanding of the tool, please visit the following jupyter notebooks:'
+            '\nUsing addAccis() to apply adaptive setpoint temperatures'
+            '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb'
+            '\nUsing rename_epw_files() to rename the EPWs for proper data analysis after simulation'
+            '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb'
+            '\nUsing runEp() to directly run simulations with EnergyPlus'
+            '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb'
+            '\nUsing the class Table() for data analysis'
+            '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb'
+            '\n\nPlease, enter the following information:')
+        ScriptType = input("\nEnter the ScriptType (\n"
                            "for VRFsystem with full air-conditioning mode: vrf_ac;\n"
                            "for VRFsystem with mixed-mode: vrf_mm;\n"
                            "for ExistingHVAC with mixed mode: ex_mm;\n"
@@ -195,7 +214,7 @@ def addAccis(
                                "    for ExistingHVAC with full air-conditioning mode: ex_ac\n"
                                "    ): ")
         if 'vrf' in ScriptType.lower():
-            SupplyAirTempInputMethod = input("Enter the SupplyAirTempInputMethod (\n"
+            SupplyAirTempInputMethod = input("\nEnter the SupplyAirTempInputMethod (\n"
                                "for Supply Air Temperature: supply air temperature;\n"
                                "for Temperature Difference: temperature difference;\n"
                                "): ")
@@ -206,26 +225,26 @@ def addAccis(
                                "for Supply Air Temperature: supply air temperature;\n"
                                "for Temperature Difference: temperature difference;\n"
                                "): ")
-        Output_keep_existing = input('Do you want to keep the existing outputs (true or false)?: ')
+        Output_keep_existing = input('\nDo you want to keep the existing outputs (true or false)?: ')
         while Output_keep_existing.lower() not in ['true', 'false']:
             Output_keep_existing = input('The answer you entered is not valid. '
                                           'Do you want to keep the existing outputs (true or false)?: ')
-        Output_type = input("Enter the Output type (standard, simplified or detailed): ")
+        Output_type = input("\nEnter the Output type (standard, simplified or detailed): ")
         while Output_type not in fullOutputsTypeList:
             Output_type = input("   Output type was not correct. "
                             "Please, enter the Output type (standard, simplified or detailed): ")
         Output_freqs = list(freq for freq in input(
-            "Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): ").split())
+            "\nEnter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): ").split())
         while (not(all(elem in fullOutputsFreqList for elem in Output_freqs))):
             Output_freqs = list(freq for freq in input(
                 "Some of the Output frequencies are not correct. "
                 "Please, enter the Output frequencies again separated by space "
                 "(timestep, hourly, daily, monthly, runperiod): ").split())
-        EnergyPlus_version = input("Enter the EnergyPlus version (9.1 to 22.2): ")
+        EnergyPlus_version = input("\nEnter the EnergyPlus version (9.1 to 22.2): ")
         while EnergyPlus_version not in fullEPversionsList:
             EnergyPlus_version = input("    EnergyPlus version was not correct. "
                                        "Please, enter the EnergyPlus version (9.1 to 22.2): ")
-        TempCtrl = input('Enter the Temperature Control method (temperature or pmv): ')
+        TempCtrl = input('\nEnter the Temperature Control method (temperature or pmv): ')
         while TempCtrl not in fullTempCtrllist:
             TempCtrl = input("  Temperature Control method was not correct. "
                              "Please, enter the Temperature Control method (temperature or pmv): ")
