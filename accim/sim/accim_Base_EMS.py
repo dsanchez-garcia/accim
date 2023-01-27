@@ -2763,7 +2763,7 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
                     Program_Line_8='set ' + windowname + '_MyVOF = 0',
                     Program_Line_9='else',
                     Program_Line_10='if ' + windowname + '_TempDiffVOF > MaxTempDiffVOF',
-                    Program_Line_11='set ' + windowname + '_MyVOF = 0.0',
+                    Program_Line_11='set ' + windowname + '_MyVOF = MultiplierVOF',
                     Program_Line_12='elseif ' + windowname + '_TempDiffVOF < MinTempDiffVOF',
                     Program_Line_13='set ' + windowname + '_MyVOF = 1.0',
                     Program_Line_14='else',
