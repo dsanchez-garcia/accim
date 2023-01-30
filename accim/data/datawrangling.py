@@ -143,7 +143,7 @@ class rename_epw_files:
                 for k in rcpdict[j]:
                     if k.lower() in epw_df.loc[i, 'EPW_names'].lower():
                         epw_df.loc[i, 'EPW_scenario'] = j
-                        epw_df.loc[i, 'EPW_mod_filtered'].remove(j)
+                        epw_df.loc[i, 'EPW_mod_filtered'].remove([x for x in epw_df.loc[i, 'EPW_mod_filtered'] if x.lower() in k.lower()][0])
 
         rcp_not_found_list = []
 
@@ -285,6 +285,7 @@ class rename_epw_files:
             # epw_df['EPW_CountryCode'] = epw_df['EPW_CountryCode'].astype(str)
         else:
             # Method: geolocation
+            epw_df['EPW_City_or_subcountry'] = 'UNKNOWN'
             for i in range(len(epw_df['EPW_mod_filtered'])):
                 location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
                 for j in epw_df.loc[i, 'EPW_mod_filtered']:
@@ -305,26 +306,33 @@ class rename_epw_files:
                                         epw_df.loc[i, 'EPW_City_or_subcountry'] = j.replace(' ', '-').capitalize()
                                 except KeyError:
                                     print(f'No city or subcountry has been found in file {epw_df.loc[i, "EPW_names"]}')
+                                    epw_df.loc[i, 'EPW_City_or_subcountry'] = 'UNKNOWN'
                 epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
 
             for i in range(len(epw_df['EPW_mod_filtered'])):
-                if type(epw_df.loc[i, 'EPW_City_or_subcountry']) is float:
-                    location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
-                    try:
-                        epw_df.loc[i, 'EPW_City_or_subcountry'] = str(location.raw['address'].get('city').replace(' ', '-')).capitalize()
-                    except AttributeError:
-                        epw_df.loc[i, 'EPW_City_or_subcountry'] = str(location.raw['address'].get('city')).capitalize()
-                if type(epw_df.loc[i, 'EPW_country']) is float:
-                    location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
-                    try:
-                        epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').replace(' ', '-').capitalize()
-                    except AttributeError:
-                        epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').capitalize()
+                try:
+                    if type(epw_df.loc[i, 'EPW_City_or_subcountry']) is float:
+                        location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
+                        try:
+                            epw_df.loc[i, 'EPW_City_or_subcountry'] = str(location.raw['address'].get('city').replace(' ', '-')).capitalize()
+                        except AttributeError:
+                            epw_df.loc[i, 'EPW_City_or_subcountry'] = str(location.raw['address'].get('city')).capitalize()
+                    if type(epw_df.loc[i, 'EPW_country']) is float:
+                        location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
+                        try:
+                            epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').replace(' ', '-').capitalize()
+                        except AttributeError:
+                            epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').capitalize()
+                except KeyError:
+                    continue
 
         for col in ['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']:
             for row in range(len(epw_df)):
-                if epw_df.loc[row, col] is None:
-                    epw_df.loc[row, col] = 'UNKNOWN'
+                try:
+                    if epw_df.loc[row, col] is None:
+                        epw_df.loc[row, col] = 'UNKNOWN'
+                except KeyError:
+                    continue
 
         epw_df['EPW_new_names'] = epw_df[['EPW_country', 'EPW_City_or_subcountry', 'EPW_scenario_year']].agg('_'.join, axis=1)
 
@@ -436,8 +444,12 @@ class rename_epw_files:
         if confirm_renaming:
             for i in range(len(epw_df)):
                 if epw_df.loc[i, 'EPW_new_names'] not in exclusion_list:
-                    shutil.copy(epw_df.loc[i, 'EPW_abs_path'], path + '/' + epw_df.loc[i, 'EPW_new_names'] + '.epw')
-                    print(f'The file {epw_df.loc[i, "EPW_names"]} has been renamed to {epw_df.loc[i, "EPW_new_names"]}')
+                    try:
+                        shutil.copy(epw_df.loc[i, 'EPW_abs_path'], path + '/' + epw_df.loc[i, 'EPW_new_names'] + '.epw')
+                        print(f'The file {epw_df.loc[i, "EPW_names"]} has been renamed to {epw_df.loc[i, "EPW_new_names"]}')
+                    except shutil.SameFileError:
+                        print(f'The old and new names of file {epw_df.loc[i, "EPW_names"]} are the same.')
+                        epw_files_to_rename.remove(epw_df.loc[i, "EPW_names"] + '.epw')
 
         if confirm_deletion is None:
             proceed = input('\nDo you want to delete the original EPW file or files? [y/n]:')
@@ -1028,6 +1040,15 @@ class Table:
                                   in i
                                   ]
                               ]
+        occupied_zone_list = [i.split(':')[0]
+                                  for i
+                                  in df.columns
+                                  if
+                                  # 'Zone Operative Temperature [C](Hourly)'
+                                  'Zone Operative Temperature'
+                                  in i
+                                  ]
+
         # if len(occupied_zone_list) == 0:
         #     occupied_zone_list = [i.split(' ')[0][:-5]
         #                     for i
@@ -1134,7 +1155,7 @@ class Table:
             print(occupied_zone_list)
             print('The hvac zones zones are:')
             print(hvac_zone_list)
-            level_excluded_zones = list(i for i in input('If you want to exclude some zones from level computations, please enter the names separated by space, otherwise hit enter:').split())
+            level_excluded_zones = list(i for i in input('If you want to exclude some zones from level computations, please enter the names separated by semicolon (;), otherwise hit enter:').split(';'))
 
         if any('block' in i for i in level):
             for output in outputdict:
