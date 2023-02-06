@@ -2543,6 +2543,7 @@ class Table:
             figname: str = None,
             figsize: float = 1,
             ratio_height_to_width: float = 1,
+            dpi: int = 500,
             confirm_graph: bool = False
     ):
         """
@@ -2747,7 +2748,7 @@ class Table:
             # plt.tight_layout()
 
             plt.savefig(figname + '.png',
-                        dpi=1200,
+                        dpi=dpi,
                         format='png',
                         bbox_extra_artists=bbox_extra_artists_tuple,
                         bbox_inches='tight')
@@ -2762,6 +2763,7 @@ class Table:
                                   figname: str = None,
                                   figsize: int = 1,
                                   markersize: int = 1,
+                                  dpi: int = 500,
                                   confirm_graph: bool = False
                                   ):
         """
@@ -3117,7 +3119,7 @@ class Table:
             # plt.tight_layout()
 
             plt.savefig(figname + '.png',
-                        dpi=1200,
+                        dpi=dpi,
                         format='png',
                         bbox_extra_artists=(leg, supx, supy),
                         bbox_inches='tight'
@@ -3129,6 +3131,7 @@ class Table:
             figname: str = None,
             figsize: float = 1,
             ratio_height_to_width: float = 1,
+            dpi: int = 500,
             confirm_graph: bool = False
     ):
         """
@@ -3387,7 +3390,7 @@ class Table:
             # plt.tight_layout()
 
             plt.savefig(figname + '.png',
-                        dpi=1200,
+                        dpi=dpi,
                         format='png',
                         bbox_extra_artists=bbox_extra_artists_tuple,
                         bbox_inches='tight')
