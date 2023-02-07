@@ -469,27 +469,28 @@ class rename_epw_files:
 class Table:
 
     def __init__(self,
-                 # path: str = None,
-                 datasets: list = None,
-                 source_concatenated_csv_filepath: str = None,
-                 source_frequency: str = None,
-                 frequency: str = None,
-                 frequency_sum_or_mean: str = None,
-                 standard_outputs: bool = None,
-                 concatenated_csv_name: str = None,
-                 level: list = None,
-                 level_sum_or_mean: list = None,
-                 level_excluded_zones: list = None,
-                 match_cities: bool = False,
-                 manage_epw_names: bool = False,
-                 split_epw_names: bool = False,
-                 normalised_energy_units: bool = True,
-                 rename_cols: bool = True,
-                 energy_units_in_kwh: bool = True,
-                 drop_nan: bool = False,
-                 name_export_rows_with_NaN: str = None,
-                 name_export_rows_not_corr_agg: str = None
-                 ):
+        # path: str = None,
+        datasets: list = None,
+        source_concatenated_csv_filepath: str = None,
+        source_frequency: str = None,
+        frequency: str = None,
+        frequency_sum_or_mean: str = None,
+        standard_outputs: bool = None,
+        concatenated_csv_name: str = None,
+        level: list = None,
+        level_sum_or_mean: list = None,
+        level_excluded_zones: list = None,
+        block_zone_hierarchy: dict = None,
+        match_cities: bool = False,
+        manage_epw_names: bool = False,
+        split_epw_names: bool = False,
+        normalised_energy_units: bool = True,
+        rename_cols: bool = True,
+        energy_units_in_kwh: bool = True,
+        drop_nan: bool = False,
+        name_export_rows_with_NaN: str = None,
+        name_export_rows_not_corr_agg: str = None,
+        ):
         """
         Generates a table or dataframe using the EnergyPlus simulation results CSV files
         available in the current folder.
@@ -1029,25 +1030,50 @@ class Table:
         #                              ]
         #                        ]
         # if len(occupied_zone_list) == 0:
-        occupied_zone_list = [i.split(' ')[0][:-5]
-                              for i
-                              in [i
-                                  for i
-                                  in df.columns
-                                  if
-                                  # 'Zone Operative Temperature [C](Hourly)'
-                                  'Zone Operative Temperature'
-                                  in i
-                                  ]
-                              ]
-        occupied_zone_list = [i.split(':')[0]
-                                  for i
-                                  in df.columns
-                                  if
-                                  # 'Zone Operative Temperature [C](Hourly)'
-                                  'Zone Operative Temperature'
-                                  in i
-                                  ]
+
+        df.columns = [i.upper() for i in df.columns]
+        block_list = []
+        #Step: scanning occupied zones
+        if all([j==2 for j in [i.count(':') for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]):
+            occupied_zone_list = [i.split(' ')[0][:-5] for i in [i for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]
+        else:
+            if all([j == 1 for j in [i.count(':') for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]):
+                total_occupied_zones = [i.split(':')[0].upper() for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]
+                for i in total_occupied_zones:
+                    df.columns = [j.replace(i, i.replace(' ', '_')) for j in df.columns]
+                total_occupied_zones = [i.replace(' ', '_') for i in total_occupied_zones]
+            else:
+                occupied_zone_list_1 = [i.split(' ')[0][:-5] for i in [i for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]
+                occupied_zone_list_2 = [i.split(':')[0] for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]
+                total_occupied_zones = occupied_zone_list_1 + occupied_zone_list_2
+                total_occupied_zones = list(dict.fromkeys(total_occupied_zones))
+            if block_zone_hierarchy is None:
+                print(
+                    'Regarding occupied zones, we have not found a clear hierarchical pattern of blocks and zones. '
+                    'The zones we have found are:'
+                    )
+                print(total_occupied_zones)
+                block_list = list(i.upper() for i in input('Please enter all Blocks separated by semicolon (;): ').split(';'))
+                hierarchy_dict = {}
+                for i in block_list:
+                    temp_zones = list(i.upper() for i in input(f'Please enter the zones for {i}, considering these cannot be at the same time in more than one block, separated by semicolon (;): ').split(';'))
+                    temp_dict = {i: temp_zones}
+                    hierarchy_dict.update(temp_dict)
+            else:
+                hierarchy_dict = block_zone_hierarchy
+                #todo poner blocks y zones en mayuscula
+
+            for i in hierarchy_dict:
+                for j in hierarchy_dict[i]:
+                    df.columns = [k.replace(j, i+'_'+j) for k in df.columns]
+                    # df.columns = [k.replace(j.upper().replace(' ', '_'), i + '_' + j) for k in df.columns]
+
+            occupied_zone_list = []
+            for i in hierarchy_dict:
+                occupied_zone_list.extend(hierarchy_dict[i])
+
+
+
 
         # if len(occupied_zone_list) == 0:
         #     occupied_zone_list = [i.split(' ')[0][:-5]
@@ -1064,21 +1090,15 @@ class Table:
         occBZlist_underscore = [i.replace(':', '_') for i in occupied_zone_list]
 
         # Step: scanning zones for hvac_zone_list
-        hvac_zone_list = [i.split(' ')[0]
-                          for i
-                          in [i
-                              for i
-                              in df.columns
-                              if 'Cooling Coil Total Cooling Rate' in i
-                              ]
-                          ]
+        hvac_zone_list = [i.split(' ')[0] for i in [i for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]
 
         hvac_zone_list = list(dict.fromkeys(hvac_zone_list))
         hvac_zone_list_underscore = [i.replace(':', '_') for i in hvac_zone_list]
 
         # Step: scanning blocks for block_list
-        block_list = [i.split(':')[0] for i in occupied_zone_list]
-        block_list = list(dict.fromkeys(block_list))
+        if len(block_list) == 0:
+            block_list = [i.split(':')[0] for i in occupied_zone_list]
+            block_list = list(dict.fromkeys(block_list))
 
         # Step: renaming all columns containing BlockX_ZoneX patterns to BlockX:ZoneX.
         renamezonesdict = {}
@@ -1111,7 +1131,7 @@ class Table:
         }
         for output in BZoutputDict:
             for block_zone in hvac_zone_list:
-                df[f'{block_zone}' + '_' + BZoutputDict[output] + ' (summed)_pymod'] = df[
+                df[f'{block_zone}' + '_' + BZoutputDict[output].upper() + ' (summed)_pymod'] = df[
                     [i for i in df.columns
                      if block_zone.lower() in i.lower() and output in i and '_pymod' not in i]
                 ].sum(axis=1)
@@ -1161,14 +1181,14 @@ class Table:
             for output in outputdict:
                 for block in block_list:
                     if any('sum' in j for j in level_sum_or_mean):
-                        df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                            [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i and not (any(k in i for k in level_excluded_zones))]
+                        df[f'{block}' + '_Total_' + outputdict[output].upper() + ' (summed)_pymod'] = df[
+                            [i for i in df.columns if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i.upper() for k in level_excluded_zones))]
                         ].sum(axis=1)
                     else:
                         if normalised_energy_units:
                             if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                                 df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                                    [i for i in df.columns if block.lower() in i.lower() and output in i and '_pymod' not in i and not (any(k in i for k in level_excluded_zones))]
+                                    [i for i in df.columns if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i.upper() for k in level_excluded_zones))]
                                 ].sum(axis=1)
                     if any('mean' in j for j in level_sum_or_mean):
                         if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
@@ -1176,24 +1196,24 @@ class Table:
                         else:
                             df[f'{block}' + '_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
                                 [i for i in df.columns
-                                 if block.lower() in i.lower() and output in i and '_pymod' not in i]
+                                 if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower()]
                             ].mean(axis=1)
         if any('building' in i for i in level):
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
                     df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                        [i for i in df.columns if output in i and '_pymod' not in i and not (any(k in i for k in level_excluded_zones))]].sum(axis=1)
+                        [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].sum(axis=1)
                 else:
                     if normalised_energy_units:
                         if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                             df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                                [i for i in df.columns if output in i and '_pymod' not in i and not (any(k in i for k in level_excluded_zones))]].sum(axis=1)
+                                [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].sum(axis=1)
                 if any('mean' in j for j in level_sum_or_mean):
                     if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                         continue
                     else:
                         df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
-                            [i for i in df.columns if output in i and '_pymod' not in i and not (any(k in i for k in level_excluded_zones))]].mean(axis=1)
+                            [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].mean(axis=1)
 
         # df.to_excel('checkpoint_02.xlsx')
 
@@ -1224,7 +1244,7 @@ class Table:
                         if j in i:
                             df[i] = df[i] / df[
                                 [i for i in df.columns
-                                 if 'Zone Floor Area' in i
+                                 if 'Zone Floor Area'.upper() in i.upper()
                                  and j.lower() in i.lower()
                                  # and j.replace(':', '_').lower() in i.lower()
                                  ][0]]
@@ -1232,17 +1252,17 @@ class Table:
                         if k + '_Total_' in i:
                             df[i] = df[i] / df[
                                 [i for i in df.columns
-                                 if 'Zone Floor Area' in i
+                                 if 'Zone Floor Area'.upper() in i.upper()
                                  and k.lower() + '_Total_'.lower() in i.lower()][0]]
                     if 'Building_Total_' in i:
                         df[i] = df[i] / df[
                             [i for i in df.columns
-                             if 'Zone Floor Area' in i
+                             if 'Zone Floor Area'.upper() in i.upper()
                              and 'Building_Total_'.lower() in i.lower()][0]]
                     if any('building' in x for x in level):
                         # try:
-                        if 'Whole Building:Facility Total HVAC Electricity Demand Rate' in i:
-                            df[i] = df[i] / df[[i for i in df.columns if 'Zone Floor Area' in i and 'Building_Total_'.lower() in i.lower()][0]]
+                        if 'Whole Building:Facility Total HVAC Electricity Demand Rate'.upper() in i.upper():
+                            df[i] = df[i] / df[[i for i in df.columns if 'Zone Floor Area'.upper() in i.upper() and 'Building_Total_'.lower() in i.lower()][0]]
                         # except IndexError:
                         #     try:
                         #         if 'Whole Building Facility Total HVAC Electricity Demand Rate' in i:
@@ -1258,14 +1278,14 @@ class Table:
         # Step: converting Wh to kWh if requested
         if energy_units_in_kwh:
             for col in df.columns:
-                if '(Wh)' in col:
+                if '(Wh)'.upper() in col.upper():
                     df[col] = df[col] / 1000
 
         # df.to_excel('checkpoint_03-1.xlsx')
 
         energy_units_dict = {}
         for i in df.columns:
-            if '(Wh)' in i:
+            if '(Wh)'.upper() in i.upper():
                 temp = {i: i.replace('(Wh)', energy_units)}
                 energy_units_dict.update(temp)
         df = df.rename(columns=energy_units_dict)
