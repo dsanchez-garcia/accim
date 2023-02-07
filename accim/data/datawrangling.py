@@ -600,6 +600,9 @@ class Table:
 
         if source_concatenated_csv_filepath is not None:
             for i in source_concatenated_csv_filepath.split('['):
+                if i.split('-')[0] == 'srcfreq':
+                    source_frequency = i.split('-')[1]
+                    self.source_frequency = source_frequency
                 if i.split('-')[0] == 'freq':
                     frequency = i.split('-')[1]
                     self.frequency = frequency
@@ -607,7 +610,10 @@ class Table:
                     frequency_sum_or_mean = i.split('-')[1]
                 elif i.split('-')[0] == 'standard_outputs':
                     standard_outputs = i.split('-')[1]
-            source_frequency = frequency
+                    if standard_outputs == 'True':
+                        standard_outputs = True
+                    else:
+                        standard_outputs = False
 
         if source_frequency in ['timestep', 'hourly']:
             aggregation_list_first = [
@@ -979,6 +985,7 @@ class Table:
                 df = df.dropna(axis='index', how='any')
             df.to_csv(
                 f'{concatenated_csv_name}'
+                f'[srcfreq-{source_frequency}'
                 f'[freq-{frequency}'
                 f'[frequency_sum_or_mean-{frequency_sum_or_mean}'
                 f'[standard_outputs-{standard_outputs}'
@@ -987,6 +994,7 @@ class Table:
             if len(rows_with_NaN) > 0:
                 rows_with_NaN.to_csv(
                     f'{concatenated_csv_name}'
+                    f'[srcfreq-{source_frequency}'
                     f'[freq-{frequency}'
                     f'[frequency_sum_or_mean-{frequency_sum_or_mean}'
                     f'[standard_outputs-{standard_outputs}'
@@ -995,6 +1003,7 @@ class Table:
             if len(not_correct_agg) > 0:
                 not_correct_agg.to_csv(
                     f'{concatenated_csv_name}'
+                    f'[srcfreq-{source_frequency}'
                     f'[freq-{frequency}'
                     f'[frequency_sum_or_mean-{frequency_sum_or_mean}'
                     f'[standard_outputs-{standard_outputs}'
@@ -1092,13 +1101,10 @@ class Table:
         # Step: scanning zones for hvac_zone_list
 
         if all([j == 2 for j in [i.count(':') for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]):
-            hvac_zone_list = [i.split(' ')[0][:-5] for i in [i for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]
+            hvac_zone_list = [i.split(' ')[0] for i in [i for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]
         else:
             if all([j == 1 for j in [i.count(':') for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]):
                 hvac_zone_list = [i.split(':')[0].split()[0].upper() for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]
-
-
-
 
         # hvac_zone_list = [i.split(' ')[0] for i in [i for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]
 
@@ -1191,7 +1197,7 @@ class Table:
             for output in outputdict:
                 for block in block_list:
                     if any('sum' in j for j in level_sum_or_mean):
-                        df[f'{block}' + '_Total_' + outputdict[output].upper() + ' (summed)_pymod'] = df[
+                        df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
                             [i for i in df.columns if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i.upper() for k in level_excluded_zones))]
                         ].sum(axis=1)
                     else:
@@ -1208,6 +1214,7 @@ class Table:
                                 [i for i in df.columns
                                  if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower()]
                             ].mean(axis=1)
+        print('checkpoint')
         if any('building' in i for i in level):
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
@@ -1249,10 +1256,9 @@ class Table:
         # Step: normalising energy units if requested
         if normalised_energy_units:
             for i in df.columns:
-                if '(Wh)' in i:
+                if '(Wh)' in i or '(WH)' in i:
                     for j in hvac_zone_list:
                         if j in i:
-                            print('testing')
                             df[i] = df[i] / df[[i for i in df.columns if 'Zone Floor Area'.upper() in i.upper() and j.lower() in i.lower()][0]]
                     for k in block_list:
                         if k + '_Total_' in i:
@@ -1395,13 +1401,13 @@ class Table:
         # todo test timestep
         if 'monthly' in self.frequency:
             df['MONTH'] = df['MONTH'].astype(str)
-            df['Date/Time'] = df['MONTH']
+            # df['Date/Time'] = df['MONTH']
         if 'daily' in self.frequency:
             df[['DAY', 'MONTH']] = df[['DAY', 'MONTH']].astype(str)
-            df['Date/Time'] = df[['DAY', 'MONTH']].agg('/'.join, axis=1)
+            # df['Date/Time'] = df[['DAY', 'MONTH']].agg('/'.join, axis=1)
         if 'hourly' in self.frequency:
             df[['DAY', 'MONTH', 'HOUR']] = df[['DAY', 'MONTH', 'HOUR']].astype(str)
-            df['Date/Time'] = df[['DAY', 'MONTH']].agg('/'.join, axis=1) + ' ' + df['HOUR'] + ':00'
+            # df['Date/Time'] = df[['DAY', 'MONTH']].agg('/'.join, axis=1) + ' ' + df['HOUR'] + ':00'
         # if 'timestep' in self.frequency:
         #     df[['DAY', 'MONTH', 'HOUR', 'MINUTE']] = df[['DAY', 'MONTH', 'HOUR', 'MINUTE']].astype(str)
         #     df['Date/Time'] = (df[['DAY', 'MONTH']].agg('/'.join, axis=1) +
@@ -1598,6 +1604,7 @@ class Table:
             cols_cat = cols_model + cols_date
 
         cols_num = [i for i in df.columns if i not in cols_cat]
+        # cols_num = cols_num[1:] + cols_num[:1]
 
         df = df[cols_cat + cols_num]
 
@@ -1680,21 +1687,34 @@ class Table:
             for col in df.columns:
                 for crit in renaming_criteria_bz:
                     if '(summed)' not in col and '(mean)' not in col:
-                        if crit in col:
+                        if crit.upper() in col.upper():
                             for block_zone in occupied_zone_list:
-                                if block_zone in col:
-                                    if energy_units in col:
+                                if block_zone.upper() in col.upper():
+                                    if energy_units.upper() in col.upper():
                                         temp = {col: block_zone + '_' + renaming_criteria_bz[crit] + ' ' + energy_units}
                                         all_cols_renamed.update(temp)
                                     else:
                                         temp = {col: block_zone + '_' + renaming_criteria_bz[crit]}
                                         all_cols_renamed.update(temp)
 
+                    #todo parece que solo hay que renombrar Block_zone_total energy demand y ordenar por orden aflabéico por la columna de consumo que se desordena
+
+                    # elif '(summed)' in col or '(mean)' in col:
+                    #     if crit.upper() in col.upper():
+                    #         for block in block_list:
+                    #             if block + '_Total' in col:
+                    #                 if energy_units.upper() in col.upper():
+                    #                     temp = {col: block + '_Total_' + renaming_criteria_bz[crit] + ' ' + energy_units}
+                    #                     all_cols_renamed.update(temp)
+                    #                 else:
+                    #                     temp = {col: block + '_Total_' + renaming_criteria_bz[crit]}
+                    #                     all_cols_renamed.update(temp)
+
             for col in df.columns:
                 for crit in renaming_criteria:
-                    if '(summed)' not in col and '(mean)' not in col:
-                        if crit in col:
-                            if energy_units in col:
+                    if '(summed)'.upper() not in col and '(mean)' not in col:
+                        if crit.upper() in col.upper():
+                            if energy_units.upper() in col.upper():
                                 temp = {col: renaming_criteria[crit] + ' ' + energy_units}
                                 all_cols_renamed.update(temp)
                             else:
@@ -1711,14 +1731,14 @@ class Table:
             for col in df.columns:
                 for crit in renaming_criteria_block:
                     for block in block_list:
-                        if block + '_Total_' + crit in col:
+                        if block.upper() + '_Total_'.upper() + crit.upper() in col:
                             if '(summed)' in col:
                                 temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} (summed)'}
                                 all_cols_renamed.update(temp)
                             elif '(mean)' in col:
                                 temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} (mean)'}
                                 all_cols_renamed.update(temp)
-                    if 'Building_Total_' + crit in col:
+                    if 'Building_Total_'.upper() + crit.upper() in col.upper():
                         if '(summed)' in col:
                             temp = {col: f'Building_Total_{renaming_criteria_block[crit]} {energy_units} (summed)'}
                             all_cols_renamed.update(temp)

@@ -1,22 +1,23 @@
 from accim.data.datawrangling import Table
 import pandas as pd
 
-# z = Table(
-#     source_frequency='hourly',
-#     frequency='monthly',
-#     frequency_sum_or_mean='sum',
-#     concatenated_csv_name='testing_data_gathering_DSB'
-# )
+z = Table(
+    source_frequency='hourly',
+    frequency='monthly',
+    frequency_sum_or_mean='sum',
+    concatenated_csv_name='testing_data_gathering_DSB',
+    standard_outputs=True,
+)
 
 ##
 
 z = Table(
-    source_concatenated_csv_filepath='testing_data_gathering_DSB[freq-monthly[frequency_sum_or_mean-sum[standard_outputs-None[CSVconcatenated.csv',
+    source_concatenated_csv_filepath='testing_data_gathering_DSB[srcfreq-hourly[freq-monthly[frequency_sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv',
     # source_frequency='hourly',
     # frequency='monthly',
     # frequency_sum_or_mean='sum',
     level=['block', 'building'],
-    level_sum_or_mean=['mean'],
+    level_sum_or_mean=['sum'],
     # block_zone_hierarchy=block_zone_dict,
     level_excluded_zones=[],
     manage_epw_names=False,
