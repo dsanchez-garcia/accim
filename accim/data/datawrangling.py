@@ -1034,7 +1034,7 @@ class Table:
         df.columns = [i.upper() for i in df.columns]
         block_list = []
         #Step: scanning occupied zones
-        if all([j==2 for j in [i.count(':') for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]):
+        if all([j == 2 for j in [i.count(':') for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]):
             occupied_zone_list = [i.split(' ')[0][:-5] for i in [i for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]
         else:
             if all([j == 1 for j in [i.count(':') for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]):
@@ -1060,8 +1060,8 @@ class Table:
                     temp_dict = {i: temp_zones}
                     hierarchy_dict.update(temp_dict)
             else:
-                hierarchy_dict = block_zone_hierarchy
-                #todo poner blocks y zones en mayuscula
+                # hierarchy_dict = block_zone_hierarchy
+                hierarchy_dict = {i.upper(): [k.upper() for k in j] for i, j in block_zone_hierarchy.items()}
 
             for i in hierarchy_dict:
                 for j in hierarchy_dict[i]:
@@ -1090,7 +1090,17 @@ class Table:
         occBZlist_underscore = [i.replace(':', '_') for i in occupied_zone_list]
 
         # Step: scanning zones for hvac_zone_list
-        hvac_zone_list = [i.split(' ')[0] for i in [i for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]
+
+        if all([j == 2 for j in [i.count(':') for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]):
+            hvac_zone_list = [i.split(' ')[0][:-5] for i in [i for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]
+        else:
+            if all([j == 1 for j in [i.count(':') for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]):
+                hvac_zone_list = [i.split(':')[0].split()[0].upper() for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]
+
+
+
+
+        # hvac_zone_list = [i.split(' ')[0] for i in [i for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]
 
         hvac_zone_list = list(dict.fromkeys(hvac_zone_list))
         hvac_zone_list_underscore = [i.replace(':', '_') for i in hvac_zone_list]
@@ -1242,12 +1252,8 @@ class Table:
                 if '(Wh)' in i:
                     for j in hvac_zone_list:
                         if j in i:
-                            df[i] = df[i] / df[
-                                [i for i in df.columns
-                                 if 'Zone Floor Area'.upper() in i.upper()
-                                 and j.lower() in i.lower()
-                                 # and j.replace(':', '_').lower() in i.lower()
-                                 ][0]]
+                            print('testing')
+                            df[i] = df[i] / df[[i for i in df.columns if 'Zone Floor Area'.upper() in i.upper() and j.lower() in i.lower()][0]]
                     for k in block_list:
                         if k + '_Total_' in i:
                             df[i] = df[i] / df[
@@ -1314,8 +1320,9 @@ class Table:
             'NameSuffix',
             'EPW'
         ]
+        fixed_columns = [i.upper() for i in fixed_columns]
 
-        df[fixed_columns] = df['Source'].str.split('[', expand=True)
+        df[fixed_columns] = df['SOURCE'].str.split('[', expand=True)
 
         # df['Model'] = df['Model'].str[:-6]
         # df['ComfStand'] = df['ComfStand'].str[3:]
@@ -1328,7 +1335,7 @@ class Table:
         # df['MaxWindSpeed'] = df['MaxWindSpeed'].str[3:]
         # df['ASTtol'] = df['ASTtol'].str[3:]
         df['EPW'] = df['EPW'].str[:-4]
-        df['Source'] = df['Source'].str[:-4]
+        df['SOURCE'] = df['SOURCE'].str[:-4]
 
         # Step: splitting EPW names if requested
         self.split_epw_names = split_epw_names
@@ -1361,10 +1368,10 @@ class Table:
 
         # Step: do not know what it is this for
         frequency_dict = {
-            'monthly': ['Month'],
-            'daily': ['Day', 'Month'],
-            'hourly': ['Day', 'Month', 'Hour'],
-            'timestep': ['Day', 'Month', 'Hour', 'Minute']
+            'monthly': ['MONTH'],
+            'daily': ['DAY', 'MONTH'],
+            'hourly': ['DAY', 'MONTH', 'HOUR'],
+            'timestep': ['DAY', 'MONTH', 'HOUR', 'MINUTE']
         }
         if self.frequency != 'runperiod':
             for i in frequency_dict[self.frequency]:
@@ -1379,27 +1386,27 @@ class Table:
 
         df = df.set_index([pd.RangeIndex(len(df))])
 
-        # df['Hour_mod'] = df['Hour'].copy()
+        # df['Hour_mod'] = df['HOUR'].copy()
         if 'hourly' in self.frequency or 'timestep' in self.frequency:
-            df['Hour'] = (pd.to_numeric(df['Hour']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
+            df['HOUR'] = (pd.to_numeric(df['HOUR']) - 1).astype(str).str.pad(width=2, side='left', fillchar='0')
         # df['Hour_mod'] = df['Hour_mod'].str.replace('.0', '').str.pad(width=2, side='left', fillchar='0')
-        # df['Hour'] = df['Hour_mod']
+        # df['HOUR'] = df['Hour_mod']
 
         # todo test timestep
         if 'monthly' in self.frequency:
-            df['Month'] = df['Month'].astype(str)
-            df['Date/Time'] = df['Month']
+            df['MONTH'] = df['MONTH'].astype(str)
+            df['Date/Time'] = df['MONTH']
         if 'daily' in self.frequency:
-            df[['Day', 'Month']] = df[['Day', 'Month']].astype(str)
-            df['Date/Time'] = df[['Day', 'Month']].agg('/'.join, axis=1)
+            df[['DAY', 'MONTH']] = df[['DAY', 'MONTH']].astype(str)
+            df['Date/Time'] = df[['DAY', 'MONTH']].agg('/'.join, axis=1)
         if 'hourly' in self.frequency:
-            df[['Day', 'Month', 'Hour']] = df[['Day', 'Month', 'Hour']].astype(str)
-            df['Date/Time'] = df[['Day', 'Month']].agg('/'.join, axis=1) + ' ' + df['Hour'] + ':00'
+            df[['DAY', 'MONTH', 'HOUR']] = df[['DAY', 'MONTH', 'HOUR']].astype(str)
+            df['Date/Time'] = df[['DAY', 'MONTH']].agg('/'.join, axis=1) + ' ' + df['HOUR'] + ':00'
         # if 'timestep' in self.frequency:
-        #     df[['Day', 'Month', 'Hour', 'Minute']] = df[['Day', 'Month', 'Hour', 'Minute']].astype(str)
-        #     df['Date/Time'] = (df[['Day', 'Month']].agg('/'.join, axis=1) +
+        #     df[['DAY', 'MONTH', 'HOUR', 'MINUTE']] = df[['DAY', 'MONTH', 'HOUR', 'MINUTE']].astype(str)
+        #     df['Date/Time'] = (df[['DAY', 'MONTH']].agg('/'.join, axis=1) +
         #                             ' ' +
-        #                             df[['Hour', 'Minute']].agg(':'.join, axis=1))
+        #                             df[['HOUR', 'MINUTE']].agg(':'.join, axis=1))
 
         df = df.set_index([pd.RangeIndex(len(df))])
 
@@ -1569,7 +1576,7 @@ class Table:
         # # else:
         # #     adj_source_freq = 0
         #
-        # # the 2 is for Date/Time and Month/Day
+        # # the 2 is for Date/Time and MONTH/DAY
         # temp_num = -(len(fixed_columns) + 2 + freq_extension + epw_extension + adj_extension)
         # cols = cols[temp_num:] + cols[:temp_num]
         # # cols = cols[5:] + cols[:5]
@@ -1579,10 +1586,11 @@ class Table:
         # num_cols.remove('count')
         # num_cols = sorted(num_cols)
 
-        cols_model = ['Source'] + fixed_columns + ['count']
+        cols_model = ['SOURCE'] + [i.upper() for i in fixed_columns] + ['COUNT']
 
         cols_date = aggregation_list_first.copy()
-        cols_date.remove('Source')
+        cols_date = [i.upper() for i in cols_date]
+        cols_date.remove('SOURCE')
 
         if split_epw_names:
             cols_cat = cols_model + cols_epw_base + cols_epw_ext + cols_date
@@ -1808,20 +1816,20 @@ class Table:
             'ASTtol',
             'NameSuffix',
             'EPW',
-            'Source',
+            'SOURCE',
             # 'col_to_pivot'
         ]
         # todo to be updated with source frequency
         if 'runperiod' in self.frequency:
             self.indexcols.remove('Date/Time')
         if 'monthly' in self.frequency:
-            self.indexcols.append('Month')
+            self.indexcols.append('MONTH')
         if 'daily' in self.frequency:
-            self.indexcols.extend(['Month', 'Day'])
+            self.indexcols.extend(['MONTH', 'DAY'])
         if 'hourly' in self.frequency:
-            self.indexcols.extend(['Month', 'Day', 'Hour'])
+            self.indexcols.extend(['MONTH', 'DAY', 'HOUR'])
         if 'timestep' in self.frequency:
-            self.indexcols.extend(['Month', 'Day', 'Hour', 'Minute'])
+            self.indexcols.extend(['MONTH', 'DAY', 'HOUR', 'MINUTE'])
             # todo change split_epw_names for a true or false variable
         if self.split_epw_names:
             self.indexcols.extend([
@@ -1963,10 +1971,10 @@ class Table:
             wrangled_df_pivoted = wrangled_df.copy()
             del wrangled_df
 
-            if 'Month' in wrangled_df_pivoted.columns:
+            if 'MONTH' in wrangled_df_pivoted.columns:
                 wrangled_df_pivoted['col_to_pivot'] = (wrangled_df_pivoted[vars_to_gather].agg('['.join, axis=1) + '_' +
-                                                       wrangled_df_pivoted['Month'].astype(str) +
-                                                       '[Month')
+                                                       wrangled_df_pivoted['MONTH'].astype(str) +
+                                                       '[MONTH')
             else:
                 wrangled_df_pivoted['col_to_pivot'] = wrangled_df_pivoted[vars_to_gather].agg('['.join, axis=1)
 
@@ -1992,7 +2000,7 @@ class Table:
 
             # summing monthly values to make runperiod
 
-            if 'Month' in self.df.columns:
+            if 'MONTH' in self.df.columns:
                 for i in var_to_gather_values:
                     wrangled_df_pivoted[f'{i}_Runperiod_Total'] = wrangled_df_pivoted[
                         [j for j in wrangled_df_pivoted.columns
@@ -2000,7 +2008,7 @@ class Table:
                     ].sum(axis=1)
 
                 for j in other_than_baseline:
-                    for i in list(dict.fromkeys(self.df['Month'])):
+                    for i in list(dict.fromkeys(self.df['MONTH'])):
                         if any('relative' in k for k in comparison_cols):
                             wrangled_df_pivoted[f'1-({j}/{baseline})_{i}_Month'] = (
                                     1 -
@@ -2039,9 +2047,9 @@ class Table:
 
             wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['col_to_pivot'], axis=1)
             self.indexcols.remove('col_to_pivot')
-            wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['Source'], axis=1)
+            wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['SOURCE'], axis=1)
             try:
-                self.indexcols.remove('Source')
+                self.indexcols.remove('SOURCE')
             except ValueError:
                 print('Since this is not the first time you run wrangled_table, '
                       '"Source" is trying to be removed from indexcols, but has been previously removed.')
@@ -2361,20 +2369,20 @@ class Table:
             'MinOToffset',
             'MaxWindSpeed',
             'ASTtol',
-            'Source',
+            'SOURCE',
             'EPW',
             'NameSuffix',
             'col_to_gather_in_cols',
             'col_to_gather_in_rows'
         ]
         if 'monthly' in self.frequency:
-            columns_to_drop.append('Month')
+            columns_to_drop.append('MONTH')
         if 'daily' in self.frequency:
-            columns_to_drop.extend(['Month', 'Day'])
+            columns_to_drop.extend(['MONTH', 'DAY'])
         if 'hourly' in self.frequency:
-            columns_to_drop.extend(['Month', 'Day', 'Hour'])
+            columns_to_drop.extend(['MONTH', 'DAY', 'HOUR'])
         if 'timestep' in self.frequency:
-            columns_to_drop.extend(['Month', 'Day', 'Hour', 'Minute'])
+            columns_to_drop.extend(['MONTH', 'DAY', 'HOUR', 'MINUTE'])
 
         df_for_graph = df_for_graph.drop(
             columns=columns_to_drop
