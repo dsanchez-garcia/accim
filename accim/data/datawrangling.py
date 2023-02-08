@@ -68,7 +68,7 @@ def genCSVconcatenated(
         merged_datasets.append(tempdf)
 
     concatenated_df = pd.concat(merged_datasets)
-    concatenated_df.to_csv(f'{concatenated_csv_name}[freq-{frequency}[sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv')
+    concatenated_df.to_csv(f'{concatenated_csv_name}[srcfreq-{source_frequency}[freq-{frequency}[sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv')
 
     for i in datasetlist_to_merge:
         os.remove(i)
@@ -1198,22 +1198,23 @@ class Table:
             print('The hvac zones zones are:')
             print(hvac_zone_list)
             level_excluded_zones = list(i for i in input('If you want to exclude some zones from level computations, please enter the names separated by semicolon (;), otherwise hit enter:').split(';'))
-        if not(level_excluded_zones[0] == ''):
-            not_valid_zones = []
-            for i in level_excluded_zones:
-                if i not in occupied_zone_list:
-                    not_valid_zones.append(i)
-            while len(not_valid_zones) > 0:
-                print('The following excluded zones do not exist:')
-                print(*not_valid_zones, sep='\n')
-                print('The zones you can exclude from level computations are:')
-                print(*occupied_zone_list, sep='\n')
-                level_excluded_zones = [i for i in level_excluded_zones if i not in not_valid_zones]
-                level_excluded_zones = list(i for i in input('If you want to exclude some zones from level computations, please enter the names separated by semicolon (;), otherwise hit enter:').split(';'))
+        if len(level_excluded_zones) > 0:
+            if not(level_excluded_zones[0] == ''):
                 not_valid_zones = []
                 for i in level_excluded_zones:
                     if i not in occupied_zone_list:
                         not_valid_zones.append(i)
+                while len(not_valid_zones) > 0:
+                    print('The following excluded zones do not exist:')
+                    print(*not_valid_zones, sep='\n')
+                    print('The zones you can exclude from level computations are:')
+                    print(*occupied_zone_list, sep='\n')
+                    level_excluded_zones = [i for i in level_excluded_zones if i not in not_valid_zones]
+                    level_excluded_zones = list(i for i in input('If you want to exclude some zones from level computations, please enter the names separated by semicolon (;), otherwise hit enter:').split(';'))
+                    not_valid_zones = []
+                    for i in level_excluded_zones:
+                        if i not in occupied_zone_list:
+                            not_valid_zones.append(i)
 
         if len(level_excluded_zones) == 0:
             print('No zones have been excluded from level computations.')
@@ -1848,7 +1849,7 @@ class Table:
         # self.split_epw_names = split_epw_names
 
         self.indexcols = [
-            'Date/Time',
+            'Date/time',
             'Model',
             'ComfStand',
             'Category',
@@ -1861,20 +1862,20 @@ class Table:
             'ASTtol',
             'NameSuffix',
             'EPW',
-            'SOURCE',
+            'Source',
             # 'col_to_pivot'
         ]
         # todo to be updated with source frequency
         if 'runperiod' in self.frequency:
-            self.indexcols.remove('Date/Time')
+            self.indexcols.remove('Date/time')
         if 'monthly' in self.frequency:
-            self.indexcols.append('MONTH')
+            self.indexcols.append('Month')
         if 'daily' in self.frequency:
-            self.indexcols.extend(['MONTH', 'DAY'])
+            self.indexcols.extend(['Month', 'Day'])
         if 'hourly' in self.frequency:
-            self.indexcols.extend(['MONTH', 'DAY', 'HOUR'])
+            self.indexcols.extend(['Month', 'Day', 'Hour'])
         if 'timestep' in self.frequency:
-            self.indexcols.extend(['MONTH', 'DAY', 'HOUR', 'MINUTE'])
+            self.indexcols.extend(['Month', 'Day', 'Hour', 'Minute'])
             # todo change split_epw_names for a true or false variable
         if self.split_epw_names:
             self.indexcols.extend([
@@ -2016,10 +2017,10 @@ class Table:
             wrangled_df_pivoted = wrangled_df.copy()
             del wrangled_df
 
-            if 'MONTH' in wrangled_df_pivoted.columns:
+            if 'Month' in wrangled_df_pivoted.columns:
                 wrangled_df_pivoted['col_to_pivot'] = (wrangled_df_pivoted[vars_to_gather].agg('['.join, axis=1) + '_' +
-                                                       wrangled_df_pivoted['MONTH'].astype(str) +
-                                                       '[MONTH')
+                                                       wrangled_df_pivoted['Month'].astype(str) +
+                                                       '[Month')
             else:
                 wrangled_df_pivoted['col_to_pivot'] = wrangled_df_pivoted[vars_to_gather].agg('['.join, axis=1)
 
@@ -2045,7 +2046,7 @@ class Table:
 
             # summing monthly values to make runperiod
 
-            if 'MONTH' in self.df.columns:
+            if 'Month' in self.df.columns:
                 for i in var_to_gather_values:
                     wrangled_df_pivoted[f'{i}_Runperiod_Total'] = wrangled_df_pivoted[
                         [j for j in wrangled_df_pivoted.columns
@@ -2053,7 +2054,7 @@ class Table:
                     ].sum(axis=1)
 
                 for j in other_than_baseline:
-                    for i in list(dict.fromkeys(self.df['MONTH'])):
+                    for i in list(dict.fromkeys(self.df['Month'])):
                         if any('relative' in k for k in comparison_cols):
                             wrangled_df_pivoted[f'1-({j}/{baseline})_{i}_Month'] = (
                                     1 -
@@ -2414,20 +2415,20 @@ class Table:
             'MinOToffset',
             'MaxWindSpeed',
             'ASTtol',
-            'SOURCE',
+            'Source',
             'EPW',
             'NameSuffix',
             'col_to_gather_in_cols',
             'col_to_gather_in_rows'
         ]
         if 'monthly' in self.frequency:
-            columns_to_drop.append('MONTH')
+            columns_to_drop.append('Month')
         if 'daily' in self.frequency:
-            columns_to_drop.extend(['MONTH', 'DAY'])
+            columns_to_drop.extend(['Month', 'Day'])
         if 'hourly' in self.frequency:
-            columns_to_drop.extend(['MONTH', 'DAY', 'HOUR'])
+            columns_to_drop.extend(['Month', 'Day', 'Hour'])
         if 'timestep' in self.frequency:
-            columns_to_drop.extend(['MONTH', 'DAY', 'HOUR', 'MINUTE'])
+            columns_to_drop.extend(['Month', 'Day', 'Hour', 'Minute'])
 
         df_for_graph = df_for_graph.drop(
             columns=columns_to_drop
@@ -2437,7 +2438,7 @@ class Table:
             'col_to_unstack'
         ]
         if self.frequency != 'runperiod':
-            multi_index.append('Date/Time')
+            multi_index.append('Date/time')
 
         df_for_graph.set_index(multi_index, inplace=True)
         if len(adap_vs_stat_data_y_main) > 0:
@@ -3240,7 +3241,7 @@ class Table:
                 confirm_graph = False
 
         if confirm_graph:
-            self.df_for_graph['Date/Time'] = self.df_for_graph.index
+            self.df_for_graph['Date/time'] = self.df_for_graph.index
 
             freq_graph_dict = {
                 'timestep': ['X?', "%d/%m %H:%M"],
@@ -3251,18 +3252,18 @@ class Table:
                 'runperiod': ['?', "?"]
             }
 
-            start_date = datetime.datetime.strptime(self.df_for_graph['Date/Time'][0], freq_graph_dict[self.frequency][1])
-            # end_date = datetime.datetime.strptime(df_for_graph['Date/Time'][len(self.df_for_graph)-1], "%d/%m %H:%M")
+            start_date = datetime.datetime.strptime(self.df_for_graph['Date/time'][0], freq_graph_dict[self.frequency][1])
+            # end_date = datetime.datetime.strptime(df_for_graph['Date/time'][len(self.df_for_graph)-1], "%d/%m %H:%M")
             # (end_date-start_date).days
 
-            self.df_for_graph['Date/Time'] = pd.date_range(
+            self.df_for_graph['Date/time'] = pd.date_range(
                 start=start_date,
                 periods=len(self.df_for_graph),
                 # '2017-31-12 23:00',
                 freq=freq_graph_dict[self.frequency][0]
             )
 
-            self.df_for_graph['Date/Time'] = pd.to_datetime(self.df_for_graph['Date/Time'])
+            self.df_for_graph['Date/time'] = pd.to_datetime(self.df_for_graph['Date/time'])
 
             fig, ax = plt.subplots(nrows=len(self.rows),
                                    ncols=len(self.cols),
@@ -3339,7 +3340,7 @@ class Table:
                         for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
                             if i == 0 and j == 0:
                                 main_y_axis[i][j][k].plot(
-                                    self.df_for_graph['Date/Time'],
+                                    self.df_for_graph['Date/time'],
                                     self.y_list_main[i][j][k]['dataframe'][x],
                                     linewidth=1,
                                     c=self.y_list_main[i][j][k]['color'][x],
@@ -3350,7 +3351,7 @@ class Table:
                                 )
                             else:
                                 main_y_axis[i][j][k].plot(
-                                    self.df_for_graph['Date/Time'],
+                                    self.df_for_graph['Date/time'],
                                     self.y_list_main[i][j][k]['dataframe'][x],
                                     linewidth=1,
                                     c=self.y_list_main[i][j][k]['color'][x],
@@ -3375,7 +3376,7 @@ class Table:
                         for x in range(len(self.y_list_sec[i][j][k]['dataframe'])):
                             if i == 0 and j == 0:
                                 sec_y_axis[i][j][k].plot(
-                                    self.df_for_graph['Date/Time'],
+                                    self.df_for_graph['Date/time'],
                                     self.y_list_sec[i][j][k]['dataframe'][x],
                                     linewidth=1,
                                     c=self.y_list_sec[i][j][k]['color'][x],
@@ -3386,7 +3387,7 @@ class Table:
                                 )
                             else:
                                 sec_y_axis[i][j][k].plot(
-                                    self.df_for_graph['Date/Time'],
+                                    self.df_for_graph['Date/time'],
                                     self.y_list_sec[i][j][k]['dataframe'][x],
                                     linewidth=1,
                                     c=self.y_list_sec[i][j][k]['color'][x],
