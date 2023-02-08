@@ -1198,25 +1198,28 @@ class Table:
             print('The hvac zones zones are:')
             print(hvac_zone_list)
             level_excluded_zones = list(i for i in input('If you want to exclude some zones from level computations, please enter the names separated by semicolon (;), otherwise hit enter:').split(';'))
-
-        not_valid_zones = []
-        for i in level_excluded_zones:
-            if i not in occupied_zone_list:
-                not_valid_zones.append(i)
-        while len(not_valid_zones) > 0:
-            print('The following excluded zones do not exist:')
-            print(*not_valid_zones, sep='\n')
-            print('The zones you can exclude from level computations are:')
-            print(*occupied_zone_list, sep='\n')
-            level_excluded_zones = [i for i in level_excluded_zones if i not in not_valid_zones]
-            level_excluded_zones = list(i for i in input('If you want to exclude some zones from level computations, please enter the names separated by semicolon (;), otherwise hit enter:').split(';'))
+        if not(level_excluded_zones[0] == ''):
             not_valid_zones = []
             for i in level_excluded_zones:
                 if i not in occupied_zone_list:
                     not_valid_zones.append(i)
+            while len(not_valid_zones) > 0:
+                print('The following excluded zones do not exist:')
+                print(*not_valid_zones, sep='\n')
+                print('The zones you can exclude from level computations are:')
+                print(*occupied_zone_list, sep='\n')
+                level_excluded_zones = [i for i in level_excluded_zones if i not in not_valid_zones]
+                level_excluded_zones = list(i for i in input('If you want to exclude some zones from level computations, please enter the names separated by semicolon (;), otherwise hit enter:').split(';'))
+                not_valid_zones = []
+                for i in level_excluded_zones:
+                    if i not in occupied_zone_list:
+                        not_valid_zones.append(i)
 
         if len(level_excluded_zones) == 0:
             print('No zones have been excluded from level computations.')
+        elif len(level_excluded_zones) == 1:
+            if level_excluded_zones[0] == '':
+                print('No zones have been excluded from level computations.')
 
         if any('block' in i for i in level):
             for output in outputdict:
