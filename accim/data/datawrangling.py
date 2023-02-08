@@ -1077,9 +1077,12 @@ class Table:
                     df.columns = [k.replace(j, i+'_'+j) for k in df.columns]
                     # df.columns = [k.replace(j.upper().replace(' ', '_'), i + '_' + j) for k in df.columns]
 
+            print('Finally, the occupied zones after renaming them following the pattern block_zone are:')
             occupied_zone_list = []
             for i in hierarchy_dict:
-                occupied_zone_list.extend(hierarchy_dict[i])
+                for j in hierarchy_dict[i]:
+                    occupied_zone_list.append(f'{i}_{j}')
+                    print(f'{i}_{j}')
 
 
 
@@ -1113,7 +1116,10 @@ class Table:
 
         # Step: scanning blocks for block_list
         if len(block_list) == 0:
-            block_list = [i.split(':')[0] for i in occupied_zone_list]
+            if all([j == 2 for j in [i.count(':') for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]):
+                block_list = [i.split(':')[0] for i in occupied_zone_list]
+            elif all([j == 1 for j in [i.count(':') for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]):
+                block_list = [i.split('_')[0] for i in occupied_zone_list]
             block_list = list(dict.fromkeys(block_list))
 
         # Step: renaming all columns containing BlockX_ZoneX patterns to BlockX:ZoneX.
@@ -1147,7 +1153,7 @@ class Table:
         }
         for output in BZoutputDict:
             for block_zone in hvac_zone_list:
-                df[f'{block_zone}' + '_' + BZoutputDict[output].upper() + ' (summed)_pymod'] = df[
+                df[f'{block_zone}' + '_' + BZoutputDict[output] + ' (summed)_pymod'] = df[
                     [i for i in df.columns
                      if block_zone.lower() in i.lower() and output in i and '_pymod' not in i]
                 ].sum(axis=1)
@@ -1193,6 +1199,25 @@ class Table:
             print(hvac_zone_list)
             level_excluded_zones = list(i for i in input('If you want to exclude some zones from level computations, please enter the names separated by semicolon (;), otherwise hit enter:').split(';'))
 
+        not_valid_zones = []
+        for i in level_excluded_zones:
+            if i not in occupied_zone_list:
+                not_valid_zones.append(i)
+        while len(not_valid_zones) > 0:
+            print('The following excluded zones do not exist:')
+            print(*not_valid_zones, sep='\n')
+            print('The zones you can exclude from level computations are:')
+            print(*occupied_zone_list, sep='\n')
+            level_excluded_zones = [i for i in level_excluded_zones if i not in not_valid_zones]
+            level_excluded_zones = list(i for i in input('If you want to exclude some zones from level computations, please enter the names separated by semicolon (;), otherwise hit enter:').split(';'))
+            not_valid_zones = []
+            for i in level_excluded_zones:
+                if i not in occupied_zone_list:
+                    not_valid_zones.append(i)
+
+        if len(level_excluded_zones) == 0:
+            print('No zones have been excluded from level computations.')
+
         if any('block' in i for i in level):
             for output in outputdict:
                 for block in block_list:
@@ -1214,7 +1239,6 @@ class Table:
                                 [i for i in df.columns
                                  if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower()]
                             ].mean(axis=1)
-        print('checkpoint')
         if any('building' in i for i in level):
             for output in outputdict:
                 if any('sum' in j for j in level_sum_or_mean):
@@ -1312,7 +1336,7 @@ class Table:
         )
 
         # Step: splitting and managing column names
-        fixed_columns = [
+        fixed_columns_orig = [
             'Model',
             'ComfStand',
             'Category',
@@ -1326,7 +1350,7 @@ class Table:
             'NameSuffix',
             'EPW'
         ]
-        fixed_columns = [i.upper() for i in fixed_columns]
+        fixed_columns = [i.upper() for i in fixed_columns_orig]
 
         df[fixed_columns] = df['SOURCE'].str.split('[', expand=True)
 
@@ -1680,9 +1704,20 @@ class Table:
                     'Minimum Outdoor Temperature for ventilation (°C)',
                 'Whole Building:Facility Total HVAC Electricity Demand Rate':
                     'Whole Building Facility Total HVAC Electricity Demand Rate',
+
             }
 
             all_cols_renamed = {}
+
+            all_cols_renamed.update({'SOURCE': 'Source'})
+
+            for i in fixed_columns_orig:
+                all_cols_renamed.update({i.upper(): i})
+
+            all_cols_renamed.update({'COUNT': 'Count'})
+
+            for i in cols_date:
+                all_cols_renamed.update({i.upper(): i.capitalize()})
 
             for col in df.columns:
                 for crit in renaming_criteria_bz:
@@ -1696,19 +1731,6 @@ class Table:
                                     else:
                                         temp = {col: block_zone + '_' + renaming_criteria_bz[crit]}
                                         all_cols_renamed.update(temp)
-
-                    #todo parece que solo hay que renombrar Block_zone_total energy demand y ordenar por orden aflabéico por la columna de consumo que se desordena
-
-                    # elif '(summed)' in col or '(mean)' in col:
-                    #     if crit.upper() in col.upper():
-                    #         for block in block_list:
-                    #             if block + '_Total' in col:
-                    #                 if energy_units.upper() in col.upper():
-                    #                     temp = {col: block + '_Total_' + renaming_criteria_bz[crit] + ' ' + energy_units}
-                    #                     all_cols_renamed.update(temp)
-                    #                 else:
-                    #                     temp = {col: block + '_Total_' + renaming_criteria_bz[crit]}
-                    #                     all_cols_renamed.update(temp)
 
             for col in df.columns:
                 for crit in renaming_criteria:
@@ -1731,7 +1753,7 @@ class Table:
             for col in df.columns:
                 for crit in renaming_criteria_block:
                     for block in block_list:
-                        if block.upper() + '_Total_'.upper() + crit.upper() in col:
+                        if block.upper() + '_Total_'.upper() + crit.upper() in col.upper():
                             if '(summed)' in col:
                                 temp = {col: f'{block}_Total_{renaming_criteria_block[crit]} {energy_units} (summed)'}
                                 all_cols_renamed.update(temp)
