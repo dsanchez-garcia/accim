@@ -391,43 +391,59 @@ class rename_epw_files:
         amendments_list = sorted(amendments_list)
 
         if len(amendments_list) > 0:
-            for i in amendments_list:
-                location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
-                try:
-                    epw_df.loc[i, 'EPW_mod_filtered'].append(str(unidecode(location.raw['address']['city_district'])))
-                except KeyError:
-                    # print(f'The city district field is not available for file {epw_df.loc[i, "EPW_names"]}')
-                    pass
-                try:
-                    epw_df.loc[i, 'EPW_mod_filtered'].append(str(unidecode(location.raw['address']['city'])))
-                except KeyError:
-                    # print(f'The city field is not available for file {epw_df.loc[i, "EPW_names"]}')
-                    pass
+            manually_rename = input('If you rename them manually, the process will be faster than searching the geolocation. '
+                                    'Please enter "y" to rename them manually, or "n" to proceed with the geolocation: ')
+            if manually_rename == 'n':
+                for i in amendments_list:
+                    location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
+                    try:
+                        epw_df.loc[i, 'EPW_mod_filtered'].append(str(unidecode(location.raw['address']['city_district'])))
+                    except KeyError:
+                        # print(f'The city district field is not available for file {epw_df.loc[i, "EPW_names"]}')
+                        pass
+                    try:
+                        epw_df.loc[i, 'EPW_mod_filtered'].append(str(unidecode(location.raw['address']['city'])))
+                    except KeyError:
+                        # print(f'The city field is not available for file {epw_df.loc[i, "EPW_names"]}')
+                        pass
 
-                try:
-                    epw_df.loc[i, 'EPW_mod_filtered'].append(str(unidecode(location.raw['address']['municipality'])))
-                except KeyError:
-                    # print(f'The municipality is not available for file {epw_df.loc[i, "EPW_names"]}')
-                    pass
+                    try:
+                        epw_df.loc[i, 'EPW_mod_filtered'].append(str(unidecode(location.raw['address']['municipality'])))
+                    except KeyError:
+                        # print(f'The municipality is not available for file {epw_df.loc[i, "EPW_names"]}')
+                        pass
 
-                epw_df.loc[i, 'location_address'] = str(location.address)
+                    epw_df.loc[i, 'location_address'] = str(location.address)
 
         if len(amendments_list) > 0:
             epw_df['amended_city_or_subcountry'] = 'temp'
-            for i in amendments_list:
-                print(f'\nRegarding the file ID: {i} / old name: {epw_df.loc[i, "EPW_names"]} / new name: {epw_df.loc[i, "EPW_new_names"]}, the available options for city or subcountry are:')
-                print(epw_df.loc[i, "EPW_mod_filtered"])
-                print("If you haven't found yet the correct city or subcountry, it may be in the following address:")
-                print(epw_df.loc[i, "location_address"])
-                epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter the amended city or subcountry, which must be unique: ').replace(' ', '-')
-                # todo check again if there are repeated combinations EPW_country-EPW_city_or_subcountry
-                temp_name = f'{epw_df.loc[i, "EPW_country"]}_{epw_df.loc[i, "amended_city_or_subcountry"]}_{epw_df.loc[i, "EPW_scenario_year"]}'
-                epw_df.loc[i, 'EPW_new_names'] = temp_name
-                while list(epw_df['EPW_new_names']).count(temp_name) > 1:
-                    print(f"{epw_df.loc[i, 'EPW_new_names']} already exists in the EPW file list, therefore you need to select a different city or subcountry name.")
-                    epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter again the amended city or subcountry, which must be unique: ').replace(' ', '-')
+            if manually_rename == 'n':
+                for i in amendments_list:
+                    print(f'\nRegarding the file ID: {i} / old name: {epw_df.loc[i, "EPW_names"]} / new name: {epw_df.loc[i, "EPW_new_names"]}, the available options for city or subcountry are:')
+                    print(epw_df.loc[i, "EPW_mod_filtered"])
+                    print("If you haven't found yet the correct city or subcountry, it may be in the following address:")
+                    print(epw_df.loc[i, "location_address"])
+                    epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter the amended city or subcountry, which must be unique: ').replace(' ', '-')
                     temp_name = f'{epw_df.loc[i, "EPW_country"]}_{epw_df.loc[i, "amended_city_or_subcountry"]}_{epw_df.loc[i, "EPW_scenario_year"]}'
                     epw_df.loc[i, 'EPW_new_names'] = temp_name
+                    while list(epw_df['EPW_new_names']).count(temp_name) > 1:
+                        print(f"{epw_df.loc[i, 'EPW_new_names']} already exists in the EPW file list, therefore you need to select a different city or subcountry name.")
+                        epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter again the amended city or subcountry, which must be unique: ').replace(' ', '-')
+                        temp_name = f'{epw_df.loc[i, "EPW_country"]}_{epw_df.loc[i, "amended_city_or_subcountry"]}_{epw_df.loc[i, "EPW_scenario_year"]}'
+                        epw_df.loc[i, 'EPW_new_names'] = temp_name
+
+            elif manually_rename == 'y':
+                for i in amendments_list:
+                    print(f'\nRegarding the file ID: {i} / old name: {epw_df.loc[i, "EPW_names"]} / new name: {epw_df.loc[i, "EPW_new_names"]}')
+                    epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter the amended city or subcountry, which must be unique: ').replace(' ', '-')
+                    temp_name = f'{epw_df.loc[i, "EPW_country"]}_{epw_df.loc[i, "amended_city_or_subcountry"]}_{epw_df.loc[i, "EPW_scenario_year"]}'
+                    epw_df.loc[i, 'EPW_new_names'] = temp_name
+                    # todo check again if there are repeated combinations EPW_country-EPW_city_or_subcountry
+                    while list(epw_df['EPW_new_names']).count(temp_name) > 1:
+                        print(f"{epw_df.loc[i, 'EPW_new_names']} already exists in the EPW file list, therefore you need to select a different city or subcountry name.")
+                        epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter again the amended city or subcountry, which must be unique: ').replace(' ', '-')
+                        temp_name = f'{epw_df.loc[i, "EPW_country"]}_{epw_df.loc[i, "amended_city_or_subcountry"]}_{epw_df.loc[i, "EPW_scenario_year"]}'
+                        epw_df.loc[i, 'EPW_new_names'] = temp_name
 
             print('\nThe previous and new names of the EPW files after city or subcountry name amendments and their unique IDs are:')
             for i in amendments_list:
