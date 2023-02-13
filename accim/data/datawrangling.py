@@ -132,7 +132,7 @@ class rename_epw_files:
 
         rcpdict = {
             'Present': ['Presente', 'Actual', 'Present', 'Current'],
-            'RCP26': ['RCP2.6', 'RCP26'],
+            'RCP26': ['RCP2.6', 'RCP26', 'RCP2.5', 'RCP25'],
             'RCP45': ['RCP4.5', 'RCP45'],
             'RCP60': ['RCP6.0', 'RCP60'],
             'RCP85': ['RCP8.5', 'RCP85']
@@ -143,7 +143,10 @@ class rename_epw_files:
                 for k in rcpdict[j]:
                     if k.lower() in epw_df.loc[i, 'EPW_names'].lower():
                         epw_df.loc[i, 'EPW_scenario'] = j
-                        epw_df.loc[i, 'EPW_mod_filtered'].remove([x for x in epw_df.loc[i, 'EPW_mod_filtered'] if x.lower() in k.lower()][0])
+                        try:
+                            epw_df.loc[i, 'EPW_mod_filtered'].remove([x for x in epw_df.loc[i, 'EPW_mod_filtered'] if x.lower() in k.lower()][0])
+                        except IndexError:
+                            continue
 
         rcp_not_found_list = []
 
@@ -164,8 +167,12 @@ class rename_epw_files:
         for i in range(len(epw_df['EPW_names'])):
             for j in range(2000, 2101, 10):
                 if str(j) in epw_df.loc[i, 'EPW_names']:
-                    epw_df.loc[i, 'EPW_year'] = str(j)
-                    epw_df.loc[i, 'EPW_mod_filtered'].remove(str(j))
+                    try:
+                        epw_df.loc[i, 'EPW_year'] = str(j)
+                        epw_df.loc[i, 'EPW_mod_filtered'].remove(str(j))
+                    except ValueError:
+                        continue
+                        # print('Year has nt ben identified.')
 
         for i in range(len(epw_df['EPW_names'])):
             if epw_df.loc[i, 'EPW_scenario'] == 'Present':
