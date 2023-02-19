@@ -508,7 +508,7 @@ def inputData(self, ScriptType: str = None):
                         print('          The minimum temperature difference number is not correct. It must be a number larger than 0 and smaller than the maximum temperature difference number. Please enter the number again.')
                         self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
 
-            self.MultiplierVOF = float(input('Enter the multiplier number for Ventilation Opening Factor (any number larger than 0): '))
+            self.MultiplierVOF = float(input('Enter the multiplier number for Ventilation Opening Factor (any number between 0 and 1): '))
             while self.MultiplierVOF < 0 or self.MultiplierVOF > 1:
                 print('          The multiplier number is not correct. It must be a number between 0 and 1. Please enter the number again.')
                 self.MultiplierVOF = float(input('         Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
