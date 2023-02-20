@@ -2116,9 +2116,9 @@ class Table:
 
             wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['col_to_pivot'], axis=1)
             self.indexcols.remove('col_to_pivot')
-            wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['SOURCE'], axis=1)
+            wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['Source'], axis=1)
             try:
-                self.indexcols.remove('SOURCE')
+                self.indexcols.remove('Source')
             except ValueError:
                 print('Since this is not the first time you run wrangled_table, '
                       '"Source" is trying to be removed from indexcols, but has been previously removed.')
