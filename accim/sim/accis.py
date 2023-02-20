@@ -179,20 +179,22 @@ def addAccis(
 
     print(
         '\n--------------------------------------------------------'
-        '\nAdaptive-Comfort-Control-Implemented Model (ACCIM) v0.6.2'
+        '\nAdaptive-Comfort-Control-Implemented Model (ACCIM)'
         '\n--------------------------------------------------------'
         '\n\nThis tool allows to apply adaptive setpoint temperatures. '
         '\nFor further information, please read the documentation: '
         '\nhttps://accim.readthedocs.io/en/master/'
         '\nFor a visual understanding of the tool, please visit the following jupyter notebooks:'
-        '\nUsing addAccis() to apply adaptive setpoint temperatures'
+        '\n-    Using addAccis() to apply adaptive setpoint temperatures'
         '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb'
-        '\nUsing rename_epw_files() to rename the EPWs for proper data analysis after simulation'
+        '\n-    Using rename_epw_files() to rename the EPWs for proper data analysis after simulation'
         '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb'
-        '\nUsing runEp() to directly run simulations with EnergyPlus'
+        '\n-    Using runEp() to directly run simulations with EnergyPlus'
         '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb'
-        '\nUsing the class Table() for data analysis'
+        '\n-    Using the class Table() for data analysis'
         '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb'
+        '\n'
+        '\nStarting with the process.'
     )
 
     if all(objArgsDef):

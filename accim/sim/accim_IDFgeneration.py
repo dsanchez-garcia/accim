@@ -386,7 +386,7 @@ def inputData(self, ScriptType: str = None):
         "80 = 80% ACCEPT;\n"
         "85 = 85% ACCEPT;\n"
         "90 = 90% ACCEPT;\n"
-        "Please refer to the full list of setpoint temperatures at https://raw.githubusercontent.com/dsanchez-garcia/accim/master/docs/images/full_table.png\n"
+        "Please refer to the full list of setpoint temperatures at https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html\n"
         "): ").split())
     while len(self.CAT_List) == 0 or not all(elem in fullCATlist for elem in self.CAT_List):
         print('          Category numbers are not correct. Please enter the numbers again.')
@@ -407,7 +407,7 @@ def inputData(self, ScriptType: str = None):
         "Enter the Comfort Mode numbers separated by space (\n"
         # "0 = Static;\n"
         # "1, 2, 3 = Adaptive;\n"
-        "Please refer to the full list of setpoint temperatures at https://raw.githubusercontent.com/dsanchez-garcia/accim/master/docs/images/full_table.png\n"
+        "Please refer to the full list of setpoint temperatures at https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html\n"
         "): ").split())
     while len(self.ComfMod_List) == 0 or not all(elem in fullComfModList for elem in self.ComfMod_List):
         print('          Comfort Mode numbers are not correct. Please enter the numbers again.')
