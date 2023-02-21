@@ -12,7 +12,7 @@ Say you have an IDF in some folder, called 'TestModel_onlyGeometryForVRFsystem_2
 When we hit enter, we'll be asked to enter some information regarding the ScriptType, the Outputs and the EnergyPlus version:
 ```
 --------------------------------------------------------
-Adaptive-Comfort-Control-Implemented Model (ACCIM) v0.6.2
+Adaptive-Comfort-Control-Implemented Model (ACCIM)
 --------------------------------------------------------
 
 This tool allows to apply adaptive setpoint temperatures.
@@ -141,7 +141,7 @@ Enter the Category numbers separated by space (
 80 = 80% ACCEPT;
 85 = 85% ACCEPT;
 90 = 90% ACCEPT;
-Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png
+Please refer to the full list of setpoint temperatures at https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html
 ): 2 3 85 90
           Are you sure the numbers are correct? [y or [] / n]: 
 
@@ -163,7 +163,7 @@ For the comfort standard 7 = IND IMAC C NV, the available ComfMods you can choos
 Enter the Comfort Mode numbers separated by space (
 0 = Static;
 1, 2, 3 = Adaptive;
-Please refer to the full list of setpoint temperatures at https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png
+Please refer to the full list of setpoint temperatures at https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html
 ): 0 3
           Are you sure the numbers are correct? [y or [] / n]: 
           

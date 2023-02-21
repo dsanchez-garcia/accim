@@ -30,20 +30,20 @@ And then, you just need to call the accis function:
 Then you'll be asked in the prompt to enter some information so that python knows how do you want to set up the output IDFs:
 ```
 --------------------------------------------------------
-Adaptive-Comfort-Control-Implemented Model (ACCIM) v0.6.2
+Adaptive-Comfort-Control-Implemented Model (ACCIM)
 --------------------------------------------------------
 
-This tool allows to apply adaptive setpoint temperatures.
-For further information, please read the documentation:
+This tool allows to apply adaptive setpoint temperatures. 
+For further information, please read the documentation: 
 https://accim.readthedocs.io/en/master/
 For a visual understanding of the tool, please visit the following jupyter notebooks:
-Using addAccis() to apply adaptive setpoint temperatures
+-    Using addAccis() to apply adaptive setpoint temperatures
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb
-Using rename_epw_files() to rename the EPWs for proper data analysis after simulation
+-    Using rename_epw_files() to rename the EPWs for proper data analysis after simulation
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
-Using runEp() to directly run simulations with EnergyPlus
+-    Using runEp() to directly run simulations with EnergyPlus
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
-Using the class Table() for data analysis
+-    Using the class Table() for data analysis
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
 
 Now, you are going to be asked to enter some information for different arguments to generate the output IDFs with adaptive setpoint temperatures.
@@ -165,9 +165,9 @@ Each argument is explained below:
 | 19            | MEX Oropeza Temperate | Mexico    | I. Oropeza-Perez, A.H. Petzold-Rodriguez, C. Bonilla-Lopez, Adaptive   thermal comfort in the main Mexican climate conditions with and without   passive cooling, Energy and Buildings. 145 (2017) 251–258.   https://doi.org/10.1016/j.enbuild.2017.04.031.                                                                                                                                                                |
 | 20            | MEX Oropeza HumTropic | Mexico    | I. Oropeza-Perez, A.H. Petzold-Rodriguez, C. Bonilla-Lopez, Adaptive   thermal comfort in the main Mexican climate conditions with and without   passive cooling, Energy and Buildings. 145 (2017) 251–258.   https://doi.org/10.1016/j.enbuild.2017.04.031.                                                                                                                                                                |
 | 21            | CHL Perez-Fargallo    | Chile     | A. Pérez-Fargallo, J.A. Pulido-Arcas, C. Rubio-Bellido, M. Trebilcock, B.   Piderit, S. Attia, Development of a new adaptive comfort model for low income   housing in the central-south of chile, Energy Build. 178 (2018) 94–106.   https://doi.org/10.1016/j.enbuild.2018.08.030.                                                                                                                                        |
-- CAT: refers to the category of the thermal comfort model applied. Most of the Comfort Standards work with 80 and 90% acceptability levels, except the European EN 16798-1 (works with Categories 1, 2 and 3), the Chinese GB/T 50785 (works with categories 1 and 2), and the India Model for Adaptive Comfort - Commercial (which works with 80, 85 and 90% acceptability levels). So, for example, if you are going to use the EN16798-1 (ComfStand = 1), you can enter '1 2 3' to generate setpoint temperatures for Categories 1, 2 and 3. Or, if you are going to use the IMAC Commercial in naturally ventilated mode (ComfStand = 7), you can enter '80 85 90' to generate setpoint temperatures for these acceptability levels. All categories are referenced in the [full list of setpoint temperatures](https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png) at the end of this section. Please note that the Category values must be consistent with the Comfort Standard values previously entered. If, for instance, you enter '1' in the Comfort Standard value (means you're asking for EN16798 model), but then enter '80' or '90' in the Category value (which are categories used in ASHRAE55), you won't get the results you want.
+- CAT: refers to the category of the thermal comfort model applied. Most of the Comfort Standards work with 80 and 90% acceptability levels, except the European EN 16798-1 (works with Categories 1, 2 and 3), the Chinese GB/T 50785 (works with categories 1 and 2), and the India Model for Adaptive Comfort - Commercial (which works with 80, 85 and 90% acceptability levels). So, for example, if you are going to use the EN16798-1 (ComfStand = 1), you can enter '1 2 3' to generate setpoint temperatures for Categories 1, 2 and 3. Or, if you are going to use the IMAC Commercial in naturally ventilated mode (ComfStand = 7), you can enter '80 85 90' to generate setpoint temperatures for these acceptability levels. All categories are referenced in the [full list of setpoint temperatures](https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html) at the end of this section. Please note that the Category values must be consistent with the Comfort Standard values previously entered. If, for instance, you enter '1' in the Comfort Standard value (means you're asking for EN16798 model), but then enter '80' or '90' in the Category value (which are categories used in ASHRAE55), you won't get the results you want.
 
-- ComfMod: is the Comfort Mode, and refers to the comfort modes used in accim. It controls if the setpoints are PMV-based (when ComfMod = 0) or adaptive (when ComfMod = 1, 2 or 3). When they are adaptive, it also controls the comfort model applied when the adaptive model is not applicable (that is, when the running mean outdoor temperature limits are exceeded), in which case a PMV-based model is applied. Each ComfMod for each ComfStand and CAT is referenced at the [full list of setpoint temperatures](https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png). Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Figure below shows the variation of setpoint temperatures when ComfMod 0 (upper left), 1 (upper right), 2 (lower left) and 3 (lower right), when ComfStand is 1 (EN 16798-1, although figure shows the superseded standard, but the setpoint behaviour is similar)
+- ComfMod: is the Comfort Mode, and refers to the comfort modes used in accim. It controls if the setpoints are PMV-based (when ComfMod = 0) or adaptive (when ComfMod = 1, 2 or 3). When they are adaptive, it also controls the comfort model applied when the adaptive model is not applicable (that is, when the running mean outdoor temperature limits are exceeded), in which case a PMV-based model is applied. Each ComfMod for each ComfStand and CAT is referenced at the [full list of setpoint temperatures](https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html). Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Figure below shows the variation of setpoint temperatures when ComfMod 0 (upper left), 1 (upper right), 2 (lower left) and 3 (lower right), when ComfStand is 1 (EN 16798-1, although figure shows the superseded standard, but the setpoint behaviour is similar)
 
 ![ComfMod](https://www.mdpi.com/energies/energies-12-01498/article_deploy/html/images/energies-12-01498-g002.png)
 
@@ -230,7 +230,7 @@ If some inputs are not used or don't make sense, you'll be able to se an 'X' in 
 ## Full list of setpoint temperatures
 Depending on the arguments ComfStand, CAT and ComfMod, cooling and heating setpoint temperatures will be the following:
 
-(If it is too small, you can look at it also at the [Github repository](https://github.com/dsanchez-garcia/accim/blob/master/docs/images/full_table.png))
+(If it is too small, you can look at it also at the [Github repository](https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html))
 
 ![full_table.png](images/full_table.png)
 

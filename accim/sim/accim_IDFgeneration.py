@@ -358,6 +358,7 @@ def inputData(self, ScriptType: str = None):
         '19 = MEX Oropeza Temperate;\n'
         '20 = MEX Oropeza HumTropic;\n'
         '21 = CHL Perez-Fargallo;\n'
+        'Please refer to the full list of setpoint temperatures at https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html\n'
         '): '
     ).split())
     while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
