@@ -1,5 +1,5 @@
 
-![ACCIM Logo with header](docs/images/accim_logo_nohatch_w-header.svg) ![CIBSE_BSAwards](https://github.com/dsanchez-garcia/accim/blob/master/docs/images/CIBSE%20BSG%20WINNER%202022%20(610x150px).png?raw=true)
+![ACCIM Logo with header](docs/images/accim_logo_white_w-header_640x320.png) ![CIBSE_BSAwards](https://github.com/dsanchez-garcia/accim/blob/master/docs/images/CIBSE%20BSG%20WINNER%202022%20(610x150px).png?raw=true)
 
 ![PyPI](https://img.shields.io/pypi/v/accim)	![PyPI - Python Version](https://img.shields.io/pypi/pyversions/accim)	![GitHub](https://img.shields.io/github/license/dsanchez-garcia/accim)	![Read the Docs](https://img.shields.io/readthedocs/accim?color=cyan)
 
@@ -18,6 +18,12 @@ If you use this package, please cite us:
 <div class="csl-entry">Sánchez-García, D., Bienvenido-Huertas, D., &#38; Rubio-Bellido, C. (2021). Computational approach to extend the air-conditioning usage to adaptive comfort: Adaptive-Comfort-Control-Implementation Script. <i>Automation in Construction</i>, <i>131</i>, 103900. https://doi.org/10.1016/j.autcon.2021.103900</div>
 
 # 2. How to use
+
+## 2.0 Requirements
+To use accim, the following must be installed:
+- Python 3.9
+- EnergyPlus (any version between 9.1 and 22.2 those included)
+
 ## 2.1 Installation
 First of all, you need to install the package:
 
