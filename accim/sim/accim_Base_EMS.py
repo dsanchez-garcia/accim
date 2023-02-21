@@ -1541,7 +1541,7 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
             Program_Line_1052='endif',
             Program_Line_1053='endif',
             Program_Line_1054='if (ComfStand == 13) || (ComfStand == 14)',
-            Program_Line_1055='if (ComfMod == 0.1) || (ComfMod == 0.2) (ComfMod == 0.3) || (ComfMod == 0.4) || (ComfMod == 0.5)',
+            Program_Line_1055='if (ComfMod == 0.1) || (ComfMod == 0.2) || (ComfMod == 0.3) || (ComfMod == 0.4) || (ComfMod == 0.5)',
             Program_Line_1056='if (CAT==80)',
             Program_Line_1057='if (CurrentTime >6) && (CurrentTime < 12)',
             Program_Line_1058='set AHST = 20+AHSTtol',
