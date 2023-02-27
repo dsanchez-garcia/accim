@@ -1243,6 +1243,7 @@ class Table:
             print('No zones have been excluded from level computations.')
         elif len(level_excluded_zones) == 1:
             if level_excluded_zones[0] == '':
+                level_excluded_zones = []
                 print('No zones have been excluded from level computations.')
 
         if any('block' in i for i in level):
