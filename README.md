@@ -35,30 +35,23 @@ First of all, you need to install the package:
 
 ## 2.2 Usage
 
-### 2.2.1 Full example: from preparation of the input IDFs and EPWs, to simulation and data analysis and visualization
 
-You can see a Jupyter Notebook in the link below:  
-https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/full_example/full_example.ipynb
 
-You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/full_example/full_example.ipynb  
-The path should be something like this, with your username instead of YOUR_USERNAME:  
-C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\full_example\full_example.ipynb
-
-### 2.2.2 Transforming PMV-based into adaptive setpoint temperatures
+### 2.2.1 Transforming PMV-based into adaptive setpoint temperatures
 
 This is a very brief explanation of the usage. Therefore, if you don't get the results you expected or get some error, I would recommend reading the 'how to use' section at the documentation in the link below.
 
 accim will take as input IDF files those located at the same path as the script. You only need to run the following code:
 
 
-#### 2.2.2.1 Short version
+#### 2.2.1.1 Short version
 
     from accim.sim import accis
     accis.addAccis()
 
 Once you run this code, you will be asked to enter some information at the terminal or python console to generate the output IDF files.
 
-#### 2.2.2.2 Longer version
+#### 2.2.1.2 Longer version
 
     from accim.sim import accis
     accis.addAccis(
@@ -95,7 +88,7 @@ You can also execute it at your computer, at the accim package folder within you
 The path should be something like this, with your username instead of YOUR_USERNAME:  
 C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\addAccis\using_addAccis.ipynb
 
-### 2.2.3 Renaming epw files for later data analysis
+### 2.2.2 Renaming epw files for later data analysis
 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
@@ -104,7 +97,7 @@ You can also execute it at your computer, at the accim package folder within you
 The path should be something like this, with your username instead of YOUR_USERNAME:  
 C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\rename_epw_files\using_rename_epw_files.ipynb
 
-### 2.2.4 Running simulations
+### 2.2.3 Running simulations
 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
@@ -113,7 +106,7 @@ You can also execute it at your computer, at the accim package folder within you
 The path should be something like this, with your username instead of YOUR_USERNAME:  
 C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\runEp\using_runEp.ipynb
 
-### 2.2.5 Functions and methods for data analysis; making figures and tables
+### 2.2.4 Functions and methods for data analysis; making figures and tables
 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
@@ -121,6 +114,15 @@ https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_
 You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb  
 The path should be something like this, with your username instead of YOUR_USERNAME:  
 C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\Table\using_Table.ipynb
+
+### 2.2.5 Full example: from preparation of the input IDFs and EPWs, to simulation and data analysis and visualization
+
+You can see a Jupyter Notebook in the link below:  
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/full_example/full_example.ipynb
+
+You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/full_example/full_example.ipynb  
+The path should be something like this, with your username instead of YOUR_USERNAME:  
+C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\full_example\full_example.ipynb
 
 # 3. Documentation
 
