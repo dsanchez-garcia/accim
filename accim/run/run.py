@@ -121,7 +121,7 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_vers
     for i in idfnames:
         for j in epwnames:
             tempidf = IDF(i, j)
-            print(i.split('.idf')[0] + '[' + j)
+            print(i.split('.idf')[0] + '[' + j.split('.epw')[0])
             idfs.append(tempidf)
     print(f' and the No. of simulations is going to be {len(idfs)}')
     # print(idfs)
