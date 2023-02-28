@@ -2145,7 +2145,7 @@ class Table:
                         cols_to_clean.append(i)
                     else:
                         cols_for_multiindex.append(i)
-
+            # todo re-review the use of check_index_and_cols and vars_to_gather to avoid repeated rows when stacking
             if check_index_and_cols:
                 print('The multiindex should contain only the variables you want to compare. '
                       'The variables and values you are going to use for the multiindex, except those already specified in vars_to_gather argument, are:')
