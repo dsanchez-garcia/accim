@@ -97,7 +97,6 @@ class Table:
         level_sum_or_mean: list = None,
         level_excluded_zones: list = None,
         block_zone_hierarchy: dict = None,
-        match_cities: bool = False,
         manage_epw_names: bool = False,
         split_epw_names: bool = False,
         normalised_energy_units: bool = True,
@@ -130,7 +129,6 @@ class Table:
         :param level_sum_or_mean: A list of strings. Strings can be 'sum' and/or 'mean'.
         Used to create the columns for levels preciously stated by summing and/or averaging.
         :param level_excluded_zones: A list of strings. Strings must be the zones excluded from level computations.
-        :param match_cities: A bool, can be True or False.
         Used to try to match the cities in the EPW file name with actual cities.
         To be used if sample_EPWs have not been previously renamed with rename_epw_files().
         :param manage_epw_names: A bool, can be True or False.
@@ -155,6 +153,8 @@ class Table:
         Used only to check the aggregations are correct.
 
         """
+        checkpoint = 0
+
         if datasets is None:
             datasets = []
         if level_sum_or_mean is None:
@@ -501,6 +501,8 @@ class Table:
             cols = cols[-1:] + cols[:-1]
             df = df[cols]
 
+        checkpoint = checkpoint + 1
+
         # Step: checking for NaNs and not correct aggregations based on count
         is_NaN = df.isna()
         row_has_NaN = is_NaN.any(axis=1)
@@ -586,6 +588,8 @@ class Table:
         except UnboundLocalError:
             print('All rows have been correctly aggregated')
 
+        checkpoint = checkpoint + 1
+
         if concatenated_csv_name is not None:
             # df.to_excel(
             #     f'{concatenated_csv_name}'
@@ -624,6 +628,8 @@ class Table:
                     f'[Rows_not_corr_agg.csv'
                 )
             return
+
+        checkpoint = checkpoint + 1
 
         # if len(rows_with_NaN) > 0 or len(not_correct_agg) > 0:
         #     f = open(f'{concatenated_csv_name}[freq-{frequency}[frequency_sum_or_mean-{frequency_sum_or_mean}[standard_outputs-{standard_outputs}[Report.txt', "w+")
@@ -1096,75 +1102,6 @@ class Table:
 
                 df.loc[i, 'EPW_Year'] = np.nan
 
-        # Step: matching cities if requested
-        isEPWformatValid = False
-        if match_cities:
-            package_cities = datapackage.Package('https://datahub.io/core/world-cities/datapackage.json')
-            package_countries = datapackage.Package('https://datahub.io/core/country-list/datapackage.json')
-
-            # to load only tabular data_cities
-            resources_cities = package_cities.resources
-            for resource in resources_cities:
-                if resource.tabular:
-                    data_cities = pd.read_csv(resource.descriptor['path'])
-
-            resources_countries = package_countries.resources
-            for resource in resources_countries:
-                if resource.tabular:
-                    data_countries = pd.read_csv(resource.descriptor['path'])
-
-            df = df.set_index([pd.RangeIndex(len(df))])
-
-            # todo if len <1
-            data_cities['subcountry'] = data_cities['subcountry'].astype(str)
-            data_countries['Name'] = data_countries['Name'].astype(str)
-            data_countries['Code'] = data_countries['Code'].astype(str)
-
-            locations = []
-            for i in list(df['EPW_mod']):
-                for j in i:
-                    if j in rcp:
-                        continue
-                    elif j.isnumeric():
-                        continue
-                    elif len(j) <= 2:
-                        continue
-                    else:
-                        locations.append(j.lower())
-            locations = list(dict.fromkeys(locations))
-
-            data_temp_city = []
-            for i in list(data_cities['name']):
-                data_temp_city.append(i.lower())
-
-            data_temp_subcountry = []
-            for i in list(data_cities['subcountry']):
-                data_temp_subcountry.append(i.lower())
-
-            matches_city = list(set(locations).intersection(set(data_temp_city)))
-            matches_subcountry = list(set(locations).intersection(data_temp_subcountry))
-            # matches_city = list(set(locations).intersection(set(data_cities['name'].str.lower())))
-            # matches_subcountry = list(set(locations).intersection(data_cities['subcountry'].str.lower()))
-            matches = matches_subcountry + matches_city
-            matches = list(dict.fromkeys(matches))
-
-            cities_df_list = []
-
-            try:
-                for i in matches:
-                    temp_df = data_cities.query('name.str.lower() == "%s"' % i.lower())
-                    if len(temp_df) == 0:
-                        temp_df = data_cities.query('subcountry.str.lower() == "%s"' % i.lower())
-                    cities_df_list.append(temp_df)
-                cities_df = pd.concat(cities_df_list)
-                cities_df = cities_df.set_index([pd.RangeIndex(len(cities_df))])
-                cities_df['country'] = cities_df['country'].astype(str)
-                isEPWformatValid = True
-            except ValueError:
-                isEPWformatValid = False
-                print('EPW files are not correctly named')
-
-            df['EPW_CountryCode'] = df['EPW_CountryCode'].astype(str)
 
         if manage_epw_names:
             for i in range(len(df['EPW_mod'])):
@@ -1178,21 +1115,7 @@ class Table:
                     elif len(j) == 2:
                         continue
                     else:
-                        if match_cities:
-                            if isEPWformatValid:
-                                for k in range(len(cities_df)):
-                                    if df.loc[i, 'EPW_CountryCode'].lower() in cities_df.loc[k, 'country'].lower():
-                                        df.loc[i, 'EPW_Country'] = cities_df.loc[k, 'country']
-                                    if str(j).lower() in cities_df.loc[k, 'name'].lower():
-                                        df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
-                                    elif str(j).lower() in cities_df.loc[k, 'subcountry'].lower():
-                                        df.loc[i, 'EPW_City_or_subcountry'] = cities_df.loc[k, 'name']
-                                    elif str(j).isalnum():
-                                        df.loc[i, 'EPW_City_or_subcountry'] = j.upper()
-                                    else:
-                                        df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
-                        else:
-                            df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
+                        df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
 
             df = df.drop(['EPW_mod'], axis=1)
 

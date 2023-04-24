@@ -13,7 +13,6 @@ class rename_epw_files:
         :param filelist: A list of the EPW files. If omitted, it will rename all sample_EPWs in that folder.
         :param confirm_renaming: True or False, #to skip renaming confirmation on prompt command or console
         :param confirm_deletion: True or False #to skip deletion confirmation on prompt command or console
-        :param match_cities: True or False. Default is False. It takes the possible city names and checks it is in an extensive list of cities. It's computationally very expensive.
         """
         import glob
         import pandas as pd
