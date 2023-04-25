@@ -45,7 +45,7 @@ def genCSVconcatenated(
             datasets=chunklist[i],
             source_frequency=source_frequency,
             frequency=frequency,
-            frequency_sum_or_mean='sum',
+            frequency_agg_func='sum',
             standard_outputs=True,
             concatenated_csv_name=f'{concatenated_csv_name}_Part{str(i).zfill(4)}',
             drop_nan=drop_nan
@@ -85,27 +85,27 @@ def genCSVconcatenated(
 class Table:
 
     def __init__(self,
-        # path: str = None,
-        datasets: list = None,
-        source_concatenated_csv_filepath: str = None,
-        source_frequency: str = None,
-        frequency: str = None,
-        frequency_sum_or_mean: str = None,
-        standard_outputs: bool = None,
-        concatenated_csv_name: str = None,
-        level: list = None,
-        level_sum_or_mean: list = None,
-        level_excluded_zones: list = None,
-        block_zone_hierarchy: dict = None,
-        manage_epw_names: bool = False,
-        split_epw_names: bool = False,
-        normalised_energy_units: bool = True,
-        rename_cols: bool = True,
-        energy_units_in_kwh: bool = True,
-        drop_nan: bool = False,
-        name_export_rows_with_NaN: str = None,
-        name_export_rows_not_corr_agg: str = None,
-    ):
+                 # path: str = None,
+                 datasets: list = None,
+                 source_concatenated_csv_filepath: str = None,
+                 source_frequency: str = None,
+                 frequency: str = None,
+                 frequency_agg_func: str = None,
+                 standard_outputs: bool = None,
+                 concatenated_csv_name: str = None,
+                 level: list = None,
+                 level_agg_func: list = None,
+                 level_excluded_zones: list = None,
+                 block_zone_hierarchy: dict = None,
+                 manage_epw_names: bool = False,
+                 split_epw_names: bool = False,
+                 normalised_energy_units: bool = True,
+                 rename_cols: bool = True,
+                 energy_units_in_kwh: bool = True,
+                 drop_nan: bool = False,
+                 name_export_rows_with_NaN: str = None,
+                 name_export_rows_not_corr_agg: str = None,
+                 ):
         """
         Generates a table or dataframe using the EnergyPlus simulation results CSV files
         available in the current folder.
@@ -118,7 +118,7 @@ class Table:
         :param frequency: A string. Rows will be aggregated based on this frequency.
         For instance, if 'daily', hourly or timesteply rows will be aggregated in days.
         String can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
-        :param frequency_sum_or_mean: A string. Can be 'sum' or 'mean'.
+        :param frequency_agg_func: A string. Can be 'sum' or 'mean'.
         Aggregates the rows based on the defined frequency by sum or mean.
         :param standard_outputs: A bool, can be True or False.
         Used to consider only standard outputs from accim.
@@ -126,7 +126,7 @@ class Table:
         :param drop_nan: A boolean, True or False. If True, drops the rows with NaNs before exporting the CSV using concatenated_csv_name.
         :param level: A list of strings. Strings can be 'block' and/or 'building'.
         Used to create columns with block or building values.
-        :param level_sum_or_mean: A list of strings. Strings can be 'sum' and/or 'mean'.
+        :param level_agg_func: A list of strings. Strings can be 'sum' and/or 'mean'.
         Used to create the columns for levels preciously stated by summing and/or averaging.
         :param level_excluded_zones: A list of strings. Strings must be the zones excluded from level computations.
         Used to try to match the cities in the EPW file name with actual cities.
@@ -153,12 +153,13 @@ class Table:
         Used only to check the aggregations are correct.
 
         """
+        flowchart_state_in_paper = 'A'
         checkpoint = 0
 
         if datasets is None:
             datasets = []
-        if level_sum_or_mean is None:
-            level_sum_or_mean = []
+        if level_agg_func is None:
+            level_agg_func = []
         if level is None:
             level = []
         # if custom_cols is None:
@@ -214,6 +215,8 @@ class Table:
                 raise KeyError(f'Source frequency is {source_frequency}, therefore '
                                f'timestep output frequency cannot be selected.')
 
+        flowchart_state_in_paper = 'A.1'
+
         if source_concatenated_csv_filepath is not None:
             for i in source_concatenated_csv_filepath.split('['):
                 if i.split('-')[0] == 'srcfreq':
@@ -222,8 +225,8 @@ class Table:
                 if i.split('-')[0] == 'freq':
                     frequency = i.split('-')[1]
                     self.frequency = frequency
-                elif i.split('-')[0] == 'frequency_sum_or_mean':
-                    frequency_sum_or_mean = i.split('-')[1]
+                elif i.split('-')[0] == 'frequency_agg_func':
+                    frequency_agg_func = i.split('-')[1]
                 elif i.split('-')[0] == 'standard_outputs':
                     standard_outputs = i.split('-')[1]
                     if standard_outputs == 'True':
@@ -268,10 +271,14 @@ class Table:
         # are considered, otherwise all csv in the folder are considered.
         # If source_concatenated_csv_filepath is not None, then the csv path is considered to
         # build the dataframe.
+
+        flowchart_state_in_paper = 'A.2'
         if source_concatenated_csv_filepath is None:
             if len(datasets) > 0:
+                flowchart_state_in_paper = 'A.2.1'
                 source_files = datasets
             else:
+                flowchart_state_in_paper = 'A.2.2'
                 allfiles = glob.glob('*.csv', recursive=True)
                 # if path is None:
                 #     allfiles = [i for i in os.listdir() if i.endswith('.csv')]
@@ -337,6 +344,7 @@ class Table:
 
             summed_dataframes = []
 
+            flowchart_state_in_paper = 'A.3'
             for file in source_files:
 
                 # with open(file) as csv_file:
@@ -438,7 +446,7 @@ class Table:
 
                 for i in df.columns:
                     if i not in agg_dict:
-                        agg_dict.update({i: frequency_sum_or_mean})
+                        agg_dict.update({i: frequency_agg_func})
 
                 if source_frequency == 'timestep' or source_frequency == 'hourly':
                     # todo timestep frequency to be tested
@@ -594,7 +602,7 @@ class Table:
             # df.to_excel(
             #     f'{concatenated_csv_name}'
             #     f'[freq-{frequency}'
-            #     f'[frequency_sum_or_mean-{frequency_sum_or_mean}'
+            #     f'[frequency_agg_func-{frequency_agg_func}'
             #     f'[standard_outputs-{standard_outputs}'
             #     f'[CSVconcatenated.xlsx'
             # )
@@ -605,7 +613,7 @@ class Table:
                 f'{concatenated_csv_name}'
                 f'[srcfreq-{source_frequency}'
                 f'[freq-{frequency}'
-                f'[frequency_sum_or_mean-{frequency_sum_or_mean}'
+                f'[frequency_agg_func-{frequency_agg_func}'
                 f'[standard_outputs-{standard_outputs}'
                 f'[CSVconcatenated.csv'
             )
@@ -614,7 +622,7 @@ class Table:
                     f'{concatenated_csv_name}'
                     f'[srcfreq-{source_frequency}'
                     f'[freq-{frequency}'
-                    f'[frequency_sum_or_mean-{frequency_sum_or_mean}'
+                    f'[frequency_agg_func-{frequency_agg_func}'
                     f'[standard_outputs-{standard_outputs}'
                     f'[Rows_with_NaNs.csv'
                 )
@@ -623,7 +631,7 @@ class Table:
                     f'{concatenated_csv_name}'
                     f'[srcfreq-{source_frequency}'
                     f'[freq-{frequency}'
-                    f'[frequency_sum_or_mean-{frequency_sum_or_mean}'
+                    f'[frequency_agg_func-{frequency_agg_func}'
                     f'[standard_outputs-{standard_outputs}'
                     f'[Rows_not_corr_agg.csv'
                 )
@@ -632,7 +640,7 @@ class Table:
         checkpoint = checkpoint + 1
 
         # if len(rows_with_NaN) > 0 or len(not_correct_agg) > 0:
-        #     f = open(f'{concatenated_csv_name}[freq-{frequency}[frequency_sum_or_mean-{frequency_sum_or_mean}[standard_outputs-{standard_outputs}[Report.txt', "w+")
+        #     f = open(f'{concatenated_csv_name}[freq-{frequency}[frequency_agg_func-{frequency_agg_func}[standard_outputs-{standard_outputs}[Report.txt', "w+")
         #     if len(rows_with_NaN) > 0:
         #         f.write('The following rows have NaN values:\r\n')
         #         dfAsString = rows_with_NaN.to_string(header=True, index=True)
@@ -846,7 +854,7 @@ class Table:
         if any('block' in i for i in level):
             for output in outputdict:
                 for block in block_list:
-                    if any('sum' in j for j in level_sum_or_mean):
+                    if any('sum' in j for j in level_agg_func):
                         df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
                             [i for i in df.columns if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i.upper() for k in level_excluded_zones))]
                         ].sum(axis=1)
@@ -856,7 +864,7 @@ class Table:
                                 df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
                                     [i for i in df.columns if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i.upper() for k in level_excluded_zones))]
                                 ].sum(axis=1)
-                    if any('mean' in j for j in level_sum_or_mean):
+                    if any('mean' in j for j in level_agg_func):
                         if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                             continue
                         else:
@@ -866,7 +874,7 @@ class Table:
                             ].mean(axis=1)
         if any('building' in i for i in level):
             for output in outputdict:
-                if any('sum' in j for j in level_sum_or_mean):
+                if any('sum' in j for j in level_agg_func):
                     df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
                         [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].sum(axis=1)
                 else:
@@ -874,7 +882,7 @@ class Table:
                         if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                             df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
                                 [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].sum(axis=1)
-                if any('mean' in j for j in level_sum_or_mean):
+                if any('mean' in j for j in level_agg_func):
                     if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                         continue
                     else:

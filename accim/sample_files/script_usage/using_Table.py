@@ -44,10 +44,10 @@ dataset_hourly = Table(
     #datasets=list #Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly', # This lets accim know which is the frequency of the input CSVs. Input CSVs with multiple frequencies are also allowed. It can be 'hourly', 'daily', 'monthly' and 'runperiod'. It can also be 'timestep' but might generate errors.
     frequency='hourly', # If 'daily', accim will aggregate the rows in days. It can be 'hourly', 'daily', 'monthly' and 'runperiod'. It can also be 'timestep' but might generate errors.
-    frequency_sum_or_mean='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    frequency_agg_func='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
     standard_outputs=True, 
     level=['building'], # A list containing the strings 'block' and/or 'building'. For instance, if ['block', 'building'], accim will generate new columns to sum up or average in blocks and building level.
-    level_sum_or_mean=['sum', 'mean'], # A list containing the strings 'sum' and/or 'mean'. For instance, if ['sum', 'mean'], accim will generate the new columns explained in the level argument by summing and averaging.
+    level_agg_func=['sum', 'mean'], # A list containing the strings 'sum' and/or 'mean'. For instance, if ['sum', 'mean'], accim will generate the new columns explained in the level argument by summing and averaging.
     level_excluded_zones=[],
     #match_cities=bool #Only used when EPW file has NOT been previously renamed
     #manage_epw_names=bool #Only used when EPW file has NOT been previously renamed
@@ -99,7 +99,7 @@ dataset_hourly_indirect = Table(
     #datasets=list #Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly', # This lets accim know which is the frequency of the input CSVs. Input CSVs with multiple frequencies are also allowed. It can be 'hourly', 'daily', 'monthly' and 'runperiod'. It can also be 'timestep' but might generate errors.
     frequency='hourly', # If 'daily', accim will aggregate the rows in days. It can be 'hourly', 'daily', 'monthly' and 'runperiod'. It can also be 'timestep' but might generate errors.
-    frequency_sum_or_mean='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    frequency_agg_func='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
     standard_outputs=True, 
     concatenated_csv_name=concatenated_csvname #Useful when working with large datasets. It saves the output dataset to a CSV file, so you don't need to re-do some work. Afterwards, it can be imported with source_concatenated_csv_filepath argument.
     # All other arguments won't have any effect on the output. This is only to store the csv at early stage. Datawrangling will be performed later.
@@ -122,14 +122,14 @@ os.listdir()
 
 
 dataset_hourly_indirect = Table(
-    source_concatenated_csv_filepath='notebook_example[srcfreq-hourly[freq-hourly[frequency_sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv',
+    source_concatenated_csv_filepath='notebook_example[srcfreq-hourly[freq-hourly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv',
     # source_frequency='hourly', # The new source frequency is the previous already computed frequency, since we have already aggregated rows based on the previous frequency. Therefore, there is no need to specify this argument.
     # 3 arguments below have been previously specified, and in fact, are stored at the concatenated CSV filename. So you don't need to specify these again.
     # frequency='hourly',
-    # frequency_sum_or_mean='sum',
+    # frequency_agg_func='sum',
     # standard_outputs=True,
     level=['building'],
-    level_sum_or_mean=['sum', 'mean'],
+    level_agg_func=['sum', 'mean'],
     split_epw_names=True, #to split EPW names based on the format Country_City_RCPscenario-YEar
     
 )
@@ -327,10 +327,10 @@ dataset_monthly = Table(
     #datasets=list Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly',
     frequency='monthly',
-    frequency_sum_or_mean='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    frequency_agg_func='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
     standard_outputs=True,
     level=['building'],
-    level_sum_or_mean=['sum'],
+    level_agg_func=['sum'],
     #match_cities=bool Only used when EPW file has NOT been previously renamed with the function rename_epw_files
     #manage_epw_names=bool Only used when EPW file has NOT been previously renamed with the function rename_epw_files
     split_epw_names=True, #to split EPW names based on the format Country_City_RCPscenario-YEar
@@ -375,10 +375,10 @@ dataset_runperiod = Table(
     #datasets=list Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly',
     frequency='runperiod',
-    frequency_sum_or_mean='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
+    frequency_agg_func='sum', #this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
     standard_outputs=True,
     level=['building'],
-    level_sum_or_mean=['sum'],
+    level_agg_func=['sum'],
     #match_cities=bool Only used when EPW file has NOT been previously renamed
     #manage_epw_names=bool Only used when EPW file has NOT been previously renamed
     split_epw_names=True, #to split EPW names based on the format Country_City_RCPscenario-YEar
@@ -463,11 +463,11 @@ dataset_runperiod_simplified_1 = Table(
     datasets=dataset,
     source_frequency='hourly',
     frequency='runperiod',
-    frequency_sum_or_mean='sum',
+    frequency_agg_func='sum',
     # this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won't make any aeffect
     standard_outputs=True,
     level=['building'],
-    level_sum_or_mean=['sum'],
+    level_agg_func=['sum'],
     # match_cities=bool Only used when EPW file has NOT been previously renamed
     # manage_epw_names=bool Only used when EPW file has NOT been previously renamed
     split_epw_names=True,  # to split EPW names based on the format Country_City_RCPscenario-YEar
