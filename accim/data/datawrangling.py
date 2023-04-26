@@ -97,7 +97,7 @@ class Table:
                  level_agg_func: list = None,
                  level_excluded_zones: list = None,
                  block_zone_hierarchy: dict = None,
-                 manage_epw_names: bool = False,
+                 # manage_epw_names: bool = False,
                  split_epw_names: bool = False,
                  normalised_energy_units: bool = True,
                  rename_cols: bool = True,
@@ -819,7 +819,7 @@ class Table:
             'Zone Thermal Comfort Fanger Model PMV': 'PMV',
             'Zone Thermal Comfort Fanger Model PPD': 'PPD (%)'
         }
-
+        # todo paper aqui
         if level_excluded_zones is None:
             print('The occupied zones are:')
             print(occupied_zone_list)
@@ -1074,58 +1074,58 @@ class Table:
         df = df.set_index([pd.RangeIndex(len(df))])
 
         # Step: managing EPW names if requested
-        if manage_epw_names:
-            rcpdict = {
-                'Present': ['Presente', 'Actual', 'Present', 'Current'],
-                'RCP2.6': ['RCP2.6', 'RCP26'],
-                'RCP4.5': ['RCP4.5', 'RCP45'],
-                'RCP6.0': ['RCP6.0', 'RCP60'],
-                'RCP8.5': ['RCP8.5', 'RCP85']
-            }
-
-            rcp = []
-            for i in rcpdict:
-                for j in range(len(rcpdict[i])):
-                    rcp.append(rcpdict[i][j])
-
-            rcp_present = []
-            for i in rcpdict['Present']:
-                rcp_present.append(i)
-
-            df['EPW_mod'] = df['EPW'].str.split('_')
-
-            for i in range(len(df['EPW_mod'])):
-                for j in df.loc[i, 'EPW_mod']:
-                    if len(j) == 2:
-                        df.loc[i, 'EPW_CountryCode'] = j
-                    else:
-                        df.loc[i, 'EPW_CountryCode'] = np.nan
-
-                    for k in rcpdict:
-                        for m in range(len(rcpdict[k])):
-                            if j in rcpdict[k][m]:
-                                df.loc[i, 'EPW_Scenario'] = k
-                            else:
-                                df.loc[i, 'EPW_Scenario'] = np.nan
-
-                df.loc[i, 'EPW_Year'] = np.nan
-
-
-        if manage_epw_names:
-            for i in range(len(df['EPW_mod'])):
-                for j in df.loc[i, 'EPW_mod']:
-                    if j in rcp_present:
-                        df.loc[i, 'EPW_Year'] = 'Present'
-                    elif j in rcp:
-                        continue
-                    elif j.isnumeric():
-                        df.loc[i, 'EPW_Year'] = int(j)
-                    elif len(j) == 2:
-                        continue
-                    else:
-                        df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
-
-            df = df.drop(['EPW_mod'], axis=1)
+        # if manage_epw_names:
+        #     rcpdict = {
+        #         'Present': ['Presente', 'Actual', 'Present', 'Current'],
+        #         'RCP2.6': ['RCP2.6', 'RCP26'],
+        #         'RCP4.5': ['RCP4.5', 'RCP45'],
+        #         'RCP6.0': ['RCP6.0', 'RCP60'],
+        #         'RCP8.5': ['RCP8.5', 'RCP85']
+        #     }
+        #
+        #     rcp = []
+        #     for i in rcpdict:
+        #         for j in range(len(rcpdict[i])):
+        #             rcp.append(rcpdict[i][j])
+        #
+        #     rcp_present = []
+        #     for i in rcpdict['Present']:
+        #         rcp_present.append(i)
+        #
+        #     df['EPW_mod'] = df['EPW'].str.split('_')
+        #
+        #     for i in range(len(df['EPW_mod'])):
+        #         for j in df.loc[i, 'EPW_mod']:
+        #             if len(j) == 2:
+        #                 df.loc[i, 'EPW_CountryCode'] = j
+        #             else:
+        #                 df.loc[i, 'EPW_CountryCode'] = np.nan
+        #
+        #             for k in rcpdict:
+        #                 for m in range(len(rcpdict[k])):
+        #                     if j in rcpdict[k][m]:
+        #                         df.loc[i, 'EPW_Scenario'] = k
+        #                     else:
+        #                         df.loc[i, 'EPW_Scenario'] = np.nan
+        #
+        #         df.loc[i, 'EPW_Year'] = np.nan
+        #
+        #
+        # if manage_epw_names:
+        #     for i in range(len(df['EPW_mod'])):
+        #         for j in df.loc[i, 'EPW_mod']:
+        #             if j in rcp_present:
+        #                 df.loc[i, 'EPW_Year'] = 'Present'
+        #             elif j in rcp:
+        #                 continue
+        #             elif j.isnumeric():
+        #                 df.loc[i, 'EPW_Year'] = int(j)
+        #             elif len(j) == 2:
+        #                 continue
+        #             else:
+        #                 df.loc[i, 'EPW_City_or_subcountry'] = j.capitalize()
+        #
+        #     df = df.drop(['EPW_mod'], axis=1)
 
         # Step: re-ordering the columns
         # cols = df.columns.tolist()
