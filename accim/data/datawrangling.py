@@ -1531,7 +1531,7 @@ class Table:
         :param vars_to_gather: A list of the variables to be transposed from rows to columns.
         :param baseline: The already transposed column you want to use as a baseline for comparisons.
         If omitted, you will be asked which one to use.
-        :param comparison_mode: A string. Can be 'other compared to baseline' or 'baseline compared to others'. Used to customise the comparison of variables.
+        :param comparison_mode: A string. Can be 'others compared to baseline' or 'baseline compared to others'. Used to customise the comparison of variables.
         :param comparison_cols: A list of strings. 'absolute' to get the difference or 'relative' to get the percentage of reduction.
         :param check_index_and_cols: A boolean. True to check index and cols, False to skip.
         :param vars_to_keep: A list of strings. To remove all variables from the multiindex except those to be kept.
