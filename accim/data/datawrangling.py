@@ -1351,10 +1351,31 @@ class Table:
                 'EPW_Scenario',
                 'EPW_Year'
             ])
+            available_vars_to_gather.remove('EPW')
 
         # todo Step: remove PMV-PPD columns if the column only have null values
 
         df = df.round(decimals=2)
+
+        cols_to_clean = []
+        cols_for_multiindex = []
+        for i in available_vars_to_gather:
+            try:
+                if (df[i][0] == df[i]).all():
+                    cols_to_clean.append(i)
+                elif len(list(set([j for j in df[i]]))) == 2 and (('_X' in list(set([j for j in df[i]]))[0]) or ('_X' in list(set([j for j in df[i]]))[1])):
+                    cols_to_clean.append(i)
+                else:
+                    cols_for_multiindex.append(i)
+            except KeyError:
+                if (df[i][0] == df[i]).all():
+                    cols_to_clean.append(i)
+                elif len(list(set([j for j in df[i]]))) == 2 and (('_X' in list(set([j for j in df[i]]))[0]) or ('_X' in list(set([j for j in df[i]]))[1])):
+                    cols_to_clean.append(i)
+                else:
+                    cols_for_multiindex.append(i)
+
+        checkpoint += 1
 
         self.hvac_zone_list = hvac_zone_list
         self.occupied_zone_list = occupied_zone_list
@@ -1633,6 +1654,8 @@ class Table:
             #
             # cols_for_values = list(set(wrangled_df_pivoted.columns) - set(cols_for_multiindex))
             #
+            # checkpoint += 1
+            #
             # wrangled_df_pivoted = wrangled_df_pivoted.pivot_table(
             #     index=cols_for_multiindex,
             #     columns='col_to_pivot',
@@ -1644,9 +1667,6 @@ class Table:
             # checkpoint += 1
             
             
-            
-
-
 
             #todo testing until here
 

@@ -16,7 +16,8 @@ dataset_runperiod = Table(
 )
 
 # dataset_runperiod.df.to_excel('using_Table_00.xlsx')
-# dataset_runperiod.df.shape
+dataset_runperiod.df.shape
+dataset_runperiod.df.columns
 
 dataset_runperiod.format_table(
     type_of_table='custom',
@@ -32,25 +33,25 @@ dataset_runperiod.format_table(
 # In[ ]:
 
 
-# for i in ['pivot', 'stack', 'unstack', 'multiindex']:
-#     dataset_runperiod.wrangled_table(
-#         reshaping=i,
-#         vars_to_gather=['ComfMod'],
-#         check_index_and_cols=True,
-#         # baseline='CM_0[CA_1',
-#         comparison_mode='baseline compared to others',
-#         comparison_cols=['relative', 'absolute']
-#     )
+for i in ['pivot', 'stack', 'unstack', 'multiindex']:
+    dataset_runperiod.wrangled_table(
+        reshaping=i,
+        vars_to_gather=['ComfMod'],
+        check_index_and_cols=True,
+        baseline='CM_3',
+        comparison_mode='baseline compared to others',
+        comparison_cols=['relative', 'absolute']
+    )
 
-dataset_runperiod.wrangled_table(
-    reshaping='pivot',
-    # vars_to_gather=['EPW_City_or_subcountry', 'ComfMod'],
-    vars_to_gather=['ComfMod'],
-    check_index_and_cols=True,
-    # baseline='CM_0[CA_1',
-    comparison_mode='baseline compared to others',
-    comparison_cols=['relative', 'absolute']
-)
+# dataset_runperiod.wrangled_table(
+#     reshaping='pivot',
+#     # vars_to_gather=['EPW_City_or_subcountry', 'ComfMod'],
+#     vars_to_gather=['ComfMod'],
+#     check_index_and_cols=True,
+#     # baseline='CM_0[CA_1',
+#     comparison_mode='baseline compared to others',
+#     comparison_cols=['relative', 'absolute']
+# )
 
 # dataset_runperiod.wrangled_table(
 #     reshaping='unstack',
