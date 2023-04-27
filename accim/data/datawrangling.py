@@ -1547,16 +1547,18 @@ class Table:
         import numpy as np
         import pandas as pd
 
-        self.df['col_to_pivot'] = 'temp'
-
-        self.indexcols.append('col_to_pivot')
 
         if reshaping == 'pivot' or reshaping == 'unstack':
             self.enter_vars_to_gather(vars_to_gather)
 
+        checkpoint = 0
+
         wrangled_df = self.df.copy()
 
         if reshaping == 'pivot':
+
+            self.df['col_to_pivot'] = 'temp'
+            self.indexcols.append('col_to_pivot')
 
             wrangled_df_pivoted = wrangled_df.copy()
             del wrangled_df
@@ -1570,12 +1572,94 @@ class Table:
 
             self.df['col_to_pivot'] = wrangled_df_pivoted['col_to_pivot']
 
+            checkpoint += 1
+
+            #todo testing from here
+
+            # todo when it is pivotted, variables not specified in vars_to_gather are summed
+            # wrangled_df_pivoted = wrangled_df_pivoted.drop(['Source'], axis=1)
+            # try:
+            #     self.indexcols.remove('Source')
+            # except ValueError:
+            #     print('Since this is not the first time you run wrangled_table, '
+            #           '"Source" is trying to be removed from indexcols, but has been previously removed.')
+            # if self.split_epw_names:
+            #     wrangled_df_pivoted = wrangled_df_pivoted.drop(['EPW', 'EPW_Scenario-Year'], axis=1)
+            #     try:
+            #         self.indexcols.remove('EPW')
+            #         self.indexcols.remove('EPW_Scenario-Year')
+            #     except ValueError:
+            #         print('Since this is not the first time you run wrangled_table, '
+            #               '"EPW" and "EPW_Scenario-Year" are trying to be removed from indexcols, but has been previously removed.')
+            #
+            #
+            # cols_to_clean = []
+            # cols_for_multiindex = []
+            # for i in self.indexcols:
+            #     try:
+            #         if (wrangled_df_pivoted[i][0] == wrangled_df_pivoted[i]).all():
+            #             cols_to_clean.append(i)
+            #         else:
+            #             cols_for_multiindex.append(i)
+            #     except KeyError:
+            #         wrangled_df_pivoted = wrangled_df_pivoted.set_index([pd.RangeIndex(len(wrangled_df_pivoted))])
+            #         if (wrangled_df_pivoted[i][0] == wrangled_df_pivoted[i]).all():
+            #             cols_to_clean.append(i)
+            #         else:
+            #             cols_for_multiindex.append(i)
+            #
+            # checkpoint += 1
+            #
+            # if check_index_and_cols:
+            #     print('The multiindex should contain only the variables you want to compare. '
+            #           'The variables and values you are going to use for the multiindex, except those already specified in vars_to_gather argument, are:')
+            #     for i in cols_for_multiindex:
+            #         if all([i not in j for j in vars_to_gather]):
+            #             print(f'{i}: {list(dict.fromkeys(wrangled_df_pivoted[i]))}')
+            #     proceed = input('If some variable is not relevant for the comparison, it should be removed. '
+            #                     'Do you want to remove any? [y/n]: ')
+            #     if 'y' in proceed:
+            #         if len(vars_to_keep) > 0:
+            #             print('The variables to keep you specified in the arguments will be overriden.')
+            #         vars_to_keep = list(str(num) for num in input("Enter the variables you want to keep separated by semicolon: ").split(';'))
+            #
+            # if len(vars_to_keep) > 0:
+            #     add_vars_to_remove = list(set(cols_for_multiindex) - set(vars_to_gather) - set(vars_to_keep))
+            #     for i in add_vars_to_remove:
+            #         cols_to_clean.append(i)
+            #         cols_for_multiindex.remove(i)
+            #
+            # wrangled_df_pivoted = wrangled_df_pivoted.drop(cols_to_clean, axis=1)
+            #
+            # cols_for_values = list(set(wrangled_df_pivoted.columns) - set(cols_for_multiindex))
+            #
+            # wrangled_df_pivoted = wrangled_df_pivoted.pivot_table(
+            #     index=cols_for_multiindex,
+            #     columns='col_to_pivot',
+            #     values=self.val_cols,
+            #     aggfunc=np.sum,
+            #     fill_value=0
+            # )
+            #
+            # checkpoint += 1
+            
+            
+            
+
+
+
+            #todo testing until here
+
+
             wrangled_df_pivoted = wrangled_df_pivoted.pivot_table(
                 index=self.indexcols.remove('col_to_pivot'),
                 columns='col_to_pivot',
                 values=self.val_cols,
+                # if aggfunc is omitted, performs the average
                 aggfunc=np.sum,
                 fill_value=0)
+
+            checkpoint += 1
 
             var_to_gather_values = list(dict.fromkeys(self.df['col_to_pivot']))
 
@@ -1630,13 +1714,14 @@ class Table:
                         )
             self.wrangled_df_pivoted = wrangled_df_pivoted
 
+            checkpoint += 1
+
         elif reshaping == 'unstack' or reshaping == 'stack' or reshaping == 'multiindex':
 
             wrangled_df_unstacked_or_stacked = wrangled_df.copy()
             del wrangled_df
 
-            wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['col_to_pivot'], axis=1)
-            self.indexcols.remove('col_to_pivot')
+            # Step: Getting rid of unnecessary columns
             wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['Source'], axis=1)
             try:
                 self.indexcols.remove('Source')
@@ -1651,6 +1736,7 @@ class Table:
                 except ValueError:
                     print('Since this is not the first time you run wrangled_table, '
                           '"EPW" and "EPW_Scenario-Year" are trying to be removed from indexcols, but has been previously removed.')
+            # removing variables where values are all the same
             cols_to_clean = []
             cols_for_multiindex = []
             for i in self.indexcols:
@@ -1665,6 +1751,9 @@ class Table:
                         cols_to_clean.append(i)
                     else:
                         cols_for_multiindex.append(i)
+
+            checkpoint += 1
+
             # todo re-review the use of check_index_and_cols and vars_to_gather to avoid repeated rows when stacking
             if check_index_and_cols:
                 print('The multiindex should contain only the variables you want to compare. '
