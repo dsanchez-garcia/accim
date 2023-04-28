@@ -1545,6 +1545,7 @@ class Table:
                        comparison_cols: list = None,
                        check_index_and_cols: bool = False,
                        vars_to_keep: list = None,
+                       excel_filename: str = None,
                        ):
         """
         Creates a table based on the arguments.
@@ -1556,7 +1557,7 @@ class Table:
         :param comparison_cols: A list of strings. 'absolute' to get the difference or 'relative' to get the percentage of reduction.
         :param check_index_and_cols: A boolean. True to check index and cols, False to skip.
         :param vars_to_keep: A list of strings. To remove all variables from the multiindex except those to be kept.
-
+        :param excel_filename: A string. If entered, the wrangled_df will be exported to excel with that string as name.
         """
         if vars_to_gather is None:
             vars_to_gather = []
@@ -1880,6 +1881,9 @@ class Table:
                 del wrangled_df_unstacked_or_stacked
 
                 print('No reshaping method has been applied, only multiindexing.')
+
+        if excel_filename is not None:
+            wrangled_df_pivoted.to_excel(f'{excel_filename}.xlsx')
 
     def enter_vars_to_gather(
             self,

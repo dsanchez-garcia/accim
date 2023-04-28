@@ -26,32 +26,33 @@ dataset_runperiod.format_table(
         'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
     ]
 )
-
-
+# dataset_runperiod.df.to_excel('using_Table_01.xlsx')
+print(*dataset_runperiod.df.columns, sep='\n')
 # In this case, we are going to use the 'pivot' reshaping option:
 
 # In[ ]:
 
 
-for i in ['pivot', 'stack', 'unstack', 'multiindex']:
-    dataset_runperiod.wrangled_table(
-        reshaping=i,
-        vars_to_gather=['ComfMod'],
-        check_index_and_cols=True,
-        baseline='CM_3',
-        comparison_mode='baseline compared to others',
-        comparison_cols=['relative', 'absolute']
-    )
+# for i in ['pivot', 'stack', 'unstack', 'multiindex']:
+#     dataset_runperiod.wrangled_table(
+#         reshaping=i,
+#         vars_to_gather=['ComfMod'],
+#         check_index_and_cols=True,
+#         baseline='CM_3',
+#         comparison_mode='baseline compared to others',
+#         comparison_cols=['relative', 'absolute'],
+#     )
 
-# dataset_runperiod.wrangled_table(
-#     reshaping='pivot',
-#     # vars_to_gather=['EPW_City_or_subcountry', 'ComfMod'],
-#     vars_to_gather=['ComfMod'],
-#     check_index_and_cols=True,
-#     # baseline='CM_0[CA_1',
-#     comparison_mode='baseline compared to others',
-#     comparison_cols=['relative', 'absolute']
-# )
+dataset_runperiod.wrangled_table(
+    reshaping='pivot',
+    # vars_to_gather=['EPW_City_or_subcountry', 'ComfMod'],
+    vars_to_gather=['ComfMod'],
+    check_index_and_cols=True,
+    # baseline='CM_0[CA_1',
+    comparison_mode='baseline compared to others',
+    comparison_cols=['relative', 'absolute'],
+    excel_filename='whatever'
+)
 
 # dataset_runperiod.wrangled_table(
 #     reshaping='unstack',
