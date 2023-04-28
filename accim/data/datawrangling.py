@@ -1386,6 +1386,9 @@ class Table:
 
         self.frequency = frequency
 
+        self.cols_to_clean = cols_to_clean
+        self.cols_for_multiindex = cols_for_multiindex
+
         # df.to_excel('checkpoint_04.xlsx')
 
         # todo pop up when process ends; by defalt True
@@ -1541,10 +1544,11 @@ class Table:
                        reshaping: str = None,
                        vars_to_gather: list = None,
                        baseline: str = None,
-                       comparison_mode: str = 'others compared to baseline',
-                       comparison_cols: list = None,
+                       comparison_mode: list = ['others compared to baseline'],
+                       comparison_cols: list = ['absolute', 'relative'],
                        check_index_and_cols: bool = False,
                        vars_to_keep: list = None,
+                       rename_dict: dict = None,
                        excel_filename: str = None,
                        ):
         """
@@ -1553,7 +1557,7 @@ class Table:
         :param vars_to_gather: A list of the variables to be transposed from rows to columns.
         :param baseline: The already transposed column you want to use as a baseline for comparisons.
         If omitted, you will be asked which one to use.
-        :param comparison_mode: A string. Can be 'others compared to baseline' or 'baseline compared to others'. Used to customise the comparison of variables.
+        :param comparison_mode: A list of strings. Can be 'others compared to baseline' and/or 'baseline compared to others'. Used to customise the comparison of variables.
         :param comparison_cols: A list of strings. 'absolute' to get the difference or 'relative' to get the percentage of reduction.
         :param check_index_and_cols: A boolean. True to check index and cols, False to skip.
         :param vars_to_keep: A list of strings. To remove all variables from the multiindex except those to be kept.
@@ -1562,12 +1566,15 @@ class Table:
         if vars_to_gather is None:
             vars_to_gather = []
         if comparison_cols is None:
-            comparison_cols = []
+            comparison_cols = ['absolute', 'relative']
         if vars_to_keep is None:
             vars_to_keep = []
 
         import numpy as np
         import pandas as pd
+
+        # todo what if no variable is entered in vars_to_gather? accim should show the variables that change, and therefore could be analysed
+        # if vars_to_gather is None:
 
 
         if reshaping == 'pivot' or reshaping == 'unstack':
@@ -1724,15 +1731,38 @@ class Table:
                         )
             else:
                 for j in other_than_baseline:
-                    if any('relative' in k for k in comparison_cols):
-                        wrangled_df_pivoted[f'1-({j}/{baseline})'] = (
-                                1 -
-                                (wrangled_df_pivoted[j] / wrangled_df_pivoted[baseline])
-                        )
-                    if any('absolute' in k for k in comparison_cols):
-                        wrangled_df_pivoted[f'{baseline} - {j}'] = (
-                                wrangled_df_pivoted[baseline] - wrangled_df_pivoted[j]
-                        )
+                    # if comparison_mode == 'others compared to baseline':
+                    if any(['others compared to baseline' in i for i in comparison_mode]):
+                        if any('relative' in k for k in comparison_cols):
+                            wrangled_df_pivoted[f'1-({j}/{baseline})'] = (
+                                    1 -
+                                    (wrangled_df_pivoted[j] / wrangled_df_pivoted[baseline])
+                            )
+                        if any('absolute' in k for k in comparison_cols):
+                            wrangled_df_pivoted[f'{baseline} - {j}'] = (
+                                    wrangled_df_pivoted[baseline] - wrangled_df_pivoted[j]
+                            )
+                    if any(['baseline compared to others' in i for i in comparison_mode]):
+                        if any('relative' in k for k in comparison_cols):
+                            wrangled_df_pivoted[f'1-({baseline}/{j})'] = (
+                                    1 -
+                                    (wrangled_df_pivoted[baseline] / wrangled_df_pivoted[j])
+                            )
+                        if any('absolute' in k for k in comparison_cols):
+                            wrangled_df_pivoted[f'{j} - {baseline}'] = (
+                                    wrangled_df_pivoted[j] - wrangled_df_pivoted[baseline]
+                            )
+            wrangled_df_pivoted = wrangled_df_pivoted.replace(
+                [i for i in rename_dict],
+                [rename_dict[i] for i in rename_dict]
+            )
+            for i in rename_dict:
+                wrangled_df_pivoted.rename(columns=lambda s: s.replace(i, rename_dict[i]), inplace=True)
+                wrangled_df_pivoted.rename(index=lambda s: s.replace(i, rename_dict[i]), inplace=True)
+
+            if excel_filename is not None:
+                wrangled_df_pivoted.to_excel(f'{excel_filename}.xlsx')
+
             self.wrangled_df_pivoted = wrangled_df_pivoted
 
             checkpoint += 1
@@ -1764,11 +1794,15 @@ class Table:
                 try:
                     if (wrangled_df_unstacked_or_stacked[i][0] == wrangled_df_unstacked_or_stacked[i]).all():
                         cols_to_clean.append(i)
+                    elif len(list(set([j for j in wrangled_df_unstacked_or_stacked[i]]))) == 2 and (('_X' in list(set([j for j in wrangled_df_unstacked_or_stacked[i]]))[0]) or ('_X' in list(set([j for j in wrangled_df_unstacked_or_stacked[i]]))[1])):
+                        cols_to_clean.append(i)
                     else:
                         cols_for_multiindex.append(i)
                 except KeyError:
                     wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.set_index([pd.RangeIndex(len(wrangled_df_unstacked_or_stacked))])
                     if (wrangled_df_unstacked_or_stacked[i][0] == wrangled_df_unstacked_or_stacked[i]).all():
+                        cols_to_clean.append(i)
+                    elif len(list(set([j for j in wrangled_df_unstacked_or_stacked[i]]))) == 2 and (('_X' in list(set([j for j in wrangled_df_unstacked_or_stacked[i]]))[0]) or ('_X' in list(set([j for j in wrangled_df_unstacked_or_stacked[i]]))[1])):
                         cols_to_clean.append(i)
                     else:
                         cols_for_multiindex.append(i)
@@ -1827,7 +1861,7 @@ class Table:
                     baseline_col = [col for col in wrangled_df_unstacked.columns if baseline in col and i in col][0]
                     for j in other_than_baseline:
                         for x in [col for col in wrangled_df_unstacked.columns if i in col and j in col]:
-                            if comparison_mode == 'others compared to baseline':
+                            if any(['others compared to baseline' in i for i in comparison_mode]):
                                 if any('relative' in k for k in comparison_cols):
                                     wrangled_df_unstacked[f'{i}[1-({j}/{baseline})'] = (
                                             1 -
@@ -1837,7 +1871,7 @@ class Table:
                                     wrangled_df_unstacked[f'{i}[{baseline} - {j}'] = (
                                             wrangled_df_unstacked[baseline_col] - wrangled_df_unstacked[x]
                                     )
-                            elif comparison_mode == 'baseline compared to others':
+                            if any(['baseline compared to others' in i for i in comparison_mode]):
                                 if any('relative' in k for k in comparison_cols):
                                     wrangled_df_unstacked[f'{i}[1-({baseline}/{j})'] = (
                                             1 -
@@ -1863,6 +1897,17 @@ class Table:
                     ]
                 )
 
+                wrangled_df_unstacked = wrangled_df_unstacked.replace(
+                    [i for i in rename_dict],
+                    [rename_dict[i] for i in rename_dict]
+                )
+                for i in rename_dict:
+                    wrangled_df_unstacked.rename(columns=lambda s: s.replace(i, rename_dict[i]), inplace=True)
+                    wrangled_df_unstacked.rename(index=lambda s: s.replace(i, rename_dict[i]), inplace=True)
+
+                if excel_filename is not None:
+                    wrangled_df_unstacked.to_excel(f'{excel_filename}.xlsx')
+
                 self.wrangled_df_unstacked = wrangled_df_unstacked
 
             elif reshaping == 'stack':
@@ -1874,16 +1919,41 @@ class Table:
                 cols_for_multiindex.append('Variable')
                 wrangled_df_stacked.index = wrangled_df_stacked.index.set_names(cols_for_multiindex)
                 cols_for_multiindex.remove('Variable')
+
+                wrangled_df_stacked = wrangled_df_stacked.replace(
+                    [i for i in rename_dict],
+                    [rename_dict[i] for i in rename_dict]
+                )
+                for i in rename_dict:
+                    wrangled_df_stacked.rename(columns=lambda s: s.replace(i, rename_dict[i]), inplace=True)
+                    wrangled_df_stacked.rename(index=lambda s: s.replace(i, rename_dict[i]), inplace=True)
+
+                if excel_filename is not None:
+                    wrangled_df_stacked.to_excel(f'{excel_filename}.xlsx')
+
                 self.wrangled_df_stacked = wrangled_df_stacked
 
             elif reshaping == 'multiindex':
-                self.wrangled_df_multiindex = wrangled_df_unstacked_or_stacked.copy()
+                wrangled_df_multiindex = wrangled_df_unstacked_or_stacked.copy()
                 del wrangled_df_unstacked_or_stacked
+
+                wrangled_df_multiindex = wrangled_df_multiindex.replace(
+                    [i for i in rename_dict],
+                    [rename_dict[i] for i in rename_dict]
+                )
+                for i in rename_dict:
+                    wrangled_df_multiindex.rename(columns=lambda s: s.replace(i, rename_dict[i]), inplace=True)
+                    wrangled_df_multiindex.rename(index=lambda s: s.replace(i, rename_dict[i]), inplace=True)
+
+                if excel_filename is not None:
+                    self.wrangled_df_multiindex.to_excel(f'{excel_filename}.xlsx')
+
+                self.wrangled_df_multiindex = wrangled_df_multiindex
 
                 print('No reshaping method has been applied, only multiindexing.')
 
-        if excel_filename is not None:
-            wrangled_df_pivoted.to_excel(f'{excel_filename}.xlsx')
+
+
 
     def enter_vars_to_gather(
             self,
