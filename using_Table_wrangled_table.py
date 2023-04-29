@@ -49,7 +49,7 @@ for i in ['pivot', 'stack', 'unstack', 'multiindex']:
             'CM_0': 'Static',
             'CM_3': 'Adaptive'
         },
-        excel_filename='texting_accim'
+        excel_filename='testing_accim'
     )
 
 # dataset_runperiod.wrangled_table(
