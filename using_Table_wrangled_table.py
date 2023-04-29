@@ -40,9 +40,16 @@ for i in ['pivot', 'stack', 'unstack', 'multiindex']:
         # check_index_and_cols=True,
         baseline='CM_3',
         vars_to_keep=['EPW_City_or_subcountry'],
-        comparison_mode=['others compared to baseline', 'baseline compared to others'],
+        comparison_mode=[
+            'others compared to baseline',
+            'baseline compared to others'
+        ],
         comparison_cols=['relative', 'absolute'],
-        rename_dict={'CM_0': 'Static', 'CM_3': 'Adaptive', 'London': 'whatever'}
+        rename_dict={
+            'CM_0': 'Static',
+            'CM_3': 'Adaptive'
+        },
+        excel_filename='texting_accim'
     )
 
 # dataset_runperiod.wrangled_table(
@@ -50,11 +57,11 @@ for i in ['pivot', 'stack', 'unstack', 'multiindex']:
 #     # vars_to_gather=['EPW_City_or_subcountry', 'ComfMod'],
 #     vars_to_gather=['ComfMod'],
 #     check_index_and_cols=True,
-#     baseline='CM_0',
+#     baseline='CM_3',
 #     comparison_mode=['others compared to baseline', 'baseline compared to others'],
-#     comparison_cols=['absolute'],
-#     rename_dict={'CM_0': 'Static', 'CM_3': 'Adaptive', 'London': 'whatever'},
-#     excel_filename='whatever'
+#     comparison_cols=['relative', 'absolute'],
+#     rename_dict={'CM_0': 'Static', 'CM_3': 'Adaptive'},
+#     # excel_filename='whatever'
 # )
 
 # dataset_runperiod.wrangled_table(

@@ -1752,6 +1752,9 @@ class Table:
                             wrangled_df_pivoted[f'{j} - {baseline}'] = (
                                     wrangled_df_pivoted[j] - wrangled_df_pivoted[baseline]
                             )
+
+            wrangled_df_pivoted = wrangled_df_pivoted.round(decimals=2)
+
             wrangled_df_pivoted = wrangled_df_pivoted.replace(
                 [i for i in rename_dict],
                 [rename_dict[i] for i in rename_dict]
@@ -1841,6 +1844,8 @@ class Table:
 
                 wrangled_df_unstacked = wrangled_df_unstacked.unstack(vars_to_gather)
 
+                checkpoint +=1
+
                 wrangled_df_unstacked.columns = ['['.join(col).strip('[') for col in wrangled_df_unstacked.columns.values]
 
                 var_to_gather_values = [i.split('[', maxsplit=1)[1] for i in wrangled_df_unstacked.columns]
@@ -1897,6 +1902,8 @@ class Table:
                     ]
                 )
 
+                wrangled_df_unstacked = wrangled_df_unstacked.round(decimals=2)
+
                 wrangled_df_unstacked = wrangled_df_unstacked.replace(
                     [i for i in rename_dict],
                     [rename_dict[i] for i in rename_dict]
@@ -1919,6 +1926,8 @@ class Table:
                 cols_for_multiindex.append('Variable')
                 wrangled_df_stacked.index = wrangled_df_stacked.index.set_names(cols_for_multiindex)
                 cols_for_multiindex.remove('Variable')
+
+                wrangled_df_stacked = wrangled_df_stacked.round(decimals=2)
 
                 wrangled_df_stacked = wrangled_df_stacked.replace(
                     [i for i in rename_dict],
@@ -1946,7 +1955,7 @@ class Table:
                     wrangled_df_multiindex.rename(index=lambda s: s.replace(i, rename_dict[i]), inplace=True)
 
                 if excel_filename is not None:
-                    self.wrangled_df_multiindex.to_excel(f'{excel_filename}.xlsx')
+                    wrangled_df_multiindex.to_excel(f'{excel_filename}.xlsx')
 
                 self.wrangled_df_multiindex = wrangled_df_multiindex
 
