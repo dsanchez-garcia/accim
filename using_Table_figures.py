@@ -116,6 +116,9 @@ dataset_hourly.scatter_plot(
 
 
 # todo check using csvs from other energyplus versions
+# todo rename columns and rows: input should be a dictionary
+# todo new cols and rows: if false, to skip
+# todo docs in arguments
 dataset_hourly.time_plot(
     vars_to_gather_cols=['ComfMod'],
     vars_to_gather_rows=['EPW_City_or_subcountry'],
