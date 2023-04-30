@@ -499,7 +499,7 @@ class Table:
                         print(f'Source frequency in file {file} is runperiod, therefore no aggregation will be performed.')
                     summed_dataframes.append(df)
             df = pd.concat(summed_dataframes)
-            df = df.round(decimals=2)
+            # df = df.round(decimals=2)
 
         else:
             # todo amend order of columns
@@ -1355,7 +1355,7 @@ class Table:
 
         # todo Step: remove PMV-PPD columns if the column only have null values
 
-        df = df.round(decimals=2)
+        # df = df.round(decimals=2)
 
         cols_to_clean = []
         cols_for_multiindex = []
@@ -1983,27 +1983,28 @@ class Table:
         return vars_to_gather
 
 
-    def generate_fig_data(self,
-                          vars_to_gather_cols: list = None,
-                          vars_to_gather_rows: list = None,
-                          detailed_cols: list = None,
-                          detailed_rows: list = None,
-                          custom_cols_order: list = None,
-                          custom_rows_order: list = None,
-                          adap_vs_stat_data_y_main: list = None,
-                          # adap_vs_stat_data_y_sec=None,
-                          baseline: str = None,
-                          colorlist_adap_vs_stat_data=None,
-                          data_on_x_axis: str = None,
-                          data_on_y_main_axis: list = None,
-                          data_on_y_sec_axis: list = None,
-                          colorlist_y_main_axis: list = None,
-                          colorlist_y_sec_axis: list = None,
-                          rename_rows: bool = None,
-                          rename_cols: bool = None,
-                          rows_new_names: list = None,
-                          cols_new_names: list = None,
-                          ):
+    def generate_fig_data(
+            self,
+            vars_to_gather_cols: list = None,
+            vars_to_gather_rows: list = None,
+            detailed_cols: list = None,
+            detailed_rows: list = None,
+            custom_cols_order: list = None,
+            custom_rows_order: list = None,
+            adap_vs_stat_data_y_main: list = None,
+            # adap_vs_stat_data_y_sec=None,
+            baseline: str = None,
+            colorlist_adap_vs_stat_data: list = None,
+            data_on_x_axis: str = None,
+            data_on_y_main_axis: list = None,
+            data_on_y_sec_axis: list = None,
+            colorlist_y_main_axis: list = None,
+            colorlist_y_sec_axis: list = None,
+            # rename_rows: bool = None,
+            # rename_cols: bool = None,
+            rows_new_names: list = None,
+            cols_new_names: list = None,
+            ):
         """
         Generates list of data to be plotted.
         :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
@@ -2305,21 +2306,21 @@ class Table:
         print(f'List of self.rows:')
         print(*self.rows, sep='\n')
 
-        if rename_rows is None:
+        if rows_new_names is None:
             self.rename_rows = input('Do you want to rename the rows? [y/n]: ')
             if self.rename_rows == 'y':
                 self.rows_new_names = []
                 for i in self.rows:
                     new_name = input(f'Please enter the new name for {i}: ')
                     self.rows_new_names.append(new_name)
-        elif rename_rows:
-            if len(self.rows_new_names) == 0:
-                self.rename_rows = input('Do you want to rename the rows? [y/n]: ')
-                if self.rename_rows == 'y':
-                    self.rows_new_names = []
-                    for i in self.rows:
-                        new_name = input(f'Please enter the new name for {i}: ')
-                        self.rows_new_names.append(new_name)
+        # elif rename_rows:
+        #     if len(self.rows_new_names) == 0:
+        #         self.rename_rows = input('Do you want to rename the rows? [y/n]: ')
+        #         if self.rename_rows == 'y':
+        #             self.rows_new_names = []
+        #             for i in self.rows:
+        #                 new_name = input(f'Please enter the new name for {i}: ')
+        #                 self.rows_new_names.append(new_name)
         else:
             print('Rows will not be renamed')
 
@@ -2328,26 +2329,40 @@ class Table:
         print(f'List of columns:')
         print(*self.cols, sep='\n')
 
-        if rename_cols is None:
+        if self.cols_new_names is None:
             self.rename_cols = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
             if self.rename_cols == 'y':
                 self.cols_new_names = []
                 for i in self.cols:
                     new_name = input(f'Please enter the new name for {i}: ')
                     self.cols_new_names.append(new_name)
-        elif rename_cols:
-            if len(self.cols_new_names) == 0:
-                self.rename_cols = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
-                if self.rename_cols == 'y':
-                    self.cols_new_names = []
-                    for i in self.cols:
-                        new_name = input(f'Please enter the new name for {i}: ')
-                        self.cols_new_names.append(new_name)
+        # elif rename_cols:
+        #     if len(self.cols_new_names) == 0:
+        #         self.rename_cols = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
+        #         if self.rename_cols == 'y':
+        #             self.cols_new_names = []
+        #             for i in self.cols:
+        #                 new_name = input(f'Please enter the new name for {i}: ')
+        #                 self.cols_new_names.append(new_name)
         else:
             print('Cols will not be renamed')
 
     def scatter_plot(
             self,
+            vars_to_gather_cols: list = None,
+            vars_to_gather_rows: list = None,
+            detailed_cols: list = None,
+            detailed_rows: list = None,
+            custom_cols_order: list = None,
+            custom_rows_order: list = None,
+            data_on_x_axis: str = None,
+            data_on_y_main_axis: list = None,
+            data_on_y_sec_axis: list = None,
+            colorlist_y_main_axis: list = None,
+            colorlist_y_sec_axis: list = None,
+            rows_new_names: list = None,
+            cols_new_names: list = None,
+
             supxlabel: str = None,
             figname: str = None,
             figsize: float = 1,
@@ -2365,6 +2380,26 @@ class Table:
         """
         import numpy as np
         import matplotlib.pyplot as plt
+
+        # todo testing from here
+
+        self.generate_fig_data(
+            vars_to_gather_cols=vars_to_gather_cols,
+            vars_to_gather_rows=vars_to_gather_rows,
+            detailed_cols=detailed_cols,
+            detailed_rows=detailed_rows,
+            custom_cols_order=custom_cols_order,
+            custom_rows_order=custom_rows_order,
+            data_on_y_main_axis=data_on_y_main_axis,
+            data_on_y_sec_axis=data_on_y_sec_axis,
+            data_on_x_axis=data_on_x_axis,
+            colorlist_y_main_axis=colorlist_y_main_axis,
+            colorlist_y_sec_axis=colorlist_y_sec_axis,
+            rows_new_names=rows_new_names,
+            cols_new_names=cols_new_names,
+        )
+
+        # todo testing until here
 
         rows = self.rows
         cols = self.cols
@@ -2499,12 +2534,14 @@ class Table:
             if len(rows) == 1:
                 if len(cols) == 1:
                     for i in range(len(rows)):
-                        if self.rename_rows == 'y':
+                        # if self.rename_rows == 'y':
+                        if self.rows_new_names is not None:
                             ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax.set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(cols)):
-                        if self.rename_cols == 'y':
+                        # if self.rename_cols == 'y':
+                        if self.cols_new_names is not None:
                             ax.set_title(self.cols_new_names[j])
                         else:
                             ax.set_title(cols[j])
@@ -2512,23 +2549,27 @@ class Table:
             if len(rows) > 1:
                 if len(cols) == 1:
                     for i in range(len(rows)):
-                        if self.rename_rows == 'y':
+                        # if self.rename_rows == 'y':
+                        if self.rows_new_names is not None:
                             ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax[i].set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(cols)):
-                        if self.rename_cols == 'y':
+                        # if self.rename_cols == 'y':
+                        if self.cols_new_names is not None:
                             ax[0].set_title(self.cols_new_names[j])
                         else:
                             ax[0].set_title(cols[j])
                 else:
                     for i in range(len(rows)):
-                        if self.rename_rows == 'y':
+                        # if self.rename_rows == 'y':
+                        if self.rows_new_names is not None:
                             ax[i, 0].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax[i, 0].set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(cols)):
-                        if self.rename_cols == 'y':
+                        # if self.rename_cols == 'y':
+                        if self.cols_new_names is not None:
                             ax[0, j].set_title(self.cols_new_names[j])
                         else:
                             ax[0, j].set_title(cols[j])
@@ -2566,15 +2607,28 @@ class Table:
 
         self.rows = rows
 
-    def scatter_plot_adap_vs_stat(self,
-                                  supxlabel: str = None,
-                                  supylabel: str = None,
-                                  figname: str = None,
-                                  figsize: int = 1,
-                                  markersize: int = 1,
-                                  dpi: int = 500,
-                                  confirm_graph: bool = False
-                                  ):
+    def scatter_plot_adap_vs_stat(
+            self,
+            vars_to_gather_cols: list = None,
+            vars_to_gather_rows: list = None,
+            detailed_cols: list = None,
+            detailed_rows: list = None,
+            custom_cols_order: list = None,
+            custom_rows_order: list = None,
+            adap_vs_stat_data_y_main: list = None,
+            baseline: str = None,
+            colorlist_adap_vs_stat_data: list = None,
+            rows_new_names: list = None,
+            cols_new_names: list = None,
+
+            supxlabel: str = None,
+            supylabel: str = None,
+            figname: str = None,
+            figsize: int = 1,
+            markersize: int = 1,
+            dpi: int = 500,
+            confirm_graph: bool = False
+            ):
         """
 
         :param supxlabel: A string. The label shown in the x-axis.
@@ -2586,6 +2640,24 @@ class Table:
         """
         import matplotlib.pyplot as plt
         import matplotlib.lines as lines
+
+        # todo testing from here
+
+        self.generate_fig_data(
+            vars_to_gather_cols=vars_to_gather_cols,
+            vars_to_gather_rows=vars_to_gather_rows,
+            detailed_cols=detailed_cols,
+            detailed_rows=detailed_rows,
+            custom_cols_order=custom_cols_order,
+            custom_rows_order=custom_rows_order,
+            adap_vs_stat_data_y_main=adap_vs_stat_data_y_main,
+            baseline=baseline,
+            colorlist_adap_vs_stat_data=colorlist_adap_vs_stat_data,
+            rows_new_names=rows_new_names,
+            cols_new_names=cols_new_names,
+        )
+
+        # todo testing until here
 
         # print(f'The number of rows and the list of these is going to be:')
         # print(f'No. of rows = {len(self.rows)}')
@@ -2867,12 +2939,14 @@ class Table:
                                   # adjustable='box',
                                   share=True)
                     for i in range(len(self.rows)):
-                        if self.rename_rows == 'y':
+                        # if self.rename_rows == 'y':
+                        if self.rows_new_names is not None:
                             ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax.set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        if self.rename_cols == 'y':
+                        # if self.rename_cols == 'y':
+                        if self.cols_new_names is not None:
                             ax.set_title(self.cols_new_names[j])
                         else:
                             ax.set_title(self.cols[j])
@@ -2883,12 +2957,14 @@ class Table:
                                      # adjustable='box',
                                      share=True)
                     for i in range(len(self.rows)):
-                        if self.rename_rows == 'y':
+                        # if self.rename_rows == 'y':
+                        if self.rows_new_names is not None:
                             ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        if self.rename_cols == 'y':
+                        # if self.rename_cols == 'y':
+                        if self.cols_new_names is not None:
                             ax[0].set_title(self.cols_new_names[j])
                         else:
                             ax[0].set_title(self.cols[j])
@@ -2897,12 +2973,14 @@ class Table:
                                         # adjustable='box',
                                         share=True)
                     for i in range(len(self.rows)):
-                        if self.rename_rows == 'y':
+                        # if self.rename_rows == 'y':
+                        if self.rows_new_names is not None:
                             ax[i, 0].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        if self.rename_cols == 'y':
+                        # if self.rename_cols == 'y':
+                        if self.cols_new_names is not None:
                             ax[0, j].set_title(self.cols_new_names[j])
                         else:
                             ax[0, j].set_title(self.cols[j])
@@ -2936,6 +3014,19 @@ class Table:
 
     def time_plot(
             self,
+            vars_to_gather_cols: list = None,
+            vars_to_gather_rows: list = None,
+            detailed_cols: list = None,
+            detailed_rows: list = None,
+            custom_cols_order: list = None,
+            custom_rows_order: list = None,
+            data_on_y_main_axis: list = None,
+            data_on_y_sec_axis: list = None,
+            colorlist_y_main_axis: list = None,
+            colorlist_y_sec_axis: list = None,
+            rows_new_names: list = None,
+            cols_new_names: list = None,
+
             supxlabel: str = None,
             figname: str = None,
             figsize: float = 1,
@@ -2958,15 +3049,33 @@ class Table:
         import datetime
         import matplotlib.dates as mdates
 
-        print(f'The number of self.rows and the list of these is going to be:')
-        print(f'No. of self.rows = {len(self.rows)}')
-        print(f'List of self.rows:')
-        print(*self.rows, sep='\n')
+        self.generate_fig_data(
+            vars_to_gather_cols=vars_to_gather_cols,
+            vars_to_gather_rows=vars_to_gather_rows,
+            detailed_cols=detailed_cols,
+            detailed_rows=detailed_rows,
+            custom_cols_order=custom_cols_order,
+            custom_rows_order=custom_rows_order,
+            data_on_y_main_axis=data_on_y_main_axis,
+            data_on_y_sec_axis=data_on_y_sec_axis,
+            data_on_x_axis='anything',
+            colorlist_y_main_axis=colorlist_y_main_axis,
+            colorlist_y_sec_axis=colorlist_y_sec_axis,
+            rows_new_names=rows_new_names,
+            cols_new_names=cols_new_names
+        )
 
-        print(f'The number of columns and the list of these is going to be:')
-        print(f'No. of columns = {len(self.cols)}')
-        print(f'List of columns:')
-        print(*self.cols, sep='\n')
+
+
+        # print(f'The number of self.rows and the list of these is going to be:')
+        # print(f'No. of self.rows = {len(self.rows)}')
+        # print(f'List of self.rows:')
+        # print(*self.rows, sep='\n')
+        #
+        # print(f'The number of columns and the list of these is going to be:')
+        # print(f'No. of columns = {len(self.cols)}')
+        # print(f'List of columns:')
+        # print(*self.cols, sep='\n')
 
         if confirm_graph is False:
             proceed = input('Do you want to proceed? [y/n]:')
@@ -2980,9 +3089,11 @@ class Table:
 
             freq_graph_dict = {
                 'timestep': ['X?', "%d/%m %H:%M"],
-                'hourly': ['H', "%d/%m %H:%M"],
-                'daily': ['D', "%d/%m"],
-                'monthly': ['M', "%m"],
+                'hourly': ['H', " %d/%m %H:%M:%S"],
+                # 'daily': ['D', "%d/%m"],
+                'daily': ['D', " %d/%m %H:%M:%S"],
+                # 'monthly': ['M', "%m"],
+                'monthly': ['M', " %d/%m %H:%M:%S"],
                 # todo WIP
                 'runperiod': ['?', "?"]
             }
@@ -3134,21 +3245,39 @@ class Table:
             if len(self.rows) == 1:
                 if len(self.cols) == 1:
                     for i in range(len(self.rows)):
-                        ax.set_ylabel(self.rows[i], rotation=90, size='large')
+                        if self.rows_new_names is not None:
+                            ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
+                        else:
+                            ax.set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        ax.set_title(self.cols[j])
+                        if self.cols_new_names is not None:
+                            ax.set_title(self.cols_new_names[j])
+                        else:
+                            ax.set_title(self.cols[j])
 
             if len(self.rows) > 1:
                 if len(self.cols) == 1:
                     for i in range(len(self.rows)):
-                        ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
+                        if self.rows_new_names is not None:
+                            ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
+                        else:
+                            ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        ax[0].set_title(self.cols[j])
+                        if self.cols_new_names is not None:
+                            ax[0].set_title(self.cols_new_names[j])
+                        else:
+                            ax[0].set_title(self.cols[j])
                 else:
                     for i in range(len(self.rows)):
-                        ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
+                        if self.rows_new_names is not None:
+                            ax[i, 0].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
+                        else:
+                            ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        ax[0, j].set_title(self.cols[j])
+                        if self.cols_new_names is not None:
+                            ax[0, j].set_title(self.cols_new_names[j])
+                        else:
+                            ax[0, j].set_title(self.cols[j])
 
             if len(self.rows) == 1:
                 if len(self.cols) == 1:
