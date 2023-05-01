@@ -1393,6 +1393,14 @@ class Table:
 
         # todo pop up when process ends; by defalt True
 
+    def gather_vars_query(
+            self,
+            vars_to_gather
+            ):
+        temp_df = self.df.copy()
+        temp_df['col_to_pivot'] = temp_df[vars_to_gather].agg('['.join, axis=1)
+        var_to_gather_values = list(dict.fromkeys(self.df['col_to_pivot']))
+
     def df(self):
         return self.df
 
