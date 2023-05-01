@@ -16,7 +16,7 @@ dataset_hourly = Table(
 # dataset_runperiod.df.to_excel('using_Table_00.xlsx')
 # dataset_runperiod.df.shape
 # dataset_runperiod.df.columns
-print(*dataset_hourly.df_backup.columns, sep='\n')
+# print(*dataset_hourly.df_backup.columns, sep='\n')
 
 dataset_hourly.format_table(
     type_of_table='custom',
@@ -66,6 +66,7 @@ dataset_hourly.format_table(
 #
 # )
 
+##
 
 dataset_hourly.scatter_plot(
     vars_to_gather_cols=['ComfMod'],
@@ -102,8 +103,14 @@ dataset_hourly.scatter_plot(
     #         'r',
     #     ]
     # ],
-    # cols_new_names=['Static', 'Adaptive'],
-    # rows_new_names=['x', 'y'],
+    rows_renaming_dict={
+        'Aberdeen': 'a',
+        'London': 'l'
+    },
+    cols_renaming_dict={
+        'CM_0': 'static',
+        'CM_3': 'adaptive'
+    },
 
     supxlabel='Outdoor temperature',
     figname='testing_scatter',
@@ -116,9 +123,9 @@ dataset_hourly.scatter_plot(
 
 
 # todo check using csvs from other energyplus versions
-# todo rename columns and rows: input should be a dictionary
-# todo new cols and rows: if false, to skip
-# todo docs in arguments
+# todo query vars_to_gather: which variants would I get with a certain combination?
+# todo check if it works with csvs with different zones
+
 dataset_hourly.time_plot(
     vars_to_gather_cols=['ComfMod'],
     vars_to_gather_rows=['EPW_City_or_subcountry'],
@@ -156,6 +163,14 @@ dataset_hourly.time_plot(
             ]
         ]
     ],
+    rows_renaming_dict={
+        'Aberdeen': 'a',
+        'London': 'l'
+    },
+    cols_renaming_dict={
+        'CM_0': 'static',
+        'CM_3': 'adaptive'
+    },
 
     figname='testing_timeplot',
     figsize=8,
@@ -179,6 +194,15 @@ dataset_hourly.scatter_plot_adap_vs_stat(
                 'r'
     ],
     baseline='CM_0',
+
+    rows_renaming_dict={
+        'Aberdeen': 'a',
+        'London': 'l'
+    },
+    cols_renaming_dict={
+        # 'CM_0': 'static',
+        'CM_3': 'adaptive'
+    },
 
     supxlabel='Outdoor temperature',
     figname='testing_scatter',

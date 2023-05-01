@@ -2000,10 +2000,8 @@ class Table:
             data_on_y_sec_axis: list = None,
             colorlist_y_main_axis: list = None,
             colorlist_y_sec_axis: list = None,
-            # rename_rows: bool = None,
-            # rename_cols: bool = None,
-            rows_new_names: list = None,
-            cols_new_names: list = None,
+            rows_renaming_dict: dict = None,
+            cols_renaming_dict: dict = None,
             ):
         """
         Generates list of data to be plotted.
@@ -2023,10 +2021,8 @@ class Table:
         [['name_on_1st_y_sec_axis', [list of column names you want to plot], ['name_on_2nd_y_sec_axis', [list of column names you want to plot], etc]
         :param colorlist_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the colors using the matplotlib notation.
         :param colorlist_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the colors using the matplotlib notation.
-        :param rename_rows: A bool. True, to rename the rows titles, False to skip.
-        :param rename_cols: A bool. True, to rename the column titles, False to skip.
-        :param rows_new_names: A list of strings. Used to rename the rows titles.
-        :param cols_new_names: A list of strings. Used to rename the columns titles.
+        :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
+        :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
         :return:
         """
         if vars_to_gather_cols is None:
@@ -2063,9 +2059,6 @@ class Table:
         import matplotlib.lines as lines
 
         df_for_graph = self.df.copy()
-
-        self.rows_new_names = rows_new_names
-        self.cols_new_names = cols_new_names
 
         df_for_graph['col_to_gather_in_cols'] = 'temp'
         df_for_graph['col_to_gather_in_rows'] = 'temp'
@@ -2297,55 +2290,108 @@ class Table:
                 temp_row.append(temp_col)
             self.y_list_sec.append(temp_row)
 
-        self.df_for_graph = df_for_graph
-        self.rows = rows
-        self.cols = cols
 
         print(f'The number of rows and the list of these is going to be:')
-        print(f'No. of rows = {len(self.rows)}')
-        print(f'List of self.rows:')
-        print(*self.rows, sep='\n')
+        print(f'No. of rows = {len(rows)}')
+        print(f'List of rows:')
+        print(*rows, sep='\n')
 
-        if rows_new_names is None:
-            self.rename_rows = input('Do you want to rename the rows? [y/n]: ')
-            if self.rename_rows == 'y':
+        self.rename_rows = 'n'
+
+        try:
+            if all([i in rows for i in [j for j in rows_renaming_dict]]):
                 self.rows_new_names = []
-                for i in self.rows:
-                    new_name = input(f'Please enter the new name for {i}: ')
-                    self.rows_new_names.append(new_name)
+                for i in rows:
+                    for j in rows_renaming_dict:
+                        if i == j:
+                            self.rows_new_names.append(rows_renaming_dict[j])
+                print(f'The renamed rows are going to be:')
+                print(*self.rows_new_names, sep='\n')
+                self.rename_rows = 'y'
+        except TypeError:
+            pass
+
+        rename_rows_user_input = 'n'
+        if rows_renaming_dict is None:
+            rename_rows_user_input = input('Do you want to rename the rows? [y/n]: ')
+        try:
+            if not(all([i in rows for i in [j for j in rows_renaming_dict]])):
+                rename_rows_user_input = input('Not all of the old names you have entered in rows_new_names were found. '
+                                         'Therefore, if you still want to rename the rows, you will have to enter the new names now. '
+                                         'Do you want to rename the rows? [y/n]: ')
+        except TypeError:
+            pass
+        if rename_rows_user_input == 'y':
+            self.rows_new_names = []
+            for i in rows:
+                new_name = input(f'Please enter the new name for {i}: ')
+                self.rows_new_names.append(new_name)
+            print(f'The renamed rows are going to be:')
+            print(*self.rows_new_names, sep='\n')
+            self.rename_rows = 'y'
+
         # elif rename_rows:
         #     if len(self.rows_new_names) == 0:
         #         self.rename_rows = input('Do you want to rename the rows? [y/n]: ')
         #         if self.rename_rows == 'y':
         #             self.rows_new_names = []
-        #             for i in self.rows:
+        #             for i in rows:
         #                 new_name = input(f'Please enter the new name for {i}: ')
         #                 self.rows_new_names.append(new_name)
-        else:
-            print('Rows will not be renamed')
 
         print(f'The number of columns and the list of these is going to be:')
-        print(f'No. of columns = {len(self.cols)}')
+        print(f'No. of columns = {len(cols)}')
         print(f'List of columns:')
-        print(*self.cols, sep='\n')
+        print(*cols, sep='\n')
 
-        if self.cols_new_names is None:
-            self.rename_cols = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
-            if self.rename_cols == 'y':
+        self.rename_cols = 'n'
+
+        try:
+            if all([i in cols for i in [j for j in cols_renaming_dict]]):
                 self.cols_new_names = []
-                for i in self.cols:
-                    new_name = input(f'Please enter the new name for {i}: ')
-                    self.cols_new_names.append(new_name)
+                for i in cols:
+                    for j in cols_renaming_dict:
+                        if i == j:
+                            self.cols_new_names.append(cols_renaming_dict[j])
+                print(f'The renamed columns are going to be:')
+                print(*self.cols_new_names, sep='\n')
+                self.rename_cols = 'y'
+        except TypeError:
+            pass
+
+        rename_cols_user_input = 'n'
+        if cols_renaming_dict is None:
+            rename_cols_user_input = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
+        try:
+            if not(all([i in cols for i in [j for j in cols_renaming_dict]])):
+                rename_cols_user_input = input('Not all of the old names you have entered in cols_new_names were found. '
+                                         'Therefore, if you still want to rename the columns, you will have to enter the new names now. '
+                                         'Do you want to rename the columns? [y/n]: ')
+        except TypeError:
+            pass
+
+        if rename_cols_user_input == 'y':
+            self.cols_new_names = []
+            for i in cols:
+                new_name = input(f'Please enter the new name for {i}: ')
+                self.cols_new_names.append(new_name)
+            print(f'The renamed columns are going to be:')
+            print(*self.cols_new_names, sep='\n')
+            self.rename_cols = 'y'
+
         # elif rename_cols:
         #     if len(self.cols_new_names) == 0:
         #         self.rename_cols = input('Column names will be the subplot titles. Do you want to rename them? [y/n]: ')
         #         if self.rename_cols == 'y':
         #             self.cols_new_names = []
-        #             for i in self.cols:
+        #             for i in cols:
         #                 new_name = input(f'Please enter the new name for {i}: ')
         #                 self.cols_new_names.append(new_name)
-        else:
-            print('Cols will not be renamed')
+
+        self.rows = rows
+        self.cols = cols
+        self.df_for_graph = df_for_graph
+
 
     def scatter_plot(
             self,
@@ -2360,8 +2406,8 @@ class Table:
             data_on_y_sec_axis: list = None,
             colorlist_y_main_axis: list = None,
             colorlist_y_sec_axis: list = None,
-            rows_new_names: list = None,
-            cols_new_names: list = None,
+            rows_renaming_dict: dict = None,
+            cols_renaming_dict: dict = None,
 
             supxlabel: str = None,
             figname: str = None,
@@ -2371,7 +2417,7 @@ class Table:
             confirm_graph: bool = False
     ):
         """
-        Used to plot a scatter plot once data has been created with generate_fig_data.
+        Used to plot a scatter plot.
         :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
         :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
         :param detailed_cols: A list of strings. The list should be the specific data you want to show in subplots columns. Used to filter.
@@ -2385,14 +2431,15 @@ class Table:
         [['name_on_1st_y_sec_axis', [list of column names you want to plot], ['name_on_2nd_y_sec_axis', [list of column names you want to plot], etc]
         :param colorlist_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the colors using the matplotlib notation.
         :param colorlist_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the colors using the matplotlib notation.
-        :param rows_new_names: A list of strings. Used to rename the rows titles.
-        :param cols_new_names: A list of strings. Used to rename the columns titles.
+        :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
+        :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
 
 
         :param supxlabel: A string. The label shown in the x-axis.
         :param figname: A string. The name of the saved figure without extension.
         :param figsize: A float. It is the figure size.
         :param ratio_height_to_width: A float. By default, is 1 (squared). If 0.5 is entered, the figure will be half higher than wide.
+        :param dpi: An integer. The number of dpis for image quality.
         :param confirm_graph: A bool. True to skip confirmation step.
         """
         import numpy as np
@@ -2412,8 +2459,8 @@ class Table:
             data_on_x_axis=data_on_x_axis,
             colorlist_y_main_axis=colorlist_y_main_axis,
             colorlist_y_sec_axis=colorlist_y_sec_axis,
-            rows_new_names=rows_new_names,
-            cols_new_names=cols_new_names,
+            rows_renaming_dict=rows_renaming_dict,
+            cols_renaming_dict=cols_renaming_dict,
         )
 
         # todo testing until here
@@ -2551,14 +2598,14 @@ class Table:
             if len(rows) == 1:
                 if len(cols) == 1:
                     for i in range(len(rows)):
-                        # if self.rename_rows == 'y':
-                        if self.rows_new_names is not None:
+                        if self.rename_rows == 'y':
+                        # if self.rows_new_names is not None:
                             ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax.set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(cols)):
-                        # if self.rename_cols == 'y':
-                        if self.cols_new_names is not None:
+                        if self.rename_cols == 'y':
+                        # if self.cols_new_names is not None:
                             ax.set_title(self.cols_new_names[j])
                         else:
                             ax.set_title(cols[j])
@@ -2566,27 +2613,27 @@ class Table:
             if len(rows) > 1:
                 if len(cols) == 1:
                     for i in range(len(rows)):
-                        # if self.rename_rows == 'y':
-                        if self.rows_new_names is not None:
+                        if self.rename_rows == 'y':
+                        # if self.rows_new_names is not None:
                             ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax[i].set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(cols)):
-                        # if self.rename_cols == 'y':
-                        if self.cols_new_names is not None:
+                        if self.rename_cols == 'y':
+                        # if self.cols_new_names is not None:
                             ax[0].set_title(self.cols_new_names[j])
                         else:
                             ax[0].set_title(cols[j])
                 else:
                     for i in range(len(rows)):
-                        # if self.rename_rows == 'y':
-                        if self.rows_new_names is not None:
+                        if self.rename_rows == 'y':
+                        # if self.rows_new_names is not None:
                             ax[i, 0].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax[i, 0].set_ylabel(rows[i], rotation=90, size='large')
                     for j in range(len(cols)):
-                        # if self.rename_cols == 'y':
-                        if self.cols_new_names is not None:
+                        if self.rename_cols == 'y':
+                        # if self.cols_new_names is not None:
                             ax[0, j].set_title(self.cols_new_names[j])
                         else:
                             ax[0, j].set_title(cols[j])
@@ -2635,8 +2682,8 @@ class Table:
             adap_vs_stat_data_y_main: list = None,
             baseline: str = None,
             colorlist_adap_vs_stat_data: list = None,
-            rows_new_names: list = None,
-            cols_new_names: list = None,
+            rows_renaming_dict: dict = None,
+            cols_renaming_dict: dict = None,
 
             supxlabel: str = None,
             supylabel: str = None,
@@ -2647,12 +2694,24 @@ class Table:
             confirm_graph: bool = False
             ):
         """
+        :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
+        :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
+        :param detailed_cols: A list of strings. The list should be the specific data you want to show in subplots columns. Used to filter.
+        :param detailed_rows: A list of strings. The list should be the specific data you want to show in subplots rows. Used to filter.
+        :param custom_cols_order: A list of strings. The list should be the specific order for the items shown in subplot columns.
+        :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
+        :param adap_vs_stat_data_y_main: A list of strings. Used to select the data you want to show in the adap_vs_stat graph. Should be a list of the column names you want to plot in each subplot.
+        :param baseline: A string, used only in adap_vs_stat_data_y_main. The baseline should be one of the combinations in vars_to_gather_cols. It will be plotted in x-axis, while the reference combination for comparison in y-axis.
+        :param colorlist_adap_vs_stat_data: A list of strings. Should be the colors using the matplotlib color notation for the columns entered in adap_vs_stat_data_y_main in the same order.
+        :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
+        :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
 
         :param supxlabel: A string. The label shown in the x-axis.
         :param supylabel: A string. The label shown in the y-axis.
         :param figname: A string. The name of the saved figure without extension.
         :param figsize: A float. It is the figure size.
         :param markersize: An integer. The size of the markers.
+        :param dpi: An integer. The number of dpis for image quality.
         :param confirm_graph: A bool. True to skip confirmation step.
         """
         import matplotlib.pyplot as plt
@@ -2670,8 +2729,8 @@ class Table:
             adap_vs_stat_data_y_main=adap_vs_stat_data_y_main,
             baseline=baseline,
             colorlist_adap_vs_stat_data=colorlist_adap_vs_stat_data,
-            rows_new_names=rows_new_names,
-            cols_new_names=cols_new_names,
+            rows_renaming_dict=rows_renaming_dict,
+            cols_renaming_dict=cols_renaming_dict,
         )
 
         # todo testing until here
@@ -2956,14 +3015,14 @@ class Table:
                                   # adjustable='box',
                                   share=True)
                     for i in range(len(self.rows)):
-                        # if self.rename_rows == 'y':
-                        if self.rows_new_names is not None:
+                        if self.rename_rows == 'y':
+                        # if self.rows_new_names is not None:
                             ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax.set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        # if self.rename_cols == 'y':
-                        if self.cols_new_names is not None:
+                        if self.rename_cols == 'y':
+                        # if self.cols_new_names is not None:
                             ax.set_title(self.cols_new_names[j])
                         else:
                             ax.set_title(self.cols[j])
@@ -2974,14 +3033,14 @@ class Table:
                                      # adjustable='box',
                                      share=True)
                     for i in range(len(self.rows)):
-                        # if self.rename_rows == 'y':
-                        if self.rows_new_names is not None:
+                        if self.rename_rows == 'y':
+                        # if self.rows_new_names is not None:
                             ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        # if self.rename_cols == 'y':
-                        if self.cols_new_names is not None:
+                        if self.rename_cols == 'y':
+                        # if self.cols_new_names is not None:
                             ax[0].set_title(self.cols_new_names[j])
                         else:
                             ax[0].set_title(self.cols[j])
@@ -2990,14 +3049,14 @@ class Table:
                                         # adjustable='box',
                                         share=True)
                     for i in range(len(self.rows)):
-                        # if self.rename_rows == 'y':
-                        if self.rows_new_names is not None:
+                        if self.rename_rows == 'y':
+                        # if self.rows_new_names is not None:
                             ax[i, 0].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        # if self.rename_cols == 'y':
-                        if self.cols_new_names is not None:
+                        if self.rename_cols == 'y':
+                        # if self.cols_new_names is not None:
                             ax[0, j].set_title(self.cols_new_names[j])
                         else:
                             ax[0, j].set_title(self.cols[j])
@@ -3041,8 +3100,8 @@ class Table:
             data_on_y_sec_axis: list = None,
             colorlist_y_main_axis: list = None,
             colorlist_y_sec_axis: list = None,
-            rows_new_names: list = None,
-            cols_new_names: list = None,
+            rows_renaming_dict: dict = None,
+            cols_renaming_dict: dict = None,
 
             supxlabel: str = None,
             figname: str = None,
@@ -3052,11 +3111,28 @@ class Table:
             confirm_graph: bool = False
     ):
         """
-        Used to plot a timeplot once data has been created with generate_fig_data.
+        Used to plot a timeplot.
+        :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
+        :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
+        :param detailed_cols: A list of strings. The list should be the specific data you want to show in subplots columns. Used to filter.
+        :param detailed_rows: A list of strings. The list should be the specific data you want to show in subplots rows. Used to filter.
+        :param custom_cols_order: A list of strings. The list should be the specific order for the items shown in subplot columns.
+        :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
+        :param data_on_x_axis: A string. The column name you want to plot in the x-axis.
+        :param data_on_y_main_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot main y-axis. It needs to follow this structure:
+        [['name_on_y_main_axis', [list of column names you want to plot]]
+        :param data_on_y_sec_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot secondary y-axis. It needs to follow this structure:
+        [['name_on_1st_y_sec_axis', [list of column names you want to plot], ['name_on_2nd_y_sec_axis', [list of column names you want to plot], etc]
+        :param colorlist_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the colors using the matplotlib notation.
+        :param colorlist_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the colors using the matplotlib notation.
+        :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
+        :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
+
         :param supxlabel: A string. The label shown in the x-axis.
         :param figname: A string. The name of the saved figure without extension.
         :param figsize: A float. It is the figure size.
         :param ratio_height_to_width: A float. By default, is 1 (squared). If 0.5 is entered, the figure will be half higher than wide.
+        :param dpi: An integer. The number of dpis for image quality.
         :param confirm_graph: A bool. True to skip confirmation step.
 
         """
@@ -3078,8 +3154,8 @@ class Table:
             data_on_x_axis='anything',
             colorlist_y_main_axis=colorlist_y_main_axis,
             colorlist_y_sec_axis=colorlist_y_sec_axis,
-            rows_new_names=rows_new_names,
-            cols_new_names=cols_new_names
+            rows_renaming_dict=rows_renaming_dict,
+            cols_renaming_dict=cols_renaming_dict,
         )
 
 
@@ -3262,12 +3338,12 @@ class Table:
             if len(self.rows) == 1:
                 if len(self.cols) == 1:
                     for i in range(len(self.rows)):
-                        if self.rows_new_names is not None:
+                        if self.rename_rows == 'y':
                             ax.set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax.set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        if self.cols_new_names is not None:
+                        if self.rename_rows == 'y':
                             ax.set_title(self.cols_new_names[j])
                         else:
                             ax.set_title(self.cols[j])
@@ -3275,23 +3351,23 @@ class Table:
             if len(self.rows) > 1:
                 if len(self.cols) == 1:
                     for i in range(len(self.rows)):
-                        if self.rows_new_names is not None:
+                        if self.rename_rows == 'y':
                             ax[i].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax[i].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        if self.cols_new_names is not None:
+                        if self.rename_rows == 'y':
                             ax[0].set_title(self.cols_new_names[j])
                         else:
                             ax[0].set_title(self.cols[j])
                 else:
                     for i in range(len(self.rows)):
-                        if self.rows_new_names is not None:
+                        if self.rename_rows == 'y':
                             ax[i, 0].set_ylabel(self.rows_new_names[i], rotation=90, size='large')
                         else:
                             ax[i, 0].set_ylabel(self.rows[i], rotation=90, size='large')
                     for j in range(len(self.cols)):
-                        if self.cols_new_names is not None:
+                        if self.rename_rows == 'y':
                             ax[0, j].set_title(self.cols_new_names[j])
                         else:
                             ax[0, j].set_title(self.cols[j])
