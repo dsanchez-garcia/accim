@@ -1399,7 +1399,14 @@ class Table:
             ):
         temp_df = self.df.copy()
         temp_df['col_to_pivot'] = temp_df[vars_to_gather].agg('['.join, axis=1)
-        var_to_gather_values = list(dict.fromkeys(self.df['col_to_pivot']))
+        vars_to_gather_values = list(dict.fromkeys(temp_df['col_to_pivot']))
+        print('The categorical columns which have different values and those values are:')
+        # print(*self.cols_for_multiindex, sep='\n')
+        for i in self.cols_for_multiindex:
+            print(f'{i}: {list(dict.fromkeys(temp_df[i]))}')
+        print('The available options resulting from the data entered in vars_to_gather would be: ')
+        print(vars_to_gather_values)
+        del temp_df
 
     def df(self):
         return self.df

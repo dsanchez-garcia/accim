@@ -13,6 +13,7 @@ dataset_hourly = Table(
     split_epw_names=True, #to split EPW names based on the format Country_City_RCPscenario-YEar
 )
 
+
 # dataset_runperiod.df.to_excel('using_Table_00.xlsx')
 # dataset_runperiod.df.shape
 # dataset_runperiod.df.columns
@@ -26,45 +27,47 @@ dataset_hourly.format_table(
         'Site Outdoor Air Drybulb Temperature (°C)'
     ]
 )
+dataset_hourly.cols_for_multiindex
+dataset_hourly.gather_vars_query(['ComfMod'])
 ## scatter_plot
 
-# dataset_hourly.generate_fig_data(
-#     vars_to_gather_cols=['ComfMod'],
-#     vars_to_gather_rows=['EPW_City_or_subcountry'],
-#     data_on_y_main_axis=[
-#         [
-#             'Energy Demand (kWh/m2)',
-#             [
-#                 'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
-#                 'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
-#             ]
-#         ],
-#     ],
-#     # data_on_y_sec_axis=[
-#     #         'Temperature',
-#     #         [
-#     #             'Site Outdoor Air Drybulb Temperature (°C)'
-#     #         ]
-#     #     ],
-#     data_on_x_axis='Site Outdoor Air Drybulb Temperature (°C)',
-#
-#     colorlist_y_main_axis=[
-#         [
-#             'Energy Demand (kWh/m2)',
-#             [
-#                 'b',
-#                 'r'
-#             ]
-#         ],
-#     ],
-#     # colorlist_y_sec_axis=[
-#     #     'Heating Energy Demand (kWh/m2)',
-#     #     [
-#     #         'r',
-#     #     ]
-#     # ],
-#
-# )
+dataset_hourly.generate_fig_data(
+    vars_to_gather_cols=['ComfMod'],
+    vars_to_gather_rows=['EPW_City_or_subcountry'],
+    data_on_y_main_axis=[
+        [
+            'Energy Demand (kWh/m2)',
+            [
+                'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
+                'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
+            ]
+        ],
+    ],
+    # data_on_y_sec_axis=[
+    #         'Temperature',
+    #         [
+    #             'Site Outdoor Air Drybulb Temperature (°C)'
+    #         ]
+    #     ],
+    data_on_x_axis='Site Outdoor Air Drybulb Temperature (°C)',
+
+    colorlist_y_main_axis=[
+        [
+            'Energy Demand (kWh/m2)',
+            [
+                'b',
+                'r'
+            ]
+        ],
+    ],
+    # colorlist_y_sec_axis=[
+    #     'Heating Energy Demand (kWh/m2)',
+    #     [
+    #         'r',
+    #     ]
+    # ],
+
+)
 
 ##
 
@@ -123,7 +126,6 @@ dataset_hourly.scatter_plot(
 
 
 # todo check using csvs from other energyplus versions
-# todo query vars_to_gather: which variants would I get with a certain combination?
 # todo check if it works with csvs with different zones
 
 dataset_hourly.time_plot(
