@@ -2441,9 +2441,9 @@ class Table:
         :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
         :param data_on_x_axis: A string. The column name you want to plot in the x-axis.
         :param data_on_y_main_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot main y-axis. It needs to follow this structure:
-        [['name_on_y_main_axis', [list of column names you want to plot]]
+        [['name_on_y_main_axis', [list of column names you want to plot]]]
         :param data_on_y_sec_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot secondary y-axis. It needs to follow this structure:
-        [['name_on_1st_y_sec_axis', [list of column names you want to plot], ['name_on_2nd_y_sec_axis', [list of column names you want to plot], etc]
+        [[['name_on_1st_y_sec_axis', [list of column names you want to plot]], ['name_on_2nd_y_sec_axis', [list of column names you want to plot]], etc]
         :param colorlist_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the colors using the matplotlib notation.
         :param colorlist_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the colors using the matplotlib notation.
         :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
@@ -3135,9 +3135,9 @@ class Table:
         :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
         :param data_on_x_axis: A string. The column name you want to plot in the x-axis.
         :param data_on_y_main_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot main y-axis. It needs to follow this structure:
-        [['name_on_y_main_axis', [list of column names you want to plot]]
+        [['name_on_y_main_axis', [list of column names you want to plot]]]
         :param data_on_y_sec_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot secondary y-axis. It needs to follow this structure:
-        [['name_on_1st_y_sec_axis', [list of column names you want to plot], ['name_on_2nd_y_sec_axis', [list of column names you want to plot], etc]
+        [[['name_on_1st_y_sec_axis', [list of column names you want to plot]], ['name_on_2nd_y_sec_axis', [list of column names you want to plot]], etc]
         :param colorlist_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the colors using the matplotlib notation.
         :param colorlist_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the colors using the matplotlib notation.
         :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
