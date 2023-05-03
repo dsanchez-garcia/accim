@@ -216,9 +216,9 @@ class rename_epw_files:
         checkpoint = checkpoint + 1
 
         end = time()
-        time_taken = end - start
+        time_taken = round(end - start, 2)
         time_per_epw = round(time_taken / len(epw_df), 2)
-        print(f'The geolocation process has taken: {time_taken} ({time_per_epw} s/EPW)')
+        print(f'The geolocation process has taken: {time_taken} seconds ({time_per_epw} s/EPW)')
 
         print('\nThe previous and new names of the EPW files and their unique IDs are:')
         for i in range(len(epw_df)):
@@ -262,7 +262,7 @@ class rename_epw_files:
             in input('\nIf any of the city or subcountry names needs some amendment '
                      '(if you are not happy with any of the available options, '
                      'you can exclude it from renaming at the next stage), '
-                     'please enter the EPW IDs separated by space:').split()
+                     'please enter the EPW IDs separated by space; otherwise, hit enter to omit:').split()
         )
         while len(list(set([i for i in amendments_list if amendments_list.count(i) > 1]))) > 0:
             amendments_list = list(

@@ -1405,7 +1405,7 @@ class Table:
         for i in self.cols_for_multiindex:
             print(f'{i}: {list(dict.fromkeys(temp_df[i]))}')
         print('The available options resulting from the data entered in vars_to_gather would be: ')
-        print(vars_to_gather_values)
+        print(*vars_to_gather_values, sep='\n')
         del temp_df
 
     def df(self):
@@ -1480,7 +1480,8 @@ class Table:
                 self.val_cols = [col for col in self.df.columns if
                                  'Total Energy Demand' in col or
                                  'Cooling Energy Demand' in col or
-                                 'Heating Energy Demand' in col]
+                                 'Heating Energy Demand' in col
+                                 ]
             else:
                 self.val_cols = [col for col in self.df.columns if
                                  'Cooling Coil Total Cooling Rate' in col or
@@ -1500,6 +1501,8 @@ class Table:
                 if 'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)' in col
                    or 'Adaptive Heating Setpoint Temperature_No Tolerance (°C)' in col
                    or 'Building_Total_Zone Operative Temperature (°C) (mean)' in col
+                   or 'Building_Total_Cooling Energy Demand' in col
+                   or 'Building_Total_Heating Energy Demand' in col
             ]
             RMOT_col = [
                 col for col in self.df.columns
@@ -1555,17 +1558,19 @@ class Table:
     # def block_list(self):
     #     return block_list()
 
-    def wrangled_table(self,
-                       reshaping: str = None,
-                       vars_to_gather: list = None,
-                       baseline: str = None,
-                       comparison_mode: list = ['others compared to baseline'],
-                       comparison_cols: list = ['absolute', 'relative'],
-                       check_index_and_cols: bool = False,
-                       vars_to_keep: list = None,
-                       rename_dict: dict = None,
-                       excel_filename: str = None,
-                       ):
+    def wrangled_table(
+            self,
+            reshaping: str = None,
+            vars_to_gather: list = None,
+            baseline: str = None,
+            comparison_mode: list = ['others compared to baseline'],
+            comparison_cols: list = ['absolute', 'relative'],
+            check_index_and_cols: bool = False,
+            vars_to_keep: list = None,
+            rename_dict: dict = None,
+            transpose: bool = False,
+            excel_filename: str = None,
+            ):
         """
         Creates a table based on the arguments.
         :param reshaping: A string. Can be 'pivot', 'unstack' or 'multiindex', to perform these actions.
@@ -1778,6 +1783,9 @@ class Table:
                 wrangled_df_pivoted.rename(columns=lambda s: s.replace(i, rename_dict[i]), inplace=True)
                 wrangled_df_pivoted.rename(index=lambda s: s.replace(i, rename_dict[i]), inplace=True)
 
+            if transpose:
+                wrangled_df_pivoted = wrangled_df_pivoted.transpose()
+
             if excel_filename is not None:
                 wrangled_df_pivoted.to_excel(f'{excel_filename}.xlsx')
 
@@ -1927,6 +1935,9 @@ class Table:
                     wrangled_df_unstacked.rename(columns=lambda s: s.replace(i, rename_dict[i]), inplace=True)
                     wrangled_df_unstacked.rename(index=lambda s: s.replace(i, rename_dict[i]), inplace=True)
 
+                if transpose:
+                    wrangled_df_unstacked = wrangled_df_unstacked.transpose()
+
                 if excel_filename is not None:
                     wrangled_df_unstacked.to_excel(f'{excel_filename}.xlsx')
 
@@ -1952,6 +1963,9 @@ class Table:
                     wrangled_df_stacked.rename(columns=lambda s: s.replace(i, rename_dict[i]), inplace=True)
                     wrangled_df_stacked.rename(index=lambda s: s.replace(i, rename_dict[i]), inplace=True)
 
+                if transpose:
+                    wrangled_df_stacked = wrangled_df_stacked.transpose()
+
                 if excel_filename is not None:
                     wrangled_df_stacked.to_excel(f'{excel_filename}.xlsx')
 
@@ -1968,6 +1982,9 @@ class Table:
                 for i in rename_dict:
                     wrangled_df_multiindex.rename(columns=lambda s: s.replace(i, rename_dict[i]), inplace=True)
                     wrangled_df_multiindex.rename(index=lambda s: s.replace(i, rename_dict[i]), inplace=True)
+
+                if transpose:
+                    wrangled_df_multiindex = wrangled_df_multiindex.transpose()
 
                 if excel_filename is not None:
                     wrangled_df_multiindex.to_excel(f'{excel_filename}.xlsx')
@@ -2461,6 +2478,8 @@ class Table:
         import matplotlib.pyplot as plt
 
         # todo testing from here
+
+        self.df = self.df.fillna(0)
 
         self.generate_fig_data(
             vars_to_gather_cols=vars_to_gather_cols,
