@@ -2441,6 +2441,8 @@ class Table:
             rows_renaming_dict: dict = None,
             cols_renaming_dict: dict = None,
 
+            sharex: bool = True,
+            sharey: bool = True,
             supxlabel: str = None,
             figname: str = None,
             figsize: float = 1,
@@ -2522,8 +2524,8 @@ class Table:
         if confirm_graph:
             fig, ax = plt.subplots(nrows=len(rows),
                                    ncols=len(cols),
-                                   sharex=True,
-                                   sharey=True,
+                                   sharex=sharex,
+                                   sharey=sharey,
                                    constrained_layout=True,
                                    figsize=(figsize * len(cols), ratio_height_to_width * figsize * len(rows)))
 
@@ -2718,7 +2720,7 @@ class Table:
 
         self.rows = rows
 
-    def scatter_plot_adap_vs_stat(
+    def scatter_plot_with_baseline(
             self,
             vars_to_gather_cols: list = None,
             vars_to_gather_rows: list = None,
@@ -3150,7 +3152,8 @@ class Table:
             rows_renaming_dict: dict = None,
             cols_renaming_dict: dict = None,
 
-            supxlabel: str = None,
+            sharex: bool = True,
+            sharey: bool = True,
             figname: str = None,
             figsize: float = 1,
             ratio_height_to_width: float = 1,
@@ -3253,8 +3256,8 @@ class Table:
 
             fig, ax = plt.subplots(nrows=len(self.rows),
                                    ncols=len(self.cols),
-                                   sharex=True,
-                                   sharey=True,
+                                   sharex=sharex,
+                                   sharey=sharey,
                                    constrained_layout=True,
                                    figsize=(figsize * len(self.cols), ratio_height_to_width * figsize * len(self.rows)))
 
@@ -3450,13 +3453,17 @@ class Table:
                         label.set(rotation=90, horizontalalignment='center')
                 else:
                     for j in range(len(self.cols)):
-                        ax[len(self.rows) - 1, j].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
-                        for label in ax[len(self.rows) - 1, j].get_xticklabels():
-                            label.set(rotation=90, horizontalalignment='center')
+                        # ax[len(self.rows) - 1, j].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+                        # for label in ax[len(self.rows) - 1, j].get_xticklabels():
+                        #     label.set(rotation=90, horizontalalignment='center')
+                        for i in range(len(self.rows)):
+                            ax[i, j].xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+                            for label in ax[i, j].get_xticklabels():
+                                label.set(rotation=90, horizontalalignment='center')
 
             # plt.xticks(rotation=70)
 
-            supx = fig.supxlabel(supxlabel)
+            supx = fig.supxlabel('Time')
             supy = fig.supylabel(self.data_on_y_main_axis[0][0])
 
             leg = fig.legend(
