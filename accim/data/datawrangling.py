@@ -2574,7 +2574,12 @@ class Table:
                                                          grid_alpha=0.5)
                         main_y_axis[i][j][k].set_facecolor((0, 0, 0, 0.10))
 
+
                         for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
+                            if 'Setpoint Temperature' in self.y_list_main[i][j][k]['label'][x]:
+                                zord = 1
+                            else:
+                                zord = 0
                             if i == 0 and j == 0:
                                 main_y_axis[i][j][k].scatter(
                                     self.x_list[i][j][2],
@@ -2584,6 +2589,7 @@ class Table:
                                     marker='o',
                                     alpha=0.5,
                                     label=self.y_list_main[i][j][k]['label'][x],
+                                    zorder=zord
                                 )
                             else:
                                 main_y_axis[i][j][k].scatter(
@@ -2593,6 +2599,7 @@ class Table:
                                     s=1,
                                     marker='o',
                                     alpha=0.5,
+                                    zorder=zord
                                 )
 
             for i in range(len(rows)):
@@ -2609,6 +2616,10 @@ class Table:
                                     sec_y_axis[i][j][k].spines["right"].set_position(("axes", 1 + k * 0.15))
                                     sec_y_axis[i][j][k].spines["right"].set_visible(True)
                         for x in range(len(self.y_list_sec[i][j][k]['dataframe'])):
+                            if 'Setpoint Temperature' in self.y_list_sec[i][j][k]['label'][x]:
+                                zord = 1
+                            else:
+                                zord = 0
                             if i == 0 and j == 0:
                                 sec_y_axis[i][j][k].scatter(
                                     self.x_list[i][j][2],
@@ -2618,6 +2629,7 @@ class Table:
                                     marker='o',
                                     alpha=0.5,
                                     label=self.y_list_sec[i][j][k]['label'][x],
+                                    zorder=zord,
                                 )
                             else:
                                 sec_y_axis[i][j][k].scatter(
@@ -2627,6 +2639,7 @@ class Table:
                                     s=1,
                                     marker='o',
                                     alpha=0.5,
+                                    zorder=zord,
                                 )
 
             if len(rows) == 1:
@@ -3311,6 +3324,10 @@ class Table:
                         main_y_axis[i][j][k].set_facecolor((0, 0, 0, 0.10))
 
                         for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
+                            if 'Setpoint Temperature' in self.y_list_main[i][j][k]['label'][x]:
+                                zord = 1
+                            else:
+                                zord = 0
                             if i == 0 and j == 0:
                                 main_y_axis[i][j][k].plot(
                                     self.df_for_graph['Date/time'],
@@ -3321,6 +3338,7 @@ class Table:
                                     # marker='o',
                                     # alpha=0.5,
                                     label=self.y_list_main[i][j][k]['label'][x],
+                                    zorder=zord,
                                 )
                             else:
                                 main_y_axis[i][j][k].plot(
@@ -3331,6 +3349,7 @@ class Table:
                                     # ms=markersize,
                                     # marker='o',
                                     # alpha=0.5,
+                                    zorder=zord,
                                 )
 
             for i in range(len(self.rows)):
@@ -3347,6 +3366,10 @@ class Table:
                                     sec_y_axis[i][j][k].spines["right"].set_position(("axes", 1 + k * 0.15))
                                     sec_y_axis[i][j][k].spines["right"].set_visible(True)
                         for x in range(len(self.y_list_sec[i][j][k]['dataframe'])):
+                            if 'Setpoint Temperature' in self.y_list_sec[i][j][k]['label'][x]:
+                                zord = 1
+                            else:
+                                zord = 0
                             if i == 0 and j == 0:
                                 sec_y_axis[i][j][k].plot(
                                     self.df_for_graph['Date/time'],
@@ -3357,6 +3380,7 @@ class Table:
                                     # marker='o',
                                     # alpha=0.5,
                                     label=self.y_list_sec[i][j][k]['label'][x],
+                                    zorder=zord,
                                 )
                             else:
                                 sec_y_axis[i][j][k].plot(
@@ -3367,6 +3391,7 @@ class Table:
                                     # ms=markersize,
                                     # marker='o',
                                     # alpha=0.5,
+                                    zorder=zord,
                                 )
 
             if len(self.rows) == 1:
