@@ -2023,10 +2023,10 @@ class Table:
             detailed_rows: list = None,
             custom_cols_order: list = None,
             custom_rows_order: list = None,
-            adap_vs_stat_data_y_main: list = None,
+            data_on_y_axis_baseline_plot: list = None,
             # adap_vs_stat_data_y_sec=None,
             baseline: str = None,
-            colorlist_adap_vs_stat_data: list = None,
+            colorlist_baseline_plot_data: list = None,
             data_on_x_axis: str = None,
             data_on_y_main_axis: list = None,
             data_on_y_sec_axis: list = None,
@@ -2043,9 +2043,9 @@ class Table:
         :param detailed_rows: A list of strings. The list should be the specific data you want to show in subplots rows. Used to filter.
         :param custom_cols_order: A list of strings. The list should be the specific order for the items shown in subplot columns.
         :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
-        :param adap_vs_stat_data_y_main: A list of strings. Used to select the data you want to show in the adap_vs_stat graph. Should be a list of the column names you want to plot in each subplot.
-        :param baseline: A string, used only in adap_vs_stat_data_y_main. The baseline should be one of the combinations in vars_to_gather_cols. It will be plotted in x-axis, while the reference combination for comparison in y-axis.
-        :param colorlist_adap_vs_stat_data: A list of strings. Should be the colors using the matplotlib color notation for the columns entered in adap_vs_stat_data_y_main in the same order.
+        :param data_on_y_axis_baseline_plot: A list of strings. Used to select the data you want to show in the graph. Should be a list of the column names you want to plot in each subplot.
+        :param baseline: A string, used only in data_on_y_axis_baseline_plot. The baseline should be one of the combinations in vars_to_gather_cols. It will be plotted in x-axis, while the reference combination for comparison in y-axis.
+        :param colorlist_baseline_plot_data: A list of strings. Should be the colors using the matplotlib color notation for the columns entered in data_on_y_axis_baseline_plot in the same order.
         :param data_on_x_axis: A string. The column name you want to plot in the x-axis.
         :param data_on_y_main_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot main y-axis. It needs to follow this structure:
         [['name_on_y_main_axis', [list of column names you want to plot]]
@@ -2069,13 +2069,13 @@ class Table:
             custom_cols_order = []
         if custom_rows_order is None:
             custom_rows_order = []
-        if adap_vs_stat_data_y_main is None:
-            adap_vs_stat_data_y_main = []
-        self.adap_vs_stat_data_y_main = adap_vs_stat_data_y_main
+        if data_on_y_axis_baseline_plot is None:
+            data_on_y_axis_baseline_plot = []
+        self.data_on_y_axis_baseline_plot = data_on_y_axis_baseline_plot
         # if adap_vs_stat_data_y_sec is None:
         #     adap_vs_stat_data_y_sec = []
-        if colorlist_adap_vs_stat_data is None:
-            colorlist_adap_vs_stat_data = []
+        if colorlist_baseline_plot_data is None:
+            colorlist_baseline_plot_data = []
         if data_on_y_main_axis is None:
             data_on_y_main_axis = []
         self.data_on_y_main_axis = data_on_y_main_axis
@@ -2137,9 +2137,9 @@ class Table:
         if len(detailed_rows) > 0:
             rows = detailed_rows
 
-        if len(adap_vs_stat_data_y_main) > 0:
+        if len(data_on_y_axis_baseline_plot) > 0:
             if baseline is None:
-                print(f'Any baseline has been specified. The list of available baselines is:')
+                print(f'No baseline has been specified. The list of available baselines is:')
                 print(all_cols)
                 baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
 
@@ -2160,7 +2160,7 @@ class Table:
             (df_for_graph['col_to_gather_in_rows'].isin(rows))
             ]
 
-        # if baseline is not None and len(adap_vs_stat_data_y_main) > 0:
+        # if baseline is not None and len(data_on_y_axis_baseline_plot) > 0:
         df_for_graph['col_to_unstack'] = df_for_graph[
             ['col_to_gather_in_cols', 'col_to_gather_in_rows']].agg('['.join, axis=1)
 
@@ -2202,8 +2202,8 @@ class Table:
             multi_index.append('Date/time')
 
         df_for_graph.set_index(multi_index, inplace=True)
-        if len(adap_vs_stat_data_y_main) > 0:
-            self.max_value = max([df_for_graph[dataset].max() for dataset in adap_vs_stat_data_y_main])
+        if len(data_on_y_axis_baseline_plot) > 0:
+            self.max_value = max([df_for_graph[dataset].max() for dataset in data_on_y_axis_baseline_plot])
 
         standard_units = ['(°C)', '(h)', '(m3)', '(m2)', '(ach)', '(Wh)', '(kWh)', '(Wh/m2)', '(kWh/m2)']
 
@@ -2236,13 +2236,13 @@ class Table:
         for i in range(len(rows)):
             temp_row = []
             for j in range(len(cols)):
-                if len(adap_vs_stat_data_y_main) > 0:
+                if len(data_on_y_axis_baseline_plot) > 0:
                     temp = [
                         [i, j],
                         f'{rows[i]}_{cols[j]}',
                         [
                             df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and baseline in x and dataset in x]]
-                            for dataset in adap_vs_stat_data_y_main
+                            for dataset in data_on_y_axis_baseline_plot
                         ]
                     ]
                 else:
@@ -2257,17 +2257,17 @@ class Table:
         self.y_list_main = []
         for i in range(len(rows)):
             temp_row = []
-            if baseline is not None and len(adap_vs_stat_data_y_main) > 0:
+            if baseline is not None and len(data_on_y_axis_baseline_plot) > 0:
                 for j in range(len(cols)):
                     temp = [
                         [i, j],
                         f'{rows[i]}_{cols[j]}',
                         [
                             df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
-                            for dataset in adap_vs_stat_data_y_main
+                            for dataset in data_on_y_axis_baseline_plot
                         ],
-                        [dataset for dataset in adap_vs_stat_data_y_main],
-                        [color for color in colorlist_adap_vs_stat_data]
+                        [dataset for dataset in data_on_y_axis_baseline_plot],
+                        [color for color in colorlist_baseline_plot_data]
                     ]
                     temp_row.append(temp)
                 self.y_list_main.append(temp_row)
@@ -2728,9 +2728,9 @@ class Table:
             detailed_rows: list = None,
             custom_cols_order: list = None,
             custom_rows_order: list = None,
-            adap_vs_stat_data_y_main: list = None,
+            data_on_y_axis_baseline_plot: list = None,
             baseline: str = None,
-            colorlist_adap_vs_stat_data: list = None,
+            colorlist_baseline_plot_data: list = None,
             rows_renaming_dict: dict = None,
             cols_renaming_dict: dict = None,
 
@@ -2749,9 +2749,9 @@ class Table:
         :param detailed_rows: A list of strings. The list should be the specific data you want to show in subplots rows. Used to filter.
         :param custom_cols_order: A list of strings. The list should be the specific order for the items shown in subplot columns.
         :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
-        :param adap_vs_stat_data_y_main: A list of strings. Used to select the data you want to show in the adap_vs_stat graph. Should be a list of the column names you want to plot in each subplot.
-        :param baseline: A string, used only in adap_vs_stat_data_y_main. The baseline should be one of the combinations in vars_to_gather_cols. It will be plotted in x-axis, while the reference combination for comparison in y-axis.
-        :param colorlist_adap_vs_stat_data: A list of strings. Should be the colors using the matplotlib color notation for the columns entered in adap_vs_stat_data_y_main in the same order.
+        :param data_on_y_axis_baseline_plot: A list of strings. Used to select the data you want to show in the graph. Should be a list of the column names you want to plot in each subplot.
+        :param baseline: A string, used only in data_on_y_axis_baseline_plot. The baseline should be one of the combinations in vars_to_gather_cols. It will be plotted in x-axis, while the reference combination for comparison in y-axis.
+        :param colorlist_baseline_plot_data: A list of strings. Should be the colors using the matplotlib color notation for the columns entered in data_on_y_axis_baseline_plot in the same order.
         :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
         :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
 
@@ -2775,9 +2775,9 @@ class Table:
             detailed_rows=detailed_rows,
             custom_cols_order=custom_cols_order,
             custom_rows_order=custom_rows_order,
-            adap_vs_stat_data_y_main=adap_vs_stat_data_y_main,
+            data_on_y_axis_baseline_plot=data_on_y_axis_baseline_plot,
             baseline=baseline,
-            colorlist_adap_vs_stat_data=colorlist_adap_vs_stat_data,
+            colorlist_baseline_plot_data=colorlist_baseline_plot_data,
             rows_renaming_dict=rows_renaming_dict,
             cols_renaming_dict=cols_renaming_dict,
         )

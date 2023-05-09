@@ -195,11 +195,11 @@ dataset_hourly.scatter_plot_with_baseline(
         'CS_IND IMAC C NV[CM_3[HM_0',
         'CS_INT ASHRAE55[CM_3[HM_0'
     ],
-    adap_vs_stat_data_y_main=[
+    data_on_y_axis_baseline_plot=[
                 'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
                 'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
     ],
-    colorlist_adap_vs_stat_data=[
+    colorlist_baseline_plot_data=[
                 'blue',
                 'red'
     ],

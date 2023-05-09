@@ -278,7 +278,7 @@ dataset_hourly.scatter_plot(
 
 # ### 3.2 Adaptive vs Static data scatter plot:
 
-# A very specific type of scatter plot can be done to show the relationship between data related to adaptive and static setpoint temperatures. In this case, you would need to use the following arguments in generate_fig_data: adap_vs_stat_data_y_main, baseline and colorlist_adap_vs_stat_data; finally, you would need to use the scatter_plot_adap_vs_stat() function.
+# A very specific type of scatter plot can be done to show the relationship between data related to adaptive and static setpoint temperatures. In this case, you would need to use the following arguments in generate_fig_data: data_on_y_axis_baseline_plot, baseline and colorlist_baseline_plot_data; finally, you would need to use the scatter_plot_adap_vs_stat() function.
 
 # In[18]:
 
@@ -286,12 +286,12 @@ dataset_hourly.scatter_plot(
 dataset_hourly.generate_fig_data(
     vars_to_gather_rows=['EPW_City_or_subcountry'], #you can enter multiple variables, for example: ['EPW_City_or_subcountry', 'EPW_Scenario-Year']
     vars_to_gather_cols=['ComfMod', 'Category'], #you can enter multiple variables
-    adap_vs_stat_data_y_main=[ # in this case, you only need to specify a list which includes the data columns you want to plot
+    data_on_y_axis_baseline_plot=[ # in this case, you only need to specify a list which includes the data columns you want to plot
         'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
         'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
     ],
     baseline='CM_0[CA_1', # the baseline needs to be in vars_to_gather_cols, and it's going to be shown on x axis. Given the variables we have simulated, you can choose between 'CM_0[CA_1', 'CM_0[CA_2', 'CM_0[CA_3', 'CM_3[CA_1', 'CM_3[CA_2' and 'CM_3[CA_3'
-    colorlist_adap_vs_stat_data=[
+    colorlist_baseline_plot_data=[
         'b',
         'r',
     ]
