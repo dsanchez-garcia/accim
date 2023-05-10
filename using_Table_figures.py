@@ -1,4 +1,4 @@
-from accim.data.datawrangling import Table
+from accim.data.data_postprocessing import Table
 dataset_hourly = Table(
     #datasets=list Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly',

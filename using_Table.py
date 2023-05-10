@@ -39,7 +39,7 @@ print(*[i for i in os.listdir() if i.endswith('.csv') and 'TestModel_onlyGeometr
 # In[2]:
 
 
-from accim.data.datawrangling import Table
+from accim.data.data_postprocessing import Table
 dataset_hourly = Table(
     #datasets=list #Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly', # This lets accim know which is the frequency of the input CSVs. Input CSVs with multiple frequencies are also allowed. It can be 'hourly', 'daily', 'monthly' and 'runperiod'. It can also be 'timestep' but might generate errors.
@@ -323,7 +323,7 @@ for i in os.listdir():
 # In[20]:
 
 
-from accim.data.datawrangling import Table
+from accim.data.data_postprocessing import Table
 dataset_monthly = Table(
     #datasets=list Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly',
@@ -372,7 +372,7 @@ dataset_monthly.wrangled_df_unstacked
 # In[23]:
 
 
-from accim.data.datawrangling import Table
+from accim.data.data_postprocessing import Table
 dataset_runperiod = Table(
     #datasets=list Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly',
@@ -458,7 +458,7 @@ dataset_runperiod.wrangled_df_pivoted
 
 
 import os
-from accim.data.datawrangling import Table
+from accim.data.data_postprocessing import Table
 
 dataset = [i for i in os.listdir() if i.endswith('.csv') and 'CA_3' in i]
 

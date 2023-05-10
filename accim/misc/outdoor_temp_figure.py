@@ -1,4 +1,4 @@
-from accim.data.datawrangling import Table
+from accim.data.data_postprocessing import Table
 import time
 import matplotlib.pyplot as plt
 import datetime

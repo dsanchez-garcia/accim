@@ -1,4 +1,4 @@
-from accim.data.datawrangling import Table
+from accim.data.data_postprocessing import Table
 dataset_hourly = Table(
     source_frequency='hourly',
     frequency='hourly',

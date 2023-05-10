@@ -1,6 +1,6 @@
 
 from os import listdir
-from accim.data.datawrangling import Table
+from accim.data.data_postprocessing import Table
 dataset_runperiod = Table(
     datasets=[i for i in listdir() if i.endswith('.csv') and 'HM_1' not in i],
     source_frequency='hourly',

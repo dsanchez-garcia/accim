@@ -1,6 +1,6 @@
 
 
-from accim.data.datawrangling import Table
+from accim.data.data_postprocessing import Table
 dataset_runperiod = Table(
     source_frequency='hourly',
     frequency='runperiod',
