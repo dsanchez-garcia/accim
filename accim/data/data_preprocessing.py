@@ -1,3 +1,104 @@
+class give_address_0:
+    def __init__(
+            self,
+            latitude,
+            longitude
+    ):
+        import requests
+
+        # Make request to OpenStreetMap API
+        url = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={latitude}&lon={longitude}"
+        response = requests.get(url).json()
+
+        # Extract address information from response
+        self.address = response['address']
+
+        # Print the full address
+        self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
+
+class give_address_1:
+    def __init__(
+            self,
+            latitude,
+            longitude
+    ):
+        import requests
+        import ssl
+        import certifi
+
+        # Set up SSL context with OpenStreetMap certificate added to trust store
+        context = ssl.create_default_context()
+        cafile = certifi.where()
+        context.load_verify_locations(cafile)
+        context.check_hostname = True
+
+        # Make request to OpenStreetMap API with SSL verification enabled
+        url = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={latitude}&lon={longitude}"
+        response = requests.get(url, verify=cafile, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10).json()
+
+        # Extract address information from response
+        self.address = response['address']
+
+        # Print the full address
+        self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
+
+class give_address_2:
+    def __init__(
+            self,
+            latitude,
+            longitude
+    ):
+        import requests
+        import certifi
+        import OpenSSL
+        import ssl
+        import socket
+
+        # Obtain the certificate chain
+        ctx = ssl.create_default_context()
+        sock = ctx.wrap_socket(socket.socket(), server_hostname="nominatim.openstreetmap.org")
+        sock.connect(("nominatim.openstreetmap.org", 443))
+        cert = sock.getpeercert(True)
+        cert_chain = [OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_ASN1, cert)]
+
+        # Set up SSL context with certificate chain added to trust store
+        cafile = certifi.where()
+        context = ssl.create_default_context(cafile=cafile)
+        for cert in cert_chain:
+            context.load_verify_locations(cadata=cert.dump())
+
+        # Make request to OpenStreetMap API with SSL verification enabled
+        url = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={latitude}&lon={longitude}"
+        response = requests.get(url, verify=cafile, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10).json()
+
+        # Extract address information from response
+        self.address = response['address']
+
+        # Print the full address
+        self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
+
+
+
+
+class give_address:
+    def __init__(
+            self,
+            latitude,
+            longitude
+    ):
+        import requests
+
+        # Make request to OpenStreetMap API
+        url = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={latitude}&lon={longitude}"
+        response = requests.get(url).json()
+
+        # Extract address information from response
+        self.address = response['address']
+
+        # Print the full address
+        self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
+
+
 class rename_epw_files:
     def __init__(
             self,
@@ -19,11 +120,13 @@ class rename_epw_files:
         import datapackage
         import numpy as np
         import os
+        from geopy.exc import GeocoderUnavailable
         from geopy.geocoders import Nominatim
         import pycountry
         import shutil
         from unidecode import unidecode
         from time import time
+        import requests
 
         checkpoint = 0
 
@@ -140,39 +243,80 @@ class rename_epw_files:
         epw_df['EPW_city_or_subcountry'] = 'UNKNOWN'
 
 
-        geolocator = Nominatim(user_agent="geoapiExercises")
+        # todo trying to make it work with own class
         for i in range(len(epw_df)):
-            location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
-            # print(location)
-            epw_df.loc[i, 'EPW_country_code'] = location.raw['address'].get('country_code').upper()
-            epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
-            # epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').replace(' ', '-')
-            # epw_df.loc[i, 'EPW_city'] = location.raw['address'].get('city', '')
-            # epw_df.loc[i, 'geolocator_address'] = location.raw['display_name']
-            epw_df.loc[i, 'location_address'] = unidecode(location.address)
+            try:
+                osm_address = give_address(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
+                epw_df.loc[i, 'EPW_country_code'] = osm_address.address['country_code'].upper()
+                epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
+                epw_df.loc[i, 'location_address'] = unidecode(osm_address.full_address)
 
+                for j in epw_df.loc[i, 'EPW_mod_filtered']:
+                    if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+                        try:
+                            if j.lower() in str(unidecode(osm_address.address['city_district'])).lower():
+                                epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+                        except KeyError:
+                            pass
+                    if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+                        try:
+                            if j.lower() in str(unidecode(osm_address.address['city'])).lower():
+                                epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+                        except KeyError:
+                            pass
+                    if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+                        try:
+                            if j.lower() in str(unidecode(osm_address.address['municipality'])).lower():
+                                epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+                        except KeyError:
+                            pass
+            except requests.exceptions.SSLError:
+                epw_df.loc[i, 'EPW_country_code'] = 'UNKNOWN'
+                epw_df.loc[i, 'EPW_country'] = 'UNKNOWN'
+                epw_df.loc[i, 'location_address'] = 'UNKNOWN'
+                epw_df.loc[i, 'EPW_city_or_subcountry'] = 'UNKNOWN'
+                print(f"For some reason, accim cannot connect to OpenStreetMap to get the address of file {epw_df.loc[i, 'EPW_names']}. It gets an SSL error.")
 
-        # for i in range(len(epw_df['EPW_mod_filtered'])):
-        #     location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
-            for j in epw_df.loc[i, 'EPW_mod_filtered']:
-                if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                    try:
-                        if j.lower() in str(unidecode(location.raw['address']['city_district'])).lower():
-                            epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                    except KeyError:
-                        pass
-                if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                    try:
-                        if j.lower() in str(unidecode(location.raw['address']['city'])).lower():
-                            epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                    except KeyError:
-                        pass
-                if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
-                    try:
-                        if j.lower() in str(unidecode(location.raw['address']['municipality'])).lower():
-                            epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
-                    except KeyError:
-                        pass
+        checkpoint +=1
+
+        # todo consider except Using geolocator
+        # geolocator = Nominatim(user_agent="geoapiExercises")
+        # for i in range(len(epw_df)):
+        #     try:
+        #         location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
+        #         # print(location)
+        #         epw_df.loc[i, 'EPW_country_code'] = location.raw['address'].get('country_code').upper()
+        #         epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
+        #         # epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').replace(' ', '-')
+        #         # epw_df.loc[i, 'EPW_city'] = location.raw['address'].get('city', '')
+        #         # epw_df.loc[i, 'geolocator_address'] = location.raw['display_name']
+        #         epw_df.loc[i, 'location_address'] = unidecode(location.address)
+        #
+        #
+        #     # for i in range(len(epw_df['EPW_mod_filtered'])):
+        #     #     location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
+        #         for j in epw_df.loc[i, 'EPW_mod_filtered']:
+        #             if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+        #                 try:
+        #                     if j.lower() in str(unidecode(location.raw['address']['city_district'])).lower():
+        #                         epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+        #                 except KeyError:
+        #                     pass
+        #             if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+        #                 try:
+        #                     if j.lower() in str(unidecode(location.raw['address']['city'])).lower():
+        #                         epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+        #                 except KeyError:
+        #                     pass
+        #             if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+        #                 try:
+        #                     if j.lower() in str(unidecode(location.raw['address']['municipality'])).lower():
+        #                         epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+        #                 except KeyError:
+        #                     pass
+        #     except GeocoderUnavailable:
+        #         pass
+
 
 
             #todo for the unknowns, propose the city, city_district or municipality fields
@@ -187,17 +331,23 @@ class rename_epw_files:
         for i in range(len(epw_df['EPW_mod_filtered'])):
             try:
                 if type(epw_df.loc[i, 'EPW_city_or_subcountry']) is float:
-                    location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
+                    osm_address = give_address(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
+                    # location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
                     try:
-                        epw_df.loc[i, 'EPW_city_or_subcountry'] = str(location.raw['address'].get('city').replace(' ', '-')).capitalize()
+                        epw_df.loc[i, 'EPW_city_or_subcountry'] = str(osm_address.address['city'].replace(' ', '-')).capitalize()
+                        # epw_df.loc[i, 'EPW_city_or_subcountry'] = str(location.raw['address'].get('city').replace(' ', '-')).capitalize()
                     except AttributeError:
-                        epw_df.loc[i, 'EPW_city_or_subcountry'] = str(location.raw['address'].get('city')).capitalize()
+                        epw_df.loc[i, 'EPW_city_or_subcountry'] = str(osm_address.address['city']).capitalize()
+                        # epw_df.loc[i, 'EPW_city_or_subcountry'] = str(location.raw['address'].get('city')).capitalize()
                 if type(epw_df.loc[i, 'EPW_country']) is float:
-                    location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
+                    osm_address = give_address(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
+                    # location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
                     try:
-                        epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').replace(' ', '-').capitalize()
+                        epw_df.loc[i, 'EPW_country'] = osm_address.address['country'].replace(' ', '-').capitalize()
+                        # epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').replace(' ', '-').capitalize()
                     except AttributeError:
-                        epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').capitalize()
+                        epw_df.loc[i, 'EPW_country'] = osm_address.address['country'].capitalize()
+                        # epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').capitalize()
             except KeyError:
                 continue
 
