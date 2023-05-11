@@ -103,8 +103,8 @@ class rename_epw_files:
         import datapackage
         import numpy as np
         import os
-        from geopy.exc import GeocoderUnavailable
-        from geopy.geocoders import Nominatim
+        # from geopy.exc import GeocoderUnavailable
+        # from geopy.geocoders import Nominatim
         import pycountry
         import shutil
         from unidecode import unidecode

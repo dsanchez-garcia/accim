@@ -113,7 +113,7 @@ setuptools.setup(
     install_requires=[
         'eppy',
         'pycountry',
-        'geopy',
+        # 'geopy',
         'matplotlib',
         'pandas',
         'datapackage',
