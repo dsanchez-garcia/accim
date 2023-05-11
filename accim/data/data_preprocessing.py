@@ -1,22 +1,5 @@
-class give_address_0:
-    def __init__(
-            self,
-            latitude,
-            longitude
-    ):
-        import requests
 
-        # Make request to OpenStreetMap API
-        url = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={latitude}&lon={longitude}"
-        response = requests.get(url).json()
-
-        # Extract address information from response
-        self.address = response['address']
-
-        # Print the full address
-        self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
-
-class give_address_1:
+class give_address_ssl:
     def __init__(
             self,
             latitude,
@@ -42,7 +25,7 @@ class give_address_1:
         # Print the full address
         self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
 
-class give_address_2:
+class give_address_openssl:
     def __init__(
             self,
             latitude,
@@ -247,6 +230,7 @@ class rename_epw_files:
         for i in range(len(epw_df)):
             try:
                 osm_address = give_address(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
+
                 epw_df.loc[i, 'EPW_country_code'] = osm_address.address['country_code'].upper()
                 epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
                 epw_df.loc[i, 'location_address'] = unidecode(osm_address.full_address)
@@ -271,11 +255,65 @@ class rename_epw_files:
                         except KeyError:
                             pass
             except requests.exceptions.SSLError:
-                epw_df.loc[i, 'EPW_country_code'] = 'UNKNOWN'
-                epw_df.loc[i, 'EPW_country'] = 'UNKNOWN'
-                epw_df.loc[i, 'location_address'] = 'UNKNOWN'
-                epw_df.loc[i, 'EPW_city_or_subcountry'] = 'UNKNOWN'
-                print(f"For some reason, accim cannot connect to OpenStreetMap to get the address of file {epw_df.loc[i, 'EPW_names']}. It gets an SSL error.")
+                try:
+                    osm_address = give_address_ssl(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
+
+                    epw_df.loc[i, 'EPW_country_code'] = osm_address.address['country_code'].upper()
+                    epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
+                    epw_df.loc[i, 'location_address'] = unidecode(osm_address.full_address)
+
+                    for j in epw_df.loc[i, 'EPW_mod_filtered']:
+                        if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+                            try:
+                                if j.lower() in str(unidecode(osm_address.address['city_district'])).lower():
+                                    epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+                            except KeyError:
+                                pass
+                        if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+                            try:
+                                if j.lower() in str(unidecode(osm_address.address['city'])).lower():
+                                    epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+                            except KeyError:
+                                pass
+                        if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+                            try:
+                                if j.lower() in str(unidecode(osm_address.address['municipality'])).lower():
+                                    epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+                            except KeyError:
+                                pass
+                except requests.exceptions.SSLError:
+                    try:
+                        osm_address = give_address_openssl(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
+
+                        epw_df.loc[i, 'EPW_country_code'] = osm_address.address['country_code'].upper()
+                        epw_df.loc[i, 'EPW_country'] = pycountry.countries.get(alpha_2=epw_df.loc[i, 'EPW_country_code']).name.replace(' ', '-')
+                        epw_df.loc[i, 'location_address'] = unidecode(osm_address.full_address)
+
+                        for j in epw_df.loc[i, 'EPW_mod_filtered']:
+                            if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+                                try:
+                                    if j.lower() in str(unidecode(osm_address.address['city_district'])).lower():
+                                        epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+                                except KeyError:
+                                    pass
+                            if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+                                try:
+                                    if j.lower() in str(unidecode(osm_address.address['city'])).lower():
+                                        epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+                                except KeyError:
+                                    pass
+                            if 'UNKNOWN' in epw_df.loc[i, 'EPW_city_or_subcountry']:
+                                try:
+                                    if j.lower() in str(unidecode(osm_address.address['municipality'])).lower():
+                                        epw_df.loc[i, 'EPW_city_or_subcountry'] = j.replace(' ', '-').capitalize()
+                                except KeyError:
+                                    pass
+                    except AttributeError:
+                        epw_df.loc[i, 'EPW_country_code'] = 'UNKNOWN'
+                        epw_df.loc[i, 'EPW_country'] = 'UNKNOWN'
+                        epw_df.loc[i, 'location_address'] = 'UNKNOWN'
+                        epw_df.loc[i, 'EPW_city_or_subcountry'] = 'UNKNOWN'
+                        print(f"For some reason, accim cannot connect to OpenStreetMap to get the address of file {epw_df.loc[i, 'EPW_names']}. It gets an SSL error.")
 
         checkpoint +=1
 
@@ -436,12 +474,12 @@ class rename_epw_files:
             for i in amendments_list:
                 print(f'\nRegarding the file ID: {i} / old name: {epw_df.loc[i, "EPW_names"]} / new name: {epw_df.loc[i, "EPW_new_names"]}, the address obtained from coordinates is: ')
                 print(epw_df.loc[i, "location_address"])
-                epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter the amended city or subcountry, which must be unique: ').replace(' ', '-')
+                epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter the amended city or subcountry, which must be unique: ').replace(' ', '-').replace('_', '-')
                 temp_name = f'{epw_df.loc[i, "EPW_country"]}_{epw_df.loc[i, "amended_city_or_subcountry"]}_{epw_df.loc[i, "EPW_scenario_year"]}'
                 epw_df.loc[i, 'EPW_new_names'] = temp_name
                 while list(epw_df['EPW_new_names']).count(temp_name) > 1:
                     print(f"{epw_df.loc[i, 'EPW_new_names']} already exists in the EPW file list, therefore you need to select a different city or subcountry name.")
-                    epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter again the amended city or subcountry, which must be unique: ').replace(' ', '-')
+                    epw_df.loc[i, 'amended_city_or_subcountry'] = input('Please enter again the amended city or subcountry, which must be unique: ').replace(' ', '-').replace('_', '-')
                     temp_name = f'{epw_df.loc[i, "EPW_country"]}_{epw_df.loc[i, "amended_city_or_subcountry"]}_{epw_df.loc[i, "EPW_scenario_year"]}'
                     epw_df.loc[i, 'EPW_new_names'] = temp_name
 
