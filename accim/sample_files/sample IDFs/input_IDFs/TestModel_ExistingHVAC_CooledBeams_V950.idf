@@ -167,7 +167,7 @@
     ,                        !- ASHRAE Clear Sky Optical Depth for Diffuse Irradiance (taud) {dimensionless}
     0;                       !- Sky Clearness
 
-  Timestep,2;
+  Timestep,6;
 
   ConvergenceLimits,
     1,                       !- Minimum System Timestep {minutes}
@@ -1387,7 +1387,7 @@
     ,                        !- External Node Name
     1;                       !- Window/Door Opening Factor, or Crack Factor {dimensionless}
 
-   ! Block 1, Zone 2, Wall - 27,842 m2 - 0,0°, Surface Area: 27,842m2
+   ! Block 1, Zone 2, Wall - 27,842 m2 - 0,0ï¿½, Surface Area: 27,842m2
 
   BuildingSurface:Detailed,
     Block1:Zone2_Wall_3_0_0, !- Name
@@ -1510,7 +1510,7 @@
     -.3,                     !- Wind Pressure Coefficient Value 7 {dimensionless}
     .1;                      !- Wind Pressure Coefficient Value 8 {dimensionless}
 
-   ! Block 1, Zone 2, Wall - 35,844 m2 - 270,0°, Surface Area: 35,844m2
+   ! Block 1, Zone 2, Wall - 35,844 m2 - 270,0ï¿½, Surface Area: 35,844m2
 
   BuildingSurface:Detailed,
     Block1:Zone2_Wall_4_0_0, !- Name
@@ -1633,7 +1633,7 @@
     .4,                      !- Wind Pressure Coefficient Value 7 {dimensionless}
     .1;                      !- Wind Pressure Coefficient Value 8 {dimensionless}
 
-   ! Block 1, Zone 2, Wall - 27,842 m2 - 180,0°, Surface Area: 27,842m2
+   ! Block 1, Zone 2, Wall - 27,842 m2 - 180,0ï¿½, Surface Area: 27,842m2
 
   BuildingSurface:Detailed,
     Block1:Zone2_Wall_5_0_0, !- Name
@@ -1897,7 +1897,7 @@
     ,                        !- External Node Name
     1;                       !- Window/Door Opening Factor, or Crack Factor {dimensionless}
 
-   ! Block 1, Zone 3, Wall - 24,356 m2 - 0,0°, Surface Area: 24,356m2
+   ! Block 1, Zone 3, Wall - 24,356 m2 - 0,0ï¿½, Surface Area: 24,356m2
 
   BuildingSurface:Detailed,
     Block1:Zone3_Wall_3_0_0, !- Name
@@ -2020,7 +2020,7 @@
     -.3,                     !- Wind Pressure Coefficient Value 7 {dimensionless}
     .1;                      !- Wind Pressure Coefficient Value 8 {dimensionless}
 
-   ! Block 1, Zone 3, Wall - 24,356 m2 - 180,0°, Surface Area: 24,356m2
+   ! Block 1, Zone 3, Wall - 24,356 m2 - 180,0ï¿½, Surface Area: 24,356m2
 
   BuildingSurface:Detailed,
     Block1:Zone3_Wall_5_0_0, !- Name
@@ -2308,7 +2308,7 @@
     -.4,                     !- Wind Pressure Coefficient Value 7 {dimensionless}
     -.5;                     !- Wind Pressure Coefficient Value 8 {dimensionless}
 
-   ! Block 1, Zone 1, Wall - 35,844 m2 - 90,0°, Surface Area: 35,844m2
+   ! Block 1, Zone 1, Wall - 35,844 m2 - 90,0ï¿½, Surface Area: 35,844m2
 
   BuildingSurface:Detailed,
     Block1:Zone1_Wall_2_0_0, !- Name
@@ -2431,7 +2431,7 @@
     -.2,                     !- Wind Pressure Coefficient Value 7 {dimensionless}
     -.35;                    !- Wind Pressure Coefficient Value 8 {dimensionless}
 
-   ! Block 1, Zone 1, Wall - 12,211 m2 - 0,0°, Surface Area: 12,211m2
+   ! Block 1, Zone 1, Wall - 12,211 m2 - 0,0ï¿½, Surface Area: 12,211m2
 
   BuildingSurface:Detailed,
     Block1:Zone1_Wall_3_0_0, !- Name
@@ -2554,7 +2554,7 @@
     -.3,                     !- Wind Pressure Coefficient Value 7 {dimensionless}
     .1;                      !- Wind Pressure Coefficient Value 8 {dimensionless}
 
-   ! Block 1, Zone 1, Wall - 12,211 m2 - 180,0°, Surface Area: 12,211m2
+   ! Block 1, Zone 1, Wall - 12,211 m2 - 180,0ï¿½, Surface Area: 12,211m2
 
   BuildingSurface:Detailed,
     Block1:Zone1_Wall_5_0_0, !- Name

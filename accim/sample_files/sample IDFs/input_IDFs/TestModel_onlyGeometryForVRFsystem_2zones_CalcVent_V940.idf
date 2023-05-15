@@ -221,7 +221,7 @@ SizingPeriod:DesignDay, Winter Design Day in Untitled (01-01:31-12),  !- Design 
    ,                                              !- ASHRAE Clear Sky Optical Depth for Diffuse Irradiance (taud)
    0;                                             !- Clearness {0.0 to 1.2} - gives no sun (but does include long wave radiant heat exchange with sky)
 
-Timestep, 2;                                      !- Timesteps/hour
+Timestep, 6;                                      !- Timesteps/hour
 
 ConvergenceLimits,
    1,                                             !- Minimum System Time Step (0=same as zone time step)

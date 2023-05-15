@@ -42,7 +42,7 @@ def addAccis(
     :param Output_type: The default is None. Can be 'standard', 'simplified' or 'detailed'.
     :param Output_freqs: The default is None. A list containing the following strings: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
     :param Output_keep_existing: The default is None. It is a boolean (True or False) to keep the existing Output:Variable objects or not.
-    :param EnergyPlus_version: The default is None. Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1' or '22.2'.
+    :param EnergyPlus_version: The default is None. Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'.
     :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
     :param ComfStand: The default is None.
         '0 = ESP CTE;
@@ -102,7 +102,7 @@ def addAccis(
     Exceptions
             DESCRIPTION. EnergyPlus version not supported.
         Only works for versions between EnergyPlus 9.1 (enter 9.1) and
-        EnergyPlus 22.2 (enter 22.2).
+        EnergyPlus 23.1 (enter 23.1).
 
     :return:
     Returns nothing. Output IDFs are generated in the source folder, where input IDFs were located.
@@ -168,7 +168,8 @@ def addAccis(
         '9.5',
         '9.6',
         '22.1',
-        '22.2'
+        '22.2',
+        '23.1',
     ]
 
     fullTempCtrllist = [
@@ -248,10 +249,10 @@ def addAccis(
                 "Some of the Output frequencies are not correct. "
                 "Please, enter the Output frequencies again separated by space "
                 "(timestep, hourly, daily, monthly, runperiod): ").split())
-        EnergyPlus_version = input("\nEnter the EnergyPlus version (9.1 to 22.2): ")
+        EnergyPlus_version = input("\nEnter the EnergyPlus version (9.1 to 23.1): ")
         while EnergyPlus_version not in fullEPversionsList:
             EnergyPlus_version = input("    EnergyPlus version was not correct. "
-                                       "Please, enter the EnergyPlus version (9.1 to 22.2): ")
+                                       "Please, enter the EnergyPlus version (9.1 to 23.1): ")
         TempCtrl = input('\nEnter the Temperature Control method (temperature or pmv): ')
         while TempCtrl not in fullTempCtrllist:
             TempCtrl = input("  Temperature Control method was not correct. "

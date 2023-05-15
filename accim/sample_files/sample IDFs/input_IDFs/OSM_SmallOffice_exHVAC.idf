@@ -3,7 +3,7 @@ Version,
   22.1;                                   !- Version Identifier
 
 Timestep,
-  1;                                      !- Number of Timesteps per Hour
+  6;                                      !- Number of Timesteps per Hour
 
 LifeCycleCost:Parameters,
   Life Cycle Cost Parameters,             !- Name

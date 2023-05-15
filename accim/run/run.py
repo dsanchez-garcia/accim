@@ -38,7 +38,7 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_vers
     :param confirmRun: Default is None. Enter True to run all simulations regardless the no. of them,
     or False to shut down all runs.
     :param num_CPUs: An integer. The number of CPUs to be used.
-    :param EnergyPlus_version: A string. It should be the EnergyPlus version of the IDFs, from '9.0' to '22.2'.
+    :param EnergyPlus_version: A string. It should be the EnergyPlus version of the IDFs, from '9.0' to '23.1'.
     """
 
     fullEPversionsList = [
@@ -49,7 +49,8 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_vers
         '9.5',
         '9.6',
         '22.1',
-        '22.2'
+        '22.2',
+        '23.1',
     ]
 
     if EnergyPlus_version is None:
@@ -73,6 +74,8 @@ def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_vers
         iddfile = 'C:\EnergyPlusV22-1-0\Energy+.idd'
     elif EnergyPlus_version.lower() == '22.2':
         iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
+    elif EnergyPlus_version.lower() == '23.1':
+        iddfile = 'C:\EnergyPlusV23-1-0\Energy+.idd'
     else:
         while EnergyPlus_version.lower() not in fullEPversionsList:
             print(f'{EnergyPlus_version} is not available. You must enter one of the following list:')
