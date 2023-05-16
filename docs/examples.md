@@ -52,7 +52,7 @@ Enter the Output type (standard, simplified or detailed): standard
 
 Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): hourly runperiod
 
-Enter the EnergyPlus version (9.1 to 22.2): 22.2
+Enter the EnergyPlus version (9.1 to 23.1): 23.1
 
 Enter the Temperature Control method (temperature or pmv): temperature
 ```
@@ -64,7 +64,7 @@ Supply Air Temperature Input Method is: supply air temperature
 Output type is: standard
 Output frequencies are: 
 ['hourly', 'runperiod']
-EnergyPlus version is: 22.2
+EnergyPlus version is: 23.1
 Temperature Control method is: temperature
 
 =======================START OF GENERIC IDF FILE GENERATION PROCESS=======================

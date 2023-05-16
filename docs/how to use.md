@@ -19,7 +19,7 @@ No matter what type or functions are you going to use, the language of the softw
 
 Said that, accim will transform all the IDF files located in the same path where script is. Therefore, the quickest way to run the script is opening a prompt command dialog in the folder where the IDF files are located (you can do this by holding Ctrl and right-click inside the folder, and click on 'open PowerShell window here'). Then run Python by typing 'python' in the command prompt.
 
-First you need to import the module 'accis' (stands for Adaptive Comfort Control Implementation Script):
+First you need to import the module 'accis' (stands for Adaptive-Comfort-Control-Implementation Script):
 ```
 >>> from accim.sim import accis
 ```
@@ -66,9 +66,9 @@ where
 - ScriptType can be 'vrf_mm', 'vrf_ac', 'ex_mm' or 'ex_ac', and it refers to the type of functions as explained above
 - SupplyAirTempInputMethod can be 'supply air temperature' or 'temperature difference', and it is the supply air temperature input method for the VRF systems.
 - Existing outputs in the IDF can be kept if entered 'true'. Otherwise, if entered 'false', it will be removed for clarity purposes at results stage.
-- Output_type can be 'standard' or 'simplified', and it refers to the simulation results: 'standard' means that results will contain the full selection relevant to accim; and 'simplified' means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited.
+- Output_type can be 'standard', 'detailed' or 'simplified', and it refers to the simulation results: 'standard' means that results will contain the full selection relevant to accim;'detailed' is mainly used for testing the software tool; and 'simplified' means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited.
 - Output_freqs (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies.
-- EnergyPlus_version can be '9.1' to '9.6', '22.1' or '22.2'. It is the version of EnergyPlus you have installed in your computer. If you enter '9.1', accim will look for the E+9.1.0 IDD file in path "C:\\EnergyPlusV9-1-0".
+- EnergyPlus_version can be from '9.1' to '23.1'. It is the version of EnergyPlus you have installed in your computer. If you enter '9.1', accim will look for the E+9.1.0 IDD file in path "C:\\EnergyPlusV9-1-0".
 - Temperature Control method can be 'temperature' or 'temp', or 'pmv'. If 'temp' is used, the setpoint will be the operative temperature, otherwise if 'pmv' is used, the setpoint will be the PMV index.
 
 Besides, `addAccis()` can take the same values we entered before in the prompt command as arguments. The usage of this function will be detailed below. An example of this, to get the same results as shown in the command prompt would be:
@@ -89,7 +89,7 @@ If you run `accis.addAccis(whateverScriptType, whateverSupplyAirTempInputMethod,
 >>>                bool, # Output_keep_existing: True or False
 >>>                str, # Output_type: 'simplified' or 'standard'
 >>>                list, # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
->>>                str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', or '22.2'
+>>>                str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'
 >>>                str, # TempCtrl: 'temperature' or 'temp', or 'pmv'
 >>>                list, # ComfStand, which is the Comfort Standard
 >>>                list, # CAT, which is the Category
@@ -117,7 +117,7 @@ Some example of the usage could be:
 >>>                Output_keep_existing=False, # Output_keep_existing: True or False
 >>>                Output_type='standard', # Output_type: 'simplified' or 'standard'
 >>>                Output_freqs=['hourly', 'runperiod'], # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
->>>                EnergyPlus_version='9.5', # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', or '22.2'
+>>>                EnergyPlus_version='9.5', # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'
 >>>                TempCtrl='temp', # Temperature Control: 'temperature' or 'temp', or 'pmv'
 >>>                ComfStand=[0, 1, 2, 3], # ComfStand, which is the Comfort Standard
 >>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category
@@ -167,7 +167,7 @@ Each argument is explained below:
 | 21            | CHL Perez-Fargallo    | Chile     | A. Pérez-Fargallo, J.A. Pulido-Arcas, C. Rubio-Bellido, M. Trebilcock, B.   Piderit, S. Attia, Development of a new adaptive comfort model for low income   housing in the central-south of chile, Energy Build. 178 (2018) 94–106.   https://doi.org/10.1016/j.enbuild.2018.08.030.                                                                                                                                        |
 - CAT: refers to the category of the thermal comfort model applied. Most of the Comfort Standards work with 80 and 90% acceptability levels, except the European EN 16798-1 (works with Categories 1, 2 and 3), the Chinese GB/T 50785 (works with categories 1 and 2), and the India Model for Adaptive Comfort - Commercial (which works with 80, 85 and 90% acceptability levels). So, for example, if you are going to use the EN16798-1 (ComfStand = 1), you can enter '1 2 3' to generate setpoint temperatures for Categories 1, 2 and 3. Or, if you are going to use the IMAC Commercial in naturally ventilated mode (ComfStand = 7), you can enter '80 85 90' to generate setpoint temperatures for these acceptability levels. All categories are referenced in the [full list of setpoint temperatures](https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html) at the end of this section. Please note that the Category values must be consistent with the Comfort Standard values previously entered. If, for instance, you enter '1' in the Comfort Standard value (means you're asking for EN16798 model), but then enter '80' or '90' in the Category value (which are categories used in ASHRAE55), you won't get the results you want.
 
-- ComfMod: is the Comfort Mode, and refers to the comfort modes used in accim. It controls if the setpoints are PMV-based (when ComfMod = 0) or adaptive (when ComfMod = 1, 2 or 3). When they are adaptive, it also controls the comfort model applied when the adaptive model is not applicable (that is, when the running mean outdoor temperature limits are exceeded), in which case a PMV-based model is applied. Each ComfMod for each ComfStand and CAT is referenced at the [full list of setpoint temperatures](https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html). Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Figure below shows the variation of setpoint temperatures when ComfMod 0 (upper left), 1 (upper right), 2 (lower left) and 3 (lower right), when ComfStand is 1 (EN 16798-1, although figure shows the superseded standard, but the setpoint behaviour is similar)
+- ComfMod: is the Comfort Mode, and refers to the comfort modes used in accim. It controls if the setpoints are static (when ComfMod = 0) or adaptive (when ComfMod = 1, 2 or 3). When they are adaptive, it also controls the comfort model applied when the adaptive model is not applicable (that is, when the running mean outdoor temperature limits are exceeded), in which case a PMV-based model is applied. Each ComfMod for each ComfStand and CAT is referenced at the [full list of setpoint temperatures](https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html). Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Figure below shows the variation of setpoint temperatures when ComfMod 0 (upper left), 1 (upper right), 2 (lower left) and 3 (lower right), when ComfStand is 1 (EN 16798-1, although figure shows the superseded standard, but the setpoint behaviour is similar)
 
 ![ComfMod](https://www.mdpi.com/energies/energies-12-01498/article_deploy/html/images/energies-12-01498-g002.png)
 
