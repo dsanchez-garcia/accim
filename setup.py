@@ -111,7 +111,7 @@ setuptools.setup(
        },
     python_requires='<3.10',
     install_requires=[
-        'eppy',
+        'eppy>=0.5.63',
         'pycountry',
         # 'geopy',
         'matplotlib',
