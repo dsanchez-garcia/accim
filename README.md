@@ -28,7 +28,7 @@ Sánchez-García, D., Martínez-Crespo, J., Hernando, U.R.R., Alonso, C., 2023. 
 ## 2.0 Requirements
 To use accim, the following must be installed:
 - Python 3.9
-- EnergyPlus (any version between 9.1 and 22.2 those included)
+- EnergyPlus (any version between 9.1 and 23.1 those included)
 
 ## 2.1 Installation
 First of all, you need to install the package:
