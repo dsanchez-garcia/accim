@@ -229,9 +229,10 @@ class rename_epw_files:
 
         # todo trying to make it work with own class
         for i in range(len(epw_df)):
-            for k in rename_dict:
-                if k.lower() in epw_df.loc[i, 'EPW_names'].lower():
-                    epw_df.loc[i, 'EPW_city_or_subcountry'] = rename_dict[k].replace(' ', '-').capitalize()
+            if rename_dict is not None:
+                for k in rename_dict:
+                    if k.lower() in epw_df.loc[i, 'EPW_names'].lower():
+                        epw_df.loc[i, 'EPW_city_or_subcountry'] = rename_dict[k].replace(' ', '-').capitalize()
             try:
                 osm_address = give_address(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
 
