@@ -269,7 +269,15 @@ class Table:
         if source_concatenated_csv_filepath is None:
             if len(datasets) > 0:
                 flowchart_state_in_paper = 'A.2.1'
-                source_files = datasets
+                source_files = [
+                    f for f in datasets if
+                    'Table.csv' not in f and
+                    'Meter.csv' not in f and
+                    'Zsz.csv' not in f and
+                    '[CSVconcatenated.csv' not in f and
+                    '[Rows_not_corr_agg.csv' not in f and
+                    '[Rows_with_NaNs.csv' not in f
+                ]
             else:
                 flowchart_state_in_paper = 'A.2.2'
                 allfiles = glob.glob('*.csv', recursive=True)
