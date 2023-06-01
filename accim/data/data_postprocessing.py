@@ -2574,6 +2574,15 @@ class Table:
                             for k in range(len(self.data_on_y_sec_axis)):
                                 sec_y_axis_temp_cols.append(ax[i].twinx())
                             sec_y_axis_temp_rows.append(sec_y_axis_temp_cols)
+                    elif len(rows) == 1 and len(cols) > 1:
+                        # continue
+                        for k in range(len(self.data_on_y_main_axis)):
+                            main_y_axis_temp_cols.append(ax[j])
+                        main_y_axis_temp_rows.append(main_y_axis_temp_cols)
+                        if len(self.data_on_y_sec_axis) > 0:
+                            for k in range(len(self.data_on_y_sec_axis)):
+                                sec_y_axis_temp_cols.append(ax[j].twinx())
+                            sec_y_axis_temp_rows.append(sec_y_axis_temp_cols)
                     else:
                         for k in range(len(self.data_on_y_main_axis)):
                             main_y_axis_temp_cols.append(ax[i, j])
@@ -2585,6 +2594,9 @@ class Table:
                 main_y_axis.append(main_y_axis_temp_rows)
                 sec_y_axis.append(sec_y_axis_temp_rows)
 
+            # if len(rows) == 1 and len(cols) > 1:
+
+
             for i in range(len(rows)):
                 for j in range(len(cols)):
                     for k in range(len(self.y_list_main[i][j])):
@@ -2594,12 +2606,13 @@ class Table:
                                                          grid_alpha=0.5)
                         main_y_axis[i][j][k].set_facecolor((0, 0, 0, 0.10))
 
-
                         for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
+
                             if 'Setpoint Temperature' in self.y_list_main[i][j][k]['label'][x]:
                                 zord = 1
                             else:
                                 zord = 0
+
                             if i == 0 and j == 0:
                                 main_y_axis[i][j][k].scatter(
                                     self.x_list[i][j][2],
@@ -2621,6 +2634,18 @@ class Table:
                                     alpha=0.5,
                                     zorder=zord
                                 )
+                                #todo add nested lists as input argument; if 1, add first degree linear regression, etc.
+                            b, a = np.polyfit(
+                                self.x_list[i][j][2].values.flatten(),
+                                self.y_list_main[i][j][k]['dataframe'][x].values.flatten(),
+                                deg=1
+                            )
+                            main_y_axis[i][j][k].plot(
+                                self.x_list[i][j][2].values.flatten(),
+                                a + b * self.x_list[i][j][2].values.flatten(),
+                                color=self.y_list_main[i][j][k]['color'][x],
+                                linestyle='--'
+                            )
 
             for i in range(len(rows)):
                 for j in range(len(cols)):
@@ -2661,6 +2686,18 @@ class Table:
                                     alpha=0.5,
                                     zorder=zord,
                                 )
+                            b, a = np.polyfit(
+                                self.x_list[i][j][2].values.flatten(),
+                                self.y_list_sec[i][j][k]['dataframe'][x].values.flatten(),
+                                deg=1
+                            )
+                            sec_y_axis[i][j][k].plot(
+                                self.x_list[i][j][2].values.flatten(),
+                                a + b * self.x_list[i][j][2].values.flatten(),
+                                color=self.y_list_sec[i][j][k]['color'][x],
+                                linestyle='--'
+                            )
+
 
             if len(rows) == 1:
                 if len(cols) == 1:
