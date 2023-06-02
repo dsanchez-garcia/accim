@@ -64,6 +64,26 @@ dataset_hourly.scatter_plot(
             ]
         ],
     ],
+    best_fit_deg_y_main_axis=[
+        [
+            'Energy Demand (kWh/m2)',
+            [
+                1,
+                1,
+            ]
+        ],
+    ],
+    # best_fit_deg_y_sec_axis=[
+    #     [
+    #         'Temperature (°C)',
+    #         [
+    #             0,
+    #             0,
+    #             2
+    #         ]
+    #     ],
+    # ],
+
     # cols_renaming_dict={
     #     'Ahmedabad[Present': 'Ahmedabad Present',
     #     'Ahmedabad[RCP85-2100': 'Ahmedabad RCP85-2100',

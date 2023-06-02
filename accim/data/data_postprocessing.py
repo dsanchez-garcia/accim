@@ -2049,6 +2049,8 @@ class Table:
             data_on_y_sec_axis: list = None,
             colorlist_y_main_axis: list = None,
             colorlist_y_sec_axis: list = None,
+            best_fit_deg_y_main_axis: list = None,
+            best_fit_deg_y_sec_axis: list = None,
             rows_renaming_dict: dict = None,
             cols_renaming_dict: dict = None,
             ):
@@ -2074,6 +2076,10 @@ class Table:
         :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
         :return:
         """
+        import matplotlib.pyplot as plt
+        import matplotlib.lines as lines
+        import copy
+
         if vars_to_gather_cols is None:
             vars_to_gather_cols = []
         if vars_to_gather_rows is None:
@@ -2104,8 +2110,40 @@ class Table:
         if colorlist_y_sec_axis is None:
             colorlist_y_sec_axis = []
 
-        import matplotlib.pyplot as plt
-        import matplotlib.lines as lines
+        if best_fit_deg_y_main_axis is None:
+            best_fit_deg_y_main_axis = copy.deepcopy(data_on_y_main_axis)
+            for i in range(len(best_fit_deg_y_main_axis)):
+                for j in range(len(best_fit_deg_y_main_axis[i])):
+                    if j == 1:
+                        for k in range(len(best_fit_deg_y_main_axis[i][j])):
+                            best_fit_deg_y_main_axis[i][j][k] = 0
+        else:
+            for i in range(len(best_fit_deg_y_main_axis)):
+                for j in range(len(best_fit_deg_y_main_axis[i])):
+                    if j == 1:
+                        for k in range(len(best_fit_deg_y_main_axis[i][j])):
+                            if k is True:
+                                best_fit_deg_y_main_axis[i][j][k] = 1
+                            elif k is False:
+                                best_fit_deg_y_main_axis[i][j][k] = 0
+
+        if best_fit_deg_y_sec_axis is None:
+            best_fit_deg_y_sec_axis = copy.deepcopy(data_on_y_sec_axis)
+            for i in range(len(best_fit_deg_y_sec_axis)):
+                for j in range(len(best_fit_deg_y_sec_axis[i])):
+                    if j == 1:
+                        for k in range(len(best_fit_deg_y_sec_axis[i][j])):
+                            best_fit_deg_y_sec_axis[i][j][k] = 0
+        else:
+            for i in range(len(best_fit_deg_y_sec_axis)):
+                for j in range(len(best_fit_deg_y_sec_axis[i])):
+                    if j == 1:
+                        for k in range(len(best_fit_deg_y_sec_axis[i][j])):
+                            if k is True:
+                                best_fit_deg_y_sec_axis[i][j][k] = 1
+                            elif k is False:
+                                best_fit_deg_y_sec_axis[i][j][k] = 0
+
 
         df_for_graph = self.df.copy()
 
@@ -2301,7 +2339,8 @@ class Table:
                                 for dataset in self.data_on_y_main_axis[k][1]
                             ],
                             'label': [dataset for dataset in self.data_on_y_main_axis[k][1]],
-                            'color': [color for color in colorlist_y_main_axis[k][1]]
+                            'color': [color for color in colorlist_y_main_axis[k][1]],
+                            'best fit line deg': [deg for deg in best_fit_deg_y_main_axis[k][1]]
                         }
                         temp_col.append(temp)
                     temp_row.append(temp_col)
@@ -2333,7 +2372,8 @@ class Table:
                             for dataset in data_on_y_sec_axis[k][1]
                         ],
                         'label': [dataset for dataset in data_on_y_sec_axis[k][1]],
-                        'color': [color for color in colorlist_y_sec_axis[k][1]]
+                        'color': [color for color in colorlist_y_sec_axis[k][1]],
+                        'best fit line deg': [deg for deg in best_fit_deg_y_sec_axis[k][1]]
                     }
                     temp_col.append(temp)
                 temp_row.append(temp_col)
@@ -2455,6 +2495,8 @@ class Table:
             data_on_y_sec_axis: list = None,
             colorlist_y_main_axis: list = None,
             colorlist_y_sec_axis: list = None,
+            best_fit_deg_y_main_axis: list = None,
+            best_fit_deg_y_sec_axis: list = None,
             rows_renaming_dict: dict = None,
             cols_renaming_dict: dict = None,
 
@@ -2496,6 +2538,9 @@ class Table:
         """
         import numpy as np
         import matplotlib.pyplot as plt
+        import matplotlib.patheffects as pe
+        from sklearn.linear_model import LinearRegression
+        from sklearn.preprocessing import PolynomialFeatures
 
         # todo testing from here
 
@@ -2513,6 +2558,8 @@ class Table:
             data_on_x_axis=data_on_x_axis,
             colorlist_y_main_axis=colorlist_y_main_axis,
             colorlist_y_sec_axis=colorlist_y_sec_axis,
+            best_fit_deg_y_main_axis=best_fit_deg_y_main_axis,
+            best_fit_deg_y_sec_axis=best_fit_deg_y_sec_axis,
             rows_renaming_dict=rows_renaming_dict,
             cols_renaming_dict=cols_renaming_dict,
         )
@@ -2540,12 +2587,14 @@ class Table:
                 confirm_graph = False
 
         if confirm_graph:
-            fig, ax = plt.subplots(nrows=len(rows),
-                                   ncols=len(cols),
-                                   sharex=sharex,
-                                   sharey=sharey,
-                                   constrained_layout=True,
-                                   figsize=(figsize * len(cols), ratio_height_to_width * figsize * len(rows)))
+            fig, ax = plt.subplots(
+                nrows=len(rows),
+                ncols=len(cols),
+                sharex=sharex,
+                sharey=sharey,
+                constrained_layout=True,
+                figsize=(figsize * len(cols), ratio_height_to_width * figsize * len(rows))
+            )
 
             main_y_axis = []
             sec_y_axis = []
@@ -2619,7 +2668,7 @@ class Table:
                                     self.y_list_main[i][j][k]['dataframe'][x],
                                     c=self.y_list_main[i][j][k]['color'][x],
                                     s=1,
-                                    marker='o',
+                                    marker='.',
                                     alpha=0.5,
                                     label=self.y_list_main[i][j][k]['label'][x],
                                     zorder=zord
@@ -2630,22 +2679,10 @@ class Table:
                                     self.y_list_main[i][j][k]['dataframe'][x],
                                     c=self.y_list_main[i][j][k]['color'][x],
                                     s=1,
-                                    marker='o',
+                                    marker='.',
                                     alpha=0.5,
                                     zorder=zord
                                 )
-                                #todo add nested lists as input argument; if 1, add first degree linear regression, etc.
-                            b, a = np.polyfit(
-                                self.x_list[i][j][2].values.flatten(),
-                                self.y_list_main[i][j][k]['dataframe'][x].values.flatten(),
-                                deg=1
-                            )
-                            main_y_axis[i][j][k].plot(
-                                self.x_list[i][j][2].values.flatten(),
-                                a + b * self.x_list[i][j][2].values.flatten(),
-                                color=self.y_list_main[i][j][k]['color'][x],
-                                linestyle='--'
-                            )
 
             for i in range(len(rows)):
                 for j in range(len(cols)):
@@ -2671,7 +2708,7 @@ class Table:
                                     self.y_list_sec[i][j][k]['dataframe'][x],
                                     c=self.y_list_sec[i][j][k]['color'][x],
                                     s=1,
-                                    marker='o',
+                                    marker='.',
                                     alpha=0.5,
                                     label=self.y_list_sec[i][j][k]['label'][x],
                                     zorder=zord,
@@ -2682,22 +2719,45 @@ class Table:
                                     self.y_list_sec[i][j][k]['dataframe'][x],
                                     c=self.y_list_sec[i][j][k]['color'][x],
                                     s=1,
-                                    marker='o',
+                                    marker='.',
                                     alpha=0.5,
                                     zorder=zord,
                                 )
-                            b, a = np.polyfit(
-                                self.x_list[i][j][2].values.flatten(),
-                                self.y_list_sec[i][j][k]['dataframe'][x].values.flatten(),
-                                deg=1
-                            )
-                            sec_y_axis[i][j][k].plot(
-                                self.x_list[i][j][2].values.flatten(),
-                                a + b * self.x_list[i][j][2].values.flatten(),
-                                color=self.y_list_sec[i][j][k]['color'][x],
-                                linestyle='--'
-                            )
 
+            for i in range(len(rows)):
+                for j in range(len(cols)):
+                    for k in range(len(self.y_list_main[i][j])):
+                        for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
+                            if self.y_list_main[i][j][k]['best fit line deg'][x] > 0:
+                                poly_features = PolynomialFeatures(degree=self.y_list_main[i][j][k]['best fit line deg'][x], include_bias=False)
+                                X_poly = poly_features.fit_transform(self.x_list[i][j][2].to_numpy())
+                                lin_reg = LinearRegression()
+                                lin_reg.fit(X_poly, self.y_list_main[i][j][k]['dataframe'][x].to_numpy())
+                                main_y_axis[i][j][k].plot(
+                                    self.x_list[i][j][2].to_numpy(),
+                                    lin_reg.predict(X_poly),
+                                    color=self.y_list_main[i][j][k]['color'][x],
+                                    # linestyle='--',
+                                    linewidth=0.5,
+                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    zorder=2
+                                )
+                    for k in range(len(self.y_list_sec[i][j])):
+                        for x in range(len(self.y_list_sec[i][j][k]['dataframe'])):
+                            if self.y_list_sec[i][j][k]['best fit line deg'][x] > 0:
+                                poly_features = PolynomialFeatures(degree=self.y_list_sec[i][j][k]['best fit line deg'][x], include_bias=False)
+                                X_poly = poly_features.fit_transform(self.x_list[i][j][2].to_numpy())
+                                lin_reg = LinearRegression()
+                                lin_reg.fit(X_poly, self.y_list_sec[i][j][k]['dataframe'][x].to_numpy())
+                                sec_y_axis[i][j][k].plot(
+                                    self.x_list[i][j][2].to_numpy(),
+                                    lin_reg.predict(X_poly),
+                                    color=self.y_list_sec[i][j][k]['color'][x],
+                                    # linestyle='--',
+                                    linewidth=0.5,
+                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    zorder=2
+                                )
 
             if len(rows) == 1:
                 if len(cols) == 1:
