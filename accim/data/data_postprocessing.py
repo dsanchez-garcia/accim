@@ -3091,6 +3091,88 @@ class Table:
                         ax[i].set_ylim((0, self.max_value))
                         ax[i].set_xlim((0, self.max_value))
 
+                    elif len(self.rows) == 1 and len(self.cols) > 1:
+                        # ax[j].set_title(f'{self.rows[i]} / {self.cols[j]}')
+                        ax[j].grid(True, linestyle='-.')
+                        ax[j].tick_params(axis='both',
+                                          grid_color='black',
+                                          grid_alpha=0.5)
+                        ax[j].set_facecolor((0, 0, 0, 0.10))
+                        ax[j].add_artist((lines.Line2D(
+                            [0, self.max_value], [0, self.max_value],
+                            dashes=(2, 2, 2, 2),
+                            linewidth=1,
+                            color='gray'
+                        )))
+                        ax[j].add_artist((lines.Line2D(
+                            [0, self.max_value / 2], [0, self.max_value],
+                            dashes=(2, 2, 2, 2),
+                            linewidth=1,
+                            color='gray'
+                        )))
+                        ax[j].add_artist((lines.Line2D(
+                            [0, self.max_value / 4], [0, self.max_value],
+                            dashes=(2, 2, 2, 2),
+                            linewidth=1,
+                            color='gray'
+                        )))
+                        ax[j].add_artist((lines.Line2D(
+                            [0, self.max_value], [0, self.max_value / 2],
+                            dashes=(2, 2, 2, 2),
+                            linewidth=1,
+                            color='gray'
+                        )))
+                        ax[j].add_artist((lines.Line2D(
+                            [0, self.max_value], [0, self.max_value / 4],
+                            dashes=(2, 2, 2, 2),
+                            linewidth=1,
+                            color='gray'
+                        )))
+
+                        for k in range(len(self.x_list[i][j][2])):
+                            if i == 0 and j == 0:
+                                ax[j].scatter(
+                                    self.x_list[i][j][2][k],
+                                    self.y_list_main[i][j][2][k],
+                                    c=self.y_list_main[i][j][4][k],
+                                    s=markersize,
+                                    marker='o',
+                                    alpha=0.5,
+                                    label=self.y_list_main[i][j][3][k]
+                                )
+                                # if len(self.adap_vs_stat_data_y_sec) > 0:
+                                #     ax[j].twinx().scatter(
+                                #         self.x_list[i][j][2][k],
+                                #         self.y_list_sec[i][j][2][k],
+                                #         c=self.y_list_sec[i][j][4][k],
+                                #         s=markersize,
+                                #         marker='o',
+                                #         alpha=0.5,
+                                #         label=self.y_list_main[i][j][3][k]
+                                #     )
+                            else:
+                                ax[j].scatter(
+                                    self.x_list[i][j][2][k],
+                                    self.y_list_main[i][j][2][k],
+                                    c=self.y_list_main[i][j][4][k],
+                                    s=markersize,
+                                    marker='o',
+                                    alpha=0.5,
+                                )
+                                # if len(self.adap_vs_stat_data_y_sec) > 0:
+                                #     ax[j].twinx().scatter(
+                                #         self.x_list[i][j][2][k],
+                                #         self.y_list_sec[i][j][2][k],
+                                #         c=self.y_list_sec[i][j][4][k],
+                                #         s=markersize,
+                                #         marker='o',
+                                #         alpha=0.5,
+                                #         label=self.y_list_main[i][j][3][k]
+                                #     )
+
+                        ax[j].set_ylim((0, self.max_value))
+                        ax[j].set_xlim((0, self.max_value))
+
                     else:
                         # ax[i, j].set_title(f'{self.rows[i]} / {self.cols[j]}')
                         ax[i, j].grid(True, linestyle='-.')
@@ -3177,6 +3259,7 @@ class Table:
                 if len(self.cols) == 1:
                     ax.set_aspect('equal',
                                   # adjustable='box',
+                                  'box',
                                   share=True)
                     for i in range(len(self.rows)):
                         if self.rename_rows == 'y':
@@ -3194,6 +3277,7 @@ class Table:
             if len(self.rows) > 1:
                 if len(self.cols) == 1:
                     ax[0].set_aspect('equal',
+                                     'box',
                                      # adjustable='box',
                                      share=True)
                     for i in range(len(self.rows)):
