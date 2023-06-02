@@ -47,56 +47,32 @@ dataset_hourly.scatter_plot(
     ],
     colorlist_y_main_axis=[
         [
-            'Energy Demand (kWh/m2)',
-            [
-                'cyan',
-                'orange',
-            ]
+            'Energy Demand (kWh/m2)', ['cyan', 'orange']
         ],
     ],
     colorlist_y_sec_axis=[
         [
-            'Temperature (°C)',
-            [
-                'blue',
-                'red',
-                'green'
-            ]
+            'Temperature (°C)', ['blue', 'red', 'green']
         ],
     ],
     best_fit_deg_y_main_axis=[
         [
-            'Energy Demand (kWh/m2)',
-            [
-                1,
-                1,
-            ]
+            'Energy Demand (kWh/m2)', [1, 1]
         ],
     ],
-    # best_fit_deg_y_sec_axis=[
-    #     [
-    #         'Temperature (°C)',
-    #         [
-    #             0,
-    #             0,
-    #             2
-    #         ]
-    #     ],
-    # ],
-
-    # cols_renaming_dict={
-    #     'Ahmedabad[Present': 'Ahmedabad Present',
-    #     'Ahmedabad[RCP85-2100': 'Ahmedabad RCP85-2100',
-    #     'Shimla[Present': 'Shimla Present',
-    #     'Shimla[RCP85-2100': 'Shimla RCP85-2100'
-    # },
-    # rows_renaming_dict={
-    #     'CS_IND IMAC C NV[CM_0[HM_0': 'IND_Stat_AC',
-    #     'CS_IND IMAC C NV[CM_3[HM_0': 'IND_Adap_AC',
-    #     'CS_IND IMAC C NV[CM_3[HM_1': 'IND_Adap_NV',
-    #     'CS_IND IMAC C NV[CM_3[HM_2': 'IND_Adap_MM',
-    #     'CS_INT ASHRAE55[CM_3[HM_0': 'ASH_Adap_AC'
-    # },
+    cols_renaming_dict={
+        'Ahmedabad[Present': 'Ahmedabad Present',
+        'Ahmedabad[RCP85-2100': 'Ahmedabad RCP85-2100',
+        'Shimla[Present': 'Shimla Present',
+        'Shimla[RCP85-2100': 'Shimla RCP85-2100'
+    },
+    rows_renaming_dict={
+        'CS_IND IMAC C NV[CM_0[HM_0': 'IND_Stat_AC',
+        'CS_IND IMAC C NV[CM_3[HM_0': 'IND_Adap_AC',
+        'CS_IND IMAC C NV[CM_3[HM_1': 'IND_Adap_NV',
+        'CS_IND IMAC C NV[CM_3[HM_2': 'IND_Adap_MM',
+        'CS_INT ASHRAE55[CM_3[HM_0': 'ASH_Adap_AC'
+    },
     sharex=False,
     sharey=False,
     supxlabel='Prevailing mean outdoor temperature (°C)',
