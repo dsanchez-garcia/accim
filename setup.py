@@ -111,6 +111,7 @@ setuptools.setup(
        },
     python_requires='<3.10',
     install_requires=[
+        'scikit-learn',
         'eppy>=0.5.63',
         'pycountry',
         # 'geopy',
