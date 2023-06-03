@@ -61,17 +61,17 @@ dataset_hourly.scatter_plot(
         ],
     ],
     cols_renaming_dict={
-        'Ahmedabad[Present': 'Ahmedabad Present',
-        'Ahmedabad[RCP85-2100': 'Ahmedabad RCP85-2100',
+        # 'Ahmedabad[Present': 'Ahmedabad Present',
+        # 'Ahmedabad[RCP85-2100': 'Ahmedabad RCP85-2100',
         'Shimla[Present': 'Shimla Present',
         'Shimla[RCP85-2100': 'Shimla RCP85-2100'
     },
     rows_renaming_dict={
-        'CS_IND IMAC C NV[CM_0[HM_0': 'IND_Stat_AC',
-        'CS_IND IMAC C NV[CM_3[HM_0': 'IND_Adap_AC',
-        'CS_IND IMAC C NV[CM_3[HM_1': 'IND_Adap_NV',
+        # 'CS_IND IMAC C NV[CM_0[HM_0': 'IND_Stat_AC',
+        # 'CS_IND IMAC C NV[CM_3[HM_0': 'IND_Adap_AC',
+        # 'CS_IND IMAC C NV[CM_3[HM_1': 'IND_Adap_NV',
         'CS_IND IMAC C NV[CM_3[HM_2': 'IND_Adap_MM',
-        'CS_INT ASHRAE55[CM_3[HM_0': 'ASH_Adap_AC'
+        # 'CS_INT ASHRAE55[CM_3[HM_0': 'ASH_Adap_AC'
     },
     sharex=False,
     sharey=False,

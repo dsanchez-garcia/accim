@@ -2524,9 +2524,10 @@ class Table:
         [[['name_on_1st_y_sec_axis', [list of column names you want to plot]], ['name_on_2nd_y_sec_axis', [list of column names you want to plot]], etc]
         :param colorlist_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the colors using the matplotlib notation.
         :param colorlist_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the colors using the matplotlib notation.
+        :param best_fit_deg_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the polynomial degree for the best fit lines.
+        :param best_fit_deg_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the polynomial degree for the best fit lines.
         :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
         :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
-
         :param sharey: True to share the x-axis across all subplots
         :param sharex: True to share the y-axis across all subplots
         :param supxlabel: A string. The label shown in the x-axis.
@@ -2738,6 +2739,7 @@ class Table:
                                     lin_reg.predict(X_poly),
                                     color=self.y_list_main[i][j][k]['color'][x],
                                     # linestyle='--',
+                                    linestyle=(0, (5, 10)),
                                     linewidth=0.5,
                                     path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
                                     zorder=2
@@ -2754,6 +2756,7 @@ class Table:
                                     lin_reg.predict(X_poly),
                                     color=self.y_list_sec[i][j][k]['color'][x],
                                     # linestyle='--',
+                                    linestyle=(0, (5, 10)),
                                     linewidth=0.5,
                                     path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
                                     zorder=2
