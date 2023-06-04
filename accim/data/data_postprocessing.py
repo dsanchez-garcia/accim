@@ -1992,13 +1992,14 @@ class Table:
                 wrangled_df_multiindex = wrangled_df_unstacked_or_stacked.copy()
                 del wrangled_df_unstacked_or_stacked
 
-                wrangled_df_multiindex = wrangled_df_multiindex.replace(
-                    [i for i in rename_dict],
-                    [rename_dict[i] for i in rename_dict]
-                )
-                for i in rename_dict:
-                    wrangled_df_multiindex.rename(columns=lambda s: s.replace(i, rename_dict[i]), inplace=True)
-                    wrangled_df_multiindex.rename(index=lambda s: s.replace(i, rename_dict[i]), inplace=True)
+                if rename_dict is not None:
+                    wrangled_df_multiindex = wrangled_df_multiindex.replace(
+                        [i for i in rename_dict],
+                        [rename_dict[i] for i in rename_dict]
+                    )
+                    for i in rename_dict:
+                        wrangled_df_multiindex.rename(columns=lambda s: s.replace(i, rename_dict[i]), inplace=True)
+                        wrangled_df_multiindex.rename(index=lambda s: s.replace(i, rename_dict[i]), inplace=True)
 
                 if transpose:
                     wrangled_df_multiindex = wrangled_df_multiindex.transpose()
