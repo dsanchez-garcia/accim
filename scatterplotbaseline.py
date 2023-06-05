@@ -42,6 +42,10 @@ dataset_hourly.scatter_plot_with_baseline(
                 'red'
     ],
     baseline='CS_IND IMAC C NV[CM_3[HM_2',
+    best_fit_deg=[
+        1,
+        1,
+    ],
     rows_renaming_dict={
         # 'Ahmedabad[Present': 'Ahmedabad Present',
         # 'Ahmedabad[RCP85-2100': 'Ahmedabad RCP85-2100',

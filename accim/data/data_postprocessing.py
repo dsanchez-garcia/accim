@@ -2052,6 +2052,7 @@ class Table:
             colorlist_y_sec_axis: list = None,
             best_fit_deg_y_main_axis: list = None,
             best_fit_deg_y_sec_axis: list = None,
+            best_fit_deg: list = None,
             rows_renaming_dict: dict = None,
             cols_renaming_dict: dict = None,
             ):
@@ -2123,9 +2124,9 @@ class Table:
                 for j in range(len(best_fit_deg_y_main_axis[i])):
                     if j == 1:
                         for k in range(len(best_fit_deg_y_main_axis[i][j])):
-                            if k is True:
+                            if best_fit_deg_y_main_axis[i][j][k] is True:
                                 best_fit_deg_y_main_axis[i][j][k] = 1
-                            elif k is False:
+                            elif best_fit_deg_y_main_axis[i][j][k] is False:
                                 best_fit_deg_y_main_axis[i][j][k] = 0
 
         if best_fit_deg_y_sec_axis is None:
@@ -2140,11 +2141,21 @@ class Table:
                 for j in range(len(best_fit_deg_y_sec_axis[i])):
                     if j == 1:
                         for k in range(len(best_fit_deg_y_sec_axis[i][j])):
-                            if k is True:
+                            if best_fit_deg_y_sec_axis[i][j][k] is True:
                                 best_fit_deg_y_sec_axis[i][j][k] = 1
-                            elif k is False:
+                            elif best_fit_deg_y_sec_axis[i][j][k] is False:
                                 best_fit_deg_y_sec_axis[i][j][k] = 0
 
+        if best_fit_deg is None:
+            best_fit_deg = copy.deepcopy(data_on_y_axis_baseline_plot)
+            for i in range(len(best_fit_deg)):
+                best_fit_deg[i] = 0
+        else:
+            for i in range(len(best_fit_deg)):
+                if best_fit_deg[i] is True:
+                    best_fit_deg[i] = 1
+                elif best_fit_deg[i] is False:
+                    best_fit_deg[i] = 0
 
         df_for_graph = self.df.copy()
 
@@ -2323,7 +2334,8 @@ class Table:
                             for dataset in data_on_y_axis_baseline_plot
                         ],
                         [dataset for dataset in data_on_y_axis_baseline_plot],
-                        [color for color in colorlist_baseline_plot_data]
+                        [color for color in colorlist_baseline_plot_data],
+                        [deg for deg in best_fit_deg]
                     ]
                     temp_row.append(temp)
                 self.y_list_main.append(temp_row)
@@ -2850,9 +2862,9 @@ class Table:
             data_on_y_axis_baseline_plot: list = None,
             baseline: str = None,
             colorlist_baseline_plot_data: list = None,
+            best_fit_deg: list = None,
             rows_renaming_dict: dict = None,
             cols_renaming_dict: dict = None,
-
             supxlabel: str = None,
             supylabel: str = None,
             figname: str = None,
@@ -2871,9 +2883,9 @@ class Table:
         :param data_on_y_axis_baseline_plot: A list of strings. Used to select the data you want to show in the graph. Should be a list of the column names you want to plot in each subplot.
         :param baseline: A string, used only in data_on_y_axis_baseline_plot. The baseline should be one of the combinations in vars_to_gather_cols. It will be plotted in x-axis, while the reference combination for comparison in y-axis.
         :param colorlist_baseline_plot_data: A list of strings. Should be the colors using the matplotlib color notation for the columns entered in data_on_y_axis_baseline_plot in the same order.
+        :param best_fit_deg: A list with nested lists and strings. It should follow the same structure as data_on_y_axis_baseline_plot, but replacing the column names with the polynomial degree for the best fit lines.
         :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
         :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
-
         :param supxlabel: A string. The label shown in the x-axis.
         :param supylabel: A string. The label shown in the y-axis.
         :param figname: A string. The name of the saved figure without extension.
@@ -2884,6 +2896,10 @@ class Table:
         """
         import matplotlib.pyplot as plt
         import matplotlib.lines as lines
+        import matplotlib.patheffects as pe
+        from sklearn.linear_model import LinearRegression
+        from sklearn.preprocessing import PolynomialFeatures
+
 
         # todo testing from here
 
@@ -2897,6 +2913,7 @@ class Table:
             data_on_y_axis_baseline_plot=data_on_y_axis_baseline_plot,
             baseline=baseline,
             colorlist_baseline_plot_data=colorlist_baseline_plot_data,
+            best_fit_deg=best_fit_deg,
             rows_renaming_dict=rows_renaming_dict,
             cols_renaming_dict=cols_renaming_dict,
         )
@@ -3009,7 +3026,21 @@ class Table:
                                 #         alpha=0.5,
                                 #         label=self.y_list_main[i][j][3][k]
                                 #     )
-
+                            if self.y_list_main[i][j][5][k] > 0:
+                                poly_features = PolynomialFeatures(degree=self.y_list_main[i][j][5][k], include_bias=False)
+                                X_poly = poly_features.fit_transform(self.x_list[i][j][2][k].to_numpy())
+                                lin_reg = LinearRegression()
+                                lin_reg.fit(X_poly, self.y_list_main[i][j][2][k].to_numpy())
+                                ax.plot(
+                                    self.x_list[i][j][2][k].to_numpy(),
+                                    lin_reg.predict(X_poly),
+                                    color=self.y_list_main[i][j][4][k],
+                                    # linestyle='--',
+                                    linestyle=(0, (5, 10)),
+                                    linewidth=0.5,
+                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    zorder=1
+                                )
                         ax.set_ylim((0, self.max_value))
                         ax.set_xlim((0, self.max_value))
 
@@ -3091,6 +3122,21 @@ class Table:
                                 #         alpha=0.5,
                                 #         label=self.y_list_main[i][j][3][k]
                                 #     )
+                            if self.y_list_main[i][j][5][k] > 0:
+                                poly_features = PolynomialFeatures(degree=self.y_list_main[i][j][5][k], include_bias=False)
+                                X_poly = poly_features.fit_transform(self.x_list[i][j][2][k].to_numpy())
+                                lin_reg = LinearRegression()
+                                lin_reg.fit(X_poly, self.y_list_main[i][j][2][k].to_numpy())
+                                ax[i].plot(
+                                    self.x_list[i][j][2][k].to_numpy(),
+                                    lin_reg.predict(X_poly),
+                                    color=self.y_list_main[i][j][4][k],
+                                    # linestyle='--',
+                                    linestyle=(0, (5, 10)),
+                                    linewidth=0.5,
+                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    zorder=1
+                                )
 
                         ax[i].set_ylim((0, self.max_value))
                         ax[i].set_xlim((0, self.max_value))
@@ -3173,6 +3219,21 @@ class Table:
                                 #         alpha=0.5,
                                 #         label=self.y_list_main[i][j][3][k]
                                 #     )
+                            if self.y_list_main[i][j][5][k] > 0:
+                                poly_features = PolynomialFeatures(degree=self.y_list_main[i][j][5][k], include_bias=False)
+                                X_poly = poly_features.fit_transform(self.x_list[i][j][2][k].to_numpy())
+                                lin_reg = LinearRegression()
+                                lin_reg.fit(X_poly, self.y_list_main[i][j][2][k].to_numpy())
+                                ax[j].plot(
+                                    self.x_list[i][j][2][k].to_numpy(),
+                                    lin_reg.predict(X_poly),
+                                    color=self.y_list_main[i][j][4][k],
+                                    # linestyle='--',
+                                    linestyle=(0, (5, 10)),
+                                    linewidth=0.5,
+                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    zorder=1
+                                )
 
                         ax[j].set_ylim((0, self.max_value))
                         ax[j].set_xlim((0, self.max_value))
@@ -3255,7 +3316,21 @@ class Table:
                                 #         alpha=0.5,
                                 #         label=self.y_list_main[i][j][3][k]
                                 #     )
-
+                            if self.y_list_main[i][j][5][k] > 0:
+                                poly_features = PolynomialFeatures(degree=self.y_list_main[i][j][5][k], include_bias=False)
+                                X_poly = poly_features.fit_transform(self.x_list[i][j][2][k].to_numpy())
+                                lin_reg = LinearRegression()
+                                lin_reg.fit(X_poly, self.y_list_main[i][j][2][k].to_numpy())
+                                ax[i, j].plot(
+                                    self.x_list[i][j][2][k].to_numpy(),
+                                    lin_reg.predict(X_poly),
+                                    color=self.y_list_main[i][j][4][k],
+                                    # linestyle='--',
+                                    linestyle=(0, (5, 10)),
+                                    linewidth=0.5,
+                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    zorder=1
+                                )
                         ax[i, j].set_ylim((0, self.max_value))
                         ax[i, j].set_xlim((0, self.max_value))
 
