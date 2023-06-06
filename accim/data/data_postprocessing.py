@@ -2520,7 +2520,12 @@ class Table:
             figsize: float = 1,
             ratio_height_to_width: float = 1,
             dpi: int = 500,
-            confirm_graph: bool = False
+            confirm_graph: bool = False,
+            set_facecolor: any = (0, 0, 0, 0.10),
+            best_fit_background_linewidth: float = 1,
+            best_fit_linewidth: float = 0.5,
+            best_fit_linestyle: any = (0, (5, 10)),
+
     ):
         """
         Used to plot a scatter plot.
@@ -2549,6 +2554,10 @@ class Table:
         :param ratio_height_to_width: A float. By default, is 1 (squared). If 0.5 is entered, the figure will be half higher than wide.
         :param dpi: An integer. The number of dpis for image quality.
         :param confirm_graph: A bool. True to skip confirmation step.
+        :param set_facecolor: Usage is similar to matplotlib.axes.Axes.set_facecolor
+        :param best_fit_linestyle: Anything in matplotlib linestyle notation. Use to change the style of the best fit lines.
+        :param best_fit_linewidth: A float. Used to change the width of the best fit lines.
+        :param best_fit_background_linewidth: A float. Used to change the width of the background best fit lines. Must be greater than best_fit_linewidth.
         """
         import numpy as np
         import matplotlib.pyplot as plt
@@ -2667,7 +2676,7 @@ class Table:
                         main_y_axis[i][j][k].tick_params(axis='both',
                                                          grid_color='black',
                                                          grid_alpha=0.5)
-                        main_y_axis[i][j][k].set_facecolor((0, 0, 0, 0.10))
+                        main_y_axis[i][j][k].set_facecolor(set_facecolor)
 
                         for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
 
@@ -2752,9 +2761,9 @@ class Table:
                                     lin_reg.predict(X_poly),
                                     color=self.y_list_main[i][j][k]['color'][x],
                                     # linestyle='--',
-                                    linestyle=(0, (5, 10)),
-                                    linewidth=0.5,
-                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    linestyle=best_fit_linestyle,
+                                    linewidth=best_fit_linewidth,
+                                    path_effects=[pe.Stroke(linewidth=best_fit_background_linewidth, foreground='0'), pe.Normal()],
                                     zorder=2
                                 )
                     for k in range(len(self.y_list_sec[i][j])):
@@ -2769,9 +2778,9 @@ class Table:
                                     lin_reg.predict(X_poly),
                                     color=self.y_list_sec[i][j][k]['color'][x],
                                     # linestyle='--',
-                                    linestyle=(0, (5, 10)),
-                                    linewidth=0.5,
-                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    linestyle=best_fit_linestyle,
+                                    linewidth=best_fit_linewidth,
+                                    path_effects=[pe.Stroke(linewidth=best_fit_background_linewidth, foreground='0'), pe.Normal()],
                                     zorder=2
                                 )
 
@@ -2871,8 +2880,12 @@ class Table:
             figsize: int = 1,
             markersize: int = 1,
             dpi: int = 500,
-            confirm_graph: bool = False
-            ):
+            confirm_graph: bool = False,
+            set_facecolor: any = (0, 0, 0, 0.10),
+            best_fit_background_linewidth: float = 1,
+            best_fit_linewidth: float = 0.5,
+            best_fit_linestyle: any = (0, (5, 10)),
+    ):
         """
         :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
         :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
@@ -2893,6 +2906,9 @@ class Table:
         :param markersize: An integer. The size of the markers.
         :param dpi: An integer. The number of dpis for image quality.
         :param confirm_graph: A bool. True to skip confirmation step.
+        :param best_fit_linestyle: Anything in matplotlib linestyle notation. Use to change the style of the best fit lines.
+        :param best_fit_linewidth: A float. Used to change the width of the best fit lines.
+        :param best_fit_background_linewidth: A float. Used to change the width of the background best fit lines. Must be greater than best_fit_linewidth.
         """
         import matplotlib.pyplot as plt
         import matplotlib.lines as lines
@@ -2954,7 +2970,7 @@ class Table:
                         ax.tick_params(axis='both',
                                        grid_color='black',
                                        grid_alpha=0.5)
-                        ax.set_facecolor((0, 0, 0, 0.10))
+                        ax.set_facecolor(set_facecolor)
                         ax.add_artist((lines.Line2D(
                             [0, self.max_value], [0, self.max_value],
                             dashes=(2, 2, 2, 2),
@@ -3036,9 +3052,9 @@ class Table:
                                     lin_reg.predict(X_poly),
                                     color=self.y_list_main[i][j][4][k],
                                     # linestyle='--',
-                                    linestyle=(0, (5, 10)),
-                                    linewidth=0.5,
-                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    linestyle=best_fit_linestyle,
+                                    linewidth=best_fit_linewidth,
+                                    path_effects=[pe.Stroke(linewidth=best_fit_background_linewidth, foreground='0'), pe.Normal()],
                                     zorder=1
                                 )
                         ax.set_ylim((0, self.max_value))
@@ -3050,7 +3066,7 @@ class Table:
                         ax[i].tick_params(axis='both',
                                           grid_color='black',
                                           grid_alpha=0.5)
-                        ax[i].set_facecolor((0, 0, 0, 0.10))
+                        ax[i].set_facecolor(set_facecolor)
                         ax[i].add_artist((lines.Line2D(
                             [0, self.max_value], [0, self.max_value],
                             dashes=(2, 2, 2, 2),
@@ -3132,9 +3148,9 @@ class Table:
                                     lin_reg.predict(X_poly),
                                     color=self.y_list_main[i][j][4][k],
                                     # linestyle='--',
-                                    linestyle=(0, (5, 10)),
-                                    linewidth=0.5,
-                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    linestyle=best_fit_linestyle,
+                                    linewidth=best_fit_linewidth,
+                                    path_effects=[pe.Stroke(linewidth=best_fit_background_linewidth, foreground='0'), pe.Normal()],
                                     zorder=1
                                 )
 
@@ -3147,7 +3163,7 @@ class Table:
                         ax[j].tick_params(axis='both',
                                           grid_color='black',
                                           grid_alpha=0.5)
-                        ax[j].set_facecolor((0, 0, 0, 0.10))
+                        ax[j].set_facecolor(set_facecolor)
                         ax[j].add_artist((lines.Line2D(
                             [0, self.max_value], [0, self.max_value],
                             dashes=(2, 2, 2, 2),
@@ -3229,9 +3245,9 @@ class Table:
                                     lin_reg.predict(X_poly),
                                     color=self.y_list_main[i][j][4][k],
                                     # linestyle='--',
-                                    linestyle=(0, (5, 10)),
-                                    linewidth=0.5,
-                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    linestyle=best_fit_linestyle,
+                                    linewidth=best_fit_linewidth,
+                                    path_effects=[pe.Stroke(linewidth=best_fit_background_linewidth, foreground='0'), pe.Normal()],
                                     zorder=1
                                 )
 
@@ -3244,7 +3260,7 @@ class Table:
                         ax[i, j].tick_params(axis='both',
                                              grid_color='black',
                                              grid_alpha=0.5)
-                        ax[i, j].set_facecolor((0, 0, 0, 0.10))
+                        ax[i, j].set_facecolor(set_facecolor)
                         ax[i, j].add_artist((lines.Line2D(
                             [0, self.max_value], [0, self.max_value],
                             dashes=(2, 2, 2, 2),
@@ -3326,9 +3342,9 @@ class Table:
                                     lin_reg.predict(X_poly),
                                     color=self.y_list_main[i][j][4][k],
                                     # linestyle='--',
-                                    linestyle=(0, (5, 10)),
-                                    linewidth=0.5,
-                                    path_effects=[pe.Stroke(linewidth=2, foreground='0'), pe.Normal()],
+                                    linestyle=best_fit_linestyle,
+                                    linewidth=best_fit_linewidth,
+                                    path_effects=[pe.Stroke(linewidth=best_fit_background_linewidth, foreground='0'), pe.Normal()],
                                     zorder=1
                                 )
                         ax[i, j].set_ylim((0, self.max_value))
@@ -3436,7 +3452,8 @@ class Table:
             figsize: float = 1,
             ratio_height_to_width: float = 1,
             dpi: int = 500,
-            confirm_graph: bool = False
+            confirm_graph: bool = False,
+            set_facecolor: any = (0, 0, 0, 0.10)
     ):
         """
         Used to plot a timeplot.
@@ -3604,7 +3621,7 @@ class Table:
                         main_y_axis[i][j][k].tick_params(axis='both',
                                                          grid_color='black',
                                                          grid_alpha=0.5)
-                        main_y_axis[i][j][k].set_facecolor((0, 0, 0, 0.10))
+                        main_y_axis[i][j][k].set_facecolor(set_facecolor)
 
                         for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
                             if 'Setpoint Temperature' in self.y_list_main[i][j][k]['label'][x]:

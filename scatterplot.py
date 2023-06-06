@@ -8,30 +8,37 @@ dataset_hourly = Table(
     level_agg_func=['mean', 'sum'],
     level_excluded_zones=['ATTIC:ATTIC'],
     split_epw_names=True,
+    energy_units_in_kwh=False
 )
+
+dataset_hourly.df.columns
+
+
+##
+
 
 dataset_hourly.format_table(
     type_of_table='custom',
     custom_cols=[
         'BLOCK1:PERIMETERXZNX4_ASHRAE 55 Running mean outdoor temperature (°C)',
-        'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
-        'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
+        'Building_Total_Cooling Energy Demand (Wh/m2) (summed)',
+        'Building_Total_Heating Energy Demand (Wh/m2) (summed)',
         'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
         'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
         'Building_Total_Zone Operative Temperature (°C) (mean)'
     ]
 )
-
+##
 dataset_hourly.scatter_plot(
-    vars_to_gather_rows=['ComfStand', 'ComfMod', 'HVACmode'],
-    vars_to_gather_cols=['EPW_City_or_subcountry', 'EPW_Scenario-Year'],
+    vars_to_gather_cols=['ComfStand', 'ComfMod', 'HVACmode'],
+    vars_to_gather_rows=['EPW_City_or_subcountry', 'EPW_Scenario-Year'],
     data_on_x_axis='BLOCK1:PERIMETERXZNX4_ASHRAE 55 Running mean outdoor temperature (°C)',
     data_on_y_main_axis=[
         [
-            'Energy Demand (kWh/m2)',
+            'Energy Demand (Wh/m2)',
             [
-                'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
-                'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
+                'Building_Total_Cooling Energy Demand (Wh/m2) (summed)',
+                'Building_Total_Heating Energy Demand (Wh/m2) (summed)',
             ]
         ],
     ],
@@ -73,12 +80,16 @@ dataset_hourly.scatter_plot(
         'CS_IND IMAC C NV[CM_3[HM_2': 'IND_Adap_MM',
         # 'CS_INT ASHRAE55[CM_3[HM_0': 'ASH_Adap_AC'
     },
-    sharex=False,
-    sharey=False,
+    sharex=True,
+    sharey=True,
     supxlabel='Prevailing mean outdoor temperature (°C)',
     figname='testing_scatterplot_case_study',
-    figsize=4,
+    figsize=8,
     ratio_height_to_width=0.5,
     dpi=300,
-    confirm_graph=True
+    confirm_graph=True,
+    set_facecolor='#f3e97975',
+    best_fit_background_linewidth=2,
+    best_fit_linewidth=1,
+    # best_fit_linestyle=(5, (10, 3))
 )
