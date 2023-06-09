@@ -422,6 +422,16 @@ def inputData(self, ScriptType: str = None):
             self.ComfMod_List = list(
                 float(num) for num in input("     Enter the Comfort Mode numbers separated by space: ").split())
 
+    self.SetpointAcc = float(input('Enter the setpoint accuracy number (any number greater than 0): '))
+    while self.SetpointAcc < 0:
+        print('          The setpoint accuracy number is not correct. It must be a number greater than 0. Please enter the number again.')
+        self.SetpointAcc = float(input('         Enter the setpoint accuracy number (any number greater than 0): '))
+    while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+        self.SetpointAcc = float(input('      Enter the setpoint accuracy number (any number greater than 0): '))
+        while self.SetpointAcc < 0 or self.SetpointAcc > 1:
+            print('          The setpoint accuracy number is not correct. It must be a number greater than 0. Please enter the number again.')
+            self.SetpointAcc = float(input('         Enter the setpoint accuracy number (any number greater than 0): '))
+
     if 'mm' in ScriptType.lower():
         fullHVACmodeList = [0, 1, 2]
         self.HVACmode_List = list(int(num) for num in input(
@@ -595,6 +605,7 @@ def genIDF(self,
            ComfStand=None,
            CAT=None,
            ComfMod=None,
+           SetpointAcc=10000,
            HVACmode=None,
            VentCtrl=None,
            MaxTempDiffVOF=20,
@@ -622,6 +633,7 @@ def genIDF(self,
     arguments = (ComfStand is None,
                  CAT is None,
                  ComfMod is None,
+                 SetpointAcc == 10000,
                  HVACmode is None,
                  VentCtrl is None,
                  MaxTempDiffVOF == 20,
@@ -646,6 +658,7 @@ def genIDF(self,
         self.ComfStand_List = ComfStand
         self.CAT_List = CAT
         self.ComfMod_List = ComfMod
+        self.SetpointAcc = SetpointAcc
         self.HVACmode_List = HVACmode
         self.VentCtrl_List = VentCtrl
         self.MaxTempDiffVOF = MaxTempDiffVOF,
@@ -935,6 +948,8 @@ def genIDF(self,
                              program.Name == 'SetInputData'])
             SetVOFinputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
                              program.Name == 'SetVOFinputData'])
+            SetAST = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
+                             program.Name == 'SetAST'])
             if TempCtrl.lower() == 'temp' or TempCtrl.lower() == 'temperature':
                 for ComfStand_value in self.ComfStand_List:
                     SetInputData[0].Program_Line_1 = 'set ComfStand = ' + repr(ComfStand_value)
@@ -948,6 +963,7 @@ def genIDF(self,
                                                                  self.ASTtol_value_steps):
                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
+                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
                                     outputname = (
                                             filename
                                             + ComfStand_dict[ComfStand_value]
@@ -986,10 +1002,9 @@ def genIDF(self,
                                                 for ASTtol_value in numpy.arange(self.ASTtol_value_from,
                                                                                  self.ASTtol_value_to,
                                                                                  self.ASTtol_value_steps):
-                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(
-                                                        -ASTtol_value)
-                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(
-                                                        ASTtol_value)
+                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
+                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
@@ -1030,6 +1045,7 @@ def genIDF(self,
                                                                                  self.ASTtol_value_steps):
                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
@@ -1070,12 +1086,9 @@ def genIDF(self,
                                                                 for ASTtol_value in numpy.arange(self.ASTtol_value_from,
                                                                                                  self.ASTtol_value_to,
                                                                                                  self.ASTtol_value_steps):
-                                                                    SetInputData[
-                                                                        0].Program_Line_9 = 'set ACSTtol = ' + repr(
-                                                                        -ASTtol_value)
-                                                                    SetInputData[
-                                                                        0].Program_Line_10 = 'set AHSTtol = ' + repr(
-                                                                        ASTtol_value)
+                                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
+                                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
+                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
                                                                     outputname = (
                                                                             filename
                                                                             + ComfStand_dict[ComfStand_value]
@@ -1119,6 +1132,7 @@ def genIDF(self,
                                                                                  self.ASTtol_value_steps):
                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
@@ -1159,6 +1173,7 @@ def genIDF(self,
                                                                                                  self.ASTtol_value_steps):
                                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
                                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
+                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
                                                                     outputname = (
                                                                             filename
                                                                             + ComfStand_dict[ComfStand_value]
