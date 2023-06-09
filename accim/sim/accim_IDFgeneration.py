@@ -432,6 +432,90 @@ def inputData(self, ScriptType: str = None):
             print('          The setpoint accuracy number is not correct. It must be a number greater than 0. Please enter the number again.')
             self.SetpointAcc = float(input('         Enter the setpoint accuracy number (any number greater than 0): '))
 
+    if (any(i in [1, 2] for i in self.ComfStand_List) and 0 in self.ComfMod_List) or 22 in self.ComfStand_List:
+        self.CoolSeasonStart = list(
+            int(num)
+            for num
+            in input("Enter the start of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
+        )
+        if len(self.CoolSeasonStart) == 1:
+            day_of_year = self.CoolSeasonStart[0]
+        elif len(self.CoolSeasonStart) == 2:
+            from datetime import date
+            day_of_year = date(2007, self.CoolSeasonStart[1], self.CoolSeasonStart[0]).timetuple().tm_yday
+        while day_of_year < 1 or day_of_year > 365:
+            print('          The start for cooling season is not correct. It must be a numeric date format dd/mm or the day of the year. Please enter the value again.')
+            self.CoolSeasonStart = list(
+                int(num)
+                for num
+                in input("Enter the start of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
+            )
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CoolSeasonStart = list(
+                int(num)
+                for num
+                in input("Enter the start of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
+            )
+            if len(self.CoolSeasonStart) == 1:
+                day_of_year = self.CoolSeasonStart[0]
+            elif len(self.CoolSeasonStart) == 2:
+                day_of_year = date(2007, self.CoolSeasonStart[1], self.CoolSeasonStart[0]).timetuple().tm_yday
+            while day_of_year < 1 or day_of_year > 365:
+                print('          The start for cooling season is not correct. It must be a numeric date format dd/mm or the day of the year. Please enter the value again.')
+                self.CoolSeasonStart = list(
+                    int(num)
+                    for num
+                    in input("Enter the start of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
+                )
+                if len(self.CoolSeasonStart) == 1:
+                    day_of_year = self.CoolSeasonStart[0]
+                elif len(self.CoolSeasonStart) == 2:
+                    day_of_year = date(2007, self.CoolSeasonStart[1], self.CoolSeasonStart[0]).timetuple().tm_yday
+        self.CoolSeasonStart = day_of_year
+
+        self.CoolSeasonEnd = list(
+            int(num)
+            for num
+            in input("Enter the end of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
+        )
+        if len(self.CoolSeasonEnd) == 1:
+            day_of_year = self.CoolSeasonEnd[0]
+        elif len(self.CoolSeasonEnd) == 2:
+            from datetime import date
+            day_of_year = date(2007, self.CoolSeasonEnd[1], self.CoolSeasonEnd[0]).timetuple().tm_yday
+        while day_of_year < 1 or day_of_year > 365:
+            print('          The end for cooling season is not correct. It must be a numeric date format dd/mm or the day of the year. Please enter the value again.')
+            self.CoolSeasonEnd = list(
+                int(num)
+                for num
+                in input("Enter the end of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
+            )
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CoolSeasonEnd = list(
+                int(num)
+                for num
+                in input("Enter the end of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
+            )
+            if len(self.CoolSeasonEnd) == 1:
+                day_of_year = self.CoolSeasonEnd[0]
+            elif len(self.CoolSeasonEnd) == 2:
+                day_of_year = date(2007, self.CoolSeasonEnd[1], self.CoolSeasonEnd[0]).timetuple().tm_yday
+            while day_of_year < 1 or day_of_year > 365:
+                print('          The end for cooling season is not correct. It must be a numeric date format dd/mm or the day of the year. Please enter the value again.')
+                self.CoolSeasonEnd = list(
+                    int(num)
+                    for num
+                    in input("Enter the end of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
+                )
+                if len(self.CoolSeasonEnd) == 1:
+                    day_of_year = self.CoolSeasonEnd[0]
+                elif len(self.CoolSeasonEnd) == 2:
+                    day_of_year = date(2007, self.CoolSeasonEnd[1], self.CoolSeasonEnd[0]).timetuple().tm_yday
+        self.CoolSeasonEnd = day_of_year
+    else:
+        self.CoolSeasonStart = 121
+        self.CoolSeasonEnd = 274
+
     if 'mm' in ScriptType.lower():
         fullHVACmodeList = [0, 1, 2]
         self.HVACmode_List = list(int(num) for num in input(
@@ -606,6 +690,8 @@ def genIDF(self,
            CAT=None,
            ComfMod=None,
            SetpointAcc=10000,
+           CoolSeasonStart=121,
+           CoolSeasonEnd=274,
            HVACmode=None,
            VentCtrl=None,
            MaxTempDiffVOF=20,
@@ -634,6 +720,8 @@ def genIDF(self,
                  CAT is None,
                  ComfMod is None,
                  SetpointAcc == 10000,
+                 CoolSeasonStart == 121,
+                 CoolSeasonEnd == 274,
                  HVACmode is None,
                  VentCtrl is None,
                  MaxTempDiffVOF == 20,
@@ -659,6 +747,31 @@ def genIDF(self,
         self.CAT_List = CAT
         self.ComfMod_List = ComfMod
         self.SetpointAcc = SetpointAcc
+        
+        if type(CoolSeasonStart) is str:
+            CoolSeasonStart = list(int(num) for num in CoolSeasonStart.split('/'))
+            from datetime import date
+            day_of_year = date(2007, CoolSeasonStart[1], CoolSeasonStart[0]).timetuple().tm_yday
+        elif type(CoolSeasonStart) is int:
+            day_of_year = CoolSeasonStart
+        self.CoolSeasonStart = day_of_year
+        
+        # CoolSeasonEnd = list(int(num) for num in CoolSeasonEnd.split('/'))
+        # if len(CoolSeasonEnd) == 1:
+        #     day_of_year = CoolSeasonEnd[0]
+        # elif len(CoolSeasonEnd) == 2:
+        #     from datetime import date
+        #     day_of_year = date(2007, CoolSeasonEnd[1], CoolSeasonEnd[0]).timetuple().tm_yday
+        # self.CoolSeasonEnd = day_of_year
+        if type(CoolSeasonEnd) is str:
+            CoolSeasonEnd = list(int(num) for num in CoolSeasonEnd.split('/'))
+            from datetime import date
+            day_of_year = date(2007, CoolSeasonEnd[1], CoolSeasonEnd[0]).timetuple().tm_yday
+        elif type(CoolSeasonEnd) is int:
+            day_of_year = CoolSeasonEnd
+        self.CoolSeasonEnd = day_of_year
+
+        
         self.HVACmode_List = HVACmode
         self.VentCtrl_List = VentCtrl
         self.MaxTempDiffVOF = MaxTempDiffVOF,
@@ -963,7 +1076,9 @@ def genIDF(self,
                                                                  self.ASTtol_value_steps):
                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
+                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
+                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                     outputname = (
                                             filename
                                             + ComfStand_dict[ComfStand_value]
@@ -1004,7 +1119,9 @@ def genIDF(self,
                                                                                  self.ASTtol_value_steps):
                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
+                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
+                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
@@ -1045,7 +1162,9 @@ def genIDF(self,
                                                                                  self.ASTtol_value_steps):
                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
+                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
+                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
@@ -1088,7 +1207,9 @@ def genIDF(self,
                                                                                                  self.ASTtol_value_steps):
                                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
                                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
+                                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
+                                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                                                     outputname = (
                                                                             filename
                                                                             + ComfStand_dict[ComfStand_value]
@@ -1132,7 +1253,9 @@ def genIDF(self,
                                                                                  self.ASTtol_value_steps):
                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
+                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
+                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
@@ -1173,7 +1296,9 @@ def genIDF(self,
                                                                                                  self.ASTtol_value_steps):
                                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
                                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
+                                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
+                                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                                                     outputname = (
                                                                             filename
                                                                             + ComfStand_dict[ComfStand_value]

@@ -18,6 +18,8 @@ def addAccis(
         CAT: any = None,
         ComfMod: any = None,
         SetpointAcc: float = 10000,
+        CoolSeasonStart: int = 121,
+        CoolSeasonEnd: int = 274,
         HVACmode: any = None,
         VentCtrl: any = None,
         MaxTempDiffVOF: float = 20,
@@ -111,6 +113,9 @@ def addAccis(
     import accim.sim.accim_Main as accim_Main
     from os import listdir, remove
     import accim
+
+    #todo try to make CoolSeasonStart and End available for south hemisphere
+    #todo complete implementation of ISO7730
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
                  and not '[' in file
@@ -443,6 +448,8 @@ def addAccis(
                 CAT=CAT,
                 ComfMod=ComfMod,
                 SetpointAcc=SetpointAcc,
+                CoolSeasonStart=CoolSeasonStart,
+                CoolSeasonEnd=CoolSeasonEnd,
                 HVACmode=HVACmode,
                 VentCtrl=VentCtrl,
                 MaxTempDiffVOF=MaxTempDiffVOF,
@@ -475,6 +482,8 @@ def addAccis(
                 CAT=CAT,
                 ComfMod=ComfMod,
                 SetpointAcc=SetpointAcc,
+                CoolSeasonStart=CoolSeasonStart,
+                CoolSeasonEnd=CoolSeasonEnd,
                 HVACmode=[0],
                 VentCtrl=[0],
                 VSToffset=[0],
