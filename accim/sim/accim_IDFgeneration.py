@@ -26,6 +26,7 @@ def inputData(self, ScriptType: str = None):
         '19 = MEX Oropeza Temperate': [[80, 90], [0, 1, 2, 3]],
         '20 = MEX Oropeza HumTropic': [[80, 90], [0, 1, 2, 3]],
         '21 = CHL Perez-Fargallo': [[80, 90], [2, 3]],
+        '22 = INT ISO7730': [[1, 2, 3], [0]],
 
     }
 
@@ -60,7 +61,7 @@ def inputData(self, ScriptType: str = None):
                 90: 'ASHRAE 55 90% acceptability',
             },
             'ComfMod': {
-                0: 'ASHRAE 55 Static setpoints (calculated with Clima Tool)',
+                0: 'ISO 7730 Static setpoints',
                 1: 'ASHRAE 55 Adaptive setpoints when applicable, otherwise CTE',
                 2: 'ASHRAE 55 Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints',
                 3: 'ASHRAE 55 Adaptive setpoints when applicable, otherwise ASHRAE 55 Adaptive setpoints horizontally extended',
@@ -329,7 +330,17 @@ def inputData(self, ScriptType: str = None):
                 3: 'Perez-Fargallo Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
             }
         },
-
+        22: {
+            'name': '22 = INT ISO7730',
+            'CAT': {
+                1: 'Cat A: -0.2 < PMV < 0.2; PPD < 6%',
+                2: 'Cat B: -0.5 < PMV < 0.5; PPD < 10%',
+                3: 'Cat C: -0.7 < PMV < 0.7; PPD < 15%',
+            },
+            'ComfMod': {
+                0: 'ISO 7730 Static setpoints',
+            }
+        },
     }
 
     print('The information you will be required to enter below will be used to generate the customised output IDFs:')
@@ -358,6 +369,7 @@ def inputData(self, ScriptType: str = None):
         '19 = MEX Oropeza Temperate;\n'
         '20 = MEX Oropeza HumTropic;\n'
         '21 = CHL Perez-Fargallo;\n'
+        '22 = INT ISO7730;\n'
         'Please refer to the full list of setpoint temperatures at https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html\n'
         '): '
     ).split())
@@ -381,9 +393,9 @@ def inputData(self, ScriptType: str = None):
     fullCATlist = [1, 2, 3, 80, 85, 90]
     self.CAT_List = list(int(num) for num in input(
         "Enter the Category numbers separated by space (\n"
-        "1 = CAT I;\n"
-        "2 = CAT II;\n"
-        "3 = CAT III;\n"
+        "1 = CAT I / CAT A;\n"
+        "2 = CAT II / CAT B;\n"
+        "3 = CAT III / CAT C;\n"
         "80 = 80% ACCEPT;\n"
         "85 = 85% ACCEPT;\n"
         "90 = 90% ACCEPT;\n"
@@ -839,6 +851,7 @@ def genIDF(self,
         19: '[CS_MEX Oropeza Temperate',
         20: '[CS_MEX Oropeza HumTropic',
         21: '[CS_CHL Perez-Fargallo',
+        22: '[CS_INT ISO7730',
     }
 
     outputlist = []
@@ -894,9 +907,9 @@ def genIDF(self,
                                                             + '.idf'
                                                     )
                                                     outputlist.append(outputname)
-                elif ComfStand_value in [1, 4, 5]:
+                elif ComfStand_value in [1, 4, 5, 22]:
                     for CAT_value in self.CAT_List:
-                        if ComfStand_value in [1] and CAT_value not in range(0, 4):
+                        if ComfStand_value in [1, 22] and CAT_value not in range(0, 4):
                             continue
                         elif ComfStand_value in [4, 5] and CAT_value not in [1, 2]:
                             continue
@@ -1141,9 +1154,9 @@ def genIDF(self,
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
                                                     idf1.savecopy(outputname)
-                    elif ComfStand_value in [1, 4, 5]:
+                    elif ComfStand_value in [1, 4, 5, 22]:
                         for CAT_value in self.CAT_List:
-                            if ComfStand_value in [1] and CAT_value not in range(0, 4):
+                            if ComfStand_value in [1, 22] and CAT_value not in range(0, 4):
                                 continue
                             elif ComfStand_value in [4, 5] and CAT_value not in [1, 2]:
                                 continue

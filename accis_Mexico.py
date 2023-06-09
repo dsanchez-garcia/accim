@@ -9,10 +9,10 @@ accis.addAccis(
     EnergyPlus_version='23.1',
     TempCtrl='temp',
     # ComfStand=[2, 17, 18, 19, 20],
-    ComfStand=[2],
-    CoolSeasonStart=100,
-    CoolSeasonEnd=50,
-    CAT=[80],
+    ComfStand=[22],
+    CoolSeasonStart='01/11',
+    CoolSeasonEnd='01/04',
+    CAT=[3],
     ComfMod=[0],
     SetpointAcc=1000,
     HVACmode=[2],
@@ -24,5 +24,5 @@ accis.addAccis(
     ASTtol_start=0.1,
     ASTtol_end_input=0.1,
     confirmGen=True,
-    NameSuffix='date_inverse'
+    # NameSuffix='date_inverse'
 )

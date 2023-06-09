@@ -115,7 +115,6 @@ def addAccis(
     import accim
 
     #todo try to make CoolSeasonStart and End available for south hemisphere
-    #todo complete implementation of ISO7730
 
     filelist = ([file for file in listdir() if file.endswith('.idf')
                  and not '[' in file
@@ -133,11 +132,12 @@ def addAccis(
         TempCtrl is not None,
     )
 
-    fullScriptTypeList = ['vrf_ac',
-                          'vrf_mm',
-                          'ex_mm',
-                          'ex_ac',
-                          ]
+    fullScriptTypeList = [
+        'vrf_ac',
+        'vrf_mm',
+        'ex_mm',
+        'ex_ac',
+    ]
 
     SupplyAirTempInputMethodList = [
         'supply air temperature',
