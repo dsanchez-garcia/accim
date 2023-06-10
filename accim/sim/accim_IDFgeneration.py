@@ -917,6 +917,8 @@ def genIDF(self,
                             for ComfMod_value in self.ComfMod_List:
                                 if ComfStand_value not in [13, 14] and ComfMod_value in [0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5]:
                                     continue
+                                elif ComfStand_value == 22 and ComfMod_value != 0:
+                                    continue
                                 else:
                                     for HVACmode_value in self.HVACmode_List:
                                         if HVACmode_value == 0:
@@ -977,6 +979,8 @@ def genIDF(self,
                                 if ComfStand_value in [13, 14] and ComfMod_value in [0, 1]:
                                     continue
                                 elif ComfStand_value not in [13, 14] and ComfMod_value in [0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5]:
+                                    continue
+                                elif ComfStand_value == 21 and ComfMod_value not in [2, 3]:
                                     continue
                                 else:
                                     for HVACmode_value in self.HVACmode_List:
@@ -1165,6 +1169,8 @@ def genIDF(self,
                                 for ComfMod_value in self.ComfMod_List:
                                     if ComfStand_value not in [13, 14] and ComfMod_value in [0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5]:
                                         continue
+                                    elif ComfStand_value == 22 and ComfMod_value != 0:
+                                        continue
                                     else:
                                         SetInputData[0].Program_Line_3 = 'set ComfMod = ' + repr(ComfMod_value)
                                         for HVACmode_value in self.HVACmode_List:
@@ -1255,6 +1261,8 @@ def genIDF(self,
                                     if ComfStand_value in [13, 14] and ComfMod_value in [0, 1]:
                                         continue
                                     elif ComfStand_value not in [13, 14] and ComfMod_value in [0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5]:
+                                        continue
+                                    elif ComfStand_value == 21 and ComfMod_value not in [2, 3]:
                                         continue
                                     else:
                                         SetInputData[0].Program_Line_3 = 'set ComfMod = ' + repr(ComfMod_value)
