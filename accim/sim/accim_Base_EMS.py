@@ -3363,6 +3363,72 @@ def removeDuplicatedOutputVariables(
             self.idf1.removeidfobject(firstoutput)
     # del alloutputs, firstoutput, unique_list, duplicated_list
 
+def outputsSpecified(
+        self,
+        remove_or_keep: str = None,
+):
+    """Remove duplicated Output:Variable objects for accim."""
+    all_outputs_to_delete = []
+    for freq in ['Timestep', 'Hourly', 'Daily', 'Monthly', 'Runperiod']:
+        alloutputs = [
+                output
+                for output
+                in self.idf1.idfobjects['Output:Variable']
+                if freq == output.Reporting_Frequency
+        ]
+        if len(alloutputs) == 0:
+            continue
+        else:
+            alloutputsnames = [
+                output.Variable_Name
+                for output
+                in self.idf1.idfobjects['Output:Variable']
+                if freq == output.Reporting_Frequency
+            ]
+            alloutputsnames = list(dict.fromkeys(alloutputsnames))
+            print(f'The current existing outputs for {freq} Frequency are:')
+            print(*alloutputsnames, sep='\n')
+            if remove_or_keep is None:
+                remove_or_keep = input('Do you want to remove some input or keep it and remove all others? Please enter remove or keep:')
+                custom_outputs = list(str(output) for output in input('Please enter these outputs (which must be contained in the list above) separated by semicolon (;): ').split(';'))
+                if remove_or_keep.lower() == 'remove':
+                    outputs_to_delete = [i for i in alloutputs if any([i.Variable_Name == j for j in custom_outputs])]
+                elif remove_or_keep.lower() == 'keep':
+                    outputs_to_delete = [i for i in alloutputs if all([i.Variable_Name != j for j in custom_outputs])]
+                remove_or_keep = None
+                outputs_to_keep = [i for i in alloutputs if i not in outputs_to_delete]
+
+            # outputs_to_delete = []
+            # for i in outputs_to_delete:
+            #     for j in alloutputs:
+            #         if remove_or_keep.lower() == 'remove':
+            #             if i in j.Variable_Name:
+            #                 outputs_to_delete.append(j)
+            #         if remove_or_keep.lower() == 'keep':
+            #             if i in j.Variable_Name:
+            #                 outputs_to_delete.append(j)
+
+            all_outputs_to_delete.extend(outputs_to_delete)
+
+
+        # unique_list = []
+        # duplicated_list = []
+        # for i in alloutputs:
+        #     if i.Variable_Name not in unique_list:
+        #         unique_list.append(i)
+        #     else:
+        #         duplicated_list.append(i)
+    # for j in range(len(all_outputs_to_delete)):
+    #     firstoutput = self.idf1.idfobjects['Output:Variable'][-1]
+    #     self.idf1.removeidfobject(firstoutput)
+
+    for j in all_outputs_to_delete:
+        # firstoutput = self.idf1.idfobjects['Output:Variable'][-1]
+        self.idf1.removeidfobject(j)
+
+
+    # del alloutputs, firstoutput, unique_list, duplicated_list
+
 
 def addOutputVariablesSimplified(
         self,

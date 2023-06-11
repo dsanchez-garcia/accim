@@ -6,6 +6,7 @@ accis.addAccis(
     Output_keep_existing=False,
     Output_type='standard',
     Output_freqs=['hourly'],
+    # Output_freqs=['hourly'],
     EnergyPlus_version='23.1',
     TempCtrl='temp',
     ComfStand=[2, 17, 18, 19, 20, 22],

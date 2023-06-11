@@ -12,6 +12,7 @@ def addAccis(
         Output_type: str = None,
         Output_freqs: any = None,
         Output_keep_existing: bool = None,
+        Output_check: bool = None,
         EnergyPlus_version: str = None,
         TempCtrl: str = None,
         ComfStand: any = None,
@@ -114,11 +115,11 @@ def addAccis(
     from os import listdir, remove
     import accim
 
-    #todo try to make CoolSeasonStart and End available for south hemisphere
-
     filelist = ([file for file in listdir() if file.endswith('.idf')
                  and not '[' in file
                  and not '_pymod' in file])
+    if len(filelist) == 0:
+        raise FileNotFoundError('No idf files were found. There must be at least 1 idf file located at the path where this script is being run.')
 
     filelist = ([file.split('.idf')[0] for file in filelist])
 
@@ -400,6 +401,8 @@ def addAccis(
             )
 
         z.removeDuplicatedOutputVariables()
+
+        z.outputsSpecified()
 
         z.saveaccim(verboseMode=verboseMode)
         if verboseMode:
