@@ -4,7 +4,7 @@ accis.addAccis(
     ScriptType='vrf_mm',
     SupplyAirTempInputMethod='temperature difference',
     Output_keep_existing=False,
-    Output_type='standard',
+    Output_type='custom',
     Output_freqs=['hourly'],
     # Output_freqs=['hourly'],
     EnergyPlus_version='23.1',

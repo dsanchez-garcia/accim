@@ -12,7 +12,7 @@ def addAccis(
         Output_type: str = None,
         Output_freqs: any = None,
         Output_keep_existing: bool = None,
-        Output_check: bool = None,
+        Output_dataframe: bool = None,
         EnergyPlus_version: str = None,
         TempCtrl: str = None,
         ComfStand: any = None,
@@ -43,7 +43,7 @@ def addAccis(
     'vrf_mm' for VRFsystem with mixed-mode, 
     'ex_ac' for ExistingHVAC only with full air-conditioning mode, 
     'ex_mm' for ExistingHVAC with mixed-mode.
-    :param Output_type: The default is None. Can be 'standard', 'simplified' or 'detailed'.
+    :param Output_type: The default is None. Can be 'standard', 'simplified', 'detailed' or 'custom'.
     :param Output_freqs: The default is None. A list containing the following strings: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
     :param Output_keep_existing: The default is None. It is a boolean (True or False) to keep the existing Output:Variable objects or not.
     :param EnergyPlus_version: The default is None. Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'.
@@ -151,7 +151,11 @@ def addAccis(
         'Simplified',
         'simplified',
         'Detailed',
-        'detailed'
+        'detailed',
+        'Custom',
+        'custom',
+        # 'Show outputs',
+        # 'show outputs'
     ]
 
     fullOutputsFreqList = [
@@ -245,10 +249,10 @@ def addAccis(
         while Output_keep_existing.lower() not in ['true', 'false']:
             Output_keep_existing = input('The answer you entered is not valid. '
                                           'Do you want to keep the existing outputs (true or false)?: ')
-        Output_type = input("\nEnter the Output type (standard, simplified or detailed): ")
+        Output_type = input("\nEnter the Output type (standard, simplified, detailed or custom): ")
         while Output_type not in fullOutputsTypeList:
             Output_type = input("   Output type was not correct. "
-                            "Please, enter the Output type (standard, simplified or detailed): ")
+                            "Please, enter the Output type (standard, simplified, detailed or custom): ")
         Output_freqs = list(freq for freq in input(
             "\nEnter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): ").split())
         while (not(all(elem in fullOutputsFreqList for elem in Output_freqs))):
@@ -366,6 +370,7 @@ def addAccis(
             z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
 
         z.addEMSPCMBase(verboseMode=verboseMode)
+
         if Output_keep_existing == 'true':
             Output_keep_existing = True
         elif Output_keep_existing == 'false':
@@ -388,7 +393,7 @@ def addAccis(
                 TempCtrl=TempCtrl,
                 verboseMode=verboseMode
             )
-        elif Output_type.lower() == 'detailed':
+        elif Output_type.lower() == 'detailed' or Output_type.lower() == 'custom':
             z.addOutputVariablesStandard(
                 Outputs_freq=Output_freqs,
                 ScriptType=ScriptType,
@@ -399,10 +404,10 @@ def addAccis(
                 Outputs_freq=Output_freqs,
                 verboseMode=verboseMode
             )
+            if Output_type.lower() == 'custom':
+                z.outputsSpecified()
 
         z.removeDuplicatedOutputVariables()
-
-        z.outputsSpecified()
 
         z.saveaccim(verboseMode=verboseMode)
         if verboseMode:

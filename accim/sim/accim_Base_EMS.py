@@ -3386,7 +3386,7 @@ def outputsSpecified(
                 if freq == output.Reporting_Frequency
             ]
             alloutputsnames = list(dict.fromkeys(alloutputsnames))
-            print(f'The current existing outputs for {freq} Frequency are:')
+            print(f'\nThe current existing outputs for {freq} Frequency are:')
             print(*alloutputsnames, sep='\n')
             if remove_or_keep is None:
                 remove_or_keep = input('Do you want to remove some input or keep it and remove all others? Please enter remove or keep:')
