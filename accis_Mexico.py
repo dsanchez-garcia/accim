@@ -46,15 +46,15 @@ df_outputs_in = df_outputs_in[
     )
 ]
 ##
+from accim.sim import accis
 x = accis.addAccis(
     ScriptType='vrf_mm',
     SupplyAirTempInputMethod='temperature difference',
     Output_keep_existing=False,
     Output_type='standard',
     Output_freqs=['hourly'],
-    Output_gen_dataframe=True,
-    Output_take_dataframe=df_outputs_in,
-    # Output_freqs=['hourly'],
+    # Output_gen_dataframe=True,
+    # Output_take_dataframe=df_outputs_in,
     EnergyPlus_version='23.1',
     TempCtrl='temp',
     ComfStand=[17],
@@ -71,6 +71,23 @@ x = accis.addAccis(
     ASTtol_steps=0.1,
     ASTtol_start=0.1,
     ASTtol_end_input=0.1,
-    # confirmGen=False,
+    confirmGen=True,
     # NameSuffix='date_inverse'
 )
+##
+from eppy.modeleditor import IDF
+
+input_idfs = [i for i in x.input_idfs]
+input_idf0 = x.input_idfs[input_idfs[0]]
+len(input_idf0.idfobjects['output:variable'])
+
+
+output_idfs = [i for i in x.output_idfs]
+
+output_idf0 = x.output_idfs[output_idfs[0]]
+
+len(output_idf0.idfobjects['output:variable'])
+
+##
+from accim.sim import accis
+adaptive_setpoints_idfs = accis.addAccis()

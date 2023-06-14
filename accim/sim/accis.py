@@ -5,7 +5,7 @@ This function transform fixed setpoint temperature
 building energy models into adaptive setpoint temperature energy models
 by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 """
-
+import pandas as pd
 class addAccis:
     def __init__(self,
                  ScriptType: str = None,
@@ -14,7 +14,7 @@ class addAccis:
                  Output_freqs: any = None,
                  Output_keep_existing: bool = None,
                  Output_gen_dataframe: bool = None,
-                 Output_take_dataframe: bool = None,
+                 Output_take_dataframe: pd.DataFrame = None,
                  EnergyPlus_version: str = None,
                  TempCtrl: str = None,
                  ComfStand: any = None,
@@ -41,13 +41,16 @@ class addAccis:
         """
         Parameters
         :param ScriptType: The default is None.
-        'vrf_ac' for VRFsystem with full air-conditionin mode,
+        'vrf_ac' for VRFsystem with full air-conditioning mode,
         'vrf_mm' for VRFsystem with mixed-mode,
         'ex_ac' for ExistingHVAC only with full air-conditioning mode,
         'ex_mm' for ExistingHVAC with mixed-mode.
+        :param SupplyAirTempInputMethod: The default is None. 'supply air temperature' or 'temperature difference' to use such supply air temperature input method in the VRF system. Only used if vrf_ac or vrf_mm are used.
         :param Output_type: The default is None. Can be 'standard', 'simplified', 'detailed' or 'custom'.
         :param Output_freqs: The default is None. A list containing the following strings: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
         :param Output_keep_existing: The default is None. It is a boolean (True or False) to keep the existing Output:Variable objects or not.
+        :param Output_gen_dataframe: The default is None. It is a boolean (True or False) to generate a pandas DataFrame instance containing all Output:Variable objects.
+        :param Output_take_dataframe: It takes the pandas DataFrame previously generated with Output_gen_dataframe, which the user has filtered to keep only the rows related to the Output:Variable objects that need to be kept in the model.
         :param EnergyPlus_version: The default is None. Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'.
         :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
         :param ComfStand: The default is None.
@@ -73,6 +76,7 @@ class addAccis:
             '19 = MEX Oropeza Temperate;
             '20 = MEX Oropeza HumTropic;
             '21 = CHL Perez-Fargallo;
+            '22 = INT ISO7730
         :param CAT: The default is None.
         (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT)
         :param ComfMod: The default is None.
@@ -80,6 +84,11 @@ class addAccis:
         1 = Adaptive when applicable, otherwise relevant local static model;
         2 = Adaptive when applicable, otherwise relevant international static model
         3 = Adaptive when applicable, otherwise horizontal extention of adaptive setpoints)
+        :param SetpointAcc: A float. It is the number for the accuracy of the setpoint temperatures.
+        For instance, if 2 was used, setpoints would be rounded to every half Celsius degree;
+        if 10 was used, the setpoints would be rounded to the first decimal.
+        :param CoolSeasonStart: A date in format dd/mm, or the number of the day in the year. Defines when start the cooling season, only used in some static setpoint temperatures.
+        :param CoolSeasonEnd: A date in format dd/mm, or the number of the day in the year. Defines when ends the cooling season, only used in some static setpoint temperatures.
         :param HVACmode: The default is None.
         (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
         :param VentCtrl: The default is None.
@@ -211,7 +220,7 @@ class addAccis:
             '\n'
             '\nStarting with the process.'
         )
-
+        self.arguments = {}
         if all(objArgsDef):
             pass
         else:
@@ -267,6 +276,10 @@ class addAccis:
             while Output_gen_dataframe.lower() not in ['true', 'false']:
                 Output_gen_dataframe = input('The answer you entered is not valid. '
                                               'Do you want to generate a dataframe to see all outputs? (true or false):')
+            if Output_gen_dataframe.lower() == 'true':
+                Output_gen_dataframe = True
+            elif Output_gen_dataframe.lower() == 'false':
+                Output_gen_dataframe = False
             EnergyPlus_version = input("\nEnter the EnergyPlus version (9.1 to 23.1): ")
             while EnergyPlus_version not in fullEPversionsList:
                 EnergyPlus_version = input("    EnergyPlus version was not correct. "
@@ -324,11 +337,29 @@ class addAccis:
             raise ValueError(TempCtrl + " is not a valid Temperature Control method. "
                                                   "You must choose a Temperature Control method"
                                                   "from the list above.")
+        self.arguments.update(
+            {
+                'ScriptType': ScriptType,
+                'SupplyAirTempInputMethod': SupplyAirTempInputMethod,
+                'Output_type': Output_type,
+                'Output_freqs': Output_freqs,
+                'Output_keep_existing': Output_keep_existing,
+                'Output_gen_dataframe': Output_gen_dataframe,
+                'Output_take_dataframe': Output_take_dataframe,
+                'EnergyPlus_version': EnergyPlus_version,
+                'TempCtrl': TempCtrl,
+            }
+        )
 
         notWorkingIDFs = []
 
         if Output_gen_dataframe:
             df_outputs_to_concat = []
+        self.input_idfs = {}
+        self.occupied_zones = {}
+        self.occupied_zones_original_name = {}
+        self.windows_and_doors = {}
+        self.windows_and_doors_original_name = {}
 
         for file in filelist:
             if verboseMode:
@@ -342,6 +373,11 @@ class addAccis:
                 TempCtrl=TempCtrl,
                 verboseMode=verboseMode
             )
+            self.input_idfs.update({file: z.idf0})
+            self.occupied_zones.update({file: z.occupiedZones})
+            self.occupied_zones_original_name.update({file: z.occupiedZones_orig})
+            self.windows_and_doors.update({file: z.windownamelist})
+            self.windows_and_doors_original_name.update({file: z.windownamelist_orig})
 
             if z.accimNotWorking is True:
                 # raise KeyError(f'accim is not going to work with {file}')
@@ -498,9 +534,43 @@ class addAccis:
                     verboseMode=verboseMode,
                     confirmGen=confirmGen
                     )
+                self.arguments.update(
+                    {
+                        'ScriptType': ScriptType,
+                        'TempCtrl': TempCtrl,
+                        'ComfStand': ComfStand,
+                        'CAT': CAT,
+                        'ComfMod': ComfMod,
+                        'SetpointAcc': SetpointAcc,
+                        'CoolSeasonStart': CoolSeasonStart,
+                        'CoolSeasonEnd': CoolSeasonEnd,
+                        'HVACmode': HVACmode,
+                        'VentCtrl': VentCtrl,
+                        'MaxTempDiffVOF': MaxTempDiffVOF,
+                        'MinTempDiffVOF': MinTempDiffVOF,
+                        'MultiplierVOF': MultiplierVOF,
+                        'VSToffset': VSToffset,
+                        'MinOToffset': MinOToffset,
+                        'MaxWindSpeed': MaxWindSpeed,
+                        'ASTtol_start': ASTtol_start,
+                        'ASTtol_end_input': ASTtol_end_input,
+                        'ASTtol_steps': ASTtol_steps,
+                        'NameSuffix': NameSuffix,
+                        'verboseMode': verboseMode,
+                        'confirmGen': confirmGen,
+                    }
+                )
             else:
                 z.inputData(
                     ScriptType=ScriptType,
+                )
+                self.arguments.update(z.user_input_arguments)
+                self.arguments.update(
+                    {
+                        'NameSuffix': NameSuffix,
+                        'verboseMode': verboseMode,
+                        'confirmGen': confirmGen,
+                    }
                 )
                 z.genIDF(
                     ScriptType=ScriptType,
@@ -532,15 +602,49 @@ class addAccis:
                     verboseMode=verboseMode,
                     confirmGen=confirmGen
                     )
+                self.arguments.update(
+                    {
+                        'ScriptType': ScriptType,
+                        'TempCtrl': TempCtrl,
+                        'ComfStand': ComfStand,
+                        'CAT': CAT,
+                        'ComfMod': ComfMod,
+                        'SetpointAcc': SetpointAcc,
+                        'CoolSeasonStart': CoolSeasonStart,
+                        'CoolSeasonEnd': CoolSeasonEnd,
+                        'HVACmode': [0],
+                        'VentCtrl': [0],
+                        'MaxTempDiffVOF': 1,
+                        'MinTempDiffVOF': 0,
+                        'MultiplierVOF': 0,
+                        'VSToffset': [0],
+                        'MinOToffset': [0],
+                        'MaxWindSpeed': [0],
+                        'ASTtol_start': ASTtol_start,
+                        'ASTtol_end_input': ASTtol_end_input,
+                        'ASTtol_steps': ASTtol_steps,
+                        'NameSuffix': NameSuffix,
+                        'verboseMode': verboseMode,
+                        'confirmGen': confirmGen,
+                    }
+                )
             else:
                 z.inputData(
                     ScriptType=ScriptType,
+                )
+                self.arguments.update(z.user_input_arguments)
+                self.arguments.update(
+                    {
+                        'NameSuffix': NameSuffix,
+                        'verboseMode': verboseMode,
+                        'confirmGen': confirmGen,
+                    }
                 )
                 z.genIDF(
                     ScriptType=ScriptType,
                     TempCtrl=TempCtrl,
                 )
-
+        self.output_idfs = z.output_idf_dict
         if verboseMode:
             print('''\n=======================END OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')
 

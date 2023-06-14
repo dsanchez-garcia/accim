@@ -2,15 +2,15 @@
 ## First steps
 There has been developed 4 main branches of functions, which are:
 
-- VRFsystem with full air-conditioning mode: This mode has been developed mainly to support models originated with OpenStudio, which up to date does not support Airflow Network objects and subsequently Calculated Natural Ventilation. It adds standard VRF systems for each occupied zone and applies the adaptive or PMV-based setpoint temperatures, but only works with full air-conditioning mode.
+- VRF system with full air-conditioning mode: This mode has been developed mainly to support models originated with OpenStudio, which up to date does not support Airflow Network objects and subsequently Calculated Natural Ventilation. It adds standard VRF systems for each occupied zone and applies the adaptive or PMV-based setpoint temperatures, but only works with full air-conditioning mode.
 
-- VRFsystem with mixed mode: It adds standard VRF systems for each occupied zone and applies the adaptive or PMV-based setpoint temperatures. Works with Calculated Natural Ventilation, although full air-conditioning mode can also be used. If mixed mode is used, the model must be generally developed with DesignBuilder.
+- VRF system with mixed mode: It adds standard VRF systems for each occupied zone and applies the adaptive or PMV-based setpoint temperatures. Works with Calculated Natural Ventilation, although full air-conditioning mode can also be used. If mixed mode is used, the model must be generally developed with DesignBuilder.
 
-- ExistingHVAC only with full air-conditioning mode: Keeps the existing HVAC systems and modify the existing setpoint temperatures to adaptive or PMV-based setpoint temperatures. However, mixed-mode and naturally ventilated modes are not available in this mode. 
+- Existing HVAC system only with full air-conditioning mode: Keeps the existing HVAC systems and modify the existing setpoint temperatures to adaptive or PMV-based setpoint temperatures. However, mixed-mode and naturally ventilated modes are not available in this mode. 
 
-- ExistingHVAC with mixed mode: UNDER DEVELOPMENT. IT IS NOT ADVISABLE TO USE IT YET. Keeps the existing HVAC systems and modify the existing setpoint temperatures to adaptive or PMV-based setpoint temperatures, considering mixed-mode. In order to properly work, there must be only one object for heating and another for cooling that can be used to monitor if these are turned on at any timestep (such as `Coil:Cooling:Water` and `Coil:Heating:Water`). Also, these objects must be named following the pattern "Zone name" "Object name". For instance, an `Coil:Heating:Electric` object could be named `Block1:Zone1 PTAC Heating Coil`, given that `Block1:Zone1` is a valid zone name. On the other hand, a `Coil:Cooling:Water` object named `Main Cooling Coil 1` would not be valid, since in this case the room would be `Main`; this is the typical case of some equipment shared by multiple rooms. If this condition is not met, accim will not generate the output IDF files for that input IDF file. For instance, if there are `Coil:Heating:Electric` and `Coil:Heating:DX:SingleSpeed` objects in the same model, simulation will crash. Also, if there is just an `ZoneHVAC:Baseboard:RadiantConvective:Water` used for heating, and cooling is not monitored, simulation will also crash.
+- Existing HVAC system with mixed mode: UNDER DEVELOPMENT. IT IS NOT ADVISABLE TO USE IT YET. Keeps the existing HVAC systems and modify the existing setpoint temperatures to adaptive or PMV-based setpoint temperatures, considering mixed-mode. In order to properly work, there must be only one object for heating and another for cooling that can be used to monitor if these are turned on at any timestep (such as `Coil:Cooling:Water` and `Coil:Heating:Water`). Also, these objects must be named following the pattern "Zone name" "Object name". For instance, an `Coil:Heating:Electric` object could be named `Block1:Zone1 PTAC Heating Coil`, given that `Block1:Zone1` is a valid zone name. On the other hand, a `Coil:Cooling:Water` object named `Main Cooling Coil 1` would not be valid, since in this case the room would be `Main`; this is the typical case of some equipment shared by multiple rooms. If this condition is not met, accim will not generate the output IDF files for that input IDF file. For instance, if there are `Coil:Heating:Electric` and `Coil:Heating:DX:SingleSpeed` objects in the same model, simulation will crash. Also, if there is just an `ZoneHVAC:Baseboard:RadiantConvective:Water` used for heating, and cooling is not monitored, simulation will also crash.
 
-Therefore, if you are going to use the VRFsystem script, you're supposed to have one or multiple IDFs with fixed setpoint temperature, or even without any HVAC objects at all (it doesn't matter, since the module is going to add a standard VRF system for each zone, and the simulation is going to be calculated with these VRF systems), and with Calculated Natural Ventilation if you're going to use the Mixed Mode.
+Therefore, if you are going to use the VRF system script, you're supposed to have one or multiple IDFs with fixed setpoint temperature, or even without any HVAC objects at all (it doesn't matter, since the module is going to add a standard VRF system for each zone, and the simulation is going to be calculated with these VRF systems), and with Calculated Natural Ventilation if you're going to use the Mixed Mode.
 On the other hand, if you are going to use any ExistingHVAC script, again you're supposed to have one or multiple IDFs, however in this case there must be a fully functional HVAC system. Therefore, you must be able to successfully run a simulation with fixed setpoint temperatures in order for the accim package to work. The main difference between ExistingHVAC only with full air-conditioning and with mixed mode is that in the latter, the existing HVAC system needs to be mapped in order to monitor if it needs to be activated or not, and windows need to be actuated in case conditions for natural ventilation are favourable.
 In both cases, when you export the IDF, please do not request ASHRAE 55 or CEN 15251 results. accim will do so by adding the relevant fields to the People objects.
 
@@ -59,23 +59,35 @@ for VRFsystem with mixed-mode: vrf_mm;
 for ExistingHVAC with mixed mode: ex_mm;
 for ExistingHVAC with full air-conditioning mode: ex_ac
 ): vrf_mm
+
+Enter the SupplyAirTempInputMethod (
+for Supply Air Temperature: supply air temperature;
+for Temperature Difference: temperature difference;
+): temperature difference
+
 Do you want to keep the existing outputs (true or false)?: false
-Enter the Output type (standard or simplified): standard
+
+Enter the Output type (standard, simplified, detailed or custom): standard
+
 Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): hourly runperiod
+
+Do you want to generate a dataframe to see all outputs? (true or false): false
+
+Enter the EnergyPlus version (9.1 to 23.1): 23.1
+
+Enter the Temperature Control method (temperature or pmv): temperature
 ```
 where
 - ScriptType can be 'vrf_mm', 'vrf_ac', 'ex_mm' or 'ex_ac', and it refers to the type of functions as explained above
 - SupplyAirTempInputMethod can be 'supply air temperature' or 'temperature difference', and it is the supply air temperature input method for the VRF systems.
 - Existing outputs in the IDF can be kept if entered 'true'. Otherwise, if entered 'false', it will be removed for clarity purposes at results stage.
-- Output_type can be 'standard', 'detailed' or 'simplified', and it refers to the simulation results: 'standard' means that results will contain the full selection relevant to accim;'detailed' is mainly used for testing the software tool; and 'simplified' means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited.
+- Output_type can be 'standard', 'detailed', 'simplified' or 'custom' and it refers to the simulation results: 'standard' means that results will contain the full selection relevant to accim;'detailed' is mainly used for testing the software tool; 'simplified' means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and finally, 'custom' allows the user to specify the outputs to be kept or removed by entering them in the python console.
 - Output_freqs (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies.
+- Also, a pandas DataFrame instance can be created containing all Output:Variable objects. This allows the user to filter the DataFrame as needed, so that it only contains the needed Output:Variable objects, and then it can be entered in the argument ``Output_take_dataframe``
 - EnergyPlus_version can be from '9.1' to '23.1'. It is the version of EnergyPlus you have installed in your computer. If you enter '9.1', accim will look for the E+9.1.0 IDD file in path "C:\\EnergyPlusV9-1-0".
 - Temperature Control method can be 'temperature' or 'temp', or 'pmv'. If 'temp' is used, the setpoint will be the operative temperature, otherwise if 'pmv' is used, the setpoint will be the PMV index.
 
-Besides, `addAccis()` can take the same values we entered before in the prompt command as arguments. The usage of this function will be detailed below. An example of this, to get the same results as shown in the command prompt would be:
-```
->>> accis.addAccis('vrf_mm', 'supply air temperature', True, 'standard', ['hourly', 'daily'], '9.6', 'temp')
-```
+
 accis will show on the prompt command dialog all the objects it adds, and those that doesn't need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled 'Setting up the target IDFs'.
 
 Once you run the simulations, you might get some EnergyPlus warnings and severe errors. This is something I'm currently working on.
@@ -83,18 +95,23 @@ Once you run the simulations, you might get some EnergyPlus warnings and severe 
 ## Setting up the target IDFs
 
 
-If you run `accis.addAccis(whateverScriptType, whateverSupplyAirTempInputMethod, whateverOutput_keep_existing, whateverOutput_type, whateverOutput_freqs, whateverEPversion, whateverTempCtrl)`, you will be asked in the prompt to enter a few values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
+If you have run `accis.addAccis()`, you will be asked in the prompt to enter a few more values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
 ```
 >>> accis.addAccis(str, # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'
 >>>                str, # SupplyAirTempInputMethod: 'supply air temperature', 'temperature difference'
 >>>                bool, # Output_keep_existing: True or False
->>>                str, # Output_type: 'simplified' or 'standard'
+>>>                str, # Output_type: 'simplified', 'standard', 'detailed' or 'custom'
 >>>                list, # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
+>>>                bool, # Output_gen_dataframe: True or False
+>>>                pandas DataFrame, # Output_take_dataframe
 >>>                str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'
 >>>                str, # TempCtrl: 'temperature' or 'temp', or 'pmv'
 >>>                list, # ComfStand, which is the Comfort Standard
 >>>                list, # CAT, which is the Category
 >>>                list, # ComfMod, which is Comfort Mode
+>>>                float, # SetpointAcc, which defines the accuracy of the setpoint temperatures
+>>>                str containing a date in format dd/mm, or an int # CoolSeasonStart
+>>>                str containing a date in format dd/mm, or an int # CoolSeasonEnd
 >>>                list, # HVACmode, which is the HVAC mode
 >>>                list, # VentCtrl, which is the Ventilation Control
 >>>                float, # MaxTempDiffVOF
@@ -113,16 +130,21 @@ If you run `accis.addAccis(whateverScriptType, whateverSupplyAirTempInputMethod,
 ```
 Some example of the usage could be:
 ```
->>> accis.addAccis(ScriptType='vrf', # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'
+>>> accis.addAccis(ScriptType='vrf_mm', # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'
 >>>                SupplyAirTempInputMethod='supply air temperature', # SupplyAirTempInputMethod: 'supply air temperature', 'temperature difference'
 >>>                Output_keep_existing=False, # Output_keep_existing: True or False
 >>>                Output_type='standard', # Output_type: 'simplified' or 'standard'
 >>>                Output_freqs=['hourly', 'runperiod'], # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
+>>>                Output_gen_dataframe=False,
+>>>                # we just omit Output_take_dataframe
 >>>                EnergyPlus_version='9.5', # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'
 >>>                TempCtrl='temp', # Temperature Control: 'temperature' or 'temp', or 'pmv'
 >>>                ComfStand=[0, 1, 2, 3], # ComfStand, which is the Comfort Standard
 >>>                CAT=[1, 2, 3, 80, 90], # CAT, which is the Category
 >>>                ComfMod=[0, 1, 2, 3], # ComfMod, which is Comfort Mode
+>>>                SetpointAcc=10, # Therefore, setpoints will be rounded to the first decimal
+>>>                # we just omit CoolSeasonStart, since the default date is May 1st
+>>>                # we just omit CoolSeasonEnd, since the default date is September 1st
 >>>                HVACmode=[0, 1, 2], # HVACmode, which is the HVAC mode
 >>>                VentCtrl=[0, 1], # VentCtrl, which is the Ventilation Control
 >>>                MaxTempDiffVOF=20, # When the difference of operative and outdoor temperature exceeds 20°C, windows will be opened the fraction of MultiplierVOF.
@@ -137,7 +159,7 @@ Some example of the usage could be:
 >>>                NameSuffix='standard' # Name Suffix: for example, just in case you want to clarify the outputs
 >>>                )
 ```
-If you specify the arguments when you call the function, you need to specify at least: ScriptType, SupplyAirTempInputMethod, Output_keep_existing, Output_type, Output_freqs, EnergyPlus_version, TempCtrl, ComfStand, CAT, ComfMod, HVACmode and VentCtrl. For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all aforementioned arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
+For clarity purposes, it's recommended to specify the argument name as well, as shown above. If you don't specify all arguments, you'll be ask to enter them at the prompt command, and these values will be used instead of those specified in the function call.
 Each argument is explained below:
 
 - ComfStand: refers to the thermal comfort standard or model to be applied. Enter any number from 0 to 21 to select the comfort standard or model to be used; you can see which model is each number in the table below. Readthedocs doesn't render it properly, so please take a look at the [Github repository](https://github.com/dsanchez-garcia/accim/blob/master/docs/how%20to%20use.md). For example, if you enter '0 1 2 3', you'll get IDFs for CTE, EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for Japanese dwellings. If you don't enter any number, or if some of the numbers entered are not 0, 1, 2 or 3, it'll ask you to enter the numbers again.
@@ -166,6 +188,7 @@ Each argument is explained below:
 | 19            | MEX Oropeza Temperate | Mexico    | I. Oropeza-Perez, A.H. Petzold-Rodriguez, C. Bonilla-Lopez, Adaptive   thermal comfort in the main Mexican climate conditions with and without   passive cooling, Energy and Buildings. 145 (2017) 251–258.   https://doi.org/10.1016/j.enbuild.2017.04.031.                                                                                                                                                                |
 | 20            | MEX Oropeza HumTropic | Mexico    | I. Oropeza-Perez, A.H. Petzold-Rodriguez, C. Bonilla-Lopez, Adaptive   thermal comfort in the main Mexican climate conditions with and without   passive cooling, Energy and Buildings. 145 (2017) 251–258.   https://doi.org/10.1016/j.enbuild.2017.04.031.                                                                                                                                                                |
 | 21            | CHL Perez-Fargallo    | Chile     | A. Pérez-Fargallo, J.A. Pulido-Arcas, C. Rubio-Bellido, M. Trebilcock, B.   Piderit, S. Attia, Development of a new adaptive comfort model for low income   housing in the central-south of chile, Energy Build. 178 (2018) 94–106.   https://doi.org/10.1016/j.enbuild.2018.08.030.                                                                                                                                        |
+
 - CAT: refers to the category of the thermal comfort model applied. Most of the Comfort Standards work with 80 and 90% acceptability levels, except the European EN 16798-1 (works with Categories 1, 2 and 3), the Chinese GB/T 50785 (works with categories 1 and 2), and the India Model for Adaptive Comfort - Commercial (which works with 80, 85 and 90% acceptability levels). So, for example, if you are going to use the EN16798-1 (ComfStand = 1), you can enter '1 2 3' to generate setpoint temperatures for Categories 1, 2 and 3. Or, if you are going to use the IMAC Commercial in naturally ventilated mode (ComfStand = 7), you can enter '80 85 90' to generate setpoint temperatures for these acceptability levels. All categories are referenced in the [full list of setpoint temperatures](https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html) at the end of this section. Please note that the Category values must be consistent with the Comfort Standard values previously entered. If, for instance, you enter '1' in the Comfort Standard value (means you're asking for EN16798 model), but then enter '80' or '90' in the Category value (which are categories used in ASHRAE55), you won't get the results you want.
 
 - ComfMod: is the Comfort Mode, and refers to the comfort modes used in accim. It controls if the setpoints are static (when ComfMod = 0) or adaptive (when ComfMod = 1, 2 or 3). When they are adaptive, it also controls the comfort model applied when the adaptive model is not applicable (that is, when the running mean outdoor temperature limits are exceeded), in which case a PMV-based model is applied. Each ComfMod for each ComfStand and CAT is referenced at the [full list of setpoint temperatures](https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html). Please refer to the research article https://www.mdpi.com/1996-1073/12/8/1498 for more information. Figure below shows the variation of setpoint temperatures when ComfMod 0 (upper left), 1 (upper right), 2 (lower left) and 3 (lower right), when ComfStand is 1 (EN 16798-1, although figure shows the superseded standard, but the setpoint behaviour is similar)

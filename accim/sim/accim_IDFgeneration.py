@@ -624,6 +624,10 @@ def inputData(self, ScriptType: str = None):
                 while self.MultiplierVOF < 0 or self.MultiplierVOF > 1:
                     print('          The multiplier number is not correct. It must be a number between 0 and 1. Please enter the number again.')
                     self.MultiplierVOF = float(input('         Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
+        else:
+            self.MaxTempDiffVOF = 20
+            self.MinTempDiffVOF = 0.5
+            self.MultiplierVOF = 0.25
 
         self.VSToffset_List = list(float(num) for num in input(
             "\nEnter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
@@ -693,6 +697,26 @@ def inputData(self, ScriptType: str = None):
             self.ASTtol_value_steps = float(input('     Enter the ASTtol value steps (if omitted, will be 0.1): '))
         except ValueError:
             self.ASTtol_value_steps = float(0.1)
+
+    self.user_input_arguments = {
+        'ComfStand': self.ComfStand_List,
+        'CAT': self.CAT_List,
+        'ComfMod': self.ComfMod_List,
+        'SetpointAcc': self.SetpointAcc,
+        'CoolSeasonStart': self.CoolSeasonStart,
+        'CoolSeasonEnd': self.CoolSeasonEnd,
+        'HVACmode': self.HVACmode_List,
+        'VentCtrl': self.VentCtrl_List,
+        'MaxTempDiffVOF': self.MaxTempDiffVOF,
+        'MinTempDiffVOF': self.MinTempDiffVOF,
+        'MultiplierVOF': self.MultiplierVOF,
+        'VSToffset': self.VSToffset_List,
+        'MinOToffset': self.MinOToffset_List,
+        'MaxWindSpeed': self.MaxWindSpeed_List,
+        'ASTtol_start': self.ASTtol_value_from,
+        'ASTtol_end_input': self.ASTtol_value_to_input,
+        'ASTtol_steps': self.ASTtol_value_steps,
+    }
 
 
 def genIDF(self,
@@ -1063,6 +1087,7 @@ def genIDF(self,
         if verboseMode:
             print('Generating the following output IDF files:')
         # pbar = tqdm(total=len(outputlist))
+        # self.output_idf_dict = {}
         for file in filelist_pymod:
             filename = file
 
@@ -1115,6 +1140,7 @@ def genIDF(self,
                                         # time.sleep(0.1)
                                         # pbar.update(1)
                                     idf1.savecopy(outputname)
+                                    self.output_idf_dict.update({outputname: idf1})
                             else:
                                 for VentCtrl_value in self.VentCtrl_List:
                                     SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
@@ -1158,6 +1184,7 @@ def genIDF(self,
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
                                                     idf1.savecopy(outputname)
+                                                    self.output_idf_dict.update({outputname: idf1})
                     elif ComfStand_value in [1, 4, 5, 22]:
                         for CAT_value in self.CAT_List:
                             if ComfStand_value in [1, 22] and CAT_value not in range(0, 4):
@@ -1203,6 +1230,7 @@ def genIDF(self,
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
                                                     idf1.savecopy(outputname)
+                                                    self.output_idf_dict.update({outputname: idf1})
                                             else:
                                                 for VentCtrl_value in self.VentCtrl_List:
                                                     SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
@@ -1248,6 +1276,7 @@ def genIDF(self,
                                                                         # time.sleep(0.1)
                                                                         # pbar.update(1)
                                                                     idf1.savecopy(outputname)
+                                                                    self.output_idf_dict.update({outputname: idf1})
                     elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]:
                         for CAT_value in self.CAT_List:
                             if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -1296,6 +1325,7 @@ def genIDF(self,
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
                                                     idf1.savecopy(outputname)
+                                                    self.output_idf_dict.update({outputname: idf1})
                                             else:
                                                 for VentCtrl_value in self.VentCtrl_List:
                                                     SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
@@ -1339,6 +1369,7 @@ def genIDF(self,
                                                                         # time.sleep(0.1)
                                                                         # pbar.update(1)
                                                                     idf1.savecopy(outputname)
+                                                                    self.output_idf_dict.update({outputname: idf1})
             elif TempCtrl.lower() == 'pmv':
                 SetInputData[0].Program_Line_4 = 'set HVACmode = 0'
                 outputname = (
@@ -1360,7 +1391,7 @@ def genIDF(self,
                     # time.sleep(0.1)
                     # pbar.update(1)
                 idf1.savecopy(outputname)
-
+                self.output_idf_dict.update({outputname: idf1})
         # pbar.close()
     elif confirmGen == False:
         if verboseMode:

@@ -81,14 +81,19 @@ class accimJob():
             print('IDD location is: '+iddfile)
         IDF.setiddname(iddfile)
 
+
+
         fname1 = filename_temp+'.idf'
         self.idf0 = IDF(fname1)
+
         self.idf0.savecopy(filename_temp+'_pymod.idf')
 
         self.filename = filename_temp+'_pymod'
         fname1 = self.filename+'.idf'
         self.idf1 = IDF(fname1)
         self.filename = filename_temp+'_pymod'
+
+        self.output_idf_dict = {}
 
         # print(self.filename)
         self.occupiedZones_orig = []
