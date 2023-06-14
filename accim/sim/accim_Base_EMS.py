@@ -3343,14 +3343,12 @@ def removeDuplicatedOutputVariables(
 ):
     """Remove duplicated Output:Variable objects for accim."""
     for freq in ['Timestep', 'Hourly', 'Daily', 'Monthly', 'Runperiod']:
-        alloutputs = (
-            [
-                output
-                for output
-                in self.idf1.idfobjects['Output:Variable']
-                if freq == output.Reporting_Frequency
-            ]
-        )
+        alloutputs = [
+            output
+            for output
+            in self.idf1.idfobjects['Output:Variable']
+            if freq == output.Reporting_Frequency
+        ]
         unique_list = []
         duplicated_list = []
         for i in alloutputs:
@@ -3361,6 +3359,24 @@ def removeDuplicatedOutputVariables(
         for j in range(len(duplicated_list)):
             firstoutput = self.idf1.idfobjects['Output:Variable'][-1]
             self.idf1.removeidfobject(firstoutput)
+
+    ## Alternative method (probably better)
+    # alloutputs = [
+    #     output
+    #     for output
+    #     in self.idf1.idfobjects['Output:Variable']
+    # ]
+    # unique_list = []
+    # duplicated_list = []
+    # for i in alloutputs:
+    #     if i not in unique_list:
+    #         unique_list.append(i)
+    #     else:
+    #         duplicated_list.append(i)
+    # for j in range(len(duplicated_list)):
+    #     firstoutput = self.idf1.idfobjects['Output:Variable'][-1]
+    #     self.idf1.removeidfobject(firstoutput)
+
     # del alloutputs, firstoutput, unique_list, duplicated_list
 
 def outputsSpecified(
@@ -3429,6 +3445,55 @@ def outputsSpecified(
 
     # del alloutputs, firstoutput, unique_list, duplicated_list
 
+
+def genOutputDataframe(
+        self,
+        idf_filename,
+):
+    import pandas as pd
+    alloutputs = [
+        output
+        for output
+        in self.idf1.idfobjects['Output:Variable']
+    ]
+    self.df_outputs_temp = pd.DataFrame(columns=['file', 'key_value', 'variable_name', 'reporting_frequency', 'schedule_name'])
+    for i in range(len(alloutputs)):
+        self.df_outputs_temp.loc[i, 'file'] = idf_filename
+        self.df_outputs_temp.loc[i, 'key_value'] = alloutputs[i].Key_Value
+        self.df_outputs_temp.loc[i, 'variable_name'] = alloutputs[i].Variable_Name
+        self.df_outputs_temp.loc[i, 'reporting_frequency'] = alloutputs[i].Reporting_Frequency
+        self.df_outputs_temp.loc[i, 'schedule_name'] = alloutputs[i].Schedule_Name
+
+def takeOutputDataFrame(
+        self,
+        idf_filename,
+        df_outputs_in,
+        verboseMode,
+):
+    import pandas as pd
+    df_outputs_in = df_outputs_in[
+        df_outputs_in['file'].str.contains(idf_filename)
+    ]
+    df_outputs_in = df_outputs_in.set_index([pd.RangeIndex(len(df_outputs_in))])
+
+    alloutputs = [
+        output
+        for output
+        in self.idf1.idfobjects['Output:Variable']
+    ]
+    for i in alloutputs:
+        self.idf1.removeidfobject(i)
+
+    for i in range(len(df_outputs_in)):
+        self.idf1.newidfobject(
+            'Output:Variable',
+            Key_Value=df_outputs_in.loc[i, 'key_value'],
+            Variable_Name=df_outputs_in.loc[i, 'variable_name'],
+            Reporting_Frequency=df_outputs_in.loc[i, 'reporting_frequency'].capitalize(),
+            Schedule_Name=df_outputs_in.loc[i, 'schedule_name']
+            )
+        if verboseMode:
+            print('Added - '+df_outputs_in.loc[i, 'key_value']+ ' '+df_outputs_in.loc[i, 'variable_name']+' Output:Variable data')
 
 def addOutputVariablesSimplified(
         self,

@@ -1605,7 +1605,7 @@ class Table:
 
         # todo what if no variable is entered in vars_to_gather? accim should show the variables that change, and therefore could be analysed
 
-        # todo revise stack returns a dataframe suitable for seaborn (one columns for values, all others for categoricals)
+        # todo revise stack returns a dataframe suitable for seaborn (one column for values, all others for categoricals)
 
         # if vars_to_gather is None:
 

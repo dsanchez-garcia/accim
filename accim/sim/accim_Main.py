@@ -25,7 +25,9 @@ class accimJob():
         addOutputVariablesDetailed, \
         removeExistingOutputVariables, \
         removeDuplicatedOutputVariables, \
-        outputsSpecified
+        outputsSpecified, \
+        genOutputDataframe, \
+        takeOutputDataFrame
 
     from accim.sim.accim_ExistingHVAC import \
         addForscriptSchExistHVAC
