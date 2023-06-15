@@ -172,7 +172,7 @@
     ,                        !- ASHRAE Clear Sky Optical Depth for Diffuse Irradiance (taud) {dimensionless}
     0;                       !- Sky Clearness
 
-  Timestep,2;
+  Timestep,6;
 
   ConvergenceLimits,
     1,                       !- Minimum System Timestep {minutes}

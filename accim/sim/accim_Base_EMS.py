@@ -3757,7 +3757,7 @@ def addOutputVariablesStandard(
                     Schedule_Name=''
                 )
                 if verboseMode:
-                    print('Added - ' + zonename + ' VRF Indoor Unit DX Heating Coil'+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+                    print('Added - ' + zonename + ' VRF Indoor Unit DX Heating Coil'+' Reporting Frequency '+freq.capitalize()+' Output:Variable data')
 
     del EMSoutputvariablenamelist, outputnamelist, addittionaloutputs,
 
