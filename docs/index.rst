@@ -19,7 +19,6 @@ Welcome to accim 0.6.12's documentation!
    2_detailed tutorial
    3_examples
    additional scripts
-   using_addAccis
    4_troubleshooting
    5_citation
    6_credits
