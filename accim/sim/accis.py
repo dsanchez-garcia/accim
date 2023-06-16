@@ -228,6 +228,7 @@ class addAccis:
                 '\nNow, you are going to be asked to enter some information for different arguments '
                 'to generate the output IDFs with adaptive setpoint temperatures. '
                 '\nIf you are not sure about how to use these parameters, please take a look at the documentation in the following link: '
+                #todo change url in all places
                 '\nhttps://accim.readthedocs.io/en/latest/how%20to%20use.html'
                 '\n\nPlease, enter the following information:'
             )

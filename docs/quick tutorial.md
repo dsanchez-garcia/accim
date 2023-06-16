@@ -1,60 +1,40 @@
 
-![ACCIM Logo with header](https://github.com/dsanchez-garcia/accim/blob/master/docs/images/accim_logo_white_w-header_640x320.png?raw=true) ![CIBSE_BSAwards](https://github.com/dsanchez-garcia/accim/blob/master/docs/images/CIBSE%20BSG%20WINNER%202022%20(610x150px).png?raw=true)
 
-![PyPI](https://img.shields.io/pypi/v/accim)	![PyPI - Python Version](https://img.shields.io/pypi/pyversions/accim)	![GitHub](https://img.shields.io/github/license/dsanchez-garcia/accim)	![Read the Docs](https://img.shields.io/readthedocs/accim?color=cyan)
+# How to use
 
-
-
-ACCIM stands for Adaptive Comfort Control Implemented Model.
-
-In research terms, this is a proposal for a paradigm shift, from using fixed PMV-based to adaptive setpoint temperatures, based on adaptive thermal comfort algorithms and it has been widely studied and published on scientific research journals (for more information, refer to https://orcid.org/0000-0002-3080-0821).
-
-In terms of code, this is a python package that transforms fixed setpoint temperature building energy models into adaptive setpoint temperature energy models by adding the Adaptive Comfort Control Implementation Script (ACCIS). This package has been developed to be used in EnergyPlus building energy performance simulations.
-
-The figure below clearly explains the aim of adaptive setpoint temperatures: introducing hourly temperature values into the adaptive comfort zone. On the left column, you can see the simulation results of a naturally ventilated building, while on the right column, the same building in mixed-mode operation with adaptive setpoint temperatures.
-
-![Use of adaptive setpoint](https://raw.githubusercontent.com/dsanchez-garcia/accim/master/docs/images/NV_vs_MM.png)
-
-# 1. Citation
-
-If you use this package, please cite us:
-
-Sánchez-García, D., Bienvenido-Huertas, D., Rubio-Bellido, C., 2021. _Computational approach to extend the air-conditioning usage to adaptive comfort: Adaptive-Comfort-Control-Implementation Script._ Automation in Construction. 131, 103900. https://doi.org/10.1016/j.autcon.2021.103900
-
-Sánchez-García, D., Martínez-Crespo, J., Hernando, U.R.R., Alonso, C., 2023. _A detailed view of the Adaptive-Comfort-Control-Implementation Script (ACCIS): The capabilities of the automation system for adaptive setpoint temperatures in building energy models._ Energy and Buildings. 288. https://doi.org/10.1016/j.enbuild.2023.113019
-
-# 2. How to use
-
-## 2.0 Requirements
+## Requirements
 To use accim, the following must be installed:
 - Python 3.9
-- EnergyPlus (any version between 9.1 and 23.1 those included)
+  - When installing it, tick the checkbox “Add Python 3.9 to PATH”
+  - Disable path length limit
+- EnergyPlus (any version between 9.1 and 23.1 those included) in default path (C:\EnergyPlusV23-1-0)
 
-## 2.1 Installation
+Also, Jupyter Notebook is recommended, in order to run the notebooks within path ``accim/sample_files/jupyter_notebook``
+
+## Installation
 First of all, you need to install the package:
 
     pip install accim
 
-## 2.2 Usage
+## Usage
 
 
 
-### 2.2.1 Transforming PMV-based into adaptive setpoint temperatures
+### Transforming PMV-based into adaptive setpoint temperatures
 
-This is a very brief explanation of the usage. Therefore, if you don't get the results you expected or get some error, I would recommend reading the 'Detailed use' section at the documentation in the link https://accim.readthedocs.io/en/latest/
-
+This is a very brief explanation of the usage. Therefore, if you don't get the results you expected or get some error, I would recommend reading the 'Detailed use' section at the documentation in the link below.
 
 accim will take as input IDF files those located at the same path as the script. You only need to run the following code:
 
 
-#### 2.2.1.1 Short version
+#### Short version
 
     from accim.sim import accis
     accis.addAccis()
 
 Once you run this code, you will be asked to enter some information at the terminal or python console to generate the output IDF files.
 
-#### 2.2.1.2 Longer version
+#### Longer version
 
     from accim.sim import accis
     accis.addAccis(

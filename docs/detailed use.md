@@ -1,4 +1,4 @@
-# How to use
+# Detailed use
 ## First steps
 There has been developed 4 main branches of functions, which are:
 

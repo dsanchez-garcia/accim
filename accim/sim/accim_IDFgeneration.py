@@ -418,8 +418,8 @@ def inputData(self, ScriptType: str = None):
     fullComfModList = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 2, 3]
     self.ComfMod_List = list(float(num) for num in input(
         "Enter the Comfort Mode numbers separated by space (\n"
-        # "0 = Static;\n"
-        # "1, 2, 3 = Adaptive;\n"
+        "0 or 0.X = Static;\n"
+        "1, 1.X, 2, 3 = Adaptive;\n"
         "Please refer to the full list of setpoint temperatures at https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html\n"
         "): ").split())
     while len(self.ComfMod_List) == 0 or not all(elem in fullComfModList for elem in self.ComfMod_List):
@@ -434,7 +434,7 @@ def inputData(self, ScriptType: str = None):
             self.ComfMod_List = list(
                 float(num) for num in input("     Enter the Comfort Mode numbers separated by space: ").split())
 
-    self.SetpointAcc = float(input('Enter the setpoint accuracy number (any number greater than 0): '))
+    self.SetpointAcc = float(input('\nEnter the setpoint accuracy number (any number greater than 0): '))
     while self.SetpointAcc < 0:
         print('          The setpoint accuracy number is not correct. It must be a number greater than 0. Please enter the number again.')
         self.SetpointAcc = float(input('         Enter the setpoint accuracy number (any number greater than 0): '))
@@ -448,7 +448,7 @@ def inputData(self, ScriptType: str = None):
         self.CoolSeasonStart = list(
             int(num)
             for num
-            in input("Enter the start of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
+            in input("\nEnter the start of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
         )
         if len(self.CoolSeasonStart) == 1:
             day_of_year = self.CoolSeasonStart[0]
@@ -488,7 +488,7 @@ def inputData(self, ScriptType: str = None):
         self.CoolSeasonEnd = list(
             int(num)
             for num
-            in input("Enter the end of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
+            in input("\nEnter the end of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
         )
         if len(self.CoolSeasonEnd) == 1:
             day_of_year = self.CoolSeasonEnd[0]

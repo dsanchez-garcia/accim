@@ -164,13 +164,18 @@ For the comfort standard 7 = IND IMAC C NV, the available ComfMods you can choos
 2 = IMAC C NV Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints
 3 = IMAC C NV Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended
 Enter the Comfort Mode numbers separated by space (
+0 or 0.X = Static;
+1, 1.X, 2, 3 = Adaptive;
 Please refer to the full list of setpoint temperatures at https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html
 ): 0 3
           Are you sure the numbers are correct? [y or [] / n]:
+          
 Enter the setpoint accuracy number (any number greater than 0): 100
           Are you sure the number is correct? [y or [] / n]:
+          
 Enter the start of the cooling season in numeric date format dd/mm or the day of the year: 01/05
           Are you sure the number is correct? [y or [] / n]:
+          
 Enter the end of the cooling season in numeric date format dd/mm or the day of the year: 01/10
           Are you sure the number is correct? [y or [] / n]:
 

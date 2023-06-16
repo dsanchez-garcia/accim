@@ -5,4 +5,4 @@ Afterwards, you just need to pip install it (please note that accim is lowercase
 
 `pip install accim`
 
-Then you can run it. Please refer to the 'how to use' section.
+Then you can run it. Please refer to the 'Detailed use' section.
