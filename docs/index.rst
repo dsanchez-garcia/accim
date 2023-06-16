@@ -14,13 +14,15 @@ Welcome to accim 0.6.12's documentation!
    :caption: Contents:
 
    readme
-   quick tutorial
-   installation
-   detailed use
-   examples
+   0_requirements
+   1_quick tutorial
+   2_detailed tutorial
+   3_examples
    additional scripts
-   troubleshooting
-   citation
+   accim/sample_files/jupyter_notebooks/addAccis/using_addAccis
+   4_troubleshooting
+   5_citation
+   6_credits
 
 Indices and tables
 ==================
