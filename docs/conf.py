@@ -69,4 +69,5 @@ def setup(app):
 
 extensions = [
     "nbsphinx",
+    "myst_nb",
 ]
