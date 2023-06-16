@@ -60,13 +60,18 @@ Once you run this code, you will be asked to enter some information at the termi
         ScriptType=str, # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'. For instance: ScriptType='vrf_ac',
         SupplyAirTempInputMethod=str, # SupplyAirTempInputMethod: 'supply air temperature', 'temperature difference'. For instance: SupplyAirTempInputMethod='supply air temperature',
         Output_keep_existing=bool, # Output_keep_existing: True or False. For instance: Output_keep_existing=False,
-        Output_type=str, # Output_type: 'simplified' or 'standard'. For instance: Output_type='standard',
+        Output_type=str, # Output_type: 'simplified', 'standard', 'detailed' or 'custom'. For instance: Output_type='standard',
         Output_freqs=list, # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: Output_freqs=['hourly', 'runperiod'],
+        Output_gen_dataframe=bool, # Output_keep_existing: True or False. For instance: Output_keep_existing=False,
+        Output_take_dataframe=pandas Dataframe,
         EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'. For instance: EnergyPlus_version='23.1',
         TempCtrl=str, # TempCtrl: 'temperature' or 'temp', or 'pmv'. For instance: TempCtrl='temp',
         ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 21. For instance: ComfStand=[0, 1, 2, 3],
         CAT=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: CAT=[3, 80],
         ComfMod=list, # it is Comfort Mode. Can be 0, 1, 2 or 3. For instance: ComfMod=[0, 3],
+        SetpointAcc=float, # it is the accuracy of the setpoint temperatures
+        CoolSeasonStart=dd/mm date in string format or integer to represent the day of the year, # it is the start date for the cooling season
+        CoolSeasonEnd=dd/mm date in string format or integer to represent the day of the year, # it is the end date for the cooling season
         HVACmode=list, # it is the HVAC mode. 0 for Full AC, 1 for NV and 2 for MM. For instance: HVACmode=[0, 2],
         VentCtrl=list, # it is the Ventilation Control. Can be 0 or 1. For instance: VentCtrl=[0, 1],
         MaxTempDiffVOF=float, # When the difference of operative and outdoor temperature exceeds MaxTempDiffVOF, windows will be opened the fraction of MultiplierVOF. For instance: MaxTempDiffVOF=20,
