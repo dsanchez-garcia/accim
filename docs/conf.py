@@ -67,7 +67,3 @@ def setup(app):
             }, True)
     app.add_transform(AutoStructify)
 
-extensions = [
-    "nbsphinx",
-    "myst_nb",
-]

@@ -1,5 +1,5 @@
-# 4. Troubleshooting
-## 4.1 Errors you might get
+# Troubleshooting
+## Errors you might get
 Below you can see a few errors you might get when trying to run `addAccis()`:
 
 ________________________
@@ -65,7 +65,7 @@ If you get an error similar to the one above, you are probably trying to run `ad
 
 ________________________
 
-## 4.2 General recommendations
+## General recommendations
 
 If you are using only one version of Python in your computer, you should check on the option 'Add to PATH'. Otherwise, the python interpreter won't be able to find the accis package.
 
