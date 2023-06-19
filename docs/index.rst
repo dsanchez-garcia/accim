@@ -13,7 +13,6 @@ Welcome to accim 0.6.12's documentation!
    :maxdepth: 7
    :caption: Contents:
 
-   readme
    1_requirements
    2_installation
    3_quick tutorial
