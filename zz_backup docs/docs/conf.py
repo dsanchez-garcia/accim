@@ -29,7 +29,16 @@ author = 'Daniel Sánchez-García'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['recommonmark']
+extensions = [
+    'recommonmark',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.doctest',
+    'sphinx.ext.coverage',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.githubpages',
+    'sphinx.ext.napoleon',
+    'nbsphinx'
+]
 
 from recommonmark.parser import CommonMarkParser
 
@@ -46,11 +55,6 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
-extensions = [
-    # "nbsphinx",
-    "myst_nb",
-]
 
 
 # -- Options for HTML output -------------------------------------------------
