@@ -1,4 +1,4 @@
-# Additional scripts
+## Additional scripts
 
 ### Renaming epw files for later data analysis
 

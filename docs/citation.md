@@ -1,4 +1,4 @@
-# 5. Citation
+# 7. Citation
 
 If you use this package, please cite us:
 
@@ -6,6 +6,6 @@ Sánchez-García, D., Bienvenido-Huertas, D., Rubio-Bellido, C., 2021. _Computat
 
 Sánchez-García, D., Martínez-Crespo, J., Hernando, U.R.R., Alonso, C., 2023. _A detailed view of the Adaptive-Comfort-Control-Implementation Script (ACCIS): The capabilities of the automation system for adaptive setpoint temperatures in building energy models._ Energy and Buildings. 288. https://doi.org/10.1016/j.enbuild.2023.113019
 
-# 6. Credits
+# 8. Credits
 
-It wouldn't have been possible to develop this python package without eppy, so thank you for such an awesome work.
+It wouldn't have been possible to develop this python package without [eppy](https://pypi.org/project/eppy/), so thank you for such an awesome work.

@@ -1,34 +1,19 @@
 
-# 1. Requirements
-To use accim, the following must be installed:
-- Python 3.9
-  - When installing it, tick the checkbox “Add Python 3.9 to PATH”
-  - Disable path length limit
-- EnergyPlus (any version between 9.1 and 23.1 those included) in default path (C:\EnergyPlusV23-1-0)
 
-Also, Jupyter Notebook is recommended, in order to run the notebooks within path ``accim/sample_files/jupyter_notebook``
-
-# 2. Quick tutorial
-
-## 2.1 Installation
-First of all, you need to install the package:
-
-    pip install accim
-
-## 2.2 Hot to use: Transforming PMV-based into adaptive setpoint temperatures
+# 3. Quick tutorial: Implementing adaptive setpoint temperatures
 
 This is a very brief explanation of the usage. Therefore, if you don't get the results you expected or get some error, I would recommend reading the 'Detailed use' section at the documentation in the link below.
 
 accim will take as input IDF files those located at the same path as the script. You only need to run the following code:
 
-### 2.2.1.Short version
+## 3.1 Short version
 
     from accim.sim import accis
     accis.addAccis()
 
 Once you run this code, you will be asked to enter some information at the terminal or python console to generate the output IDF files.
 
-### 2.2.2 Long version
+## 3.2 Long version
 
     from accim.sim import accis
     accis.addAccis(

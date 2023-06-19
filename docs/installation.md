@@ -1,8 +1,17 @@
-# Installation
-accim works with EnergyPlus versions from 9.1 to 23.1. In order to use the accim package, EnergyPlus needs to be installed in the default path, which for EnergyPlus is usually "C:\\", therefore the folder created by the installer would be "C:\\EnergyPlusV9-5-0" for example. In versions 9.1.0 to 9.3.0 you won't get all the expected results in the csv value generated.
+# 1. Requirements
+To use accim, the following must be installed:
+- Python 3.9
+  - When installing it, tick the checkbox “Add Python 3.9 to PATH”
+  - Disable path length limit
+- EnergyPlus (any version between 9.1 and 23.1 those included) in default path (C:\EnergyPlusV23-1-0)
 
-Afterwards, you just need to pip install it (please note that accim is lowercase):
+Also, Jupyter Notebook is recommended, in order to run the notebooks within path ``accim/sample_files/jupyter_notebook``
 
-`pip install accim`
+# 2. Installation
+First of all, you need to install the package. To install the latest version, execute:
 
-Then you can run it. Please refer to the 'Detailed use' section.
+    pip install accim
+
+To install some specific version, execute the same code followed by "==version number". For instance, to install version 0.6.11:
+
+    pip install accim==0.6.11

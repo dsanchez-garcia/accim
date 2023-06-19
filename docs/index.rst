@@ -14,8 +14,8 @@ Welcome to accim 0.6.12's documentation!
    :caption: Contents:
 
    readme
-   quick tutorial
    installation
+   quick tutorial
    detailed use
    examples
    additional scripts

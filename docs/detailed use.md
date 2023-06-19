@@ -1,5 +1,5 @@
-# 3. Detailed use
-## 3.1 First steps
+# 4. Detailed use
+## 4.1 First steps
 There has been developed 4 main branches of functions, which are:
 
 - VRF system with full air-conditioning mode: This mode has been developed mainly to support models originated with OpenStudio, which up to date does not support Airflow Network objects and subsequently Calculated Natural Ventilation. It adds standard VRF systems for each occupied zone and applies the adaptive or PMV-based setpoint temperatures, but only works with full air-conditioning mode.
@@ -92,7 +92,7 @@ accis will show on the prompt command dialog all the objects it adds, and those 
 
 Once you run the simulations, you might get some EnergyPlus warnings and severe errors. This is something I'm currently working on.
 
-## 3.2 Setting up the target IDFs
+## 4.2 Setting up the target IDFs
 
 
 If you have run `accis.addAccis()`, you will be asked in the prompt to enter a few more values separated by space to set up the desired IDFs. However, you can also skip the command prompt process by running accis directly including the arguments in the function, whose usage would be:
@@ -256,7 +256,7 @@ where:
 
 If some inputs are not used or don't make sense, you'll be able to se an 'X' in the output IDF file. For example, if you use CTE as Comfort Standard, then the inputs for Category and Comfort Mode (which are only for EN16798-1 and ASHRAE 55) are not used in the process, and the output IDF would contain in its name 'CS_ESP CTE[CA_X[CM_X'. Another similar case occurs if you use Full air-conditioning HVAC Mode (i.e. enter '0' for HVAC Mode), or if you use the 'ex_ac' ScriptType, where the output IDF would contain in its name '[HM_0[VC_X[VO_X[MT_X[MW_X'.
 
-## 3.3 Full list of setpoint temperatures
+## 4.3 Full list of setpoint temperatures
 Depending on the arguments ComfStand, CAT and ComfMod, cooling and heating setpoint temperatures will be the following:
 
 (If it is too small, you can look at it also at the [Github repository](https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpoint_table.html))
