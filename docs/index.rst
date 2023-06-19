@@ -22,6 +22,7 @@ Welcome to accim 0.6.12's documentation!
    6_troubleshooting
    7_citation
    8_credits
+   using_addAccis
 
 Indices and tables
 ==================

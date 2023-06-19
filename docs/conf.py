@@ -60,7 +60,14 @@ html_theme = 'sphinx_rtd_theme'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+extensions = [
+    "nbsphinx",
+    # "myst_nb",
+]
+
+
 def setup(app):
+    github_doc_root = 'https://github.com/dsanchez-garcia/accim/tree/master/docs'
     app.add_config_value('recommonmark_config', {
             'url_resolver': lambda url: github_doc_root + url,
             'auto_toc_tree_section': 'Contents',
