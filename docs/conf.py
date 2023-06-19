@@ -48,8 +48,8 @@ templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 extensions = [
-    "nbsphinx",
-    # "myst_nb",
+    # "nbsphinx",
+    "myst_nb",
 ]
 
 
@@ -68,7 +68,9 @@ html_static_path = ['_static']
 
 
 def setup(app):
-    github_doc_root = 'https://github.com/dsanchez-garcia/accim/tree/master/docs'
+    # github_doc_root = 'https://github.com/dsanchez-garcia/accim/tree/master/docs'
+    github_doc_root = 'accim/tree/master/docs'
+
     app.add_config_value('recommonmark_config', {
             'url_resolver': lambda url: github_doc_root + url,
             'auto_toc_tree_section': 'Contents',

@@ -6,6 +6,7 @@ building energy models into adaptive setpoint temperature energy models
 by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 """
 import pandas as pd
+from accim import __version__
 class addAccis:
     def __init__(self,
                  ScriptType: str = None,
@@ -203,7 +204,7 @@ class addAccis:
 
         print(
             '\n--------------------------------------------------------'
-            '\nAdaptive-Comfort-Control-Implemented Model (ACCIM)'
+            f'\nAdaptive-Comfort-Control-Implemented Model (ACCIM) v{__version__}'
             '\n--------------------------------------------------------'
             '\n\nThis tool allows to apply adaptive setpoint temperatures. '
             '\nFor further information, please read the documentation: '
