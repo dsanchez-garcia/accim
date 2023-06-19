@@ -14,13 +14,15 @@ Welcome to accim 0.6.12's documentation!
    :caption: Contents:
 
    readme
-   installation
-   quick tutorial
-   detailed use
-   examples
+   1_requirements
+   2_installation
+   3_quick tutorial
+   4_detailed use
+   5_examples
    additional scripts
-   troubleshooting
-   citation
+   6_troubleshooting
+   7_citation
+   8_credits
 
 Indices and tables
 ==================
