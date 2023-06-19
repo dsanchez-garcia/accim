@@ -1,7 +1,7 @@
 import setuptools
 from os import path
 from setuptools.command.install import install
-
+import accim
 
 
 # class PostInstallCommand(install):
@@ -79,7 +79,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
     name='accim',
-    version='0.6.12',
+    version=accim.__version__,
     description='Transforms PMV-based into adaptive setpoint temperature EnergyPlus building energy models',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -122,7 +122,7 @@ setuptools.setup(
         # 'shutil',
         # 'glob'
         ],
-    scripts=['bin/addAccis.py'],
+    # scripts=['bin/addAccis.py'],
     keywords=[
         'adaptive thermal comfort',
         'building energy model',
