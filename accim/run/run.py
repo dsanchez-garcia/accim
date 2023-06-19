@@ -2,7 +2,7 @@
 Multiprocessing runs.
 
 using generators instead of a list
-when you are running a 100 files you have to use generators
+when you are running 100 files you have to use generators
 original script: https://eppy.readthedocs.io/en/latest/runningeplus.html
 slightly modified so that takes multiple sample_EPWs located in the local folder
 """
