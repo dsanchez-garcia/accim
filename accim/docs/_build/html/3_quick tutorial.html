@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3. Quick tutorial: Implementing adaptive setpoint temperatures &mdash; accim  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="4. Detailed use" href="4_detailed%20use.html" />
+    <link rel="prev" title="2. Installation" href="2_installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="2_installation.html">2. Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">3. Quick tutorial: Implementing adaptive setpoint temperatures</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#short-version">3.1 Short version</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#long-version">3.2 Long version</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="4_detailed%20use.html">4. Detailed use</a></li>
+<li class="toctree-l1"><a class="reference internal" href="5_examples.html">5. Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="6_troubleshooting.html">6. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="7_citation.html">7. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="8_credits.html">8. Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">accim</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">3. Quick tutorial: Implementing adaptive setpoint temperatures</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/3_quick tutorial.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quick-tutorial-implementing-adaptive-setpoint-temperatures">
+<h1>3. Quick tutorial: Implementing adaptive setpoint temperatures<a class="headerlink" href="#quick-tutorial-implementing-adaptive-setpoint-temperatures" title="Permalink to this heading"></a></h1>
+<p>This is a very brief explanation of the usage. Therefore, if you don’t
+get the results you expected or get some error, I would recommend
+reading the ‘Detailed use’ section at the documentation in the link
+below.</p>
+<p>accim will take as input IDF files those located at the same path as the
+script. You only need to run the following code:</p>
+<section id="short-version">
+<h2>3.1 Short version<a class="headerlink" href="#short-version" title="Permalink to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">accim.sim</span> <span class="kn">import</span> <span class="n">accis</span>
+<span class="n">accis</span><span class="o">.</span><span class="n">addAccis</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Once you run this code, you will be asked to enter some information at
+the terminal or python console to generate the output IDF files.</p>
+</section>
+<section id="long-version">
+<h2>3.2 Long version<a class="headerlink" href="#long-version" title="Permalink to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">accim.sim</span> <span class="kn">import</span> <span class="n">accis</span>
+<span class="n">accis</span><span class="o">.</span><span class="n">addAccis</span><span class="p">(</span>
+    <span class="n">ScriptType</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="c1"># ScriptType: &#39;vrf_mm&#39;, &#39;vrf_ac&#39;, &#39;ex_mm&#39;, &#39;ex_ac&#39;. For instance: ScriptType=&#39;vrf_ac&#39;,</span>
+    <span class="n">SupplyAirTempInputMethod</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="c1"># SupplyAirTempInputMethod: &#39;supply air temperature&#39;, &#39;temperature difference&#39;. For instance: SupplyAirTempInputMethod=&#39;supply air temperature&#39;,</span>
+    <span class="n">Output_keep_existing</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span> <span class="c1"># Output_keep_existing: True or False. For instance: Output_keep_existing=False,</span>
+    <span class="n">Output_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="c1"># Output_type: &#39;simplified&#39;, &#39;standard&#39;, &#39;detailed&#39; or &#39;custom&#39;. For instance: Output_type=&#39;standard&#39;,</span>
+    <span class="n">Output_freqs</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span> <span class="c1"># Output_freqs: [&#39;timestep&#39;, &#39;hourly&#39;, &#39;daily&#39;, &#39;monthly&#39;, &#39;runperiod&#39;]. For instance: Output_freqs=[&#39;hourly&#39;, &#39;runperiod&#39;],</span>
+    <span class="n">Output_gen_dataframe</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span> <span class="c1"># Output_keep_existing: True or False. For instance: Output_keep_existing=False,</span>
+    <span class="n">Output_take_dataframe</span><span class="o">=</span><span class="n">pandas</span> <span class="n">Dataframe</span><span class="p">,</span>
+    <span class="n">EnergyPlus_version</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="c1"># EnergyPlus_version: &#39;9.1&#39;, &#39;9.2&#39;, &#39;9.3&#39;, &#39;9.4&#39;, &#39;9.5&#39;, &#39;9.6&#39;, &#39;22.1&#39;, &#39;22.2&#39; or &#39;23.1&#39;. For instance: EnergyPlus_version=&#39;23.1&#39;,</span>
+    <span class="n">TempCtrl</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="c1"># TempCtrl: &#39;temperature&#39; or &#39;temp&#39;, or &#39;pmv&#39;. For instance: TempCtrl=&#39;temp&#39;,</span>
+    <span class="n">ComfStand</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span> <span class="c1"># it is the Comfort Standard. Can be any integer from 0 to 21. For instance: ComfStand=[0, 1, 2, 3],</span>
+    <span class="n">CAT</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span> <span class="c1"># it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: CAT=[3, 80],</span>
+    <span class="n">ComfMod</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span> <span class="c1"># it is Comfort Mode. Can be 0, 1, 2 or 3. For instance: ComfMod=[0, 3],</span>
+    <span class="n">SetpointAcc</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="c1"># it is the accuracy of the setpoint temperatures</span>
+    <span class="n">CoolSeasonStart</span><span class="o">=</span><span class="n">dd</span><span class="o">/</span><span class="n">mm</span> <span class="n">date</span> <span class="ow">in</span> <span class="n">string</span> <span class="nb">format</span> <span class="ow">or</span> <span class="n">integer</span> <span class="n">to</span> <span class="n">represent</span> <span class="n">the</span> <span class="n">day</span> <span class="n">of</span> <span class="n">the</span> <span class="n">year</span><span class="p">,</span> <span class="c1"># it is the start date for the cooling season</span>
+    <span class="n">CoolSeasonEnd</span><span class="o">=</span><span class="n">dd</span><span class="o">/</span><span class="n">mm</span> <span class="n">date</span> <span class="ow">in</span> <span class="n">string</span> <span class="nb">format</span> <span class="ow">or</span> <span class="n">integer</span> <span class="n">to</span> <span class="n">represent</span> <span class="n">the</span> <span class="n">day</span> <span class="n">of</span> <span class="n">the</span> <span class="n">year</span><span class="p">,</span> <span class="c1"># it is the end date for the cooling season</span>
+    <span class="n">HVACmode</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span> <span class="c1"># it is the HVAC mode. 0 for Full AC, 1 for NV and 2 for MM. For instance: HVACmode=[0, 2],</span>
+    <span class="n">VentCtrl</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span> <span class="c1"># it is the Ventilation Control. Can be 0 or 1. For instance: VentCtrl=[0, 1],</span>
+    <span class="n">MaxTempDiffVOF</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="c1"># When the difference of operative and outdoor temperature exceeds MaxTempDiffVOF, windows will be opened the fraction of MultiplierVOF. For instance: MaxTempDiffVOF=20,</span>
+    <span class="n">MinTempDiffVOF</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="c1"># When the difference of operative and outdoor temperature is smaller than MinTempDiffVOF, windows will be fully opened. Between min and max, windows will be linearly opened. For instance: MinTempDiffVOF=1,</span>
+    <span class="n">MultiplierVOF</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="c1"># Fraction of window to be opened when temperature difference exceeds MaxTempDiffVOF. For instance: Multiplier=0.2,</span>
+    <span class="n">VSToffset</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span> <span class="c1"># it is the offset for the ventilation setpoint. Can be any number, float or int. For instance: VSToffset=[-1.5, -1, 0, 1, 1.5],</span>
+    <span class="n">MinOToffset</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span> <span class="c1"># it is the offset for the minimum outdoor temperature to ventilate. Can be any positive number, float or int. For instance: MinOToffset=[0.5, 1, 2],</span>
+    <span class="n">MaxWindSpeed</span><span class="o">=</span><span class="nb">list</span><span class="p">,</span> <span class="c1"># it is the maximum wind speed allowed for ventilation. Can be any positive number, float or int. For instance: MinOToffset=[2.5, 5, 10],</span>
+    <span class="n">ASTtol_start</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="c1"># it is the start of the tolerance sequence. For instance: ASTtol_start=0,</span>
+    <span class="n">ASTtol_end_input</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="c1"># it is the end of the tolerance sequence. For instance: ASTtol_start=2,</span>
+    <span class="n">ASTtol_steps</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="c1"># these are the steps of the tolerance sequence. For instance: ASTtol_steps=0.25,</span>
+    <span class="n">NameSuffix</span><span class="o">=</span><span class="nb">str</span> <span class="c1"># NameSuffix: some text you might want to add at the end of the output IDF file name. For instance: NameSuffix=&#39;whatever&#39;,</span>
+    <span class="n">verboseMode</span><span class="o">=</span><span class="nb">bool</span> <span class="c1"># verboseMode: True to print all process in screen, False to not to print it. Default is True. For instance: verboseMode=True,</span>
+    <span class="n">confirmGen</span><span class="o">=</span><span class="nb">bool</span> <span class="c1"># True to confirm automatically the generation of IDFs; if False, you&#39;ll be asked to confirm in command prompt. Default is False. For instance: confirmGen=False,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="2_installation.html" class="btn btn-neutral float-left" title="2. Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="4_detailed%20use.html" class="btn btn-neutral float-right" title="4. Detailed use" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
