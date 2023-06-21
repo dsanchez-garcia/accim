@@ -1,5 +1,8 @@
-3. Quick tutorial: Implementing adaptive setpoint temperatures
+3. Quick tutorial:
 ==============================================================
+
+3.1 Implementing adaptive setpoint temperatures
+-----------------------------------------------
 
 This is a very brief explanation of the usage. Therefore, if you don’t
 get the results you expected or get some error, I would recommend
@@ -9,8 +12,8 @@ below.
 accim will take as input IDF files those located at the same path as the
 script. You only need to run the following code:
 
-3.1 Short version
------------------
+3.1.1 Short version
+^^^^^^^^^^^^^^^^^^^^
 
 ::
 
@@ -20,8 +23,9 @@ script. You only need to run the following code:
 Once you run this code, you will be asked to enter some information at
 the terminal or python console to generate the output IDF files.
 
-3.2 Long version
-----------------
+
+3.1.2 Long version
+^^^^^^^^^^^^^^^^
 
 ::
 
@@ -57,3 +61,7 @@ the terminal or python console to generate the output IDF files.
        verboseMode=bool # verboseMode: True to print all process in screen, False to not to print it. Default is True. For instance: verboseMode=True,
        confirmGen=bool # True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. For instance: confirmGen=False,
    )
+
+3.1 Other uses
+--------------
+Although the main use of accim is the implementation of adaptive setpoint temperatures, there are some functions, classes and methods that allow to roughly automate the whole process consisting of preparation of the epw and idf files, the simulation runs and the data analysis. For further information, please refer to the How-to Guides section in this documentation, which contains some Jupyter Notebooks that can also be found in accim's installation folder.

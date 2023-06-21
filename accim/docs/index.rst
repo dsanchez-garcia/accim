@@ -7,19 +7,33 @@ Welcome to accim's documentation!
 =================================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 7
+   :caption: Tutorial:
 
    1_requirements
    2_installation
    3_quick tutorial
    4_detailed use
-   5_examples
-   6_troubleshooting
-   7_citation
-   8_credits
+   5_troubleshooting
+   6_citation
+   7_credits
+
+.. toctree::
+   :maxdepth: 7
+   :caption: How-to Guides:
+
+   jupyter_notebooks/addAccis/using_addAccis
+   jupyter_notebooks/full_example/full_example
+   jupyter_notebooks/rename_epw_files/using_rename_epw_files
+   jupyter_notebooks/runEp/using_runEp
+   jupyter_notebooks/Table/using_Table
+
+.. toctree::
+   :maxdepth: 7
+   :caption: Further information:
+
    modules
-   using_addAccis
+
 
 Indices and tables
 ==================
