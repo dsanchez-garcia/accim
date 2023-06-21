@@ -1,4 +1,4 @@
-3. Quick tutorial:
+3. Quick tutorial
 ==============================================================
 
 3.1 Implementing adaptive setpoint temperatures
