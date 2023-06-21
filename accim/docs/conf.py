@@ -39,7 +39,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 html_theme = 'sphinx_rtd_theme'
 html_static_path = [
     '_static',
-    'docs/previous_versions_pdfs',
+    'previous_versions_pdfs',
+    # 'docs/previous_versions_pdfs',
     # 'accim/docs/previous_versions_pdfs',
     # 'pdf'
 ]
