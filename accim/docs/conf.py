@@ -43,4 +43,5 @@ html_static_path = [
     # 'docs/previous_versions_pdfs',
     # 'accim/docs/previous_versions_pdfs',
     # 'pdf'
+    '_assets',
 ]
