@@ -19,6 +19,7 @@ Welcome to accim's documentation!
    7_citation
    8_credits
    modules
+   using_addAccis
 
 Indices and tables
 ==================
