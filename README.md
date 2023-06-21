@@ -92,45 +92,80 @@ Once you run this code, you will be asked to enter some information at the termi
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb  
 
-You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb  
-The path should be something like this, with your username instead of YOUR_USERNAME:  
-C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\addAccis\using_addAccis.ipynb
+You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+within your site_packages path, in
+
+accim/sample_files/jupyter_notebooks/addAccis
+
+The path should be something like this, with your username instead of YOUR_USERNAME:
+
+*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\addAccis*
+
+Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
 
 ### 2.2.2 Renaming epw files for later data analysis
 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
 
-You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb  
-The path should be something like this, with your username instead of YOUR_USERNAME:  
-C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\rename_epw_files\using_rename_epw_files.ipynb
+You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+within your site_packages path, in
+
+accim/sample_files/jupyter_notebooks/rename_epw_files
+
+The path should be something like this, with your username instead of YOUR_USERNAME:
+
+*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\rename_epw_files*
+
+Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
 
 ### 2.2.3 Running simulations
 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
 
-You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb  
-The path should be something like this, with your username instead of YOUR_USERNAME:  
-C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\runEp\using_runEp.ipynb
+You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+within your site_packages path, in
+
+accim/sample_files/jupyter_notebooks/runEp
+
+The path should be something like this, with your username instead of YOUR_USERNAME:
+
+*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\runEp*
+
+Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
 
 ### 2.2.4 Functions and methods for data analysis; making figures and tables
 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
 
-You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb  
-The path should be something like this, with your username instead of YOUR_USERNAME:  
-C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\Table\using_Table.ipynb
+You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+within your site_packages path, in
+
+accim/sample_files/jupyter_notebooks/Table
+
+The path should be something like this, with your username instead of YOUR_USERNAME:
+
+*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\Table*
+
+Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
 
 ### 2.2.5 Full example: from preparation of the input IDFs and EPWs, to simulation and data analysis and visualization
 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/full_example/full_example.ipynb
 
-You can also execute it at your computer, at the accim package folder within your site_packages path, in accim/sample_files/jupyter_notebooks/full_example/full_example.ipynb  
-The path should be something like this, with your username instead of YOUR_USERNAME:  
-C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\full_example\full_example.ipynb
+You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+within your site_packages path, in
+
+accim/sample_files/jupyter_notebooks/full_example
+
+The path should be something like this, with your username instead of YOUR_USERNAME:
+
+*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\full_example*
+
+Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
 
 # 3. Documentation
 

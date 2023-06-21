@@ -1,7 +1,7 @@
-6. Troubleshooting
+5. Troubleshooting
 ==================
 
-6.1 Errors you might get
+5.1 Errors you might get
 ------------------------
 
 Below you can see a few errors you might get when trying to run
@@ -101,3 +101,12 @@ won’t be able to find the accis package.
    :alt: Troubleshooting_Path
 
    Troubleshooting_Path
+
+Also, once you have installed Python 3.9, you should also diable the path length limit:
+
+.. figure:: images/accim_troubleshooting_04_disable_length.jpg
+   :alt: Troubleshooting_Disable_length_limit
+
+   Troubleshooting_Disable_length_limit
+
+

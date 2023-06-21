@@ -1,4 +1,4 @@
-8. Credits
+7. Credits
 ==========
 
 It wouldn’t have been possible to develop this python package without

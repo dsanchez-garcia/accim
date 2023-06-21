@@ -832,14 +832,29 @@ repository <https://raw.githack.com/dsanchez-garcia/accim/master/docs/full_setpo
 .. figure:: images/full_table.png
    :alt: full_table.png
 
-   full_table.png
 
 .. |Venting Opening Factor| image:: images/VentingOpeningFactor.png
 
 4.4 Putting it into practice: Adaptive setpoint temperatures step by step
 -------------------------------------------------------------------
 
-You can see an example below. The input file is included within
+You can see a Jupyter Notebook either in the How-to Guide section of this documentation or in the link below:
+
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb
+
+You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+within your site_packages path, in
+
+accim/sample_files/jupyter_notebooks/addAccis
+
+The path should be something like this, with your username instead of
+YOUR_USERNAME:
+
+*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\addAccis*
+
+Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+
+You can also see an example below. The input file is included within
 :file:`accim/sample_files/sample IDFs` folder, and it was originally named
 :file:`TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2310.idf`, but for
 clarity purposes in this case has been renamed to “TestModel.idf”.

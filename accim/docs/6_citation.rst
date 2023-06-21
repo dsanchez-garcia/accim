@@ -1,4 +1,4 @@
-7. Citation
+6. Citation
 ===========
 
 If you use this package, please cite us:
