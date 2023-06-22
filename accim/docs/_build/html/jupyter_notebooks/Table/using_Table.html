@@ -1,0 +1,2734 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Using the class Table() for data analysis &mdash; accim  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/nbsphinx-code-cells.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="accim" href="../../modules.html" />
+    <link rel="prev" title="Using runEp() to directly run simulations with EnergyPlus" href="../runEp/using_runEp.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            accim
+          </a>
+              <div class="version">
+                0.6.12
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../4_detailed%20use.html">4. Detailed use</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../full_example/full_example.html">Full example of adaptive setpoint temperature simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#1.-Getting-the-full-dataset-of-simulation-results">1. Getting the full dataset of simulation results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#2.-Filtering-results">2. Filtering results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#3.-Making-graphs">3. Making graphs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#3.1-Scatter-plot:">3.1 Scatter plot:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#3.2-Adaptive-vs-Static-data-scatter-plot:">3.2 Adaptive vs Static data scatter plot:</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#4.-Making-tables">4. Making tables</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/jupyter_notebooks/Table/using_Table.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Using-the-class-Table()-for-data-analysis">
+<h1>Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis<a class="headerlink" href="#Using-the-class-Table()-for-data-analysis" title="Permalink to this heading"></a></h1>
+<p>Say we have previously renamed the EPW files with rename_epw_files(), and the EPWs we currently have are:</p>
+<ul class="simple">
+<li><p>United-Kingdom_Aberdeen_Present</p></li>
+<li><p>United-Kingdom_London_Present</p></li>
+</ul>
+<p>We also have transformed the IDF file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220.idf, and the IDFs we currently have are:</p>
+<ul class="simple">
+<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+</ul>
+<p>Next, we simulate these files with runEp(), so the CSVs we get are:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220&#39;</span> <span class="ow">in</span> <span class="n">i</span><span class="p">],</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+</pre></div></div>
+</div>
+<p>So now, let’s use the class Table() to analyse the data.</p>
+<section id="1.-Getting-the-full-dataset-of-simulation-results">
+<h2>1. Getting the full dataset of simulation results<a class="headerlink" href="#1.-Getting-the-full-dataset-of-simulation-results" title="Permalink to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">accim.data.data_postprocessing</span> <span class="kn">import</span> <span class="n">Table</span>
+<span class="n">dataset_hourly</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+    <span class="c1">#datasets=list #Since we are not specifying any list, it will use all available CSVs in the folder</span>
+    <span class="n">source_frequency</span><span class="o">=</span><span class="s1">&#39;hourly&#39;</span><span class="p">,</span> <span class="c1"># This lets accim know which is the frequency of the input CSVs. Input CSVs with multiple frequencies are also allowed. It can be &#39;hourly&#39;, &#39;daily&#39;, &#39;monthly&#39; and &#39;runperiod&#39;. It can also be &#39;timestep&#39; but might generate errors.</span>
+    <span class="n">frequency</span><span class="o">=</span><span class="s1">&#39;hourly&#39;</span><span class="p">,</span> <span class="c1"># If &#39;daily&#39;, accim will aggregate the rows in days. It can be &#39;hourly&#39;, &#39;daily&#39;, &#39;monthly&#39; and &#39;runperiod&#39;. It can also be &#39;timestep&#39; but might generate errors.</span>
+    <span class="n">frequency_agg_func</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">,</span> <span class="c1">#this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won&#39;t make any aeffect</span>
+    <span class="n">standard_outputs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;building&#39;</span><span class="p">],</span> <span class="c1"># A list containing the strings &#39;block&#39; and/or &#39;building&#39;. For instance, if [&#39;block&#39;, &#39;building&#39;], accim will generate new columns to sum up or average in blocks and building level.</span>
+    <span class="n">level_agg_func</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;sum&#39;</span><span class="p">,</span> <span class="s1">&#39;mean&#39;</span><span class="p">],</span> <span class="c1"># A list containing the strings &#39;sum&#39; and/or &#39;mean&#39;. For instance, if [&#39;sum&#39;, &#39;mean&#39;], accim will generate the new columns explained in the level argument by summing and averaging.</span>
+    <span class="n">level_excluded_zones</span><span class="o">=</span><span class="p">[],</span>
+    <span class="n">split_epw_names</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1">#to split EPW names based on the pattern Country_City_RCPscenario-Year</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+No zones have been excluded from level computations.
+All CSVs are for present scenario.
+</pre></div></div>
+</div>
+<p>A Table object has been created, which includes a number of accessible variables. The most important is the Pandas Dataframe created from the CSVs, which can be accessed with .df (in this case, dataset_hourly.df)</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_hourly</span><span class="o">.</span><span class="n">df</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Source</th>
+      <th>Model</th>
+      <th>ComfStand</th>
+      <th>CAT</th>
+      <th>ComfMod</th>
+      <th>HVACmode</th>
+      <th>VentCtrl</th>
+      <th>VSToffset</th>
+      <th>MinOToffset</th>
+      <th>MaxWindSpeed</th>
+      <th>...</th>
+      <th>Building_Total_Total Energy Demand (kWh/m2) (summed)</th>
+      <th>Building_Total_Total Energy Demand (kWh/m2) (mean)</th>
+      <th>Building_Total_Total Energy Consumption (kWh/m2) (summed)</th>
+      <th>Building_Total_Total Energy Consumption (kWh/m2) (mean)</th>
+      <th>Building_Total_Zone Air Volume (m3) (summed)</th>
+      <th>Building_Total_Zone Floor Area (m2) (summed)</th>
+      <th>Building_Total_PMV (summed)</th>
+      <th>Building_Total_PMV (mean)</th>
+      <th>Building_Total_PPD (%) (summed)</th>
+      <th>Building_Total_PPD (%) (mean)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_1</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>0.036738</td>
+      <td>0.009185</td>
+      <td>0.030576</td>
+      <td>0.007644</td>
+      <td>232.0401</td>
+      <td>66.2971</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_1</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>0.040240</td>
+      <td>0.010060</td>
+      <td>0.034616</td>
+      <td>0.008654</td>
+      <td>232.0401</td>
+      <td>66.2971</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_1</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>0.042701</td>
+      <td>0.010675</td>
+      <td>0.037389</td>
+      <td>0.009347</td>
+      <td>232.0401</td>
+      <td>66.2971</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_1</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>0.044282</td>
+      <td>0.011071</td>
+      <td>0.039079</td>
+      <td>0.009770</td>
+      <td>232.0401</td>
+      <td>66.2971</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_1</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>0.045109</td>
+      <td>0.011277</td>
+      <td>0.039927</td>
+      <td>0.009982</td>
+      <td>232.0401</td>
+      <td>66.2971</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>105115</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>0.011349</td>
+      <td>0.002837</td>
+      <td>0.007941</td>
+      <td>0.001985</td>
+      <td>232.0401</td>
+      <td>66.2971</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>105116</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>0.011955</td>
+      <td>0.002989</td>
+      <td>0.008373</td>
+      <td>0.002093</td>
+      <td>232.0401</td>
+      <td>66.2971</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>105117</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>0.012974</td>
+      <td>0.003243</td>
+      <td>0.009094</td>
+      <td>0.002273</td>
+      <td>232.0401</td>
+      <td>66.2971</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>105118</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>0.015072</td>
+      <td>0.003768</td>
+      <td>0.010571</td>
+      <td>0.002643</td>
+      <td>232.0401</td>
+      <td>66.2971</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>105119</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>0.017182</td>
+      <td>0.004295</td>
+      <td>0.012108</td>
+      <td>0.003027</td>
+      <td>232.0401</td>
+      <td>66.2971</td>
+      <td>0.0</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+<p>105120 rows × 119 columns</p>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_hourly</span><span class="o">.</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(105120, 119)
+</pre></div></div>
+</div>
+<p>Also, you can see the block list that has been extracted from the zones in the CSV columns, as well as the zones with heating or cooling energy consumption, and the occupied zones:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_hourly</span><span class="o">.</span><span class="n">block_list</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;BLOCK1&#39;]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_hourly</span><span class="o">.</span><span class="n">hvac_zone_list</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;BLOCK1:ZONE2&#39;, &#39;BLOCK1:ZONE1&#39;]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_hourly</span><span class="o">.</span><span class="n">occupied_zone_list</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;BLOCK1:ZONE2&#39;, &#39;BLOCK1:ZONE1&#39;]
+</pre></div></div>
+</div>
+<p>In case of lots of CSVs, using the Table class would mean gathering the CSVs to make the Dataframe each time, and it might be very time-consuming. Therefore, the CSVs can be concatenated into a single CSV and store in the same folder with the argument concatenated_csv_name. Afterwards, that concatenated CSV can be read using the argument source_concatenated_csv_filepath each time a Table class object is created.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">concatenated_csvname</span> <span class="o">=</span> <span class="s1">&#39;notebook_example&#39;</span>
+<span class="n">dataset_hourly_indirect</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+    <span class="c1">#datasets=list #Since we are not specifying any list, it will use all available CSVs in the folder</span>
+    <span class="n">source_frequency</span><span class="o">=</span><span class="s1">&#39;hourly&#39;</span><span class="p">,</span> <span class="c1"># This lets accim know which is the frequency of the input CSVs. Input CSVs with multiple frequencies are also allowed. It can be &#39;hourly&#39;, &#39;daily&#39;, &#39;monthly&#39; and &#39;runperiod&#39;. It can also be &#39;timestep&#39; but might generate errors.</span>
+    <span class="n">frequency</span><span class="o">=</span><span class="s1">&#39;hourly&#39;</span><span class="p">,</span> <span class="c1"># If &#39;daily&#39;, accim will aggregate the rows in days. It can be &#39;hourly&#39;, &#39;daily&#39;, &#39;monthly&#39; and &#39;runperiod&#39;. It can also be &#39;timestep&#39; but might generate errors.</span>
+    <span class="n">frequency_agg_func</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">,</span> <span class="c1">#this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won&#39;t make any aeffect</span>
+    <span class="n">standard_outputs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">concatenated_csv_name</span><span class="o">=</span><span class="n">concatenated_csvname</span> <span class="c1">#Useful when working with large datasets. It saves the output dataset to a CSV file, so you don&#39;t need to re-do some work. Afterwards, it can be imported with source_concatenated_csv_filepath argument.</span>
+    <span class="c1"># All other arguments won&#39;t have any effect on the output. This is only to store the csv at early stage. Datawrangling will be performed later.</span>
+
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+</pre></div></div>
+</div>
+<p>We just generated a CSV, whose name begins with ‘notebook example’, specifies the input data and ends with ‘CSVconcatenated’. If there is some row with NaN, it will be generated another CSV reporting this, but ending with ‘Rows_with_NaNs’. We should be able to see it below:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;.ipynb_checkpoints&#39;,
+ &#39;notebook_example[srcfreq-hourly[freq-hourly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;using_Table.ipynb&#39;,
+ &#39;__init__.py&#39;]
+</pre></div></div>
+</div>
+<p>Now, let’s continue working with the CSVconcatenated we have generated:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_hourly_indirect</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+    <span class="n">source_concatenated_csv_filepath</span><span class="o">=</span><span class="s1">&#39;notebook_example[srcfreq-hourly[freq-hourly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv&#39;</span><span class="p">,</span>
+    <span class="c1"># source_frequency=&#39;hourly&#39;, # The new source frequency is the previous already computed frequency, since we have already aggregated rows based on the previous frequency. Therefore, there is no need to specify this argument.</span>
+    <span class="c1"># 3 arguments below have been previously specified, and in fact, are stored at the concatenated CSV filename. So you don&#39;t need to specify these again.</span>
+    <span class="c1"># frequency=&#39;hourly&#39;,</span>
+    <span class="c1"># frequency_agg_func=&#39;sum&#39;,</span>
+    <span class="c1"># standard_outputs=True,</span>
+    <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;building&#39;</span><span class="p">],</span>
+    <span class="n">level_agg_func</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;sum&#39;</span><span class="p">,</span> <span class="s1">&#39;mean&#39;</span><span class="p">],</span>
+    <span class="n">level_excluded_zones</span><span class="o">=</span><span class="p">[],</span>
+    <span class="n">split_epw_names</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1">#to split EPW names based on the format Country_City_RCPscenario-YEar</span>
+
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+No zones have been excluded from level computations.
+All CSVs are for present scenario.
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_hourly_indirect</span><span class="o">.</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(105120, 119)
+</pre></div></div>
+</div>
+<p>You can see we have obtained the same full dataset. Now, let’s delete the concatenated CSV file to save some space.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">concatenated_csvname</span> <span class="ow">in</span> <span class="n">i</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="2.-Filtering-results">
+<h2>2. Filtering results<a class="headerlink" href="#2.-Filtering-results" title="Permalink to this heading"></a></h2>
+<p>We have used any of the 2 methods to obtain the full dataset of simulation results.</p>
+<p>At this point, we should have decided what table or graph we intend to make, and therefore we should know what data we are going to show in it. In this case, we want to make a figure with different subplots, showing the different ComfMod values on the rows and the different EPW_City_or_subcountry values on the columns, and in each subplot, a scatter plot with the indoor operative temperature and adaptive heating and cooling setpoints on the y main axis (left spine), and on the secondary y axis,
+2 different spines, one of them to show the heating and cooling energy demand, and the other one the air changes. However, let’s say we just want to see the subplots for Category CA_3.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">dataset_hourly</span><span class="o">.</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Source
+Model
+ComfStand
+CAT
+ComfMod
+HVACmode
+VentCtrl
+VSToffset
+MinOToffset
+MaxWindSpeed
+ASTtol
+NameSuffix
+EPW
+Count
+EPW_Country_name
+EPW_City_or_subcountry
+EPW_Scenario-Year
+EPW_Scenario
+EPW_Year
+Date/time
+Month/day
+Month
+Day
+Hour
+Minute
+Second
+Site Outdoor Air Drybulb Temperature (°C)
+Site Outdoor Air Relative Humidity (%)
+Site Wind Speed (m/s)
+Comfort Temperature (°C)
+Adaptive Cooling Setpoint Temperature (°C)
+Adaptive Heating Setpoint Temperature (°C)
+Adaptive Cooling Setpoint Temperature_No Tolerance (°C)
+Adaptive Heating Setpoint Temperature_No Tolerance (°C)
+Ventilation Setpoint Temperature (°C)
+Minimum Outdoor Temperature for ventilation (°C)
+BLOCK1:ZONE2_Comfortable Hours_No Applicability (h)
+BLOCK1:ZONE1_Comfortable Hours_No Applicability (h)
+BLOCK1:ZONE2_Comfortable Hours_Applicability (h)
+BLOCK1:ZONE1_Comfortable Hours_Applicability (h)
+BLOCK1:ZONE2_Discomfortable Applicable Hot Hours (h)
+BLOCK1:ZONE1_Discomfortable Applicable Hot Hours (h)
+BLOCK1:ZONE2_Discomfortable Applicable Cold Hours (h)
+BLOCK1:ZONE1_Discomfortable Applicable Cold Hours (h)
+BLOCK1:ZONE2_Discomfortable Non Applicable Hot Hours (h)
+BLOCK1:ZONE1_Discomfortable Non Applicable Hot Hours (h)
+BLOCK1:ZONE2_Discomfortable Non Applicable Cold Hours (h)
+BLOCK1:ZONE1_Discomfortable Non Applicable Cold Hours (h)
+BLOCK1:ZONE2_Zone Floor Area (m2)
+BLOCK1:ZONE1_Zone Floor Area (m2)
+BLOCK1:ZONE2_Zone Air Volume (m3)
+BLOCK1:ZONE1_Zone Air Volume (m3)
+BLOCK1:ZONE2_Ventilation Hours (h)
+BLOCK1:ZONE1_Ventilation Hours (h)
+BLOCK1:ZONE2_Zone Operative Temperature (°C)
+BLOCK1:ZONE1_Zone Operative Temperature (°C)
+BLOCK1:ZONE2_AFN Zone Infiltration Volume (m3)
+BLOCK1:ZONE2_AFN Zone Infiltration Air Change Rate (ach)
+BLOCK1:ZONE1_AFN Zone Infiltration Volume (m3)
+BLOCK1:ZONE1_AFN Zone Infiltration Air Change Rate (ach)
+Whole Building Facility Total HVAC Electricity Demand Rate (kWh/m2)
+BLOCK1:ZONE2_ASHRAE 55 Running mean outdoor temperature (°C)
+BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)
+BLOCK1:ZONE1_ASHRAE 55 Running mean outdoor temperature (°C)
+BLOCK1:ZONE1_EN16798-1 Running mean outdoor temperature (°C)
+BLOCK1:ZONE2_Cooling Energy Demand (kWh/m2)
+BLOCK1:ZONE1_Cooling Energy Demand (kWh/m2)
+BLOCK1:ZONE2_Heating Energy Demand (kWh/m2)
+BLOCK1:ZONE1_Heating Energy Demand (kWh/m2)
+BLOCK1:ZONE2_Cooling Energy Consumption (kWh/m2)
+BLOCK1:ZONE2_Heating Energy Consumption (kWh/m2)
+BLOCK1:ZONE1_Cooling Energy Consumption (kWh/m2)
+BLOCK1:ZONE1_Heating Energy Consumption (kWh/m2)
+BLOCK1:ZONE2_Total Energy Demand (kWh/m2) (summed)
+BLOCK1:ZONE1_Total Energy Demand (kWh/m2) (summed)
+BLOCK1:ZONE2_Total Energy Consumption (kWh/m2) (summed)
+BLOCK1:ZONE1_Total Energy Consumption (kWh/m2) (summed)
+Building_Total_Zone Operative Temperature (°C) (summed)
+Building_Total_Zone Operative Temperature (°C) (mean)
+Building_Total_Comfortable Hours_No Applicability (h) (summed)
+Building_Total_Comfortable Hours_No Applicability (h) (mean)
+Building_Total_Comfortable Hours_Applicability (h) (summed)
+Building_Total_Comfortable Hours_Applicability (h) (mean)
+Building_Total_Discomfortable Applicable Hot Hours (h) (summed)
+Building_Total_Discomfortable Applicable Hot Hours (h) (mean)
+Building_Total_Discomfortable Applicable Cold Hours (h) (summed)
+Building_Total_Discomfortable Applicable Cold Hours (h) (mean)
+Building_Total_Discomfortable Non Applicable Hot Hours (h) (summed)
+Building_Total_Discomfortable Non Applicable Hot Hours (h) (mean)
+Building_Total_Discomfortable Non Applicable Cold Hours (h) (summed)
+Building_Total_Discomfortable Non Applicable Cold Hours (h) (mean)
+Building_Total_Ventilation Hours (h) (summed)
+Building_Total_Ventilation Hours (h) (mean)
+Building_Total_AFN Zone Infiltration Volume (m3) (summed)
+Building_Total_AFN Zone Infiltration Volume (m3) (mean)
+Building_Total_AFN Zone Infiltration Air Change Rate (ach) (summed)
+Building_Total_AFN Zone Infiltration Air Change Rate (ach) (mean)
+Building_Total_AFN Zone Ventilation Volume (m3) (summed)
+Building_Total_AFN Zone Ventilation Volume (m3) (mean)
+Building_Total_AFN Zone Ventilation Air Change Rate (ach) (summed)
+Building_Total_AFN Zone Ventilation Air Change Rate (ach) (mean)
+Building_Total_Cooling Energy Demand (kWh/m2) (summed)
+Building_Total_Cooling Energy Demand (kWh/m2) (mean)
+Building_Total_Heating Energy Demand (kWh/m2) (summed)
+Building_Total_Heating Energy Demand (kWh/m2) (mean)
+Building_Total_Cooling Energy Consumption (kWh/m2) (summed)
+Building_Total_Cooling Energy Consumption (kWh/m2) (mean)
+Building_Total_Heating Energy Consumption (kWh/m2) (summed)
+Building_Total_Heating Energy Consumption (kWh/m2) (mean)
+Building_Total_Total Energy Demand (kWh/m2) (summed)
+Building_Total_Total Energy Demand (kWh/m2) (mean)
+Building_Total_Total Energy Consumption (kWh/m2) (summed)
+Building_Total_Total Energy Consumption (kWh/m2) (mean)
+Building_Total_Zone Air Volume (m3) (summed)
+Building_Total_Zone Floor Area (m2) (summed)
+Building_Total_PMV (summed)
+Building_Total_PMV (mean)
+Building_Total_PPD (%) (summed)
+Building_Total_PPD (%) (mean)
+</pre></div></div>
+</div>
+<p>Now, let’s extract the data we are really interested in. For this, we can use the method called format_table():</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_hourly</span><span class="o">.</span><span class="n">format_table</span><span class="p">(</span>
+    <span class="n">type_of_table</span><span class="o">=</span><span class="s1">&#39;custom&#39;</span><span class="p">,</span> <span class="c1"># Used to choose some predefined tables. It can be &#39;energy demand&#39;, &#39;comfort hours&#39;, &#39;temperature&#39;, &#39;all&#39; or &#39;custom&#39;</span>
+    <span class="n">custom_cols</span><span class="o">=</span><span class="p">[</span> <span class="c1">#if type_of_table is &#39;custom&#39;, custom_cols is used to filter the desired columns to keep</span>
+        <span class="s1">&#39;Adaptive Cooling Setpoint Temperature_No Tolerance (°C)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Adaptive Heating Setpoint Temperature_No Tolerance (°C)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Building_Total_Zone Operative Temperature (°C) (mean)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Building_Total_Cooling Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Building_Total_Heating Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Building_Total_AFN Zone Infiltration Air Change Rate (ach) (summed)&#39;</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>So, we have already filtered the columns we wanted. Let’s look at the result:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_hourly</span><span class="o">.</span><span class="n">df</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Date/time</th>
+      <th>Model</th>
+      <th>ComfStand</th>
+      <th>CAT</th>
+      <th>ComfMod</th>
+      <th>HVACmode</th>
+      <th>VentCtrl</th>
+      <th>VSToffset</th>
+      <th>MinOToffset</th>
+      <th>MaxWindSpeed</th>
+      <th>...</th>
+      <th>EPW_Scenario-Year</th>
+      <th>EPW_Scenario</th>
+      <th>EPW_Year</th>
+      <th>Adaptive Cooling Setpoint Temperature_No Tolerance (°C)</th>
+      <th>Adaptive Heating Setpoint Temperature_No Tolerance (°C)</th>
+      <th>Building_Total_Zone Operative Temperature (°C) (mean)</th>
+      <th>BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)</th>
+      <th>Building_Total_Cooling Energy Demand (kWh/m2) (summed)</th>
+      <th>Building_Total_Heating Energy Demand (kWh/m2) (summed)</th>
+      <th>Building_Total_AFN Zone Infiltration Air Change Rate (ach) (summed)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>01/01  01:00:00</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_1</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>25.0</td>
+      <td>21.0</td>
+      <td>21.075965</td>
+      <td>-1.071071</td>
+      <td>0.0</td>
+      <td>0.036738</td>
+      <td>0.217716</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>01/01  02:00:00</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_1</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>25.0</td>
+      <td>21.0</td>
+      <td>21.060730</td>
+      <td>-1.071071</td>
+      <td>0.0</td>
+      <td>0.040240</td>
+      <td>0.229646</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>01/01  03:00:00</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_1</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>25.0</td>
+      <td>21.0</td>
+      <td>21.061641</td>
+      <td>-1.071071</td>
+      <td>0.0</td>
+      <td>0.042701</td>
+      <td>0.238609</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>01/01  04:00:00</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_1</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>25.0</td>
+      <td>21.0</td>
+      <td>21.068896</td>
+      <td>-1.071071</td>
+      <td>0.0</td>
+      <td>0.044282</td>
+      <td>0.242288</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>01/01  05:00:00</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_1</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>25.0</td>
+      <td>21.0</td>
+      <td>21.078253</td>
+      <td>-1.071071</td>
+      <td>0.0</td>
+      <td>0.045109</td>
+      <td>0.243261</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>105115</th>
+      <td>12/31  20:00:00</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>26.1</td>
+      <td>17.1</td>
+      <td>17.171267</td>
+      <td>7.543148</td>
+      <td>0.0</td>
+      <td>0.011349</td>
+      <td>0.180364</td>
+    </tr>
+    <tr>
+      <th>105116</th>
+      <td>12/31  21:00:00</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>26.1</td>
+      <td>17.1</td>
+      <td>17.176058</td>
+      <td>7.543148</td>
+      <td>0.0</td>
+      <td>0.011955</td>
+      <td>0.175023</td>
+    </tr>
+    <tr>
+      <th>105117</th>
+      <td>12/31  22:00:00</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>26.1</td>
+      <td>17.1</td>
+      <td>17.178160</td>
+      <td>7.543148</td>
+      <td>0.0</td>
+      <td>0.012974</td>
+      <td>0.191868</td>
+    </tr>
+    <tr>
+      <th>105118</th>
+      <td>12/31  23:00:00</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>26.1</td>
+      <td>17.1</td>
+      <td>17.176237</td>
+      <td>7.543148</td>
+      <td>0.0</td>
+      <td>0.015072</td>
+      <td>0.255266</td>
+    </tr>
+    <tr>
+      <th>105119</th>
+      <td>12/31  24:00:00</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>...</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>26.1</td>
+      <td>17.1</td>
+      <td>17.170725</td>
+      <td>7.543148</td>
+      <td>0.0</td>
+      <td>0.017182</td>
+      <td>0.281407</td>
+    </tr>
+  </tbody>
+</table>
+<p>105120 rows × 29 columns</p>
+</div></div>
+</div>
+<p>As you can see, the number of columns have been reduced to 29, which are 22 columns for the index and categorical data, and the 7 columns we filtered.</p>
+</section>
+<section id="3.-Making-graphs">
+<h2>3. Making graphs<a class="headerlink" href="#3.-Making-graphs" title="Permalink to this heading"></a></h2>
+<p>We will make the figure with scatter_plot(), however it needs some input data we will previously generate with generate_fig_data().</p>
+<section id="3.1-Scatter-plot:">
+<h3>3.1 Scatter plot:<a class="headerlink" href="#3.1-Scatter-plot:" title="Permalink to this heading"></a></h3>
+<p>As said above, we first need to generate the dataset lists with generate_fig_data():</p>
+<p>And finally we can plot the figure:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_hourly</span><span class="o">.</span><span class="n">scatter_plot</span><span class="p">(</span>
+    <span class="n">vars_to_gather_rows</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ComfMod&#39;</span><span class="p">,</span> <span class="s1">&#39;CAT&#39;</span><span class="p">],</span> <span class="c1"># variables to gather in rows of subplots</span>
+    <span class="n">vars_to_gather_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;EPW_City_or_subcountry&#39;</span><span class="p">],</span><span class="c1"># variables to gather in columns of subplots</span>
+    <span class="n">detailed_rows</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;CM_0[CA_3&#39;</span><span class="p">,</span> <span class="s1">&#39;CM_3[CA_3&#39;</span><span class="p">],</span> <span class="c1">#we only want to see those combinations</span>
+    <span class="n">data_on_x_axis</span><span class="o">=</span><span class="s1">&#39;BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)&#39;</span><span class="p">,</span> <span class="c1">#column name (string) for the data on x axis</span>
+
+    <span class="n">data_on_y_main_axis</span><span class="o">=</span><span class="p">[</span> <span class="c1"># similarly to above, a list including the name of the secondary y-axis and the column names you want to plot in it</span>
+        <span class="p">[</span>
+            <span class="s1">&#39;Energy (kWh/m2)&#39;</span><span class="p">,</span>
+            <span class="p">[</span>
+                <span class="s1">&#39;Building_Total_Cooling Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;Building_Total_Heating Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="p">],</span>
+    <span class="p">],</span>
+    <span class="n">data_on_y_sec_axis</span><span class="o">=</span><span class="p">[</span> <span class="c1">#list which includes the name of the axis on the first place, and then in the second place, a list which includes the column names you want to plot</span>
+        <span class="p">[</span>
+            <span class="s1">&#39;Air renovation (ach)&#39;</span><span class="p">,</span>
+            <span class="p">[</span>
+                <span class="s1">&#39;Building_Total_AFN Zone Infiltration Air Change Rate (ach) (summed)&#39;</span>
+            <span class="p">]</span>
+        <span class="p">],</span>
+        <span class="p">[</span>
+            <span class="s1">&#39;Operative Temperature (°C)&#39;</span><span class="p">,</span>
+            <span class="p">[</span>
+                <span class="s1">&#39;Adaptive Cooling Setpoint Temperature_No Tolerance (°C)&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;Adaptive Heating Setpoint Temperature_No Tolerance (°C)&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;Building_Total_Zone Operative Temperature (°C) (mean)&#39;</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="p">],</span>
+    <span class="p">],</span>
+
+    <span class="n">colorlist_y_main_axis</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">[</span>
+            <span class="s1">&#39;Energy (kWh/m2)&#39;</span><span class="p">,</span>
+            <span class="p">[</span>
+                <span class="s1">&#39;cyan&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;orange&#39;</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="p">],</span>
+
+    <span class="p">],</span>
+    <span class="n">colorlist_y_sec_axis</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">[</span>
+            <span class="s1">&#39;Air renovation (ach)&#39;</span><span class="p">,</span>
+            <span class="p">[</span>
+                <span class="s1">&#39;yellow&#39;</span>
+            <span class="p">]</span>
+        <span class="p">],</span>
+        <span class="p">[</span>
+            <span class="s1">&#39;Operative Temperature (°C)&#39;</span><span class="p">,</span>
+            <span class="p">[</span>
+                <span class="s1">&#39;b&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;r&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;g&#39;</span><span class="p">,</span>
+            <span class="p">]</span>
+        <span class="p">],</span>
+    <span class="p">],</span>
+
+    <span class="n">supxlabel</span><span class="o">=</span><span class="s1">&#39;Running Mean Outdoor Temperature (°C)&#39;</span><span class="p">,</span> <span class="c1"># data label on x axis</span>
+    <span class="n">figname</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;WIP_scatterplot_RMOT&#39;</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
+    <span class="n">ratio_height_to_width</span><span class="o">=</span><span class="mf">0.33</span><span class="p">,</span>
+    <span class="n">confirm_graph</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+The number of rows and the list of these is going to be:
+No. of rows = 2
+List of rows:
+CM_0[CA_3
+CM_3[CA_3
+Do you want to rename the rows? [y/n]: y
+Please enter the new name for CM_0[CA_3: Static setpoints
+Please enter the new name for CM_3[CA_3: Adaptive setpoints
+The renamed rows are going to be:
+Static setpoints
+Adaptive setpoints
+The number of columns and the list of these is going to be:
+No. of columns = 2
+List of columns:
+Aberdeen
+London
+Column names will be the subplot titles. Do you want to rename them? [y/n]: n
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../_images/jupyter_notebooks_Table_using_Table_36_1.png" src="../../_images/jupyter_notebooks_Table_using_Table_36_1.png" />
+</div>
+</div>
+</section>
+<section id="3.2-Adaptive-vs-Static-data-scatter-plot:">
+<h3>3.2 Adaptive vs Static data scatter plot:<a class="headerlink" href="#3.2-Adaptive-vs-Static-data-scatter-plot:" title="Permalink to this heading"></a></h3>
+<p>A very specific type of scatter plot can be done to show the relationship between data related to adaptive and static setpoint temperatures. In this case, you would need to use the following arguments in generate_fig_data: adap_vs_stat_data_y_main, baseline and colorlist_adap_vs_stat_data; finally, you would need to use the scatter_plot_adap_vs_stat() function.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_hourly</span><span class="o">.</span><span class="n">scatter_plot_with_baseline</span><span class="p">(</span>
+    <span class="n">vars_to_gather_rows</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;EPW_City_or_subcountry&#39;</span><span class="p">],</span> <span class="c1">#you can enter multiple variables, for example: [&#39;EPW_City_or_subcountry&#39;, &#39;EPW_Scenario-Year&#39;]</span>
+    <span class="n">vars_to_gather_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ComfMod&#39;</span><span class="p">,</span> <span class="s1">&#39;CAT&#39;</span><span class="p">],</span> <span class="c1">#you can enter multiple variables</span>
+    <span class="n">data_on_y_axis_baseline_plot</span><span class="o">=</span><span class="p">[</span> <span class="c1"># in this case, you only need to specify a list which includes the data columns you want to plot</span>
+        <span class="s1">&#39;Building_Total_Cooling Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Building_Total_Heating Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="n">baseline</span><span class="o">=</span><span class="s1">&#39;CM_0[CA_1&#39;</span><span class="p">,</span> <span class="c1"># the baseline needs to be in vars_to_gather_cols, and it&#39;s going to be shown on x axis. Given the variables we have simulated, you can choose between &#39;CM_0[CA_1&#39;, &#39;CM_0[CA_2&#39;, &#39;CM_0[CA_3&#39;, &#39;CM_3[CA_1&#39;, &#39;CM_3[CA_2&#39; and &#39;CM_3[CA_3&#39;</span>
+    <span class="n">colorlist_baseline_plot_data</span><span class="o">=</span><span class="p">[</span>
+        <span class="s1">&#39;b&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;r&#39;</span><span class="p">,</span>
+    <span class="p">],</span>
+
+    <span class="n">supxlabel</span><span class="o">=</span><span class="s1">&#39;Static Energy Demand (kWh/m2)&#39;</span><span class="p">,</span>
+    <span class="n">supylabel</span><span class="o">=</span><span class="s1">&#39;Adaptive Energy Demand (kWh/m2)&#39;</span><span class="p">,</span>
+    <span class="n">figname</span><span class="o">=</span><span class="s1">&#39;WIP_scatterplot_adap_vs_stat&#39;</span><span class="p">,</span>
+    <span class="n">figsize</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">confirm_graph</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+The number of rows and the list of these is going to be:
+No. of rows = 2
+List of rows:
+Aberdeen
+London
+Do you want to rename the rows? [y/n]: n
+The number of columns and the list of these is going to be:
+No. of columns = 5
+List of columns:
+CM_0[CA_2
+CM_0[CA_3
+CM_3[CA_1
+CM_3[CA_2
+CM_3[CA_3
+Column names will be the subplot titles. Do you want to rename them? [y/n]: n
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../_images/jupyter_notebooks_Table_using_Table_39_1.png" src="../../_images/jupyter_notebooks_Table_using_Table_39_1.png" />
+</div>
+</div>
+<p>Now, let’s delete all the images we have created to save some space:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.png&#39;</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+<section id="4.-Making-tables">
+<h2>4. Making tables<a class="headerlink" href="#4.-Making-tables" title="Permalink to this heading"></a></h2>
+<p>Now, let’s make some tables comparing results. For example, let’s make a table to show monthly values of heating and cooling energy demand. First, let’s generate the dataset with monthly frequency and let’s filter the columns to keep heating and cooling demand at building level.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">accim.data.data_postprocessing</span> <span class="kn">import</span> <span class="n">Table</span>
+<span class="n">dataset_monthly</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+    <span class="c1">#datasets=list Since we are not specifying any list, it will use all available CSVs in the folder</span>
+    <span class="n">source_frequency</span><span class="o">=</span><span class="s1">&#39;hourly&#39;</span><span class="p">,</span>
+    <span class="n">frequency</span><span class="o">=</span><span class="s1">&#39;monthly&#39;</span><span class="p">,</span>
+    <span class="n">frequency_agg_func</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">,</span> <span class="c1">#this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won&#39;t make any aeffect</span>
+    <span class="n">standard_outputs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;building&#39;</span><span class="p">],</span>
+    <span class="n">level_agg_func</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;sum&#39;</span><span class="p">],</span>
+    <span class="n">level_excluded_zones</span><span class="o">=</span><span class="p">[],</span>
+    <span class="n">split_epw_names</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1">#to split EPW names based on the format Country_City_RCPscenario-YEar</span>
+<span class="p">)</span>
+
+<span class="n">dataset_monthly</span><span class="o">.</span><span class="n">format_table</span><span class="p">(</span>
+    <span class="n">type_of_table</span><span class="o">=</span><span class="s1">&#39;custom&#39;</span><span class="p">,</span>
+    <span class="n">custom_cols</span><span class="o">=</span><span class="p">[</span>
+        <span class="s1">&#39;Building_Total_Cooling Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Building_Total_Heating Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+No zones have been excluded from level computations.
+All CSVs are for present scenario.
+</pre></div></div>
+</div>
+<p>Now, let’s make the table we are looking for. You can choose ‘unstack’ or ‘pivot’ as a reshaping method (remember that we are actually working with Pandas Dataframes). Let’s go with unstack, and we are going to compare the baseline shown below with all gathered variables</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_monthly</span><span class="o">.</span><span class="n">wrangled_table</span><span class="p">(</span>
+    <span class="n">reshaping</span><span class="o">=</span><span class="s1">&#39;unstack&#39;</span><span class="p">,</span> <span class="c1">#can be &#39;unstack&#39; or &#39;pivot&#39;</span>
+    <span class="n">vars_to_gather</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ComfMod&#39;</span><span class="p">,</span> <span class="s1">&#39;CAT&#39;</span><span class="p">],</span>
+    <span class="n">vars_to_keep</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;EPW_City_or_subcountry&#39;</span><span class="p">],</span>
+    <span class="n">baseline</span><span class="o">=</span><span class="s1">&#39;CM_0[CA_1&#39;</span><span class="p">,</span>
+    <span class="n">comparison_mode</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;baseline compared to others&#39;</span><span class="p">],</span> <span class="c1">#can be &#39;baseline compared to others&#39; or &#39;others compared to baseline&#39;</span>
+    <span class="n">comparison_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;relative&#39;</span><span class="p">,</span> <span class="s1">&#39;absolute&#39;</span><span class="p">]</span> <span class="c1">#&#39;relative&#39; to show the difference as a percentage, &#39;absolute&#39; to show the difference by subtracting</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_monthly</span><span class="o">.</span><span class="n">wrangled_df_unstacked</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead tr th {
+        text-align: left;
+    }
+
+    .dataframe thead tr:last-of-type th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th colspan="10" halign="left">Building_Total_Cooling Energy Demand (kWh/m2) (summed)</th>
+      <th>...</th>
+      <th colspan="10" halign="left">Building_Total_Heating Energy Demand (kWh/m2) (summed)</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th>CM_0[CA_1</th>
+      <th>CM_3[CA_1</th>
+      <th>CM_0[CA_2</th>
+      <th>CM_3[CA_2</th>
+      <th>CM_0[CA_3</th>
+      <th>CM_3[CA_3</th>
+      <th>1-(CM_0[CA_1/CM_3[CA_1)</th>
+      <th>CM_3[CA_1 - CM_0[CA_1</th>
+      <th>1-(CM_0[CA_1/CM_0[CA_2)</th>
+      <th>CM_0[CA_2 - CM_0[CA_1</th>
+      <th>...</th>
+      <th>1-(CM_0[CA_1/CM_3[CA_1)</th>
+      <th>CM_3[CA_1 - CM_0[CA_1</th>
+      <th>1-(CM_0[CA_1/CM_0[CA_2)</th>
+      <th>CM_0[CA_2 - CM_0[CA_1</th>
+      <th>1-(CM_0[CA_1/CM_3[CA_2)</th>
+      <th>CM_3[CA_2 - CM_0[CA_1</th>
+      <th>1-(CM_0[CA_1/CM_0[CA_3)</th>
+      <th>CM_0[CA_3 - CM_0[CA_1</th>
+      <th>1-(CM_0[CA_1/CM_3[CA_3)</th>
+      <th>CM_3[CA_3 - CM_0[CA_1</th>
+    </tr>
+    <tr>
+      <th>Date/time</th>
+      <th>Month</th>
+      <th>EPW_City_or_subcountry</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th rowspan="2" valign="top">01/01  01:00:00</th>
+      <th rowspan="2" valign="top">01</th>
+      <th>Aberdeen</th>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>NaN</td>
+      <td>0.00</td>
+      <td>NaN</td>
+      <td>0.00</td>
+      <td>...</td>
+      <td>-0.26</td>
+      <td>-3.05</td>
+      <td>-0.16</td>
+      <td>-2.11</td>
+      <td>-0.67</td>
+      <td>-6.02</td>
+      <td>-0.65</td>
+      <td>-5.90</td>
+      <td>-1.11</td>
+      <td>-7.88</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>0.12</td>
+      <td>0.00</td>
+      <td>0.04</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>-inf</td>
+      <td>-0.12</td>
+      <td>-2.14</td>
+      <td>-0.08</td>
+      <td>...</td>
+      <td>-0.08</td>
+      <td>-1.35</td>
+      <td>-0.12</td>
+      <td>-1.96</td>
+      <td>-0.54</td>
+      <td>-6.20</td>
+      <td>-0.58</td>
+      <td>-6.50</td>
+      <td>-1.16</td>
+      <td>-9.53</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">02/01  01:00:00</th>
+      <th rowspan="2" valign="top">02</th>
+      <th>Aberdeen</th>
+      <td>0.29</td>
+      <td>0.26</td>
+      <td>0.14</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>-0.14</td>
+      <td>-0.04</td>
+      <td>-1.08</td>
+      <td>-0.15</td>
+      <td>...</td>
+      <td>-0.12</td>
+      <td>-2.05</td>
+      <td>-0.09</td>
+      <td>-1.52</td>
+      <td>-0.37</td>
+      <td>-5.24</td>
+      <td>-0.39</td>
+      <td>-5.43</td>
+      <td>-1.01</td>
+      <td>-9.65</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>0.43</td>
+      <td>0.09</td>
+      <td>0.07</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>-3.98</td>
+      <td>-0.34</td>
+      <td>-5.36</td>
+      <td>-0.36</td>
+      <td>...</td>
+      <td>0.01</td>
+      <td>0.17</td>
+      <td>-0.04</td>
+      <td>-0.78</td>
+      <td>-0.39</td>
+      <td>-5.15</td>
+      <td>-0.44</td>
+      <td>-5.59</td>
+      <td>-1.21</td>
+      <td>-10.06</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">03/01  01:00:00</th>
+      <th rowspan="2" valign="top">03</th>
+      <th>Aberdeen</th>
+      <td>1.39</td>
+      <td>1.06</td>
+      <td>0.71</td>
+      <td>0.26</td>
+      <td>0.26</td>
+      <td>0.06</td>
+      <td>-0.32</td>
+      <td>-0.33</td>
+      <td>-0.97</td>
+      <td>-0.69</td>
+      <td>...</td>
+      <td>-0.02</td>
+      <td>-0.41</td>
+      <td>-0.03</td>
+      <td>-0.72</td>
+      <td>-0.23</td>
+      <td>-4.67</td>
+      <td>-0.26</td>
+      <td>-5.14</td>
+      <td>-0.80</td>
+      <td>-11.02</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>1.34</td>
+      <td>0.95</td>
+      <td>0.82</td>
+      <td>0.06</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>-0.41</td>
+      <td>-0.39</td>
+      <td>-0.64</td>
+      <td>-0.52</td>
+      <td>...</td>
+      <td>0.05</td>
+      <td>1.29</td>
+      <td>-0.08</td>
+      <td>-1.80</td>
+      <td>-0.27</td>
+      <td>-5.44</td>
+      <td>-0.26</td>
+      <td>-5.28</td>
+      <td>-1.04</td>
+      <td>-12.95</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">04/01  01:00:00</th>
+      <th rowspan="2" valign="top">04</th>
+      <th>Aberdeen</th>
+      <td>3.38</td>
+      <td>2.72</td>
+      <td>1.92</td>
+      <td>0.79</td>
+      <td>0.32</td>
+      <td>0.00</td>
+      <td>-0.24</td>
+      <td>-0.66</td>
+      <td>-0.76</td>
+      <td>-1.45</td>
+      <td>...</td>
+      <td>0.04</td>
+      <td>1.18</td>
+      <td>0.02</td>
+      <td>0.62</td>
+      <td>-0.12</td>
+      <td>-2.87</td>
+      <td>-0.12</td>
+      <td>-2.72</td>
+      <td>-0.56</td>
+      <td>-9.36</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>6.95</td>
+      <td>6.75</td>
+      <td>5.65</td>
+      <td>2.76</td>
+      <td>2.66</td>
+      <td>0.72</td>
+      <td>-0.03</td>
+      <td>-0.20</td>
+      <td>-0.23</td>
+      <td>-1.30</td>
+      <td>...</td>
+      <td>-0.09</td>
+      <td>-1.91</td>
+      <td>-0.10</td>
+      <td>-1.95</td>
+      <td>-0.47</td>
+      <td>-7.04</td>
+      <td>-0.55</td>
+      <td>-7.87</td>
+      <td>-1.79</td>
+      <td>-14.23</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">05/01  01:00:00</th>
+      <th rowspan="2" valign="top">05</th>
+      <th>Aberdeen</th>
+      <td>8.78</td>
+      <td>7.24</td>
+      <td>5.67</td>
+      <td>1.67</td>
+      <td>1.42</td>
+      <td>0.09</td>
+      <td>-0.21</td>
+      <td>-1.54</td>
+      <td>-0.55</td>
+      <td>-3.11</td>
+      <td>...</td>
+      <td>-0.36</td>
+      <td>-9.43</td>
+      <td>0.15</td>
+      <td>6.35</td>
+      <td>-0.69</td>
+      <td>-14.40</td>
+      <td>0.19</td>
+      <td>8.35</td>
+      <td>-2.12</td>
+      <td>-24.07</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>14.37</td>
+      <td>14.89</td>
+      <td>11.25</td>
+      <td>8.51</td>
+      <td>4.88</td>
+      <td>3.60</td>
+      <td>0.03</td>
+      <td>0.52</td>
+      <td>-0.28</td>
+      <td>-3.12</td>
+      <td>...</td>
+      <td>-1.84</td>
+      <td>-28.72</td>
+      <td>0.15</td>
+      <td>7.73</td>
+      <td>-4.41</td>
+      <td>-36.14</td>
+      <td>0.08</td>
+      <td>3.91</td>
+      <td>-16.23</td>
+      <td>-41.76</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">06/01  01:00:00</th>
+      <th rowspan="2" valign="top">06</th>
+      <th>Aberdeen</th>
+      <td>12.16</td>
+      <td>11.19</td>
+      <td>8.94</td>
+      <td>4.83</td>
+      <td>2.89</td>
+      <td>1.35</td>
+      <td>-0.09</td>
+      <td>-0.98</td>
+      <td>-0.36</td>
+      <td>-3.22</td>
+      <td>...</td>
+      <td>-0.95</td>
+      <td>-20.62</td>
+      <td>0.08</td>
+      <td>3.45</td>
+      <td>-1.32</td>
+      <td>-24.09</td>
+      <td>-0.00</td>
+      <td>-0.14</td>
+      <td>-4.55</td>
+      <td>-34.76</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>16.10</td>
+      <td>16.39</td>
+      <td>14.03</td>
+      <td>10.63</td>
+      <td>9.05</td>
+      <td>5.27</td>
+      <td>0.02</td>
+      <td>0.29</td>
+      <td>-0.15</td>
+      <td>-2.07</td>
+      <td>...</td>
+      <td>-2.43</td>
+      <td>-30.47</td>
+      <td>0.04</td>
+      <td>1.86</td>
+      <td>-7.01</td>
+      <td>-37.66</td>
+      <td>-0.29</td>
+      <td>-9.79</td>
+      <td>-33.04</td>
+      <td>-41.77</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">07/01  01:00:00</th>
+      <th rowspan="2" valign="top">07</th>
+      <th>Aberdeen</th>
+      <td>12.15</td>
+      <td>12.88</td>
+      <td>9.30</td>
+      <td>5.85</td>
+      <td>4.02</td>
+      <td>1.65</td>
+      <td>0.06</td>
+      <td>0.73</td>
+      <td>-0.31</td>
+      <td>-2.85</td>
+      <td>...</td>
+      <td>-2.70</td>
+      <td>-36.28</td>
+      <td>0.12</td>
+      <td>6.50</td>
+      <td>-9.81</td>
+      <td>-45.11</td>
+      <td>-0.08</td>
+      <td>-3.64</td>
+      <td>-245.24</td>
+      <td>-49.51</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>25.21</td>
+      <td>18.93</td>
+      <td>22.81</td>
+      <td>10.30</td>
+      <td>15.55</td>
+      <td>4.38</td>
+      <td>-0.33</td>
+      <td>-6.28</td>
+      <td>-0.11</td>
+      <td>-2.41</td>
+      <td>...</td>
+      <td>-0.31</td>
+      <td>-2.70</td>
+      <td>0.22</td>
+      <td>3.16</td>
+      <td>-3.47</td>
+      <td>-8.85</td>
+      <td>0.23</td>
+      <td>3.32</td>
+      <td>-51.57</td>
+      <td>-11.18</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">08/01  01:00:00</th>
+      <th rowspan="2" valign="top">08</th>
+      <th>Aberdeen</th>
+      <td>11.45</td>
+      <td>11.50</td>
+      <td>8.82</td>
+      <td>4.58</td>
+      <td>4.13</td>
+      <td>2.37</td>
+      <td>0.00</td>
+      <td>0.04</td>
+      <td>-0.30</td>
+      <td>-2.63</td>
+      <td>...</td>
+      <td>-2.32</td>
+      <td>-31.05</td>
+      <td>0.12</td>
+      <td>5.91</td>
+      <td>-7.08</td>
+      <td>-38.92</td>
+      <td>-0.10</td>
+      <td>-3.91</td>
+      <td>-40.97</td>
+      <td>-43.37</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>22.48</td>
+      <td>16.96</td>
+      <td>19.97</td>
+      <td>10.88</td>
+      <td>13.45</td>
+      <td>5.21</td>
+      <td>-0.33</td>
+      <td>-5.53</td>
+      <td>-0.13</td>
+      <td>-2.51</td>
+      <td>...</td>
+      <td>-0.73</td>
+      <td>-6.28</td>
+      <td>0.17</td>
+      <td>3.10</td>
+      <td>-5.00</td>
+      <td>-12.40</td>
+      <td>-0.06</td>
+      <td>-0.83</td>
+      <td>-46.92</td>
+      <td>-14.57</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">09/01  01:00:00</th>
+      <th rowspan="2" valign="top">09</th>
+      <th>Aberdeen</th>
+      <td>3.24</td>
+      <td>4.74</td>
+      <td>1.39</td>
+      <td>0.77</td>
+      <td>0.29</td>
+      <td>0.17</td>
+      <td>0.32</td>
+      <td>1.50</td>
+      <td>-1.34</td>
+      <td>-1.86</td>
+      <td>...</td>
+      <td>-2.74</td>
+      <td>-40.09</td>
+      <td>0.09</td>
+      <td>5.11</td>
+      <td>-4.90</td>
+      <td>-45.43</td>
+      <td>-0.18</td>
+      <td>-8.19</td>
+      <td>-12.52</td>
+      <td>-50.66</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>10.22</td>
+      <td>10.32</td>
+      <td>8.71</td>
+      <td>5.35</td>
+      <td>4.03</td>
+      <td>1.56</td>
+      <td>0.01</td>
+      <td>0.09</td>
+      <td>-0.17</td>
+      <td>-1.52</td>
+      <td>...</td>
+      <td>-2.71</td>
+      <td>-31.33</td>
+      <td>-0.03</td>
+      <td>-1.20</td>
+      <td>-8.28</td>
+      <td>-38.27</td>
+      <td>-0.36</td>
+      <td>-11.29</td>
+      <td>-38.49</td>
+      <td>-41.80</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">10/01  01:00:00</th>
+      <th rowspan="2" valign="top">10</th>
+      <th>Aberdeen</th>
+      <td>0.27</td>
+      <td>0.38</td>
+      <td>0.18</td>
+      <td>0.00</td>
+      <td>0.24</td>
+      <td>0.00</td>
+      <td>0.29</td>
+      <td>0.11</td>
+      <td>-0.55</td>
+      <td>-0.10</td>
+      <td>...</td>
+      <td>-0.27</td>
+      <td>-6.41</td>
+      <td>-0.25</td>
+      <td>-5.88</td>
+      <td>-0.96</td>
+      <td>-14.61</td>
+      <td>-1.16</td>
+      <td>-15.99</td>
+      <td>-2.84</td>
+      <td>-22.01</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>3.85</td>
+      <td>4.53</td>
+      <td>3.66</td>
+      <td>1.18</td>
+      <td>3.32</td>
+      <td>0.35</td>
+      <td>0.15</td>
+      <td>0.68</td>
+      <td>-0.05</td>
+      <td>-0.19</td>
+      <td>...</td>
+      <td>-0.77</td>
+      <td>-11.56</td>
+      <td>-0.42</td>
+      <td>-7.85</td>
+      <td>-2.65</td>
+      <td>-19.23</td>
+      <td>-4.72</td>
+      <td>-21.86</td>
+      <td>-12.53</td>
+      <td>-24.53</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">11/01  01:00:00</th>
+      <th rowspan="2" valign="top">11</th>
+      <th>Aberdeen</th>
+      <td>0.05</td>
+      <td>0.04</td>
+      <td>0.07</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>-0.11</td>
+      <td>-0.00</td>
+      <td>0.28</td>
+      <td>0.02</td>
+      <td>...</td>
+      <td>-0.05</td>
+      <td>-0.82</td>
+      <td>-0.16</td>
+      <td>-2.45</td>
+      <td>-0.55</td>
+      <td>-6.37</td>
+      <td>-0.57</td>
+      <td>-6.53</td>
+      <td>-1.48</td>
+      <td>-10.69</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>0.40</td>
+      <td>0.05</td>
+      <td>0.10</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>-7.45</td>
+      <td>-0.35</td>
+      <td>-2.81</td>
+      <td>-0.29</td>
+      <td>...</td>
+      <td>-0.01</td>
+      <td>-0.15</td>
+      <td>-0.08</td>
+      <td>-1.62</td>
+      <td>-0.61</td>
+      <td>-8.43</td>
+      <td>-0.61</td>
+      <td>-8.42</td>
+      <td>-2.35</td>
+      <td>-15.54</td>
+    </tr>
+    <tr>
+      <th rowspan="2" valign="top">12/01  01:00:00</th>
+      <th rowspan="2" valign="top">12</th>
+      <th>Aberdeen</th>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>NaN</td>
+      <td>0.00</td>
+      <td>NaN</td>
+      <td>0.00</td>
+      <td>...</td>
+      <td>-0.23</td>
+      <td>-2.81</td>
+      <td>-0.17</td>
+      <td>-2.26</td>
+      <td>-0.69</td>
+      <td>-6.27</td>
+      <td>-0.75</td>
+      <td>-6.55</td>
+      <td>-1.51</td>
+      <td>-9.19</td>
+    </tr>
+    <tr>
+      <th>London</th>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>NaN</td>
+      <td>0.00</td>
+      <td>NaN</td>
+      <td>0.00</td>
+      <td>...</td>
+      <td>-0.10</td>
+      <td>-1.46</td>
+      <td>-0.20</td>
+      <td>-2.79</td>
+      <td>-0.75</td>
+      <td>-7.03</td>
+      <td>-0.71</td>
+      <td>-6.86</td>
+      <td>-1.75</td>
+      <td>-10.48</td>
+    </tr>
+  </tbody>
+</table>
+<p>24 rows × 32 columns</p>
+</div></div>
+</div>
+<p>Let’s make a different dataset to work with runperiod frequency.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">accim.data.data_postprocessing</span> <span class="kn">import</span> <span class="n">Table</span>
+<span class="n">dataset_runperiod</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+    <span class="c1">#datasets=list Since we are not specifying any list, it will use all available CSVs in the folder</span>
+    <span class="n">source_frequency</span><span class="o">=</span><span class="s1">&#39;hourly&#39;</span><span class="p">,</span>
+    <span class="n">frequency</span><span class="o">=</span><span class="s1">&#39;runperiod&#39;</span><span class="p">,</span>
+    <span class="n">frequency_agg_func</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">,</span> <span class="c1">#this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won&#39;t make any aeffect</span>
+    <span class="n">standard_outputs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;building&#39;</span><span class="p">],</span>
+    <span class="n">level_agg_func</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;sum&#39;</span><span class="p">],</span>
+    <span class="n">level_excluded_zones</span><span class="o">=</span><span class="p">[],</span>
+    <span class="c1">#match_cities=bool Only used when EPW file has NOT been previously renamed</span>
+    <span class="c1">#manage_epw_names=bool Only used when EPW file has NOT been previously renamed</span>
+    <span class="n">split_epw_names</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1">#to split EPW names based on the format Country_City_RCPscenario-YEar</span>
+<span class="p">)</span>
+
+<span class="n">dataset_runperiod</span><span class="o">.</span><span class="n">format_table</span><span class="p">(</span>
+    <span class="n">type_of_table</span><span class="o">=</span><span class="s1">&#39;custom&#39;</span><span class="p">,</span>
+    <span class="n">custom_cols</span><span class="o">=</span><span class="p">[</span>
+        <span class="s1">&#39;Building_Total_Cooling Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Building_Total_Heating Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+No zones have been excluded from level computations.
+All CSVs are for present scenario.
+</pre></div></div>
+</div>
+<p>In this case, we are going to use the ‘pivot’ reshaping option:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_runperiod</span><span class="o">.</span><span class="n">wrangled_table</span><span class="p">(</span>
+    <span class="n">reshaping</span><span class="o">=</span><span class="s1">&#39;pivot&#39;</span><span class="p">,</span>
+    <span class="n">vars_to_gather</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ComfMod&#39;</span><span class="p">,</span> <span class="s1">&#39;CAT&#39;</span><span class="p">],</span>
+    <span class="n">baseline</span><span class="o">=</span><span class="s1">&#39;CM_0[CA_1&#39;</span><span class="p">,</span>
+    <span class="n">comparison_mode</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;baseline compared to others&#39;</span><span class="p">],</span>
+    <span class="n">comparison_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;relative&#39;</span><span class="p">,</span> <span class="s1">&#39;absolute&#39;</span><span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1611: SettingWithCopyWarning:
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+  self.df[&#39;col_to_pivot&#39;] = &#39;temp&#39;
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1624: SettingWithCopyWarning:
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+  self.df[&#39;col_to_pivot&#39;] = wrangled_df_pivoted[&#39;col_to_pivot&#39;]
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_runperiod</span><span class="o">.</span><span class="n">wrangled_df_pivoted</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>col_to_pivot</th>
+      <th>CM_0[CA_1</th>
+      <th>CM_0[CA_2</th>
+      <th>CM_0[CA_3</th>
+      <th>CM_3[CA_1</th>
+      <th>CM_3[CA_2</th>
+      <th>CM_3[CA_3</th>
+      <th>1-(CM_0[CA_1/CM_3[CA_1)</th>
+      <th>CM_3[CA_1 - CM_0[CA_1</th>
+      <th>1-(CM_0[CA_1/CM_0[CA_2)</th>
+      <th>CM_0[CA_2 - CM_0[CA_1</th>
+      <th>1-(CM_0[CA_1/CM_3[CA_3)</th>
+      <th>CM_3[CA_3 - CM_0[CA_1</th>
+      <th>1-(CM_0[CA_1/CM_3[CA_2)</th>
+      <th>CM_3[CA_2 - CM_0[CA_1</th>
+      <th>1-(CM_0[CA_1/CM_0[CA_3)</th>
+      <th>CM_0[CA_3 - CM_0[CA_1</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Building_Total_Cooling Energy Demand (kWh/m2) (summed)</th>
+      <td>154.66</td>
+      <td>124.24</td>
+      <td>66.51</td>
+      <td>141.86</td>
+      <td>68.41</td>
+      <td>26.77</td>
+      <td>-0.09</td>
+      <td>-12.80</td>
+      <td>-0.24</td>
+      <td>-30.42</td>
+      <td>-4.78</td>
+      <td>-127.89</td>
+      <td>-1.26</td>
+      <td>-86.24</td>
+      <td>-1.33</td>
+      <td>-88.14</td>
+    </tr>
+    <tr>
+      <th>Building_Total_Heating Energy Demand (kWh/m2) (summed)</th>
+      <td>680.07</td>
+      <td>688.99</td>
+      <td>547.22</td>
+      <td>413.73</td>
+      <td>274.22</td>
+      <td>149.52</td>
+      <td>-0.64</td>
+      <td>-266.33</td>
+      <td>0.01</td>
+      <td>8.92</td>
+      <td>-3.55</td>
+      <td>-530.55</td>
+      <td>-1.48</td>
+      <td>-405.85</td>
+      <td>-0.24</td>
+      <td>-132.84</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>Again, please remember we are working with Pandas Dataframe objects. That means we can modify the df we have generated. For instance, we can simplify it by removing all rows except those with ‘CA_3’ in the Category column, as shown below.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_runperiod</span><span class="o">.</span><span class="n">df</span> <span class="o">=</span> <span class="n">dataset_runperiod</span><span class="o">.</span><span class="n">df</span><span class="p">[</span>
+    <span class="n">dataset_runperiod</span><span class="o">.</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;CAT&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s1">&#39;CA_3&#39;</span><span class="p">])</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_runperiod</span><span class="o">.</span><span class="n">df</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Model</th>
+      <th>ComfStand</th>
+      <th>CAT</th>
+      <th>ComfMod</th>
+      <th>HVACmode</th>
+      <th>VentCtrl</th>
+      <th>VSToffset</th>
+      <th>MinOToffset</th>
+      <th>MaxWindSpeed</th>
+      <th>ASTtol</th>
+      <th>NameSuffix</th>
+      <th>EPW</th>
+      <th>Source</th>
+      <th>EPW_Country_name</th>
+      <th>EPW_City_or_subcountry</th>
+      <th>EPW_Scenario-Year</th>
+      <th>EPW_Scenario</th>
+      <th>EPW_Year</th>
+      <th>Building_Total_Cooling Energy Demand (kWh/m2) (summed)</th>
+      <th>Building_Total_Heating Energy Demand (kWh/m2) (summed)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>8</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>AT_0.1</td>
+      <td>NS_X</td>
+      <td>United-Kingdom_Aberdeen_Present</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>United-Kingdom</td>
+      <td>Aberdeen</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>13.574438</td>
+      <td>318.977783</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_0</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>AT_0.1</td>
+      <td>NS_X</td>
+      <td>United-Kingdom_London_Present</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>United-Kingdom</td>
+      <td>London</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>52.938830</td>
+      <td>228.246073</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>AT_0.1</td>
+      <td>NS_X</td>
+      <td>United-Kingdom_Aberdeen_Present</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>United-Kingdom</td>
+      <td>Aberdeen</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>5.687532</td>
+      <td>92.602457</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>CS_INT EN16798</td>
+      <td>CA_3</td>
+      <td>CM_3</td>
+      <td>HM_2</td>
+      <td>VC_0</td>
+      <td>VO_0</td>
+      <td>MT_50</td>
+      <td>MW_50</td>
+      <td>AT_0.1</td>
+      <td>NS_X</td>
+      <td>United-Kingdom_London_Present</td>
+      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>United-Kingdom</td>
+      <td>London</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>Present</td>
+      <td>21.084511</td>
+      <td>56.917599</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>And now we could make a similar pivoted table as above, but simplified to show only CA_3:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_runperiod</span><span class="o">.</span><span class="n">wrangled_table</span><span class="p">(</span>
+    <span class="n">reshaping</span><span class="o">=</span><span class="s1">&#39;pivot&#39;</span><span class="p">,</span>
+    <span class="n">vars_to_gather</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ComfMod&#39;</span><span class="p">],</span>
+    <span class="n">baseline</span><span class="o">=</span><span class="s1">&#39;CM_0&#39;</span><span class="p">,</span>
+    <span class="n">comparison_mode</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;baseline compared to others&#39;</span><span class="p">],</span>
+    <span class="n">comparison_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;relative&#39;</span><span class="p">,</span> <span class="s1">&#39;absolute&#39;</span><span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_runperiod</span><span class="o">.</span><span class="n">wrangled_df_pivoted</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>col_to_pivot</th>
+      <th>CM_0</th>
+      <th>CM_3</th>
+      <th>1-(CM_0/CM_3)</th>
+      <th>CM_3 - CM_0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Building_Total_Cooling Energy Demand (kWh/m2) (summed)</th>
+      <td>66.51</td>
+      <td>26.77</td>
+      <td>-1.48</td>
+      <td>-39.74</td>
+    </tr>
+    <tr>
+      <th>Building_Total_Heating Energy Demand (kWh/m2) (summed)</th>
+      <td>547.22</td>
+      <td>149.52</td>
+      <td>-2.66</td>
+      <td>-397.70</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>Another method to achieve this is generating a different Table object, only reading the CSV files with CA_3 in it name:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">accim.data.data_postprocessing</span> <span class="kn">import</span> <span class="n">Table</span>
+
+<span class="n">dataset</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;CA_3&#39;</span> <span class="ow">in</span> <span class="n">i</span><span class="p">]</span>
+
+<span class="n">dataset_runperiod_simplified_1</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+    <span class="n">datasets</span><span class="o">=</span><span class="n">dataset</span><span class="p">,</span>
+    <span class="n">source_frequency</span><span class="o">=</span><span class="s1">&#39;hourly&#39;</span><span class="p">,</span>
+    <span class="n">frequency</span><span class="o">=</span><span class="s1">&#39;runperiod&#39;</span><span class="p">,</span>
+    <span class="n">frequency_agg_func</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">,</span>
+    <span class="c1"># this makes the sum or average when aggregating in days, months or runperiod; since the original CSV frequency is in hour, it won&#39;t make any aeffect</span>
+    <span class="n">standard_outputs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">level</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;building&#39;</span><span class="p">],</span>
+    <span class="n">level_agg_func</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;sum&#39;</span><span class="p">],</span>
+    <span class="n">level_excluded_zones</span><span class="o">=</span><span class="p">[],</span>
+    <span class="n">split_epw_names</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># to split EPW names based on the format Country_City_RCPscenario-YEar</span>
+<span class="p">)</span>
+
+<span class="n">dataset_runperiod_simplified_1</span><span class="o">.</span><span class="n">format_table</span><span class="p">(</span>
+    <span class="n">type_of_table</span><span class="o">=</span><span class="s1">&#39;custom&#39;</span><span class="p">,</span>
+    <span class="n">custom_cols</span><span class="o">=</span><span class="p">[</span>
+        <span class="s1">&#39;Building_Total_Cooling Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Building_Total_Heating Energy Demand (kWh/m2) (summed)&#39;</span><span class="p">,</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+
+<span class="n">dataset_runperiod_simplified_1</span><span class="o">.</span><span class="n">wrangled_table</span><span class="p">(</span>
+    <span class="n">reshaping</span><span class="o">=</span><span class="s1">&#39;pivot&#39;</span><span class="p">,</span>
+    <span class="n">vars_to_gather</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ComfMod&#39;</span><span class="p">],</span>
+    <span class="n">baseline</span><span class="o">=</span><span class="s1">&#39;CM_0&#39;</span><span class="p">,</span>
+    <span class="n">comparison_mode</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;baseline compared to others&#39;</span><span class="p">],</span>
+    <span class="n">comparison_cols</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;relative&#39;</span><span class="p">,</span> <span class="s1">&#39;absolute&#39;</span><span class="p">]</span>
+<span class="p">)</span>
+<br/><br/><br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+No zones have been excluded from level computations.
+All CSVs are for present scenario.
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1611: SettingWithCopyWarning:
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+  self.df[&#39;col_to_pivot&#39;] = &#39;temp&#39;
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1624: SettingWithCopyWarning:
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+  self.df[&#39;col_to_pivot&#39;] = wrangled_df_pivoted[&#39;col_to_pivot&#39;]
+</pre></div></div>
+</div>
+<p>You can see below the resulting table is exactly the same:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_runperiod_simplified_1</span><span class="o">.</span><span class="n">wrangled_df_pivoted</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th>col_to_pivot</th>
+      <th>CM_0</th>
+      <th>CM_3</th>
+      <th>1-(CM_0/CM_3)</th>
+      <th>CM_3 - CM_0</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Building_Total_Cooling Energy Demand (kWh/m2) (summed)</th>
+      <td>66.51</td>
+      <td>26.77</td>
+      <td>-1.48</td>
+      <td>-39.74</td>
+    </tr>
+    <tr>
+      <th>Building_Total_Heating Energy Demand (kWh/m2) (summed)</th>
+      <td>547.22</td>
+      <td>149.52</td>
+      <td>-2.66</td>
+      <td>-397.70</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>You can finally export the table as xlsx format:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[31]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dataset_runperiod_simplified_1</span><span class="o">.</span><span class="n">wrangled_df_pivoted</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="s1">&#39;building_energy_demand.xlsx&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Let’s delete it now:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.xlsx&#39;</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../runEp/using_runEp.html" class="btn btn-neutral float-left" title="Using runEp() to directly run simulations with EnergyPlus" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../../modules.html" class="btn btn-neutral float-right" title="accim" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

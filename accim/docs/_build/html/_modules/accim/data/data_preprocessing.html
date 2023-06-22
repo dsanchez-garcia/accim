@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.data.data_preprocessing &mdash; accim  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            accim
+          </a>
+              <div class="version">
+                0.6.12
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../4_detailed%20use.html">4. Detailed use</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/full_example/full_example.html">Full example of adaptive setpoint temperature simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">accim.data.data_preprocessing</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for accim.data.data_preprocessing</h1><div class="highlight"><pre>
+<span></span>
+<div class="viewcode-block" id="give_address_ssl"><a class="viewcode-back" href="../../../accim.data.html#accim.data.data_preprocessing.give_address_ssl">[docs]</a><span class="k">class</span> <span class="nc">give_address_ssl</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">latitude</span><span class="p">,</span>
+            <span class="n">longitude</span>
+    <span class="p">):</span>
+        <span class="kn">import</span> <span class="nn">requests</span>
+        <span class="kn">import</span> <span class="nn">ssl</span>
+        <span class="kn">import</span> <span class="nn">certifi</span>
+
+        <span class="c1"># Set up SSL context with OpenStreetMap certificate added to trust store</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">ssl</span><span class="o">.</span><span class="n">create_default_context</span><span class="p">()</span>
+        <span class="n">cafile</span> <span class="o">=</span> <span class="n">certifi</span><span class="o">.</span><span class="n">where</span><span class="p">()</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">load_verify_locations</span><span class="p">(</span><span class="n">cafile</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">check_hostname</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># Make request to OpenStreetMap API with SSL verification enabled</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://nominatim.openstreetmap.org/reverse?format=jsonv2&amp;lat=</span><span class="si">{</span><span class="n">latitude</span><span class="si">}</span><span class="s2">&amp;lon=</span><span class="si">{</span><span class="n">longitude</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="n">cafile</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;User-Agent&#39;</span><span class="p">:</span> <span class="s1">&#39;Mozilla/5.0&#39;</span><span class="p">},</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="c1"># Extract address information from response</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
+
+        <span class="c1"># Print the full address</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">full_address</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">and</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;country_code&#39;</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="give_address_openssl"><a class="viewcode-back" href="../../../accim.data.html#accim.data.data_preprocessing.give_address_openssl">[docs]</a><span class="k">class</span> <span class="nc">give_address_openssl</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">latitude</span><span class="p">,</span>
+            <span class="n">longitude</span>
+    <span class="p">):</span>
+        <span class="kn">import</span> <span class="nn">requests</span>
+        <span class="kn">import</span> <span class="nn">certifi</span>
+        <span class="kn">import</span> <span class="nn">OpenSSL</span>
+        <span class="kn">import</span> <span class="nn">ssl</span>
+        <span class="kn">import</span> <span class="nn">socket</span>
+
+        <span class="c1"># Obtain the certificate chain</span>
+        <span class="n">ctx</span> <span class="o">=</span> <span class="n">ssl</span><span class="o">.</span><span class="n">create_default_context</span><span class="p">()</span>
+        <span class="n">sock</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">wrap_socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(),</span> <span class="n">server_hostname</span><span class="o">=</span><span class="s2">&quot;nominatim.openstreetmap.org&quot;</span><span class="p">)</span>
+        <span class="n">sock</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s2">&quot;nominatim.openstreetmap.org&quot;</span><span class="p">,</span> <span class="mi">443</span><span class="p">))</span>
+        <span class="n">cert</span> <span class="o">=</span> <span class="n">sock</span><span class="o">.</span><span class="n">getpeercert</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">cert_chain</span> <span class="o">=</span> <span class="p">[</span><span class="n">OpenSSL</span><span class="o">.</span><span class="n">crypto</span><span class="o">.</span><span class="n">load_certificate</span><span class="p">(</span><span class="n">OpenSSL</span><span class="o">.</span><span class="n">crypto</span><span class="o">.</span><span class="n">FILETYPE_ASN1</span><span class="p">,</span> <span class="n">cert</span><span class="p">)]</span>
+
+        <span class="c1"># Set up SSL context with certificate chain added to trust store</span>
+        <span class="n">cafile</span> <span class="o">=</span> <span class="n">certifi</span><span class="o">.</span><span class="n">where</span><span class="p">()</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">ssl</span><span class="o">.</span><span class="n">create_default_context</span><span class="p">(</span><span class="n">cafile</span><span class="o">=</span><span class="n">cafile</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">cert</span> <span class="ow">in</span> <span class="n">cert_chain</span><span class="p">:</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">load_verify_locations</span><span class="p">(</span><span class="n">cadata</span><span class="o">=</span><span class="n">cert</span><span class="o">.</span><span class="n">dump</span><span class="p">())</span>
+
+        <span class="c1"># Make request to OpenStreetMap API with SSL verification enabled</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://nominatim.openstreetmap.org/reverse?format=jsonv2&amp;lat=</span><span class="si">{</span><span class="n">latitude</span><span class="si">}</span><span class="s2">&amp;lon=</span><span class="si">{</span><span class="n">longitude</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="n">cafile</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;User-Agent&#39;</span><span class="p">:</span> <span class="s1">&#39;Mozilla/5.0&#39;</span><span class="p">},</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="c1"># Extract address information from response</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
+
+        <span class="c1"># Print the full address</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">full_address</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">and</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;country_code&#39;</span><span class="p">])</span></div>
+
+
+
+
+<div class="viewcode-block" id="give_address"><a class="viewcode-back" href="../../../accim.data.html#accim.data.data_preprocessing.give_address">[docs]</a><span class="k">class</span> <span class="nc">give_address</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">latitude</span><span class="p">,</span>
+            <span class="n">longitude</span>
+    <span class="p">):</span>
+        <span class="kn">import</span> <span class="nn">requests</span>
+
+        <span class="c1"># Make request to OpenStreetMap API</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://nominatim.openstreetmap.org/reverse?format=jsonv2&amp;lat=</span><span class="si">{</span><span class="n">latitude</span><span class="si">}</span><span class="s2">&amp;lon=</span><span class="si">{</span><span class="n">longitude</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+        <span class="c1"># Extract address information from response</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">address</span> <span class="o">=</span> <span class="n">response</span><span class="p">[</span><span class="s1">&#39;address&#39;</span><span class="p">]</span>
+
+        <span class="c1"># Print the full address</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">full_address</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">address</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">and</span> <span class="n">k</span> <span class="o">!=</span> <span class="s1">&#39;country_code&#39;</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="rename_epw_files"><a class="viewcode-back" href="../../../accim.data.html#accim.data.data_preprocessing.rename_epw_files">[docs]</a><span class="k">class</span> <span class="nc">rename_epw_files</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">filelist</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">rename_dict</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">confirm_renaming</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">confirm_deletion</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Renames the EPW files following the name convention &#39;Country_City_RCPscenario-Year&#39;.</span>
+<span class="sd">        The Country and City fields are computed based on the coordinates of the EPW,</span>
+<span class="sd">        and the RCPscenario and Year are taken from the original name.</span>
+<span class="sd">        If no reference is found, the sample_EPWs are considered to be  for Present scenario.</span>
+<span class="sd">        :param filelist: A list of the EPW files. If omitted, it will rename all sample_EPWs in that folder.</span>
+<span class="sd">        :param confirm_renaming: True or False, #to skip renaming confirmation on prompt command or console</span>
+<span class="sd">        :param confirm_deletion: True or False #to skip deletion confirmation on prompt command or console</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">glob</span>
+        <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+        <span class="kn">import</span> <span class="nn">datapackage</span>
+        <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+        <span class="kn">import</span> <span class="nn">os</span>
+        <span class="c1"># from geopy.exc import GeocoderUnavailable</span>
+        <span class="c1"># from geopy.geocoders import Nominatim</span>
+        <span class="kn">import</span> <span class="nn">pycountry</span>
+        <span class="kn">import</span> <span class="nn">shutil</span>
+        <span class="kn">from</span> <span class="nn">unidecode</span> <span class="kn">import</span> <span class="n">unidecode</span>
+        <span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">time</span>
+        <span class="kn">import</span> <span class="nn">requests</span>
+
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">filelist</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">filelist</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filelist</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">epw_files_to_rename</span> <span class="o">=</span> <span class="n">filelist</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># todo same as Table</span>
+            <span class="n">epw_files_to_rename</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;*.epw&#39;</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">epw_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">epw_files_to_rename</span><span class="p">,</span>
+                              <span class="n">index</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_files_to_rename</span><span class="p">))),</span>
+                              <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;EPW_file_names&#39;</span><span class="p">])</span>
+
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">)):</span>
+            <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_abs_path&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_file_names&#39;</span><span class="p">])</span>
+
+        <span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_names&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_file_names&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.epw&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_mod&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_names&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+
+        <span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_mod_filtered&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_names&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+
+        <span class="n">rcpdict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;Present&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;Presente&#39;</span><span class="p">,</span> <span class="s1">&#39;Actual&#39;</span><span class="p">,</span> <span class="s1">&#39;Present&#39;</span><span class="p">,</span> <span class="s1">&#39;Current&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;RCP26&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;RCP2.6&#39;</span><span class="p">,</span> <span class="s1">&#39;RCP26&#39;</span><span class="p">,</span> <span class="s1">&#39;RCP2.5&#39;</span><span class="p">,</span> <span class="s1">&#39;RCP25&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;RCP45&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;RCP4.5&#39;</span><span class="p">,</span> <span class="s1">&#39;RCP45&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;RCP60&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;RCP6.0&#39;</span><span class="p">,</span> <span class="s1">&#39;RCP60&#39;</span><span class="p">],</span>
+            <span class="s1">&#39;RCP85&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;RCP8.5&#39;</span><span class="p">,</span> <span class="s1">&#39;RCP85&#39;</span><span class="p">]</span>
+        <span class="p">}</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_names&#39;</span><span class="p">])):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">rcpdict</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">rcpdict</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_names&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_scenario&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_mod_filtered&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">([</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_mod_filtered&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">()][</span><span class="mi">0</span><span class="p">])</span>
+                        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+                            <span class="k">continue</span>
+
+        <span class="n">rcp_not_found_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_names&#39;</span><span class="p">])):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_scenario&#39;</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">float</span><span class="p">:</span>
+                    <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_scenario&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Present&#39;</span>
+                    <span class="n">rcp_not_found_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_file_names&#39;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_scenario&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Present&#39;</span>
+                <span class="n">rcp_not_found_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_file_names&#39;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rcp_not_found_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Since no match has been found between RCP scenarios and EPW file name, &#39;</span>
+                  <span class="s1">&#39;Present scenario has been assigned to the following EPW files:&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">rcp_not_found_list</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_names&#39;</span><span class="p">])):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2000</span><span class="p">,</span> <span class="mi">2101</span><span class="p">,</span> <span class="mi">10</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">j</span><span class="p">)</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_names&#39;</span><span class="p">]:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_year&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_mod_filtered&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">j</span><span class="p">))</span>
+                    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                        <span class="k">continue</span>
+                        <span class="c1"># print(&#39;Year has nt ben identified.&#39;)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_names&#39;</span><span class="p">])):</span>
+            <span class="k">if</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_scenario&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Present&#39;</span><span class="p">:</span>
+                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_scenario_year&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Present&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_scenario_year&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_scenario&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;-&#39;</span> <span class="o">+</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_year&#39;</span><span class="p">]</span>
+
+        <span class="n">year_not_found_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_names&#39;</span><span class="p">])):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_year&#39;</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">float</span><span class="p">:</span>
+                    <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_year&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Present&#39;</span>
+                    <span class="n">year_not_found_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_file_names&#39;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_year&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;Present&#39;</span>
+                <span class="n">year_not_found_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_file_names&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">year_not_found_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Since no match has been found between RCP scenario Year and EPW file name, &#39;</span>
+                  <span class="s1">&#39;Present year has been assigned to the following EPW files:&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">year_not_found_list</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># path = r&#39;C:\Users\user\PycharmProjects\accim&#39;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+        <span class="n">new_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">epw_files_to_rename</span><span class="p">:</span>
+            <span class="c1"># open the file and then call .read() to get the text</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">file</span><span class="p">),</span>
+                    <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+                <span class="n">new_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)])</span>
+            <span class="c1"># f.close()</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_list</span><span class="p">)):</span>
+            <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_latitude&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_list</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="mi">6</span><span class="p">]</span>
+            <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_longitude&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_list</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="mi">7</span><span class="p">]</span>
+
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;UNKNOWN&#39;</span>
+
+
+        <span class="c1"># todo trying to make it work with own class</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">rename_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">rename_dict</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_names&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rename_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">osm_address</span> <span class="o">=</span> <span class="n">give_address</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_latitude&#39;</span><span class="p">],</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_longitude&#39;</span><span class="p">])</span>
+
+                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country_code&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;country_code&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pycountry</span><span class="o">.</span><span class="n">countries</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">alpha_2</span><span class="o">=</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country_code&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span>
+                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;location_address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">full_address</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_mod_filtered&#39;</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="s1">&#39;UNKNOWN&#39;</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">j</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;city_district&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                            <span class="k">pass</span>
+                    <span class="k">if</span> <span class="s1">&#39;UNKNOWN&#39;</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">j</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;city&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                            <span class="k">pass</span>
+                    <span class="k">if</span> <span class="s1">&#39;UNKNOWN&#39;</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">j</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;municipality&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                            <span class="k">pass</span>
+            <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">SSLError</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">osm_address</span> <span class="o">=</span> <span class="n">give_address_ssl</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_latitude&#39;</span><span class="p">],</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_longitude&#39;</span><span class="p">])</span>
+
+                    <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country_code&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;country_code&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+                    <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pycountry</span><span class="o">.</span><span class="n">countries</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">alpha_2</span><span class="o">=</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country_code&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span>
+                    <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;location_address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">full_address</span><span class="p">)</span>
+
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_mod_filtered&#39;</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="s1">&#39;UNKNOWN&#39;</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]:</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="k">if</span> <span class="n">j</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;city_district&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                                    <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                                <span class="k">pass</span>
+                        <span class="k">if</span> <span class="s1">&#39;UNKNOWN&#39;</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]:</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="k">if</span> <span class="n">j</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;city&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                                    <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                                <span class="k">pass</span>
+                        <span class="k">if</span> <span class="s1">&#39;UNKNOWN&#39;</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]:</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="k">if</span> <span class="n">j</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;municipality&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                                    <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                                <span class="k">pass</span>
+                <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">SSLError</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">osm_address</span> <span class="o">=</span> <span class="n">give_address_openssl</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_latitude&#39;</span><span class="p">],</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_longitude&#39;</span><span class="p">])</span>
+
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country_code&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;country_code&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pycountry</span><span class="o">.</span><span class="n">countries</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">alpha_2</span><span class="o">=</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country_code&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;location_address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">full_address</span><span class="p">)</span>
+
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_mod_filtered&#39;</span><span class="p">]:</span>
+                            <span class="k">if</span> <span class="s1">&#39;UNKNOWN&#39;</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]:</span>
+                                <span class="k">try</span><span class="p">:</span>
+                                    <span class="k">if</span> <span class="n">j</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;city_district&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                                    <span class="k">pass</span>
+                            <span class="k">if</span> <span class="s1">&#39;UNKNOWN&#39;</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]:</span>
+                                <span class="k">try</span><span class="p">:</span>
+                                    <span class="k">if</span> <span class="n">j</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;city&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                                    <span class="k">pass</span>
+                            <span class="k">if</span> <span class="s1">&#39;UNKNOWN&#39;</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]:</span>
+                                <span class="k">try</span><span class="p">:</span>
+                                    <span class="k">if</span> <span class="n">j</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">unidecode</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;municipality&#39;</span><span class="p">]))</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                                    <span class="k">pass</span>
+                    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country_code&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;UNKNOWN&#39;</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;UNKNOWN&#39;</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;location_address&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;UNKNOWN&#39;</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;UNKNOWN&#39;</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;For some reason, accim cannot connect to OpenStreetMap to get the address of file </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;EPW_names&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">. It gets an SSL error.&quot;</span><span class="p">)</span>
+
+        <span class="n">checkpoint</span> <span class="o">+=</span><span class="mi">1</span>
+
+        <span class="c1"># todo consider except Using geolocator</span>
+        <span class="c1"># geolocator = Nominatim(user_agent=&quot;geoapiExercises&quot;)</span>
+        <span class="c1"># for i in range(len(epw_df)):</span>
+        <span class="c1">#     try:</span>
+        <span class="c1">#         location = geolocator.reverse(epw_df.loc[i, &#39;EPW_latitude&#39;] + &quot;,&quot; + epw_df.loc[i, &#39;EPW_longitude&#39;])</span>
+        <span class="c1">#         # print(location)</span>
+        <span class="c1">#         epw_df.loc[i, &#39;EPW_country_code&#39;] = location.raw[&#39;address&#39;].get(&#39;country_code&#39;).upper()</span>
+        <span class="c1">#         epw_df.loc[i, &#39;EPW_country&#39;] = pycountry.countries.get(alpha_2=epw_df.loc[i, &#39;EPW_country_code&#39;]).name.replace(&#39; &#39;, &#39;-&#39;)</span>
+        <span class="c1">#         # epw_df.loc[i, &#39;EPW_country&#39;] = location.raw[&#39;address&#39;].get(&#39;country&#39;).replace(&#39; &#39;, &#39;-&#39;)</span>
+        <span class="c1">#         # epw_df.loc[i, &#39;EPW_city&#39;] = location.raw[&#39;address&#39;].get(&#39;city&#39;, &#39;&#39;)</span>
+        <span class="c1">#         # epw_df.loc[i, &#39;geolocator_address&#39;] = location.raw[&#39;display_name&#39;]</span>
+        <span class="c1">#         epw_df.loc[i, &#39;location_address&#39;] = unidecode(location.address)</span>
+        <span class="c1">#</span>
+        <span class="c1">#</span>
+        <span class="c1">#     # for i in range(len(epw_df[&#39;EPW_mod_filtered&#39;])):</span>
+        <span class="c1">#     #     location = geolocator.reverse(epw_df.loc[i, &#39;EPW_latitude&#39;] + &quot;,&quot; + epw_df.loc[i, &#39;EPW_longitude&#39;])</span>
+        <span class="c1">#         for j in epw_df.loc[i, &#39;EPW_mod_filtered&#39;]:</span>
+        <span class="c1">#             if &#39;UNKNOWN&#39; in epw_df.loc[i, &#39;EPW_city_or_subcountry&#39;]:</span>
+        <span class="c1">#                 try:</span>
+        <span class="c1">#                     if j.lower() in str(unidecode(location.raw[&#39;address&#39;][&#39;city_district&#39;])).lower():</span>
+        <span class="c1">#                         epw_df.loc[i, &#39;EPW_city_or_subcountry&#39;] = j.replace(&#39; &#39;, &#39;-&#39;).capitalize()</span>
+        <span class="c1">#                 except KeyError:</span>
+        <span class="c1">#                     pass</span>
+        <span class="c1">#             if &#39;UNKNOWN&#39; in epw_df.loc[i, &#39;EPW_city_or_subcountry&#39;]:</span>
+        <span class="c1">#                 try:</span>
+        <span class="c1">#                     if j.lower() in str(unidecode(location.raw[&#39;address&#39;][&#39;city&#39;])).lower():</span>
+        <span class="c1">#                         epw_df.loc[i, &#39;EPW_city_or_subcountry&#39;] = j.replace(&#39; &#39;, &#39;-&#39;).capitalize()</span>
+        <span class="c1">#                 except KeyError:</span>
+        <span class="c1">#                     pass</span>
+        <span class="c1">#             if &#39;UNKNOWN&#39; in epw_df.loc[i, &#39;EPW_city_or_subcountry&#39;]:</span>
+        <span class="c1">#                 try:</span>
+        <span class="c1">#                     if j.lower() in str(unidecode(location.raw[&#39;address&#39;][&#39;municipality&#39;])).lower():</span>
+        <span class="c1">#                         epw_df.loc[i, &#39;EPW_city_or_subcountry&#39;] = j.replace(&#39; &#39;, &#39;-&#39;).capitalize()</span>
+        <span class="c1">#                 except KeyError:</span>
+        <span class="c1">#                     pass</span>
+        <span class="c1">#     except GeocoderUnavailable:</span>
+        <span class="c1">#         pass</span>
+
+
+
+            <span class="c1">#todo for the unknowns, propose the city, city_district or municipality fields</span>
+
+
+
+
+
+
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_mod_filtered&#39;</span><span class="p">])):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">float</span><span class="p">:</span>
+                    <span class="n">osm_address</span> <span class="o">=</span> <span class="n">give_address</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_latitude&#39;</span><span class="p">],</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_longitude&#39;</span><span class="p">])</span>
+                    <span class="c1"># location = geolocator.reverse(epw_df.loc[i, &#39;EPW_latitude&#39;] + &quot;,&quot; + epw_df.loc[i, &#39;EPW_longitude&#39;])</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;city&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                        <span class="c1"># epw_df.loc[i, &#39;EPW_city_or_subcountry&#39;] = str(location.raw[&#39;address&#39;].get(&#39;city&#39;).replace(&#39; &#39;, &#39;-&#39;)).capitalize()</span>
+                    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;city&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                        <span class="c1"># epw_df.loc[i, &#39;EPW_city_or_subcountry&#39;] = str(location.raw[&#39;address&#39;].get(&#39;city&#39;)).capitalize()</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country&#39;</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">float</span><span class="p">:</span>
+                    <span class="n">osm_address</span> <span class="o">=</span> <span class="n">give_address</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_latitude&#39;</span><span class="p">],</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_longitude&#39;</span><span class="p">])</span>
+                    <span class="c1"># location = geolocator.reverse(epw_df.loc[i, &#39;EPW_latitude&#39;] + &quot;,&quot; + epw_df.loc[i, &#39;EPW_longitude&#39;])</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;country&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                        <span class="c1"># epw_df.loc[i, &#39;EPW_country&#39;] = location.raw[&#39;address&#39;].get(&#39;country&#39;).replace(&#39; &#39;, &#39;-&#39;).capitalize()</span>
+                    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_country&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">osm_address</span><span class="o">.</span><span class="n">address</span><span class="p">[</span><span class="s1">&#39;country&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+                        <span class="c1"># epw_df.loc[i, &#39;EPW_country&#39;] = location.raw[&#39;address&#39;].get(&#39;country&#39;).capitalize()</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;EPW_country&#39;</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">,</span> <span class="s1">&#39;EPW_scenario_year&#39;</span><span class="p">]:</span>
+            <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">)):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;UNKNOWN&#39;</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="k">continue</span>
+        <span class="c1"># todo workflow here</span>
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_new_names&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">epw_df</span><span class="p">[[</span><span class="s1">&#39;EPW_country&#39;</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">,</span> <span class="s1">&#39;EPW_scenario_year&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+        <span class="n">time_taken</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">time_per_epw</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">time_taken</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The geolocation process has taken: </span><span class="si">{</span><span class="n">time_taken</span><span class="si">}</span><span class="s1"> seconds (</span><span class="si">{</span><span class="n">time_per_epw</span><span class="si">}</span><span class="s1"> s/EPW)&#39;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">The previous and new names of the EPW files and their unique IDs are:&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">)):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;ID: </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1"> / </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_names&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1"> / </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_new_names&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="c1"># print(*list(epw_df[&#39;EPW_names&#39;]), sep=&#39;\n&#39;)</span>
+        <span class="c1"># print(&#39;And the new names of the EPW files are going to be:&#39;)</span>
+        <span class="c1"># print(*list(epw_df[&#39;EPW_new_names&#39;]), sep=&#39;\n&#39;)</span>
+
+        <span class="c1"># Checking there are no duplicates</span>
+        <span class="n">unique_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">duplicated_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">duplicated_id_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">unknown_id_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_new_names&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">unique_list</span><span class="p">:</span>
+                <span class="n">unique_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_new_names&#39;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">duplicated_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_new_names&#39;</span><span class="p">])</span>
+                <span class="n">unique_list</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_new_names&#39;</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_new_names&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">duplicated_list</span><span class="p">:</span>
+                <span class="n">duplicated_id_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">duplicated_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">duplicated_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">duplicated_list</span><span class="p">))</span>
+            <span class="n">duplicated_id_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">duplicated_id_list</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Duplicates have been found in the renamed EPW files, &#39;</span>
+                  <span class="s1">&#39;therefore these need to be amended in the next stage:&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">duplicated_list</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="s1">&#39;UNKNOWN&#39;</span> <span class="ow">in</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_city_or_subcountry&#39;</span><span class="p">]:</span>
+                <span class="n">unknown_id_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">unknown_id_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&quot;UNKNOWN&quot; city or subcountry have been found in the renamed EPW files, &#39;</span>
+                  <span class="s1">&#39;therefore these need to be amended in the next stage.&#39;</span><span class="p">)</span>
+
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">amendments_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span>
+            <span class="ow">in</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">If any of the city or subcountry names needs some amendment &#39;</span>
+                     <span class="s1">&#39;(if you are not happy with any of the available options, &#39;</span>
+                     <span class="s1">&#39;you can exclude it from renaming at the next stage), &#39;</span>
+                     <span class="s1">&#39;please enter the EPW IDs separated by space; otherwise, hit enter to omit:&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">amendments_list</span> <span class="k">if</span> <span class="n">amendments_list</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">])))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">amendments_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+                <span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span>
+                <span class="ow">in</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Some of the EPW IDs you just entered are duplicated. &#39;</span>
+                         <span class="s1">&#39;Please enter again the epw IDs separated by space:&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">duplicated_id_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">amendments_list</span><span class="p">:</span>
+                <span class="n">amendments_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">unknown_id_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">amendments_list</span><span class="p">:</span>
+                <span class="n">amendments_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+        <span class="n">amendments_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">amendments_list</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">amendments_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;amended_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;temp&#39;</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">amendments_list</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Regarding the file ID: </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1"> / old name: </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_names&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1"> / new name: </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_new_names&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">, the address obtained from coordinates is: &#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;location_address&quot;</span><span class="p">])</span>
+                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;amended_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Please enter the amended city or subcountry, which must be unique: &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span>
+                <span class="n">temp_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_country&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;amended_city_or_subcountry&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_scenario_year&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_new_names&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_name</span>
+                <span class="k">while</span> <span class="nb">list</span><span class="p">(</span><span class="n">epw_df</span><span class="p">[</span><span class="s1">&#39;EPW_new_names&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">temp_name</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;EPW_new_names&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> already exists in the EPW file list, therefore you need to select a different city or subcountry name.&quot;</span><span class="p">)</span>
+                    <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;amended_city_or_subcountry&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Please enter again the amended city or subcountry, which must be unique: &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span>
+                    <span class="n">temp_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_country&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;amended_city_or_subcountry&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_scenario_year&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span>
+                    <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_new_names&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_name</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">The previous and new names of the EPW files after city or subcountry name amendments and their unique IDs are:&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">amendments_list</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;ID: </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1"> / </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_names&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1"> / </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_new_names&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">The final list of previous and new names of the EPW files and their unique IDs is:&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">)):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;ID: </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1"> / </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_names&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1"> / </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_new_names&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">exclusion_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
+            <span class="k">for</span> <span class="nb">id</span>
+            <span class="ow">in</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">If you want to exclude some EPWs from renaming, &#39;</span>
+                     <span class="s1">&#39;please enter the IDs separated by space, &#39;</span>
+                     <span class="s1">&#39;otherwise, hit enter to continue:&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">confirm_renaming</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">proceed</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Do you want to copy and rename the file or files? [y/n]:&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">&#39;y&#39;</span> <span class="ow">in</span> <span class="n">proceed</span><span class="p">:</span>
+                <span class="n">confirm_renaming</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="s1">&#39;n&#39;</span> <span class="ow">in</span> <span class="n">proceed</span><span class="p">:</span>
+                <span class="n">confirm_renaming</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">checkpoint</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">confirm_renaming</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">epw_df</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">exclusion_list</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_abs_path&#39;</span><span class="p">],</span> <span class="n">path</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;EPW_new_names&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.epw&#39;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The file </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_names&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1"> has been renamed to </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_new_names&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="n">shutil</span><span class="o">.</span><span class="n">SameFileError</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The old and new names of file </span><span class="si">{</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;EPW_names&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1"> are the same.&#39;</span><span class="p">)</span>
+                        <span class="n">epw_files_to_rename</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">epw_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;EPW_names&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.epw&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">confirm_deletion</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">proceed</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Do you want to delete the original EPW file or files? [y/n]:&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">&#39;y&#39;</span> <span class="ow">in</span> <span class="n">proceed</span><span class="p">:</span>
+                <span class="n">confirm_deletion</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="s1">&#39;n&#39;</span> <span class="ow">in</span> <span class="n">proceed</span><span class="p">:</span>
+                <span class="n">confirm_deletion</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="n">confirm_deletion</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">epw_files_to_rename</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The file </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1"> has been deleted.&#39;</span><span class="p">)</span></div>
+
+        <span class="c1"># todo pop up when process ends; by default True</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

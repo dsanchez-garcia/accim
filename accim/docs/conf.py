@@ -43,5 +43,6 @@ html_static_path = [
     # 'docs/previous_versions_pdfs',
     # 'accim/docs/previous_versions_pdfs',
     # 'pdf'
+    r'C:\Python\accim\accim\docs\previous_versions_pdfs',
     '_assets',
 ]
