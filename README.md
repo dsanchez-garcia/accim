@@ -169,7 +169,7 @@ Then, you just need to copy the folder to a different path (i.e. Desktop), open 
 
 # 3. Documentation
 
-Detailed documentation, including the explanation of the different arguments, is at: https://accim.readthedocs.io/en/master/
+Detailed documentation, including the explanation of the different arguments, is at: https://accim.readthedocs.io/en/latest/
 
 # 4. Credits
 

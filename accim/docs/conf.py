@@ -16,6 +16,7 @@ project = 'accim'
 copyright = '2023, Daniel Sánchez-García'
 author = 'Daniel Sánchez-García'
 version = accim.__version__
+release = accim.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
