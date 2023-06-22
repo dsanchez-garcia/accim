@@ -120,7 +120,7 @@ python knows how do you want to set up the output IDFs:
 
    Now, you are going to be asked to enter some information for different arguments to generate the output IDFs with adaptive setpoint temperatures.
    If you are not sure about how to use these parameters, please take a look at the documentation in the following link:
-   https://accim.readthedocs.io/en/latest/how%20to%20use.html
+   https://accim.readthedocs.io/en/latest/4_detailed%20use.html
 
    Please, enter the following information:
 
@@ -894,7 +894,7 @@ the ScriptType, the Outputs and the EnergyPlus version:
 
    Now, you are going to be asked to enter some information for different arguments to generate the output IDFs with adaptive setpoint temperatures.
    If you are not sure about how to use these parameters, please take a look at the documentation in the following link:
-   https://accim.readthedocs.io/en/latest/how%20to%20use.html
+   https://accim.readthedocs.io/en/latest/4_detailed%20use.html
 
    Please, enter the following information:
 

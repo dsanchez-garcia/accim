@@ -1,5 +1,5 @@
 
-![ACCIM Logo with header](https://github.com/dsanchez-garcia/accim/blob/master/docs/images/accim_logo_white_w-header_640x320.png?raw=true) ![CIBSE_BSAwards](https://github.com/dsanchez-garcia/accim/blob/master/docs/images/CIBSE%20BSG%20WINNER%202022%20(610x150px).png?raw=true)
+![ACCIM Logo with header](https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/images/accim_logo_white_w-header_640x320.png?raw=true) ![CIBSE_BSAwards](https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/images/CIBSE%20BSG%20WINNER%202022%20(610x150px).png?raw=true)
 
 ![PyPI](https://img.shields.io/pypi/v/accim)	![PyPI - Python Version](https://img.shields.io/pypi/pyversions/accim)	![GitHub](https://img.shields.io/github/license/dsanchez-garcia/accim)	![Read the Docs](https://img.shields.io/readthedocs/accim?color=cyan)
 
@@ -13,7 +13,7 @@ In terms of code, this is a python package that transforms fixed setpoint temper
 
 The figure below clearly explains the aim of adaptive setpoint temperatures: introducing hourly temperature values into the adaptive comfort zone. On the left column, you can see the simulation results of a naturally ventilated building, while on the right column, the same building in mixed-mode operation with adaptive setpoint temperatures.
 
-![Use of adaptive setpoint](https://raw.githubusercontent.com/dsanchez-garcia/accim/master/docs/images/NV_vs_MM.png)
+![Use of adaptive setpoint](https://raw.githubusercontent.com/dsanchez-garcia/accim/master/accim/docs/images/NV_vs_MM.png)
 
 # 1. Citation
 
