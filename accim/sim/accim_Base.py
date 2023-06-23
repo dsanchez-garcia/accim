@@ -1,13 +1,21 @@
 """Add EnergyPlus objects in common to both ExistingHVAC and VRFsystem."""
 
 
-def setComfFieldsPeople(self, EnergyPlus_version: str = None, TempCtrl: str = None, verboseMode: bool = True):
+def setComfFieldsPeople(
+        self,
+        EnergyPlus_version: str = None,
+        TempCtrl: str = None,
+        verboseMode: bool = True
+):
     """
     Amend PEOPLE objects so that accim can work.
-
     Copy existing PEOPLE objects and adds AdaptiveASH55 and AdaptiveCEN15251
     to Thermal Comfort Model types 1 and 2 fields of the existing People
     objects.
+
+    :param EnergyPlus_version:
+    :param TempCtrl:
+    :param verboseMode:
     """
     ppl = ([people for people in self.idf1.idfobjects['PEOPLE']])
     for i in range(len(ppl)):

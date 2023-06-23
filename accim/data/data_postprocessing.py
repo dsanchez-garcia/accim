@@ -16,11 +16,14 @@ def genCSVconcatenated(
     resulting from simulation runs.
     Useful in cases there are many CSVs, which could cause memory errors.
 
-    :param list datasets: List of strings containing the names of the CSV files to be concatenated. If omitted, all CSV files are concatenated.
+    :param list datasets: List of strings containing the names of the
+        CSV files to be concatenated. If omitted, all CSV files are concatenated.
     :type datasets: list
-    :param source_frequency: Used to inform accim about the frequency of the input CSVs. Strings can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
+    :param source_frequency: Used to inform accim about the frequency of the input CSVs.
+        Strings can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
     :type source_frequency: str
-    :param frequency: Rows will be aggregated based on this frequency. Strings can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
+    :param frequency: Rows will be aggregated based on this frequency.
+        Strings can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
     :type frequency: str
     :param datasets_per_chunk: The number of CSV files for chuck to be concatenated.
     :type datasets_per_chunk: int
@@ -28,7 +31,6 @@ def genCSVconcatenated(
     :type concatenated_csv_name: str
     :param drop_nan: True to drop nan values.
     :type drop_nan: bool
-    :return:
     """
     import pandas as pd
     from accim.data.data_postprocessing import Table

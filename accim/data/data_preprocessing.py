@@ -1,10 +1,24 @@
-
+"""
+Submodule to perform data processing before simulation run.
+"""
 class give_address_ssl:
+    """
+    Search address from coordinates using nominatim.openstreetmap.org.
+    Version 1 to avoid ssl error.
+
+    :param latitude: The latitude from the EPW file.
+    :type latitude: float
+    :param longitude: The longitude from the EPW file.
+    :type longitude: float
+    """
     def __init__(
             self,
-            latitude,
-            longitude
+            latitude: float,
+            longitude: float,
     ):
+        """
+        Constructor method.
+        """
         import requests
         import ssl
         import certifi
@@ -26,10 +40,19 @@ class give_address_ssl:
         self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
 
 class give_address_openssl:
+    """
+    Search address from coordinates using nominatim.openstreetmap.org.
+    Version 2 to avoid ssl error.
+
+    :param latitude: The latitude from the EPW file.
+    :type latitude: float
+    :param longitude: The longitude from the EPW file.
+    :type longitude: float
+    """
     def __init__(
             self,
-            latitude,
-            longitude
+            latitude: float,
+            longitude: float,
     ):
         import requests
         import certifi
@@ -61,13 +84,20 @@ class give_address_openssl:
         self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
 
 
-
-
 class give_address:
+    """
+    Search address from coordinates using nominatim.openstreetmap.org.
+    Version 3 to avoid ssl error.
+
+    :param latitude: The latitude from the EPW file.
+    :type latitude: float
+    :param longitude: The longitude from the EPW file.
+    :type longitude: float
+    """
     def __init__(
             self,
-            latitude,
-            longitude
+            latitude: float,
+            longitude: float,
     ):
         import requests
 
@@ -83,6 +113,26 @@ class give_address:
 
 
 class rename_epw_files:
+    """
+    Renames the EPW files following the name convention 'Country_City_RCPscenario-Year'.
+    The Country and City fields are computed based on the coordinates of the EPW,
+    and the RCPscenario and Year are taken from the original name.
+    If no reference is found, the sample_EPWs are considered to be  for Present scenario.
+
+    :param filelist: A list of the EPW files.
+        If omitted, it will rename all sample_EPWs in that folder.
+    :type filelist: list
+    :param rename_dict: A dict to set the city field for each EPW file.
+        It must follow the pattern
+        {'city name to be search in epw file name': 'city name for the epw file if found`}
+    :type rename_dict: dict
+    :param confirm_renaming: True or False,
+        to skip renaming confirmation on prompt command or console
+    :type confirm_renaming: bool
+    :param confirm_deletion: True or False,
+        to skip deletion confirmation on prompt command or console
+    :type confirm_deletion: bool
+    """
     def __init__(
             self,
             filelist=None,
@@ -91,13 +141,7 @@ class rename_epw_files:
             confirm_deletion=None,
     ):
         """
-        Renames the EPW files following the name convention 'Country_City_RCPscenario-Year'.
-        The Country and City fields are computed based on the coordinates of the EPW,
-        and the RCPscenario and Year are taken from the original name.
-        If no reference is found, the sample_EPWs are considered to be  for Present scenario.
-        :param filelist: A list of the EPW files. If omitted, it will rename all sample_EPWs in that folder.
-        :param confirm_renaming: True or False, #to skip renaming confirmation on prompt command or console
-        :param confirm_deletion: True or False #to skip deletion confirmation on prompt command or console
+        Constructor method.
         """
         import glob
         import pandas as pd

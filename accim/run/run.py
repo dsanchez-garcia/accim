@@ -30,15 +30,27 @@ def make_eplaunch_options(idf, epw):
     return options
 
 
-def runEp(runOnlyAccim=None, confirmRun=None, num_CPUs: int = 2, EnergyPlus_version: str = None):
+def runEp(
+        runOnlyAccim: bool=None,
+        confirmRun: bool=None,
+        num_CPUs: int = 2,
+        EnergyPlus_version: str = None
+):
     """
     Run simulations in the latest EnergyPlus version installed in the computer.
 
-    :param runOnlyAccim: Default is None. Enter True to run only ACCIM output IDFs, or False to run all IDFs.
-    :param confirmRun: Default is None. Enter True to run all simulations regardless the no. of them,
-    or False to shut down all runs.
+    :param runOnlyAccim: Default is None.
+        Enter True to run only ACCIM output IDFs, or False to run all IDFs.
+    :type runOnlyAccim: bool
+    :param confirmRun: Default is None.
+        Enter True to run all simulations regardless the no. of them,
+        or False to shut down all runs.
+    :type confirmRun: bool
     :param num_CPUs: An integer. The number of CPUs to be used.
-    :param EnergyPlus_version: A string. It should be the EnergyPlus version of the IDFs, from '9.0' to '23.1'.
+    :type num_CPUs: int
+    :param EnergyPlus_version: A string.
+        It should be the EnergyPlus version of the IDFs, from '9.0' to '23.1'.
+    :type EnergyPlus_version: str
     """
 
     fullEPversionsList = [
