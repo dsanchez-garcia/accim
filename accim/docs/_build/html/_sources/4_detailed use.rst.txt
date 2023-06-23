@@ -120,7 +120,7 @@ python knows how do you want to set up the output IDFs:
 
    Now, you are going to be asked to enter some information for different arguments to generate the output IDFs with adaptive setpoint temperatures.
    If you are not sure about how to use these parameters, please take a look at the documentation in the following link:
-   https://accim.readthedocs.io/en/latest/4_detailed%20use.html
+   https://accim.readthedocs.io/en/master/4_detailed%20use.html
 
    Please, enter the following information:
 
@@ -250,10 +250,7 @@ explained below:
 -  ComfStand: refers to the thermal comfort standard or model to be
    applied. Enter any number from 0 to 21 to select the comfort standard
    or model to be used; you can see which model is each number in the
-   table below. Readthedocs doesn’t render it properly, so please take a
-   look at the `Github
-   repository <https://github.com/dsanchez-garcia/accim/blob/master/docs/how%20to%20use.md>`__.
-   For example, if you enter ‘0 1 2 3’, you’ll get IDFs for CTE,
+   table below. For example, if you enter ‘0 1 2 3’, you’ll get IDFs for CTE,
    EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for
    Japanese dwellings. If you don’t enter any number, it’ll ask you to
    enter the numbers again.
@@ -894,7 +891,7 @@ the ScriptType, the Outputs and the EnergyPlus version:
 
    Now, you are going to be asked to enter some information for different arguments to generate the output IDFs with adaptive setpoint temperatures.
    If you are not sure about how to use these parameters, please take a look at the documentation in the following link:
-   https://accim.readthedocs.io/en/latest/4_detailed%20use.html
+   https://accim.readthedocs.io/en/master/4_detailed%20use.html
 
    Please, enter the following information:
 

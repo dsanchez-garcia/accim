@@ -41,7 +41,7 @@ First of all, you need to install the package:
 
 ### 2.2.1 Transforming PMV-based into adaptive setpoint temperatures
 
-This is a very brief explanation of the usage. Therefore, if you don't get the results you expected or get some error, I would recommend reading the 'Detailed use' section at the documentation in the link https://accim.readthedocs.io/en/latest/
+This is a very brief explanation of the usage. Therefore, if you don't get the results you expected or get some error, I would recommend reading the 'Detailed use' section at the documentation in the link https://accim.readthedocs.io/en/master/
 
 
 accim will take as input IDF files those located at the same path as the script. You only need to run the following code:
@@ -169,7 +169,7 @@ Then, you just need to copy the folder to a different path (i.e. Desktop), open 
 
 # 3. Documentation
 
-Detailed documentation, including the explanation of the different arguments, is at: https://accim.readthedocs.io/en/latest/
+Detailed documentation, including the explanation of the different arguments, is at: https://accim.readthedocs.io/en/master/
 
 # 4. Credits
 

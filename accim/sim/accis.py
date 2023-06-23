@@ -208,7 +208,7 @@ class addAccis:
             '\n--------------------------------------------------------'
             '\n\nThis tool allows to apply adaptive setpoint temperatures. '
             '\nFor further information, please read the documentation: '
-            '\nhttps://accim.readthedocs.io/en/latest/'
+            '\nhttps://accim.readthedocs.io/en/master/'
             '\nFor a visual understanding of the tool, please visit the following jupyter notebooks:'
             '\n-    Using addAccis() to apply adaptive setpoint temperatures'
             '\nhttps://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb'
@@ -232,7 +232,7 @@ class addAccis:
                 'to generate the output IDFs with adaptive setpoint temperatures. '
                 '\nIf you are not sure about how to use these parameters, please take a look at the documentation in the following link: '
                 #todo change url in all places
-                '\nhttps://accim.readthedocs.io/en/latest/4_detailed%20use.html'
+                '\nhttps://accim.readthedocs.io/en/master/4_detailed%20use.html'
                 '\n\nPlease, enter the following information:'
             )
             ScriptType = input("\nEnter the ScriptType (\n"

@@ -39,7 +39,7 @@
             accim
           </a>
               <div class="version">
-                0.6.12
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -212,14 +212,14 @@ enter now is:</p>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 
 --------------------------------------------------------
-Adaptive-Comfort-Control-Implemented Model (ACCIM)
+Adaptive-Comfort-Control-Implemented Model (ACCIM) v0.7.0
 --------------------------------------------------------
 
 This tool allows to apply adaptive setpoint temperatures.
@@ -233,6 +233,8 @@ https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_
 -    Using runEp() to directly run simulations with EnergyPlus
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
 -    Using the class Table() for data analysis
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
+-    Full example
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
 
 Starting with the process.
@@ -530,9 +532,9 @@ Added - ACST_Sch_BLOCK1_ZONE1 Reporting FrequencyHourly Output:Variable data
 Added - VRF Heat Pump Cooling Electricity Energy Reporting FrequencyHourly Output:Variable data
 Added - VRF Heat Pump Heating Electricity Energy Reporting FrequencyHourly Output:Variable data
 Added - BLOCK1_ZONE2 VRF Indoor Unit DX Cooling Coil Reporting FrequencyHourly Output:Variable data
-Added - BLOCK1_ZONE2 VRF Indoor Unit DX Heating Coil Reporting FrequencyHourly Output:Variable data
+Added - BLOCK1_ZONE2 VRF Indoor Unit DX Heating Coil Reporting Frequency Hourly Output:Variable data
 Added - BLOCK1_ZONE1 VRF Indoor Unit DX Cooling Coil Reporting FrequencyHourly Output:Variable data
-Added - BLOCK1_ZONE1 VRF Indoor Unit DX Heating Coil Reporting FrequencyHourly Output:Variable data
+Added - BLOCK1_ZONE1 VRF Indoor Unit DX Heating Coil Reporting Frequency Hourly Output:Variable data
 Added - Comfort Temperature Reporting FrequencyMonthly Output:Variable data
 Added - Adaptive Cooling Setpoint Temperature Reporting FrequencyMonthly Output:Variable data
 Added - Adaptive Heating Setpoint Temperature Reporting FrequencyMonthly Output:Variable data
@@ -583,9 +585,9 @@ Added - ACST_Sch_BLOCK1_ZONE1 Reporting FrequencyMonthly Output:Variable data
 Added - VRF Heat Pump Cooling Electricity Energy Reporting FrequencyMonthly Output:Variable data
 Added - VRF Heat Pump Heating Electricity Energy Reporting FrequencyMonthly Output:Variable data
 Added - BLOCK1_ZONE2 VRF Indoor Unit DX Cooling Coil Reporting FrequencyMonthly Output:Variable data
-Added - BLOCK1_ZONE2 VRF Indoor Unit DX Heating Coil Reporting FrequencyMonthly Output:Variable data
+Added - BLOCK1_ZONE2 VRF Indoor Unit DX Heating Coil Reporting Frequency Monthly Output:Variable data
 Added - BLOCK1_ZONE1 VRF Indoor Unit DX Cooling Coil Reporting FrequencyMonthly Output:Variable data
-Added - BLOCK1_ZONE1 VRF Indoor Unit DX Heating Coil Reporting FrequencyMonthly Output:Variable data
+Added - BLOCK1_ZONE1 VRF Indoor Unit DX Heating Coil Reporting Frequency Monthly Output:Variable data
 IDF has been saved
 Ending with file:
 TestModel
@@ -619,6 +621,15 @@ TestModel[CS_JPN Rijal[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.i
 
 =======================END OF OUTPUT IDF FILES GENERATION PROCESS=======================
 
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;accim.sim.accis.addAccis at 0x1cd24687400&gt;
 </pre></div></div>
 </div>
 <p>So, now let’s see the list of output IDFs we have generated</p>
@@ -745,11 +756,11 @@ city or subcountry, which must be unique: <strong>Sapporo</strong></p>
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:136: FutureWarning: The default value of regex will change from True to False in a future version.
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:137: FutureWarning: The default value of regex will change from True to False in a future version.
   epw_df[&#39;EPW_names&#39;] = epw_df[&#39;EPW_file_names&#39;].str.replace(&#39;.epw&#39;, &#39;&#39;)
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:138: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:139: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
   epw_df[&#39;EPW_mod&#39;] = epw_df[&#39;EPW_names&#39;].str.replace(&#39;-&#39;, &#39;_&#39;).str.replace(&#39;.&#39;, &#39;_&#39;).str.split(&#39;_&#39;)
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:140: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:141: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
   epw_df[&#39;EPW_mod_filtered&#39;] = epw_df[&#39;EPW_names&#39;].str.replace(&#39;-&#39;, &#39;_&#39;).str.replace(&#39;.&#39;, &#39;_&#39;).str.split(&#39;_&#39;)
 </pre></div></div>
 </div>
@@ -761,7 +772,7 @@ C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\da
 Since no match has been found between RCP scenario Year and EPW file name, Present year has been assigned to the following EPW files:
 Current_Naha_JA-hour.epw
 Current_Sapporo_JA-hour.epw
-The geolocation process has taken: 1.81 seconds (0.45 s/EPW)
+The geolocation process has taken: 1.79 seconds (0.45 s/EPW)
 
 The previous and new names of the EPW files and their unique IDs are:
 ID: 0 / Current_Naha_JA-hour / Japan_UNKNOWN_Present
@@ -811,8 +822,6 @@ The file Current_Naha_JA-hour has been renamed to Japan_Naha_Present
 The file Current_Sapporo_JA-hour has been renamed to Japan_Sapporo_Present
 The file rcp85_2100_Naha_JA-hour has been renamed to Japan_Naha_RCP85-2100
 The file rcp85_2100_Sapporo_JA-hour has been renamed to Japan_Sapporo_RCP85-2100
-
-Do you want to delete the original EPW file or files? [y/n]:n
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -821,7 +830,7 @@ Do you want to delete the original EPW file or files? [y/n]:n
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;accim.data.data_preprocessing.rename_epw_files at 0x1d4cc7c6cd0&gt;
+&lt;accim.data.data_preprocessing.rename_epw_files at 0x1cd24687a90&gt;
 </pre></div></div>
 </div>
 <p>Now, let’s see what EPWs we do have:</p>
@@ -1075,62 +1084,48 @@ Input data frequency in file TestModel[CS_JPN Rijal[CA_80[CM_3[HM_2[VC_0[VO_0.0[
 Input data frequency in file TestModel[CS_JPN Rijal[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[Japan_Sapporo_RCP85-2100.csv is hourly, therefore no aggregation will be performed.
 Please bear in mind if you are using CSVs with multiple frequencies, you will get NaNs. The following rows have NaN values:
             Date/Time  \
-8078  12/03  15:00:00
-2308  04/07  05:00:00
+5591  08/21  24:00:00
 
       Environment:Site Outdoor Air Drybulb Temperature [C](Hourly)  \
-8078                                               4.35
-2308                                              25.80
+5591                                          32.008333
 
       Environment:Site Outdoor Air Relative Humidity [%](Hourly)  \
-8078                                          85.500000
-2308                                          92.166667
+5591                                          70.583333
 
       Environment:Site Wind Speed [m/s](Hourly)  \
-8078                                   0.258333
-2308                                   2.883333
+5591                                      3.275
 
       EMS:Comfort Temperature [C](Hourly)  \
-8078                            18.822591
-2308                            25.408244
+5591                            27.926645
 
       EMS:Adaptive Cooling Setpoint Temperature [C](Hourly)  \
-8078                                               24.3
-2308                                               27.9
+5591                                            31.3266
 
       EMS:Adaptive Heating Setpoint Temperature [C](Hourly)  \
-8078                                               17.5
-2308                                               18.1
+5591                                            24.5267
 
       EMS:Adaptive Cooling Setpoint Temperature_No Tolerance [C](Hourly)  \
-8078                                               24.4
-2308                                               28.0
+5591                                          31.426645
 
       EMS:Adaptive Heating Setpoint Temperature_No Tolerance [C](Hourly)  \
-8078                                               17.4
-2308                                               18.0
+5591                                          24.426645
 
       EMS:Ventilation Setpoint Temperature [C](Hourly)  ...  \
-8078                                         20.900000  ...
-2308                                         25.408244  ...
+5591                                         27.926645  ...
 
       VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Cooling Electricity Energy [J](Hourly)  \
-8078                                           0.000000
-2308                                      252442.378302
+5591                                                0.0
 
       VRF OUTDOOR UNIT_BLOCK1:ZONE1:VRF Heat Pump Heating Electricity Energy [J](Hourly)  \
-8078                                                0.0
-2308                                                0.0
+5591                                                0.0
 
                                                  Source  Month/Day  Hour  \
-8078  TestModel[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0...             None
-2308  TestModel[CS_JPN Rijal[CA_80[CM_0[HM_2[VC_0[VO...             None
+5591  TestModel[CS_INT ASHRAE55[CA_80[CM_3[HM_1[VC_0...             None
 
       Month   Day  Minute  Second  count
-8078         None    None    None      1
-2308         None    None    None      1
+5591         None    None    None      1
 
-[2 rows x 60 columns]
+[1 rows x 60 columns]
 No zones have been excluded from level computations.
 </pre></div></div>
 </div>
@@ -1207,16 +1202,7 @@ Japan_Naha_Present
 Japan_Naha_RCP85-2100
 Japan_Sapporo_Present
 Japan_Sapporo_RCP85-2100
-Do you want to rename the rows? [y/n]: y
-Please enter the new name for Japan_Naha_Present: Naha Present
-Please enter the new name for Japan_Naha_RCP85-2100: Naha RCP8.5 2100
-Please enter the new name for Japan_Sapporo_Present: Sapporo Present
-Please enter the new name for Japan_Sapporo_RCP85-2100: Sapporo RCP8.5 2100
-The renamed rows are going to be:
-Naha Present
-Naha RCP8.5 2100
-Sapporo Present
-Sapporo RCP8.5 2100
+Do you want to rename the rows? [y/n]: n
 The number of columns and the list of these is going to be:
 No. of columns = 2
 List of columns:
@@ -1321,16 +1307,7 @@ Japan_Naha_Present
 Japan_Naha_RCP85-2100
 Japan_Sapporo_Present
 Japan_Sapporo_RCP85-2100
-Do you want to rename the rows? [y/n]: y
-Please enter the new name for Japan_Naha_Present: Naha Present
-Please enter the new name for Japan_Naha_RCP85-2100: Naha RCP8.5 2100
-Please enter the new name for Japan_Sapporo_Present: Sapporo Present
-Please enter the new name for Japan_Sapporo_RCP85-2100: Sapporo RCP8.5 2100
-The renamed rows are going to be:
-Naha Present
-Naha RCP8.5 2100
-Sapporo Present
-Sapporo RCP8.5 2100
+Do you want to rename the rows? [y/n]: n
 The number of columns and the list of these is going to be:
 No. of columns = 3
 List of columns:
@@ -1338,13 +1315,13 @@ CS_JPN Rijal[CM_0[HM_2
 CS_INT ASHRAE55[CM_3[HM_2
 CS_JPN Rijal[CM_3[HM_2
 Column names will be the subplot titles. Do you want to rename them? [y/n]: y
-Please enter the new name for CS_JPN Rijal[CM_0[HM_2: JPN Static
-Please enter the new name for CS_INT ASHRAE55[CM_3[HM_2: ASHRAE Adaptive
-Please enter the new name for CS_JPN Rijal[CM_3[HM_2: JPN Adaptive
+Please enter the new name for CS_JPN Rijal[CM_0[HM_2: JPN Stat MM
+Please enter the new name for CS_INT ASHRAE55[CM_3[HM_2: ASHRAE55 Adap MM
+Please enter the new name for CS_JPN Rijal[CM_3[HM_2: JPN Adap MM
 The renamed columns are going to be:
-JPN Static
-ASHRAE Adaptive
-JPN Adaptive
+JPN Stat MM
+ASHRAE55 Adap MM
+JPN Adap MM
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -1473,29 +1450,29 @@ No zones have been excluded from level computations.
       <th rowspan="2" valign="top">Naha</th>
       <th>Present</th>
       <th>Present</th>
-      <td>8706.92</td>
+      <td>8707.42</td>
       <td>6940.58</td>
-      <td>8733.33</td>
-      <td>8741.50</td>
+      <td>8733.42</td>
+      <td>8741.67</td>
       <td>8744.50</td>
-      <td>552.11</td>
+      <td>552.12</td>
       <td>0.0</td>
-      <td>265.82</td>
-      <td>356.79</td>
-      <td>183.66</td>
+      <td>265.85</td>
+      <td>356.80</td>
+      <td>183.67</td>
     </tr>
     <tr>
       <th>RCP85</th>
       <th>2100</th>
-      <td>8692.08</td>
+      <td>8692.67</td>
       <td>5111.58</td>
       <td>8714.08</td>
-      <td>8738.67</td>
-      <td>8704.50</td>
+      <td>8738.83</td>
+      <td>8704.67</td>
       <td>758.73</td>
       <td>0.0</td>
       <td>419.02</td>
-      <td>556.96</td>
+      <td>556.98</td>
       <td>336.46</td>
     </tr>
     <tr>
@@ -1506,24 +1483,24 @@ No zones have been excluded from level computations.
       <td>5632.58</td>
       <td>8533.33</td>
       <td>8471.67</td>
-      <td>8558.83</td>
+      <td>8559.58</td>
       <td>594.15</td>
       <td>0.0</td>
-      <td>292.37</td>
+      <td>292.39</td>
       <td>334.51</td>
-      <td>254.74</td>
+      <td>253.92</td>
     </tr>
     <tr>
       <th>RCP85</th>
       <th>2100</th>
-      <td>8362.17</td>
+      <td>8362.50</td>
       <td>6031.92</td>
       <td>8563.58</td>
-      <td>8458.92</td>
+      <td>8459.00</td>
       <td>8613.75</td>
       <td>585.09</td>
       <td>0.0</td>
-      <td>331.92</td>
+      <td>331.88</td>
       <td>425.29</td>
       <td>268.65</td>
     </tr>
@@ -1568,15 +1545,15 @@ No zones have been excluded from level computations.
   Building_Total_Comfortable Hours_No Applicability (h) (mean)  \
 0                          CS_INT ASHRAE55[CM_0[HM_2
 1                                                NaN
-2                                            8706.92
-3                                            8692.08
+2                                            8707.42
+3                                            8692.67
 4                                            8218.67
-5                                            8362.17
+5                                             8362.5
 
                   Unnamed: 4                 Unnamed: 5  \
 0  CS_INT ASHRAE55[CM_3[HM_1  CS_INT ASHRAE55[CM_3[HM_2
 1                        NaN                        NaN
-2                    6940.58                    8733.33
+2                    6940.58                    8733.42
 3                    5111.58                    8714.08
 4                    5632.58                    8533.33
 5                    6031.92                    8563.58
@@ -1584,15 +1561,15 @@ No zones have been excluded from level computations.
                Unnamed: 6              Unnamed: 7  \
 0  CS_JPN Rijal[CM_0[HM_2  CS_JPN Rijal[CM_3[HM_2
 1                     NaN                     NaN
-2                  8741.5                  8744.5
-3                 8738.67                  8704.5
-4                 8471.67                 8558.83
-5                 8458.92                 8613.75
+2                 8741.67                  8744.5
+3                 8738.83                 8704.67
+4                 8471.67                 8559.58
+5                    8459                 8613.75
 
   Building_Total_Total Energy Demand (kWh/m2) (summed)  \
 0                          CS_INT ASHRAE55[CM_0[HM_2
 1                                                NaN
-2                                             552.11
+2                                             552.12
 3                                             758.73
 4                                             594.15
 5                                             585.09
@@ -1600,17 +1577,17 @@ No zones have been excluded from level computations.
                   Unnamed: 9                Unnamed: 10  \
 0  CS_INT ASHRAE55[CM_3[HM_1  CS_INT ASHRAE55[CM_3[HM_2
 1                        NaN                        NaN
-2                          0                     265.82
+2                          0                     265.85
 3                          0                     419.02
-4                          0                     292.37
-5                          0                     331.92
+4                          0                     292.39
+5                          0                     331.88
 
               Unnamed: 11             Unnamed: 12
 0  CS_JPN Rijal[CM_0[HM_2  CS_JPN Rijal[CM_3[HM_2
 1                     NaN                     NaN
-2                  356.79                  183.66
-3                  556.96                  336.46
-4                  334.51                  254.74
+2                   356.8                  183.67
+3                  556.98                  336.46
+4                  334.51                  253.92
 5                  425.29                  268.65
 </pre></div></div>
 </div>

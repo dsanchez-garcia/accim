@@ -39,7 +39,7 @@
             accim
           </a>
               <div class="version">
-                0.6.12
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -119,12 +119,12 @@
 </ul>
 <p>We also have transformed the IDF file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220.idf, and the IDFs we currently have are:</p>
 <ul class="simple">
-<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
-<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
-<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
-<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
-<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
-<li><p>TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+<li><p>TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+<li><p>TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+<li><p>TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+<li><p>TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+<li><p>TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
+<li><p>TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X.idf</p></li>
 </ul>
 <p>Next, we simulate these files with runEp(), so the CSVs we get are:</p>
 <div class="nbinput docutils container">
@@ -132,7 +132,7 @@
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
-<span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220&#39;</span> <span class="ow">in</span> <span class="n">i</span><span class="p">],</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;TestModel&#39;</span> <span class="ow">in</span> <span class="n">i</span><span class="p">],</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -141,18 +141,18 @@
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
-TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
+TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv
+TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv
 </pre></div></div>
 </div>
 <p>So now, let’s use the class Table() to analyse the data.</p>
@@ -182,18 +182,18 @@ TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
 No zones have been excluded from level computations.
 All CSVs are for present scenario.
 </pre></div></div>
@@ -256,8 +256,8 @@ All CSVs are for present scenario.
   <tbody>
     <tr>
       <th>0</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[V...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_1</td>
       <td>CM_0</td>
@@ -280,8 +280,8 @@ All CSVs are for present scenario.
     </tr>
     <tr>
       <th>1</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[V...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_1</td>
       <td>CM_0</td>
@@ -304,8 +304,8 @@ All CSVs are for present scenario.
     </tr>
     <tr>
       <th>2</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[V...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_1</td>
       <td>CM_0</td>
@@ -328,8 +328,8 @@ All CSVs are for present scenario.
     </tr>
     <tr>
       <th>3</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[V...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_1</td>
       <td>CM_0</td>
@@ -352,8 +352,8 @@ All CSVs are for present scenario.
     </tr>
     <tr>
       <th>4</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[V...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_1</td>
       <td>CM_0</td>
@@ -400,8 +400,8 @@ All CSVs are for present scenario.
     </tr>
     <tr>
       <th>105115</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[V...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -424,8 +424,8 @@ All CSVs are for present scenario.
     </tr>
     <tr>
       <th>105116</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[V...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -448,8 +448,8 @@ All CSVs are for present scenario.
     </tr>
     <tr>
       <th>105117</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[V...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -472,8 +472,8 @@ All CSVs are for present scenario.
     </tr>
     <tr>
       <th>105118</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[V...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -496,8 +496,8 @@ All CSVs are for present scenario.
     </tr>
     <tr>
       <th>105119</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[V...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -616,18 +616,18 @@ All CSVs are for present scenario.
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
-Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv is hourly, therefore no aggregation will be performed.
+Input data frequency in file TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv is hourly, therefore no aggregation will be performed.
 </pre></div></div>
 </div>
 <p>We just generated a CSV, whose name begins with ‘notebook example’, specifies the input data and ends with ‘CSVconcatenated’. If there is some row with NaN, it will be generated another CSV reporting this, but ending with ‘Rows_with_NaNs’. We should be able to see it below:</p>
@@ -648,18 +648,18 @@ Input data frequency in file TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_
 <div class="highlight"><pre>
 [&#39;.ipynb_checkpoints&#39;,
  &#39;notebook_example[srcfreq-hourly[freq-hourly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
- &#39;TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2220[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv&#39;,
+ &#39;TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X[United-Kingdom_London_Present.csv&#39;,
  &#39;using_Table.ipynb&#39;,
  &#39;__init__.py&#39;]
 </pre></div></div>
@@ -941,7 +941,7 @@ Building_Total_PPD (%) (mean)
     <tr>
       <th>0</th>
       <td>01/01  01:00:00</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_1</td>
       <td>CM_0</td>
@@ -965,7 +965,7 @@ Building_Total_PPD (%) (mean)
     <tr>
       <th>1</th>
       <td>01/01  02:00:00</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_1</td>
       <td>CM_0</td>
@@ -989,7 +989,7 @@ Building_Total_PPD (%) (mean)
     <tr>
       <th>2</th>
       <td>01/01  03:00:00</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_1</td>
       <td>CM_0</td>
@@ -1013,7 +1013,7 @@ Building_Total_PPD (%) (mean)
     <tr>
       <th>3</th>
       <td>01/01  04:00:00</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_1</td>
       <td>CM_0</td>
@@ -1037,7 +1037,7 @@ Building_Total_PPD (%) (mean)
     <tr>
       <th>4</th>
       <td>01/01  05:00:00</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_1</td>
       <td>CM_0</td>
@@ -1085,7 +1085,7 @@ Building_Total_PPD (%) (mean)
     <tr>
       <th>105115</th>
       <td>12/31  20:00:00</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -1109,7 +1109,7 @@ Building_Total_PPD (%) (mean)
     <tr>
       <th>105116</th>
       <td>12/31  21:00:00</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -1133,7 +1133,7 @@ Building_Total_PPD (%) (mean)
     <tr>
       <th>105117</th>
       <td>12/31  22:00:00</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -1157,7 +1157,7 @@ Building_Total_PPD (%) (mean)
     <tr>
       <th>105118</th>
       <td>12/31  23:00:00</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -1181,7 +1181,7 @@ Building_Total_PPD (%) (mean)
     <tr>
       <th>105119</th>
       <td>12/31  24:00:00</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -2205,13 +2205,13 @@ All CSVs are for present scenario.
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1611: SettingWithCopyWarning:
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1622: SettingWithCopyWarning:
 A value is trying to be set on a copy of a slice from a DataFrame.
 Try using .loc[row_indexer,col_indexer] = value instead
 
 See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
   self.df[&#39;col_to_pivot&#39;] = &#39;temp&#39;
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1624: SettingWithCopyWarning:
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1635: SettingWithCopyWarning:
 A value is trying to be set on a copy of a slice from a DataFrame.
 Try using .loc[row_indexer,col_indexer] = value instead
 
@@ -2256,16 +2256,16 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
       <th>CM_3[CA_1</th>
       <th>CM_3[CA_2</th>
       <th>CM_3[CA_3</th>
+      <th>1-(CM_0[CA_1/CM_3[CA_2)</th>
+      <th>CM_3[CA_2 - CM_0[CA_1</th>
+      <th>1-(CM_0[CA_1/CM_0[CA_3)</th>
+      <th>CM_0[CA_3 - CM_0[CA_1</th>
       <th>1-(CM_0[CA_1/CM_3[CA_1)</th>
       <th>CM_3[CA_1 - CM_0[CA_1</th>
       <th>1-(CM_0[CA_1/CM_0[CA_2)</th>
       <th>CM_0[CA_2 - CM_0[CA_1</th>
       <th>1-(CM_0[CA_1/CM_3[CA_3)</th>
       <th>CM_3[CA_3 - CM_0[CA_1</th>
-      <th>1-(CM_0[CA_1/CM_3[CA_2)</th>
-      <th>CM_3[CA_2 - CM_0[CA_1</th>
-      <th>1-(CM_0[CA_1/CM_0[CA_3)</th>
-      <th>CM_0[CA_3 - CM_0[CA_1</th>
     </tr>
   </thead>
   <tbody>
@@ -2277,16 +2277,16 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
       <td>141.86</td>
       <td>68.41</td>
       <td>26.77</td>
+      <td>-1.26</td>
+      <td>-86.24</td>
+      <td>-1.33</td>
+      <td>-88.14</td>
       <td>-0.09</td>
       <td>-12.80</td>
       <td>-0.24</td>
       <td>-30.42</td>
       <td>-4.78</td>
       <td>-127.89</td>
-      <td>-1.26</td>
-      <td>-86.24</td>
-      <td>-1.33</td>
-      <td>-88.14</td>
     </tr>
     <tr>
       <th>Building_Total_Heating Energy Demand (kWh/m2) (summed)</th>
@@ -2296,16 +2296,16 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
       <td>413.73</td>
       <td>274.22</td>
       <td>149.52</td>
+      <td>-1.48</td>
+      <td>-405.85</td>
+      <td>-0.24</td>
+      <td>-132.84</td>
       <td>-0.64</td>
       <td>-266.33</td>
       <td>0.01</td>
       <td>8.92</td>
       <td>-3.55</td>
       <td>-530.55</td>
-      <td>-1.48</td>
-      <td>-405.85</td>
-      <td>-0.24</td>
-      <td>-132.84</td>
     </tr>
   </tbody>
 </table>
@@ -2378,7 +2378,7 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
   <tbody>
     <tr>
       <th>8</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_0</td>
@@ -2390,7 +2390,7 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
       <td>AT_0.1</td>
       <td>NS_X</td>
       <td>United-Kingdom_Aberdeen_Present</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[V...</td>
       <td>United-Kingdom</td>
       <td>Aberdeen</td>
       <td>Present</td>
@@ -2401,7 +2401,7 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
     </tr>
     <tr>
       <th>9</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_0</td>
@@ -2413,7 +2413,7 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
       <td>AT_0.1</td>
       <td>NS_X</td>
       <td>United-Kingdom_London_Present</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_0[V...</td>
       <td>United-Kingdom</td>
       <td>London</td>
       <td>Present</td>
@@ -2424,7 +2424,7 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
     </tr>
     <tr>
       <th>10</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -2436,7 +2436,7 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
       <td>AT_0.1</td>
       <td>NS_X</td>
       <td>United-Kingdom_Aberdeen_Present</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[V...</td>
       <td>United-Kingdom</td>
       <td>Aberdeen</td>
       <td>Present</td>
@@ -2447,7 +2447,7 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
     </tr>
     <tr>
       <th>11</th>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel</td>
       <td>CS_INT EN16798</td>
       <td>CA_3</td>
       <td>CM_3</td>
@@ -2459,7 +2459,7 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
       <td>AT_0.1</td>
       <td>NS_X</td>
       <td>United-Kingdom_London_Present</td>
-      <td>TestModel_onlyGeometryForVRFsystem_2zones_Calc...</td>
+      <td>TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[V...</td>
       <td>United-Kingdom</td>
       <td>London</td>
       <td>Present</td>
@@ -2598,13 +2598,13 @@ All CSVs are for present scenario.
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1611: SettingWithCopyWarning:
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1622: SettingWithCopyWarning:
 A value is trying to be set on a copy of a slice from a DataFrame.
 Try using .loc[row_indexer,col_indexer] = value instead
 
 See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
   self.df[&#39;col_to_pivot&#39;] = &#39;temp&#39;
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1624: SettingWithCopyWarning:
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_postprocessing.py:1635: SettingWithCopyWarning:
 A value is trying to be set on a copy of a slice from a DataFrame.
 Try using .loc[row_indexer,col_indexer] = value instead
 
@@ -2686,14 +2686,6 @@ See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stab
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">():</span>
     <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.xlsx&#39;</span><span class="p">):</span>
         <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>
 </pre></div>
 </div>
 </div>

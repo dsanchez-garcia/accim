@@ -1,3 +1,8 @@
+"""
+Classes and functions to perform data analytics after simulation runs.
+"""
+
+
 def genCSVconcatenated(
         datasets: list = None,
         source_frequency: str = None,
@@ -6,6 +11,25 @@ def genCSVconcatenated(
         concatenated_csv_name: str = None,
         drop_nan: bool = True,
 ):
+    """
+    Function to generate concatenated CSV files from a large number of CSV files
+    resulting from simulation runs.
+    Useful in cases there are many CSVs, which could cause memory errors.
+
+    :param list datasets: List of strings containing the names of the CSV files to be concatenated. If omitted, all CSV files are concatenated.
+    :type datasets: list
+    :param source_frequency: Used to inform accim about the frequency of the input CSVs. Strings can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
+    :type source_frequency: str
+    :param frequency: Rows will be aggregated based on this frequency. Strings can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
+    :type frequency: str
+    :param datasets_per_chunk: The number of CSV files for chuck to be concatenated.
+    :type datasets_per_chunk: int
+    :param concatenated_csv_name: A string used as the name for the concatenated csv file.
+    :type concatenated_csv_name: str
+    :param drop_nan: True to drop nan values.
+    :type drop_nan: bool
+    :return:
+    """
     import pandas as pd
     from accim.data.data_postprocessing import Table
     from time import time
@@ -80,12 +104,71 @@ def genCSVconcatenated(
     # todo pop up when process ends; by default True
 
 
-
-
 class Table:
+    """Generates a table or dataframe using the EnergyPlus simulation
+    results CSV files available in the current folder.
+
+    :param datasets: A list of strings. The strings are the names of the CSV files
+        that you want to work with, at the working directory.
+    :type datasets: list
+    :param source_concatenated_csv_filepath: A string used as the filepath to read the
+        previously concatenated csv file with the argument concatenated_csv_name.
+    :type source_concatenated_csv_filepath: str
+    :param source_frequency: Used to inform accim about the frequency
+        of the input CSVs. If there are multiple frequencies in a single CSV,
+        the columns for the frequencies different to the selected one will be discarded.
+        String can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
+    :type source_frequency: str
+    :param frequency: Rows will be aggregated based on this frequency.
+        String can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
+        For instance, if 'daily', hourly or timesteply rows will be aggregated in days.
+        String can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
+    :type frequency: str
+    :param frequency_agg_func: Aggregates the rows based on the defined
+        frequency by sum or mean. Can be 'sum' or 'mean'.
+    :type frequency_agg_func: str
+    :param standard_outputs: Used to consider only standard outputs from accim.
+        It can be True or False.
+    :type standard_outputs: bool
+    :param concatenated_csv_name: Used as the name for the concatenated csv file.
+    :type concatenated_csv_name: str
+    :param drop_nan: If True, drops the rows with NaNs before
+        exporting the CSV using concatenated_csv_name.
+    :type drop_nan: bool
+    :param level: A list of strings. Strings can be 'block' and/or 'building'.
+        Used to create columns with block or building values.
+    :type level: list
+    :param level_agg_func: A list of strings. Strings can be 'sum' and/or 'mean'.
+        Used to create the columns for levels preciously stated by summing and/or averaging.
+    :param level_agg_func: list
+    :param level_excluded_zones: A list of strings. Strings must be the zones excluded from level computations.
+        Used to try to match the cities in the EPW file name with actual cities.
+        To be used if sample_EPWs have not been previously renamed with rename_epw_files().
+    :type level_excluded_zones: list
+    :param split_epw_names: It splits the EPW name into Country_City_RCPscenario-Year format.
+        To be used if sample_EPWs do have been previously renamed with rename_epw_files().
+    :type split_epw_names: bool
+    :param normalised_energy_units: A bool, can be True or False.
+        Used to show Wh or Wh/m2 units.
+    :type normalised_energy_units: bool
+    :param rename_cols: A bool, can be True or False.
+        Used to keep the original name of EnergyPlus outputs or rename them for understanding
+        purposes.
+    :type rename_cols: bool
+    :param energy_units_in_kwh: A bool, can be True or False. If True, energy units will be in kWh or kWh/m2,
+        otherwise these will be in Wh or Wh/m2.
+    :type energy_units_in_kwh: bool
+    :param name_export_rows_with_NaN: This parameter shouldn't be generally used.
+        A string used as a name to export a xlsx file with the rows with NaNs.
+        Used only to check the rows with NANs.
+    :type name_export_rows_with_NaN: str
+    :param name_export_rows_not_corr_agg: This parameter shouldn't be generally used.
+        A string used as a name to export a xlsx file with the rows not correctly aggregated.
+        Used only to check the aggregations are correct.
+    :type name_export_rows_not_corr_agg: str
+    """
 
     def __init__(self,
-                 # path: str = None,
                  datasets: list = None,
                  source_concatenated_csv_filepath: str = None,
                  source_frequency: str = None,
@@ -104,48 +187,9 @@ class Table:
                  drop_nan: bool = False,
                  name_export_rows_with_NaN: str = None,
                  name_export_rows_not_corr_agg: str = None,
-                 ):
+    ):
         """
-        Generates a table or dataframe using the EnergyPlus simulation results CSV files
-        available in the current folder.
-        :param datasets: A list of strings.
-        The strings are the names of the CSV files that you want to work with, at the working directory.
-        :param source_concatenated_csv_filepath: A string used as the filepath to read the previously concatenated csv file with the argument concatenated_csv_name.
-        :param source_frequency: A string. Used to inform accim about the frequency of the input CSVs.
-        If there are multiple frequencies in a single CSV, the columns for the frequencies different to the selected one will be discarded.
-        String can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
-        :param frequency: A string. Rows will be aggregated based on this frequency.
-        For instance, if 'daily', hourly or timesteply rows will be aggregated in days.
-        String can be 'timestep', 'hourly', 'daily', 'monthly' or 'runperiod'.
-        :param frequency_agg_func: A string. Can be 'sum' or 'mean'.
-        Aggregates the rows based on the defined frequency by sum or mean.
-        :param standard_outputs: A bool, can be True or False.
-        Used to consider only standard outputs from accim.
-        :param concatenated_csv_name: A string used as the name for the concatenated csv file.
-        :param drop_nan: A boolean, True or False. If True, drops the rows with NaNs before exporting the CSV using concatenated_csv_name.
-        :param level: A list of strings. Strings can be 'block' and/or 'building'.
-        Used to create columns with block or building values.
-        :param level_agg_func: A list of strings. Strings can be 'sum' and/or 'mean'.
-        Used to create the columns for levels preciously stated by summing and/or averaging.
-        :param level_excluded_zones: A list of strings. Strings must be the zones excluded from level computations.
-        Used to try to match the cities in the EPW file name with actual cities.
-        To be used if sample_EPWs have not been previously renamed with rename_epw_files().
-        :param split_epw_names: A bool. It splits the EPW name into Country_City_RCPscenario-Year format.
-        To be used if sample_EPWs do have been previously renamed with rename_epw_files().
-        :param normalised_energy_units: A bool, can be True or False.
-        Used to show Wh or Wh/m2 units.
-        :param rename_cols: A bool, can be True or False.
-        Used to keep the original name of EnergyPlus outputs or rename them for understanding
-        purposes.
-        :param energy_units_in_kwh: A bool, can be True or False. If True, energy units will be in kWh or kWh/m2,
-        otherwise these will be in Wh or Wh/m2.
-        :param name_export_rows_with_NaN: This parameter shouldn't be generally used.
-        A string used as a name to export a xlsx file with the rows with NaNs.
-        Used only to check the rows with NANs.
-        :param name_export_rows_not_corr_agg: This parameter shouldn't be generally used.
-        A string used as a name to export a xlsx file with the rows not correctly aggregated.
-        Used only to check the aggregations are correct.
-
+        Constructor method
         """
         checkpoint = 0
 
@@ -1399,8 +1443,11 @@ class Table:
             vars_to_gather: list = None
             ):
         """
-        Used to inform the user of the variables suitable to be analysed and the available options from a certain gathered variables
+        Used to inform the user of the variables suitable to be analysed and the available
+        options from a certain gathered variables
+
         :param vars_to_gather: A list of variables.
+        :type vars_to_gather: list
         """
         temp_df = self.df.copy()
         temp_df['col_to_pivot'] = temp_df[vars_to_gather].agg('['.join, axis=1)
@@ -1413,9 +1460,6 @@ class Table:
         print(*vars_to_gather_values, sep='\n')
         del temp_df
 
-    def df(self):
-        return self.df
-
     def format_table(self,
                      type_of_table: str = 'all',
                      custom_cols: list = None,
@@ -1424,6 +1468,7 @@ class Table:
                      ):
         """
         Filter the columns.
+
         :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours'.
         :param custom_cols: A list of strings.
         The strings will be used as a filter, and the columns that match will be selected.
@@ -1539,8 +1584,13 @@ class Table:
     ):
         """
         Used to order the string values of a column in a custom order.
-        :param ordered_list: A list os strings. Used to order the string values of a column in a custom order.
-        :param column_to_order: A string. It should be the column whose string values should be ordered.
+
+        :param ordered_list: A list os strings.
+            Used to order the string values of a column in a custom order.
+        :type ordered_list: list
+        :param column_to_order: A string.
+            It should be the column whose string values should be ordered.
+        :type column_to_order: str
         """
         from pandas.api.types import CategoricalDtype
 
@@ -1580,17 +1630,29 @@ class Table:
             ):
         """
         Creates a table based on the arguments.
-        :param reshaping: A string. Can be 'pivot', 'unstack' or 'multiindex', to perform these actions.
+
+        :param reshaping: A string.
+            Can be 'pivot', 'unstack' or 'multiindex', to perform these actions.
+        :type reshaping: str
         :param vars_to_gather: A list of the variables to be transposed from rows to columns.
+        :type vars_to_gather: list
         :param baseline: The already transposed column you want to use as a baseline for comparisons.
-        If omitted, you will be asked which one to use.
+            If omitted, you will be asked which one to use.
+        :type baseline: str
         :param comparison_mode: A list of strings. Can be 'others compared to baseline' and/or 'baseline compared to others'. Used to customise the comparison of variables.
+        :type comparison_mode: list
         :param comparison_cols: A list of strings. 'absolute' to get the difference or 'relative' to get the percentage of reduction.
+        :type comparison_cols: list
         :param check_index_and_cols: A boolean. True to check index and cols, False to skip.
+        :type check_index_and_cols: bool
         :param vars_to_keep: A list of strings. To remove all variables from the multiindex except those to be kept.
+        :type vars_to_keep: list
         :param excel_filename: A string. If entered, the wrangled_df will be exported to excel with that string as name.
+        :type excel_filename: str
         :param transpose: True to transpose the dataframe
+        :type transpose: bool
         :param rename_dict: Renames all data in the dataframe based on the format {'old_string': 'new_string'}
+        :type rename_dict: dict
 
         """
         if vars_to_gather is None:
@@ -2014,13 +2076,16 @@ class Table:
 
                 print('No reshaping method has been applied, only multiindexing.')
 
-
-
-
     def enter_vars_to_gather(
             self,
             vars_to_gather=None
     ):
+        """
+        Function used by accim to gather variables to be combined in columns.
+
+        :param vars_to_gather: The list of strings containing the variables.
+        :type vars_to_gather: list
+        """
         if vars_to_gather is None:
             vars_to_gather = []
 
@@ -2061,6 +2126,7 @@ class Table:
             ):
         """
         Generates list of data to be plotted.
+
         :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
         :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
         :param detailed_cols: A list of strings. The list should be the specific data you want to show in subplots columns. Used to filter.
@@ -2072,14 +2138,13 @@ class Table:
         :param colorlist_baseline_plot_data: A list of strings. Should be the colors using the matplotlib color notation for the columns entered in data_on_y_axis_baseline_plot in the same order.
         :param data_on_x_axis: A string. The column name you want to plot in the x-axis.
         :param data_on_y_main_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot main y-axis. It needs to follow this structure:
-        [['name_on_y_main_axis', [list of column names you want to plot]]
+            [['name_on_y_main_axis', [list of column names you want to plot]]
         :param data_on_y_sec_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot secondary y-axis. It needs to follow this structure:
-        [['name_on_1st_y_sec_axis', [list of column names you want to plot], ['name_on_2nd_y_sec_axis', [list of column names you want to plot], etc]
+            [['name_on_1st_y_sec_axis', [list of column names you want to plot], ['name_on_2nd_y_sec_axis', [list of column names you want to plot], etc]
         :param colorlist_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the colors using the matplotlib notation.
         :param colorlist_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the colors using the matplotlib notation.
         :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
         :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
-        :return:
         """
         import matplotlib.pyplot as plt
         import matplotlib.lines as lines
@@ -2532,6 +2597,7 @@ class Table:
     ):
         """
         Used to plot a scatter plot.
+
         :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
         :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
         :param detailed_cols: A list of strings. The list should be the specific data you want to show in subplots columns. Used to filter.
@@ -2890,6 +2956,8 @@ class Table:
             best_fit_linestyle: any = (0, (5, 10)),
     ):
         """
+        Used to plot a scatter plot with baseline.
+
         :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
         :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
         :param detailed_cols: A list of strings. The list should be the specific data you want to show in subplots columns. Used to filter.
@@ -3460,6 +3528,7 @@ class Table:
     ):
         """
         Used to plot a timeplot.
+
         :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
         :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
         :param detailed_cols: A list of strings. The list should be the specific data you want to show in subplots columns. Used to filter.
@@ -3507,8 +3576,6 @@ class Table:
             rows_renaming_dict=rows_renaming_dict,
             cols_renaming_dict=cols_renaming_dict,
         )
-
-
 
         # print(f'The number of self.rows and the list of these is going to be:')
         # print(f'No. of self.rows = {len(self.rows)}')

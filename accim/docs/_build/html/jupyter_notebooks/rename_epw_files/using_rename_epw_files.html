@@ -39,7 +39,7 @@
             accim
           </a>
               <div class="version">
-                0.6.12
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -163,11 +163,11 @@
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:136: FutureWarning: The default value of regex will change from True to False in a future version.
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:137: FutureWarning: The default value of regex will change from True to False in a future version.
   epw_df[&#39;EPW_names&#39;] = epw_df[&#39;EPW_file_names&#39;].str.replace(&#39;.epw&#39;, &#39;&#39;)
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:138: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:139: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
   epw_df[&#39;EPW_mod&#39;] = epw_df[&#39;EPW_names&#39;].str.replace(&#39;-&#39;, &#39;_&#39;).str.replace(&#39;.&#39;, &#39;_&#39;).str.split(&#39;_&#39;)
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:140: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:141: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
   epw_df[&#39;EPW_mod_filtered&#39;] = epw_df[&#39;EPW_names&#39;].str.replace(&#39;-&#39;, &#39;_&#39;).str.replace(&#39;.&#39;, &#39;_&#39;).str.split(&#39;_&#39;)
 </pre></div></div>
 </div>
@@ -182,7 +182,7 @@ GBR_London.Gatwick.037760_IWEC.epw
 Since no match has been found between RCP scenario Year and EPW file name, Present year has been assigned to the following EPW files:
 GBR_Aberdeen.Dyce.030910_IWEC.epw
 GBR_London.Gatwick.037760_IWEC.epw
-The geolocation process has taken: 1.26 seconds (0.42 s/EPW)
+The geolocation process has taken: 1.36 seconds (0.45 s/EPW)
 
 The previous and new names of the EPW files and their unique IDs are:
 ID: 0 / GBR_Aberdeen.Dyce.030910_IWEC / United-Kingdom_Aberdeen_Present
@@ -191,7 +191,7 @@ ID: 2 / RCP26_2100_GC03_Ponta_Grossa / Brazil_Ponta_RCP26-2100
 
 &#34;UNKNOWN&#34; city or subcountry have been found in the renamed EPW files, therefore these need to be amended in the next stage.
 
-If any of the city or subcountry names needs some amendment (if you are not happy with any of the available options, you can exclude it from renaming at the next stage), please enter the EPW IDs separated by space; otherwise, hit enter to omit:1 2
+If any of the city or subcountry names needs some amendment (if you are not happy with any of the available options, you can exclude it from renaming at the next stage), please enter the EPW IDs separated by space; otherwise, hit enter to omit:2
 
 Regarding the file ID: 1 / old name: GBR_London.Gatwick.037760_IWEC / new name: United-Kingdom_UNKNOWN_Present, the address obtained from coordinates is:
 London Gatwick Airport, Old Brighton Road South, Lowfield Heath, Manor Royal, Crawley, West Sussex, GB-WSX, England, GB-ENG, RH11 0PT, United Kingdom
@@ -224,7 +224,7 @@ The file RCP26_2100_GC03_Ponta_Grossa has been renamed to Brazil_Ponta-Grossa_RC
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;accim.data.data_preprocessing.rename_epw_files at 0x1a3e60dafa0&gt;
+&lt;accim.data.data_preprocessing.rename_epw_files at 0x28b783abcd0&gt;
 </pre></div></div>
 </div>
 <p>You can see above that there was no reference to RCP scenarios in the original EPW file name in 2 of the instances, therefore these has been considered as Present scenario. The same applies to the Year field. Finally, states the previous and the new names of the EPWs. So, now, let’s see what files we do have in the folder.</p>
