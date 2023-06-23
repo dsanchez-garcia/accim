@@ -38,7 +38,7 @@ Welcome to accim |version|'s documentation!
    :maxdepth: 7
    :caption: Documentation for previous versions:
 
-   pdfs_for_prev_versions
+   8_pdfs_for_prev_versions
 
 Indices and tables
 ==================
