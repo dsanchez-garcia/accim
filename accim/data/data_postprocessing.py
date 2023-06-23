@@ -1467,7 +1467,7 @@ class Table:
                      # split_epw_names: bool = False
                      ):
         """
-        Filter the columns.
+        It filters the columns.
 
         :param type_of_table: To get previously set out tables. Can be 'energy demand' or 'comfort hours'.
         :param custom_cols: A list of strings.
@@ -1639,21 +1639,26 @@ class Table:
         :param baseline: The already transposed column you want to use as a baseline for comparisons.
             If omitted, you will be asked which one to use.
         :type baseline: str
-        :param comparison_mode: A list of strings. Can be 'others compared to baseline' and/or 'baseline compared to others'. Used to customise the comparison of variables.
+        :param comparison_mode: A list of strings.
+            Can be 'others compared to baseline' and/or 'baseline compared to others'.
+            Used to customise the comparison of variables.
         :type comparison_mode: list
-        :param comparison_cols: A list of strings. 'absolute' to get the difference or 'relative' to get the percentage of reduction.
+        :param comparison_cols: A list of strings.
+            'absolute' to get the difference or 'relative' to get the percentage of reduction.
         :type comparison_cols: list
         :param check_index_and_cols: A boolean. True to check index and cols, False to skip.
         :type check_index_and_cols: bool
-        :param vars_to_keep: A list of strings. To remove all variables from the multiindex except those to be kept.
+        :param vars_to_keep: A list of strings.
+            To remove all variables from the multiindex except those to be kept.
         :type vars_to_keep: list
-        :param excel_filename: A string. If entered, the wrangled_df will be exported to excel with that string as name.
+        :param excel_filename: A string.
+            If entered, the wrangled_df will be exported to excel with that string as name.
         :type excel_filename: str
         :param transpose: True to transpose the dataframe
         :type transpose: bool
-        :param rename_dict: Renames all data in the dataframe based on the format {'old_string': 'new_string'}
+        :param rename_dict: Renames all data in the dataframe based on the format
+            {'old_string': 'new_string'}
         :type rename_dict: dict
-
         """
         if vars_to_gather is None:
             vars_to_gather = []
@@ -2595,35 +2600,86 @@ class Table:
     ):
         """Used to plot a scatter plot.
 
-        :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
-        :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
-        :param detailed_cols: A list of strings. The list should be the specific data you want to show in subplots columns. Used to filter.
-        :param detailed_rows: A list of strings. The list should be the specific data you want to show in subplots rows. Used to filter.
-        :param custom_cols_order: A list of strings. The list should be the specific order for the items shown in subplot columns.
-        :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
+        :param vars_to_gather_cols: A list of strings.
+            The list should be the variables you want to show in subplot columns.
+        :type vars_to_gather_cols: list
+        :param vars_to_gather_rows: A list of strings.
+            The list should be the variables you want to show in subplot rows.
+        :type vars_to_gather_rows: list
+        :param detailed_cols: A list of strings.
+            The list should be the specific data you want to show in subplots columns.
+            Used to filter.
+        :type detailed_cols: list
+        :param detailed_rows: A list of strings.
+            The list should be the specific data you want to show in subplots rows.
+            Used to filter.
+        :type detailed_rows: list
+        :param custom_cols_order: A list of strings.
+            The list should be the specific order for the items shown in subplot columns.
+        :type custom_cols_order: list
+        :param custom_rows_order: A list of strings.
+            The list should be the specific order for the items shown in subplot rows.
+        :type custom_rows_order: list
         :param data_on_x_axis: A string. The column name you want to plot in the x-axis.
-        :param data_on_y_main_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot main y-axis. It needs to follow this structure:
+        :type data_on_x_axis: str
+        :param data_on_y_main_axis: A list with nested lists and strings.
+            Used to select the data you want to show in the scatter plot main y-axis.
+            It needs to follow this structure:
             [['name_on_y_main_axis', [list of column names you want to plot]]]
-        :param data_on_y_sec_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot secondary y-axis. It needs to follow this structure:
+        :type data_on_y_main_axis: list
+        :param data_on_y_sec_axis: A list with nested lists and strings.
+            Used to select the data you want to show in the scatter plot secondary y-axis.
+            It needs to follow this structure:
             [[['name_on_1st_y_sec_axis', [list of column names you want to plot]], ['name_on_2nd_y_sec_axis', [list of column names you want to plot]], etc]
-        :param colorlist_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the colors using the matplotlib notation.
-        :param colorlist_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the colors using the matplotlib notation.
-        :param best_fit_deg_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the polynomial degree for the best fit lines.
-        :param best_fit_deg_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the polynomial degree for the best fit lines.
-        :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
-        :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
+        :type data_on_y_sec_axis: list
+        :param colorlist_y_main_axis: A list with nested lists and strings.
+            It should follow the same structure as data_on_y_main_axis,
+            but replacing the column names with the colors using the matplotlib notation.
+        :type colorlist_y_main_axis: list
+        :param colorlist_y_sec_axis: A list with nested lists and strings.
+            It should follow the same structure as data_on_y_sec_axis,
+            but replacing the column names with the colors using the matplotlib notation.
+        :type colorlist_y_sec_axis: list
+        :param best_fit_deg_y_sec_axis: A list with nested lists and strings.
+            It should follow the same structure as data_on_y_sec_axis,
+            but replacing the column names with the polynomial degree for the best fit lines.
+        :type best_fit_deg_y_sec_axis: list
+        :param best_fit_deg_y_main_axis: A list with nested lists and strings.
+            It should follow the same structure as data_on_y_main_axis,
+            but replacing the column names with the polynomial degree for the best fit lines.
+        :type best_fit_deg_y_main_axis: list
+        :param rows_renaming_dict: A dictionary. Should follow the pattern
+            {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
+        :type rows_renaming_dict: dict
+        :param cols_renaming_dict: A dictionary. Should follow the pattern
+            {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
+        :type cols_renaming_dict: dict
         :param sharey: True to share the x-axis across all subplots
+        :type sharey: bool
         :param sharex: True to share the y-axis across all subplots
+        :type sharex: bool
         :param supxlabel: A string. The label shown in the x-axis.
+        :type supxlabel: str
         :param figname: A string. The name of the saved figure without extension.
+        :type figname: str
         :param figsize: A float. It is the figure size.
+        :type figsize: float
         :param ratio_height_to_width: A float. By default, is 1 (squared). If 0.5 is entered, the figure will be half higher than wide.
+        :type ratio_height_to_width: float
         :param dpi: An integer. The number of dpis for image quality.
+        :type dpi: int
         :param confirm_graph: A bool. True to skip confirmation step.
+        :type confirm_graph: bool
         :param set_facecolor: Usage is similar to matplotlib.axes.Axes.set_facecolor
+        :type set_facecolor: any
         :param best_fit_linestyle: Anything in matplotlib linestyle notation. Use to change the style of the best fit lines.
+        :type best_fit_linestyle: any
         :param best_fit_linewidth: A float. Used to change the width of the best fit lines.
-        :param best_fit_background_linewidth: A float. Used to change the width of the background best fit lines. Must be greater than best_fit_linewidth.
+        :type best_fit_linewidth: float
+        :param best_fit_background_linewidth: A float.
+            Used to change the width of the background best fit lines.
+            Must be greater than best_fit_linewidth.
+        :type best_fit_background_linewidth: float
         """
         import numpy as np
         import matplotlib.pyplot as plt
@@ -2955,28 +3011,71 @@ class Table:
         """
         Used to plot a scatter plot with baseline.
 
-        :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
-        :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
-        :param detailed_cols: A list of strings. The list should be the specific data you want to show in subplots columns. Used to filter.
-        :param detailed_rows: A list of strings. The list should be the specific data you want to show in subplots rows. Used to filter.
-        :param custom_cols_order: A list of strings. The list should be the specific order for the items shown in subplot columns.
-        :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
-        :param data_on_y_axis_baseline_plot: A list of strings. Used to select the data you want to show in the graph. Should be a list of the column names you want to plot in each subplot.
-        :param baseline: A string, used only in data_on_y_axis_baseline_plot. The baseline should be one of the combinations in vars_to_gather_cols. It will be plotted in x-axis, while the reference combination for comparison in y-axis.
-        :param colorlist_baseline_plot_data: A list of strings. Should be the colors using the matplotlib color notation for the columns entered in data_on_y_axis_baseline_plot in the same order.
-        :param best_fit_deg: A list with nested lists and strings. It should follow the same structure as data_on_y_axis_baseline_plot, but replacing the column names with the polynomial degree for the best fit lines.
-        :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
-        :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
+        :param vars_to_gather_cols: A list of strings.
+            The list should be the variables you want to show in subplot columns.
+        :type vars_to_gather_cols: list
+        :param vars_to_gather_rows: A list of strings.
+            The list should be the variables you want to show in subplot rows.
+        :type vars_to_gather_rows: list
+        :param detailed_cols: A list of strings.
+            The list should be the specific data you want to show in subplots columns.
+            Used to filter.
+        :type detailed_cols: list
+        :param detailed_rows: A list of strings.
+            The list should be the specific data you want to show in subplots rows.
+            Used to filter.
+        :type detailed_rows: list
+        :param custom_cols_order: A list of strings.
+            The list should be the specific order for the items shown in subplot columns.
+        :type custom_cols_order: list
+        :param custom_rows_order: A list of strings.
+            The list should be the specific order for the items shown in subplot rows.
+        :type custom_rows_order: list
+        :param data_on_y_axis_baseline_plot: A list of strings.
+            Used to select the data you want to show in the graph.
+            Should be a list of the column names you want to plot in each subplot.
+        :type data_on_y_axis_baseline_plot: list
+        :param baseline: A string, used only in data_on_y_axis_baseline_plot.
+            The baseline should be one of the combinations in vars_to_gather_cols.
+            It will be plotted in x-axis,
+            while the reference combination for comparison in y-axis.
+        :type baseline: str
+        :param colorlist_baseline_plot_data: A list of strings.
+            Should be the colors using the matplotlib color notation
+            for the columns entered in data_on_y_axis_baseline_plot in the same order.
+        :type colorlist_baseline_plot_data: list
+        :param best_fit_deg: A list with nested lists and strings.
+            It should follow the same structure as data_on_y_axis_baseline_plot,
+            but replacing the column names with the polynomial degree for the best fit lines.
+        :type best_fit_deg: list
+        :param rows_renaming_dict: A dictionary. Should follow the pattern
+            {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
+        :type rows_renaming_dict: dict
+        :param cols_renaming_dict: A dictionary. Should follow the pattern
+            {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
+        :type cols_renaming_dict: dict
         :param supxlabel: A string. The label shown in the x-axis.
+        :type supxlabel: str
         :param supylabel: A string. The label shown in the y-axis.
+        :type supylabel: str
         :param figname: A string. The name of the saved figure without extension.
+        :type figname: str
         :param figsize: A float. It is the figure size.
+        :type figsize: float
         :param markersize: An integer. The size of the markers.
+        :type markersize: int
         :param dpi: An integer. The number of dpis for image quality.
+        :type dpi: int
         :param confirm_graph: A bool. True to skip confirmation step.
-        :param best_fit_linestyle: Anything in matplotlib linestyle notation. Use to change the style of the best fit lines.
+        :type confirm_graph: bool
+        :param best_fit_linestyle: Anything in matplotlib linestyle notation.
+            Use to change the style of the best fit lines.
+        :type best_fit_linestyle: any
         :param best_fit_linewidth: A float. Used to change the width of the best fit lines.
-        :param best_fit_background_linewidth: A float. Used to change the width of the background best fit lines. Must be greater than best_fit_linewidth.
+        :type best_fit_linewidth: float
+        :param best_fit_background_linewidth: A float. Used to change the width of the
+            background best fit lines. Must be greater than best_fit_linewidth.
+        :type best_fit_background_linewidth: float
         """
         import matplotlib.pyplot as plt
         import matplotlib.lines as lines
@@ -3526,31 +3625,66 @@ class Table:
         """
         Used to plot a timeplot.
 
-        :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
-        :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
-        :param detailed_cols: A list of strings. The list should be the specific data you want to show in subplots columns. Used to filter.
-        :param detailed_rows: A list of strings. The list should be the specific data you want to show in subplots rows. Used to filter.
-        :param custom_cols_order: A list of strings. The list should be the specific order for the items shown in subplot columns.
-        :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
-        :param data_on_x_axis: A string. The column name you want to plot in the x-axis.
-        :param data_on_y_main_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot main y-axis. It needs to follow this structure:
-        [['name_on_y_main_axis', [list of column names you want to plot]]]
-        :param data_on_y_sec_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot secondary y-axis. It needs to follow this structure:
-        [[['name_on_1st_y_sec_axis', [list of column names you want to plot]], ['name_on_2nd_y_sec_axis', [list of column names you want to plot]], etc]
-        :param colorlist_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the colors using the matplotlib notation.
-        :param colorlist_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the colors using the matplotlib notation.
-        :param rows_renaming_dict: A dictionary. Should follow the pattern {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
-        :param cols_renaming_dict: A dictionary. Should follow the pattern {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
-
+        :param vars_to_gather_cols: A list of strings.
+            The list should be the variables you want to show in subplot columns.
+        :type vars_to_gather_cols: list
+        :param vars_to_gather_rows: A list of strings.
+            The list should be the variables you want to show in subplot rows.
+        :type vars_to_gather_rows: list
+        :param detailed_cols: A list of strings.
+            The list should be the specific data you want to show in subplots columns.
+            Used to filter.
+        :type detailed_cols: list
+        :param detailed_rows: A list of strings.
+            The list should be the specific data you want to show in subplots rows.
+            Used to filter.
+        :type detailed_rows: list
+        :param custom_cols_order: A list of strings.
+            The list should be the specific order for the items shown in subplot columns.
+        :type custom_cols_order: list
+        :param custom_rows_order: A list of strings.
+            The list should be the specific order for the items shown in subplot rows.
+        :type custom_rows_order: list
+        :param data_on_y_main_axis: A list with nested lists and strings.
+            Used to select the data you want to show in the scatter plot main y-axis.
+            It needs to follow this structure:
+            [['name_on_y_main_axis', [list of column names you want to plot]]]
+        :type data_on_y_main_axis: list
+        :param data_on_y_sec_axis: A list with nested lists and strings.
+            Used to select the data you want to show in the scatter plot secondary y-axis.
+            It needs to follow this structure:
+            [[['name_on_1st_y_sec_axis', [list of column names you want to plot]], ['name_on_2nd_y_sec_axis', [list of column names you want to plot]], etc]
+        :type data_on_y_sec_axis: list
+        :param colorlist_y_main_axis: A list with nested lists and strings.
+            It should follow the same structure as data_on_y_main_axis,
+            but replacing the column names with the colors using the matplotlib notation.
+        :type colorlist_y_main_axis: list
+        :param colorlist_y_sec_axis: A list with nested lists and strings.
+            It should follow the same structure as data_on_y_sec_axis,
+            but replacing the column names with the colors using the matplotlib notation.
+        :type colorlist_y_sec_axis: list
+        :param rows_renaming_dict: A dictionary. Should follow the pattern
+            {'old row name 1': 'new row name 1', 'old row name 2': 'new row name 2'}
+        :type rows_renaming_dict: dict
+        :param cols_renaming_dict: A dictionary. Should follow the pattern
+            {'old col name 1': 'new col name 1', 'old col name 2': 'new col name 2'}
+        :type cols_renaming_dict: dict
         :param sharey: True to share the x-axis across all subplots
+        :type sharey: bool
         :param sharex: True to share the y-axis across all subplots
-        :param supxlabel: A string. The label shown in the x-axis.
+        :type sharex: bool
         :param figname: A string. The name of the saved figure without extension.
+        :type figname: str
         :param figsize: A float. It is the figure size.
+        :type figsize: float
         :param ratio_height_to_width: A float. By default, is 1 (squared). If 0.5 is entered, the figure will be half higher than wide.
+        :type ratio_height_to_width: float
         :param dpi: An integer. The number of dpis for image quality.
+        :type dpi: int
         :param confirm_graph: A bool. True to skip confirmation step.
-
+        :type confirm_graph: bool
+        :param set_facecolor: Usage is similar to matplotlib.axes.Axes.set_facecolor
+        :type set_facecolor: any
         """
         import numpy as np
         import matplotlib.pyplot as plt
