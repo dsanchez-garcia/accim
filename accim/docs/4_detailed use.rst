@@ -580,7 +580,7 @@ explained below:
    (ComfStand = 7), you can enter ‘80 85 90’ to generate setpoint
    temperatures for these acceptability levels. All categories are
    referenced in the `full list of setpoint
-   temperatures <https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html>`__
+   temperatures <https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html>`__
    at the end of this section. Please note that the Category values must
    be consistent with the Comfort Standard values previously entered.
    If, for instance, you enter ‘1’ in the Comfort Standard value (means
@@ -596,7 +596,7 @@ explained below:
    are exceeded), in which case a PMV-based model is applied. Each
    ComfMod for each ComfStand and CAT is referenced at the `full list of
    setpoint
-   temperatures <https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html>`__.
+   temperatures <https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html>`__.
    Please refer to the research article
    https://www.mdpi.com/1996-1073/12/8/1498 for more information. Figure
    below shows the variation of setpoint temperatures when ComfMod 0
@@ -824,7 +824,7 @@ Depending on the arguments ComfStand, CAT and ComfMod, cooling and
 heating setpoint temperatures will be the following:
 
 (If it is too small, you can look at it also at the `Github
-repository <https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html>`__)
+repository <https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html>`__)
 
 .. figure:: images/full_table.png
    :alt: full_table.png
@@ -988,7 +988,7 @@ value):
    20 = MEX Oropeza HumTropic;
    21 = CHL Perez-Fargallo;
    22 = INT ISO7730;
-   Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html
+   Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html
    ): 1 2 7
              Are you sure the numbers are correct? [y or [] / n]:
 
@@ -1010,7 +1010,7 @@ value):
    80 = 80% ACCEPT;
    85 = 85% ACCEPT;
    90 = 90% ACCEPT;
-   Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html
+   Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html
    ): 2 3 85 90
              Are you sure the numbers are correct? [y or [] / n]:
 
@@ -1032,7 +1032,7 @@ value):
    Enter the Comfort Mode numbers separated by space (
    0 or 0.X = Static;
    1, 1.X, 2, 3 = Adaptive;
-   Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html
+   Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html
    ): 0 3
              Are you sure the numbers are correct? [y or [] / n]:
 

@@ -370,7 +370,7 @@ def inputData(self, ScriptType: str = None):
         '20 = MEX Oropeza HumTropic;\n'
         '21 = CHL Perez-Fargallo;\n'
         '22 = INT ISO7730;\n'
-        'Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html\n'
+        'Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html\n'
         '): '
     ).split())
     while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
@@ -399,7 +399,7 @@ def inputData(self, ScriptType: str = None):
         "80 = 80% ACCEPT;\n"
         "85 = 85% ACCEPT;\n"
         "90 = 90% ACCEPT;\n"
-        "Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html\n"
+        "Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html\n"
         "): ").split())
     while len(self.CAT_List) == 0 or not all(elem in fullCATlist for elem in self.CAT_List):
         print('          Category numbers are not correct. Please enter the numbers again.')
@@ -420,7 +420,7 @@ def inputData(self, ScriptType: str = None):
         "Enter the Comfort Mode numbers separated by space (\n"
         "0 or 0.X = Static;\n"
         "1, 1.X, 2, 3 = Adaptive;\n"
-        "Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html\n"
+        "Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html\n"
         "): ").split())
     while len(self.ComfMod_List) == 0 or not all(elem in fullComfModList for elem in self.ComfMod_List):
         print('          Comfort Mode numbers are not correct. Please enter the numbers again.')
