@@ -18,7 +18,7 @@ project = 'accim'
 copyright = '2023, Daniel Sánchez-García'
 author = 'Daniel Sánchez-García'
 version = accim.__version__
-release = accim.__version__
+# release = accim.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -43,5 +43,8 @@ html_theme = 'sphinx_rtd_theme'
 #todo pdf not working
 html_static_path = [
     '_static',
+    # 'accim/docs/previous_versions_pdfs',
+    # 'docs/previous_versions_pdfs',
+    'previous_versions_pdfs',
     r'C:\Python\accim\accim\docs\previous_versions_pdfs',
 ]
