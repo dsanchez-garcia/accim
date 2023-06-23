@@ -2580,7 +2580,6 @@ class Table:
             best_fit_deg_y_sec_axis: list = None,
             rows_renaming_dict: dict = None,
             cols_renaming_dict: dict = None,
-
             sharex: bool = True,
             sharey: bool = True,
             supxlabel: str = None,
@@ -2593,10 +2592,8 @@ class Table:
             best_fit_background_linewidth: float = 1,
             best_fit_linewidth: float = 0.5,
             best_fit_linestyle: any = (0, (5, 10)),
-
     ):
-        """
-        Used to plot a scatter plot.
+        """Used to plot a scatter plot.
 
         :param vars_to_gather_cols: A list of strings. The list should be the variables you want to show in subplot columns.
         :param vars_to_gather_rows: A list of strings. The list should be the variables you want to show in subplot rows.
@@ -2606,9 +2603,9 @@ class Table:
         :param custom_rows_order: A list of strings. The list should be the specific order for the items shown in subplot rows.
         :param data_on_x_axis: A string. The column name you want to plot in the x-axis.
         :param data_on_y_main_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot main y-axis. It needs to follow this structure:
-        [['name_on_y_main_axis', [list of column names you want to plot]]]
+            [['name_on_y_main_axis', [list of column names you want to plot]]]
         :param data_on_y_sec_axis: A list with nested lists and strings. Used to select the data you want to show in the scatter plot secondary y-axis. It needs to follow this structure:
-        [[['name_on_1st_y_sec_axis', [list of column names you want to plot]], ['name_on_2nd_y_sec_axis', [list of column names you want to plot]], etc]
+            [[['name_on_1st_y_sec_axis', [list of column names you want to plot]], ['name_on_2nd_y_sec_axis', [list of column names you want to plot]], etc]
         :param colorlist_y_main_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_main_axis, but replacing the column names with the colors using the matplotlib notation.
         :param colorlist_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the colors using the matplotlib notation.
         :param best_fit_deg_y_sec_axis: A list with nested lists and strings. It should follow the same structure as data_on_y_sec_axis, but replacing the column names with the polynomial degree for the best fit lines.
