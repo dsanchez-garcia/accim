@@ -168,6 +168,7 @@ class Table:
         A string used as a name to export a xlsx file with the rows not correctly aggregated.
         Used only to check the aggregations are correct.
     :type name_export_rows_not_corr_agg: str
+    #todo instance variables: wrangled_df, etc.
     """
 
     def __init__(self,

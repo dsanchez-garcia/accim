@@ -1,5 +1,11 @@
+"""Module for function in EnergyPlus scope related to models with existing HVAC systems"""
+
 def addForscriptSchExistHVAC(self, verboseMode: bool = True):
-    """Add FORSCRIPT Schedules for each zone in existing HVAC zones."""
+    """Add Schedules for each zone in existing HVAC zones to override the existing setpoint temperatures.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     for i in range(len(self.HVACzonelist)):
         if len(self.HVACzonelist[i][3]) == 0:
             continue

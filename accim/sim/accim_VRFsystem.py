@@ -4,8 +4,10 @@
 def addOpTempTherm(self, verboseMode : bool = True):
     """
     Amend ZoneControl:Thermostat:OperativeTemperature objects.
-
     Add ZoneControl:Thermostat:OperativeTemperature objects for each zone.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
     """
     for zonename_orig in self.zonenames_orig:
         if zonename_orig+' Thermostat' in [thermostat.Thermostat_Name
@@ -29,9 +31,11 @@ def addOpTempTherm(self, verboseMode : bool = True):
 def addBaseSchedules(self, verboseMode : bool = True):
     """
     Amend Schedule:Compact objects.
-
     Checks Schedule:Compact objects needed for accim,
     and add them in case these are not in the model
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
     """
     if "On" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
         if verboseMode:
@@ -69,9 +73,11 @@ def addBaseSchedules(self, verboseMode : bool = True):
 def setAvailSchOn(self, verboseMode: bool = True):
     """
     Amend availability schedules.
-
     Assign On Compact:Schedule to heating and cooling availability
     schedule names.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
     """
     for schedule in [i for i in self.idf1.idfobjects['ZoneHVAC:IdealLoadsAirSystem']]:
         schedule.Heating_Availability_Schedule_Name='On'
@@ -84,9 +90,11 @@ def setAvailSchOn(self, verboseMode: bool = True):
 def addVRFsystemSch(self, verboseMode: bool = True):
     """
     Amend Schedule:Compact objects for VRFsystem.
-
     Add Schedule:Compact objects needed for VRFsystem to work,
     other than AHST_Sch and ACST_Sch Schedules.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
     """
     addVRFsystemSch_dict = {
         'On 24/7': 'Until: 24:00,1',
@@ -139,7 +147,12 @@ def addVRFsystemSch(self, verboseMode: bool = True):
 
 
 def addCurveObj(self, verboseMode: bool = True):
-    """Add Curve Objects needed for VRFsystem to work."""
+    """
+    Add Curve Objects needed for VRFsystem to work.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     # curvecubiclist=([i for i in self.idf1.idfobjects['Curve:Cubic']])
     # print(curvecubiclist)
 
@@ -905,7 +918,13 @@ def addDetHVACobj(
         verboseMode: bool = True,
         SupplyAirTempInputMethod: str = None,
 ):
-    """Add Detailed HVAC objects for VRFsystem to work."""
+    """Add Detailed HVAC objects for VRFsystem to work.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param EnergyPlus_version: Inherited from :class:``accim.sim.accis.addAccis``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    :param SupplyAirTempInputMethod: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     for zn in self.zonenames_orig:
         if 'VRF Outdoor Unit_'+zn in [i.Heat_Pump_Name
                                       for i
@@ -1521,7 +1540,11 @@ def addDetHVACobj(
 
 
 def addForscriptSchVRFsystem(self, verboseMode: bool = True):
-    """Add FORSCRIPT Schedules for each zone for VRFsystem."""
+    """Add FORSCRIPT Schedules for each zone for VRFsystem.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     for zn in self.zonenames:
         if "AHST_Sch_"+zn in [sch.Name
                                     for sch
@@ -1583,7 +1606,11 @@ def addForscriptSchVRFsystem(self, verboseMode: bool = True):
 
 
 def checkVentIsOn(self, verboseMode: bool = True):
-    """Check ventilation settings."""
+    """Check ventilation settings.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     if "Vent_SP_temp" in [sch.Name
                           for sch
                           in self.idf1.idfobjects['Schedule:Compact']]:

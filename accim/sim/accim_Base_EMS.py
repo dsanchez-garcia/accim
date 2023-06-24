@@ -4,10 +4,11 @@
 def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
     """
     Add EMS programs for Base accim.
-
     Checks if some programs objects are already
     in the model, and otherwise adds them.
-    :param verboseMode:
+
+    :param ScriptType: Inherited from :class:`accim.sim.accis.addAccis`
+    :param verboseMode: Inherited from :class:`accim.sim.accis.addAccis`
     """
     programlist = ([program.Name
                     for program
@@ -3076,9 +3077,11 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
 def addEMSPCMBase(self, verboseMode: bool = True):
     """
     Add EMS program calling managers for Base accim.
-
     Checks if some EMS program calling manager objects are already
     in the model, and otherwise adds them.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
     """
     programlist = ([program.Name
                     for program
@@ -3107,9 +3110,12 @@ def addEMSPCMBase(self, verboseMode: bool = True):
 # todo add argument for mm outputvariables
 def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = True):
     """Add EMS output variables for Base accim.
-
     Checks if some EMS output variables objects are already
     in the model, and otherwise adds them.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param ScriptType: Inherited from :class:``accim.sim.accis.addAccis``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
     """
     EMSOutputVariableAvg_dict = {
         'Comfort Temperature': ['ComfTemp', 'C'],
@@ -3214,7 +3220,12 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
 
 
 def addGlobVarList(self, ScriptType: str = None, verboseMode: bool = True):
-    """Remove existing Global Variable objects and add correct Global Variable objects for accim."""
+    """Remove existing Global Variable objects and add correct Global Variable objects for accim.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param ScriptType: Inherited from :class:``accim.sim.accis.addAccis``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     globalvariablelist = ([program for program in self.idf1.idfobjects['ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE']])
 
     for i in range(len(globalvariablelist)):
@@ -3292,7 +3303,11 @@ def addGlobVarList(self, ScriptType: str = None, verboseMode: bool = True):
         print("Global variables objects have been added")
 
 def addIntVarList(self, verboseMode: bool = True):
-    """Add Internal variables objects for accim."""
+    """Add Internal variables objects for accim.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     internalvariablelist = ([program for program in self.idf1.idfobjects['ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE']])
 
     for i in range(len(internalvariablelist)):
@@ -3320,7 +3335,10 @@ def addIntVarList(self, verboseMode: bool = True):
 def removeExistingOutputVariables(
         self,
 ):
-    """Remove existing Output:Variable objects for accim."""
+    """Remove existing Output:Variable objects for accim.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    """
     EnvironmentalImpactFactorslist = ([output for output in self.idf1.idfobjects['Output:EnvironmentalImpactFactors']])
     outputmeterlist = ([output for output in self.idf1.idfobjects['Output:Meter']])
     alloutputs = ([output for output in self.idf1.idfobjects['Output:Variable']])
@@ -3341,7 +3359,10 @@ def removeExistingOutputVariables(
 def removeDuplicatedOutputVariables(
         self,
 ):
-    """Remove duplicated Output:Variable objects for accim."""
+    """Remove duplicated Output:Variable objects for accim.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    """
     for freq in ['Timestep', 'Hourly', 'Daily', 'Monthly', 'Runperiod']:
         alloutputs = [
             output
@@ -3383,7 +3404,11 @@ def outputsSpecified(
         self,
         remove_or_keep: str = None,
 ):
-    """Remove duplicated Output:Variable objects for accim."""
+    """Remove duplicated Output:Variable objects for accim.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param remove_or_keep: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     all_outputs_to_delete = []
     for freq in ['Timestep', 'Hourly', 'Daily', 'Monthly', 'Runperiod']:
         alloutputs = [
@@ -3448,8 +3473,14 @@ def outputsSpecified(
 
 def genOutputDataframe(
         self,
-        idf_filename,
+        idf_filename: str = None,
 ):
+    """
+    Used to generate a pandas DataFrame instance containing all Output:Variable objects in the model.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param idf_filename: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     import pandas as pd
     alloutputs = [
         output
@@ -3470,6 +3501,14 @@ def takeOutputDataFrame(
         df_outputs_in,
         verboseMode,
 ):
+    """
+    Used to read a pandas DataFrame containing the Output:Variable objects to be kept.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param idf_filename: Inherited from :class:``accim.sim.accis.addAccis``
+    :param df_outputs_in: Inherited from :class:``accim.sim.accis.addAccis``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     import pandas as pd
     df_outputs_in = df_outputs_in[
         df_outputs_in['file'].str.contains(idf_filename)
@@ -3503,9 +3542,14 @@ def addOutputVariablesSimplified(
 ):
     """
     Add simplified Output:Variable objects for accim.
-
     Remove all outputs and add only VFR outdoor unit consumption
     and operative temperature.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param Outputs_freq: Inherited from :class:``accim.sim.accis.addAccis``
+    :param TempCtrl: Inherited from :class:``accim.sim.accis.addAccis``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+
     """
 
     additionaloutputs = [
@@ -3542,7 +3586,14 @@ def addOutputVariablesStandard(
         ScriptType: str = None,
         TempCtrl: str = None,
         verboseMode: bool = True):
-    """Add Output:Variable objects for accim."""
+    """Add Output:Variable objects for accim.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param Outputs_freq: Inherited from :class:``accim.sim.accis.addAccis``
+    :param ScriptType: Inherited from :class:``accim.sim.accis.addAccis``
+    :param TempCtrl: Inherited from :class:``accim.sim.accis.addAccis``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
 
     EMSoutputvariablenamelist = ([outputvariable.Name
                            for outputvariable
@@ -3766,7 +3817,12 @@ def addOutputVariablesDetailed(
         self,
         Outputs_freq: any = None,
         verboseMode: bool = True):
-    """Add Output:Variable objects for accim."""
+    """Add Output:Variable objects for accim.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param Outputs_freq: Inherited from :class:``accim.sim.accis.addAccis``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
 
     addittionaloutputs = [
         'AFN Surface Venting Window or Door Opening Factor',
@@ -3798,7 +3854,12 @@ def addOutputVariablesDetailed(
                     print('Added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
 
 def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
-    """Add EMS sensors for accim."""
+    """Add EMS sensors for accim.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param ScriptType: Inherited from :class:``accim.sim.accis.addAccis``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     sensorlist = ([sensor.Name for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor']])
 
     if len([i.Name for i in self.idf1.idfobjects['zonelist']]) > 0:
@@ -3949,7 +4010,12 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
 
 
 def addEMSActuatorsBase(self, ScriptType: str = None, verboseMode: bool = True):
-    """Add EMS actuators for accim."""
+    """Add EMS actuators for accim.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param ScriptType: Inherited from :class:``accim.sim.accis.addAccis``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
     actuatorlist = ([actuator.Name for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator']])
 
     for zonename in self.zonenames:

@@ -1,7 +1,15 @@
 """Class for accim."""
 
 class accimJob():
-    """Class to start the accim process."""
+    """Class to start the process to add the :class:``accim.sim.accis.addAccis``.
+
+    :param filename_temp: the filename of the idf
+    :param ScriptType: Inherited from :class:``accim.sim.accis.addAccis``
+    :param EnergyPlus_version: Inherited from :class:``accim.sim.accis.addAccis``
+    :param TempCtrl: Inherited from :class:``accim.sim.accis.addAccis``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    :param accimNotWorking: True if problems detected in :class:``accim.sim.accis.addAccis``
+    """
     from os import listdir
     import numpy
 
@@ -52,6 +60,9 @@ class accimJob():
                  TempCtrl: str = None,
                  verboseMode: bool = True,
                  accimNotWorking: bool = False):
+        """
+        Constructor method.
+        """
         from eppy import modeleditor
         from eppy.modeleditor import IDF
         self.accimNotWorking = accimNotWorking

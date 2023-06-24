@@ -133,6 +133,20 @@ class addAccis:
     :type verboseMode: bool
     :param confirmGen: True to skip confirmation of output IDF generation. Default is None.
     :type confirmGen: bool
+    :ivar arguments: A dictionary containing all arguments
+    :ivar df_outputs: the pandas DataFrame instance created with argument ``Output_gen_dataframe``
+    :ivar input_idfs: A dictionary containing all input IDFs following the format {'input idf filename': :class:``eppy.modeleditor.IDF object``}
+    :ivar occupied_zones: A dictionary containing all input idfs and
+        occupied zone names following the format {'idf filename': [list of zone names]}
+    :ivar occupied_zones_original_name: A dictionary containing all input idfs and
+        occupied zone original names following the format {'idf filename': [list of zone original names]}
+    :ivar output_idfs: A dictionary containing all output IDFs following the format {'output idf filename': :class:``eppy.modeleditor.IDF object``}
+    :ivar windows_and_doors: A dictionary containing all input idfs and
+        window and door names following the format
+        {'idf filename': [list of window and door names]}
+    :ivar windows_and_doors_original_name: A dictionary containing all input idfs and
+        window and door original names following the format
+        {'idf filename': [list of window and door original names]}
     """
     def __init__(
         self,
