@@ -170,10 +170,9 @@ class Table:
         A string used as a name to export a xlsx file with the rows not correctly aggregated.
         Used only to check the aggregations are correct.
     :type name_export_rows_not_corr_agg: str
-    #todo instance variables: wrangled_df, etc.
     :ivar df: The pandas DataFrame instance.
         It is modified when method ``format_table`` is called.
-    :ivar df_backup: The full pandas DataFrame instance resulting from :class:``Table``.
+    :ivar df_backup: The full pandas DataFrame instance resulting from class ``Table``.
         It is not modified, so can be used to revert the DataFrame instance to its initial state.
     :ivar cols_for_multiindex: The list of columns (or variables) that change in the dataset.
         These represent the variables that might be interesting to study, and therefore,

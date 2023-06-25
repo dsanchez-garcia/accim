@@ -5,8 +5,8 @@ def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
     """
     Adds the EMS sensors for models with existing HVAC system.
 
-    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
-    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
     """
     sensorlist = ([sensor.Name for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor']])
     for i in range(len(self.ExisHVAC)):

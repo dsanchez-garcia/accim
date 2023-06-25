@@ -13,9 +13,9 @@ def setComfFieldsPeople(
     to Thermal Comfort Model types 1 and 2 fields of the existing People
     objects.
 
-    :param EnergyPlus_version: Inherited from :class:`accim.sim.accis.addAccis`
-    :param TempCtrl: Inherited from :class:`accim.sim.accis.addAccis`
-    :param verboseMode: Inherited from :class:`accim.sim.accis.addAccis`
+    :param EnergyPlus_version: Inherited from class `accim.sim.accis.addAccis`
+    :param TempCtrl: Inherited from class `accim.sim.accis.addAccis`
+    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
     """
     ppl = ([people for people in self.idf1.idfobjects['PEOPLE']])
     for i in range(len(ppl)):
@@ -176,7 +176,7 @@ def setComfFieldsPeople(
 def saveaccim(self, verboseMode: bool = True):
     """Save IDF.
 
-    :param verboseMode: Inherited from :class:`accim.sim.accis.addAccis`
+    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
     """
     self.idf1.save()
     if verboseMode:
@@ -186,7 +186,7 @@ def saveaccim(self, verboseMode: bool = True):
 def setPMVsetpoint(self, verboseMode: bool = True):
     """Sets PMV setpoints for temperature control.
 
-    :param verboseMode: Inherited from :class:`accim.sim.accis.addAccis`
+    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
     """
     # previoustodo check again the difference between operative temp and fanger; see ZoneControl:Thermostat and where is it assigned
     optempthermlist = ([program for program in self.idf1.idfobjects['ZoneControl:Thermostat:OperativeTemperature']])

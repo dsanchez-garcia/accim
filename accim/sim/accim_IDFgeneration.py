@@ -4,8 +4,8 @@
 def inputData(self, ScriptType: str = None):
     """Input data for IDF generation.
 
-    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
-    :param ScriptType: Inherited from :class:``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
+    :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``
     """
     CS_CA_CM_list_dict = {
         '0 = ESP CTE': [['n/a'], ['n/a']],
@@ -749,11 +749,11 @@ def genIDF(self,
            ):
     """Generate IDFs.
 
-    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
-    :param ScriptType: Inherited from :class:``accim.sim.accis.addAccis``
-    :param TempCtrl: Inherited from :class:``accim.sim.accis.addAccis``
-    :param ComfStand: Inherited from :class:``accim.sim.accis.addAccis``
-    :param CAT: Inherited from :class:``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
+    :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``
+    :param TempCtrl: Inherited from class ``accim.sim.accis.addAccis``
+    :param ComfStand: Inherited from class ``accim.sim.accis.addAccis``
+    :param CAT: Inherited from class ``accim.sim.accis.addAccis``
     :param ComfMod: Inherited from :class:``accim.sim.accis.addAccis``
     :param SetpointAcc: Inherited from :class:``accim.sim.accis.addAccis``
     :param CoolSeasonStart: Inherited from :class:``accim.sim.accis.addAccis``

@@ -7,8 +7,8 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
     Checks if some programs objects are already
     in the model, and otherwise adds them.
 
-    :param ScriptType: Inherited from :class:`accim.sim.accis.addAccis`
-    :param verboseMode: Inherited from :class:`accim.sim.accis.addAccis`
+    :param ScriptType: Inherited from class `accim.sim.accis.addAccis`
+    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
     """
     programlist = ([program.Name
                     for program
@@ -3080,8 +3080,8 @@ def addEMSPCMBase(self, verboseMode: bool = True):
     Checks if some EMS program calling manager objects are already
     in the model, and otherwise adds them.
 
-    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
-    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
     """
     programlist = ([program.Name
                     for program
@@ -3113,7 +3113,7 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
     Checks if some EMS output variables objects are already
     in the model, and otherwise adds them.
 
-    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
     :param ScriptType: Inherited from :class:``accim.sim.accis.addAccis``
     :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
     """
