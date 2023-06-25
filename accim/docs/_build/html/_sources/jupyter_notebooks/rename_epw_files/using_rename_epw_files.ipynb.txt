@@ -1,0 +1,291 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "83aa9f64",
+   "metadata": {},
+   "source": [
+    "# Using ``rename_epw_files()`` to rename the EPWs for proper data analysis after simulation"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a7e5d106",
+   "metadata": {},
+   "source": [
+    "``rename_epw_files`` function will rename your EPW files following the naming convention \"Country_City_RCPscenario-Year\". It will get the Country and City fields from EPW coordinates, and the RCPscenario and Year fields from the original name. If there is no reference to this in the original name, it will consider these to be at Present scenario."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "35f134de",
+   "metadata": {},
+   "source": [
+    "usage:\n",
+    "``\n",
+    "rename_epw_files(  \n",
+    "filelist=list_of_files_to_rename, # if omitted, it will rename all EPWs in that folder  \n",
+    "confirm_renaming=True or False, #to skip renaming confirmation on prompt command or console  \n",
+    "confirm_deletion=True or False #to skip deletion confirmation on prompt command or console  \n",
+    "match_cities: True or False. Default is False. It's computationally very expensive.  \n",
+    ")``"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5cfda218",
+   "metadata": {},
+   "source": [
+    "First of all, let's see what files we do have in the folder:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "8bcf4ced",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['.ipynb_checkpoints',\n",
+       " 'GBR_Aberdeen.Dyce.030910_IWEC.epw',\n",
+       " 'GBR_London.Gatwick.037760_IWEC.epw',\n",
+       " 'RCP26_2100_GC03_Ponta_Grossa.epw',\n",
+       " 'using_rename_epw_files.ipynb',\n",
+       " '__init__.py']"
+      ]
+     },
+     "execution_count": 1,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "import os\n",
+    "os.listdir()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c282206a",
+   "metadata": {},
+   "source": [
+    "You can see there are 3 EPW files, which are:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "33e64dbd",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['GBR_Aberdeen.Dyce.030910_IWEC.epw', 'GBR_London.Gatwick.037760_IWEC.epw', 'RCP26_2100_GC03_Ponta_Grossa.epw']\n"
+     ]
+    }
+   ],
+   "source": [
+    "old_epws = [i for i in os.listdir() if i.endswith('.epw')]\n",
+    "print(old_epws)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5524d9c2",
+   "metadata": {},
+   "source": [
+    "So let's rename them. When we call the function, you will be asked to enter the IDs of the EPW names which are not correct, if there are any. If you enter one or multiple IDs, you will be asked if you want to rename them manually (i.e. typing the correct new name) or not. If you say 'n', possible names will be searched by using the geolocation, which can be computationally expensive if there are a moderate number of EPWs (e.g. 30)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "4254ac77",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "C:\\users\\sanga\\appdata\\local\\programs\\python\\python39\\lib\\site-packages\\accim\\data\\data_preprocessing.py:137: FutureWarning: The default value of regex will change from True to False in a future version.\n",
+      "  epw_df['EPW_names'] = epw_df['EPW_file_names'].str.replace('.epw', '')\n",
+      "C:\\users\\sanga\\appdata\\local\\programs\\python\\python39\\lib\\site-packages\\accim\\data\\data_preprocessing.py:139: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.\n",
+      "  epw_df['EPW_mod'] = epw_df['EPW_names'].str.replace('-', '_').str.replace('.', '_').str.split('_')\n",
+      "C:\\users\\sanga\\appdata\\local\\programs\\python\\python39\\lib\\site-packages\\accim\\data\\data_preprocessing.py:141: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.\n",
+      "  epw_df['EPW_mod_filtered'] = epw_df['EPW_names'].str.replace('-', '_').str.replace('.', '_').str.split('_')\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Since no match has been found between RCP scenarios and EPW file name, Present scenario has been assigned to the following EPW files:\n",
+      "GBR_Aberdeen.Dyce.030910_IWEC.epw\n",
+      "GBR_London.Gatwick.037760_IWEC.epw\n",
+      "Since no match has been found between RCP scenario Year and EPW file name, Present year has been assigned to the following EPW files:\n",
+      "GBR_Aberdeen.Dyce.030910_IWEC.epw\n",
+      "GBR_London.Gatwick.037760_IWEC.epw\n",
+      "The geolocation process has taken: 1.36 seconds (0.45 s/EPW)\n",
+      "\n",
+      "The previous and new names of the EPW files and their unique IDs are:\n",
+      "ID: 0 / GBR_Aberdeen.Dyce.030910_IWEC / United-Kingdom_Aberdeen_Present\n",
+      "ID: 1 / GBR_London.Gatwick.037760_IWEC / United-Kingdom_UNKNOWN_Present\n",
+      "ID: 2 / RCP26_2100_GC03_Ponta_Grossa / Brazil_Ponta_RCP26-2100\n",
+      "\n",
+      "\"UNKNOWN\" city or subcountry have been found in the renamed EPW files, therefore these need to be amended in the next stage.\n",
+      "\n",
+      "If any of the city or subcountry names needs some amendment (if you are not happy with any of the available options, you can exclude it from renaming at the next stage), please enter the EPW IDs separated by space; otherwise, hit enter to omit:2\n",
+      "\n",
+      "Regarding the file ID: 1 / old name: GBR_London.Gatwick.037760_IWEC / new name: United-Kingdom_UNKNOWN_Present, the address obtained from coordinates is: \n",
+      "London Gatwick Airport, Old Brighton Road South, Lowfield Heath, Manor Royal, Crawley, West Sussex, GB-WSX, England, GB-ENG, RH11 0PT, United Kingdom\n",
+      "Please enter the amended city or subcountry, which must be unique: London\n",
+      "\n",
+      "Regarding the file ID: 2 / old name: RCP26_2100_GC03_Ponta_Grossa / new name: Brazil_Ponta_RCP26-2100, the address obtained from coordinates is: \n",
+      "Praca Barao de Guarauna, Centro, Centro, Ponta Grossa, Regiao Geografica Imediata de Ponta Grossa, Regiao Geografica Intermediaria de Ponta Grossa, Parana, BR-PR, Regiao Sul, 84010-050, Brasil\n",
+      "Please enter the amended city or subcountry, which must be unique: Ponta Grossa\n",
+      "\n",
+      "The previous and new names of the EPW files after city or subcountry name amendments and their unique IDs are:\n",
+      "ID: 1 / GBR_London.Gatwick.037760_IWEC / United-Kingdom_London_Present\n",
+      "ID: 2 / RCP26_2100_GC03_Ponta_Grossa / Brazil_Ponta-Grossa_RCP26-2100\n",
+      "\n",
+      "The final list of previous and new names of the EPW files and their unique IDs is:\n",
+      "ID: 0 / GBR_Aberdeen.Dyce.030910_IWEC / United-Kingdom_Aberdeen_Present\n",
+      "ID: 1 / GBR_London.Gatwick.037760_IWEC / United-Kingdom_London_Present\n",
+      "ID: 2 / RCP26_2100_GC03_Ponta_Grossa / Brazil_Ponta-Grossa_RCP26-2100\n",
+      "\n",
+      "If you want to exclude some EPWs from renaming, please enter the IDs separated by space, otherwise, hit enter to continue:\n",
+      "\n",
+      "Do you want to copy and rename the file or files? [y/n]:y\n",
+      "The file GBR_Aberdeen.Dyce.030910_IWEC has been renamed to United-Kingdom_Aberdeen_Present\n",
+      "The file GBR_London.Gatwick.037760_IWEC has been renamed to United-Kingdom_London_Present\n",
+      "The file RCP26_2100_GC03_Ponta_Grossa has been renamed to Brazil_Ponta-Grossa_RCP26-2100\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<accim.data.data_preprocessing.rename_epw_files at 0x28b783abcd0>"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from accim.data.data_preprocessing import rename_epw_files\n",
+    "rename_epw_files(\n",
+    "    confirm_deletion=False,\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "34031be9",
+   "metadata": {},
+   "source": [
+    "You can see above that there was no reference to RCP scenarios in the original EPW file name in 2 of the instances, therefore these has been considered as Present scenario. The same applies to the Year field. Finally, states the previous and the new names of the EPWs. So, now, let's see what files we do have in the folder."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "16ae976e",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "['.ipynb_checkpoints',\n",
+       " 'Brazil_Ponta-Grossa_RCP26-2100.epw',\n",
+       " 'GBR_Aberdeen.Dyce.030910_IWEC.epw',\n",
+       " 'GBR_London.Gatwick.037760_IWEC.epw',\n",
+       " 'RCP26_2100_GC03_Ponta_Grossa.epw',\n",
+       " 'United-Kingdom_Aberdeen_Present.epw',\n",
+       " 'United-Kingdom_London_Present.epw',\n",
+       " 'using_rename_epw_files.ipynb',\n",
+       " '__init__.py']"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "os.listdir()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "05de8914",
+   "metadata": {},
+   "source": [
+    "We can see the new EPWs are:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "6e80b813",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['Brazil_Ponta-Grossa_RCP26-2100.epw', 'United-Kingdom_Aberdeen_Present.epw', 'United-Kingdom_London_Present.epw']\n"
+     ]
+    }
+   ],
+   "source": [
+    "new_epws = [i for i in os.listdir() if not(any(i in j for j in old_epws)) and i.endswith('.epw')]\n",
+    "print(new_epws)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ad65b911",
+   "metadata": {},
+   "source": [
+    "Let's delete the new files so that we can run the notebook again."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "dd09f3f6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for i in new_epws:\n",
+    "    os.remove(i)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.4"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

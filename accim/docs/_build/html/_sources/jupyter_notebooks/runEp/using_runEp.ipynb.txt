@@ -1,0 +1,260 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "822c8238",
+   "metadata": {},
+   "source": [
+    "# Using ``runEp()`` to directly run simulations with EnergyPlus"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "fb84d255",
+   "metadata": {},
+   "source": [
+    "This script has been created by eppy’s development team (https://eppy.readthedocs.io/en/latest/runningeplus.html, specifically from section ‘Running in parallel processes using Generators’), however I did some changes. Anyway, you probably should check out eppy package, since it’s absolutely awesome."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "c8ea4bef",
+   "metadata": {},
+   "source": [
+    "This script will take all EPWs and IDFs located in the folder where the script is being executed as input files, and will run simulations based on these, naming the output files with the following naming convention: \"IDFname[EPWname\""
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "acd9a72f",
+   "metadata": {},
+   "source": [
+    "First of all, let's see what files we do have in the folder:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "a9c8279d",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      ".ipynb_checkpoints\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf\n",
+      "United-Kingdom_Aberdeen_Present.epw\n",
+      "using_runEp.ipynb\n",
+      "__init__.py\n"
+     ]
+    }
+   ],
+   "source": [
+    "import os\n",
+    "original_files = [i for i in os.listdir()]\n",
+    "print(*original_files, sep='\\n')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "9096fdce",
+   "metadata": {},
+   "source": [
+    "As you can see, the EPW file or files we have is or are:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "d79e7b06",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['United-Kingdom_Aberdeen_Present.epw']\n"
+     ]
+    }
+   ],
+   "source": [
+    "print([i for i in original_files if i.endswith('.epw')])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "f4d4c7b5",
+   "metadata": {},
+   "source": [
+    "And the IDF file or files we have is or are:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "9bc50938",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "['TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf']\n"
+     ]
+    }
+   ],
+   "source": [
+    "print([i for i in original_files if i.endswith('.idf')])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "3df097f8",
+   "metadata": {},
+   "source": [
+    "Based on that, let's use ``runEp()``:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "b9a1077e",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "The IDFs we are going to run are:\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf\n",
+      " and the No. of IDFs is going to be 1\n",
+      "The sample_EPWs we are going to run are:\n",
+      "United-Kingdom_Aberdeen_Present.epw\n",
+      " and the No. of sample_EPWs is going to be 1\n",
+      "Therefore, the simulations are going to be:\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present\n",
+      " and the No. of simulations is going to be 1\n"
+     ]
+    }
+   ],
+   "source": [
+    "from accim.run import run\n",
+    "run.runEp(\n",
+    "    runOnlyAccim=True, #only runs output IDFs, that is, IDFs with \"[\" in its name\n",
+    "    confirmRun=True, #to skip confirmation\n",
+    "    num_CPUs=2, #to specify the number of CPUs to be used\n",
+    "    EnergyPlus_version='23.1', #to specify the EnergyPlus version of the IDF, and the version of EnergyPlus you are going to run\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a0452b62",
+   "metadata": {},
+   "source": [
+    "``runEp()`` just informed us about the input files, and the number of simulation runs and name of each one. So now, let's see what are the outputs:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "7f43e948",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.audit\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.bnd\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.dxf\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.eio\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.end\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.err\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.eso\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.mdd\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.mtd\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.rdd\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.rvaudit\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.shd\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_PresentTable.csv\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_PresentTable.htm\n",
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_PresentZsz.csv\n"
+     ]
+    }
+   ],
+   "source": [
+    "new_files = [i for i in os.listdir() if not(any(i in j for j in original_files))]\n",
+    "print(*new_files, sep='\\n')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "1f4d26d1",
+   "metadata": {},
+   "source": [
+    "The CSV files we have generated follow the naming convention 'IDF[EPW' and therefore, are suitable to be used with the class Table, within the accim.data.datawrangling module."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "808158c5",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "TestModel_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X[United-Kingdom_Aberdeen_Present.csv\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(*[i for i in os.listdir() if i.endswith('.csv') and not(i.endswith('Table.csv')) and not (i.endswith('Zsz.csv'))], sep='\\n')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "86b87509",
+   "metadata": {},
+   "source": [
+    "Now, let's remove all output files of the simulation run:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "813eed59",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for i in new_files:\n",
+    "    os.remove(i)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.4"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
