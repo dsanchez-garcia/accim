@@ -7,7 +7,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
-import accim
+# import accim
 
 # todo re-run all notebooks
 
@@ -17,7 +17,7 @@ import accim
 project = 'accim'
 copyright = '2023, Daniel Sánchez-García'
 author = 'Daniel Sánchez-García'
-version = accim.__version__
+# version = accim.__version__
 # release = accim.__version__
 
 # -- General configuration ---------------------------------------------------

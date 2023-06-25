@@ -143,7 +143,8 @@ class Table:
     :param level_agg_func: A list of strings. Strings can be 'sum' and/or 'mean'.
         Used to create the columns for levels preciously stated by summing and/or averaging.
     :param level_agg_func: list
-    :param level_excluded_zones: A list of strings. Strings must be the zones excluded from level computations.
+    :param level_excluded_zones: A list of strings.
+        Strings must be the zones excluded from level computations.
         Used to try to match the cities in the EPW file name with actual cities.
         To be used if sample_EPWs have not been previously renamed with rename_epw_files().
     :type level_excluded_zones: list
@@ -157,7 +158,8 @@ class Table:
         Used to keep the original name of EnergyPlus outputs or rename them for understanding
         purposes.
     :type rename_cols: bool
-    :param energy_units_in_kwh: A bool, can be True or False. If True, energy units will be in kWh or kWh/m2,
+    :param energy_units_in_kwh: A bool, can be True or False.
+        If True, energy units will be in kWh or kWh/m2,
         otherwise these will be in Wh or Wh/m2.
     :type energy_units_in_kwh: bool
     :param name_export_rows_with_NaN: This parameter shouldn't be generally used.
@@ -169,6 +171,22 @@ class Table:
         Used only to check the aggregations are correct.
     :type name_export_rows_not_corr_agg: str
     #todo instance variables: wrangled_df, etc.
+    :ivar df: The pandas DataFrame instance.
+        It is modified when method ``format_table`` is called.
+    :ivar df_backup: The full pandas DataFrame instance resulting from :class:``Table``.
+        It is not modified, so can be used to revert the DataFrame instance to its initial state.
+    :ivar cols_for_multiindex: The list of columns (or variables) that change in the dataset.
+        These represent the variables that might be interesting to study, and therefore,
+        the variables that are suggested to used in arguments
+        ``vars_to_gather``, ``vars_to_gather_cols`` or ``vars_to_gather_rows``.
+    :ivar wrangled_df_unstacked: The resulting pandas DataFrame after calling the
+        method ``wrangled_table`` with ``reshaping='unstack'``
+    :ivar wrangled_df_stacked: The resulting pandas DataFrame after calling the
+        method ``wrangled_table`` with ``reshaping='stack'``
+    :ivar wrangled_df_multiindex: The resulting pandas DataFrame after calling the
+        method ``wrangled_table`` with ``reshaping='multiindex'``
+    :ivar wrangled_df_pivoted: The resulting pandas DataFrame after calling the
+        method ``wrangled_table`` with ``reshaping='pivot'``
     """
 
     def __init__(self,
