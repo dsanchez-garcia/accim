@@ -6,10 +6,6 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
-# sys.path.insert(0, os.path.abspath(r'C:\Python\accim\accim'))
-
-
-
 
 import accim
 
@@ -44,7 +40,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
-#todo pdf not working
 html_static_path = [
     '_static',
     # 'accim/docs/previous_versions_pdfs',
