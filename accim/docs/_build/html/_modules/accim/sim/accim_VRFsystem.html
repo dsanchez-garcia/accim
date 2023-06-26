@@ -33,7 +33,7 @@
             accim
           </a>
               <div class="version">
-                0.6.13
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
@@ -103,8 +103,8 @@
 <span class="sd">    Amend ZoneControl:Thermostat:OperativeTemperature objects.</span>
 <span class="sd">    Add ZoneControl:Thermostat:OperativeTemperature objects for each zone.</span>
 
-<span class="sd">    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``</span>
-<span class="sd">    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``</span>
+<span class="sd">    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">zonename_orig</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">zonenames_orig</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">zonename_orig</span><span class="o">+</span><span class="s1">&#39; Thermostat&#39;</span> <span class="ow">in</span> <span class="p">[</span><span class="n">thermostat</span><span class="o">.</span><span class="n">Thermostat_Name</span>
@@ -131,8 +131,8 @@
 <span class="sd">    Checks Schedule:Compact objects needed for accim,</span>
 <span class="sd">    and add them in case these are not in the model</span>
 
-<span class="sd">    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``</span>
-<span class="sd">    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``</span>
+<span class="sd">    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="s2">&quot;On&quot;</span> <span class="ow">in</span> <span class="p">[</span><span class="n">schedule</span><span class="o">.</span><span class="n">Name</span> <span class="k">for</span> <span class="n">schedule</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Schedule:Compact&#39;</span><span class="p">]]:</span>
         <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
@@ -173,8 +173,8 @@
 <span class="sd">    Assign On Compact:Schedule to heating and cooling availability</span>
 <span class="sd">    schedule names.</span>
 
-<span class="sd">    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``</span>
-<span class="sd">    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``</span>
+<span class="sd">    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">schedule</span> <span class="ow">in</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;ZoneHVAC:IdealLoadsAirSystem&#39;</span><span class="p">]]:</span>
         <span class="n">schedule</span><span class="o">.</span><span class="n">Heating_Availability_Schedule_Name</span><span class="o">=</span><span class="s1">&#39;On&#39;</span>
@@ -190,8 +190,8 @@
 <span class="sd">    Add Schedule:Compact objects needed for VRFsystem to work,</span>
 <span class="sd">    other than AHST_Sch and ACST_Sch Schedules.</span>
 
-<span class="sd">    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``</span>
-<span class="sd">    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``</span>
+<span class="sd">    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">addVRFsystemSch_dict</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s1">&#39;On 24/7&#39;</span><span class="p">:</span> <span class="s1">&#39;Until: 24:00,1&#39;</span><span class="p">,</span>
@@ -247,8 +247,8 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Add Curve Objects needed for VRFsystem to work.</span>
 
-<span class="sd">    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``</span>
-<span class="sd">    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``</span>
+<span class="sd">    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># curvecubiclist=([i for i in self.idf1.idfobjects[&#39;Curve:Cubic&#39;]])</span>
     <span class="c1"># print(curvecubiclist)</span>
@@ -1017,10 +1017,10 @@
 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Add Detailed HVAC objects for VRFsystem to work.</span>
 
-<span class="sd">    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``</span>
-<span class="sd">    :param EnergyPlus_version: Inherited from :class:``accim.sim.accis.addAccis``</span>
-<span class="sd">    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``</span>
-<span class="sd">    :param SupplyAirTempInputMethod: Inherited from :class:``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``</span>
+<span class="sd">    :param EnergyPlus_version: Inherited from class ``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param SupplyAirTempInputMethod: Inherited from class ``accim.sim.accis.addAccis``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">zn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">zonenames_orig</span><span class="p">:</span>
         <span class="k">if</span> <span class="s1">&#39;VRF Outdoor Unit_&#39;</span><span class="o">+</span><span class="n">zn</span> <span class="ow">in</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Heat_Pump_Name</span>
@@ -1639,7 +1639,7 @@
 <div class="viewcode-block" id="addForscriptSchVRFsystem"><a class="viewcode-back" href="../../../accim.sim.html#accim.sim.accim_Main.addForscriptSchVRFsystem">[docs]</a><span class="k">def</span> <span class="nf">addForscriptSchVRFsystem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verboseMode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Add FORSCRIPT Schedules for each zone for VRFsystem.</span>
 
-<span class="sd">    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``</span>
+<span class="sd">    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``</span>
 <span class="sd">    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">zn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">zonenames</span><span class="p">:</span>

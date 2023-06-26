@@ -36,7 +36,7 @@
             accim
           </a>
               <div class="version">
-                0.6.13
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -149,9 +149,8 @@ It can be True or False.</p></li>
 exporting the CSV using concatenated_csv_name.</p></li>
 <li><p><strong>level</strong> (<em>list</em>) – A list of strings. Strings can be ‘block’ and/or ‘building’.
 Used to create columns with block or building values.</p></li>
-<li><p><strong>level_agg_func</strong> – A list of strings. Strings can be ‘sum’ and/or ‘mean’.
+<li><p><strong>level_agg_func</strong> (<em>list</em>) – A list of strings. Strings can be ‘sum’ and/or ‘mean’.
 Used to create the columns for levels preciously stated by summing and/or averaging.</p></li>
-<li><p><strong>level_agg_func</strong> – list</p></li>
 <li><p><strong>level_excluded_zones</strong> (<em>list</em>) – A list of strings.
 Strings must be the zones excluded from level computations.
 Used to try to match the cities in the EPW file name with actual cities.
@@ -174,16 +173,11 @@ A string used as a name to export a xlsx file with the rows not correctly aggreg
 Used only to check the aggregations are correct.</p></li>
 </ul>
 </dd>
-</dl>
-<p>#todo instance variables: wrangled_df, etc.
-:ivar df: The pandas DataFrame instance.</p>
-<blockquote>
-<div><p>It is modified when method <code class="docutils literal notranslate"><span class="pre">format_table</span></code> is called.</p>
-</div></blockquote>
-<dl class="field-list simple">
-<dt class="field-odd">Variables<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>df_backup</strong> – The full pandas DataFrame instance resulting from :class:<code class="docutils literal notranslate"><span class="pre">Table</span></code>.
+<dt class="field-even">Variables<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>df</strong> – The pandas DataFrame instance.
+It is modified when method <code class="docutils literal notranslate"><span class="pre">format_table</span></code> is called.</p></li>
+<li><p><strong>df_backup</strong> – The full pandas DataFrame instance resulting from class <code class="docutils literal notranslate"><span class="pre">Table</span></code>.
 It is not modified, so can be used to revert the DataFrame instance to its initial state.</p></li>
 <li><p><strong>cols_for_multiindex</strong> – The list of columns (or variables) that change in the dataset.
 These represent the variables that might be interesting to study, and therefore,

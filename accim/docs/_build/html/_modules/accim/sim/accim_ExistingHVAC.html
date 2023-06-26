@@ -33,7 +33,7 @@
             accim
           </a>
               <div class="version">
-                0.6.13
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
@@ -100,8 +100,8 @@
 <div class="viewcode-block" id="addForscriptSchExistHVAC"><a class="viewcode-back" href="../../../accim.sim.html#accim.sim.accim_ExistingHVAC.addForscriptSchExistHVAC">[docs]</a><span class="k">def</span> <span class="nf">addForscriptSchExistHVAC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verboseMode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Add Schedules for each zone in existing HVAC zones to override the existing setpoint temperatures.</span>
 
-<span class="sd">    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``</span>
-<span class="sd">    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``</span>
+<span class="sd">    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">)):</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">3</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>

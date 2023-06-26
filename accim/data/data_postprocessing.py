@@ -142,7 +142,7 @@ class Table:
     :type level: list
     :param level_agg_func: A list of strings. Strings can be 'sum' and/or 'mean'.
         Used to create the columns for levels preciously stated by summing and/or averaging.
-    :param level_agg_func: list
+    :type level_agg_func: list
     :param level_excluded_zones: A list of strings.
         Strings must be the zones excluded from level computations.
         Used to try to match the cities in the EPW file name with actual cities.

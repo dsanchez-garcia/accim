@@ -33,7 +33,7 @@
             accim
           </a>
               <div class="version">
-                0.6.13
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
@@ -110,9 +110,9 @@
 <span class="sd">    to Thermal Comfort Model types 1 and 2 fields of the existing People</span>
 <span class="sd">    objects.</span>
 
-<span class="sd">    :param EnergyPlus_version: Inherited from :class:`accim.sim.accis.addAccis`</span>
-<span class="sd">    :param TempCtrl: Inherited from :class:`accim.sim.accis.addAccis`</span>
-<span class="sd">    :param verboseMode: Inherited from :class:`accim.sim.accis.addAccis`</span>
+<span class="sd">    :param EnergyPlus_version: Inherited from class `accim.sim.accis.addAccis`</span>
+<span class="sd">    :param TempCtrl: Inherited from class `accim.sim.accis.addAccis`</span>
+<span class="sd">    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">ppl</span> <span class="o">=</span> <span class="p">([</span><span class="n">people</span> <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;PEOPLE&#39;</span><span class="p">]])</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ppl</span><span class="p">)):</span>
@@ -273,7 +273,7 @@
 <div class="viewcode-block" id="saveaccim"><a class="viewcode-back" href="../../../accim.sim.html#accim.sim.accim_Base.saveaccim">[docs]</a><span class="k">def</span> <span class="nf">saveaccim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verboseMode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Save IDF.</span>
 
-<span class="sd">    :param verboseMode: Inherited from :class:`accim.sim.accis.addAccis`</span>
+<span class="sd">    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
@@ -283,7 +283,7 @@
 <div class="viewcode-block" id="setPMVsetpoint"><a class="viewcode-back" href="../../../accim.sim.html#accim.sim.accim_Base.setPMVsetpoint">[docs]</a><span class="k">def</span> <span class="nf">setPMVsetpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verboseMode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Sets PMV setpoints for temperature control.</span>
 
-<span class="sd">    :param verboseMode: Inherited from :class:`accim.sim.accis.addAccis`</span>
+<span class="sd">    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># previoustodo check again the difference between operative temp and fanger; see ZoneControl:Thermostat and where is it assigned</span>
     <span class="n">optempthermlist</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;ZoneControl:Thermostat:OperativeTemperature&#39;</span><span class="p">]])</span>

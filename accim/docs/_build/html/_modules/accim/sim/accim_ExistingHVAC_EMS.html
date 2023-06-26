@@ -33,7 +33,7 @@
             accim
           </a>
               <div class="version">
-                0.6.13
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
@@ -102,8 +102,8 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Adds the EMS sensors for models with existing HVAC system.</span>
 
-<span class="sd">    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``</span>
-<span class="sd">    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``</span>
+<span class="sd">    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">sensorlist</span> <span class="o">=</span> <span class="p">([</span><span class="n">sensor</span><span class="o">.</span><span class="n">Name</span> <span class="k">for</span> <span class="n">sensor</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Sensor&#39;</span><span class="p">]])</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">)):</span>

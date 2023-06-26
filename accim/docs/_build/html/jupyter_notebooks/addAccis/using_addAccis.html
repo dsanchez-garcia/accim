@@ -39,7 +39,7 @@
             accim
           </a>
               <div class="version">
-                0.6.13
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -251,15 +251,7 @@ for VRFsystem with full air-conditioning mode: vrf_ac;
 for VRFsystem with mixed-mode: vrf_mm;
 for ExistingHVAC with mixed mode: ex_mm;
 for ExistingHVAC with full air-conditioning mode: ex_ac
-):
-  @media print {
-    .ms-editor-squiggles-container {
-      display:none !important;
-    }
-  }
-  .ms-editor-squiggles-container {
-    all: initial;
-  }vrf_mm
+): vrf_mm
 
 Enter the SupplyAirTempInputMethod (
 for Supply Air Temperature: supply air temperature;
@@ -663,7 +655,7 @@ Enter the Comfort Standard numbers separated by space (
 20 = MEX Oropeza HumTropic;
 21 = CHL Perez-Fargallo;
 22 = INT ISO7730;
-Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html
+Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html
 ): 1 14
           Are you sure the numbers are correct? [y or [] / n]:
 
@@ -682,7 +674,7 @@ Enter the Category numbers separated by space (
 80 = 80% ACCEPT;
 85 = 85% ACCEPT;
 90 = 90% ACCEPT;
-Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html
+Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html
 ): 1 2 3 80 90
           Are you sure the numbers are correct? [y or [] / n]:
 
@@ -708,7 +700,7 @@ For the comfort standard 14 = AUS DeDear, the available ComfMods you can choose 
 Enter the Comfort Mode numbers separated by space (
 0 or 0.X = Static;
 1, 1.X, 2, 3 = Adaptive;
-Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/full_setpoint_table.html
+Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html
 ): 0 0.1 0.2 0.3 0.4 0.5 1 1.1 1.2 1.3 1.4 1.5 2 3
           Are you sure the numbers are correct? [y or [] / n]:
 
@@ -848,7 +840,7 @@ TestModel[CS_AUS DeDear[CA_90[CM_3.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;accim.sim.accis.addAccis at 0x2525b72c700&gt;
+&lt;accim.sim.accis.addAccis at 0x202ac1cb8b0&gt;
 </pre></div></div>
 </div>
 <p>Let’s see what files we do have now in the folder:</p>
@@ -1504,7 +1496,7 @@ TestModel[CS_AUS DeDear[CA_90[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;accim.sim.accis.addAccis at 0x2527dc67ee0&gt;
+&lt;accim.sim.accis.addAccis at 0x202ce772ca0&gt;
 </pre></div></div>
 </div>
 <p>Let’s see what files we do have now in the folder:</p>
@@ -2303,7 +2295,7 @@ For instance, we can take a look at the arguments we have requested when ``addAc
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;TestModel&#39;: &lt;eppy.modeleditor.IDF at 0x252046fc070&gt;}
+{&#39;TestModel&#39;: &lt;eppy.modeleditor.IDF at 0x202d52010d0&gt;}
 </pre></div></div>
 </div>
 <p>So let’s read the eppy.modeleditor.IDF object of the idf TestModel. For instance, let’s see which zones are in the IDF by reading it, and if these are the same as previously seen in <code class="docutils literal notranslate"><span class="pre">add_accis_instance.occupied_zones_original_name</span></code>:</p>
@@ -2370,42 +2362,42 @@ Zone,
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_INT EN16798[CA_1[CM_1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_INT EN16798[CA_1[CM_2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_INT EN16798[CA_2[CM_1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_INT EN16798[CA_2[CM_2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_INT EN16798[CA_3[CM_1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_INT EN16798[CA_3[CM_2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_0.1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_0.2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_0.3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_0.4[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_0.5[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_1.1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_1.2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_1.3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_1.4[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_1.5[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_80[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_0.1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_0.2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_0.3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_0.4[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_0.5[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_1.1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_1.2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_1.3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_1.4[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_1.5[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;,
- &#39;TestModel[CS_AUS DeDear[CA_90[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x25207018580&gt;}
+{&#39;TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_INT EN16798[CA_1[CM_1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_INT EN16798[CA_1[CM_2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_INT EN16798[CA_1[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_INT EN16798[CA_2[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_INT EN16798[CA_2[CM_1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_INT EN16798[CA_2[CM_2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_INT EN16798[CA_2[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_INT EN16798[CA_3[CM_0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_INT EN16798[CA_3[CM_1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_INT EN16798[CA_3[CM_2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_INT EN16798[CA_3[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_0.1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_0.2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_0.3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_0.4[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_0.5[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_1.1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_1.2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_1.3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_1.4[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_1.5[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_80[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_0.1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_0.2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_0.3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_0.4[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_0.5[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_1.1[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_1.2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_1.3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_1.4[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_1.5[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_2[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;,
+ &#39;TestModel[CS_AUS DeDear[CA_90[CM_3[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf&#39;: &lt;eppy.modeleditor.IDF at 0x202d7b1c550&gt;}
 </pre></div></div>
 </div>
 <p>Let’s read the last one. Let’s see, for instance, the Schedule:Compact objects for the thermostats:</p>

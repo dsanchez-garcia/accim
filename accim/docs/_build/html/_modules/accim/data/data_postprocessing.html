@@ -33,7 +33,7 @@
             accim
           </a>
               <div class="version">
-                0.6.13
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
@@ -239,7 +239,7 @@
 <span class="sd">    :type level: list</span>
 <span class="sd">    :param level_agg_func: A list of strings. Strings can be &#39;sum&#39; and/or &#39;mean&#39;.</span>
 <span class="sd">        Used to create the columns for levels preciously stated by summing and/or averaging.</span>
-<span class="sd">    :param level_agg_func: list</span>
+<span class="sd">    :type level_agg_func: list</span>
 <span class="sd">    :param level_excluded_zones: A list of strings.</span>
 <span class="sd">        Strings must be the zones excluded from level computations.</span>
 <span class="sd">        Used to try to match the cities in the EPW file name with actual cities.</span>
@@ -267,10 +267,9 @@
 <span class="sd">        A string used as a name to export a xlsx file with the rows not correctly aggregated.</span>
 <span class="sd">        Used only to check the aggregations are correct.</span>
 <span class="sd">    :type name_export_rows_not_corr_agg: str</span>
-<span class="sd">    #todo instance variables: wrangled_df, etc.</span>
 <span class="sd">    :ivar df: The pandas DataFrame instance.</span>
 <span class="sd">        It is modified when method ``format_table`` is called.</span>
-<span class="sd">    :ivar df_backup: The full pandas DataFrame instance resulting from :class:``Table``.</span>
+<span class="sd">    :ivar df_backup: The full pandas DataFrame instance resulting from class ``Table``.</span>
 <span class="sd">        It is not modified, so can be used to revert the DataFrame instance to its initial state.</span>
 <span class="sd">    :ivar cols_for_multiindex: The list of columns (or variables) that change in the dataset.</span>
 <span class="sd">        These represent the variables that might be interesting to study, and therefore,</span>

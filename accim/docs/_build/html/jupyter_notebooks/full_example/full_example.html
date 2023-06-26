@@ -39,7 +39,7 @@
             accim
           </a>
               <div class="version">
-                0.6.13
+                0.7.0
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
@@ -629,7 +629,7 @@ TestModel[CS_JPN Rijal[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.i
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;accim.sim.accis.addAccis at 0x1cd24687400&gt;
+&lt;accim.sim.accis.addAccis at 0x17dbe51f1c0&gt;
 </pre></div></div>
 </div>
 <p>So, now let’s see the list of output IDFs we have generated</p>
@@ -747,7 +747,13 @@ city or subcountry, which must be unique: <strong>Sapporo</strong></p>
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">accim.data.data_preprocessing</span> <span class="kn">import</span> <span class="n">rename_epw_files</span>
-<span class="n">rename_epw_files</span><span class="p">(</span><span class="n">confirm_deletion</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">rename_epw_files</span><span class="p">(</span>
+    <span class="n">rename_dict</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;Naha&#39;</span><span class="p">:</span> <span class="s1">&#39;Naha&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Sapporo&#39;</span><span class="p">:</span> <span class="s1">&#39;Sapporo&#39;</span>
+    <span class="p">},</span>
+    <span class="n">confirm_deletion</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -756,11 +762,11 @@ city or subcountry, which must be unique: <strong>Sapporo</strong></p>
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:137: FutureWarning: The default value of regex will change from True to False in a future version.
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:181: FutureWarning: The default value of regex will change from True to False in a future version.
   epw_df[&#39;EPW_names&#39;] = epw_df[&#39;EPW_file_names&#39;].str.replace(&#39;.epw&#39;, &#39;&#39;)
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:139: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:183: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
   epw_df[&#39;EPW_mod&#39;] = epw_df[&#39;EPW_names&#39;].str.replace(&#39;-&#39;, &#39;_&#39;).str.replace(&#39;.&#39;, &#39;_&#39;).str.split(&#39;_&#39;)
-C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:141: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:185: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
   epw_df[&#39;EPW_mod_filtered&#39;] = epw_df[&#39;EPW_names&#39;].str.replace(&#39;-&#39;, &#39;_&#39;).str.replace(&#39;.&#39;, &#39;_&#39;).str.split(&#39;_&#39;)
 </pre></div></div>
 </div>
@@ -772,42 +778,15 @@ C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\da
 Since no match has been found between RCP scenario Year and EPW file name, Present year has been assigned to the following EPW files:
 Current_Naha_JA-hour.epw
 Current_Sapporo_JA-hour.epw
-The geolocation process has taken: 1.79 seconds (0.45 s/EPW)
+The geolocation process has taken: 2.05 seconds (0.51 s/EPW)
 
 The previous and new names of the EPW files and their unique IDs are:
-ID: 0 / Current_Naha_JA-hour / Japan_UNKNOWN_Present
-ID: 1 / Current_Sapporo_JA-hour / Japan_UNKNOWN_Present
-ID: 2 / rcp85_2100_Naha_JA-hour / Japan_UNKNOWN_RCP85-2100
-ID: 3 / rcp85_2100_Sapporo_JA-hour / Japan_UNKNOWN_RCP85-2100
-
-Duplicates have been found in the renamed EPW files, therefore these need to be amended in the next stage:
-[&#39;Japan_UNKNOWN_Present&#39;, &#39;Japan_UNKNOWN_RCP85-2100&#39;]
-
-&#34;UNKNOWN&#34; city or subcountry have been found in the renamed EPW files, therefore these need to be amended in the next stage.
-
-If any of the city or subcountry names needs some amendment (if you are not happy with any of the available options, you can exclude it from renaming at the next stage), please enter the EPW IDs separated by space; otherwise, hit enter to omit:
-
-Regarding the file ID: 0 / old name: Current_Naha_JA-hour / new name: Japan_UNKNOWN_Present, the address obtained from coordinates is:
-Du Jia Fu , Li Jian Cheng Shi , Chong Nawa Xian , JP-47, 901-0292, Ri Ben
-Please enter the amended city or subcountry, which must be unique: Naha
-
-Regarding the file ID: 1 / old name: Current_Sapporo_JA-hour / new name: Japan_UNKNOWN_Present, the address obtained from coordinates is:
-Zhong Xue Gao Xiao  Guan Li Dong , Jiao Shi Dong , Chuang Cheng Chuan Tong , Bei Er Shi Er Tiao Xi Er Ding Mu , Bei Qu , Zha Huang Shi , Shi Shou Zhen Xing Ju , Bei Hai Dao , JP-01, 001-8501, Ri Ben
-Please enter the amended city or subcountry, which must be unique: Sapporo
-
-Regarding the file ID: 2 / old name: rcp85_2100_Naha_JA-hour / new name: Japan_UNKNOWN_RCP85-2100, the address obtained from coordinates is:
-Du Jia Fu , Li Jian Cheng Shi , Chong Nawa Xian , JP-47, 901-0292, Ri Ben
-Please enter the amended city or subcountry, which must be unique: Naha
-
-Regarding the file ID: 3 / old name: rcp85_2100_Sapporo_JA-hour / new name: Japan_UNKNOWN_RCP85-2100, the address obtained from coordinates is:
-Zhong Xue Gao Xiao  Guan Li Dong , Jiao Shi Dong , Chuang Cheng Chuan Tong , Bei Er Shi Er Tiao Xi Er Ding Mu , Bei Qu , Zha Huang Shi , Shi Shou Zhen Xing Ju , Bei Hai Dao , JP-01, 001-8501, Ri Ben
-Please enter the amended city or subcountry, which must be unique: Sapporo
-
-The previous and new names of the EPW files after city or subcountry name amendments and their unique IDs are:
 ID: 0 / Current_Naha_JA-hour / Japan_Naha_Present
 ID: 1 / Current_Sapporo_JA-hour / Japan_Sapporo_Present
 ID: 2 / rcp85_2100_Naha_JA-hour / Japan_Naha_RCP85-2100
 ID: 3 / rcp85_2100_Sapporo_JA-hour / Japan_Sapporo_RCP85-2100
+
+If any of the city or subcountry names needs some amendment (if you are not happy with any of the available options, you can exclude it from renaming at the next stage), please enter the EPW IDs separated by space; otherwise, hit enter to omit:
 
 The final list of previous and new names of the EPW files and their unique IDs is:
 ID: 0 / Current_Naha_JA-hour / Japan_Naha_Present
@@ -830,7 +809,7 @@ The file rcp85_2100_Sapporo_JA-hour has been renamed to Japan_Sapporo_RCP85-2100
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;accim.data.data_preprocessing.rename_epw_files at 0x1cd24687a90&gt;
+&lt;accim.data.data_preprocessing.rename_epw_files at 0x17dbe51fc40&gt;
 </pre></div></div>
 </div>
 <p>Now, let’s see what EPWs we do have:</p>
@@ -1181,8 +1160,18 @@ No zones have been excluded from level computations.
             <span class="p">]</span>
         <span class="p">],</span>
     <span class="p">],</span>
+    <span class="n">rows_renaming_dict</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;Japan_Naha_Present&#39;</span><span class="p">:</span> <span class="s1">&#39;Naha Present&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Japan_Naha_RCP85-2100&#39;</span><span class="p">:</span> <span class="s1">&#39;Naha RCP85-2100&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Japan_Sapporo_Present&#39;</span><span class="p">:</span> <span class="s1">&#39;Sapporo Present&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Japan_Sapporo_RCP85-2100&#39;</span><span class="p">:</span> <span class="s1">&#39;Sapporo RCP85-2100&#39;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="n">cols_renaming_dict</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;CS_INT ASHRAE55[CM_3[HM_1&#39;</span><span class="p">:</span> <span class="s1">&#39;ASHRAE 55 NV&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CS_INT ASHRAE55[CM_3[HM_2&#39;</span><span class="p">:</span> <span class="s1">&#39;ASHRAE 55 MM&#39;</span><span class="p">,</span>
+    <span class="p">},</span>
     <span class="n">supxlabel</span><span class="o">=</span><span class="s1">&#39;Running Mean Outdoor Temperature (°C)&#39;</span><span class="p">,</span> <span class="c1"># data label on x axis</span>
-    <span class="n">figname</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;Scatterplot_NV_vs_MM&#39;</span><span class="p">,</span>
+    <span class="n">figname</span><span class="o">=</span><span class="s1">&#39;Scatterplot_NV_vs_MM&#39;</span><span class="p">,</span>
     <span class="n">figsize</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
     <span class="n">ratio_height_to_width</span><span class="o">=</span><span class="mf">0.33</span><span class="p">,</span>
     <span class="n">confirm_graph</span><span class="o">=</span><span class="kc">True</span>
@@ -1202,15 +1191,16 @@ Japan_Naha_Present
 Japan_Naha_RCP85-2100
 Japan_Sapporo_Present
 Japan_Sapporo_RCP85-2100
-Do you want to rename the rows? [y/n]: n
+The renamed rows are going to be:
+Naha Present
+Naha RCP85-2100
+Sapporo Present
+Sapporo RCP85-2100
 The number of columns and the list of these is going to be:
 No. of columns = 2
 List of columns:
 CS_INT ASHRAE55[CM_3[HM_1
 CS_INT ASHRAE55[CM_3[HM_2
-Column names will be the subplot titles. Do you want to rename them? [y/n]: y
-Please enter the new name for CS_INT ASHRAE55[CM_3[HM_1: ASHRAE 55 NV
-Please enter the new name for CS_INT ASHRAE55[CM_3[HM_2: ASHRAE 55 MM
 The renamed columns are going to be:
 ASHRAE 55 NV
 ASHRAE 55 MM
@@ -1286,6 +1276,17 @@ ASHRAE 55 MM
             <span class="p">]</span>
         <span class="p">],</span>
     <span class="p">],</span>
+    <span class="n">rows_renaming_dict</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;Japan_Naha_Present&#39;</span><span class="p">:</span> <span class="s1">&#39;Naha Present&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Japan_Naha_RCP85-2100&#39;</span><span class="p">:</span> <span class="s1">&#39;Naha RCP85-2100&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Japan_Sapporo_Present&#39;</span><span class="p">:</span> <span class="s1">&#39;Sapporo Present&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;Japan_Sapporo_RCP85-2100&#39;</span><span class="p">:</span> <span class="s1">&#39;Sapporo RCP85-2100&#39;</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="n">cols_renaming_dict</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;CS_JPN Rijal[CM_0[HM_2&#39;</span><span class="p">:</span> <span class="s1">&#39;JPN Stat MM&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CS_INT ASHRAE55[CM_3[HM_2&#39;</span><span class="p">:</span> <span class="s1">&#39;ASHRAE55 Adap MM&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CS_JPN Rijal[CM_3[HM_2&#39;</span><span class="p">:</span> <span class="s1">&#39;JPN Adap MM&#39;</span>
+    <span class="p">},</span>
     <span class="n">supxlabel</span><span class="o">=</span><span class="s1">&#39;Running Mean Outdoor Temperature (°C)&#39;</span><span class="p">,</span> <span class="c1"># data label on x axis</span>
     <span class="n">figname</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;scatterplot_JPN_stat_ASH_adap_JPN_adap&#39;</span><span class="p">,</span>
     <span class="n">figsize</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
@@ -1307,17 +1308,17 @@ Japan_Naha_Present
 Japan_Naha_RCP85-2100
 Japan_Sapporo_Present
 Japan_Sapporo_RCP85-2100
-Do you want to rename the rows? [y/n]: n
+The renamed rows are going to be:
+Naha Present
+Naha RCP85-2100
+Sapporo Present
+Sapporo RCP85-2100
 The number of columns and the list of these is going to be:
 No. of columns = 3
 List of columns:
 CS_JPN Rijal[CM_0[HM_2
 CS_INT ASHRAE55[CM_3[HM_2
 CS_JPN Rijal[CM_3[HM_2
-Column names will be the subplot titles. Do you want to rename them? [y/n]: y
-Please enter the new name for CS_JPN Rijal[CM_0[HM_2: JPN Stat MM
-Please enter the new name for CS_INT ASHRAE55[CM_3[HM_2: ASHRAE55 Adap MM
-Please enter the new name for CS_JPN Rijal[CM_3[HM_2: JPN Adap MM
 The renamed columns are going to be:
 JPN Stat MM
 ASHRAE55 Adap MM
@@ -1367,7 +1368,14 @@ JPN Adap MM
     <span class="n">vars_to_gather</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;ComfStand&#39;</span><span class="p">,</span> <span class="s1">&#39;ComfMod&#39;</span><span class="p">,</span> <span class="s1">&#39;HVACmode&#39;</span><span class="p">],</span>
     <span class="n">baseline</span><span class="o">=</span><span class="s1">&#39;CS_JPN Rijal[CM_3[HM_2&#39;</span><span class="p">,</span>
     <span class="n">comparison_mode</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;baseline compared to others&#39;</span><span class="p">],</span>
-    <span class="n">comparison_cols</span><span class="o">=</span><span class="p">[]</span>
+    <span class="n">comparison_cols</span><span class="o">=</span><span class="p">[],</span>
+    <span class="n">rename_dict</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;CS_INT ASHRAE55[CM_0[HM_2&#39;</span><span class="p">:</span> <span class="s1">&#39;ASHRAE Stat MM&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CS_INT ASHRAE55[CM_3[HM_1&#39;</span><span class="p">:</span> <span class="s1">&#39;ASHRAE Adap NV&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CS_INT ASHRAE55[CM_3[HM_2&#39;</span><span class="p">:</span> <span class="s1">&#39;ASHRAE Adap MM&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CS_JPN Rijal[CM_0[HM_2&#39;</span><span class="p">:</span> <span class="s1">&#39;JPN Stat MM&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CS_JPN Rijal[CM_3[HM_2&#39;</span><span class="p">:</span> <span class="s1">&#39;JPN Adap MM&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
 <span class="p">)</span>
 
 <span class="n">dataset_runperiod</span><span class="o">.</span><span class="n">wrangled_df_unstacked</span>
@@ -1418,16 +1426,16 @@ No zones have been excluded from level computations.
       <th></th>
       <th></th>
       <th></th>
-      <th>CS_INT ASHRAE55[CM_0[HM_2</th>
-      <th>CS_INT ASHRAE55[CM_3[HM_1</th>
-      <th>CS_INT ASHRAE55[CM_3[HM_2</th>
-      <th>CS_JPN Rijal[CM_0[HM_2</th>
-      <th>CS_JPN Rijal[CM_3[HM_2</th>
-      <th>CS_INT ASHRAE55[CM_0[HM_2</th>
-      <th>CS_INT ASHRAE55[CM_3[HM_1</th>
-      <th>CS_INT ASHRAE55[CM_3[HM_2</th>
-      <th>CS_JPN Rijal[CM_0[HM_2</th>
-      <th>CS_JPN Rijal[CM_3[HM_2</th>
+      <th>ASHRAE Stat MM</th>
+      <th>ASHRAE Adap NV</th>
+      <th>ASHRAE Adap MM</th>
+      <th>JPN Stat MM</th>
+      <th>JPN Adap MM</th>
+      <th>ASHRAE Stat MM</th>
+      <th>ASHRAE Adap NV</th>
+      <th>ASHRAE Adap MM</th>
+      <th>JPN Stat MM</th>
+      <th>JPN Adap MM</th>
     </tr>
     <tr>
       <th>EPW_City_or_subcountry</th>
@@ -1543,52 +1551,36 @@ No zones have been excluded from level computations.
 5                     NaN         RCP85       2100
 
   Building_Total_Comfortable Hours_No Applicability (h) (mean)  \
-0                          CS_INT ASHRAE55[CM_0[HM_2
+0                                     ASHRAE Stat MM
 1                                                NaN
 2                                            8707.42
 3                                            8692.67
 4                                            8218.67
 5                                             8362.5
 
-                  Unnamed: 4                 Unnamed: 5  \
-0  CS_INT ASHRAE55[CM_3[HM_1  CS_INT ASHRAE55[CM_3[HM_2
-1                        NaN                        NaN
-2                    6940.58                    8733.42
-3                    5111.58                    8714.08
-4                    5632.58                    8533.33
-5                    6031.92                    8563.58
+       Unnamed: 4      Unnamed: 5   Unnamed: 6   Unnamed: 7  \
+0  ASHRAE Adap NV  ASHRAE Adap MM  JPN Stat MM  JPN Adap MM
+1             NaN             NaN          NaN          NaN
+2         6940.58         8733.42      8741.67       8744.5
+3         5111.58         8714.08      8738.83      8704.67
+4         5632.58         8533.33      8471.67      8559.58
+5         6031.92         8563.58         8459      8613.75
 
-               Unnamed: 6              Unnamed: 7  \
-0  CS_JPN Rijal[CM_0[HM_2  CS_JPN Rijal[CM_3[HM_2
-1                     NaN                     NaN
-2                 8741.67                  8744.5
-3                 8738.83                 8704.67
-4                 8471.67                 8559.58
-5                    8459                 8613.75
+  Building_Total_Total Energy Demand (kWh/m2) (summed)      Unnamed: 9  \
+0                                     ASHRAE Stat MM    ASHRAE Adap NV
+1                                                NaN               NaN
+2                                             552.12                 0
+3                                             758.73                 0
+4                                             594.15                 0
+5                                             585.09                 0
 
-  Building_Total_Total Energy Demand (kWh/m2) (summed)  \
-0                          CS_INT ASHRAE55[CM_0[HM_2
-1                                                NaN
-2                                             552.12
-3                                             758.73
-4                                             594.15
-5                                             585.09
-
-                  Unnamed: 9                Unnamed: 10  \
-0  CS_INT ASHRAE55[CM_3[HM_1  CS_INT ASHRAE55[CM_3[HM_2
-1                        NaN                        NaN
-2                          0                     265.85
-3                          0                     419.02
-4                          0                     292.39
-5                          0                     331.88
-
-              Unnamed: 11             Unnamed: 12
-0  CS_JPN Rijal[CM_0[HM_2  CS_JPN Rijal[CM_3[HM_2
-1                     NaN                     NaN
-2                   356.8                  183.67
-3                  556.98                  336.46
-4                  334.51                  253.92
-5                  425.29                  268.65
+      Unnamed: 10  Unnamed: 11  Unnamed: 12
+0  ASHRAE Adap MM  JPN Stat MM  JPN Adap MM
+1             NaN          NaN          NaN
+2          265.85        356.8       183.67
+3          419.02       556.98       336.46
+4          292.39       334.51       253.92
+5          331.88       425.29       268.65
 </pre></div></div>
 </div>
 <p>Finally, so that we can run this jupyter notebook again, let’s leave everything as it was at the beginning.</p>
