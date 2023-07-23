@@ -1940,31 +1940,38 @@ class Table:
 
             checkpoint += 1
 
-            # todo re-review the use of check_index_and_cols and vars_to_gather to avoid repeated rows when stacking
-            if check_index_and_cols:
-                print('The multiindex should contain only the variables you want to compare. '
-                      'The variables and values you are going to use for the multiindex, except those already specified in vars_to_gather argument, are:')
-                for i in cols_for_multiindex:
-                    if all([i not in j for j in vars_to_gather]):
-                        print(f'{i}: {list(dict.fromkeys(wrangled_df_unstacked_or_stacked[i]))}')
-                proceed = input('If some variable is not relevant for the comparison, it should be removed. '
-                                'Do you want to remove any? [y/n]: ')
-                if 'y' in proceed:
-                    if len(vars_to_keep) > 0:
-                        print('The variables to keep you specified in the arguments will be overriden.')
-                    vars_to_keep = list(str(num) for num in input("Enter the variables you want to keep separated by semicolon: ").split(';'))
 
-            # if len(vars_to_keep) > 0:
-            #     add_vars_to_remove = list(set(cols_for_multiindex) - set(vars_to_gather) - set(vars_to_keep))
-            #     for i in add_vars_to_remove:
-            #         cols_to_clean.append(i)
-            #         cols_for_multiindex.remove(i)
 
             wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(cols_to_clean, axis=1)
 
             cols_for_values = list(set(wrangled_df_unstacked_or_stacked.columns) - set(cols_for_multiindex))
 
+
+            # todo re-review the use of check_index_and_cols and vars_to_gather to avoid repeated rows when stacking
+            if len(vars_to_keep) == 0:
+                if check_index_and_cols:
+                    print('The multiindex should contain only the variables you want to compare. '
+                          'The variables and values you are going to use for the multiindex, except those already specified in vars_to_gather argument, are:')
+                    for i in cols_for_multiindex:
+                        if all([i not in j for j in vars_to_gather]):
+                            print(f'{i}: {list(dict.fromkeys(wrangled_df_unstacked_or_stacked[i]))}')
+                    proceed = input('If some variable is not relevant for the comparison, it should be removed. '
+                                    'Do you want to remove any? [y/n]: ')
+                    if 'y' in proceed:
+                        if len(vars_to_keep) > 0:
+                            print('The variables to keep you specified in the arguments will be overriden.')
+                        vars_to_keep = list(str(num) for num in input("Enter the variables you want to keep separated by semicolon: ").split(';'))
+
+            if len(vars_to_keep) > 0:
+                add_vars_to_remove = list(set(cols_for_multiindex) - set(vars_to_gather) - set(vars_to_keep))
+                for i in add_vars_to_remove:
+                    cols_to_clean.append(i)
+                    cols_for_multiindex.remove(i)
+                wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(add_vars_to_remove, axis=1)
+
             wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.set_index(cols_for_multiindex)
+
+            checkpoint += 1
 
             if reshaping == 'unstack':
                 wrangled_df_unstacked = wrangled_df_unstacked_or_stacked.copy()
