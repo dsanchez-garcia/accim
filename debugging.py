@@ -1,7 +1,27 @@
 from accim.data.data_postprocessing import Table
 z = Table(
-    source_concatenated_csv_filepath='Australia_ACCIM[srcfreq-hourly[freq-runperiod[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv',
+    # source_concatenated_csv_filepath='Australia_ACCIM[srcfreq-hourly[freq-runperiod[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv',
+    source_frequency='hourly',
+    frequency='hourly',
+    frequency_agg_func='sum',
+    # level=['building'],
+    # level_agg_func=['sum', 'mean'],
+    # level_excluded_zones=[],
+    # split_epw_names=True,
+    normalised_energy_units=True,
+    rename_cols=True,
+    energy_units_in_kwh=True,
+)
+
+##
+from accim.data.data_postprocessing import Table
+z = Table(
+    # source_concatenated_csv_filepath='Australia_ACCIM[srcfreq-hourly[freq-runperiod[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv',
+    source_frequency='hourly',
+    frequency='hourly',
+    frequency_agg_func='sum',
     level=['building'],
+    standard_outputs=True,
     level_agg_func=['sum', 'mean'],
     level_excluded_zones=[],
     split_epw_names=True,
@@ -9,6 +29,7 @@ z = Table(
     rename_cols=True,
     energy_units_in_kwh=True,
 )
+
 
 z.format_table(
     type_of_table='temperature',
@@ -46,20 +67,20 @@ z.df = df_mod
 # z.df = df_filtered
 
 
-z.df.columns = [i
-    .replace('Building_Total_', '')
-    .replace(' (summed)', '')
-    for i in z.df.columns]
-z.val_cols = [i
-    .replace('Building_Total_', '')
-    .replace(' (summed)', '')
-    for i in z.val_cols]
-z.df.columns = [i
-    .replace('_No Tolerance', '')
-    for i in z.df.columns]
-z.val_cols = [i
-    .replace('_No Tolerance', '')
-    for i in z.val_cols]
+# z.df.columns = [i
+#     .replace('Building_Total_', '')
+#     .replace(' (summed)', '')
+#     for i in z.df.columns]
+# z.val_cols = [i
+#     .replace('Building_Total_', '')
+#     .replace(' (summed)', '')
+#     for i in z.val_cols]
+# z.df.columns = [i
+#     .replace('_No Tolerance', '')
+#     for i in z.df.columns]
+# z.val_cols = [i
+#     .replace('_No Tolerance', '')
+#     for i in z.val_cols]
 
 
 
@@ -75,9 +96,9 @@ z.scatter_plot(
         [
             'Indoor Operative Temperature (°C)',
             [
-                'Adaptive Cooling Setpoint Temperature (°C)',
-                'Adaptive Heating Setpoint Temperature (°C)',
-                'Zone Operative Temperature (°C) (mean)',
+                'Adaptive Cooling Setpoint Temperature_No Tolerance (°C)',
+                'Adaptive Heating Setpoint Temperature_No Tolerance (°C)',
+                'Building_Total_Zone Operative Temperature (°C) (mean)',
             ]
         ],
     ],
@@ -85,8 +106,8 @@ z.scatter_plot(
         [
             'Energy (kWh/m2)',
             [
-                'Cooling Energy Demand (kWh/m2)',
-                'Heating Energy Demand (kWh/m2)',
+                'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
+                'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
             ]
         ],
     ],
