@@ -1641,7 +1641,7 @@ class Table:
             vars_to_gather: list = None,
             baseline: str = None,
             comparison_mode: list = ['others compared to baseline'],
-            comparison_cols: list = ['absolute', 'relative'],
+            comparison_cols: list = None,
             check_index_and_cols: bool = False,
             vars_to_keep: list = None,
             rename_dict: dict = None,
@@ -1683,7 +1683,7 @@ class Table:
         if vars_to_gather is None:
             vars_to_gather = []
         if comparison_cols is None:
-            comparison_cols = ['absolute', 'relative']
+            comparison_cols = []
         if vars_to_keep is None:
             vars_to_keep = []
 
@@ -1986,10 +1986,14 @@ class Table:
                 var_to_gather_values = [i.split('[', maxsplit=1)[1] for i in wrangled_df_unstacked.columns]
                 var_to_gather_values = list(dict.fromkeys(var_to_gather_values))
 
-                if baseline not in var_to_gather_values:
-                    print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
-                    print(var_to_gather_values)
-                    baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
+                if len(comparison_cols) == 0:
+                    baseline = var_to_gather_values[0]
+                    comparison_mode = ['baseline compared to others']
+                else:
+                    if baseline not in var_to_gather_values:
+                        print(f'"{baseline}" is not in list of categories you want to compare. The list is:')
+                        print(var_to_gather_values)
+                        baseline = input('Please choose one from the list above (it is case-sensitive) for baseline:')
 
                 other_than_baseline = [i.split('[', maxsplit=1)[1] for i in wrangled_df_unstacked.columns if baseline not in i]
                 other_than_baseline = list(dict.fromkeys(other_than_baseline))
