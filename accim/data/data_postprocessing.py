@@ -1461,7 +1461,7 @@ class Table:
 
         # df.to_excel('checkpoint_04.xlsx')
 
-        # todo pop up when process ends; by defalt True
+        # todo pop up when process ends; by default True
 
     def gather_vars_query(
             self,
@@ -1475,14 +1475,15 @@ class Table:
         :type vars_to_gather: list
         """
         temp_df = self.df.copy()
-        temp_df['col_to_pivot'] = temp_df[vars_to_gather].agg('['.join, axis=1)
-        vars_to_gather_values = list(dict.fromkeys(temp_df['col_to_pivot']))
         print('The categorical columns which have different values and those values are:')
         # print(*self.cols_for_multiindex, sep='\n')
-        for i in self.cols_for_multiindex:
-            print(f'{i}: {list(dict.fromkeys(temp_df[i]))}')
-        print('The available options resulting from the data entered in vars_to_gather would be: ')
-        print(*vars_to_gather_values, sep='\n')
+        for i in self.suggested_vars_dict:
+            print(f'{i}: {self.suggested_vars_dict[i]}')
+        if vars_to_gather is not None:
+            temp_df['col_to_pivot'] = temp_df[vars_to_gather].agg('['.join, axis=1)
+            vars_to_gather_values = list(dict.fromkeys(temp_df['col_to_pivot']))
+            print('The available options resulting from the data entered in vars_to_gather would be: ')
+            print(*vars_to_gather_values, sep='\n')
         del temp_df
 
     def format_table(self,
