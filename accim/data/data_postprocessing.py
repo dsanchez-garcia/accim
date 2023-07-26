@@ -1416,7 +1416,7 @@ class Table:
                 'EPW_Scenario',
                 'EPW_Year'
             ])
-            available_vars_to_gather.remove('EPW')
+            # available_vars_to_gather.remove('EPW')
 
         # todo Step: remove PMV-PPD columns if the column only have null values
 
@@ -1424,6 +1424,8 @@ class Table:
 
         cols_to_clean = []
         cols_for_multiindex = []
+        suggested_vars_dict = {}
+
         for i in available_vars_to_gather:
             try:
                 if (df[i][0] == df[i]).all():
@@ -1432,6 +1434,7 @@ class Table:
                     cols_to_clean.append(i)
                 else:
                     cols_for_multiindex.append(i)
+                    suggested_vars_dict.update({i: list(dict.fromkeys(df[i]))})
             except KeyError:
                 if (df[i][0] == df[i]).all():
                     cols_to_clean.append(i)
@@ -1439,6 +1442,7 @@ class Table:
                     cols_to_clean.append(i)
                 else:
                     cols_for_multiindex.append(i)
+                    suggested_vars_dict.update({i: list(dict.fromkeys(df[i]))})
 
         checkpoint += 1
 
@@ -1453,6 +1457,7 @@ class Table:
 
         self.cols_to_clean = cols_to_clean
         self.cols_for_multiindex = cols_for_multiindex
+        self.suggested_vars_dict = suggested_vars_dict
 
         # df.to_excel('checkpoint_04.xlsx')
 
@@ -1910,14 +1915,15 @@ class Table:
             except ValueError:
                 print('Since this is not the first time you run wrangled_table, '
                       '"Source" is trying to be removed from indexcols, but has been previously removed.')
-            if self.split_epw_names:
-                wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['EPW', 'EPW_Scenario-Year'], axis=1)
-                try:
-                    self.indexcols.remove('EPW')
-                    self.indexcols.remove('EPW_Scenario-Year')
-                except ValueError:
-                    print('Since this is not the first time you run wrangled_table, '
-                          '"EPW" and "EPW_Scenario-Year" are trying to be removed from indexcols, but has been previously removed.')
+            # if self.split_epw_names:
+            #     wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['EPW', 'EPW_Scenario-Year'], axis=1)
+            #     try:
+            #         self.indexcols.remove('EPW')
+            #         self.indexcols.remove('EPW_Scenario-Year')
+            #     except ValueError:
+            #         print('Since this is not the first time you run wrangled_table, '
+            #               '"EPW" and "EPW_Scenario-Year" are trying to be removed from indexcols, but has been previously removed.')
+
             # removing variables where values are all the same
             cols_to_clean = []
             cols_for_multiindex = []
