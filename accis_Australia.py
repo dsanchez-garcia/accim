@@ -1,6 +1,6 @@
 from accim.sim import accis
 
-x = accis.addAccis(
+y = accis.addAccis(
     ScriptType='vrf_mm',
     SupplyAirTempInputMethod='temperature difference',
     Output_keep_existing=True,
@@ -10,13 +10,13 @@ x = accis.addAccis(
     # Output_freqs=['hourly'],
     EnergyPlus_version='23.1',
     TempCtrl='temp',
-    ComfStand=[22],
+    ComfStand=[2, 13, 14],
     CoolSeasonStart='01/12',
     CoolSeasonEnd='28/02',
-    CAT=[3],
-    ComfMod=[0],
+    CAT=[80],
+    ComfMod=[3],
     SetpointAcc=1000,
-    HVACmode=[2],
+    HVACmode=[1],
     VentCtrl=[0],
     VSToffset=[0],
     MinOToffset=[50],
