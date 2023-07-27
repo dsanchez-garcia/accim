@@ -1914,16 +1914,18 @@ class Table:
             try:
                 self.indexcols.remove('Source')
             except ValueError:
-                print('Since this is not the first time you run wrangled_table, '
-                      '"Source" is trying to be removed from indexcols, but has been previously removed.')
+                pass
+                # print('Since this is not the first time you run wrangled_table, '
+                #       '"Source" is trying to be removed from indexcols, but has been previously removed.')
             if self.split_epw_names:
                 wrangled_df_unstacked_or_stacked = wrangled_df_unstacked_or_stacked.drop(['EPW', 'EPW_Scenario-Year'], axis=1)
                 try:
                     self.indexcols.remove('EPW')
                     self.indexcols.remove('EPW_Scenario-Year')
                 except ValueError:
-                    print('Since this is not the first time you run wrangled_table, '
-                          '"EPW" and "EPW_Scenario-Year" are trying to be removed from indexcols, but has been previously removed.')
+                    pass
+                    # print('Since this is not the first time you run wrangled_table, '
+                    #       '"EPW" and "EPW_Scenario-Year" are trying to be removed from indexcols, but has been previously removed.')
 
             # removing variables where values are all the same
             cols_to_clean = []
