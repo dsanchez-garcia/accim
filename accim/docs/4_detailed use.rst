@@ -1,4 +1,4 @@
-4. Detailed use
+4. Detailed use and explanation of arguments
 ===============
 
 4.1 First steps
@@ -248,7 +248,7 @@ instead of those specified in the function call. Each argument is
 explained below:
 
 -  ComfStand: refers to the thermal comfort standard or model to be
-   applied. Enter any number from 0 to 21 to select the comfort standard
+   applied. Enter any number from 0 to 22 to select the comfort standard
    or model to be used; you can see which model is each number in the
    table below. For example, if you enter ‘0 1 2 3’, you’ll get IDFs for CTE,
    EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for
@@ -588,9 +588,9 @@ explained below:
    Category value (which are categories used in ASHRAE55), you won’t get
    the results you want.
 
--  ComfMod: is the Comfort Mode, and refers to the comfort modes used in
-   accim. It controls if the setpoints are static (when ComfMod = 0) or
-   adaptive (when ComfMod = 1, 2 or 3). When they are adaptive, it also
+-  ComfMod: is the Comfort Mode, and refers to the setpoint behaviour.
+   It controls if the setpoints are static (when ComfMod = 0 or 0.X) or
+   adaptive (when ComfMod = 1 or 1.X, 2 or 3). When they are adaptive, it also
    controls the comfort model applied when the adaptive model is not
    applicable (that is, when the running mean outdoor temperature limits
    are exceeded), in which case a PMV-based model is applied. Each
