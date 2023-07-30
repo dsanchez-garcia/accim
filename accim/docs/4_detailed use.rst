@@ -4,7 +4,7 @@
 4.1 First steps
 ---------------
 
-There has been developed 4 main branches of functions, which are:
+Four main branches of functions have been developed, which are:
 
 -  VRF system with full air-conditioning mode: This mode has been
    developed mainly to support models originated with OpenStudio, which
