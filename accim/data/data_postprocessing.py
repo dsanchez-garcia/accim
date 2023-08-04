@@ -2,11 +2,44 @@
 Classes and functions to perform data analytics after simulation runs.
 """
 
+def preview_Table_cols(datasets: list = []):
+    import pandas as pd
+    import glob
+    # Step: generating list of output columns
+
+    if len(datasets) > 0:
+        source_files = [
+            f for f in datasets if
+            'Table.csv' not in f and
+            'Meter.csv' not in f and
+            'Zsz.csv' not in f and
+            '[CSVconcatenated.csv' not in f and
+            '[Rows_not_corr_agg.csv' not in f and
+            '[Rows_with_NaNs.csv' not in f
+        ]
+    else:
+        allfiles = glob.glob('*.csv', recursive=True)
+        # if path is None:
+        #     allfiles = [i for i in os.listdir() if i.endswith('.csv')]
+        # else:
+        #     allfiles = [i for i in os.listdir(path) if i.endswith('.csv')]
+        source_files = [f for f in allfiles if
+                        'Table.csv' not in f and
+                        'Meter.csv' not in f and
+                        'Zsz.csv' not in f and
+                        '[CSVconcatenated.csv' not in f and
+                        '[Rows_not_corr_agg.csv' not in f and
+                        '[Rows_with_NaNs.csv' not in f
+                        ]
+    sample_output_cols_df = pd.DataFrame(pd.read_csv(source_files[0]))
+    sample_output_cols = [i for i in sample_output_cols_df.columns]
+    return sample_output_cols
 
 def genCSVconcatenated(
         datasets: list = None,
         source_frequency: str = None,
         frequency: str = None,
+        output_cols_to_keep: list = None,
         datasets_per_chunk: int = 50,
         concatenated_csv_name: str = None,
         drop_nan: bool = True,
@@ -69,6 +102,7 @@ def genCSVconcatenated(
     for i in range(len(chunklist)):
         z = Table(
             datasets=chunklist[i],
+            output_cols_to_keep=output_cols_to_keep,
             source_frequency=source_frequency,
             frequency=frequency,
             frequency_agg_func='sum',
@@ -188,25 +222,27 @@ class Table:
         method ``wrangled_table`` with ``reshaping='pivot'``
     """
 
-    def __init__(self,
-                 datasets: list = None,
-                 source_concatenated_csv_filepath: str = None,
-                 source_frequency: str = None,
-                 frequency: str = None,
-                 frequency_agg_func: str = None,
-                 standard_outputs: bool = None,
-                 concatenated_csv_name: str = None,
-                 level: list = None,
-                 level_agg_func: list = None,
-                 level_excluded_zones: list = None,
-                 block_zone_hierarchy: dict = None,
-                 split_epw_names: bool = False,
-                 normalised_energy_units: bool = True,
-                 rename_cols: bool = True,
-                 energy_units_in_kwh: bool = True,
-                 drop_nan: bool = False,
-                 name_export_rows_with_NaN: str = None,
-                 name_export_rows_not_corr_agg: str = None,
+    def __init__(
+        self,
+        datasets: list = None,
+        source_concatenated_csv_filepath: str = None,
+        source_frequency: str = None,
+        frequency: str = None,
+        frequency_agg_func: str = None,
+        standard_outputs: bool = None,
+        output_cols_to_keep: list = None,
+        concatenated_csv_name: str = None,
+        level: list = None,
+        level_agg_func: list = None,
+        level_excluded_zones: list = None,
+        block_zone_hierarchy: dict = None,
+        split_epw_names: bool = False,
+        normalised_energy_units: bool = True,
+        rename_cols: bool = True,
+        energy_units_in_kwh: bool = True,
+        drop_nan: bool = False,
+        name_export_rows_with_NaN: str = None,
+        name_export_rows_not_corr_agg: str = None,
     ):
         """
         Constructor method
@@ -424,6 +460,18 @@ class Table:
                     for i in cleaned_columns:
                         for j in df.columns:
                             if i in j:
+                                if SFdict[source_frequency] in j:
+                                    keeplist.append(j)
+                    keeplist = list(dict.fromkeys(keeplist))
+                    keeplist.append('Date/Time')
+                    droplist = list(set(df.columns) - set(keeplist))
+                    df = df.drop(droplist, axis=1)
+
+                if output_cols_to_keep is not None:
+                    keeplist = []
+                    for i in output_cols_to_keep:
+                        for j in df.columns:
+                            if i == j:
                                 if SFdict[source_frequency] in j:
                                     keeplist.append(j)
                     keeplist = list(dict.fromkeys(keeplist))
@@ -918,41 +966,43 @@ class Table:
 
         if any('block' in i for i in level):
             for output in outputdict:
-                for block in block_list:
+                if any([output.lower() in i.lower() for i in df.columns]):
+                    for block in block_list:
+                        if any('sum' in j for j in level_agg_func):
+                            df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
+                                [i for i in df.columns if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i.upper() for k in level_excluded_zones))]
+                            ].sum(axis=1)
+                        else:
+                            if normalised_energy_units:
+                                if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
+                                    df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
+                                        [i for i in df.columns if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i.upper() for k in level_excluded_zones))]
+                                    ].sum(axis=1)
+                        if any('mean' in j for j in level_agg_func):
+                            if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
+                                continue
+                            else:
+                                df[f'{block}' + '_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
+                                    [i for i in df.columns
+                                     if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower()]
+                                ].mean(axis=1)
+        if any('building' in i for i in level):
+            for output in outputdict:
+                if any([output.lower() in i.lower() for i in df.columns]):
                     if any('sum' in j for j in level_agg_func):
-                        df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                            [i for i in df.columns if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i.upper() for k in level_excluded_zones))]
-                        ].sum(axis=1)
+                        df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
+                            [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].sum(axis=1)
                     else:
                         if normalised_energy_units:
                             if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
-                                df[f'{block}' + '_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                                    [i for i in df.columns if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i.upper() for k in level_excluded_zones))]
-                                ].sum(axis=1)
+                                df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
+                                    [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].sum(axis=1)
                     if any('mean' in j for j in level_agg_func):
                         if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
                             continue
                         else:
-                            df[f'{block}' + '_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
-                                [i for i in df.columns
-                                 if block.lower() in i.lower() and output.upper() in i.upper() and '_pymod' not in i.lower()]
-                            ].mean(axis=1)
-        if any('building' in i for i in level):
-            for output in outputdict:
-                if any('sum' in j for j in level_agg_func):
-                    df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                        [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].sum(axis=1)
-                else:
-                    if normalised_energy_units:
-                        if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
-                            df['Building_Total_' + outputdict[output] + ' (summed)_pymod'] = df[
-                                [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].sum(axis=1)
-                if any('mean' in j for j in level_agg_func):
-                    if 'Zone Air Volume' in output or 'Zone Floor Area' in output:
-                        continue
-                    else:
-                        df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
-                            [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].mean(axis=1)
+                            df['Building_Total_' + outputdict[output] + ' (mean)_pymod'] = df[
+                                [i for i in df.columns if output.upper() in i.upper() and '_pymod' not in i.lower() and not (any(k.upper() in i for k in level_excluded_zones))]].mean(axis=1)
 
         # df.to_excel('checkpoint_02.xlsx')
 
