@@ -3,6 +3,14 @@ Classes and functions to perform data analytics after simulation runs.
 """
 
 def preview_Table_cols(datasets: list = []):
+    """
+    Function to return the list of EnergyPlus Output:Variable outputs columns
+    from the first CSV file in the path, suitable to be computed in the class Table,
+    or the datasets, if entered. It is useful to know the full list of columns in the CSV files from simulation,
+    so that columns can be filtered using the argument output_cols_to_keep in the class Table.
+    :param datasets: The list of CSV files to be conca
+    :return: The list of columns within the CSV files.
+    """
     import pandas as pd
     import glob
     # Step: generating list of output columns
@@ -166,6 +174,10 @@ class Table:
     :param standard_outputs: Used to consider only standard outputs from accim.
         It can be True or False.
     :type standard_outputs: bool
+    :param output_cols_to_keep: A list of columns from EnergyPlus Output:Variable.
+        Used to remove all other columns from EnergyPlus Output:Variable objects
+        except the ones specified in this list.
+    :type output_cols_to_keep: list
     :param concatenated_csv_name: Used as the name for the concatenated csv file.
     :type concatenated_csv_name: str
     :param drop_nan: If True, drops the rows with NaNs before
