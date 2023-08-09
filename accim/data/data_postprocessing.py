@@ -1480,6 +1480,9 @@ class Table:
             ])
             available_vars_to_gather.remove('EPW')
 
+        if frequency == 'monthly':
+            available_vars_to_gather.extend(['Month'])
+
         # todo Step: remove PMV-PPD columns if the column only have null values
 
         # df = df.round(decimals=2)
