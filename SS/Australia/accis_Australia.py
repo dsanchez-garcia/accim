@@ -1,22 +1,20 @@
 from accim.sim import accis
-
-y = accis.addAccis(
+accis.addAccis(
     ScriptType='vrf_mm',
     SupplyAirTempInputMethod='temperature difference',
-    Output_keep_existing=True,
-    Output_type='detailed',
+    Output_keep_existing=False,
+    Output_type='standard',
     Output_freqs=['hourly'],
-    Output_gen_dataframe=True,
-    # Output_freqs=['hourly'],
+    Output_gen_dataframe=False,
     EnergyPlus_version='23.1',
-    TempCtrl='temp',
-    ComfStand=[2, 13, 14],
+    TempCtrl='temperature',
+    ComfStand=[2, 14, 22],
     CoolSeasonStart='01/12',
     CoolSeasonEnd='28/02',
-    CAT=[80],
-    ComfMod=[3],
+    CAT=[80, 3],
+    ComfMod=[0, 3],
     SetpointAcc=1000,
-    HVACmode=[1],
+    HVACmode=[2],
     VentCtrl=[0],
     VSToffset=[0],
     MinOToffset=[50],
@@ -25,5 +23,4 @@ y = accis.addAccis(
     ASTtol_start=0.1,
     ASTtol_end_input=0.1,
     confirmGen=True,
-    # NameSuffix='date_inverse'
 )
