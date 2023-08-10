@@ -1482,6 +1482,12 @@ class Table:
 
         if frequency == 'monthly':
             available_vars_to_gather.extend(['Month'])
+        if frequency == 'daily':
+            available_vars_to_gather.extend(['Month', 'Day'])
+        if frequency == 'hourly':
+            available_vars_to_gather.extend(['Month', 'Day', 'Hour'])
+
+
 
         # todo Step: remove PMV-PPD columns if the column only have null values
 
