@@ -1,6 +1,8 @@
 1. Requirements
 ===============
 
+Please, note this documentation is for version |version|.
+
 To use accim, the following must be installed:
 
 * Python 3.9
