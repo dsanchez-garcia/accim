@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Using rename_epw_files() to rename the EPWs for proper data analysis after simulation &mdash; accim  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/nbsphinx-code-cells.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Using runEp() to directly run simulations with EnergyPlus" href="../runEp/using_runEp.html" />
+    <link rel="prev" title="Full example of adaptive setpoint temperature simulation: IBPSA webinar" href="../full_example_IBPSA/full_example_IBPSA.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            accim
+          </a>
+              <div class="version">
+                0.7.2
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Using-rename_epw_files()-to-rename-the-EPWs-for-proper-data-analysis-after-simulation">
+<h1>Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation<a class="headerlink" href="#Using-rename_epw_files()-to-rename-the-EPWs-for-proper-data-analysis-after-simulation" title="Permalink to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">rename_epw_files</span></code> function will rename your EPW files following the naming convention “Country_City_RCPscenario-Year”. It will get the Country and City fields from EPW coordinates, and the RCPscenario and Year fields from the original name. If there is no reference to this in the original name, it will consider these to be at Present scenario.</p>
+<p>usage: <code class="docutils literal notranslate"><span class="pre">rename_epw_files(</span>&#160;&#160; <span class="pre">filelist=list_of_files_to_rename,</span> <span class="pre">#</span> <span class="pre">if</span> <span class="pre">omitted,</span> <span class="pre">it</span> <span class="pre">will</span> <span class="pre">rename</span> <span class="pre">all</span> <span class="pre">EPWs</span> <span class="pre">in</span> <span class="pre">that</span> <span class="pre">folder</span>&#160;&#160; <span class="pre">confirm_renaming=True</span> <span class="pre">or</span> <span class="pre">False,</span> <span class="pre">#to</span> <span class="pre">skip</span> <span class="pre">renaming</span> <span class="pre">confirmation</span> <span class="pre">on</span> <span class="pre">prompt</span> <span class="pre">command</span> <span class="pre">or</span> <span class="pre">console</span>&#160;&#160; <span class="pre">confirm_deletion=True</span> <span class="pre">or</span> <span class="pre">False</span> <span class="pre">#to</span> <span class="pre">skip</span> <span class="pre">deletion</span> <span class="pre">confirmation</span> <span class="pre">on</span> <span class="pre">prompt</span> <span class="pre">command</span> <span class="pre">or</span> <span class="pre">console</span>&#160;&#160; <span class="pre">match_cities:</span> <span class="pre">True</span> <span class="pre">or</span> <span class="pre">False.</span> <span class="pre">Default</span> <span class="pre">is</span> <span class="pre">False.</span> <span class="pre">It's</span> <span class="pre">computationally</span> <span class="pre">very</span> <span class="pre">expensive.</span>&#160;&#160; <span class="pre">)</span></code></p>
+<p>First of all, let’s see what files we do have in the folder:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;.ipynb_checkpoints&#39;,
+ &#39;GBR_Aberdeen.Dyce.030910_IWEC.epw&#39;,
+ &#39;GBR_London.Gatwick.037760_IWEC.epw&#39;,
+ &#39;RCP26_2100_GC03_Ponta_Grossa.epw&#39;,
+ &#39;using_rename_epw_files.ipynb&#39;,
+ &#39;__init__.py&#39;]
+</pre></div></div>
+</div>
+<p>You can see there are 3 EPW files, which are:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">old_epws</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.epw&#39;</span><span class="p">)]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">old_epws</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;GBR_Aberdeen.Dyce.030910_IWEC.epw&#39;, &#39;GBR_London.Gatwick.037760_IWEC.epw&#39;, &#39;RCP26_2100_GC03_Ponta_Grossa.epw&#39;]
+</pre></div></div>
+</div>
+<p>So let’s rename them. When we call the function, you will be asked to enter the IDs of the EPW names which are not correct, if there are any. If you enter one or multiple IDs, you will be asked if you want to rename them manually (i.e. typing the correct new name) or not. If you say ‘n’, possible names will be searched by using the geolocation, which can be computationally expensive if there are a moderate number of EPWs (e.g. 30).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">accim.data.data_preprocessing</span> <span class="kn">import</span> <span class="n">rename_epw_files</span>
+<span class="n">rename_epw_files</span><span class="p">(</span>
+    <span class="n">confirm_deletion</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:181: FutureWarning: The default value of regex will change from True to False in a future version.
+  epw_df[&#39;EPW_names&#39;] = epw_df[&#39;EPW_file_names&#39;].str.replace(&#39;.epw&#39;, &#39;&#39;)
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:183: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
+  epw_df[&#39;EPW_mod&#39;] = epw_df[&#39;EPW_names&#39;].str.replace(&#39;-&#39;, &#39;_&#39;).str.replace(&#39;.&#39;, &#39;_&#39;).str.split(&#39;_&#39;)
+C:\users\sanga\appdata\local\programs\python\python39\lib\site-packages\accim\data\data_preprocessing.py:185: FutureWarning: The default value of regex will change from True to False in a future version. In addition, single character regular expressions will*not* be treated as literal strings when regex=True.
+  epw_df[&#39;EPW_mod_filtered&#39;] = epw_df[&#39;EPW_names&#39;].str.replace(&#39;-&#39;, &#39;_&#39;).str.replace(&#39;.&#39;, &#39;_&#39;).str.split(&#39;_&#39;)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Since no match has been found between RCP scenarios and EPW file name, Present scenario has been assigned to the following EPW files:
+GBR_Aberdeen.Dyce.030910_IWEC.epw
+GBR_London.Gatwick.037760_IWEC.epw
+Since no match has been found between RCP scenario Year and EPW file name, Present year has been assigned to the following EPW files:
+GBR_Aberdeen.Dyce.030910_IWEC.epw
+GBR_London.Gatwick.037760_IWEC.epw
+The geolocation process has taken: 6.2 seconds (2.07 s/EPW)
+
+The previous and new names of the EPW files and their unique IDs are:
+ID: 0 / GBR_Aberdeen.Dyce.030910_IWEC / United-Kingdom_Aberdeen_Present
+ID: 1 / GBR_London.Gatwick.037760_IWEC / United-Kingdom_UNKNOWN_Present
+ID: 2 / RCP26_2100_GC03_Ponta_Grossa / Brazil_Ponta_RCP26-2100
+
+&#34;UNKNOWN&#34; city or subcountry have been found in the renamed EPW files, therefore these need to be amended in the next stage.
+
+If any of the city or subcountry names needs some amendment (if you are not happy with any of the available options, you can exclude it from renaming at the next stage), please enter the EPW IDs separated by space; otherwise, hit enter to omit:1 2
+
+Regarding the file ID: 1 / old name: GBR_London.Gatwick.037760_IWEC / new name: United-Kingdom_UNKNOWN_Present, the address obtained from coordinates is:
+London Gatwick Airport, Old Brighton Road South, Lowfield Heath, Manor Royal, Crawley, West Sussex, GB-WSX, England, GB-ENG, RH11 0PT, United Kingdom
+Please enter the amended city or subcountry, which must be unique: London
+
+Regarding the file ID: 2 / old name: RCP26_2100_GC03_Ponta_Grossa / new name: Brazil_Ponta_RCP26-2100, the address obtained from coordinates is:
+Praca Barao de Guarauna, Centro, Centro, Ponta Grossa, Regiao Geografica Imediata de Ponta Grossa, Regiao Geografica Intermediaria de Ponta Grossa, Parana, BR-PR, Regiao Sul, 84010-050, Brasil
+Please enter the amended city or subcountry, which must be unique: Ponta Grossa
+
+The previous and new names of the EPW files after city or subcountry name amendments and their unique IDs are:
+ID: 1 / GBR_London.Gatwick.037760_IWEC / United-Kingdom_London_Present
+ID: 2 / RCP26_2100_GC03_Ponta_Grossa / Brazil_Ponta-Grossa_RCP26-2100
+
+The final list of previous and new names of the EPW files and their unique IDs is:
+ID: 0 / GBR_Aberdeen.Dyce.030910_IWEC / United-Kingdom_Aberdeen_Present
+ID: 1 / GBR_London.Gatwick.037760_IWEC / United-Kingdom_London_Present
+ID: 2 / RCP26_2100_GC03_Ponta_Grossa / Brazil_Ponta-Grossa_RCP26-2100
+
+If you want to exclude some EPWs from renaming, please enter the IDs separated by space, otherwise, hit enter to continue:
+
+Do you want to copy and rename the file or files? [y/n]:y
+The file GBR_Aberdeen.Dyce.030910_IWEC has been renamed to United-Kingdom_Aberdeen_Present
+The file GBR_London.Gatwick.037760_IWEC has been renamed to United-Kingdom_London_Present
+The file RCP26_2100_GC03_Ponta_Grossa has been renamed to Brazil_Ponta-Grossa_RCP26-2100
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;accim.data.data_preprocessing.rename_epw_files at 0x28c9609aee0&gt;
+</pre></div></div>
+</div>
+<p>You can see above that there was no reference to RCP scenarios in the original EPW file name in 2 of the instances, therefore these has been considered as Present scenario. The same applies to the Year field. Finally, states the previous and the new names of the EPWs. So, now, let’s see what files we do have in the folder.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;.ipynb_checkpoints&#39;,
+ &#39;Brazil_Ponta-Grossa_RCP26-2100.epw&#39;,
+ &#39;GBR_Aberdeen.Dyce.030910_IWEC.epw&#39;,
+ &#39;GBR_London.Gatwick.037760_IWEC.epw&#39;,
+ &#39;RCP26_2100_GC03_Ponta_Grossa.epw&#39;,
+ &#39;United-Kingdom_Aberdeen_Present.epw&#39;,
+ &#39;United-Kingdom_London_Present.epw&#39;,
+ &#39;using_rename_epw_files.ipynb&#39;,
+ &#39;__init__.py&#39;]
+</pre></div></div>
+</div>
+<p>We can see the new EPWs are:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">new_epws</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">any</span><span class="p">(</span><span class="n">i</span> <span class="ow">in</span> <span class="n">j</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">old_epws</span><span class="p">))</span> <span class="ow">and</span> <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.epw&#39;</span><span class="p">)]</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">new_epws</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;Brazil_Ponta-Grossa_RCP26-2100.epw&#39;, &#39;United-Kingdom_Aberdeen_Present.epw&#39;, &#39;United-Kingdom_London_Present.epw&#39;]
+</pre></div></div>
+</div>
+<p>Let’s delete the new files so that we can run the notebook again.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">new_epws</span><span class="p">:</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../full_example_IBPSA/full_example_IBPSA.html" class="btn btn-neutral float-left" title="Full example of adaptive setpoint temperature simulation: IBPSA webinar" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../runEp/using_runEp.html" class="btn btn-neutral float-right" title="Using runEp() to directly run simulations with EnergyPlus" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

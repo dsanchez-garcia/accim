@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.sim package &mdash; accim  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Documentation for previous versions" href="8_pdfs_for_prev_versions.html" />
+    <link rel="prev" title="accim.run package" href="accim.run.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            accim
+          </a>
+              <div class="version">
+                0.7.2
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">accim</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="accim.html">accim package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="accim.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="accim.data.html">accim.data package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.run.html">accim.run package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">accim.sim package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#module-accim">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">accim</a></li>
+          <li class="breadcrumb-item"><a href="accim.html">accim package</a></li>
+      <li class="breadcrumb-item active">accim.sim package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/accim.sim.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="accim-sim-package">
+<h1>accim.sim package<a class="headerlink" href="#accim-sim-package" title="Permalink to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
+</section>
+<section id="module-accim.sim.accim_Base">
+<span id="accim-sim-accim-base-module"></span><h2>accim.sim.accim_Base module<a class="headerlink" href="#module-accim.sim.accim_Base" title="Permalink to this heading"></a></h2>
+<p>Add EnergyPlus objects in common to both ExistingHVAC and VRFsystem.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base.saveaccim">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base.</span></span><span class="sig-name descname"><span class="pre">saveaccim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base.html#saveaccim"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base.saveaccim" title="Permalink to this definition"></a></dt>
+<dd><p>Save IDF.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>verboseMode</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base.setComfFieldsPeople">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base.</span></span><span class="sig-name descname"><span class="pre">setComfFieldsPeople</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">EnergyPlus_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TempCtrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base.html#setComfFieldsPeople"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base.setComfFieldsPeople" title="Permalink to this definition"></a></dt>
+<dd><p>Amend PEOPLE objects so that accim can work.
+Copy existing PEOPLE objects and adds AdaptiveASH55 and AdaptiveCEN15251
+to Thermal Comfort Model types 1 and 2 fields of the existing People
+objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>EnergyPlus_version</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p></li>
+<li><p><strong>TempCtrl</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base.setPMVsetpoint">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base.</span></span><span class="sig-name descname"><span class="pre">setPMVsetpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base.html#setPMVsetpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base.setPMVsetpoint" title="Permalink to this definition"></a></dt>
+<dd><p>Sets PMV setpoints for temperature control.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>verboseMode</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.sim.accim_Base_EMS">
+<span id="accim-sim-accim-base-ems-module"></span><h2>accim.sim.accim_Base_EMS module<a class="headerlink" href="#module-accim.sim.accim_Base_EMS" title="Permalink to this heading"></a></h2>
+<p>Add EMS objects in common to both ExistingHVAC and VRFsystem.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.addEMSActuatorsBase">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">addEMSActuatorsBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#addEMSActuatorsBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.addEMSActuatorsBase" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS actuators for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.addEMSOutputVariableBase">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">addEMSOutputVariableBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#addEMSOutputVariableBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.addEMSOutputVariableBase" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS output variables for Base accim.
+Checks if some EMS output variables objects are already
+in the model, and otherwise adds them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.addEMSPCMBase">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">addEMSPCMBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#addEMSPCMBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.addEMSPCMBase" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS program calling managers for Base accim.
+Checks if some EMS program calling manager objects are already
+in the model, and otherwise adds them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.addEMSProgramsBase">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">addEMSProgramsBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#addEMSProgramsBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.addEMSProgramsBase" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS programs for Base accim.
+Checks if some programs objects are already
+in the model, and otherwise adds them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ScriptType</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.addEMSSensorsBase">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">addEMSSensorsBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#addEMSSensorsBase"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.addEMSSensorsBase" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS sensors for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.addGlobVarList">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">addGlobVarList</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#addGlobVarList"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.addGlobVarList" title="Permalink to this definition"></a></dt>
+<dd><p>Remove existing Global Variable objects and add correct Global Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.addIntVarList">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">addIntVarList</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#addIntVarList"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.addIntVarList" title="Permalink to this definition"></a></dt>
+<dd><p>Add Internal variables objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.addOutputVariablesDetailed">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">addOutputVariablesDetailed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Outputs_freq</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#addOutputVariablesDetailed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.addOutputVariablesDetailed" title="Permalink to this definition"></a></dt>
+<dd><p>Add Output:Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>Outputs_freq</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.addOutputVariablesSimplified">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">addOutputVariablesSimplified</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Outputs_freq</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TempCtrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#addOutputVariablesSimplified"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.addOutputVariablesSimplified" title="Permalink to this definition"></a></dt>
+<dd><p>Add simplified Output:Variable objects for accim.
+Remove all outputs and add only VFR outdoor unit consumption
+and operative temperature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>Outputs_freq</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>TempCtrl</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.addOutputVariablesStandard">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">addOutputVariablesStandard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Outputs_freq</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TempCtrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#addOutputVariablesStandard"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.addOutputVariablesStandard" title="Permalink to this definition"></a></dt>
+<dd><p>Add Output:Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>Outputs_freq</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>TempCtrl</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.genOutputDataframe">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">genOutputDataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idf_filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#genOutputDataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.genOutputDataframe" title="Permalink to this definition"></a></dt>
+<dd><p>Used to generate a pandas DataFrame instance containing all Output:Variable objects in the model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>idf_filename</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.outputsSpecified">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">outputsSpecified</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_or_keep</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#outputsSpecified"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.outputsSpecified" title="Permalink to this definition"></a></dt>
+<dd><p>Remove duplicated Output:Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>remove_or_keep</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.removeDuplicatedOutputVariables">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">removeDuplicatedOutputVariables</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#removeDuplicatedOutputVariables"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.removeDuplicatedOutputVariables" title="Permalink to this definition"></a></dt>
+<dd><p>Remove duplicated Output:Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.removeExistingOutputVariables">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">removeExistingOutputVariables</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#removeExistingOutputVariables"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.removeExistingOutputVariables" title="Permalink to this definition"></a></dt>
+<dd><p>Remove existing Output:Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_Base_EMS.takeOutputDataFrame">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Base_EMS.</span></span><span class="sig-name descname"><span class="pre">takeOutputDataFrame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idf_filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df_outputs_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Base_EMS.html#takeOutputDataFrame"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Base_EMS.takeOutputDataFrame" title="Permalink to this definition"></a></dt>
+<dd><p>Used to read a pandas DataFrame containing the Output:Variable objects to be kept.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>idf_filename</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>df_outputs_in</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.sim.accim_ExistingHVAC">
+<span id="accim-sim-accim-existinghvac-module"></span><h2>accim.sim.accim_ExistingHVAC module<a class="headerlink" href="#module-accim.sim.accim_ExistingHVAC" title="Permalink to this heading"></a></h2>
+<p>Module for function in EnergyPlus scope related to models with existing HVAC systems</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_ExistingHVAC.addForscriptSchExistHVAC">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_ExistingHVAC.</span></span><span class="sig-name descname"><span class="pre">addForscriptSchExistHVAC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_ExistingHVAC.html#addForscriptSchExistHVAC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_ExistingHVAC.addForscriptSchExistHVAC" title="Permalink to this definition"></a></dt>
+<dd><p>Add Schedules for each zone in existing HVAC zones to override the existing setpoint temperatures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.sim.accim_ExistingHVAC_EMS">
+<span id="accim-sim-accim-existinghvac-ems-module"></span><h2>accim.sim.accim_ExistingHVAC_EMS module<a class="headerlink" href="#module-accim.sim.accim_ExistingHVAC_EMS" title="Permalink to this heading"></a></h2>
+<p>Module for EMS functions and models with existing HVAC systems</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_ExistingHVAC_EMS.addEMSSensorsExisHVAC">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_ExistingHVAC_EMS.</span></span><span class="sig-name descname"><span class="pre">addEMSSensorsExisHVAC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_ExistingHVAC_EMS.html#addEMSSensorsExisHVAC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_ExistingHVAC_EMS.addEMSSensorsExisHVAC" title="Permalink to this definition"></a></dt>
+<dd><p>Adds the EMS sensors for models with existing HVAC system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.sim.accim_IDFgeneration">
+<span id="accim-sim-accim-idfgeneration-module"></span><h2>accim.sim.accim_IDFgeneration module<a class="headerlink" href="#module-accim.sim.accim_IDFgeneration" title="Permalink to this heading"></a></h2>
+<p>Generate IDFs.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_IDFgeneration.genIDF">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_IDFgeneration.</span></span><span class="sig-name descname"><span class="pre">genIDF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TempCtrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ComfStand</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">CAT</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ComfMod</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SetpointAcc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">CoolSeasonStart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">121</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">CoolSeasonEnd</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">274</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">HVACmode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">VentCtrl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MaxTempDiffVOF</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinTempDiffVOF</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MultiplierVOF</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">VSToffset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[0]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinOToffset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[50]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MaxWindSpeed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[50]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ASTtol_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ASTtol_end_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ASTtol_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">NameSuffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confirmGen</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_IDFgeneration.html#genIDF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_IDFgeneration.genIDF" title="Permalink to this definition"></a></dt>
+<dd><p>Generate IDFs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>TempCtrl</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ComfStand</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>CAT</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ComfMod</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>SetpointAcc</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>CoolSeasonStart</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>CoolSeasonEnd</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>HVACmode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>VentCtrl</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>MaxTempDiffVOF</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>MinTempDiffVOF</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>MultiplierVOF</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>VSToffset</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>MinOToffset</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>MaxWindSpeed</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ASTtol_start</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ASTtol_end_input</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ASTtol_steps</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>NameSuffix</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>confirmGen</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_IDFgeneration.inputData">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_IDFgeneration.</span></span><span class="sig-name descname"><span class="pre">inputData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_IDFgeneration.html#inputData"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_IDFgeneration.inputData" title="Permalink to this definition"></a></dt>
+<dd><p>Input data for IDF generation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.sim.accim_Main">
+<span id="accim-sim-accim-main-module"></span><h2>accim.sim.accim_Main module<a class="headerlink" href="#module-accim.sim.accim_Main" title="Permalink to this heading"></a></h2>
+<p>Class for accim.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.sim.accim_Main.</span></span><span class="sig-name descname"><span class="pre">accimJob</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename_temp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">EnergyPlus_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TempCtrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">accimNotWorking</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_Main.html#accimJob"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_Main.accimJob" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class to start the process to add the class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename_temp</strong> – the filename of the idf</p></li>
+<li><p><strong>ScriptType</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>EnergyPlus_version</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>TempCtrl</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>accimNotWorking</strong> – True if problems detected in class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addBaseSchedules">
+<span class="sig-name descname"><span class="pre">addBaseSchedules</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addBaseSchedules" title="Permalink to this definition"></a></dt>
+<dd><p>Amend Schedule:Compact objects.
+Checks Schedule:Compact objects needed for accim,
+and add them in case these are not in the model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addCurveObj">
+<span class="sig-name descname"><span class="pre">addCurveObj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addCurveObj" title="Permalink to this definition"></a></dt>
+<dd><p>Add Curve Objects needed for VRFsystem to work.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addDetHVACobj">
+<span class="sig-name descname"><span class="pre">addDetHVACobj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">EnergyPlus_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SupplyAirTempInputMethod</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addDetHVACobj" title="Permalink to this definition"></a></dt>
+<dd><p>Add Detailed HVAC objects for VRFsystem to work.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>EnergyPlus_version</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>SupplyAirTempInputMethod</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addEMSActuatorsBase">
+<span class="sig-name descname"><span class="pre">addEMSActuatorsBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addEMSActuatorsBase" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS actuators for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addEMSOutputVariableBase">
+<span class="sig-name descname"><span class="pre">addEMSOutputVariableBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addEMSOutputVariableBase" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS output variables for Base accim.
+Checks if some EMS output variables objects are already
+in the model, and otherwise adds them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addEMSPCMBase">
+<span class="sig-name descname"><span class="pre">addEMSPCMBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addEMSPCMBase" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS program calling managers for Base accim.
+Checks if some EMS program calling manager objects are already
+in the model, and otherwise adds them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addEMSProgramsBase">
+<span class="sig-name descname"><span class="pre">addEMSProgramsBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addEMSProgramsBase" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS programs for Base accim.
+Checks if some programs objects are already
+in the model, and otherwise adds them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ScriptType</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addEMSSensorsBase">
+<span class="sig-name descname"><span class="pre">addEMSSensorsBase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addEMSSensorsBase" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS sensors for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addEMSSensorsExisHVAC">
+<span class="sig-name descname"><span class="pre">addEMSSensorsExisHVAC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addEMSSensorsExisHVAC" title="Permalink to this definition"></a></dt>
+<dd><p>Adds the EMS sensors for models with existing HVAC system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addEMSSensorsVRFsystem">
+<span class="sig-name descname"><span class="pre">addEMSSensorsVRFsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addEMSSensorsVRFsystem" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS sensors for VRF system accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addForscriptSchExistHVAC">
+<span class="sig-name descname"><span class="pre">addForscriptSchExistHVAC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addForscriptSchExistHVAC" title="Permalink to this definition"></a></dt>
+<dd><p>Add Schedules for each zone in existing HVAC zones to override the existing setpoint temperatures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addForscriptSchVRFsystem">
+<span class="sig-name descname"><span class="pre">addForscriptSchVRFsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addForscriptSchVRFsystem" title="Permalink to this definition"></a></dt>
+<dd><p>Add FORSCRIPT Schedules for each zone for VRFsystem.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addGlobVarList">
+<span class="sig-name descname"><span class="pre">addGlobVarList</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addGlobVarList" title="Permalink to this definition"></a></dt>
+<dd><p>Remove existing Global Variable objects and add correct Global Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addIntVarList">
+<span class="sig-name descname"><span class="pre">addIntVarList</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addIntVarList" title="Permalink to this definition"></a></dt>
+<dd><p>Add Internal variables objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addOpTempTherm">
+<span class="sig-name descname"><span class="pre">addOpTempTherm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addOpTempTherm" title="Permalink to this definition"></a></dt>
+<dd><p>Amend ZoneControl:Thermostat:OperativeTemperature objects.
+Add ZoneControl:Thermostat:OperativeTemperature objects for each zone.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addOutputVariablesDetailed">
+<span class="sig-name descname"><span class="pre">addOutputVariablesDetailed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Outputs_freq</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addOutputVariablesDetailed" title="Permalink to this definition"></a></dt>
+<dd><p>Add Output:Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>Outputs_freq</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addOutputVariablesSimplified">
+<span class="sig-name descname"><span class="pre">addOutputVariablesSimplified</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Outputs_freq</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TempCtrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addOutputVariablesSimplified" title="Permalink to this definition"></a></dt>
+<dd><p>Add simplified Output:Variable objects for accim.
+Remove all outputs and add only VFR outdoor unit consumption
+and operative temperature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>Outputs_freq</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>TempCtrl</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addOutputVariablesStandard">
+<span class="sig-name descname"><span class="pre">addOutputVariablesStandard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Outputs_freq</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TempCtrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addOutputVariablesStandard" title="Permalink to this definition"></a></dt>
+<dd><p>Add Output:Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>Outputs_freq</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>TempCtrl</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.addVRFsystemSch">
+<span class="sig-name descname"><span class="pre">addVRFsystemSch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.addVRFsystemSch" title="Permalink to this definition"></a></dt>
+<dd><p>Amend Schedule:Compact objects for VRFsystem.
+Add Schedule:Compact objects needed for VRFsystem to work,
+other than AHST_Sch and ACST_Sch Schedules.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.checkVentIsOn">
+<span class="sig-name descname"><span class="pre">checkVentIsOn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.checkVentIsOn" title="Permalink to this definition"></a></dt>
+<dd><p>Check ventilation settings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.genIDF">
+<span class="sig-name descname"><span class="pre">genIDF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TempCtrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ComfStand</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">CAT</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ComfMod</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SetpointAcc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">CoolSeasonStart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">121</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">CoolSeasonEnd</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">274</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">HVACmode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">VentCtrl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MaxTempDiffVOF</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinTempDiffVOF</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MultiplierVOF</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">VSToffset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[0]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinOToffset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[50]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MaxWindSpeed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[50]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ASTtol_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ASTtol_end_input</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ASTtol_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">NameSuffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confirmGen</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.genIDF" title="Permalink to this definition"></a></dt>
+<dd><p>Generate IDFs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>TempCtrl</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ComfStand</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>CAT</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ComfMod</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>SetpointAcc</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>CoolSeasonStart</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>CoolSeasonEnd</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>HVACmode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>VentCtrl</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>MaxTempDiffVOF</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>MinTempDiffVOF</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>MultiplierVOF</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>VSToffset</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>MinOToffset</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>MaxWindSpeed</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ASTtol_start</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ASTtol_end_input</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>ASTtol_steps</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>NameSuffix</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>confirmGen</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.genOutputDataframe">
+<span class="sig-name descname"><span class="pre">genOutputDataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf_filename</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.genOutputDataframe" title="Permalink to this definition"></a></dt>
+<dd><p>Used to generate a pandas DataFrame instance containing all Output:Variable objects in the model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>idf_filename</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.inputData">
+<span class="sig-name descname"><span class="pre">inputData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.inputData" title="Permalink to this definition"></a></dt>
+<dd><p>Input data for IDF generation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.listdir">
+<span class="sig-name descname"><span class="pre">listdir</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.listdir" title="Permalink to this definition"></a></dt>
+<dd><p>Return a list containing the names of the files in the directory.</p>
+<dl class="simple">
+<dt>path can be specified as either str, bytes, or a path-like object.  If path is bytes,</dt><dd><p>the filenames returned will also be bytes; in all other circumstances
+the filenames returned will be str.</p>
+</dd>
+</dl>
+<p>If path is None, uses the path=’.’.
+On some platforms, path may also be specified as an open file descriptor;</p>
+<blockquote>
+<div><p>the file descriptor must refer to a directory.
+If this functionality is unavailable, using it raises NotImplementedError.</p>
+</div></blockquote>
+<p>The list is in arbitrary order.  It does not include the special
+entries ‘.’ and ‘..’ even if they are present in the directory.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.numpy">
+<span class="sig-name descname"><span class="pre">numpy</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;module</span> <span class="pre">'numpy'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\sanga\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\numpy\\__init__.py'&gt;</span></em><a class="headerlink" href="#accim.sim.accim_Main.accimJob.numpy" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.outputsSpecified">
+<span class="sig-name descname"><span class="pre">outputsSpecified</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">remove_or_keep</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.outputsSpecified" title="Permalink to this definition"></a></dt>
+<dd><p>Remove duplicated Output:Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>remove_or_keep</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.removeDuplicatedOutputVariables">
+<span class="sig-name descname"><span class="pre">removeDuplicatedOutputVariables</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.removeDuplicatedOutputVariables" title="Permalink to this definition"></a></dt>
+<dd><p>Remove duplicated Output:Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.removeExistingOutputVariables">
+<span class="sig-name descname"><span class="pre">removeExistingOutputVariables</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.removeExistingOutputVariables" title="Permalink to this definition"></a></dt>
+<dd><p>Remove existing Output:Variable objects for accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.saveaccim">
+<span class="sig-name descname"><span class="pre">saveaccim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.saveaccim" title="Permalink to this definition"></a></dt>
+<dd><p>Save IDF.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>verboseMode</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.setAvailSchOn">
+<span class="sig-name descname"><span class="pre">setAvailSchOn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.setAvailSchOn" title="Permalink to this definition"></a></dt>
+<dd><p>Amend availability schedules.
+Assign On Compact:Schedule to heating and cooling availability
+schedule names.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.setComfFieldsPeople">
+<span class="sig-name descname"><span class="pre">setComfFieldsPeople</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">EnergyPlus_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TempCtrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.setComfFieldsPeople" title="Permalink to this definition"></a></dt>
+<dd><p>Amend PEOPLE objects so that accim can work.
+Copy existing PEOPLE objects and adds AdaptiveASH55 and AdaptiveCEN15251
+to Thermal Comfort Model types 1 and 2 fields of the existing People
+objects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>EnergyPlus_version</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p></li>
+<li><p><strong>TempCtrl</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.setPMVsetpoint">
+<span class="sig-name descname"><span class="pre">setPMVsetpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.setPMVsetpoint" title="Permalink to this definition"></a></dt>
+<dd><p>Sets PMV setpoints for temperature control.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>verboseMode</strong> – Inherited from class <cite>accim.sim.accis.addAccis</cite></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.sim.accim_Main.accimJob.takeOutputDataFrame">
+<span class="sig-name descname"><span class="pre">takeOutputDataFrame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf_filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df_outputs_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#accim.sim.accim_Main.accimJob.takeOutputDataFrame" title="Permalink to this definition"></a></dt>
+<dd><p>Used to read a pandas DataFrame containing the Output:Variable objects to be kept.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>idf_filename</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>df_outputs_in</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-accim.sim.accim_VRFsystem">
+<span id="accim-sim-accim-vrfsystem-module"></span><h2>accim.sim.accim_VRFsystem module<a class="headerlink" href="#module-accim.sim.accim_VRFsystem" title="Permalink to this heading"></a></h2>
+<p>Add EnergyPlus objects only for VRFsystem.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_VRFsystem.addBaseSchedules">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_VRFsystem.</span></span><span class="sig-name descname"><span class="pre">addBaseSchedules</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_VRFsystem.html#addBaseSchedules"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_VRFsystem.addBaseSchedules" title="Permalink to this definition"></a></dt>
+<dd><p>Amend Schedule:Compact objects.
+Checks Schedule:Compact objects needed for accim,
+and add them in case these are not in the model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_VRFsystem.addCurveObj">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_VRFsystem.</span></span><span class="sig-name descname"><span class="pre">addCurveObj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_VRFsystem.html#addCurveObj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_VRFsystem.addCurveObj" title="Permalink to this definition"></a></dt>
+<dd><p>Add Curve Objects needed for VRFsystem to work.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_VRFsystem.addDetHVACobj">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_VRFsystem.</span></span><span class="sig-name descname"><span class="pre">addDetHVACobj</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">EnergyPlus_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SupplyAirTempInputMethod</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_VRFsystem.html#addDetHVACobj"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_VRFsystem.addDetHVACobj" title="Permalink to this definition"></a></dt>
+<dd><p>Add Detailed HVAC objects for VRFsystem to work.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>EnergyPlus_version</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>SupplyAirTempInputMethod</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_VRFsystem.addForscriptSchVRFsystem">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_VRFsystem.</span></span><span class="sig-name descname"><span class="pre">addForscriptSchVRFsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_VRFsystem.html#addForscriptSchVRFsystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_VRFsystem.addForscriptSchVRFsystem" title="Permalink to this definition"></a></dt>
+<dd><p>Add FORSCRIPT Schedules for each zone for VRFsystem.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_VRFsystem.addOpTempTherm">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_VRFsystem.</span></span><span class="sig-name descname"><span class="pre">addOpTempTherm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_VRFsystem.html#addOpTempTherm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_VRFsystem.addOpTempTherm" title="Permalink to this definition"></a></dt>
+<dd><p>Amend ZoneControl:Thermostat:OperativeTemperature objects.
+Add ZoneControl:Thermostat:OperativeTemperature objects for each zone.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_VRFsystem.addVRFsystemSch">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_VRFsystem.</span></span><span class="sig-name descname"><span class="pre">addVRFsystemSch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_VRFsystem.html#addVRFsystemSch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_VRFsystem.addVRFsystemSch" title="Permalink to this definition"></a></dt>
+<dd><p>Amend Schedule:Compact objects for VRFsystem.
+Add Schedule:Compact objects needed for VRFsystem to work,
+other than AHST_Sch and ACST_Sch Schedules.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_VRFsystem.checkVentIsOn">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_VRFsystem.</span></span><span class="sig-name descname"><span class="pre">checkVentIsOn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_VRFsystem.html#checkVentIsOn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_VRFsystem.checkVentIsOn" title="Permalink to this definition"></a></dt>
+<dd><p>Check ventilation settings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from :class:<code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_VRFsystem.setAvailSchOn">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_VRFsystem.</span></span><span class="sig-name descname"><span class="pre">setAvailSchOn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_VRFsystem.html#setAvailSchOn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_VRFsystem.setAvailSchOn" title="Permalink to this definition"></a></dt>
+<dd><p>Amend availability schedules.
+Assign On Compact:Schedule to heating and cooling availability
+schedule names.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.sim.accim_VRFsystem_EMS">
+<span id="accim-sim-accim-vrfsystem-ems-module"></span><h2>accim.sim.accim_VRFsystem_EMS module<a class="headerlink" href="#module-accim.sim.accim_VRFsystem_EMS" title="Permalink to this heading"></a></h2>
+<p>Add EMS objects only for VRFsystem.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.sim.accim_VRFsystem_EMS.addEMSSensorsVRFsystem">
+<span class="sig-prename descclassname"><span class="pre">accim.sim.accim_VRFsystem_EMS.</span></span><span class="sig-name descname"><span class="pre">addEMSSensorsVRFsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accim_VRFsystem_EMS.html#addEMSSensorsVRFsystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accim_VRFsystem_EMS.addEMSSensorsVRFsystem" title="Permalink to this definition"></a></dt>
+<dd><p>Add EMS sensors for VRF system accim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> – Used as a method for class <code class="docutils literal notranslate"><span class="pre">accim.sim.accim_Main.accimJob</span></code></p></li>
+<li><p><strong>ScriptType</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+<li><p><strong>verboseMode</strong> – Inherited from class <code class="docutils literal notranslate"><span class="pre">accim.sim.accis.addAccis</span></code></p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.sim.accis">
+<span id="accim-sim-accis-module"></span><h2>accim.sim.accis module<a class="headerlink" href="#module-accim.sim.accis" title="Permalink to this heading"></a></h2>
+<p>Run the function below to add the ACCIS.</p>
+<p>This function transform fixed setpoint temperature
+building energy models into adaptive setpoint temperature energy models
+by adding the Adaptive Comfort Control Implementation Script (ACCIS)</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.sim.accis.addAccis">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.sim.accis.</span></span><span class="sig-name descname"><span class="pre">addAccis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ScriptType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SupplyAirTempInputMethod</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Output_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Output_freqs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Output_keep_existing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Output_gen_dataframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Output_take_dataframe</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">EnergyPlus_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TempCtrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ComfStand</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">CAT</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ComfMod</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">SetpointAcc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">CoolSeasonStart</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">121</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">CoolSeasonEnd</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">274</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">HVACmode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">VentCtrl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MaxTempDiffVOF</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinTempDiffVOF</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MultiplierVOF</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">VSToffset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[0]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MinOToffset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[50]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MaxWindSpeed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[50]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ASTtol_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ASTtol_end_input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ASTtol_steps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">NameSuffix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verboseMode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confirmGen</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/sim/accis.html#addAccis"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.sim.accis.addAccis" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Adds the Adaptive-Comfort-Control Implementation Script, which is an EnergyManagementSystem
+script that applies adaptive setpoint temperatures to EnergyPlus building energy models.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ScriptType</strong> (<em>str</em>) – The default is None.
+‘vrf_ac’ for VRF system with full air-conditioning mode,
+‘vrf_mm’ for VRF system with mixed-mode,
+‘ex_ac’ for existing HVAC only with full air-conditioning mode,
+‘ex_mm’ for existing HVAC with mixed-mode.</p></li>
+<li><p><strong>SupplyAirTempInputMethod</strong> (<em>str</em>) – The default is None.
+‘supply air temperature’ or ‘temperature difference’ to use such
+supply air temperature input method in the VRF system.
+Only used if vrf_ac or vrf_mm are used.</p></li>
+<li><p><strong>Output_type</strong> (<em>str</em>) – The default is None.
+Can be ‘standard’, ‘simplified’, ‘detailed’ or ‘custom’.</p></li>
+<li><p><strong>Output_freqs</strong> (<em>list</em>) – The default is None.
+A list containing the following strings:
+[‘timestep’, ‘hourly’, ‘daily’, ‘monthly’, ‘runperiod’]</p></li>
+<li><p><strong>Output_keep_existing</strong> (<em>bool</em>) – The default is None.
+It is a boolean (True or False) to keep the existing Output:Variable objects or not.</p></li>
+<li><p><strong>Output_gen_dataframe</strong> (<em>bool</em>) – The default is None.
+It is a boolean (True or False) to generate a pandas DataFrame instance
+containing all Output:Variable objects.</p></li>
+<li><p><strong>Output_take_dataframe</strong> (<em>bool</em>) – It takes the pandas DataFrame previously generated
+with Output_gen_dataframe, which the user has filtered to keep only the rows
+related to the Output:Variable objects that need to be kept in the model.</p></li>
+<li><p><strong>EnergyPlus_version</strong> (<em>str</em>) – The default is None.
+Can be ‘9.1’, ‘9.2’, ‘9.3’, ‘9.4’, ‘9.5’, ‘9.6’, ‘22.1’, ‘22.2’ or ‘23.1’.</p></li>
+<li><p><strong>TempCtrl</strong> (<em>str</em>) – The default is None. Can be ‘temp’ or ‘pmv’.</p></li>
+<li><p><strong>ComfStand</strong> (<em>list</em>) – The default is None.
+‘0 = ESP CTE;
+‘1 = INT EN16798;
+‘2 = INT ASHRAE55;
+‘3 = JPN Rijal;
+‘4 = CHN GBT50785 Cold;
+‘5 = CHN GBT50785 HotMild;
+‘6 = CHN Yang;
+‘7 = IND IMAC C NV;
+‘8 = IND IMAC C MM;
+‘9 = IND IMAC R 7DRM;
+‘10 = IND IMAC R 30DRM;
+‘11 = IND Dhaka;
+‘12 = ROM Udrea;
+‘13 = AUS Williamson;
+‘14 = AUS DeDear;
+‘15 = BRA Rupp NV;
+‘16 = BRA Rupp AC;
+‘17 = MEX Oropeza Arid;
+‘18 = MEX Oropeza DryTropic;
+‘19 = MEX Oropeza Temperate;
+‘20 = MEX Oropeza HumTropic;
+‘21 = CHL Perez-Fargallo;
+‘22 = INT ISO7730</p></li>
+<li><p><strong>CAT</strong> (<em>list</em>) – The default is None.
+(1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT)</p></li>
+<li><p><strong>ComfMod</strong> (<em>list</em>) – The default is None.
+(0/0.X = Static;
+1/1.X = Adaptive when applicable, otherwise relevant local static model;
+2 = Adaptive when applicable, otherwise relevant international static model
+3 = Adaptive when applicable, otherwise horizontal extention of adaptive setpoints)</p></li>
+<li><p><strong>SetpointAcc</strong> (<em>float</em>) – A float. It is the number for the accuracy of the setpoint temperatures.
+For instance, if 2 was used, setpoints would be rounded to every half Celsius degree;
+if 10 was used, the setpoints would be rounded to the first decimal.</p></li>
+<li><p><strong>CoolSeasonStart</strong> (<em>any</em>) – A date in format dd/mm, or the number of the day in the year.
+Defines when start the cooling season, only used in some static setpoint temperatures.</p></li>
+<li><p><strong>CoolSeasonEnd</strong> (<em>any</em>) – A date in format dd/mm, or the number of the day in the year.
+Defines when ends the cooling season, only used in some static setpoint temperatures.</p></li>
+<li><p><strong>HVACmode</strong> (<em>list</em>) – The default is None.
+(0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)</p></li>
+<li><p><strong>VentCtrl</strong> (<em>list</em>) – The default is None.
+(if HVACmode = 1:
+0 = Ventilates above neutral temperature;
+1 = Ventilates above upper comfort limit;
+if HVACmode = 2:
+0 = Ventilates above neutral temperature and fully opens doors and windows;
+1 = Ventilates above lower comfort limit and fully opens doors and windows;
+2 = Ventilates above neutral temperature and opens doors and windows based on the customised venting opening factor;
+3 = Ventilates above lower comfort limit and opens doors and windows based on the customised venting opening factor;
+)</p></li>
+<li><p><strong>MaxTempDiffVOF</strong> (<em>float</em>) – The maximum temperature difference for the Venting Opening Factor.
+Must be a number greater than 0.</p></li>
+<li><p><strong>MinTempDiffVOF</strong> (<em>float</em>) – The minimum temperature difference for the Venting Opening Factor.
+Must be a number greater than 0 and smaller than the maximum temperature difference.</p></li>
+<li><p><strong>MultiplierVOF</strong> (<em>float</em>) – The multiplier for the modulation of the Venting Opening Factor.
+Must be a number between 0 and 1.</p></li>
+<li><p><strong>VSToffset</strong> (<em>list</em>) – The default is 0. Please refer to documentation.</p></li>
+<li><p><strong>MinOToffset</strong> (<em>list</em>) – The default is 50. Please refer to documentation.</p></li>
+<li><p><strong>MaxWindSpeed</strong> (<em>list</em>) – The default is 50. Please refer to documentation.</p></li>
+<li><p><strong>ASTtol_start</strong> (<em>float</em>) – The default is 0.1. Please refer to documentation.</p></li>
+<li><p><strong>ASTtol_end_input</strong> (<em>float</em>) – The default is 0.1. Please refer to documentation.</p></li>
+<li><p><strong>ASTtol_steps</strong> (<em>float</em>) – The default is 0.1. Please refer to documentation.</p></li>
+<li><p><strong>NameSuffix</strong> (<em>str</em>) – The default is ‘’ (an empty string). Please refer to documentation.</p></li>
+<li><p><strong>verboseMode</strong> (<em>bool</em>) – True to print the process on screen. Default is True.</p></li>
+<li><p><strong>confirmGen</strong> (<em>bool</em>) – True to skip confirmation of output IDF generation. Default is None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Variables<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>arguments</strong> – A dictionary containing all arguments</p></li>
+<li><p><strong>df_outputs</strong> – the pandas DataFrame instance created with argument <code class="docutils literal notranslate"><span class="pre">Output_gen_dataframe</span></code></p></li>
+<li><p><strong>input_idfs</strong> – A dictionary containing all input IDFs following the format {‘input idf filename’: class <code class="docutils literal notranslate"><span class="pre">eppy.modeleditor.IDF</span> <span class="pre">object</span></code>}</p></li>
+<li><p><strong>occupied_zones</strong> – A dictionary containing all input idfs and
+occupied zone names following the format {‘idf filename’: [list of zone names]}</p></li>
+<li><p><strong>occupied_zones_original_name</strong> – A dictionary containing all input idfs and
+occupied zone original names following the format {‘idf filename’: [list of zone original names]}</p></li>
+<li><p><strong>output_idfs</strong> – A dictionary containing all output IDFs following the format {‘output idf filename’: class <code class="docutils literal notranslate"><span class="pre">eppy.modeleditor.IDF</span> <span class="pre">object</span></code>}</p></li>
+<li><p><strong>windows_and_doors</strong> – A dictionary containing all input idfs and
+window and door names following the format
+{‘idf filename’: [list of window and door names]}</p></li>
+<li><p><strong>windows_and_doors_original_name</strong> – A dictionary containing all input idfs and
+window and door original names following the format
+{‘idf filename’: [list of window and door original names]}</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.sim">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-accim.sim" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="accim.run.html" class="btn btn-neutral float-left" title="accim.run package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="8_pdfs_for_prev_versions.html" class="btn btn-neutral float-right" title="Documentation for previous versions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
