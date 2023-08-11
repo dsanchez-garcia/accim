@@ -67,7 +67,7 @@ Once you run this code, you will be asked to enter some information at the termi
         Output_take_dataframe=pandas Dataframe,
         EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'. For instance: EnergyPlus_version='23.1',
         TempCtrl=str, # TempCtrl: 'temperature' or 'temp', or 'pmv'. For instance: TempCtrl='temp',
-        ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 21. For instance: ComfStand=[0, 1, 2, 3],
+        ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 22. For instance: ComfStand=[0, 1, 2, 3],
         CAT=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: CAT=[3, 80],
         ComfMod=list, # it is Comfort Mode. Can be 0, 1, 2 or 3. For instance: ComfMod=[0, 3],
         SetpointAcc=float, # it is the accuracy of the setpoint temperatures
@@ -154,16 +154,20 @@ Then, you just need to copy the folder to a different path (i.e. Desktop), open 
 ### 2.2.5 Full example: from preparation of the input IDFs and EPWs, to simulation and data analysis and visualization
 
 You can see a Jupyter Notebook in the link below:  
-https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/full_example/full_example.ipynb
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.ipynb
+
+This Notebook was used in the IBPSA webinar (although for accim version 0.7.1), which you can watch at the following YouTube link:
+https://www.youtube.com/watch?v=PQ34Pl7t4HA&t=3393s
+
 
 You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
 within your site_packages path, in
 
-accim/sample_files/jupyter_notebooks/full_example
+accim/sample_files/jupyter_notebooks/full_example_IBPSA
 
 The path should be something like this, with your username instead of YOUR_USERNAME:
 
-*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\full_example*
+*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\full_example_IBPSA*
 
 Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
 
