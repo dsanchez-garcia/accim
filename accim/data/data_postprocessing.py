@@ -8,7 +8,9 @@ def preview_Table_cols(datasets: list = []):
     from the first CSV file in the path, suitable to be computed in the class Table,
     or the datasets, if entered. It is useful to know the full list of columns in the CSV files from simulation,
     so that columns can be filtered using the argument output_cols_to_keep in the class Table.
-    :param datasets: The list of CSV files to be conca
+
+    :param datasets: The list of CSV files to be concatenated.
+    :type datasets: list
     :return: The list of columns within the CSV files.
     """
     import pandas as pd
