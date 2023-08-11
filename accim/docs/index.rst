@@ -34,6 +34,12 @@ Welcome to accim |version|'s documentation!
 
    modules
 
+.. toctree::
+   :maxdepth: 7
+   :caption: Documentation for previous versions:
+
+   8_pdfs_for_prev_versions
+
 Indices and tables
 ==================
 
