@@ -90,7 +90,7 @@ file to update, select the new version and finally update file.
 
 --------------
 
-6.2 General recommendations
+5.2 General recommendations
 ---------------------------
 
 If you are using only one version of Python in your computer, you should

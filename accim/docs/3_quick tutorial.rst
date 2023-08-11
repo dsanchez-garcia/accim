@@ -62,6 +62,6 @@ the terminal or python console to generate the output IDF files.
        confirmGen=bool # True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. For instance: confirmGen=False,
    )
 
-3.1 Other uses
+3.2 Other uses
 --------------
 Although the main use of accim is the implementation of adaptive setpoint temperatures, there are some functions, classes and methods that allow to roughly automate the whole process consisting of preparation of the epw and idf files, the simulation runs and the data analysis. For further information, please refer to the How-to Guides section in this documentation, which contains some Jupyter Notebooks that can also be found in accim's installation folder.
