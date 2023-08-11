@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>4. Detailed use &mdash; accim  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="5. Troubleshooting" href="5_troubleshooting.html" />
+    <link rel="prev" title="3. Quick tutorial" href="3_quick%20tutorial.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            accim
+          </a>
+              <div class="version">
+                0.7.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">4. Detailed use</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#first-steps">4.1 First steps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#setting-up-the-target-idfs">4.2 Setting up the target IDFs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#full-list-of-setpoint-temperatures">4.3 Full list of setpoint temperatures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#putting-it-into-practice-adaptive-setpoint-temperatures-step-by-step">4.4 Putting it into practice: Adaptive setpoint temperatures step by step</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#renaming-epw-files-for-later-data-analysis">4.5 Renaming epw files for later data analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-simulations">4.6 Running simulations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#functions-and-methods-for-data-analysis-making-figures-and-tables">4.7 Functions and methods for data analysis; making figures and tables</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/full_example/full_example.html">Full example of adaptive setpoint temperature simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">4. Detailed use</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/4_detailed use.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="detailed-use">
+<h1>4. Detailed use<a class="headerlink" href="#detailed-use" title="Permalink to this heading"></a></h1>
+<section id="first-steps">
+<h2>4.1 First steps<a class="headerlink" href="#first-steps" title="Permalink to this heading"></a></h2>
+<p>There has been developed 4 main branches of functions, which are:</p>
+<ul class="simple">
+<li><p>VRF system with full air-conditioning mode: This mode has been
+developed mainly to support models originated with OpenStudio, which
+up to date does not support Airflow Network objects and subsequently
+Calculated Natural Ventilation. It adds standard VRF systems for each
+occupied zone and applies the adaptive or PMV-based setpoint
+temperatures, but only works with full air-conditioning mode.</p></li>
+<li><p>VRF system with mixed mode: It adds standard VRF systems for each
+occupied zone and applies the adaptive or PMV-based setpoint
+temperatures. Works with Calculated Natural Ventilation, although
+full air-conditioning mode can also be used. If mixed mode is used,
+the model must be generally developed with DesignBuilder.</p></li>
+<li><p>Existing HVAC system only with full air-conditioning mode: Keeps the
+existing HVAC systems and modify the existing setpoint temperatures
+to adaptive or PMV-based setpoint temperatures. However, mixed-mode
+and naturally ventilated modes are not available in this mode.</p></li>
+<li><p>Existing HVAC system with mixed mode: UNDER DEVELOPMENT. IT IS NOT
+ADVISABLE TO USE IT YET. Keeps the existing HVAC systems and modify
+the existing setpoint temperatures to adaptive or PMV-based setpoint
+temperatures, considering mixed-mode. In order to properly work,
+there must be only one object for heating and another for cooling
+that can be used to monitor if these are turned on at any timestep
+(such as <code class="docutils literal notranslate"><span class="pre">Coil:Cooling:Water</span></code> and <code class="docutils literal notranslate"><span class="pre">Coil:Heating:Water</span></code>). Also,
+these objects must be named following the pattern “Zone name” “Object
+name”. For instance, an <code class="docutils literal notranslate"><span class="pre">Coil:Heating:Electric</span></code> object could be
+named <code class="docutils literal notranslate"><span class="pre">Block1:Zone1</span> <span class="pre">PTAC</span> <span class="pre">Heating</span> <span class="pre">Coil</span></code>, given that <code class="docutils literal notranslate"><span class="pre">Block1:Zone1</span></code>
+is a valid zone name. On the other hand, a <code class="docutils literal notranslate"><span class="pre">Coil:Cooling:Water</span></code>
+object named <code class="docutils literal notranslate"><span class="pre">Main</span> <span class="pre">Cooling</span> <span class="pre">Coil</span> <span class="pre">1</span></code> would not be valid, since in
+this case the room would be <code class="docutils literal notranslate"><span class="pre">Main</span></code>; this is the typical case of
+some equipment shared by multiple rooms. If this condition is not
+met, accim will not generate the output IDF files for that input IDF
+file. For instance, if there are <code class="docutils literal notranslate"><span class="pre">Coil:Heating:Electric</span></code> and
+<code class="docutils literal notranslate"><span class="pre">Coil:Heating:DX:SingleSpeed</span></code> objects in the same model, simulation
+will crash. Also, if there is just an
+<code class="docutils literal notranslate"><span class="pre">ZoneHVAC:Baseboard:RadiantConvective:Water</span></code> used for heating, and
+cooling is not monitored, simulation will also crash.</p></li>
+</ul>
+<p>Therefore, if you are going to use the VRF system script, you’re
+supposed to have one or multiple IDFs with fixed setpoint temperature,
+or even without any HVAC objects at all (it doesn’t matter, since the
+module is going to add a standard VRF system for each zone, and the
+simulation is going to be calculated with these VRF systems), and with
+Calculated Natural Ventilation if you’re going to use the Mixed Mode. On
+the other hand, if you are going to use any ExistingHVAC script, again
+you’re supposed to have one or multiple IDFs, however in this case there
+must be a fully functional HVAC system. Therefore, you must be able to
+successfully run a simulation with fixed setpoint temperatures in order
+for the accim package to work. The main difference between ExistingHVAC
+only with full air-conditioning and with mixed mode is that in the
+latter, the existing HVAC system needs to be mapped in order to monitor
+if it needs to be activated or not, and windows need to be actuated in
+case conditions for natural ventilation are favourable. In both cases,
+when you export the IDF, please do not request ASHRAE 55 or CEN 15251
+results. accim will do so by adding the relevant fields to the People
+objects.</p>
+<p>By using any ExistingHVAC script you might not get the results that you
+expect, even if there are no errors in the accim and simulation
+processes. The reason lies on the HVAC system itself, and that is why
+the VRFsystem script has been developed, because it has been tested that
+it works.</p>
+<p>No matter what type or functions are you going to use, the language of
+the software used to create the input IDF should be English (for
+example, if you use Designbuilder in Spanish, accim won’t work
+properly), and it’s not recommended to use any non-standard characters
+in the input IDF, just like written accents or “ñ”.</p>
+<p>Said that, accim will transform all the IDF files located in the same
+path where script is. Therefore, the quickest way to run the script is
+opening a prompt command dialog in the folder where the IDF files are
+located (you can do this by holding Ctrl and right-click inside the
+folder, and click on ‘open PowerShell window here’). Then run Python by
+typing ‘python’ in the command prompt.</p>
+<p>First you need to import the module ‘accis’ (stands for
+Adaptive-Comfort-Control-Implementation Script):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">accim.sim</span> <span class="kn">import</span> <span class="n">accis</span>
+</pre></div>
+</div>
+<p>And then, you just need to call the accis function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">accis</span><span class="o">.</span><span class="n">addAccis</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Then you’ll be asked in the prompt to enter some information so that
+python knows how do you want to set up the output IDFs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>--------------------------------------------------------
+Adaptive-Comfort-Control-Implemented Model (ACCIM)
+--------------------------------------------------------
+
+This tool allows to apply adaptive setpoint temperatures.
+For further information, please read the documentation:
+https://accim.readthedocs.io/en/master/
+For a visual understanding of the tool, please visit the following jupyter notebooks:
+-    Using addAccis() to apply adaptive setpoint temperatures
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb
+-    Using rename_epw_files() to rename the EPWs for proper data analysis after simulation
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
+-    Using runEp() to directly run simulations with EnergyPlus
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
+-    Using the class Table() for data analysis
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
+
+Now, you are going to be asked to enter some information for different arguments to generate the output IDFs with adaptive setpoint temperatures.
+If you are not sure about how to use these parameters, please take a look at the documentation in the following link:
+https://accim.readthedocs.io/en/master/4_detailed%20use.html
+
+Please, enter the following information:
+
+Enter the ScriptType (
+for VRFsystem with full air-conditioning mode: vrf_ac;
+for VRFsystem with mixed-mode: vrf_mm;
+for ExistingHVAC with mixed mode: ex_mm;
+for ExistingHVAC with full air-conditioning mode: ex_ac
+): vrf_mm
+
+Enter the SupplyAirTempInputMethod (
+for Supply Air Temperature: supply air temperature;
+for Temperature Difference: temperature difference;
+): temperature difference
+
+Do you want to keep the existing outputs (true or false)?: false
+
+Enter the Output type (standard, simplified, detailed or custom): standard
+
+Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): hourly runperiod
+
+Do you want to generate a dataframe to see all outputs? (true or false): false
+
+Enter the EnergyPlus version (9.1 to 23.1): 23.1
+
+Enter the Temperature Control method (temperature or pmv): temperature
+</pre></div>
+</div>
+<p>where:</p>
+<ul class="simple">
+<li><p>ScriptType can be ‘vrf_mm’, ‘vrf_ac’, ‘ex_mm’ or ‘ex_ac’, and it refers to the type of functions as explained above</p></li>
+<li><p>SupplyAirTempInputMethod can be ‘supply air temperature’ or ‘temperature difference’, and it is the supply air temperature input method for the VRF systems.</p></li>
+<li><p>Existing outputs in the IDF can be kept if entered ‘true’. Otherwise, if entered ‘false’, it will be removed for clarity purposes at results stage.</p></li>
+<li><p>Output_type can be ‘standard’, ‘detailed’, ‘simplified’ or ‘custom’ and it refers to the simulation results: ‘standard’ means that results will contain the full selection relevant to accim;‘detailed’ is mainly used for testing the software tool; ‘simplified’ means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and finally, ‘custom’ allows the user to specify the outputs to be kept or removed by entering them in the python console.</p></li>
+<li><p>Output_freqs (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies.</p></li>
+<li><p>Also, a pandas DataFrame instance can be created containing all Output:Variable objects. This allows the user to filter the DataFrame as needed, so that it only contains the needed Output:Variable objects, and then it can be entered in the argument <code class="docutils literal notranslate"><span class="pre">Output_take_dataframe</span></code></p></li>
+<li><p>EnergyPlus_version can be from ‘9.1’ to ‘23.1’. It is the version of EnergyPlus you have installed in your computer. If you enter ‘9.1’, accim will look for the E+9.1.0 IDD file in path “C:\EnergyPlusV9-1-0”.</p></li>
+<li><p>Temperature Control method can be ‘temperature’ or ‘temp’, or ‘pmv’. If ‘temp’ is used, the setpoint will be the operative temperature, otherwise if ‘pmv’ is used, the setpoint will be the PMV index.</p></li>
+</ul>
+<p>accis will show on the prompt command dialog all the objects it adds,
+and those that doesn’t need to be added because were already in the IDF,
+and finally ask you to enter some values to set up the IDFs as you
+desire. Please refer to the section titled ‘Setting up the target IDFs’.</p>
+<p>Once you run the simulations, you might get some EnergyPlus warnings and
+severe errors. This is something I’m currently working on.</p>
+</section>
+<section id="setting-up-the-target-idfs">
+<h2>4.2 Setting up the target IDFs<a class="headerlink" href="#setting-up-the-target-idfs" title="Permalink to this heading"></a></h2>
+<p>If you have run <code class="docutils literal notranslate"><span class="pre">accis.addAccis()</span></code>, you will be asked in the prompt to
+enter a few more values separated by space to set up the desired IDFs.
+However, you can also skip the command prompt process by running accis
+directly including the arguments in the function, whose usage would be:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">accis</span><span class="o">.</span><span class="n">addAccis</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="c1"># ScriptType: &#39;vrf_mm&#39;, &#39;vrf_ac&#39;, &#39;ex_mm&#39;, &#39;ex_ac&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">str</span><span class="p">,</span> <span class="c1"># SupplyAirTempInputMethod: &#39;supply air temperature&#39;, &#39;temperature difference&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">bool</span><span class="p">,</span> <span class="c1"># Output_keep_existing: True or False</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">str</span><span class="p">,</span> <span class="c1"># Output_type: &#39;simplified&#39;, &#39;standard&#39;, &#39;detailed&#39; or &#39;custom&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">list</span><span class="p">,</span> <span class="c1"># Output_freqs: [&#39;timestep&#39;, &#39;hourly&#39;, &#39;daily&#39;, &#39;monthly&#39;, &#39;runperiod&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">bool</span><span class="p">,</span> <span class="c1"># Output_gen_dataframe: True or False</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">pandas</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="c1"># Output_take_dataframe</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">str</span><span class="p">,</span> <span class="c1"># EnergyPlus_version: &#39;9.1&#39;, &#39;9.2&#39;, &#39;9.3&#39;, &#39;9.4&#39;, &#39;9.5&#39;, &#39;9.6&#39;, &#39;22.1&#39;, &#39;22.2&#39; or &#39;23.1&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">str</span><span class="p">,</span> <span class="c1"># TempCtrl: &#39;temperature&#39; or &#39;temp&#39;, or &#39;pmv&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">list</span><span class="p">,</span> <span class="c1"># ComfStand, which is the Comfort Standard</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">list</span><span class="p">,</span> <span class="c1"># CAT, which is the Category</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">list</span><span class="p">,</span> <span class="c1"># ComfMod, which is Comfort Mode</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">float</span><span class="p">,</span> <span class="c1"># SetpointAcc, which defines the accuracy of the setpoint temperatures</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">str</span> <span class="n">containing</span> <span class="n">a</span> <span class="n">date</span> <span class="ow">in</span> <span class="nb">format</span> <span class="n">dd</span><span class="o">/</span><span class="n">mm</span><span class="p">,</span> <span class="ow">or</span> <span class="n">an</span> <span class="nb">int</span> <span class="c1"># CoolSeasonStart</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">str</span> <span class="n">containing</span> <span class="n">a</span> <span class="n">date</span> <span class="ow">in</span> <span class="nb">format</span> <span class="n">dd</span><span class="o">/</span><span class="n">mm</span><span class="p">,</span> <span class="ow">or</span> <span class="n">an</span> <span class="nb">int</span> <span class="c1"># CoolSeasonEnd</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">list</span><span class="p">,</span> <span class="c1"># HVACmode, which is the HVAC mode</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">list</span><span class="p">,</span> <span class="c1"># VentCtrl, which is the Ventilation Control</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">float</span><span class="p">,</span> <span class="c1"># MaxTempDiffVOF</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">float</span><span class="p">,</span> <span class="c1"># MinTempDiffVOF</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">float</span><span class="p">,</span> <span class="c1"># MultiplierVOF</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">list</span><span class="p">,</span> <span class="c1"># VSToffset</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">list</span><span class="p">,</span> <span class="c1"># MinOToffset</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">list</span><span class="p">,</span> <span class="c1"># MaxWindSpeed</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">float</span><span class="p">,</span> <span class="c1"># ASTtol start</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">float</span><span class="p">,</span> <span class="c1"># ASTtol end</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">float</span><span class="p">,</span> <span class="c1"># ASTtol steps</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">str</span> <span class="c1"># NameSuffix: some text you might want to add at the end of the output IDF file name</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">bool</span> <span class="c1"># verboseMode: True to print all process in screen, False to not to print it. Default is True.</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="nb">bool</span> <span class="c1"># confirmGen: True to confirm automatically the generation of IDFs; if False, you&#39;ll be asked to confirm in command prompt. Default is False.</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="p">)</span>
+</pre></div>
+</div>
+<p>Some example of the usage could be:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">accis</span><span class="o">.</span><span class="n">addAccis</span><span class="p">(</span><span class="n">ScriptType</span><span class="o">=</span><span class="s1">&#39;vrf_mm&#39;</span><span class="p">,</span> <span class="c1"># ScriptType: &#39;vrf_mm&#39;, &#39;vrf_ac&#39;, &#39;ex_mm&#39;, &#39;ex_ac&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">SupplyAirTempInputMethod</span><span class="o">=</span><span class="s1">&#39;supply air temperature&#39;</span><span class="p">,</span> <span class="c1"># SupplyAirTempInputMethod: &#39;supply air temperature&#39;, &#39;temperature difference&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">Output_keep_existing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Output_keep_existing: True or False</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">Output_type</span><span class="o">=</span><span class="s1">&#39;standard&#39;</span><span class="p">,</span> <span class="c1"># Output_type: &#39;simplified&#39; or &#39;standard&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">Output_freqs</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;hourly&#39;</span><span class="p">,</span> <span class="s1">&#39;runperiod&#39;</span><span class="p">],</span> <span class="c1"># Output_freqs: [&#39;timestep&#39;, &#39;hourly&#39;, &#39;daily&#39;, &#39;monthly&#39;, &#39;runperiod&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">Output_gen_dataframe</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="c1"># we just omit Output_take_dataframe</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">EnergyPlus_version</span><span class="o">=</span><span class="s1">&#39;9.5&#39;</span><span class="p">,</span> <span class="c1"># EnergyPlus_version: &#39;9.1&#39;, &#39;9.2&#39;, &#39;9.3&#39;, &#39;9.4&#39;, &#39;9.5&#39;, &#39;9.6&#39;, &#39;22.1&#39;, &#39;22.2&#39; or &#39;23.1&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">TempCtrl</span><span class="o">=</span><span class="s1">&#39;temp&#39;</span><span class="p">,</span> <span class="c1"># Temperature Control: &#39;temperature&#39; or &#39;temp&#39;, or &#39;pmv&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">ComfStand</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="c1"># ComfStand, which is the Comfort Standard</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">CAT</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="c1"># CAT, which is the Category</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">ComfMod</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="c1"># ComfMod, which is Comfort Mode</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">SetpointAcc</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="c1"># Therefore, setpoints will be rounded to the first decimal</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="c1"># we just omit CoolSeasonStart, since the default date is May 1st</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="c1"># we just omit CoolSeasonEnd, since the default date is September 1st</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">HVACmode</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="c1"># HVACmode, which is the HVAC mode</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">VentCtrl</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="c1"># VentCtrl, which is the Ventilation Control</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">MaxTempDiffVOF</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="c1"># When the difference of operative and outdoor temperature exceeds 20°C, windows will be opened the fraction of MultiplierVOF.</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">MinTempDiffVOF</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="c1"># When the difference of operative and outdoor temperature is smaller than 1°C, windows will be fully opened. Between min and max, windows will be linearly opened.</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">MultiplierVOF</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="c1"># Fraction of window to be opened when temperature difference exceeds MaxTempDiffVOF.</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">VSToffset</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="c1"># VSToffset, which is the Ventilation Setpoint Temperature offset</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">MinOToffset</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="c1"># MinOToffset, which is the Minimum Outdoor Temperature offset</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">MaxWindSpeed</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">],</span> <span class="c1"># MaxWindSpeed, which is th Maximum Wind Speed</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">ASTtol_start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="c1"># ASTtol_start, which is the start of the tolerance sequence</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">ASTtol_end_input</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="c1"># ASTtol_end_input, which is the end of the tolerance sequence</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">ASTtol_steps</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="c1"># ASTtol_steps, which are the steps of the tolerance sequence</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="n">NameSuffix</span><span class="o">=</span><span class="s1">&#39;standard&#39;</span> <span class="c1"># Name Suffix: for example, just in case you want to clarify the outputs</span>
+<span class="gp">&gt;&gt;&gt; </span>               <span class="p">)</span>
+</pre></div>
+</div>
+<p>For clarity purposes, it’s recommended to specify the argument name as
+well, as shown above. If you don’t specify all arguments, you’ll be ask
+to enter them at the prompt command, and these values will be used
+instead of those specified in the function call. Each argument is
+explained below:</p>
+<ul class="simple">
+<li><p>ComfStand: refers to the thermal comfort standard or model to be
+applied. Enter any number from 0 to 21 to select the comfort standard
+or model to be used; you can see which model is each number in the
+table below. For example, if you enter ‘0 1 2 3’, you’ll get IDFs for CTE,
+EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for
+Japanese dwellings. If you don’t enter any number, it’ll ask you to
+enter the numbers again.</p></li>
+</ul>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>C
+o
+m
+f
+S
+t
+a
+n
+d
+N
+o
+.</p></th>
+<th class="head"><p>C
+o
+m
+f
+S
+t
+a
+n
+d
+N
+a
+m
+e</p></th>
+<th class="head"><p>A
+r
+e
+a</p></th>
+<th class="head"><p>Reference</p></th>
+<th class="head"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>E
+S
+P
+C
+T
+E</p></td>
+<td><p>S
+p
+a
+i
+n</p></td>
+<td><p>The Government of Spain. Royal Decree 314/2006. Approving
+the Spanish Technical Building Code CTE-DB-HE-1 2013:1–43.
+<a class="reference external" href="https://www.boe.es/eli/es/rd/2006/03/17/314">https://www.boe.es/eli/es/rd/2006/03/17/314</a> (accessed August
+6, 2021).</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>I
+N
+T
+E
+N
+1
+6
+7
+9
+8</p></td>
+<td><p>E
+u
+r
+o
+p
+e</p></td>
+<td><p>European committee for standardization. EN 16798-1:2019
+Energy performance of buildings. Ventilation for buildings.
+Indoor environmental input parameters for design and
+assessment of energy performance of buildings addressing
+indoor air quality, thermal environment, lighting and
+acoustics. 2019.
+<a class="reference external" href="https://en.tien">https://en.tien</a>
+da.aenor.com/norma-bsi-bs-en-16798-1-2019-000000000030297474
+(accessed August 6, 2021).</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>I
+N
+T
+A
+S
+H
+R
+A
+E
+5
+5</p></td>
+<td><p>W
+o
+r
+l
+d
+w
+i
+d
+e</p></td>
+<td><p>ASHRAE Standard 55-2020 Thermal Environmental Conditions for
+Human Occupancy, ASHRAE Standard (2020).</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>J
+P
+N
+R
+i
+j
+a
+l</p></td>
+<td><p>J
+a
+p
+a
+n</p></td>
+<td><p>Rijal, H. B., Humphreys, M. A., &amp; Nicol, J. F. (2019).
+Adaptive model and the adaptive mechanisms for thermal
+comfort in Japanese dwellings. Energy and Buildings, 202,
+109371. <a class="reference external" href="https://doi.org/10.1016/j.enbuild.2019.109371">https://doi.org/10.1016/j.enbuild.2019.109371</a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p>C
+H
+N
+G
+B
+T
+5
+0
+7
+8
+5
+C
+o
+l
+d</p></td>
+<td><p>C
+h
+i
+n
+a</p></td>
+<td><p>MOHURD, Evaluation Standard for Indoor Thermal Environment
+in Civil Buildings (GB/T 50785-2012), Ministry of Housing
+and Urban-Rural Development (MOHURD), Beijing, China, 2012.</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>5</p></td>
+<td><p>C
+H
+N
+G
+B
+T
+5
+0
+7
+8
+5
+H
+o
+t
+M
+i
+l
+d</p></td>
+<td><p>C
+h
+i
+n
+a</p></td>
+<td><p>MOHURD, Evaluation Standard for Indoor Thermal Environment
+in Civil Buildings (GB/T 50785-2012), Ministry of Housing
+and Urban-Rural Development (MOHURD), Beijing, China, 2012.</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>6</p></td>
+<td><p>C
+H
+N
+Y
+a
+n
+g</p></td>
+<td><p>C
+h
+i
+n
+a</p></td>
+<td><p>Yang, L., Fu, R., He, W., He, Q., &amp; Liu, Y. (2020). Adaptive
+thermal comfort and climate responsive building design
+strategies in dry–hot and dry–cold areas: Case study in
+Turpan, China. Energy and Buildings, 209, 109678.
+<a class="reference external" href="https://doi.org/10.1016/j.enbuild.2019.109678">https://doi.org/10.1016/j.enbuild.2019.109678</a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>7</p></td>
+<td><p>I
+N
+D
+I
+M
+A
+C
+C
+N
+V</p></td>
+<td><p>I
+n
+d
+i
+a</p></td>
+<td><p>Manu, S., Shukla, Y., Rawal, R., Thomas, L. E., &amp; de Dear,
+R. (2016). Field studies of thermal comfort across multiple
+climate zones for the subcontinent: India Model for Adaptive
+Comfort (IMAC). Building and Environment, 98, 55–70.
+<a class="reference external" href="https://doi.org/10.1016/j.buildenv.2015.12.019">https://doi.org/10.1016/j.buildenv.2015.12.019</a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>8</p></td>
+<td><p>I
+N
+D
+I
+M
+A
+C
+C
+M
+M</p></td>
+<td><p>I
+n
+d
+i
+a</p></td>
+<td><p>Manu, S., Shukla, Y., Rawal, R., Thomas, L. E., &amp; de Dear,
+R. (2016). Field studies of thermal comfort across multiple
+climate zones for the subcontinent: India Model for Adaptive
+Comfort (IMAC). Building and Environment, 98, 55–70.
+<a class="reference external" href="https://doi.org/10.1016/j.buildenv.2015.12.019">https://doi.org/10.1016/j.buildenv.2015.12.019</a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>9</p></td>
+<td><p>I
+N
+D
+I
+M
+A
+C
+R
+7
+D
+R
+M</p></td>
+<td><p>I
+n
+d
+i
+a</p></td>
+<td><p>Rawal, R., Shukla, Y., Vardhan, V., Asrani, S., Schweiker,
+M., de Dear, R., Garg, V., Mathur, J., Prakash, S., Diddi,
+S., Ranjan, S. V., Siddiqui, A. N., &amp; Somani, G. (2022).
+Adaptive thermal comfort model based on field studies in
+five climate zones across India. Building and Environment,
+219, 109187. <a class="reference external" href="https://doi.org/10.1016/J.BUILDENV.2022.109187">https://doi.org/10.1016/J.BUILDENV.2022.109187</a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>1
+0</p></td>
+<td><p>I
+N
+D
+I
+M
+A
+C
+R
+3
+0
+D
+R
+M</p></td>
+<td><p>I
+n
+d
+i
+a</p></td>
+<td><p>Rawal, R., Shukla, Y., Vardhan, V., Asrani, S., Schweiker,
+M., de Dear, R., Garg, V., Mathur, J., Prakash, S., Diddi,
+S., Ranjan, S. V., Siddiqui, A. N., &amp; Somani, G. (2022).
+Adaptive thermal comfort model based on field studies in
+five climate zones across India. Building and Environment,
+219, 109187. <a class="reference external" href="https://doi.org/10.1016/J.BUILDENV.2022.109187">https://doi.org/10.1016/J.BUILDENV.2022.109187</a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>1
+1</p></td>
+<td><p>I
+N
+D
+D
+h
+a
+k
+a</p></td>
+<td><p>I
+n
+d
+i
+a</p></td>
+<td><p>Dhaka, S., Mathur, J., Brager, G., &amp; Honnekeri, A. (2015).
+Assessment of thermal environmental conditions and
+quantification of thermal adaptation in naturally ventilated
+buildings in composite climate of India. Building and
+Environment, 86, 17–28.
+<a class="reference external" href="https://doi.org/10.1016/J.BUILDENV.2014.11.024">https://doi.org/10.1016/J.BUILDENV.2014.11.024</a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>1
+2</p></td>
+<td><p>R
+O
+M
+U
+d
+r
+e
+a</p></td>
+<td><p>R
+o
+m
+a
+n
+i
+a</p></td>
+<td><p>Udrea, I., Croitoru, C., Nastase, I., Crutescu, R., &amp;
+Badescu, V. (2018). First adaptive thermal comfort equation
+for naturally ventilated buildings in Bucharest, Romania.
+International Journal of Ventilation, 17(3), 149–165.
+<a class="reference external" href="https://doi.org/10.1080/14733315.2017.1356057">https://doi.org/10.1080/14733315.2017.1356057</a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>1
+3</p></td>
+<td><p>A
+U
+S
+W
+i
+l
+l
+i
+a
+m
+s
+o
+n</p></td>
+<td><p>A
+u
+s
+t
+r
+a
+l
+i
+a</p></td>
+<td><p>Williamson, T., &amp; Daniel, L. (2020). A new adaptive thermal
+comfort model for homes in temperate climates of Australia.
+Energy and Buildings, 210, 109728.
+<a class="reference external" href="https://doi.org/10.1016/j.enbuild.2019.109728">https://doi.org/10.1016/j.enbuild.2019.109728</a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>1
+4</p></td>
+<td><p>A
+U
+S
+D
+e
+D
+e
+a
+r</p></td>
+<td><p>A
+u
+s
+t
+r
+a
+l
+i
+a</p></td>
+<td><p>de Dear, R., Kim, J., &amp; Parkinson, T. (2018). Residential
+adaptive comfort in a humid subtropical climate—Sydney
+Australia. Energy and Buildings, 158, 1296–1305.
+<a class="reference external" href="https://doi.org/10.1016/j.enbuild.2017.11.028">https://doi.org/10.1016/j.enbuild.2017.11.028</a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>1
+5</p></td>
+<td><p>B
+R
+A
+R
+u
+p
+p
+N
+V</p></td>
+<td><p>B
+r
+a
+z
+i
+l</p></td>
+<td><p>Rupp, R. F., de Dear, R., &amp; Ghisi, E. (2018). Field study of
+mixed-mode office buildings in Southern Brazil using an
+adaptive thermal comfort framework. Energy and Buildings,
+158, 1475–1486.
+<a class="reference external" href="https://doi.org/10.1016/J.ENBUILD.2017.11.047">https://doi.org/10.1016/J.ENBUILD.2017.11.047</a></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>1
+6</p></td>
+<td><p>B
+R
+A
+R
+u
+p
+p
+A
+C</p></td>
+<td><p>B
+r
+a
+z
+i
+l</p></td>
+<td><p>Rupp, R. F., de Dear, R., &amp; Ghisi, E. (2018). Field study of
+mixed-mode office buildings in Southern Brazil using an
+adaptive thermal comfort framework. Energy and Buildings,
+158, 1475–1486.
+<a class="reference external" href="https://doi.org/10.1016/J.ENBUILD.2017.11.047">https://doi.org/10.1016/J.ENBUILD.2017.11.047</a></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>1
+7</p></td>
+<td><p>M
+E
+X
+O
+r
+o
+p
+e
+z
+a
+A
+r
+i
+d</p></td>
+<td><p>M
+e
+x
+i
+c
+o</p></td>
+<td><p>I. Oropeza-Perez, A.H. Petzold-Rodriguez, C. Bonilla-Lopez,
+Adaptive thermal comfort in the main Mexican climate
+conditions with and without passive cooling, Energy and
+Buildings. 145 (2017) 251–258.
+<a class="reference external" href="https://doi.org/10.1016/j.enbuild.2017.04.031">https://doi.org/10.1016/j.enbuild.2017.04.031</a>.</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>1
+8</p></td>
+<td><p>M
+E
+X
+O
+r
+o
+p
+e
+z
+a
+D
+r
+y
+T
+r
+o
+p
+i
+c</p></td>
+<td><p>M
+e
+x
+i
+c
+o</p></td>
+<td><p>I. Oropeza-Perez, A.H. Petzold-Rodriguez, C. Bonilla-Lopez,
+Adaptive thermal comfort in the main Mexican climate
+conditions with and without passive cooling, Energy and
+Buildings. 145 (2017) 251–258.
+<a class="reference external" href="https://doi.org/10.1016/j.enbuild.2017.04.031">https://doi.org/10.1016/j.enbuild.2017.04.031</a>.</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>1
+9</p></td>
+<td><p>M
+E
+X
+O
+r
+o
+p
+e
+z
+a
+T
+e
+m
+p
+e
+r
+a
+t
+e</p></td>
+<td><p>M
+e
+x
+i
+c
+o</p></td>
+<td><p>I. Oropeza-Perez, A.H. Petzold-Rodriguez, C. Bonilla-Lopez,
+Adaptive thermal comfort in the main Mexican climate
+conditions with and without passive cooling, Energy and
+Buildings. 145 (2017) 251–258.
+<a class="reference external" href="https://doi.org/10.1016/j.enbuild.2017.04.031">https://doi.org/10.1016/j.enbuild.2017.04.031</a>.</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>2
+0</p></td>
+<td><p>M
+E
+X
+O
+r
+o
+p
+e
+z
+a
+H
+u
+m
+T
+r
+o
+p
+i
+c</p></td>
+<td><p>M
+e
+x
+i
+c
+o</p></td>
+<td><p>I. Oropeza-Perez, A.H. Petzold-Rodriguez, C. Bonilla-Lopez,
+Adaptive thermal comfort in the main Mexican climate
+conditions with and without passive cooling, Energy and
+Buildings. 145 (2017) 251–258.
+<a class="reference external" href="https://doi.org/10.1016/j.enbuild.2017.04.031">https://doi.org/10.1016/j.enbuild.2017.04.031</a>.</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p>2
+1</p></td>
+<td><p>C
+H
+L
+P
+e
+r
+e
+z
+-
+F
+a
+r
+g
+a
+l
+l
+o</p></td>
+<td><p>C
+h
+i
+l
+e</p></td>
+<td><p>A. Pérez-Fargallo, J.A. Pulido-Arcas, C. Rubio-Bellido, M.
+Trebilcock, B. Piderit, S. Attia, Development of a new
+adaptive comfort model for low income housing in the
+central-south of chile, Energy Build. 178 (2018) 94–106.
+<a class="reference external" href="https://doi.org/10.1016/j.enbuild.2018.08.030">https://doi.org/10.1016/j.enbuild.2018.08.030</a>.</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p>2
+2</p></td>
+<td><p>I
+N
+T
+I
+S
+O
+7
+7
+3
+0</p></td>
+<td><p>W
+o
+r
+l
+d
+w
+i
+d
+e</p></td>
+<td><p>ISO, 2005. ISO 7730: Ergonomics of the thermal environment
+Analytical determination and interpretation of thermal
+comfort using calculation of the PMV and PPD indices and
+local thermal comfort criteria. Management 3, 605–615.
+<a class="reference external" href="https://doi.org/10.1016/j.soildyn.2004.11.005">https://doi.org/10.1016/j.soildyn.2004.11.005</a></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<ul class="simple">
+<li><p>CAT: refers to the category of the thermal comfort model applied.
+Most of the Comfort Standards work with 80 and 90% acceptability
+levels, except the European EN 16798-1 (works with Categories 1, 2
+and 3), the Chinese GB/T 50785 (works with categories 1 and 2), and
+the India Model for Adaptive Comfort - Commercial (which works with
+80, 85 and 90% acceptability levels). So, for example, if you are
+going to use the EN16798-1 (ComfStand = 1), you can enter ‘1 2 3’ to
+generate setpoint temperatures for Categories 1, 2 and 3. Or, if you
+are going to use the IMAC Commercial in naturally ventilated mode
+(ComfStand = 7), you can enter ‘80 85 90’ to generate setpoint
+temperatures for these acceptability levels. All categories are
+referenced in the <a class="reference external" href="https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html">full list of setpoint
+temperatures</a>
+at the end of this section. Please note that the Category values must
+be consistent with the Comfort Standard values previously entered.
+If, for instance, you enter ‘1’ in the Comfort Standard value (means
+you’re asking for EN16798 model), but then enter ‘80’ or ‘90’ in the
+Category value (which are categories used in ASHRAE55), you won’t get
+the results you want.</p></li>
+<li><p>ComfMod: is the Comfort Mode, and refers to the comfort modes used in
+accim. It controls if the setpoints are static (when ComfMod = 0) or
+adaptive (when ComfMod = 1, 2 or 3). When they are adaptive, it also
+controls the comfort model applied when the adaptive model is not
+applicable (that is, when the running mean outdoor temperature limits
+are exceeded), in which case a PMV-based model is applied. Each
+ComfMod for each ComfStand and CAT is referenced at the <a class="reference external" href="https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html">full list of
+setpoint
+temperatures</a>.
+Please refer to the research article
+<a class="reference external" href="https://www.mdpi.com/1996-1073/12/8/1498">https://www.mdpi.com/1996-1073/12/8/1498</a> for more information. Figure
+below shows the variation of setpoint temperatures when ComfMod 0
+(upper left), 1 (upper right), 2 (lower left) and 3 (lower right),
+when ComfStand is 1 (EN 16798-1, although figure shows the superseded
+standard, but the setpoint behaviour is similar)</p></li>
+</ul>
+<figure class="align-default">
+<img alt="ComfMod" src="https://www.mdpi.com/energies/energies-12-01498/article_deploy/html/images/energies-12-01498-g002.png" />
+</figure>
+<ul class="simple">
+<li><p>SetpointAcc: refers to the accuracy of the setpoint temperatures. Any
+number, integer or float, can be entered in this argument. For
+instance, if 1 was entered, the cooling setpoint would be rounded to
+the nearest integer below adaptive upper comfort limit minus
+tolerance (ASTtol), and the heating setpoint would be rounded to the
+nearest integer above adaptive lower comfort limit plus tolerance. If
+27.46 and 20.46 were the upper and lower comfort limits and its
+tolerances were respectively -0.1 and +0.1, then the nearest integers
+to 27.36 and 20.56 would be 27 and 21, and therefore, these would be
+the cooling and heating setpoint temperatures. If 2 was used instead,
+then the rounding would be done to the nearest half. If 10 were used,
+the rounding would be done to the first decimal. If 0.5 or 0.1 were
+used, the rounding would be done respectively every 2 or 10 celsius
+degrees.</p></li>
+<li><p>CoolSeasonStart: it is the start of the cooling season, only used
+when EN16798-1, ASHRAE 55 or ISO7730 are entered in ComfStand
+(respectively, ComfStand = 1, 2 and 22) and setpoint behaviour is set
+to static (i.e. ComfMod = 0). This argument can take the number of
+the day in the year (i.e. an integer) or a string containing a date
+in format dd/mm (for instance, “01/05”). Values of CoolSeasonStart
+greater than CoolSeasonEnd can be used, therefore denoting the
+location of the EPW file should be in the south hemisphere.</p></li>
+<li><p>CoolSeasonEnd: Similar to CoolSeasonStart, but it is the end of the
+cooling season. Again, only used when EN16798-1, ASHRAE 55 or ISO7730
+are entered in ComfStand (respectively, ComfStand = 1, 2 and 22) and
+setpoint behaviour is set to static (i.e. ComfMod = 0). Again, this
+argument can take the number of the day in the year (i.e. an integer)
+or a string containing a date in format dd/mm (for instance,
+“01/05”). Values of CoolSeasonEnd smaller than CoolSeasonStart can be
+used, therefore denoting the location of the EPW file should be in
+the south hemisphere.</p></li>
+<li><p>HVACmode: refers to the HVAC mode applied. Enter 0 for Fully
+Air-conditioned (AC), 1 for Naturally ventilated (NV) and/or 2 for
+Mixed Mode (MM). Please note that Calculated natural ventilation must
+be enabled so that Mixed Mode works. So, for example, if you enter ‘0
+1 2’ you’ll be getting all HVAC modes, or if you just enter ‘0 1’
+you’ll be getting just Fully Air-conditioned and Naturally
+ventilated.</p></li>
+<li><p>VentCtrl: refers to the ventilation control, only used in for NV and
+MM. When using NV, If you enter ‘0’, ventilation will be allowed if
+operative temperature exceeds neutral temperature (also known as
+comfort temperature); if you enter ‘1’, ventilation will be allowed
+if operative temperature exceeds the upper comfort limit. In other
+words, sets the value of the neutral temperature or the upper comfort
+limit to the Ventilation Setpoint Temperature (VST). When using MM, 0
+= Ventilates above neutral temperature and fully opens doors and
+windows; 1 = Ventilates above lower comfort limit and fully opens
+doors and windows; 2 = Ventilates above neutral temperature and opens
+doors and windows based on the customised venting opening factor; and
+3 = Ventilates above lower comfort limit and opens doors and windows
+based on the customised venting opening factor. Either way, if you
+enter ‘0 1’ you’ll be getting both ventilation control modes.</p></li>
+<li><p>MaxTempDiffVOF: Maximum Temperature Difference for Venting Opening
+Factor. Maximum temperature difference between indoor operative and
+outdoor temperatures, which when exceeded, windows and doors are
+opened only the fraction specified in the MultiplierVOF argument. If
+temperature difference oscillates between maximum and minimum, the
+windows and doors are opened based on the linear equation. Follows
+the same operation as explained in <a class="reference external" href="https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm">Designbuilder help
+website</a>.</p></li>
+<li><p>MinTempDiffVOF: Minimum Temperature Difference for Venting Opening
+Factor. Minimum temperature difference between indoor operative and
+outdoor temperatures, which when smaller, windows and doors are fully
+opened. If temperature difference oscillates between maximum and
+minimum, the windows and doors are opened based on the linear
+equation. Follows the same operation as explained in <a class="reference external" href="https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm">Designbuilder
+help
+website</a>.</p></li>
+<li><p>MultiplierVOF: Multiplier for modulating the Venting Opening Factor.
+The fraction of the windows that will be opened when temperature
+difference exceeds MaxTempDiffVOF. Follows the same operation as
+explained in <a class="reference external" href="https://designbuilder.co.uk/helpv7.0/Content/CalculatedNatVent.htm">Designbuilder help
+website</a>.
+<img alt="Venting Opening Factor" src="_images/VentingOpeningFactor.png" /></p></li>
+<li><p>VSToffset: stands for Ventilation Setpoint Temperature (VST) offset,
+again only used in Mixed Mode (HVAC Mode ‘2’). Applies the entered
+values as an offset to the VST, in Celsius degrees. Values entered
+can be positive or negative float or integers, and must be
+space-separated. For example, if you enter ‘-2 -1 0 1 2’ you’ll be
+getting offsets of -2°C, -1°C, 0°C, 1°C and 2°C to the VST. If you
+don’t enter any number, it’ll be used ‘0’ as the default value.</p></li>
+<li><p>MinOToffset: stands for Minimum Outdoor Temperature offset, again
+only used in Mixed Mode (HVAC Mode ‘2’). Sets the minimum outdoor
+temperature an offset to the heating setpoint temperature. For
+example, if you enter ‘1’ (please, note that the numbers must be
+positive), ventilation won’t be allowed if outdoor temperature falls
+below 1°C below the heating setpoint, in order to prevent from
+entering excessive cold. Therefore, below said limit, windows are
+closed and, if needed, air conditioning starts to work. Entered
+values can be float or integers, but always positive numbers, and
+must be space-separated. For example, if you enter ‘0 1 2’ you’ll be
+getting offsets of 0°C, 1°C and 2°C to the heating setpoint
+temperature. If you don’t enter any number, it’ll be used ‘50’ as the
+default value (that is 50°C below heating setpoint temperature, and
+therefore no limit is applied).</p></li>
+<li><p>MaxWindSpeed: stands for maximum wind speed, again only used in Mixed
+Mode (HVAC Mode ‘2’). Sets the maximum wind speed in which
+ventilation is allowed, in m/s. Therefore, if you enter ‘20’,
+ventilation won’t be allowed if wind speed is greater than 20 m/s.
+Entered values can be float or integers, but always positive numbers,
+and must be space-separated. For example, if you enter ‘5 10 15 20’
+you’ll be getting different IDFs with maximum wind speeds of 5 m/s,
+10 m/s, 15 m/s and 20 m/s. If you don’t enter any number, it’ll be
+used ‘50’ as the default value (that is 50 m/s, and therefore no
+limit is applied).</p></li>
+<li><p>ASTtol: stands for Adaptive Setpoint Temperature tolerance. It
+applies the number that you enter as a tolerance for the adaptive
+heating and cooling setpoint temperatures. The original problem was
+that, if we assigned the adaptive setpoint straight to the comfort
+limit (i.e. you enter ‘0’ for ASTtol), there were a few hours that
+fell outside the comfort zone because of the error in some decimals
+in the simulation of the operative temperature. Therefore, the
+original purpose of this feature is to control that all hours are
+comfortable hours (i.e. operative temperature falls within the
+comfort zone), and we can make that sure by considering a little
+tolerance of 0.10 °C. For example, say that adaptive cooling and
+heating setpoints are originally 29.5 and 21.5°C at some day; if you
+enter ‘1’ for ASTtol, then the setpoints would be modified to 28.5
+and 22.5°C (1°C below original cooling setpoint, and 1°C above
+original heating setpoint). The function will create a sequence of
+numbers based on the entered values. So, numbers must be entered in 3
+stages: first, the start of the sequence; second, the end of the
+sequence, and third, the steps. So for example, if you enter ‘0’ for
+the start, ‘1’ for the end, and ‘0.25’ for the steps, you would be
+getting ASTtol values of 0°C, 0.25°C, 0.5°C, 0.75°C and 1°C. If you
+don’t enter any number, it’ll be used ‘0.1’ as the default value (as
+previously said, to make sure all hours are comfortable hours), and
+you would be getting only one variation of 0.1°C.</p></li>
+<li><p>NameSuffix: the text you would like to add at the end of the file
+name.</p></li>
+<li><p>verboseMode: True to print all process in screen, False to not to
+print it. Default is True.</p></li>
+<li><p>confirmGen: Generally, this argument should be left as default. True
+to confirm automatically the generation of IDFs; if False, you’ll be
+asked to confirm in command prompt. Default is False. So, if you are
+going to set it True, be sure about the number of IDFs you are going
+to generate, because these might be thousands.</p></li>
+</ul>
+<p>So, below you can see a sample name of an IDF created by using accim’s
+VRFsystem functions. The package takes the original IDF file as a
+reference, saves a copy, run all the functions so that setpoint
+temperatures are transformed from static to adaptive, an changes its
+name based on the values previously entered:</p>
+<p><strong>TestModel_onlyGeometryForVRFsystem[CS_INT
+EN16798[CA_1[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[standard</strong></p>
+<p>where:</p>
+<ul class="simple">
+<li><p>‘TestModel_onlyGeometryForVRFsystem’ is the name of the original IDF.</p></li>
+<li><p>CS refers to the Comfort Standard, and it’s followed by the thermal
+comfort standard applied (could be ‘ESP CTE’, ‘INT EN16798’, ‘INT
+ASHRAE55’, ‘JPN Rijal’, etc).</p></li>
+<li><p>CA refers to the Category, which could be 1, 2 or 3 if CS is EN16798,
+80 or 90 if CS is ASHRAE55 or other models, or 80, 85 or 90 in case
+of the IMAC C.</p></li>
+<li><p>CM refers to the Comfort Mode, which could be 0 (Static), 1, 2, or 3
+(Adaptive modes).</p></li>
+<li><p>HM refers to the HVAC Mode, which could be 0 (Full air conditioning),
+1 (Naturally ventilated), or 2 (Mixed Mode).</p></li>
+<li><p>VC refers to the Ventilation Control, which could be 0, 1, 2 or 3.</p></li>
+<li><p>VO refers to the Ventilation setpoint temperature offset, which could
+be any number, float or integer, positive or negative.</p></li>
+<li><p>MT refers to the Minimum Outdoor Temperature offset, which could be
+any number, float or integer, but always positive number.</p></li>
+<li><p>MW refers to the Maximum Wind Speed, which could be any number, float
+or integer, but always positive number.</p></li>
+<li><p>AT refers to the Adaptive Setpoint Temperature offset, which could be
+any number, float or integer, but always positive number. Please
+remember this number comes from a 3-stage process (refer to the
+explanation above).</p></li>
+<li><p>‘standard’ is the suffix, which can be whatever you want. For
+example, this allows you to make a for loop with ‘standard’,
+‘simplified’ and ‘timestep’ and run the simulations with all type of
+outputs.</p></li>
+</ul>
+<p>If some inputs are not used or don’t make sense, you’ll be able to se an
+‘X’ in the output IDF file. For example, if you use CTE as Comfort
+Standard, then the inputs for Category and Comfort Mode (which are only
+for EN16798-1 and ASHRAE 55) are not used in the process, and the output
+IDF would contain in its name ‘CS_ESP CTE[CA_X[CM_X’. Another similar
+case occurs if you use Full air-conditioning HVAC Mode (i.e. enter ‘0’
+for HVAC Mode), or if you use the ‘ex_ac’ ScriptType, where the output
+IDF would contain in its name ‘[HM_0[VC_X[VO_X[MT_X[MW_X’.</p>
+</section>
+<section id="full-list-of-setpoint-temperatures">
+<h2>4.3 Full list of setpoint temperatures<a class="headerlink" href="#full-list-of-setpoint-temperatures" title="Permalink to this heading"></a></h2>
+<p>Depending on the arguments ComfStand, CAT and ComfMod, cooling and
+heating setpoint temperatures will be the following:</p>
+<p>(If it is too small, you can look at it also at the <a class="reference external" href="https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html">Github
+repository</a>)</p>
+<figure class="align-default">
+<img alt="full_table.png" src="_images/full_table.png" />
+</figure>
+</section>
+<section id="putting-it-into-practice-adaptive-setpoint-temperatures-step-by-step">
+<h2>4.4 Putting it into practice: Adaptive setpoint temperatures step by step<a class="headerlink" href="#putting-it-into-practice-adaptive-setpoint-temperatures-step-by-step" title="Permalink to this heading"></a></h2>
+<p>You can see a Jupyter Notebook either in the How-to Guide section of this documentation or in the link below:</p>
+<p><a class="reference external" href="https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb">https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb</a></p>
+<p>You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+within your site_packages path, in</p>
+<p>accim/sample_files/jupyter_notebooks/addAccis</p>
+<p>The path should be something like this, with your username instead of
+YOUR_USERNAME:</p>
+<p><em>C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\addAccis</em></p>
+<p>Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run “jupyter notebook”. After that, an internet browser will pop up, and you will be able to open the .ipynb file.</p>
+<p>You can also see an example below. The input file is included within
+<code class="file docutils literal notranslate"><span class="pre">accim/sample_files/sample</span> <span class="pre">IDFs</span></code> folder, and it was originally named
+<code class="file docutils literal notranslate"><span class="pre">TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2310.idf</span></code>, but for
+clarity purposes in this case has been renamed to “TestModel.idf”.</p>
+<p>So, say you have an IDF in some folder, called ‘TestModel.idf’. So, you
+can either open an IDE or simply a CMD dialog pointing at that path and
+execute python. Let’s run the functions to get the energy models with
+adaptive setpoint temperatures.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">accim.sim</span> <span class="kn">import</span> <span class="n">accis</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">accis</span><span class="o">.</span><span class="n">addAccis</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>When we hit enter, we’ll be asked to enter some information regarding
+the ScriptType, the Outputs and the EnergyPlus version:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>--------------------------------------------------------
+Adaptive-Comfort-Control-Implemented Model (ACCIM)
+--------------------------------------------------------
+
+This tool allows to apply adaptive setpoint temperatures.
+For further information, please read the documentation:
+https://accim.readthedocs.io/en/master/
+For a visual understanding of the tool, please visit the following jupyter notebooks:
+-    Using addAccis() to apply adaptive setpoint temperatures
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb-    Using rename_epw_files() to rename the EPWs for proper data analysis after simulation
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
+-    Using runEp() to directly run simulations with EnergyPlus
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
+-    Using the class Table() for data analysis
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
+
+Starting with the process.
+
+Now, you are going to be asked to enter some information for different arguments to generate the output IDFs with adaptive setpoint temperatures.
+If you are not sure about how to use these parameters, please take a look at the documentation in the following link:
+https://accim.readthedocs.io/en/master/4_detailed%20use.html
+
+Please, enter the following information:
+
+Enter the ScriptType (
+for VRFsystem with full air-conditioning mode: vrf_ac;
+for VRFsystem with mixed-mode: vrf_mm;
+for ExistingHVAC with mixed mode: ex_mm;
+for ExistingHVAC with full air-conditioning mode: ex_ac
+): vrf_mm
+
+Enter the SupplyAirTempInputMethod (
+for Supply Air Temperature: supply air temperature;
+for Temperature Difference: temperature difference;
+): temperature difference
+
+Do you want to keep the existing outputs (true or false)?: false
+
+Enter the Output type (standard, simplified, detailed or custom): standard
+
+Enter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): hourly runperiod
+
+Do you want to generate a dataframe to see all outputs? (true or false): false
+
+Enter the EnergyPlus version (9.1 to 23.1): 23.1
+
+Enter the Temperature Control method (temperature or pmv): temperature
+</pre></div>
+</div>
+<p>When we hit enter, it’s going to add all the EnergyPlus objects needed:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Basic</span> <span class="nb">input</span> <span class="n">data</span><span class="p">:</span>
+<span class="n">ScriptType</span> <span class="ow">is</span><span class="p">:</span> <span class="n">vrf_mm</span>
+<span class="n">Supply</span> <span class="n">Air</span> <span class="n">Temperature</span> <span class="n">Input</span> <span class="n">Method</span> <span class="ow">is</span><span class="p">:</span> <span class="n">temperature</span> <span class="n">difference</span>
+<span class="n">Output</span> <span class="nb">type</span> <span class="ow">is</span><span class="p">:</span> <span class="n">standard</span>
+<span class="n">Output</span> <span class="n">frequencies</span> <span class="n">are</span><span class="p">:</span>
+<span class="p">[</span><span class="s1">&#39;hourly&#39;</span><span class="p">,</span> <span class="s1">&#39;runperiod&#39;</span><span class="p">]</span>
+<span class="n">EnergyPlus</span> <span class="n">version</span> <span class="ow">is</span><span class="p">:</span> <span class="mf">23.1</span>
+<span class="n">Temperature</span> <span class="n">Control</span> <span class="n">method</span> <span class="ow">is</span><span class="p">:</span> <span class="n">temperature</span>
+
+<span class="o">=======================</span><span class="n">START</span> <span class="n">OF</span> <span class="n">GENERIC</span> <span class="n">IDF</span> <span class="n">FILE</span> <span class="n">GENERATION</span> <span class="n">PROCESS</span><span class="o">=======================</span>
+
+<span class="n">Starting</span> <span class="k">with</span> <span class="n">file</span><span class="p">:</span>
+<span class="n">TestModel</span>
+<span class="n">IDD</span> <span class="n">location</span> <span class="ow">is</span><span class="p">:</span> <span class="n">C</span><span class="p">:</span>\<span class="n">EnergyPlusV23</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="mi">0</span>\<span class="n">Energy</span><span class="o">+.</span><span class="n">idd</span>
+<span class="n">The</span> <span class="n">occupied</span> <span class="n">zones</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">model</span> <span class="n">TestModel</span> <span class="n">are</span><span class="p">:</span>
+<span class="n">BLOCK1</span><span class="p">:</span><span class="n">ZONE2</span>
+<span class="n">BLOCK1</span><span class="p">:</span><span class="n">ZONE1</span>
+<span class="n">The</span> <span class="n">windows</span> <span class="ow">and</span> <span class="n">doors</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">model</span> <span class="n">TestModel</span> <span class="n">are</span><span class="p">:</span>
+<span class="n">Block1_Zone2_Wall_3_0_0_0_0_0_Win</span>
+<span class="o">.</span>
+<span class="o">.</span>
+<span class="o">.</span>
+<span class="n">Added</span> <span class="o">-</span> <span class="n">BLOCK1_ZONE1</span> <span class="n">VRF</span> <span class="n">Indoor</span> <span class="n">Unit</span> <span class="n">DX</span> <span class="n">Cooling</span> <span class="n">Coil</span> <span class="n">Reporting</span> <span class="n">Frequency</span> <span class="n">Runperiod</span> <span class="n">Output</span><span class="p">:</span><span class="n">Variable</span> <span class="n">data</span>
+<span class="n">Added</span> <span class="o">-</span> <span class="n">BLOCK1_ZONE1</span> <span class="n">VRF</span> <span class="n">Indoor</span> <span class="n">Unit</span> <span class="n">DX</span> <span class="n">Heating</span> <span class="n">Coil</span> <span class="n">Reporting</span> <span class="n">Frequency</span> <span class="n">Runperiod</span> <span class="n">Output</span><span class="p">:</span><span class="n">Variable</span> <span class="n">data</span>
+<span class="n">IDF</span> <span class="n">has</span> <span class="n">been</span> <span class="n">saved</span>
+<span class="n">Ending</span> <span class="k">with</span> <span class="n">file</span><span class="p">:</span>
+<span class="n">TestModel</span>
+<span class="o">=======================</span><span class="n">END</span> <span class="n">OF</span> <span class="n">GENERIC</span> <span class="n">IDF</span> <span class="n">FILE</span> <span class="n">GENERATION</span> <span class="n">PROCESS</span><span class="o">=======================</span>
+
+<span class="n">The</span> <span class="n">following</span> <span class="n">IDFs</span> <span class="n">will</span> <span class="ow">not</span> <span class="n">work</span><span class="p">,</span> <span class="ow">and</span> <span class="n">therefore</span> <span class="n">these</span> <span class="n">will</span> <span class="n">be</span> <span class="n">deleted</span><span class="p">:</span>
+<span class="kc">None</span>
+</pre></div>
+</div>
+<p>And then ask us to enter the required information to generate the output
+IDF files (you can omit some by hitting enter without entering any
+value):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>=======================START OF OUTPUT IDF FILES GENERATION PROCESS=======================
+
+The information you will be required to enter below will be used to generate the customised output IDFs:
+Enter the Comfort Standard numbers separated by space (
+0 = ESP CTE;
+1 = INT EN16798-1;
+2 = INT ASHRAE55;
+3 = JPN Rijal;
+4 = CHN GBT50785 Cold;
+5 = CHN GBT50785 HotMild;
+6 = CHN Yang;
+7 = IND IMAC C NV;
+8 = IND IMAC C MM;
+9 = IND IMAC R 7DRM;
+10 = IND IMAC R 30DRM;
+11 = IND Dhaka;
+12 = ROM Udrea;
+13 = AUS Williamson;
+14 = AUS DeDear;
+15 = BRA Rupp NV;
+16 = BRA Rupp AC;
+17 = MEX Oropeza Arid;
+18 = MEX Oropeza DryTropic;
+19 = MEX Oropeza Temperate;
+20 = MEX Oropeza HumTropic;
+21 = CHL Perez-Fargallo;
+22 = INT ISO7730;
+Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html
+): 1 2 7
+          Are you sure the numbers are correct? [y or [] / n]:
+
+For the comfort standard 1 = INT EN16798, the available categories you can choose are:
+1 = EN16798 Category I
+2 = EN16798 Category II
+3 = EN16798 Category III
+For the comfort standard 2 = INT ASHRAE55, the available categories you can choose are:
+80 = ASHRAE 55 80% acceptability
+90 = ASHRAE 55 90% acceptability
+For the comfort standard 7 = IND IMAC C NV, the available categories you can choose are:
+80 = 80% acceptability
+85 = 85% acceptability
+90 = 90% acceptability
+Enter the Category numbers separated by space (
+1 = CAT I / CAT A;
+2 = CAT II / CAT B;
+3 = CAT III / CAT C;
+80 = 80% ACCEPT;
+85 = 85% ACCEPT;
+90 = 90% ACCEPT;
+Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html
+): 2 3 85 90
+          Are you sure the numbers are correct? [y or [] / n]:
+
+For the comfort standard 1 = INT EN16798, the available ComfMods you can choose are:
+0 = EN16798 Static setpoints
+1 = EN16798 Adaptive setpoints when applicable, otherwise CTE
+2 = EN16798 Adaptive setpoints when applicable, otherwise EN16798 Static setpoints
+3 = EN16798 Adaptive setpoints when applicable, otherwise EN16798 Adaptive setpoints horizontally extended
+For the comfort standard 2 = INT ASHRAE55, the available ComfMods you can choose are:
+0 = ISO 7730 Static setpoints
+1 = ASHRAE 55 Adaptive setpoints when applicable, otherwise CTE
+2 = ASHRAE 55 Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints
+3 = ASHRAE 55 Adaptive setpoints when applicable, otherwise ASHRAE 55 Adaptive setpoints horizontally extended
+For the comfort standard 7 = IND IMAC C NV, the available ComfMods you can choose are:
+0 = Indian Building Code Static setpoints
+1 = IMAC C NV Model Adaptive setpoints when applicable, otherwise Indian Building Code Static setpoints
+2 = IMAC C NV Model Adaptive setpoints when applicable, otherwise ISO 7730 Static setpoints
+3 = IMAC C NV Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended
+Enter the Comfort Mode numbers separated by space (
+0 or 0.X = Static;
+1, 1.X, 2, 3 = Adaptive;
+Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html
+): 0 3
+          Are you sure the numbers are correct? [y or [] / n]:
+
+Enter the setpoint accuracy number (any number greater than 0): 100
+          Are you sure the number is correct? [y or [] / n]:
+
+Enter the start of the cooling season in numeric date format dd/mm or the day of the year: 01/05
+          Are you sure the number is correct? [y or [] / n]:
+
+Enter the end of the cooling season in numeric date format dd/mm or the day of the year: 01/10
+          Are you sure the number is correct? [y or [] / n]:
+
+Enter the HVAC Mode numbers separated by space (
+0 = Fully Air-conditioned;
+1 = Naturally ventilated;
+2 = Mixed Mode;
+): 2
+          Are you sure the numbers are correct? [y or [] / n]:
+
+Enter the Ventilation Control numbers separated by space (
+If HVACmode = 1:
+   0 = Ventilates above neutral temperature;
+   1 = Ventilates above upper comfort limit;
+If HVACmode = 2:
+   0 = Ventilates above neutral temperature and fully opens doors and windows;
+   1 = Ventilates above lower comfort limit and fully opens doors and windows;
+   2 = Ventilates above neutral temperature and opens doors and windows based on the customised venting opening factor;
+   3 = Ventilates above lower comfort limit and opens doors and windows based on the customised venting opening factor;
+): 2 3
+          Are you sure the numbers are correct? [y or [] / n]:
+Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): 15
+          Are you sure the number is correct? [y or [] / n]:
+Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): 1
+          Are you sure the number is correct? [y or [] / n]:
+Enter the multiplier number for Ventilation Opening Factor (any number between 0 and 1): 0.2
+          Are you sure the number is correct? [y or [] / n]:
+
+Enter the VSToffset numbers separated by space (if omitted, will be 0):
+          Are you sure the numbers are correct? [y or [] / n]:
+
+Enter the MinOToffset numbers separated by space (if omitted, will be 50):
+          Are you sure the numbers are correct? [y or [] / n]:
+
+Enter the MaxWindSpeed numbers separated by space (if omitted, will be 50):
+          Are you sure the numbers are correct? [y or [] / n]:
+
+Enter the ASTtol value from (if omitted, will be 0.1):
+          Are you sure the numbers are correct? [y or [] / n]:
+Enter the ASTtol value to (if omitted, will be 0.1):
+          Are you sure the numbers are correct? [y or [] / n]:
+Enter the ASTtol value steps (if omitted, will be 0.1):
+          Are you sure the numbers are correct? [y or [] / n]:
+</pre></div>
+</div>
+<p>Afterwards, ACCIS will let us know which the output IDFs are going to
+be, the total number of them and will ask for our confirmation to
+proceed:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>The list of output IDFs is going to be:
+TestModel[CS_INT EN16798[CA_2[CM_0.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_INT EN16798[CA_2[CM_0.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_INT EN16798[CA_2[CM_3.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_INT EN16798[CA_2[CM_3.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_INT EN16798[CA_3[CM_0.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_INT EN16798[CA_3[CM_0.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_INT EN16798[CA_3[CM_3.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_INT EN16798[CA_3[CM_3.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_INT ASHRAE55[CA_90[CM_0.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_INT ASHRAE55[CA_90[CM_0.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_INT ASHRAE55[CA_90[CM_3.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_INT ASHRAE55[CA_90[CM_3.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_IND IMAC C NV[CA_85[CM_0.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_IND IMAC C NV[CA_85[CM_0.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_IND IMAC C NV[CA_85[CM_3.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_IND IMAC C NV[CA_85[CM_3.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_IND IMAC C NV[CA_90[CM_0.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_IND IMAC C NV[CA_90[CM_0.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_IND IMAC C NV[CA_90[CM_3.0[HM_2[VC_2[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+TestModel[CS_IND IMAC C NV[CA_90[CM_3.0[HM_2[VC_3[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+And the total number of output IDFs is going to be 20
+Do you still want to run ACCIS? [y/n]: y
+</pre></div>
+</div>
+<p>If we entered <code class="docutils literal notranslate"><span class="pre">n</span></code>, the whole process would shut down. Otherwise, if we
+entered ‘y’, the generation of output IDF files would start, and ACCIS
+would print on screen each output IDF name as it generates it. As you
+can see, we are going to use the EN16798-1, ASHRAE 55 and IMAC
+Commercial for naturally ventilated buildings, categories 2 and 3 for
+EN16798, 90% acceptability levels for ASHRAE 55, 85 and 90%
+acceptability levels for IMAC C NV, all with ComfMod 0 (with static
+setpoint temperatures) and 3 (with adaptive setpoint temperatures when
+the model is applicable, otherwise horizontally extending the adaptive
+setpoint temperatures), Mixed Mode, and we just went ahead with the
+remaining default values.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Generating</span> <span class="n">the</span> <span class="n">following</span> <span class="n">output</span> <span class="n">IDF</span> <span class="n">files</span><span class="p">:</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">EN16798</span><span class="p">[</span><span class="n">CA_2</span><span class="p">[</span><span class="n">CM_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_2</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">EN16798</span><span class="p">[</span><span class="n">CA_2</span><span class="p">[</span><span class="n">CM_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_3</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">EN16798</span><span class="p">[</span><span class="n">CA_2</span><span class="p">[</span><span class="n">CM_3</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_2</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">EN16798</span><span class="p">[</span><span class="n">CA_2</span><span class="p">[</span><span class="n">CM_3</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_3</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">EN16798</span><span class="p">[</span><span class="n">CA_3</span><span class="p">[</span><span class="n">CM_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_2</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">EN16798</span><span class="p">[</span><span class="n">CA_3</span><span class="p">[</span><span class="n">CM_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_3</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">EN16798</span><span class="p">[</span><span class="n">CA_3</span><span class="p">[</span><span class="n">CM_3</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_2</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">EN16798</span><span class="p">[</span><span class="n">CA_3</span><span class="p">[</span><span class="n">CM_3</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_3</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">ASHRAE55</span><span class="p">[</span><span class="n">CA_90</span><span class="p">[</span><span class="n">CM_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_2</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">ASHRAE55</span><span class="p">[</span><span class="n">CA_90</span><span class="p">[</span><span class="n">CM_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_3</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">ASHRAE55</span><span class="p">[</span><span class="n">CA_90</span><span class="p">[</span><span class="n">CM_3</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_2</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_INT</span> <span class="n">ASHRAE55</span><span class="p">[</span><span class="n">CA_90</span><span class="p">[</span><span class="n">CM_3</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_3</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_IND</span> <span class="n">IMAC</span> <span class="n">C</span> <span class="n">NV</span><span class="p">[</span><span class="n">CA_85</span><span class="p">[</span><span class="n">CM_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_2</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_IND</span> <span class="n">IMAC</span> <span class="n">C</span> <span class="n">NV</span><span class="p">[</span><span class="n">CA_85</span><span class="p">[</span><span class="n">CM_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_3</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_IND</span> <span class="n">IMAC</span> <span class="n">C</span> <span class="n">NV</span><span class="p">[</span><span class="n">CA_85</span><span class="p">[</span><span class="n">CM_3</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_2</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_IND</span> <span class="n">IMAC</span> <span class="n">C</span> <span class="n">NV</span><span class="p">[</span><span class="n">CA_85</span><span class="p">[</span><span class="n">CM_3</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_3</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_IND</span> <span class="n">IMAC</span> <span class="n">C</span> <span class="n">NV</span><span class="p">[</span><span class="n">CA_90</span><span class="p">[</span><span class="n">CM_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_2</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_IND</span> <span class="n">IMAC</span> <span class="n">C</span> <span class="n">NV</span><span class="p">[</span><span class="n">CA_90</span><span class="p">[</span><span class="n">CM_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_3</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_IND</span> <span class="n">IMAC</span> <span class="n">C</span> <span class="n">NV</span><span class="p">[</span><span class="n">CA_90</span><span class="p">[</span><span class="n">CM_3</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_2</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+<span class="n">TestModel</span><span class="p">[</span><span class="n">CS_IND</span> <span class="n">IMAC</span> <span class="n">C</span> <span class="n">NV</span><span class="p">[</span><span class="n">CA_90</span><span class="p">[</span><span class="n">CM_3</span><span class="mf">.0</span><span class="p">[</span><span class="n">HM_2</span><span class="p">[</span><span class="n">VC_3</span><span class="p">[</span><span class="n">VO_0</span><span class="mf">.0</span><span class="p">[</span><span class="n">MT_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">MW_50</span><span class="mf">.0</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="p">[</span><span class="n">NS_X</span><span class="o">.</span><span class="n">idf</span>
+
+<span class="o">=======================</span><span class="n">END</span> <span class="n">OF</span> <span class="n">OUTPUT</span> <span class="n">IDF</span> <span class="n">FILES</span> <span class="n">GENERATION</span> <span class="n">PROCESS</span><span class="o">=======================</span>
+</pre></div>
+</div>
+<p>Afterwards, you just need to run the simulation. Once you have run the
+simulations you need, you’ll get the files you usually get when you run
+any simulation, including the hourly results on a CSV file.</p>
+</section>
+<section id="renaming-epw-files-for-later-data-analysis">
+<h2>4.5 Renaming epw files for later data analysis<a class="headerlink" href="#renaming-epw-files-for-later-data-analysis" title="Permalink to this heading"></a></h2>
+<p>You can see a Jupyter Notebook either in the How-to Guide section of this documentation or in the link below:</p>
+<p><a class="reference external" href="https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb">https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb</a></p>
+<p>You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+within your site_packages path, in</p>
+<p>accim/sample_files/jupyter_notebooks/rename_epw_files</p>
+<p>The path should be something like this, with your username instead of
+YOUR_USERNAME:</p>
+<p><em>C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\rename_epw_files</em></p>
+<p>Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run “jupyter notebook”. After that, an internet browser will pop up, and you will be able to open the .ipynb file.</p>
+</section>
+<section id="running-simulations">
+<h2>4.6 Running simulations<a class="headerlink" href="#running-simulations" title="Permalink to this heading"></a></h2>
+<p>You can see a Jupyter Notebook either in the How-to Guide section of this documentation or in the link below:</p>
+<p><a class="reference external" href="https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb">https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb</a></p>
+<p>You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+within your site_packages path, in</p>
+<p>accim/sample_files/jupyter_notebooks/runEp</p>
+<p>The path should be something like this, with your username instead of
+YOUR_USERNAME:</p>
+<p><em>C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\runEp</em></p>
+<p>Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run “jupyter notebook”. After that, an internet browser will pop up, and you will be able to open the .ipynb file.</p>
+<p>This script has been created by eppy’s development team
+(<a class="reference external" href="https://eppy.readthedocs.io/en/latest/runningeplus.html">https://eppy.readthedocs.io/en/latest/runningeplus.html</a>, specifically
+from section ‘Running in parallel processes using Generators’), however
+I did some changes. Anyway, you probably should check out eppy package,
+since it’s absolutely awesome.</p>
+<p>By using this script, the EnergyPlus version used to simulate the IDFs
+will be the IDF’s version. Therefore, if your IDF is in version 9.4, but
+you don’t have EnergyPlus 9.4 installed, you’ll get an error.</p>
+<p>The main difference is that this one allows to run simulations with
+several EPW files. It takes all EPW files and IDF files located in the
+script folder, and runs them. So for example, say you have 2 no. IDFs
+(1.idf and 2.idf) and 2 no. EPW files (a.epw and b.epw). Then, this
+script will run the following simulations: 1[a; 1[b; 2[a; 2[b. The
+character ‘[’ has been used as separator in order to not to be in
+conflict with other programs. Besides, there’s a package within accim
+currently being developed (within folder data) in order to generate
+tables and graphs automatically.</p>
+<p>So, how to use it?</p>
+<p>Say you have already run any of the accis functions, and therefore you
+might have a folder with the following files:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mode</span>                 <span class="n">LastWriteTime</span>         <span class="n">Length</span> <span class="n">Name</span>
+<span class="o">----</span>                 <span class="o">-------------</span>         <span class="o">------</span> <span class="o">----</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">20</span><span class="o">/</span><span class="mi">07</span><span class="o">/</span><span class="mi">2019</span>     <span class="mi">12</span><span class="p">:</span><span class="mi">42</span>        <span class="mi">1407718</span> <span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">epw</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">20</span><span class="o">/</span><span class="mi">07</span><span class="o">/</span><span class="mi">2019</span>     <span class="mi">12</span><span class="p">:</span><span class="mi">43</span>        <span class="mi">1408160</span> <span class="n">Bilbao_2016</span><span class="o">.</span><span class="n">epw</span>
+<span class="o">-</span><span class="n">a</span><span class="o">----</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">15</span><span class="p">:</span><span class="mi">01</span>         <span class="mi">114617</span> <span class="n">TestModel_SingleZone</span><span class="o">.</span><span class="n">idf</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">15</span><span class="p">:</span><span class="mi">01</span>         <span class="mi">114617</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="o">.</span><span class="n">idf</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">15</span><span class="p">:</span><span class="mi">01</span>         <span class="mi">114617</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_2</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="o">.</span><span class="n">idf</span>
+</pre></div>
+</div>
+<p>So, now we can run the simulations:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">accim.run</span> <span class="kn">import</span> <span class="n">run</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">dir</span><span class="p">(</span><span class="n">run</span><span class="p">)</span>
+<span class="go">[&#39;IDF&#39;, &#39;__builtins__&#39;, &#39;__cached__&#39;, &#39;__doc__&#39;, &#39;__file__&#39;, &#39;__loader__&#39;, &#39;__name__&#39;, &#39;__package__&#39;, &#39;__spec__&#39;, &#39;make_eplaunch_options&#39;, &#39;os&#39;, &#39;removefiles&#39;, &#39;runEp&#39;, &#39;runIDFs&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">run</span><span class="o">.</span><span class="n">runEp</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">runEp()</span></code> is going to ask you if you want to run the simulations only
+with IDF files generated by accim. If you enter ‘y’, it’ll run only
+accim output IDFs, otherwise if you enter ‘n’, it will run all idfs in
+the folder. As you can see below, we didn’t need to remove the original
+IDF ‘TestModel_SingleZone.idf’ from the folder. Then, it will let you
+know the IDFs and EPWs that are going to be used in the simulations.
+Besides, it’ll let you know the total number of simulations, and will
+ask for your confirmation, because you might start thousands of
+simulations by mistake. Further, <code class="docutils literal notranslate"><span class="pre">runEp()</span></code>can take a total number of
+3 arguments, which are 2 boolean arguments, and one integer:
+<code class="docutils literal notranslate"><span class="pre">runEp(runOnlyAccim=True,</span> <span class="pre">confirmRun=True,</span> <span class="pre">num_CPUs=4)</span></code>. If you
+entered these, you would skip the command prompt process and jump
+straight to the simulation process. Since we entered 4 for the num_CPUs
+argument, the simulations would be run by using 4 CPS at the same time.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">run</span><span class="o">.</span><span class="n">runEp</span><span class="p">()</span>
+<span class="go">Do you want to run only accim output IDFs? [y or n]:y</span>
+<span class="go">The IDFs we are going to run are: [&#39;TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1.idf&#39;, &#39;TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0.1.idf&#39;]</span>
+<span class="go"> and the No. of IDFs is going to be 2</span>
+<span class="go">The EPWs we are going to run are: [&#39;Bilbao_2015.epw&#39;, &#39;Bilbao_2016.epw&#39;]</span>
+<span class="go"> and the No. of EPWs is going to be 2</span>
+<span class="go">Therefore, the simulations are going to be:</span>
+<span class="go">TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1.idf[Bilbao_2015.epw</span>
+<span class="go">TestModel_SingleZone_pymod[AS_EN16798[CA_1[CM_3[AT_0.1.idf[Bilbao_2016.epw</span>
+<span class="go">TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0.1.idf[Bilbao_2015.epw</span>
+<span class="go">TestModel_SingleZone_pymod[AS_EN16798[CA_2[CM_3[AT_0.1.idf[Bilbao_2016.epw</span>
+<span class="go"> and the No. of simulations is going to be 4</span>
+<span class="go">The number of simulations is going to be 4. Do you still want to proceed?[y or n]:y</span>
+</pre></div>
+</div>
+<p>Afterwards, you’ll see the calculations progress if you use the windows
+prompt command, and you’ll get an extensive list of simulation files,
+similar to this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mode</span>                 <span class="n">LastWriteTime</span>         <span class="n">Length</span> <span class="n">Name</span>
+<span class="o">----</span>                 <span class="o">-------------</span>         <span class="o">------</span> <span class="o">----</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">20</span><span class="o">/</span><span class="mi">07</span><span class="o">/</span><span class="mi">2019</span>     <span class="mi">12</span><span class="p">:</span><span class="mi">42</span>        <span class="mi">1407718</span> <span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">epw</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">20</span><span class="o">/</span><span class="mi">07</span><span class="o">/</span><span class="mi">2019</span>     <span class="mi">12</span><span class="p">:</span><span class="mi">43</span>        <span class="mi">1408160</span> <span class="n">Bilbao_2016</span><span class="o">.</span><span class="n">epw</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">15</span><span class="p">:</span><span class="mi">01</span>         <span class="mi">114617</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="o">.</span><span class="n">idf</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>           <span class="mi">1721</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">audit</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>           <span class="mi">9179</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">bnd</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>        <span class="mi">2023160</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">csv</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>           <span class="mi">6181</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">dxf</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>          <span class="mi">30483</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">eio</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>             <span class="mi">99</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">end</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>           <span class="mi">5351</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">err</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>        <span class="mi">2968770</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">eso</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>              <span class="mi">0</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">mdd</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>          <span class="mi">13352</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">mtd</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>              <span class="mi">0</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">rdd</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>           <span class="mi">1107</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">rvaudit</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>           <span class="mi">2667</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">shd</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>          <span class="mi">34187</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015Table</span><span class="o">.</span><span class="n">csv</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>         <span class="mi">139585</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015Table</span><span class="o">.</span><span class="n">htm</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>           <span class="mi">3421</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015Zsz</span><span class="o">.</span><span class="n">csv</span>
+<span class="o">.</span>
+<span class="o">.</span>
+<span class="o">.</span>
+</pre></div>
+</div>
+<p>You might need to keep these in order to debug some error, or any other
+reason, but if you don’t need to keep these except csv values with
+hourly results, you can run the <code class="docutils literal notranslate"><span class="pre">removefiles()</span></code> function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">run</span><span class="o">.</span><span class="n">removefiles</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>And now your working directory should look like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Mode</span>                 <span class="n">LastWriteTime</span>         <span class="n">Length</span> <span class="n">Name</span>
+<span class="o">----</span>                 <span class="o">-------------</span>         <span class="o">------</span> <span class="o">----</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">20</span><span class="o">/</span><span class="mi">07</span><span class="o">/</span><span class="mi">2019</span>     <span class="mi">12</span><span class="p">:</span><span class="mi">42</span>        <span class="mi">1407718</span> <span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">epw</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">20</span><span class="o">/</span><span class="mi">07</span><span class="o">/</span><span class="mi">2019</span>     <span class="mi">12</span><span class="p">:</span><span class="mi">43</span>        <span class="mi">1408160</span> <span class="n">Bilbao_2016</span><span class="o">.</span><span class="n">epw</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">15</span><span class="p">:</span><span class="mi">01</span>         <span class="mi">114617</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="o">.</span><span class="n">idf</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>        <span class="mi">2023160</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">csv</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>        <span class="mi">2017212</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_1</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2016</span><span class="o">.</span><span class="n">csv</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">15</span><span class="p">:</span><span class="mi">01</span>         <span class="mi">114617</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_2</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="mf">.1</span><span class="o">.</span><span class="n">idf</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>        <span class="mi">2023114</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_2</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2015</span><span class="o">.</span><span class="n">csv</span>
+<span class="o">-</span><span class="n">a</span><span class="o">---</span><span class="n">l</span>        <span class="mi">27</span><span class="o">/</span><span class="mi">02</span><span class="o">/</span><span class="mi">2021</span>     <span class="mi">16</span><span class="p">:</span><span class="mi">47</span>        <span class="mi">2017070</span> <span class="n">TestModel_SingleZone_pymod</span><span class="p">[</span><span class="n">AS_EN16798</span><span class="p">[</span><span class="n">CA_2</span><span class="p">[</span><span class="n">CM_3</span><span class="p">[</span><span class="n">AT_0</span><span class="p">[</span><span class="n">Bilbao_2016</span><span class="o">.</span><span class="n">csv</span>
+</pre></div>
+</div>
+<p>As you can see, <code class="docutils literal notranslate"><span class="pre">removefiles()</span></code> removes everything except EPW files,
+IDFs, .py scripts and the hourly CSV values which contains the results
+of the simulations.</p>
+</section>
+<section id="functions-and-methods-for-data-analysis-making-figures-and-tables">
+<h2>4.7 Functions and methods for data analysis; making figures and tables<a class="headerlink" href="#functions-and-methods-for-data-analysis-making-figures-and-tables" title="Permalink to this heading"></a></h2>
+<p>You can see a Jupyter Notebook either in the How-to Guide section of this documentation or in the link below:</p>
+<p><a class="reference external" href="https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb">https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb</a></p>
+<p>You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+within your site_packages path, in</p>
+<p>accim/sample_files/jupyter_notebooks/Table</p>
+<p>The path should be something like this, with your username instead of
+YOUR_USERNAME:</p>
+<p><em>C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\Table</em></p>
+<p>Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run “jupyter notebook”. After that, an internet browser will pop up, and you will be able to open the .ipynb file.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="3_quick%20tutorial.html" class="btn btn-neutral float-left" title="3. Quick tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="5_troubleshooting.html" class="btn btn-neutral float-right" title="5. Troubleshooting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
