@@ -44,6 +44,7 @@ def generate_df_from_args(
 ):
 
     import pandas as pd
+    import warnings
 
     ppl_temp = [[people.Zone_or_ZoneList_Name, people.Name] for people in building.idfobjects['People']]
     zones_with_ppl_colon = [ppl[0] for ppl in ppl_temp]
@@ -116,7 +117,7 @@ def generate_df_from_args(
 
 def add_apmv_ems_code(
         building,
-        Outputs_freq: list = ['hourly'],
+        outputs_freq: list = ['hourly'],
         other_PMV_related_outputs: bool = True,
         adap_coeff_cooling: float = 0.293,
         adap_coeff_heating: float = -0.293,
@@ -489,7 +490,7 @@ def add_apmv_ems_code(
         in building.idfobjects['EnergyManagementSystem:OutputVariable']
     ]
 
-    for freq in Outputs_freq:
+    for freq in outputs_freq:
         outputnamelist = (
             [
                 output.Variable_Name
@@ -584,32 +585,84 @@ def add_apmv_ems_code(
                 if verboseMode:
                     print(f'Added - {i}' + ' Reporting Frequency ' + freq.capitalize() + ' Output:Variable data')
 
+    return building
 
-def change_adaptive_coeff(building, value):
-    program = [p for p in building.idfobjects['EnergyManagementSystem:Program'] if 'apply_aPMV' in p.Name][0]
-    program.Program_Line_1 = f'set adap_coeff = {value}'
+
+def change_adaptive_coeff(building, df_arguments):
+    ppl_temp = [[people.Zone_or_ZoneList_Name, people.Name] for people in building.idfobjects['People']]
+    zones_with_ppl_colon = [ppl[0] for ppl in ppl_temp]
+
+    for i in zones_with_ppl_colon:
+        zonename = df_arguments.loc[i, 'underscore_zonename']
+        program = [p
+                   for p
+                   in building.idfobjects['EnergyManagementSystem:Program']
+                   if 'apply_aPMV' in p.Name
+                   and zonename.lower() in p.Name.lower()
+                   ][0]
+        program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}'
+        program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}'
+        # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}'
+        # program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}'
+        # program.Program_Line_5=f'set tol_{zonename} = {tolerance}'
     return
 
-def change_pmv_setpoints(building, value):
-    programs = [p for p in building.idfobjects['EnergyManagementSystem:Program'] if 'apply_aPMV' in p.Name]
-    for p in programs:
-        zone = p.Program_Line_2.split('set PMV_H_SP_')[1].split(' ')[0]
-        p.Program_Line_2 = f'set PMV_H_SP_{zone} = {-value}'
-        p.Program_Line_3 = f'set PMV_C_SP_{zone} = {value}'
+def change_pmv_setpoints(building, df_arguments):
+    ppl_temp = [[people.Zone_or_ZoneList_Name, people.Name] for people in building.idfobjects['People']]
+    zones_with_ppl_colon = [ppl[0] for ppl in ppl_temp]
+
+    for i in zones_with_ppl_colon:
+        zonename = df_arguments.loc[i, 'underscore_zonename']
+        program = [p
+                   for p
+                   in building.idfobjects['EnergyManagementSystem:Program']
+                   if 'apply_aPMV' in p.Name
+                   and zonename.lower() in p.Name.lower()
+                   ][0]
+        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}'
+        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}'
+        program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}'
+        program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}'
+        # program.Program_Line_5=f'set tol_{zonename} = {tolerance}'
     return
 
-def change_pmv_heating_setpoint(building, value):
-    programs = [p for p in building.idfobjects['EnergyManagementSystem:Program'] if 'apply_aPMV' in p.Name]
-    for p in programs:
-        zone = p.Program_Line_2.split('set PMV_H_SP_')[1].split(' ')[0]
-        p.Program_Line_2 = f'set PMV_H_SP_{zone} = {value}'
+
+def change_pmv_heating_setpoint(building, df_arguments):
+    ppl_temp = [[people.Zone_or_ZoneList_Name, people.Name] for people in building.idfobjects['People']]
+    zones_with_ppl_colon = [ppl[0] for ppl in ppl_temp]
+
+    for i in zones_with_ppl_colon:
+        zonename = df_arguments.loc[i, 'underscore_zonename']
+        program = [p
+                   for p
+                   in building.idfobjects['EnergyManagementSystem:Program']
+                   if 'apply_aPMV' in p.Name
+                   and zonename.lower() in p.Name.lower()
+                   ][0]
+        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}'
+        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}'
+        # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}'
+        program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}'
+        # program.Program_Line_5=f'set tol_{zonename} = {tolerance}'
     return
 
-def change_pmv_cooling_setpoint(building, value):
-    programs = [p for p in building.idfobjects['EnergyManagementSystem:Program'] if 'apply_aPMV' in p.Name]
-    for p in programs:
-        zone = p.Program_Line_2.split('set PMV_H_SP_')[1].split(' ')[0]
-        p.Program_Line_3 = f'set PMV_C_SP_{zone} = {value}'
+def change_pmv_cooling_setpoint(building, df_arguments):
+    ppl_temp = [[people.Zone_or_ZoneList_Name, people.Name] for people in building.idfobjects['People']]
+    zones_with_ppl_colon = [ppl[0] for ppl in ppl_temp]
+
+    for i in zones_with_ppl_colon:
+        zonename = df_arguments.loc[i, 'underscore_zonename']
+        program = [p
+                   for p
+                   in building.idfobjects['EnergyManagementSystem:Program']
+                   if 'apply_aPMV' in p.Name
+                   and zonename.lower() in p.Name.lower()
+                   ][0]
+        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}'
+        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}'
+        program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}'
+        # program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}'
+        # program.Program_Line_5=f'set tol_{zonename} = {tolerance}'
     return
 
 
@@ -619,12 +672,123 @@ def change_pmv_cooling_setpoint(building, value):
 #         self.zonelist = ([zone.Name for zone in building.idfobjects['Zone']])
 #         self.sensorlist = ([sensor.Name for sensor in building.idfobjects['EnergyManagementSystem:Sensor']])
 #
-# class apply_aPMV_setpoints:
-#     def __init__(
-#             self,
-#             building,
-#             adaptive_coeff: list,
-#     ):
-#
-#         def read
-#         pass
+
+def apply_aPMV_setpoints(
+        building,
+        outputs_freq: list = ['hourly'],
+        other_PMV_related_outputs: bool = True,
+        adap_coeff_cooling: float = 0.293,
+        adap_coeff_heating: float = -0.293,
+        pmv_cooling_sp: float = -0.5,
+        pmv_heating_sp: float = 0.5,
+        cooling_season_start: any = 120,
+        cooling_season_end: any = 210,
+        tolerance: float = 0.1,
+        dflt_for_adap_coeff_cooling: float = 0.4,
+        dflt_for_adap_coeff_heating: float = -0.4,
+        dflt_for_pmv_cooling_sp: float = 0.5,
+        dflt_for_pmv_heating_sp: float = -0.5,
+        verboseMode: bool = True,
+):
+    from besos import eppy_funcs as ef
+
+    building = ef.get_building(building=building)
+
+    add_apmv_ems_code(
+        building=building,
+        outputs_freq=outputs_freq,
+        other_PMV_related_outputs=other_PMV_related_outputs,
+        adap_coeff_cooling=adap_coeff_cooling,
+        adap_coeff_heating=adap_coeff_heating,
+        pmv_cooling_sp=pmv_cooling_sp,
+        pmv_heating_sp=pmv_heating_sp,
+        cooling_season_start=cooling_season_start,
+        cooling_season_end=cooling_season_end,
+        tolerance=tolerance,
+        dflt_for_adap_coeff_cooling=dflt_for_adap_coeff_cooling,
+        dflt_for_adap_coeff_heating=dflt_for_adap_coeff_heating,
+        dflt_for_pmv_cooling_sp=dflt_for_pmv_cooling_sp,
+        dflt_for_pmv_heating_sp=dflt_for_pmv_heating_sp,
+        verboseMode=verboseMode
+    )
+    return building
+
+
+class apply_aPMV_setpoints:
+    def __init__(
+            self,
+            idf,
+            building,
+            outputs_freq: list = ['hourly'],
+            other_PMV_related_outputs: bool = True,
+            adap_coeff_cooling: float = 0.293,
+            adap_coeff_heating: float = -0.293,
+            pmv_cooling_sp: float = -0.5,
+            pmv_heating_sp: float = 0.5,
+            cooling_season_start: any = 120,
+            cooling_season_end: any = 210,
+            tolerance: float = 0.1,
+            dflt_for_adap_coeff_cooling: float = 0.4,
+            dflt_for_adap_coeff_heating: float = -0.4,
+            dflt_for_pmv_cooling_sp: float = 0.5,
+            dflt_for_pmv_heating_sp: float = -0.5,
+            verboseMode: bool = True,
+
+    ):
+        from besos import eppy_funcs as ef
+
+        self.building = ef.get_building(building=idf)
+
+        add_apmv_ems_code(
+            building=building,
+            outputs_freq=outputs_freq,
+            other_PMV_related_outputs=other_PMV_related_outputs,
+            adap_coeff_cooling=adap_coeff_cooling,
+            adap_coeff_heating=adap_coeff_heating,
+            pmv_cooling_sp=pmv_cooling_sp,
+            pmv_heating_sp=pmv_heating_sp,
+            cooling_season_start=cooling_season_start,
+            cooling_season_end=cooling_season_end,
+            tolerance=tolerance,
+            dflt_for_adap_coeff_cooling=dflt_for_adap_coeff_cooling,
+            dflt_for_adap_coeff_heating=dflt_for_adap_coeff_heating,
+            dflt_for_pmv_cooling_sp=dflt_for_pmv_cooling_sp,
+            dflt_for_pmv_heating_sp=dflt_for_pmv_heating_sp,
+            verboseMode=verboseMode
+        )
+
+        def add_apmv_ems_code(
+            building,
+            outputs_freq: list = ['hourly'],
+            other_PMV_related_outputs: bool = True,
+            adap_coeff_cooling: float = 0.293,
+            adap_coeff_heating: float = -0.293,
+            pmv_cooling_sp: float = -0.5,
+            pmv_heating_sp: float = 0.5,
+            cooling_season_start: any = 120,
+            cooling_season_end: any = 210,
+            tolerance: float = 0.1,
+            dflt_for_adap_coeff_cooling: float = 0.4,
+            dflt_for_adap_coeff_heating: float = -0.4,
+            dflt_for_pmv_cooling_sp: float = 0.5,
+            dflt_for_pmv_heating_sp: float = -0.5,
+            verboseMode: bool = True,
+        ):
+            add_apmv_ems_code(
+                building=building,
+                outputs_freq=outputs_freq,
+                other_PMV_related_outputs=other_PMV_related_outputs,
+                adap_coeff_cooling=adap_coeff_cooling,
+                adap_coeff_heating=adap_coeff_heating,
+                pmv_cooling_sp=pmv_cooling_sp,
+                pmv_heating_sp=pmv_heating_sp,
+                cooling_season_start=cooling_season_start,
+                cooling_season_end=cooling_season_end,
+                tolerance=tolerance,
+                dflt_for_adap_coeff_cooling=dflt_for_adap_coeff_cooling,
+                dflt_for_adap_coeff_heating=dflt_for_adap_coeff_heating,
+                dflt_for_pmv_cooling_sp=dflt_for_pmv_cooling_sp,
+                dflt_for_pmv_heating_sp=dflt_for_pmv_heating_sp,
+                verboseMode=verboseMode
+            )
+

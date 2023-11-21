@@ -2378,3 +2378,14 @@ Fan:ConstantVolume,
    General;                                                                                            ! - End Use Sub-Category
 
 ! End detailed HVAC data definition
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Thermal Comfort Fanger Model PMV,    !- Variable Name
+    Hourly,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OutputControl:Files,
+  Yes, ! CSV
+  Yes, ! MTR
+  Yes, ! ESO
