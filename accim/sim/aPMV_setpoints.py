@@ -33,14 +33,22 @@ def transform_ddmm_to_int(string_date):
 
 def generate_df_from_args(
         building,
-        adap_coeff_cooling,
-        adap_coeff_heating,
-        pmv_cooling_sp,
-        pmv_heating_sp,
+        adap_coeff_cooling: any = 0.293,
+        adap_coeff_heating: any = -0.293,
+        pmv_cooling_sp: any = -0.5,
+        pmv_heating_sp: any = 0.5,
+        tolerance_cooling_sp_cooling_season: any = -0.1,
+        tolerance_cooling_sp_heating_season: any = -0.1,
+        tolerance_heating_sp_cooling_season: any = 0.1,
+        tolerance_heating_sp_heating_season: any = 0.1,
         dflt_for_adap_coeff_cooling: float = 0.4,
         dflt_for_adap_coeff_heating: float = -0.4,
         dflt_for_pmv_cooling_sp: float = 0.5,
         dflt_for_pmv_heating_sp: float = -0.5,
+        dflt_for_tolerance_cooling_sp_cooling_season: float = -0.1,
+        dflt_for_tolerance_cooling_sp_heating_season: float = -0.1,
+        dflt_for_tolerance_heating_sp_cooling_season: float = 0.1,
+        dflt_for_tolerance_heating_sp_heating_season: float = 0.1,
 ):
 
     import pandas as pd
@@ -53,13 +61,20 @@ def generate_df_from_args(
     data_adap_coeff_heating = {}
     data_pmv_cooling_sp = {}
     data_pmv_heating_sp = {}
+    data_tolerance_cooling_sp_cooling_season = {}
+    data_tolerance_cooling_sp_heating_season = {}
+    data_tolerance_heating_sp_cooling_season = {}
+    data_tolerance_heating_sp_heating_season = {}
 
     for i, j, k, l in [
         (adap_coeff_cooling, data_adap_coeff_cooling, 'adap_coeff_cooling', dflt_for_adap_coeff_cooling),
         (adap_coeff_heating, data_adap_coeff_heating, 'adap_coeff_heating', dflt_for_adap_coeff_heating),
         (pmv_cooling_sp, data_pmv_cooling_sp, 'pmv_cooling_sp', dflt_for_pmv_cooling_sp),
         (pmv_heating_sp, data_pmv_heating_sp, 'pmv_heating_sp', dflt_for_pmv_heating_sp),
-
+        (tolerance_cooling_sp_cooling_season, data_tolerance_cooling_sp_cooling_season, 'tolerance_cooling_sp_cooling_season', dflt_for_tolerance_cooling_sp_cooling_season),
+        (tolerance_cooling_sp_heating_season, data_tolerance_cooling_sp_heating_season, 'tolerance_cooling_sp_heating_season', dflt_for_tolerance_cooling_sp_heating_season),
+        (tolerance_heating_sp_cooling_season, data_tolerance_heating_sp_cooling_season, 'tolerance_heating_sp_cooling_season', dflt_for_tolerance_heating_sp_cooling_season),
+        (tolerance_heating_sp_heating_season, data_tolerance_heating_sp_heating_season, 'tolerance_heating_sp_heating_season', dflt_for_tolerance_heating_sp_heating_season),
     ]:
         if type(i) is dict:
             # setting default value in case the zone is missing
@@ -106,7 +121,11 @@ def generate_df_from_args(
             data_adap_coeff_cooling['series'],
             data_adap_coeff_heating['series'],
             data_pmv_cooling_sp['series'],
-            data_pmv_heating_sp['series']
+            data_pmv_heating_sp['series'],
+            data_tolerance_cooling_sp_cooling_season['series'],
+            data_tolerance_cooling_sp_heating_season['series'],
+            data_tolerance_heating_sp_cooling_season['series'],
+            data_tolerance_heating_sp_heating_season['series'],
         ],
         axis=1
     )
@@ -119,17 +138,24 @@ def add_apmv_ems_code(
         building,
         outputs_freq: list = ['hourly'],
         other_PMV_related_outputs: bool = True,
-        adap_coeff_cooling: float = 0.293,
-        adap_coeff_heating: float = -0.293,
-        pmv_cooling_sp: float = -0.5,
-        pmv_heating_sp: float = 0.5,
+        adap_coeff_cooling: any = 0.293,
+        adap_coeff_heating: any = -0.293,
+        pmv_cooling_sp: any = -0.5,
+        pmv_heating_sp: any = 0.5,
+        tolerance_cooling_sp_cooling_season: any = -0.1,
+        tolerance_cooling_sp_heating_season: any = -0.1,
+        tolerance_heating_sp_cooling_season: any = 0.1,
+        tolerance_heating_sp_heating_season: any = 0.1,
         cooling_season_start: any = 120,
         cooling_season_end: any = 210,
-        tolerance: float = 0.1,
         dflt_for_adap_coeff_cooling: float = 0.4,
         dflt_for_adap_coeff_heating: float = -0.4,
         dflt_for_pmv_cooling_sp: float = 0.5,
         dflt_for_pmv_heating_sp: float = -0.5,
+        dflt_for_tolerance_cooling_sp_cooling_season: float = -0.1,
+        dflt_for_tolerance_cooling_sp_heating_season: float = -0.1,
+        dflt_for_tolerance_heating_sp_cooling_season: float = 0.1,
+        dflt_for_tolerance_heating_sp_heating_season: float = 0.1,
         verboseMode: bool = True,
 ):
     ppl_temp = [[people.Zone_or_ZoneList_Name, people.Name] for people in building.idfobjects['People']]
@@ -152,10 +178,18 @@ def add_apmv_ems_code(
         adap_coeff_cooling=adap_coeff_cooling,
         pmv_heating_sp=pmv_heating_sp,
         pmv_cooling_sp=pmv_cooling_sp,
+        tolerance_cooling_sp_cooling_season=tolerance_cooling_sp_cooling_season,
+        tolerance_cooling_sp_heating_season=tolerance_cooling_sp_heating_season,
+        tolerance_heating_sp_cooling_season=tolerance_heating_sp_cooling_season,
+        tolerance_heating_sp_heating_season=tolerance_heating_sp_heating_season,
         dflt_for_adap_coeff_cooling=dflt_for_adap_coeff_cooling,
         dflt_for_adap_coeff_heating=dflt_for_adap_coeff_heating,
         dflt_for_pmv_cooling_sp=dflt_for_pmv_cooling_sp,
         dflt_for_pmv_heating_sp=dflt_for_pmv_heating_sp,
+        dflt_for_tolerance_cooling_sp_cooling_season=dflt_for_tolerance_cooling_sp_cooling_season,
+        dflt_for_tolerance_cooling_sp_heating_season=dflt_for_tolerance_cooling_sp_heating_season,
+        dflt_for_tolerance_heating_sp_cooling_season=dflt_for_tolerance_heating_sp_cooling_season,
+        dflt_for_tolerance_heating_sp_heating_season=dflt_for_tolerance_heating_sp_heating_season,
     )
 
     # Adding Schedule:Compact objects for PMV setpoints
@@ -249,7 +283,12 @@ def add_apmv_ems_code(
     globalvariablezonenames = []
 
     for i in [
-        'tol',
+        'tolerance_cooling_sp',
+        'tolerance_cooling_sp_cooling_season',
+        'tolerance_cooling_sp_heating_season',
+        'tolerance_heating_sp',
+        'tolerance_heating_sp_cooling_season',
+        'tolerance_heating_sp_heating_season',
         'adap_coeff',
         'adap_coeff_heating',
         'adap_coeff_cooling',
@@ -286,6 +325,19 @@ def add_apmv_ems_code(
         in building.idfobjects['EnergyManagementSystem:Program']
     ]
 
+    if f'set_cooling_season_input_data' in programlist:
+        if verboseMode:
+            print(f'Not added - set_cooling_season_input_data Program')
+    else:
+        building.newidfobject(
+            'EnergyManagementSystem:Program',
+            Name=f'set_cooling_season_input_data',
+            Program_Line_1=f'set CoolSeasonStart = {cooling_season_start}',
+            Program_Line_2=f'set CoolSeasonEnd = {cooling_season_end}'
+        )
+        if verboseMode:
+            print(f'Added - set_cooling_season_input_data Program')
+
     if f'set_cooling_season' in programlist:
         if verboseMode:
             print(f'Not added - set_cooling_season Program')
@@ -293,21 +345,19 @@ def add_apmv_ems_code(
         building.newidfobject(
             'EnergyManagementSystem:Program',
             Name=f'set_cooling_season',
-            Program_Line_1=f'set CoolSeasonStart = {cooling_season_start}',
-            Program_Line_2=f'set CoolSeasonEnd = {cooling_season_end}',
-            Program_Line_3='if CoolSeasonEnd > CoolSeasonStart',
-            Program_Line_4='if (DayOfYear >= CoolSeasonStart) && (DayOfYear < CoolSeasonEnd)',
-            Program_Line_5='set CoolingSeason = 1',
-            Program_Line_6='else',
-            Program_Line_7='set CoolingSeason = 0',
-            Program_Line_8='endif',
-            Program_Line_9='elseif CoolSeasonStart > CoolSeasonEnd',
-            Program_Line_10='if (DayOfYear >= CoolSeasonStart) || (DayOfYear < CoolSeasonEnd)',
-            Program_Line_11='set CoolingSeason = 1',
-            Program_Line_12='else',
-            Program_Line_13='set CoolingSeason = 0',
-            Program_Line_14='endif',
-            Program_Line_15='endif',
+            Program_Line_1='if CoolSeasonEnd > CoolSeasonStart',
+            Program_Line_2='if (DayOfYear >= CoolSeasonStart) && (DayOfYear < CoolSeasonEnd)',
+            Program_Line_3='set CoolingSeason = 1',
+            Program_Line_4='else',
+            Program_Line_5='set CoolingSeason = 0',
+            Program_Line_6='endif',
+            Program_Line_7='elseif CoolSeasonStart > CoolSeasonEnd',
+            Program_Line_8='if (DayOfYear >= CoolSeasonStart) || (DayOfYear < CoolSeasonEnd)',
+            Program_Line_9='set CoolingSeason = 1',
+            Program_Line_10='else',
+            Program_Line_11='set CoolingSeason = 0',
+            Program_Line_12='endif',
+            Program_Line_13='endif',
         )
         if verboseMode:
             print(f'Added - set_cooling_season Program')
@@ -326,7 +376,10 @@ def add_apmv_ems_code(
                 Program_Line_2=f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}',
                 Program_Line_3=f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}',
                 Program_Line_4=f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}',
-                Program_Line_5=f'set tol_{zonename} = {tolerance}',
+                Program_Line_5=f'set tolerance_cooling_sp_cooling_season_{zonename} = {df_arguments.loc[i, "tolerance_cooling_sp_cooling_season"]}',
+                Program_Line_6=f'set tolerance_cooling_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_cooling_sp_heating_season"]}',
+                Program_Line_7=f'set tolerance_heating_sp_cooling_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_cooling_season"]}',
+                Program_Line_8=f'set tolerance_heating_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_heating_season"]}',
             )
             if verboseMode:
                 print(f'Added - set_zone_input_data_{zonename} Program')
@@ -340,28 +393,32 @@ def add_apmv_ems_code(
                 Name=f'apply_aPMV_{zonename}',
                 Program_Line_1='if CoolingSeason == 1',
                 Program_Line_2='set adap_coeff_' + zonename + ' = adap_coeff_cooling_' + zonename + '',
-                Program_Line_3='elseif CoolingSeason == 0',
-                Program_Line_4='set adap_coeff_' + zonename + ' = adap_coeff_heating_' + zonename + '',
-                Program_Line_5='endif',
-                Program_Line_6='set aPMV_H_SP_noTol_' + zonename + ' = pmv_heating_sp_' + zonename + '/(1+adap_coeff_' + zonename + '*pmv_heating_sp_' + zonename + ')',
-                Program_Line_7='set aPMV_C_SP_noTol_' + zonename + ' = pmv_cooling_sp_' + zonename + '/(1+adap_coeff_' + zonename + '*pmv_cooling_sp_' + zonename + ')',
-                Program_Line_8='set aPMV_H_SP_' + zonename + ' = aPMV_H_SP_noTol_' + zonename + '+tol_' + zonename + '',
-                Program_Line_9='set aPMV_C_SP_' + zonename + ' = aPMV_C_SP_noTol_' + zonename + '-tol_' + zonename + '',
-                Program_Line_10='if People_Occupant_Count_' + zonename + ' > 0',
-                Program_Line_11='if aPMV_H_SP_' + zonename + ' < 0',
-                Program_Line_12='set PMV_H_SP_act_' + zonename + ' = aPMV_H_SP_' + zonename + '',
-                Program_Line_13='else',
-                Program_Line_14='set PMV_H_SP_act_' + zonename + ' = 0',
-                Program_Line_15='endif',
-                Program_Line_16='if aPMV_C_SP_' + zonename + ' > 0',
-                Program_Line_17='set PMV_C_SP_act_' + zonename + ' = aPMV_C_SP_' + zonename + '',
-                Program_Line_18='else',
-                Program_Line_19='set PMV_C_SP_act_' + zonename + ' = 0',
-                Program_Line_20='endif',
-                Program_Line_21='else',
-                Program_Line_22='set PMV_H_SP_act_' + zonename + ' = -100',
-                Program_Line_23='set PMV_C_SP_act_' + zonename + ' = 100',
+                Program_Line_3='set tolerance_cooling_sp_' + zonename + ' = tolerance_cooling_sp_cooling_season_' + zonename + '',
+                Program_Line_4='set tolerance_heating_sp_' + zonename + ' = tolerance_heating_sp_cooling_season_' + zonename + '',
+                Program_Line_5='elseif CoolingSeason == 0',
+                Program_Line_6='set adap_coeff_' + zonename + ' = adap_coeff_heating_' + zonename + '',
+                Program_Line_7='set tolerance_cooling_sp_' + zonename + ' = tolerance_cooling_sp_heating_season_' + zonename + '',
+                Program_Line_8='set tolerance_heating_sp_' + zonename + ' = tolerance_heating_sp_heating_season_' + zonename + '',
+                Program_Line_9='endif',
+                Program_Line_10='set aPMV_H_SP_noTol_' + zonename + ' = pmv_heating_sp_' + zonename + '/(1+adap_coeff_' + zonename + '*pmv_heating_sp_' + zonename + ')',
+                Program_Line_11='set aPMV_C_SP_noTol_' + zonename + ' = pmv_cooling_sp_' + zonename + '/(1+adap_coeff_' + zonename + '*pmv_cooling_sp_' + zonename + ')',
+                Program_Line_12='set aPMV_H_SP_' + zonename + ' = aPMV_H_SP_noTol_' + zonename + '+tolerance_heating_sp_' + zonename + '',
+                Program_Line_13='set aPMV_C_SP_' + zonename + ' = aPMV_C_SP_noTol_' + zonename + '+tolerance_cooling_sp_' + zonename + '',
+                Program_Line_14='if People_Occupant_Count_' + zonename + ' > 0',
+                Program_Line_15='if aPMV_H_SP_' + zonename + ' < 0',
+                Program_Line_16='set PMV_H_SP_act_' + zonename + ' = aPMV_H_SP_' + zonename + '',
+                Program_Line_17='else',
+                Program_Line_18='set PMV_H_SP_act_' + zonename + ' = 0',
+                Program_Line_19='endif',
+                Program_Line_20='if aPMV_C_SP_' + zonename + ' > 0',
+                Program_Line_21='set PMV_C_SP_act_' + zonename + ' = aPMV_C_SP_' + zonename + '',
+                Program_Line_22='else',
+                Program_Line_23='set PMV_C_SP_act_' + zonename + ' = 0',
                 Program_Line_24='endif',
+                Program_Line_25='else',
+                Program_Line_26='set PMV_H_SP_act_' + zonename + ' = -100',
+                Program_Line_27='set PMV_C_SP_act_' + zonename + ' = 100',
+                Program_Line_28='endif',
             )
             if verboseMode:
                 print(f'Added - apply_aPMV_{zonename} Program')
@@ -600,11 +657,14 @@ def change_adaptive_coeff(building, df_arguments):
                    if 'apply_aPMV' in p.Name
                    and zonename.lower() in p.Name.lower()
                    ][0]
-        program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}'
-        program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}'
-        # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}'
-        # program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}'
-        # program.Program_Line_5=f'set tol_{zonename} = {tolerance}'
+        program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}',
+        program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}',
+        # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}',
+        # program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}',
+        # program.Program_Line_5 = f'set tolerance_cooling_sp_cooling_season_{zonename} = {df_arguments.loc[i, "tolerance_cooling_sp_cooling_season"]}',
+        # program.Program_Line_6 = f'set tolerance_cooling_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_cooling_sp_heating_season"]}',
+        # program.Program_Line_7 = f'set tolerance_heating_sp_cooling_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_cooling_season"]}',
+        # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_heating_season"]}',
     return
 
 def change_pmv_setpoints(building, df_arguments):
@@ -619,11 +679,14 @@ def change_pmv_setpoints(building, df_arguments):
                    if 'apply_aPMV' in p.Name
                    and zonename.lower() in p.Name.lower()
                    ][0]
-        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}'
-        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}'
-        program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}'
-        program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}'
-        # program.Program_Line_5=f'set tol_{zonename} = {tolerance}'
+        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}',
+        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}',
+        program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}',
+        program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}',
+        # program.Program_Line_5 = f'set tolerance_cooling_sp_cooling_season_{zonename} = {df_arguments.loc[i, "tolerance_cooling_sp_cooling_season"]}',
+        # program.Program_Line_6 = f'set tolerance_cooling_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_cooling_sp_heating_season"]}',
+        # program.Program_Line_7 = f'set tolerance_heating_sp_cooling_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_cooling_season"]}',
+        # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_heating_season"]}',
     return
 
 
@@ -639,11 +702,14 @@ def change_pmv_heating_setpoint(building, df_arguments):
                    if 'apply_aPMV' in p.Name
                    and zonename.lower() in p.Name.lower()
                    ][0]
-        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}'
-        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}'
-        # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}'
-        program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}'
-        # program.Program_Line_5=f'set tol_{zonename} = {tolerance}'
+        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}',
+        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}',
+        # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}',
+        program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}',
+        # program.Program_Line_5 = f'set tolerance_cooling_sp_cooling_season_{zonename} = {df_arguments.loc[i, "tolerance_cooling_sp_cooling_season"]}',
+        # program.Program_Line_6 = f'set tolerance_cooling_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_cooling_sp_heating_season"]}',
+        # program.Program_Line_7 = f'set tolerance_heating_sp_cooling_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_cooling_season"]}',
+        # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_heating_season"]}',
     return
 
 def change_pmv_cooling_setpoint(building, df_arguments):
@@ -658,11 +724,14 @@ def change_pmv_cooling_setpoint(building, df_arguments):
                    if 'apply_aPMV' in p.Name
                    and zonename.lower() in p.Name.lower()
                    ][0]
-        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}'
-        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}'
-        program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}'
-        # program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}'
-        # program.Program_Line_5=f'set tol_{zonename} = {tolerance}'
+        # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}',
+        # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {df_arguments.loc[i, "adap_coeff_heating"]}',
+        program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, "pmv_cooling_sp"]}',
+        # program.Program_Line_4 = f'set pmv_heating_sp_{zonename} = {df_arguments.loc[i, "pmv_heating_sp"]}',
+        # program.Program_Line_5 = f'set tolerance_cooling_sp_cooling_season_{zonename} = {df_arguments.loc[i, "tolerance_cooling_sp_cooling_season"]}',
+        # program.Program_Line_6 = f'set tolerance_cooling_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_cooling_sp_heating_season"]}',
+        # program.Program_Line_7 = f'set tolerance_heating_sp_cooling_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_cooling_season"]}',
+        # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_heating_season"]}',
     return
 
 
@@ -683,11 +752,14 @@ def apply_aPMV_setpoints(
         pmv_heating_sp: float = 0.5,
         cooling_season_start: any = 120,
         cooling_season_end: any = 210,
-        tolerance: float = 0.1,
+        tolerance_heating_sp: float = 0.1,
+        tolerance_cooling_sp: float = 0.1,
         dflt_for_adap_coeff_cooling: float = 0.4,
         dflt_for_adap_coeff_heating: float = -0.4,
         dflt_for_pmv_cooling_sp: float = 0.5,
         dflt_for_pmv_heating_sp: float = -0.5,
+        dflt_for_tolerance_cooling_sp: float = -0.1,
+        dflt_for_tolerance_heating_sp: float = 0.1,
         verboseMode: bool = True,
 ):
     from besos import eppy_funcs as ef
@@ -702,13 +774,16 @@ def apply_aPMV_setpoints(
         adap_coeff_heating=adap_coeff_heating,
         pmv_cooling_sp=pmv_cooling_sp,
         pmv_heating_sp=pmv_heating_sp,
+        tolerance_cooling_sp=tolerance_cooling_sp,
+        tolerance_heating_sp=tolerance_heating_sp,
         cooling_season_start=cooling_season_start,
         cooling_season_end=cooling_season_end,
-        tolerance=tolerance,
         dflt_for_adap_coeff_cooling=dflt_for_adap_coeff_cooling,
         dflt_for_adap_coeff_heating=dflt_for_adap_coeff_heating,
         dflt_for_pmv_cooling_sp=dflt_for_pmv_cooling_sp,
         dflt_for_pmv_heating_sp=dflt_for_pmv_heating_sp,
+        dflt_for_tolerance_cooling_sp=dflt_for_tolerance_cooling_sp,
+        dflt_for_tolerance_heating_sp=dflt_for_tolerance_heating_sp,
         verboseMode=verboseMode
     )
     return building
