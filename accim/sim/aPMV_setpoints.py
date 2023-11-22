@@ -1,10 +1,27 @@
+"""
+Contains the functions to apply setpoints based on the hAdaptive Predicted Mean Vote (aPMV) index
+"""
+
+import besos.IDF_class
+import eppy.modeleditor
+from typing import Union
+
+import pandas
+
+
 # todo calculate number of occupied hours from occupancy schedules
 
 def set_zones_always_occupied(
         building,
         verboseMode: bool = True
 ):
+    """
+    This function sets the schedule for zones to always be occupied.
+    It checks if an "On" schedule is already present in the model; if not, it adds one.
 
+    :param building: the building eppy.modeleditor.IDF class instance
+    :param verboseMode: True to print on screen the actions carried out
+    """
     sch_comp_objs = [i.Name for i in building.idfobjects['schedule:compact']]
 
     if 'On' in sch_comp_objs:
@@ -25,22 +42,33 @@ def set_zones_always_occupied(
     for i in [j for j in building.idfobjects['people']]:
         i.Number_of_People_Schedule_Name = 'On'
 
-def transform_ddmm_to_int(string_date):
+    return
+
+
+def transform_ddmm_to_int(string_date: str) -> int:
+    """
+    This function converts a date string in the format "dd/mm" to the day of the year as an integer.
+
+    :param string_date: A string representing the date in format "dd/mm"
+    :return: The day of the year as an integer
+    :rtype: int
+    """
     num_date = list(int(num) for num in string_date.split('/'))
     from datetime import date
     day_of_year = date(2007, num_date[1], num_date[0]).timetuple().tm_yday
     return day_of_year
 
+
 def generate_df_from_args(
-        building,
-        adap_coeff_cooling: any = 0.293,
-        adap_coeff_heating: any = -0.293,
-        pmv_cooling_sp: any = -0.5,
-        pmv_heating_sp: any = 0.5,
-        tolerance_cooling_sp_cooling_season: any = -0.1,
-        tolerance_cooling_sp_heating_season: any = -0.1,
-        tolerance_heating_sp_cooling_season: any = 0.1,
-        tolerance_heating_sp_heating_season: any = 0.1,
+        building: besos.IDF_class,
+        adap_coeff_cooling: Union[float, dict] = 0.293,
+        adap_coeff_heating: Union[float, dict] = -0.293,
+        pmv_cooling_sp: Union[float, dict] = -0.5,
+        pmv_heating_sp: Union[float, dict] = 0.5,
+        tolerance_cooling_sp_cooling_season: Union[float, dict] = -0.1,
+        tolerance_cooling_sp_heating_season: Union[float, dict] = -0.1,
+        tolerance_heating_sp_cooling_season: Union[float, dict] = 0.1,
+        tolerance_heating_sp_heating_season: Union[float, dict] = 0.1,
         dflt_for_adap_coeff_cooling: float = 0.4,
         dflt_for_adap_coeff_heating: float = -0.4,
         dflt_for_pmv_cooling_sp: float = 0.5,
@@ -49,8 +77,74 @@ def generate_df_from_args(
         dflt_for_tolerance_cooling_sp_heating_season: float = -0.1,
         dflt_for_tolerance_heating_sp_cooling_season: float = 0.1,
         dflt_for_tolerance_heating_sp_heating_season: float = 0.1,
-):
+) -> pandas.DataFrame:
+    """
+    Maps the arguments input by the user in a pandas.DataFrame instance.
+    If some occupied zones are not defined in the arguments, default values will be applied
+    to them. In case some zone entered is not among occupied zones in the idf,
+    it will be omitted.
 
+    :param building: The besos.IDF_class. You can make it by using besos.eppy_funcs.get_building
+    :param adap_coeff_cooling: A dictionary containing all the zone names in the key field,
+    and the value for the adaptive coefficient (Lambda, λ) at the cooling season, for example:
+    {'zonename1': 0.1, 'zonename2': 0.5}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param adap_coeff_heating: A dictionary containing all the zone names in the key field,
+    and the value for the adaptive coefficient (Lambda, λ) at the heating season, for example:
+    {'zonename1': -0.1, 'zonename2': -0.5}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param pmv_cooling_sp: A dictionary containing all the zone names in the key field,
+    and the value for the cooling PMV setpoint, for example:
+    {'zonename1': 0.5, 'zonename2': 0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param pmv_heating_sp: A dictionary containing all the zone names in the key field,
+    and the value for the heating PMV setpoint, for example:
+    {'zonename1': -0.5, 'zonename2': -0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param tolerance_cooling_sp_cooling_season: A dictionary containing all the zone names
+    in the key field, and the value for the cooling PMV setpoint tolerance in cooling season;
+    this value will be summed to the resulting aPMV setpoint, therefore, in this case should be
+    a negative number, for example: {'zonename1': -0.1, 'zonename2': -0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param tolerance_cooling_sp_heating_season: A dictionary containing all the zone names
+    in the key field, and the value for the cooling PMV setpoint tolerance in heating season;
+    this value will be summed to the resulting aPMV setpoint, therefore, in this case should be
+    a negative number, for example: {'zonename1': -0.1, 'zonename2': -0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param tolerance_heating_sp_cooling_season: A dictionary containing all the zone names
+    in the key field, and the value for the heating PMV setpoint tolerance in cooling season;
+    this value will be summed to the resulting aPMV setpoint, therefore, in this case should be
+    a positive number, for example: {'zonename1': 0.1, 'zonename2': 0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param tolerance_heating_sp_heating_season: A dictionary containing all the zone names
+    in the key field, and the value for the heating PMV setpoint tolerance in heating season;
+    this value will be summed to the resulting aPMV setpoint, therefore, in this case should be
+    a positive number, for example: {'zonename1': 0.1, 'zonename2': 0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param dflt_for_adap_coeff_cooling: Float default value applied to the
+    adap_coeff_cooling argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_adap_coeff_heating: Float default value applied to the
+    adap_coeff_heating argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_pmv_cooling_sp: Float default value applied to the pmv_cooling_sp argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_pmv_heating_sp: Float default value applied to the pmv_heating_sp argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_tolerance_cooling_sp_cooling_season: Float default value applied to the
+    tolerance_cooling_sp_cooling_season argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_tolerance_cooling_sp_heating_season: Float default value applied to the
+    tolerance_cooling_sp_heating_season argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_tolerance_heating_sp_cooling_season: Float default value applied to the
+    tolerance_heating_sp_cooling_season argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_tolerance_heating_sp_heating_season: Float default value applied to the
+    tolerance_heating_sp_heating_season argument,
+    for those occupied zones not specified in the dictionary keys.
+    :return: pandas.DataFrame
+    """
     import pandas as pd
     import warnings
 
@@ -135,19 +229,19 @@ def generate_df_from_args(
 
 
 def add_apmv_ems_code(
-        building,
+        building: besos.IDF_class,
         outputs_freq: list = ['hourly'],
         other_PMV_related_outputs: bool = True,
-        adap_coeff_cooling: any = 0.293,
-        adap_coeff_heating: any = -0.293,
-        pmv_cooling_sp: any = -0.5,
-        pmv_heating_sp: any = 0.5,
-        tolerance_cooling_sp_cooling_season: any = -0.1,
-        tolerance_cooling_sp_heating_season: any = -0.1,
-        tolerance_heating_sp_cooling_season: any = 0.1,
-        tolerance_heating_sp_heating_season: any = 0.1,
-        cooling_season_start: any = 120,
-        cooling_season_end: any = 210,
+        adap_coeff_cooling: Union[float, dict] = 0.293,
+        adap_coeff_heating: Union[float, dict] = -0.293,
+        pmv_cooling_sp: Union[float, dict] = -0.5,
+        pmv_heating_sp: Union[float, dict] = 0.5,
+        tolerance_cooling_sp_cooling_season: Union[float, dict] = -0.1,
+        tolerance_cooling_sp_heating_season: Union[float, dict] = -0.1,
+        tolerance_heating_sp_cooling_season: Union[float, dict] = 0.1,
+        tolerance_heating_sp_heating_season: Union[float, dict] = 0.1,
+        cooling_season_start: Union[float, str] = 120,
+        cooling_season_end: Union[float, str] = 210,
         dflt_for_adap_coeff_cooling: float = 0.4,
         dflt_for_adap_coeff_heating: float = -0.4,
         dflt_for_pmv_cooling_sp: float = 0.5,
@@ -157,7 +251,76 @@ def add_apmv_ems_code(
         dflt_for_tolerance_heating_sp_cooling_season: float = 0.1,
         dflt_for_tolerance_heating_sp_heating_season: float = 0.1,
         verboseMode: bool = True,
-):
+) -> besos.IDF_class:
+    """
+    Applies setpoints based on the Adaptive Predicted Mean Vote (aPMV) index.
+
+    :param building: The besos.IDF_class. You can make it by using besos.eppy_funcs.get_building
+    :param adap_coeff_cooling: A dictionary containing all the zone names in the key field,
+    and the value for the adaptive coefficient (Lambda, λ) at the cooling season, for example:
+    {'zonename1': 0.1, 'zonename2': 0.5}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param adap_coeff_heating: A dictionary containing all the zone names in the key field,
+    and the value for the adaptive coefficient (Lambda, λ) at the heating season, for example:
+    {'zonename1': -0.1, 'zonename2': -0.5}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param pmv_cooling_sp: A dictionary containing all the zone names in the key field,
+    and the value for the cooling PMV setpoint, for example:
+    {'zonename1': 0.5, 'zonename2': 0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param pmv_heating_sp: A dictionary containing all the zone names in the key field,
+    and the value for the heating PMV setpoint, for example:
+    {'zonename1': -0.5, 'zonename2': -0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param tolerance_cooling_sp_cooling_season: A dictionary containing all the zone names
+    in the key field, and the value for the cooling PMV setpoint tolerance in cooling season;
+    this value will be summed to the resulting aPMV setpoint, therefore, in this case should be
+    a negative number, for example: {'zonename1': -0.1, 'zonename2': -0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param tolerance_cooling_sp_heating_season: A dictionary containing all the zone names
+    in the key field, and the value for the cooling PMV setpoint tolerance in heating season;
+    this value will be summed to the resulting aPMV setpoint, therefore, in this case should be
+    a negative number, for example: {'zonename1': -0.1, 'zonename2': -0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param tolerance_heating_sp_cooling_season: A dictionary containing all the zone names
+    in the key field, and the value for the heating PMV setpoint tolerance in cooling season;
+    this value will be summed to the resulting aPMV setpoint, therefore, in this case should be
+    a positive number, for example: {'zonename1': 0.1, 'zonename2': 0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param tolerance_heating_sp_heating_season: A dictionary containing all the zone names
+    in the key field, and the value for the heating PMV setpoint tolerance in heating season;
+    this value will be summed to the resulting aPMV setpoint, therefore, in this case should be
+    a positive number, for example: {'zonename1': 0.1, 'zonename2': 0.2}.
+    Float types are also accepted, but these will be applied to all occupied zones in the idf.
+    :param dflt_for_adap_coeff_cooling: Float default value applied to the
+    adap_coeff_cooling argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_adap_coeff_heating: Float default value applied to the
+    adap_coeff_heating argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_pmv_cooling_sp: Float default value applied to the pmv_cooling_sp argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_pmv_heating_sp: Float default value applied to the pmv_heating_sp argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_tolerance_cooling_sp_cooling_season: Float default value applied to the
+    tolerance_cooling_sp_cooling_season argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_tolerance_cooling_sp_heating_season: Float default value applied to the
+    tolerance_cooling_sp_heating_season argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_tolerance_heating_sp_cooling_season: Float default value applied to the
+    tolerance_heating_sp_cooling_season argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param dflt_for_tolerance_heating_sp_heating_season: Float default value applied to the
+    tolerance_heating_sp_heating_season argument,
+    for those occupied zones not specified in the dictionary keys.
+    :param outputs_freq:
+    :param other_PMV_related_outputs:
+    :param cooling_season_start:
+    :param cooling_season_end:
+    :param verboseMode:
+    :return:
+    """
     ppl_temp = [[people.Zone_or_ZoneList_Name, people.Name] for people in building.idfobjects['People']]
     zones_with_ppl_colon = [ppl[0] for ppl in ppl_temp]
     ppl_names = [ppl[1] for ppl in ppl_temp]
@@ -667,6 +830,7 @@ def change_adaptive_coeff(building, df_arguments):
         # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_heating_season"]}',
     return
 
+
 def change_pmv_setpoints(building, df_arguments):
     ppl_temp = [[people.Zone_or_ZoneList_Name, people.Name] for people in building.idfobjects['People']]
     zones_with_ppl_colon = [ppl[0] for ppl in ppl_temp]
@@ -711,6 +875,7 @@ def change_pmv_heating_setpoint(building, df_arguments):
         # program.Program_Line_7 = f'set tolerance_heating_sp_cooling_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_cooling_season"]}',
         # program.Program_Line_8 = f'set tolerance_heating_sp_heating_season_{zonename} = {df_arguments.loc[i, "tolerance_heating_sp_heating_season"]}',
     return
+
 
 def change_pmv_cooling_setpoint(building, df_arguments):
     ppl_temp = [[people.Zone_or_ZoneList_Name, people.Name] for people in building.idfobjects['People']]
@@ -833,21 +998,21 @@ class apply_aPMV_setpoints:
         )
 
         def add_apmv_ems_code(
-            building,
-            outputs_freq: list = ['hourly'],
-            other_PMV_related_outputs: bool = True,
-            adap_coeff_cooling: float = 0.293,
-            adap_coeff_heating: float = -0.293,
-            pmv_cooling_sp: float = -0.5,
-            pmv_heating_sp: float = 0.5,
-            cooling_season_start: any = 120,
-            cooling_season_end: any = 210,
-            tolerance: float = 0.1,
-            dflt_for_adap_coeff_cooling: float = 0.4,
-            dflt_for_adap_coeff_heating: float = -0.4,
-            dflt_for_pmv_cooling_sp: float = 0.5,
-            dflt_for_pmv_heating_sp: float = -0.5,
-            verboseMode: bool = True,
+                building,
+                outputs_freq: list = ['hourly'],
+                other_PMV_related_outputs: bool = True,
+                adap_coeff_cooling: float = 0.293,
+                adap_coeff_heating: float = -0.293,
+                pmv_cooling_sp: float = -0.5,
+                pmv_heating_sp: float = 0.5,
+                cooling_season_start: any = 120,
+                cooling_season_end: any = 210,
+                tolerance: float = 0.1,
+                dflt_for_adap_coeff_cooling: float = 0.4,
+                dflt_for_adap_coeff_heating: float = -0.4,
+                dflt_for_pmv_cooling_sp: float = 0.5,
+                dflt_for_pmv_heating_sp: float = -0.5,
+                verboseMode: bool = True,
         ):
             add_apmv_ems_code(
                 building=building,
@@ -866,4 +1031,3 @@ class apply_aPMV_setpoints:
                 dflt_for_pmv_heating_sp=dflt_for_pmv_heating_sp,
                 verboseMode=verboseMode
             )
-
