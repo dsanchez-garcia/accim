@@ -53,7 +53,11 @@ building_with_apmv = apmv.add_apmv_ems_code(
     adap_coeff_heating=adap_coeff_heating,
     pmv_cooling_sp=0.5,
     pmv_heating_sp=-0.5,
-    tolerance=0.2,
+    # tolerance=0.2,
+    tolerance_cooling_sp_cooling_season=-0.1,
+    tolerance_cooling_sp_heating_season=-0.1,
+    tolerance_heating_sp_cooling_season=0.25,
+    tolerance_heating_sp_heating_season=0.25,
     cooling_season_start='01/04',
     cooling_season_end='01/10',
 )
@@ -79,7 +83,7 @@ building_with_apmv = apmv.add_apmv_ems_code(
 
 ep.run_building(
     building=building_with_apmv,
-    out_dir='aPMV notebook/sim_results_apmv',
+    out_dir='sim_results_apmv',
     epw=epwfile
 )
 
@@ -87,7 +91,7 @@ ep.run_building(
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df_apmv = pd.read_csv('aPMV notebook/sim_results_apmv/eplusout.csv')
+df_apmv = pd.read_csv('sim_results_apmv/eplusout.csv')
 
 apmv_block1_zone1 = [i for i in df_apmv.columns if 'aPMV_Block1_Zone1' in i][0]
 apmv_block1_zone1_cooling = [
@@ -112,4 +116,4 @@ apmv_block1_zone1_heating = [
 plt.plot(df_apmv[apmv_block1_zone1], color='green')
 plt.plot(df_apmv[apmv_block1_zone1_cooling], color='blue')
 plt.plot(df_apmv[apmv_block1_zone1_heating], color='red')
-# plt.ylim(-1, 1)
+plt.ylim(-1, 1)

@@ -1,4 +1,4 @@
-Program Version:,EnergyPlus, Version 9.4.0-998c4b761e, YMD=2023.11.21 11:55
+Program Version:,EnergyPlus, Version 9.4.0-998c4b761e, YMD=2023.11.22 12:48
 Tabular Output Report in Format: ,Comma
 
 Building:,Building
@@ -176,7 +176,7 @@ FOR:,Entire Facility
 General
 
 ,,Value
-,Program Version and Build,EnergyPlus, Version 9.4.0-998c4b761e, YMD=2023.11.21 11:55
+,Program Version and Build,EnergyPlus, Version 9.4.0-998c4b761e, YMD=2023.11.22 12:48
 ,RunPeriod,UNTITLED (01-01:31-12)
 ,Weather File,SEVILLA - ESP IWEC Data WMO#=083910
 ,Latitude [deg],37.42
