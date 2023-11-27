@@ -2,7 +2,7 @@ from besos import eppy_funcs as ef
 import accim.sim.aPMV_setpoints as apmv
 
 # Use the function get_building to create a besos.IDF_class instance
-building = ef.get_building('Office_in_Seville.idf')
+building = ef.get_building('aPMV_testing_v01_no_script.idf')
 
 # Specify the arguments
 adap_coeff_cooling = {'Block1:Zone1': 0.3, 'Block1:Zone2': 0.25}
@@ -22,3 +22,5 @@ building_with_apmv = apmv.add_apmv_ems_code(
     cooling_season_start='01/04',
     cooling_season_end='01/10',
 )
+
+building_with_apmv.savecopy('aPMV_testing_v01_no_script_script_added.idf')
