@@ -533,7 +533,8 @@ def add_apmv_ems_code(
             'Zone Thermal Comfort Fanger Model PMV',
             'Zone Thermal Comfort Fanger Model PPD',
             'Zone Thermal Comfort Mean Radiant Temperature',
-            'Zone Mean Air Humidity Ratio',
+            # 'Zone Mean Air Humidity Ratio',
+            'Zone Air Relative Humidity',
             'Zone Mean Air Temperature',
             'Cooling Coil Total Cooling Rate',
             'Heating Coil Heating Rate',
@@ -589,6 +590,19 @@ def add_apmv_ems_code(
                 )
                 if verboseMode:
                     print(f'Added - {i}' + ' Reporting Frequency ' + freq.capitalize() + ' Output:Variable data')
+
+    outputcontrolfiles = [i for i in building.idfobjects['OutputControl:Files']]
+    if len(outputcontrolfiles) == 0:
+        building.newidfobject(
+            'OutputControl:Files',
+            Output_CSV='Yes',
+            Output_MTR='Yes',
+            Output_ESO='Yes'
+        )
+    else:
+        outputcontrolfiles[0].Output_CSV='Yes'
+        outputcontrolfiles[0].Output_MTR='Yes'
+        outputcontrolfiles[0].Output_ESO='Yes'
 
     return building
 
