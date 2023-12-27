@@ -60,6 +60,7 @@ building_with_apmv = apmv.add_apmv_ems_code(
     tolerance_heating_sp_heating_season=0.25,
     cooling_season_start='01/04',
     cooling_season_end='01/10',
+    other_PMV_related_outputs=True,
 )
 
 ##
