@@ -13,14 +13,14 @@ class accimJob():
     from os import listdir
     import numpy
 
-    from accim.sim_single_idf.accim_IDFgeneration import \
-        inputData,\
-        genIDF
-    from accim.sim_single_idf.accim_Base import \
+    # from accim.sim.accim_IDFgeneration import \
+    #     inputData,\
+    #     genIDF
+    from accim.sim.accim_Base import \
         setComfFieldsPeople, \
         saveaccim, \
         setPMVsetpoint
-    from accim.sim_single_idf.accim_Base_EMS_for_dsb import \
+    from accim.sim.accim_Base_EMS import \
         addEMSActuatorsBase, \
         addEMSOutputVariableBase, \
         addEMSPCMBase, \
@@ -37,11 +37,11 @@ class accimJob():
         genOutputDataframe, \
         takeOutputDataFrame
 
-    from accim.sim_single_idf.accim_ExistingHVAC import \
+    from accim.sim.accim_ExistingHVAC import \
         addForscriptSchExistHVAC
-    from accim.sim_single_idf.accim_ExistingHVAC_EMS import \
+    from accim.sim.accim_ExistingHVAC_EMS import \
         addEMSSensorsExisHVAC
-    from accim.sim_single_idf.accim_VRFsystem import \
+    from accim.sim.accim_VRFsystem import \
         addBaseSchedules, \
         addCurveObj, \
         addDetHVACobj, \
@@ -50,7 +50,7 @@ class accimJob():
         addVRFsystemSch, \
         checkVentIsOn, \
         setAvailSchOn
-    from accim.sim_single_idf.accim_VRFsystem_EMS import \
+    from accim.sim.accim_VRFsystem_EMS import \
         addEMSSensorsVRFsystem
 
     def __init__(self,

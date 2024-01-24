@@ -1,20 +1,28 @@
 from eppy.modeleditor import IDF
 from accim.sim import accis_single_idf as accis
+
 import besos.eppy_funcs as ef
+from besos.errors import InstallationError
 
 ## Using eppy
 
-iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
-
-fname = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940.idf'
-
-IDF.setiddname(iddfile)
-idf = IDF(fname)
+# iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
+#
+# fname = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940.idf'
+#
+# IDF.setiddname(iddfile)
+# idf = IDF(fname)
 
 ## Using besos
 fname = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940.idf'
 
-idf = ef.get_building(fname)
+try:
+    idf = ef.get_building(fname)
+except InstallationError:
+    from accim.utils import amend_idf_version_from_dsb
+    amend_idf_version_from_dsb(file_path=fname)
+    idf = ef.get_building(fname)
+
 
 ##
 # idf.idfobjects['zone']
@@ -24,7 +32,7 @@ idf = ef.get_building(fname)
 # version = f'{idf.idd_version[0]}.{idf.idd_version[1]}'
 
 adaptive_idf = accis.addAccis(
-    file=idf,
+    idf=idf,
     ScriptType='vrf_mm',
     SupplyAirTempInputMethod='temperature difference',
     Output_keep_existing=False,

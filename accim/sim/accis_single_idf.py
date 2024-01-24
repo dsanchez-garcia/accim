@@ -6,6 +6,9 @@ building energy models into adaptive setpoint temperature energy models
 by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 """
 
+import pandas as pd
+import besos.IDF_class
+from accim import __version__
 
 class addAccis:
     """
@@ -46,126 +49,28 @@ class addAccis:
     :type EnergyPlus_version: str
     :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
     :type TempCtrl: str
-    :param ComfStand: The default is None.
-        '0 = ESP CTE;
-        '1 = INT EN16798;
-        '2 = INT ASHRAE55;
-        '3 = JPN Rijal;
-        '4 = CHN GBT50785 Cold;
-        '5 = CHN GBT50785 HotMild;
-        '6 = CHN Yang;
-        '7 = IND IMAC C NV;
-        '8 = IND IMAC C MM;
-        '9 = IND IMAC R 7DRM;
-        '10 = IND IMAC R 30DRM;
-        '11 = IND Dhaka;
-        '12 = ROM Udrea;
-        '13 = AUS Williamson;
-        '14 = AUS DeDear;
-        '15 = BRA Rupp NV;
-        '16 = BRA Rupp AC;
-        '17 = MEX Oropeza Arid;
-        '18 = MEX Oropeza DryTropic;
-        '19 = MEX Oropeza Temperate;
-        '20 = MEX Oropeza HumTropic;
-        '21 = CHL Perez-Fargallo;
-        '22 = INT ISO7730
-    :type ComfStand: list
-    :param CAT: The default is None.
-        (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT)
-    :type CAT: list
-    :param ComfMod: The default is None.
-        (0/0.X = Static;
-        1/1.X = Adaptive when applicable, otherwise relevant local static model;
-        2 = Adaptive when applicable, otherwise relevant international static model
-        3 = Adaptive when applicable, otherwise horizontal extention of adaptive setpoints)
-    :type ComfMod: list
-    :param SetpointAcc: A float. It is the number for the accuracy of the setpoint temperatures.
-        For instance, if 2 was used, setpoints would be rounded to every half Celsius degree;
-        if 10 was used, the setpoints would be rounded to the first decimal.
-    :type SetpointAcc: float
-    :param CoolSeasonStart: A date in format dd/mm, or the number of the day in the year.
-        Defines when start the cooling season, only used in some static setpoint temperatures.
-    :type CoolSeasonStart: any
-    :param CoolSeasonEnd: A date in format dd/mm, or the number of the day in the year.
-        Defines when ends the cooling season, only used in some static setpoint temperatures.
-    :type CoolSeasonEnd: any
-    :param HVACmode: The default is None.
-        (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
-    :type HVACmode: list
-    :param VentCtrl: The default is None.
-        (if HVACmode = 1:
-        0 = Ventilates above neutral temperature;
-        1 = Ventilates above upper comfort limit;
-        if HVACmode = 2:
-        0 = Ventilates above neutral temperature and fully opens doors and windows;
-        1 = Ventilates above lower comfort limit and fully opens doors and windows;
-        2 = Ventilates above neutral temperature and opens doors and windows based on the customised venting opening factor;
-        3 = Ventilates above lower comfort limit and opens doors and windows based on the customised venting opening factor;
-        )
-    :type VentCtrl: list
-    :param MaxTempDiffVOF: The maximum temperature difference for the Venting Opening Factor.
-        Must be a number greater than 0.
-    :type MaxTempDiffVOF: float
-    :param MinTempDiffVOF: The minimum temperature difference for the Venting Opening Factor.
-        Must be a number greater than 0 and smaller than the maximum temperature difference.
-    :type MinTempDiffVOF: float
-    :param MultiplierVOF: The multiplier for the modulation of the Venting Opening Factor.
-        Must be a number between 0 and 1.
-    :type MultiplierVOF: float
-    :param VSToffset: The default is 0. Please refer to documentation.
-    :type VSToffset: list
-    :param MinOToffset: The default is 50. Please refer to documentation.
-    :type MinOToffset: list
-    :param MaxWindSpeed: The default is 50. Please refer to documentation.
-    :type MaxWindSpeed: list
-    :param ASTtol_start: The default is 0.1. Please refer to documentation.
-    :type ASTtol_start: float
-    :param ASTtol_end_input: The default is 0.1. Please refer to documentation.
-    :type ASTtol_end_input: float
-    :param ASTtol_steps: The default is 0.1. Please refer to documentation.
-    :type ASTtol_steps: float
-    :param NameSuffix: The default is '' (an empty string). Please refer to documentation.
-    :type NameSuffix: str
     :param verboseMode: True to print the process on screen. Default is True.
     :type verboseMode: bool
-    :param confirmGen: True to skip confirmation of output IDF generation. Default is None.
-    :type confirmGen: bool
     :ivar arguments: A dictionary containing all arguments
     :ivar df_outputs: the pandas DataFrame instance created with argument ``Output_gen_dataframe``
-    :ivar input_idfs: A dictionary containing all input IDFs following the format {'input idf filename': class ``eppy.modeleditor.IDF object``}
-    :ivar occupied_zones: A dictionary containing all input idfs and
-        occupied zone names following the format {'idf filename': [list of zone names]}
-    :ivar occupied_zones_original_name: A dictionary containing all input idfs and
-        occupied zone original names following the format {'idf filename': [list of zone original names]}
-    :ivar output_idfs: A dictionary containing all output IDFs following the format {'output idf filename': class ``eppy.modeleditor.IDF object``}
-    :ivar windows_and_doors: A dictionary containing all input idfs and
-        window and door names following the format
-        {'idf filename': [list of window and door names]}
-    :ivar windows_and_doors_original_name: A dictionary containing all input idfs and
-        window and door original names following the format
-        {'idf filename': [list of window and door original names]}
+    :ivar occupied_zones: A list containing all occupied zone names within the input idf.
+    :ivar occupied_zones_original_name: A list containing all occupied zone original names within the input idf.
+    :ivar windows_and_doors: A list containing all window and door names within the input idf.
+    :ivar windows_and_doors_original_name:  A list containing all window and door original names within the input idf.
     """
     def __init__(
         self,
-        file: str = None,
+        idf: besos.IDF_class = None,
         ScriptType: str = None,
         SupplyAirTempInputMethod: str = None,
         Output_type: str = None,
         Output_freqs: any = None,
         Output_keep_existing: bool = None,
-        # Output_gen_dataframe: bool = None,
-        # Output_take_dataframe: pd.DataFrame = None,
+        Output_gen_dataframe: bool = None,
+        Output_take_dataframe: pd.DataFrame = None,
         EnergyPlus_version: str = None,
         TempCtrl: str = None,
-
-
-        # ASTtol_start: float = 0.1,
-        # ASTtol_end_input: float = 0.1,
-        # ASTtol_steps: float = 0.1,
-        # NameSuffix: str = '',
         verboseMode: bool = True,
-        # confirmGen: bool = None
     ):
         """
         Constructor method.
@@ -176,31 +81,115 @@ class addAccis:
         from besos.errors import InstallationError
 
         # IDF.setiddname(api_environment.EnergyPlusInputIddPath)
-        # file = IDF(api_environment.EnergyPlusInputIdfPath)
+        # idf = IDF(api_environment.EnergyPlusInputIdfPath)
+
+
+        print(
+            '\n--------------------------------------------------------'
+            f'\nAdaptive-Comfort-Control-Implemented Model (ACCIM) v{__version__}'
+            '\n--------------------------------------------------------'
+            '\n\nThis tool allows to apply adaptive setpoint temperatures. '
+            '\nFor further information, please read the documentation: '
+            '\nhttps://accim.readthedocs.io/en/master/'
+            '\nFor a visual understanding of the tool, please visit the following jupyter notebooks:'
+            '\n-    Using addAccis() to apply adaptive setpoint temperatures'
+            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/addAccis/using_addAccis.html'
+            '\n-    Using rename_epw_files() to rename the EPWs for proper data analysis after simulation'
+            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/rename_epw_files/using_rename_epw_files.html'
+            '\n-    Using runEp() to directly run simulations with EnergyPlus'
+            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/runEp/using_runEp.html'
+            '\n-    Using the class Table() for data analysis'
+            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/Table/using_Table.html'
+            '\n-    Full example'
+            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/full_example/full_example.html'
+            '\n'
+            '\nStarting with the process.'
+        )
+
+        if verboseMode:
+            print('Basic input data:')
+            # print(f'accim version: {accim.__version__}')
+            print('ScriptType is: '+ScriptType)
+        if ScriptType not in fullScriptTypeList:
+            print('Valid ScriptTypes: ')
+            print(fullScriptTypeList)
+            raise ValueError(ScriptType + " is not a valid ScriptType. "
+                                          "You must choose a ScriptType from the list above.")
+        if 'vrf' in ScriptType.lower():
+            if verboseMode:
+                print('Supply Air Temperature Input Method is: '+SupplyAirTempInputMethod)
+            if SupplyAirTempInputMethod not in SupplyAirTempInputMethodList:
+                print('Valid Supply Air Temperature Input Methods: ')
+                print(SupplyAirTempInputMethod)
+                raise ValueError(SupplyAirTempInputMethod + " is not a valid Supply Air Temperature Input Method. "
+                                              "You must choose a Supply Air Temperature Input Method from the list above.")
+        if verboseMode:
+            print('Output type is: ' + Output_type)
+        if Output_type not in fullOutputsTypeList:
+            print('Valid Output type: ')
+            print(fullOutputsTypeList)
+            raise ValueError(Output_type + " is not a valid Output. "
+                                       "You must choose a Output from the list above.")
+        if verboseMode:
+            print('Output frequencies are: ')
+            print(Output_freqs)
+        if not (all(elem in fullOutputsFreqList for elem in Output_freqs)):
+            print('Valid Output freqs: ')
+            print(fullOutputsFreqList)
+            raise ValueError('Some of the Output frequencies in '+Output_freqs + " is not a valid Output. "
+                                       "All Output frequencies must be included in the list above.")
+        if verboseMode:
+            print('EnergyPlus version is: '+EnergyPlus_version)
+        if EnergyPlus_version not in fullEPversionsList:
+            print('Valid EnergyPlus_version: ')
+            print(fullEPversionsList)
+            raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
+                                                  "You must choose a EnergyPlus_version"
+                                                  "from the list above.")
+        if verboseMode:
+            print('Temperature Control method is: '+TempCtrl)
+        if TempCtrl not in fullTempCtrllist:
+            print('Valid Temperature Control methods: ')
+            print(fullTempCtrllist)
+            raise ValueError(TempCtrl + " is not a valid Temperature Control method. "
+                                                  "You must choose a Temperature Control method"
+                                                  "from the list above.")
+        self.arguments = {}
+        self.arguments.update(
+            {
+                'ScriptType': ScriptType,
+                'SupplyAirTempInputMethod': SupplyAirTempInputMethod,
+                'Output_type': Output_type,
+                'Output_freqs': Output_freqs,
+                'Output_keep_existing': Output_keep_existing,
+                'Output_gen_dataframe': Output_gen_dataframe,
+                'Output_take_dataframe': Output_take_dataframe,
+                'EnergyPlus_version': EnergyPlus_version,
+                'TempCtrl': TempCtrl,
+            }
+        )
 
 
         if verboseMode:
             print('''\n=======================START OF GENERIC IDF FILE GENERATION PROCESS=======================\n''')
             print('Starting with file:')
-            # print(file)
+            # print(idf)
 
         if EnergyPlus_version is None:
-            try:
-                EnergyPlus_version = f'{file.idd_version[0]}.{file.idd_version[1]}'
-            except besos.errors.InstallationError:
-                pass
+            EnergyPlus_version = f'{idf.idd_version[0]}.{idf.idd_version[1]}'
 
         z = accim_Main.accimJob(
-            idf_class_instance=file,
+            idf_class_instance=idf,
             ScriptType=ScriptType,
             EnergyPlus_version=EnergyPlus_version,
             TempCtrl=TempCtrl,
             verboseMode=verboseMode
         )
-        # self.occupied_zones.update({file: z.occupiedZones})
-        # self.occupied_zones_original_name.update({file: z.occupiedZones_orig})
-        # self.windows_and_doors.update({file: z.windownamelist})
-        # self.windows_and_doors_original_name.update({file: z.windownamelist_orig})
+
+        self.occupied_zones = z.occupiedZones
+        self.occupied_zones_original_name = z.occupiedZones_orig
+        self.windows_and_doors = z.windownamelist
+        self.windows_and_doors_original_name = z.windownamelist_orig
 
         z.setComfFieldsPeople(EnergyPlus_version=EnergyPlus_version, TempCtrl=TempCtrl, verboseMode=verboseMode)
 
@@ -269,16 +258,30 @@ class addAccis:
                 verboseMode=verboseMode
             )
             if Output_type.lower() == 'custom':
+                Output_gen_dataframe = False
                 z.outputsSpecified()
 
-        self.SetInputData = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
+        if Output_take_dataframe is not None:
+            z.takeOutputDataFrame(
+                idf_filename=file,
+                df_outputs_in=Output_take_dataframe,
+                verboseMode=verboseMode
+            )
+
+        z.removeDuplicatedOutputVariables()
+
+        if Output_gen_dataframe:
+            z.genOutputDataframe(idf_filename=file)
+            df_outputs_to_concat.append(z.df_outputs_temp)
+
+        self.SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                          program.Name == 'SetInputData'][0])
-        self.SetVOFinputData = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
+        self.SetVOFinputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                             program.Name == 'SetVOFinputData'][0])
-        self.SetAST = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
+        self.SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                    program.Name == 'SetAST'][0])
 
-        self.file = file
+        # self.idf = idf
 
     def modifyAccis(
             self,
@@ -299,10 +302,85 @@ class addAccis:
             ASTtol: int = 0.1,
 
     ):
-
+        """
+        :param ComfStand: The default is None.
+            '0 = ESP CTE;
+            '1 = INT EN16798;
+            '2 = INT ASHRAE55;
+            '3 = JPN Rijal;
+            '4 = CHN GBT50785 Cold;
+            '5 = CHN GBT50785 HotMild;
+            '6 = CHN Yang;
+            '7 = IND IMAC C NV;
+            '8 = IND IMAC C MM;
+            '9 = IND IMAC R 7DRM;
+            '10 = IND IMAC R 30DRM;
+            '11 = IND Dhaka;
+            '12 = ROM Udrea;
+            '13 = AUS Williamson;
+            '14 = AUS DeDear;
+            '15 = BRA Rupp NV;
+            '16 = BRA Rupp AC;
+            '17 = MEX Oropeza Arid;
+            '18 = MEX Oropeza DryTropic;
+            '19 = MEX Oropeza Temperate;
+            '20 = MEX Oropeza HumTropic;
+            '21 = CHL Perez-Fargallo;
+            '22 = INT ISO7730
+        :type ComfStand: int
+        :param CAT: The default is None.
+            (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT)
+        :type CAT: int
+        :param ComfMod: The default is None.
+            (0/0.X = Static;
+            1/1.X = Adaptive when applicable, otherwise relevant local static model;
+            2 = Adaptive when applicable, otherwise relevant international static model
+            3 = Adaptive when applicable, otherwise horizontal extention of adaptive setpoints)
+        :type ComfMod: float
+        :param SetpointAcc: A float. It is the number for the accuracy of the setpoint temperatures.
+            For instance, if 2 was used, setpoints would be rounded to every half Celsius degree;
+            if 10 was used, the setpoints would be rounded to the first decimal.
+        :type SetpointAcc: float
+        :param CoolSeasonStart: A date in format dd/mm, or the number of the day in the year.
+            Defines when start the cooling season, only used in some static setpoint temperatures.
+        :type CoolSeasonStart: any
+        :param CoolSeasonEnd: A date in format dd/mm, or the number of the day in the year.
+            Defines when ends the cooling season, only used in some static setpoint temperatures.
+        :type CoolSeasonEnd: any
+        :param HVACmode: The default is None.
+            (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
+        :type HVACmode: int
+        :param VentCtrl: The default is None.
+            (if HVACmode = 1:
+            0 = Ventilates above neutral temperature;
+            1 = Ventilates above upper comfort limit;
+            if HVACmode = 2:
+            0 = Ventilates above neutral temperature and fully opens doors and windows;
+            1 = Ventilates above lower comfort limit and fully opens doors and windows;
+            2 = Ventilates above neutral temperature and opens doors and windows based on the customised venting opening factor;
+            3 = Ventilates above lower comfort limit and opens doors and windows based on the customised venting opening factor;
+            )
+        :type VentCtrl: int
+        :param MaxTempDiffVOF: The maximum temperature difference for the Venting Opening Factor.
+            Must be a number greater than 0.
+        :type MaxTempDiffVOF: float
+        :param MinTempDiffVOF: The minimum temperature difference for the Venting Opening Factor.
+            Must be a number greater than 0 and smaller than the maximum temperature difference.
+        :type MinTempDiffVOF: float
+        :param MultiplierVOF: The multiplier for the modulation of the Venting Opening Factor.
+            Must be a number between 0 and 1.
+        :type MultiplierVOF: float
+        :param VSToffset: The default is 0. Please refer to documentation.
+        :type VSToffset: float
+        :param MinOToffset: The default is 50. Please refer to documentation.
+        :type MinOToffset: float
+        :param MaxWindSpeed: The default is 50. Please refer to documentation.
+        :type MaxWindSpeed: float
+        :param ASTtol: The default is 0.1. Please refer to documentation.
+        :type ASTtol: float
+        """
         while SetpointAcc < 0:
             raise ValueError('The value for SetpointAcc cannot be less than 0.')
-
 
         self.SetInputData.Program_Line_1 = 'set ComfStand = ' + repr(ComfStand)
         self.SetInputData.Program_Line_2 = 'set CAT = ' + repr(CAT)
@@ -316,6 +394,7 @@ class addAccis:
         self.SetInputData.Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol)
         self.SetInputData.Program_Line_11 = 'set CoolSeasonStart = ' + repr(CoolSeasonStart)
         self.SetInputData.Program_Line_12 = 'set CoolSeasonEnd = ' + repr(CoolSeasonEnd)
+
         self.SetAST.Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
 
         self.SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(MaxTempDiffVOF)
