@@ -3,7 +3,7 @@
 class accimJob():
     """Class to start the process to add the class ``accim.sim.accis.addAccis``.
 
-    :param filename_temp: the filename of the idf
+    :param idf_class_instance: the filename of the idf
     :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``
     :param EnergyPlus_version: Inherited from class ``accim.sim.accis.addAccis``
     :param TempCtrl: Inherited from class ``accim.sim.accis.addAccis``
@@ -20,7 +20,7 @@ class accimJob():
         setComfFieldsPeople, \
         saveaccim, \
         setPMVsetpoint
-    from accim.sim.accim_Base_EMS import \
+    from accim.sim.accim_Base_EMS_for_dsb import \
         addEMSActuatorsBase, \
         addEMSOutputVariableBase, \
         addEMSPCMBase, \
@@ -54,59 +54,22 @@ class accimJob():
         addEMSSensorsVRFsystem
 
     def __init__(self,
-                 filename_temp,
+                 idf_class_instance,
                  ScriptType: str = None,
-                 EnergyPlus_version: str = None,
                  TempCtrl: str = None,
                  verboseMode: bool = True,
-                 accimNotWorking: bool = False):
+                 ):
         """
         Constructor method.
         """
         from eppy import modeleditor
         from eppy.modeleditor import IDF
-        self.accimNotWorking = accimNotWorking
 
-        if EnergyPlus_version.lower() == '9.1':
-            iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '9.2':
-            iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '9.3':
-            iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '9.4':
-            iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '9.5':
-            iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '9.6':
-            iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '22.1':
-            iddfile = 'C:\EnergyPlusV22-1-0\Energy+.idd'
-        elif EnergyPlus_version.lower() == '22.2':
-            iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
-        elif EnergyPlus_version.lower() == '23.1':
-            iddfile = 'C:\EnergyPlusV23-1-0\Energy+.idd'
-        else:
-            raise ValueError("""EnergyPlus version not supported.\n
-                                     Only works for versions between EnergyPlus 9.1 (enter 9.1) and EnergyPlus 23.1 (enter 23.1)""")
-        if verboseMode:
-            print('IDD location is: '+iddfile)
-        IDF.setiddname(iddfile)
+        # IDF.setiddname(api_environment.EnergyPlusInputIddPath)
+        # idf1 = IDF(api_environment.EnergyPlusInputIdfPath)
 
 
 
-        fname1 = filename_temp+'.idf'
-        self.idf0 = IDF(fname1)
-
-        self.idf0.savecopy(filename_temp+'_pymod.idf')
-
-        self.filename = filename_temp+'_pymod'
-        fname1 = self.filename+'.idf'
-        self.idf1 = IDF(fname1)
-        self.filename = filename_temp+'_pymod'
-
-        self.output_idf_dict = {}
-
-        # print(self.filename)
         self.occupiedZones_orig = []
 
         occupiedZones_orig_osm = []
@@ -136,14 +99,10 @@ class accimJob():
             self.occupiedZones_orig = occupiedZones_orig_dsb
             self.occupiedZones = [i.replace(':', '_') for i in self.occupiedZones_orig]
             self.origin_dsb = True
-        else:
-            self.occupiedZones_orig = occupiedZones_orig_osm
-            self.occupiedZones = [i.replace(' ', '_') for i in self.occupiedZones_orig]
-            self.origin_dsb = False
 
 
         if verboseMode:
-            print(f'The occupied zones in the model {filename_temp} are:')
+            print(f'The occupied zones in the model {idf_class_instance} are:')
             print(*self.occupiedZones_orig, sep="\n")
 
         if (ScriptType.lower() == 'vrfsystem_mm' or
@@ -170,14 +129,14 @@ class accimJob():
             self.windownamelist_orig_split = ([i.split('_') for i in self.windownamelist_orig])
             # print(self.windownamelist_orig_split)
             if verboseMode:
-                print(f'The windows and doors in the model {filename_temp} are:')
+                print(f'The windows and doors in the model {idf_class_instance} are:')
                 print(*self.windownamelist, sep="\n")
 
         if 'vrf' in ScriptType.lower():
             self.zonenames = self.occupiedZones
             self.zonenames_orig = self.occupiedZones_orig
             if verboseMode:
-                print(f'The zones in the model {filename_temp} are:')
+                print(f'The zones in the model {idf_class_instance} are:')
                 print(*self.zonenames, sep="\n")
 
         elif 'ex' in ScriptType.lower():

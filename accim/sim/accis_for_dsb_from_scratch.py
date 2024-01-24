@@ -150,13 +150,14 @@ class addAccis:
     """
     def __init__(
         self,
+        file: str = None,
         ScriptType: str = None,
         SupplyAirTempInputMethod: str = None,
         Output_type: str = None,
         Output_freqs: any = None,
         Output_keep_existing: bool = None,
-        Output_gen_dataframe: bool = None,
-        Output_take_dataframe: pd.DataFrame = None,
+        # Output_gen_dataframe: bool = None,
+        # Output_take_dataframe: pd.DataFrame = None,
         EnergyPlus_version: str = None,
         TempCtrl: str = None,
         ComfStand: any = None,
@@ -173,544 +174,140 @@ class addAccis:
         VSToffset: any = [0],
         MinOToffset: any = [50],
         MaxWindSpeed: any = [50],
-        ASTtol_start: float = 0.1,
-        ASTtol_end_input: float = 0.1,
-        ASTtol_steps: float = 0.1,
-        NameSuffix: str = '',
+        ASTtol: float = 0.1,
+        # ASTtol_start: float = 0.1,
+        # ASTtol_end_input: float = 0.1,
+        # ASTtol_steps: float = 0.1,
+        # NameSuffix: str = '',
         verboseMode: bool = True,
-        confirmGen: bool = None
+        # confirmGen: bool = None
     ):
         """
         Constructor method.
         """
 
-        import accim.sim.accim_Main as accim_Main
+        import accim.sim.accim_Main_for_dsb as accim_Main
         from os import listdir, remove
         import accim
         import pandas as pd
 
-        filelist = ([file for file in listdir() if file.endswith('.idf')
-                     and not '[' in file
-                     and not '_pymod' in file])
-        if len(filelist) == 0:
-            raise FileNotFoundError('No idf files were found. There must be at least 1 idf file located at the path where this script is being run.')
 
-        filelist = ([file.split('.idf')[0] for file in filelist])
+        # IDF.setiddname(api_environment.EnergyPlusInputIddPath)
+        # file = IDF(api_environment.EnergyPlusInputIdfPath)
 
-        objArgsDef = (
-            ScriptType is not None,
-            SupplyAirTempInputMethod is not None,
-            Output_type is not None,
-            Output_freqs is not None,
-            Output_keep_existing is not None,
-            EnergyPlus_version is not None,
-            TempCtrl is not None,
+
+        if verboseMode:
+            print('''\n=======================START OF GENERIC IDF FILE GENERATION PROCESS=======================\n''')
+            print('Starting with file:')
+            # print(file)
+        z = accim_Main.accimJob(
+            idf_class_instance=file,
+            ScriptType=ScriptType,
+            EnergyPlus_version=EnergyPlus_version,
+            TempCtrl=TempCtrl,
+            verboseMode=verboseMode
         )
+        # self.occupied_zones.update({file: z.occupiedZones})
+        # self.occupied_zones_original_name.update({file: z.occupiedZones_orig})
+        # self.windows_and_doors.update({file: z.windownamelist})
+        # self.windows_and_doors_original_name.update({file: z.windownamelist_orig})
 
-        fullScriptTypeList = [
-            'vrf_ac',
-            'vrf_mm',
-            'ex_mm',
-            'ex_ac',
-        ]
+        z.setComfFieldsPeople(EnergyPlus_version=EnergyPlus_version, TempCtrl=TempCtrl, verboseMode=verboseMode)
 
-        SupplyAirTempInputMethodList = [
-            'supply air temperature',
-            'temperature difference'
-        ]
+        if 'vrf' in ScriptType.lower():
+            if TempCtrl.lower() == 'temperature' or TempCtrl.lower() == 'temp':
+                z.addOpTempTherm(verboseMode=verboseMode)
+            elif TempCtrl.lower() == 'pmv':
+                z.setPMVsetpoint(verboseMode=verboseMode)
+            z.addBaseSchedules(verboseMode=verboseMode)
+            z.setAvailSchOn(verboseMode=verboseMode)
+            z.addVRFsystemSch(verboseMode=verboseMode)
+            z.addCurveObj(verboseMode=verboseMode)
+            z.addDetHVACobj(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode, SupplyAirTempInputMethod=SupplyAirTempInputMethod)
+            if ScriptType.lower() == 'vrf_mm':
+                z.checkVentIsOn(verboseMode=verboseMode)
+            z.addForscriptSchVRFsystem(verboseMode=verboseMode)
+        elif 'ex' in ScriptType.lower():
+            # todo check if PMV can work with ex_ac
+            z.addForscriptSchExistHVAC(verboseMode=verboseMode)
 
-        fullOutputsTypeList = [
-            'Standard',
-            'standard',
-            'Simplified',
-            'simplified',
-            'Detailed',
-            'detailed',
-            'Custom',
-            'custom',
-            # 'Show outputs',
-            # 'show outputs'
-        ]
+        z.addEMSProgramsBase(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.addEMSOutputVariableBase(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.addGlobVarList(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.addIntVarList(verboseMode=verboseMode)
+        z.addEMSSensorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.addEMSActuatorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
 
-        fullOutputsFreqList = [
-            'Timestep',
-            'timestep',
-            'Hourly',
-            'hourly',
-            'Daily',
-            'daily',
-            'Monthly',
-            'monthly',
-            'Runperiod',
-            'runperiod'
-        ]
+        if 'vrf' in ScriptType.lower():
+            z.addEMSSensorsVRFsystem(ScriptType=ScriptType, verboseMode=verboseMode)
+        elif ScriptType.lower() == 'ex_mm':
+            z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
 
-        fullEPversionsList = [
-            '9.1',
-            '9.2',
-            '9.3',
-            '9.4',
-            '9.5',
-            '9.6',
-            '22.1',
-            '22.2',
-            '23.1',
-        ]
+        z.addEMSPCMBase(verboseMode=verboseMode)
 
-        fullTempCtrllist = [
-            'temperature',
-            'temp',
-            'pmv'
-        ]
-
-        print(
-            '\n--------------------------------------------------------'
-            f'\nAdaptive-Comfort-Control-Implemented Model (ACCIM) v{__version__}'
-            '\n--------------------------------------------------------'
-            '\n\nThis tool allows to apply adaptive setpoint temperatures. '
-            '\nFor further information, please read the documentation: '
-            '\nhttps://accim.readthedocs.io/en/master/'
-            '\nFor a visual understanding of the tool, please visit the following jupyter notebooks:'
-            '\n-    Using addAccis() to apply adaptive setpoint temperatures'
-            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/addAccis/using_addAccis.html'
-            '\n-    Using rename_epw_files() to rename the EPWs for proper data analysis after simulation'
-            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/rename_epw_files/using_rename_epw_files.html'
-            '\n-    Using runEp() to directly run simulations with EnergyPlus'
-            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/runEp/using_runEp.html'
-            '\n-    Using the class Table() for data analysis'
-            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/Table/using_Table.html'
-            '\n-    Full example'
-            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/full_example/full_example.html'
-            '\n'
-            '\nStarting with the process.'
-        )
-        self.arguments = {}
-        if all(objArgsDef):
+        if Output_keep_existing == 'true':
+            Output_keep_existing = True
+        elif Output_keep_existing == 'false':
+            Output_keep_existing = False
+        if Output_keep_existing is True:
             pass
         else:
-            print(
-                '\nNow, you are going to be asked to enter some information for different arguments '
-                'to generate the output IDFs with adaptive setpoint temperatures. '
-                '\nIf you are not sure about how to use these parameters, please take a look at the documentation in the following link: '
-                #todo change url in all places
-                '\nhttps://accim.readthedocs.io/en/master/4_detailed%20use.html'
-                '\n\nPlease, enter the following information:'
-            )
-            ScriptType = input("\nEnter the ScriptType (\n"
-                               "for VRFsystem with full air-conditioning mode: vrf_ac;\n"
-                               "for VRFsystem with mixed-mode: vrf_mm;\n"
-                               "for ExistingHVAC with mixed mode: ex_mm;\n"
-                               "for ExistingHVAC with full air-conditioning mode: ex_ac\n"
-                               "): ")
-            while ScriptType not in fullScriptTypeList:
-                ScriptType = input("    ScriptType was not correct. "
-                                   "    Enter the ScriptType (\n"
-                                   "    for VRFsystem with full air-conditioning mode: vrf_ac;\n"
-                                   "    for VRFsystem with mixed-mode: vrf_mm;\n"
-                                   "    for ExistingHVAC with mixed mode: ex_mm;\n"
-                                   "    for ExistingHVAC with full air-conditioning mode: ex_ac\n"
-                                   "    ): ")
-            if 'vrf' in ScriptType.lower():
-                SupplyAirTempInputMethod = input("\nEnter the SupplyAirTempInputMethod (\n"
-                                   "for Supply Air Temperature: supply air temperature;\n"
-                                   "for Temperature Difference: temperature difference;\n"
-                                   "): ")
-                while SupplyAirTempInputMethod not in SupplyAirTempInputMethodList:
-                    SupplyAirTempInputMethod = input(
-                        "    SupplyAirTempInputMethod was not correct. "
-                        "    Enter the SupplyAirTempInputMethod (\n"
-                                   "for Supply Air Temperature: supply air temperature;\n"
-                                   "for Temperature Difference: temperature difference;\n"
-                                   "): ")
-            Output_keep_existing = input('\nDo you want to keep the existing outputs (true or false)?: ')
-            while Output_keep_existing.lower() not in ['true', 'false']:
-                Output_keep_existing = input('The answer you entered is not valid. '
-                                              'Do you want to keep the existing outputs (true or false)?: ')
-            Output_type = input("\nEnter the Output type (standard, simplified, detailed or custom): ")
-            while Output_type not in fullOutputsTypeList:
-                Output_type = input("   Output type was not correct. "
-                                "Please, enter the Output type (standard, simplified, detailed or custom): ")
-            Output_freqs = list(freq for freq in input(
-                "\nEnter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): ").split())
-            while (not(all(elem in fullOutputsFreqList for elem in Output_freqs))):
-                Output_freqs = list(freq for freq in input(
-                    "Some of the Output frequencies are not correct. "
-                    "Please, enter the Output frequencies again separated by space "
-                    "(timestep, hourly, daily, monthly, runperiod): ").split())
-            Output_gen_dataframe = input('\nDo you want to generate a dataframe to see all outputs? (true or false): ')
-            while Output_gen_dataframe.lower() not in ['true', 'false']:
-                Output_gen_dataframe = input('The answer you entered is not valid. '
-                                              'Do you want to generate a dataframe to see all outputs? (true or false):')
-            if Output_gen_dataframe.lower() == 'true':
-                Output_gen_dataframe = True
-            elif Output_gen_dataframe.lower() == 'false':
-                Output_gen_dataframe = False
-            EnergyPlus_version = input("\nEnter the EnergyPlus version (9.1 to 23.1): ")
-            while EnergyPlus_version not in fullEPversionsList:
-                EnergyPlus_version = input("    EnergyPlus version was not correct. "
-                                           "Please, enter the EnergyPlus version (9.1 to 23.1): ")
-            TempCtrl = input('\nEnter the Temperature Control method (temperature or pmv): ')
-            while TempCtrl not in fullTempCtrllist:
-                TempCtrl = input("  Temperature Control method was not correct. "
-                                 "Please, enter the Temperature Control method (temperature or pmv): ")
+            z.removeExistingOutputVariables()
 
-        if verboseMode:
-            print('Basic input data:')
-            # print(f'accim version: {accim.__version__}')
-            print('ScriptType is: '+ScriptType)
-        if ScriptType not in fullScriptTypeList:
-            print('Valid ScriptTypes: ')
-            print(fullScriptTypeList)
-            raise ValueError(ScriptType + " is not a valid ScriptType. "
-                                          "You must choose a ScriptType from the list above.")
-        if 'vrf' in ScriptType.lower():
-            if verboseMode:
-                print('Supply Air Temperature Input Method is: '+SupplyAirTempInputMethod)
-            if SupplyAirTempInputMethod not in SupplyAirTempInputMethodList:
-                print('Valid Supply Air Temperature Input Methods: ')
-                print(SupplyAirTempInputMethod)
-                raise ValueError(SupplyAirTempInputMethod + " is not a valid Supply Air Temperature Input Method. "
-                                              "You must choose a Supply Air Temperature Input Method from the list above.")
-        if verboseMode:
-            print('Output type is: ' + Output_type)
-        if Output_type not in fullOutputsTypeList:
-            print('Valid Output type: ')
-            print(fullOutputsTypeList)
-            raise ValueError(Output_type + " is not a valid Output. "
-                                       "You must choose a Output from the list above.")
-        if verboseMode:
-            print('Output frequencies are: ')
-            print(Output_freqs)
-        if not (all(elem in fullOutputsFreqList for elem in Output_freqs)):
-            print('Valid Output freqs: ')
-            print(fullOutputsFreqList)
-            raise ValueError('Some of the Output frequencies in '+Output_freqs + " is not a valid Output. "
-                                       "All Output frequencies must be included in the list above.")
-        if verboseMode:
-            print('EnergyPlus version is: '+EnergyPlus_version)
-        if EnergyPlus_version not in fullEPversionsList:
-            print('Valid EnergyPlus_version: ')
-            print(fullEPversionsList)
-            raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
-                                                  "You must choose a EnergyPlus_version"
-                                                  "from the list above.")
-        if verboseMode:
-            print('Temperature Control method is: '+TempCtrl)
-        if TempCtrl not in fullTempCtrllist:
-            print('Valid Temperature Control methods: ')
-            print(fullTempCtrllist)
-            raise ValueError(TempCtrl + " is not a valid Temperature Control method. "
-                                                  "You must choose a Temperature Control method"
-                                                  "from the list above.")
-        self.arguments.update(
-            {
-                'ScriptType': ScriptType,
-                'SupplyAirTempInputMethod': SupplyAirTempInputMethod,
-                'Output_type': Output_type,
-                'Output_freqs': Output_freqs,
-                'Output_keep_existing': Output_keep_existing,
-                'Output_gen_dataframe': Output_gen_dataframe,
-                'Output_take_dataframe': Output_take_dataframe,
-                'EnergyPlus_version': EnergyPlus_version,
-                'TempCtrl': TempCtrl,
-            }
-        )
-
-        notWorkingIDFs = []
-
-        if Output_gen_dataframe:
-            df_outputs_to_concat = []
-        self.input_idfs = {}
-        self.occupied_zones = {}
-        self.occupied_zones_original_name = {}
-        self.windows_and_doors = {}
-        self.windows_and_doors_original_name = {}
-
-        for file in filelist:
-            if verboseMode:
-                print('''\n=======================START OF GENERIC IDF FILE GENERATION PROCESS=======================\n''')
-                print('Starting with file:')
-                print(file)
-            z = accim_Main.accimJob(
-                filename_temp=file,
-                ScriptType=ScriptType,
-                EnergyPlus_version=EnergyPlus_version,
+        if Output_type.lower() == 'simplified':
+            z.addOutputVariablesSimplified(
+                Output_freqs=Output_freqs,
                 TempCtrl=TempCtrl,
                 verboseMode=verboseMode
             )
-            self.input_idfs.update({file: z.idf0})
-            self.occupied_zones.update({file: z.occupiedZones})
-            self.occupied_zones_original_name.update({file: z.occupiedZones_orig})
-            self.windows_and_doors.update({file: z.windownamelist})
-            self.windows_and_doors_original_name.update({file: z.windownamelist_orig})
+        elif Output_type.lower() == 'standard':
+            z.addOutputVariablesStandard(
+                Outputs_freq=Output_freqs,
+                ScriptType=ScriptType,
+                TempCtrl=TempCtrl,
+                verboseMode=verboseMode
+            )
+        elif Output_type.lower() == 'detailed' or Output_type.lower() == 'custom':
+            z.addOutputVariablesStandard(
+                Outputs_freq=Output_freqs,
+                ScriptType=ScriptType,
+                TempCtrl=TempCtrl,
+                verboseMode=verboseMode
+            )
+            z.addOutputVariablesDetailed(
+                Outputs_freq=Output_freqs,
+                verboseMode=verboseMode
+            )
+            if Output_type.lower() == 'custom':
+                z.outputsSpecified()
 
-            if z.accimNotWorking is True:
-                # raise KeyError(f'accim is not going to work with {file}')
-                notWorkingIDFs.append(file)
-                continue
+        SetInputData = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
+                         program.Name == 'SetInputData'])
+        SetVOFinputData = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
+                            program.Name == 'SetVOFinputData'])
+        SetAST = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
+                   program.Name == 'SetAST'])
 
-            z.setComfFieldsPeople(EnergyPlus_version=EnergyPlus_version, TempCtrl=TempCtrl, verboseMode=verboseMode)
+        while SetpointAcc < 0:
+            raise ValueError('The value for SetpointAcc cannot be less than 0.')
 
-            if 'vrf' in ScriptType.lower():
-                if TempCtrl.lower() == 'temperature' or TempCtrl.lower() == 'temp':
-                    z.addOpTempTherm(verboseMode=verboseMode)
-                elif TempCtrl.lower() == 'pmv':
-                    z.setPMVsetpoint(verboseMode=verboseMode)
-                z.addBaseSchedules(verboseMode=verboseMode)
-                z.setAvailSchOn(verboseMode=verboseMode)
-                z.addVRFsystemSch(verboseMode=verboseMode)
-                z.addCurveObj(verboseMode=verboseMode)
-                z.addDetHVACobj(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode, SupplyAirTempInputMethod=SupplyAirTempInputMethod)
-                if ScriptType.lower() == 'vrf_mm':
-                    z.checkVentIsOn(verboseMode=verboseMode)
-                z.addForscriptSchVRFsystem(verboseMode=verboseMode)
-            elif 'ex' in ScriptType.lower():
-                # todo check if PMV can work with ex_ac
-                z.addForscriptSchExistHVAC(verboseMode=verboseMode)
 
-            z.addEMSProgramsBase(ScriptType=ScriptType, verboseMode=verboseMode)
-            z.addEMSOutputVariableBase(ScriptType=ScriptType, verboseMode=verboseMode)
-            z.addGlobVarList(ScriptType=ScriptType, verboseMode=verboseMode)
-            z.addIntVarList(verboseMode=verboseMode)
-            z.addEMSSensorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
-            z.addEMSActuatorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
 
-            if 'vrf' in ScriptType.lower():
-                z.addEMSSensorsVRFsystem(ScriptType=ScriptType, verboseMode=verboseMode)
-            elif ScriptType.lower() == 'ex_mm':
-                z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
+        SetInputData[0].Program_Line_1 = 'set ComfStand = ' + repr(ComfStand)
+        SetInputData[0].Program_Line_2 = 'set CAT = ' + repr(CAT)
+        SetInputData[0].Program_Line_3 = 'set ComfMod = ' + repr(ComfMod)
+        SetInputData[0].Program_Line_4 = 'set HVACmode = ' + repr(HVACmode)
+        SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl)
+        SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(VSToffset)
+        SetInputData[0].Program_Line_7 = 'set MinOToffset = ' + repr(MinOToffset)
+        SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = ' + repr(MaxWindSpeed)
+        SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol)
+        SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol)
+        SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(CoolSeasonStart)
+        SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(CoolSeasonEnd)
+        SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
 
-            z.addEMSPCMBase(verboseMode=verboseMode)
 
-            if Output_keep_existing == 'true':
-                Output_keep_existing = True
-            elif Output_keep_existing == 'false':
-                Output_keep_existing = False
-            if Output_keep_existing is True:
-                pass
-            else:
-                z.removeExistingOutputVariables()
-
-            if Output_type.lower() == 'simplified':
-                z.addOutputVariablesSimplified(
-                    Output_freqs=Output_freqs,
-                    TempCtrl=TempCtrl,
-                    verboseMode=verboseMode
-                )
-            elif Output_type.lower() == 'standard':
-                z.addOutputVariablesStandard(
-                    Outputs_freq=Output_freqs,
-                    ScriptType=ScriptType,
-                    TempCtrl=TempCtrl,
-                    verboseMode=verboseMode
-                )
-            elif Output_type.lower() == 'detailed' or Output_type.lower() == 'custom':
-                z.addOutputVariablesStandard(
-                    Outputs_freq=Output_freqs,
-                    ScriptType=ScriptType,
-                    TempCtrl=TempCtrl,
-                    verboseMode=verboseMode
-                )
-                z.addOutputVariablesDetailed(
-                    Outputs_freq=Output_freqs,
-                    verboseMode=verboseMode
-                )
-                if Output_type.lower() == 'custom':
-                    Output_gen_dataframe = False
-                    z.outputsSpecified()
-
-            if Output_take_dataframe is not None:
-                z.takeOutputDataFrame(
-                    idf_filename=file,
-                    df_outputs_in=Output_take_dataframe,
-                    verboseMode=verboseMode
-                )
-
-            z.removeDuplicatedOutputVariables()
-
-            if Output_gen_dataframe:
-                z.genOutputDataframe(idf_filename=file)
-                df_outputs_to_concat.append(z.df_outputs_temp)
-
-            z.saveaccim(verboseMode=verboseMode)
-            if verboseMode:
-                print('Ending with file:')
-                print(file)
-                print('''\n=======================END OF GENERIC IDF FILE GENERATION PROCESS=======================\n''')
-
-        if Output_gen_dataframe:
-            self.df_outputs = pd.concat(df_outputs_to_concat)
-
-        if verboseMode:
-            print('The following IDFs will not work, and therefore these will be deleted:')
-        if len(notWorkingIDFs) > 0:
-            if verboseMode:
-                print(*notWorkingIDFs, sep="\n")
-            filelist_pymod = ([file for file in listdir() if file.endswith('.idf')
-                         and '_pymod' in file])
-
-            for file in notWorkingIDFs:
-                for i in filelist_pymod:
-                    if file in i:
-                        remove(i)
-        else:
-            if verboseMode:
-                print('None')
-
-        if verboseMode:
-            print('''\n=======================START OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')
-
-        args_needed_mm = (
-            ComfStand is not None,
-            CAT is not None,
-            ComfMod is not None,
-            HVACmode is not None,
-            VentCtrl is not None,
-        )
-
-        args_needed_ac = (
-            ComfStand is not None,
-            CAT is not None,
-            ComfMod is not None,
-        )
-        if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
-            if all(args_needed_mm):
-                z.genIDF(
-                    ScriptType=ScriptType,
-                    TempCtrl=TempCtrl,
-                    ComfStand=ComfStand,
-                    CAT=CAT,
-                    ComfMod=ComfMod,
-                    SetpointAcc=SetpointAcc,
-                    CoolSeasonStart=CoolSeasonStart,
-                    CoolSeasonEnd=CoolSeasonEnd,
-                    HVACmode=HVACmode,
-                    VentCtrl=VentCtrl,
-                    MaxTempDiffVOF=MaxTempDiffVOF,
-                    MinTempDiffVOF=MinTempDiffVOF,
-                    MultiplierVOF=MultiplierVOF,
-                    VSToffset=VSToffset,
-                    MinOToffset=MinOToffset,
-                    MaxWindSpeed=MaxWindSpeed,
-                    ASTtol_start=ASTtol_start,
-                    ASTtol_end_input=ASTtol_end_input,
-                    ASTtol_steps=ASTtol_steps,
-                    NameSuffix=NameSuffix,
-                    verboseMode=verboseMode,
-                    confirmGen=confirmGen
-                    )
-                self.arguments.update(
-                    {
-                        'ScriptType': ScriptType,
-                        'TempCtrl': TempCtrl,
-                        'ComfStand': ComfStand,
-                        'CAT': CAT,
-                        'ComfMod': ComfMod,
-                        'SetpointAcc': SetpointAcc,
-                        'CoolSeasonStart': CoolSeasonStart,
-                        'CoolSeasonEnd': CoolSeasonEnd,
-                        'HVACmode': HVACmode,
-                        'VentCtrl': VentCtrl,
-                        'MaxTempDiffVOF': MaxTempDiffVOF,
-                        'MinTempDiffVOF': MinTempDiffVOF,
-                        'MultiplierVOF': MultiplierVOF,
-                        'VSToffset': VSToffset,
-                        'MinOToffset': MinOToffset,
-                        'MaxWindSpeed': MaxWindSpeed,
-                        'ASTtol_start': ASTtol_start,
-                        'ASTtol_end_input': ASTtol_end_input,
-                        'ASTtol_steps': ASTtol_steps,
-                        'NameSuffix': NameSuffix,
-                        'verboseMode': verboseMode,
-                        'confirmGen': confirmGen,
-                    }
-                )
-            else:
-                z.inputData(
-                    ScriptType=ScriptType,
-                )
-                self.arguments.update(z.user_input_arguments)
-                self.arguments.update(
-                    {
-                        'NameSuffix': NameSuffix,
-                        'verboseMode': verboseMode,
-                        'confirmGen': confirmGen,
-                    }
-                )
-                z.genIDF(
-                    ScriptType=ScriptType,
-                    TempCtrl=TempCtrl,
-                )
-        elif ScriptType.lower() == 'ex_ac' or ScriptType.lower() == 'vrf_ac':
-            if all(args_needed_ac):
-                z.genIDF(
-                    ScriptType=ScriptType,
-                    TempCtrl=TempCtrl,
-                    ComfStand=ComfStand,
-                    CAT=CAT,
-                    ComfMod=ComfMod,
-                    SetpointAcc=SetpointAcc,
-                    CoolSeasonStart=CoolSeasonStart,
-                    CoolSeasonEnd=CoolSeasonEnd,
-                    HVACmode=[0],
-                    VentCtrl=[0],
-                    VSToffset=[0],
-                    MaxTempDiffVOF=1,
-                    MinTempDiffVOF=0,
-                    MultiplierVOF=0,
-                    MinOToffset=[0],
-                    MaxWindSpeed=[0],
-                    ASTtol_start=ASTtol_start,
-                    ASTtol_end_input=ASTtol_end_input,
-                    ASTtol_steps=ASTtol_steps,
-                    NameSuffix=NameSuffix,
-                    verboseMode=verboseMode,
-                    confirmGen=confirmGen
-                    )
-                self.arguments.update(
-                    {
-                        'ScriptType': ScriptType,
-                        'TempCtrl': TempCtrl,
-                        'ComfStand': ComfStand,
-                        'CAT': CAT,
-                        'ComfMod': ComfMod,
-                        'SetpointAcc': SetpointAcc,
-                        'CoolSeasonStart': CoolSeasonStart,
-                        'CoolSeasonEnd': CoolSeasonEnd,
-                        'HVACmode': [0],
-                        'VentCtrl': [0],
-                        'MaxTempDiffVOF': 1,
-                        'MinTempDiffVOF': 0,
-                        'MultiplierVOF': 0,
-                        'VSToffset': [0],
-                        'MinOToffset': [0],
-                        'MaxWindSpeed': [0],
-                        'ASTtol_start': ASTtol_start,
-                        'ASTtol_end_input': ASTtol_end_input,
-                        'ASTtol_steps': ASTtol_steps,
-                        'NameSuffix': NameSuffix,
-                        'verboseMode': verboseMode,
-                        'confirmGen': confirmGen,
-                    }
-                )
-            else:
-                z.inputData(
-                    ScriptType=ScriptType,
-                )
-                self.arguments.update(z.user_input_arguments)
-                self.arguments.update(
-                    {
-                        'NameSuffix': NameSuffix,
-                        'verboseMode': verboseMode,
-                        'confirmGen': confirmGen,
-                    }
-                )
-                z.genIDF(
-                    ScriptType=ScriptType,
-                    TempCtrl=TempCtrl,
-                )
-        self.output_idfs = z.output_idf_dict
-        if verboseMode:
-            print('''\n=======================END OF OUTPUT IDF FILES GENERATION PROCESS=======================\n''')
-
-        #todo pop up when process ends; by defalt True
+        SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(MaxTempDiffVOF)
+        SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(MinTempDiffVOF)
+        SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(MultiplierVOF)

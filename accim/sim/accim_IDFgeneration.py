@@ -444,7 +444,7 @@ def inputData(self, ScriptType: str = None):
         self.SetpointAcc = float(input('         Enter the setpoint accuracy number (any number greater than 0): '))
     while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
         self.SetpointAcc = float(input('      Enter the setpoint accuracy number (any number greater than 0): '))
-        while self.SetpointAcc < 0 or self.SetpointAcc > 1:
+        while self.SetpointAcc < 0:
             print('          The setpoint accuracy number is not correct. It must be a number greater than 0. Please enter the number again.')
             self.SetpointAcc = float(input('         Enter the setpoint accuracy number (any number greater than 0): '))
 

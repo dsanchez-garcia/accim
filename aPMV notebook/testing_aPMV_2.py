@@ -47,7 +47,7 @@ df = apmv.generate_df_from_args(
 
 apmv.set_zones_always_occupied(building=building)
 
-building_with_apmv = apmv.add_apmv_ems_code(
+building_with_apmv = apmv.apply_apmv_setpoints(
     building=building,
     adap_coeff_cooling=adap_coeff_cooling,
     adap_coeff_heating=adap_coeff_heating,

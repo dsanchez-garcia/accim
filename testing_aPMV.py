@@ -62,7 +62,7 @@ adap_coeff_heating = -0.2
 # pmv_heating_sp = 0.4
 ##
 
-from accim.sim.aPMV_setpoints import generate_df_from_args
+from accim.sim.apmv_setpoints import generate_df_from_args
 df = generate_df_from_args(
     building=building,
     adap_coeff_heating=adap_coeff_heating,

@@ -1,5 +1,5 @@
 from besos import eppy_funcs as ef
-import accim.sim.aPMV_setpoints as apmv
+import accim.sim.apmv_setpoints as apmv
 
 # Use the function get_building to create a besos.IDF_class instance
 building = ef.get_building('aPMV_testing_v01_no_script.idf')
@@ -9,7 +9,7 @@ adap_coeff_cooling = {'Block1:Zone1': 0.3, 'Block1:Zone2': 0.25}
 adap_coeff_heating = {'Block1:Zone1': -0.3, 'Block1:Zone2': -0.25}
 
 # Call the function
-building_with_apmv = apmv.add_apmv_ems_code(
+building_with_apmv = apmv.apply_apmv_setpoints(
     building=building,
     adap_coeff_cooling=adap_coeff_cooling,
     adap_coeff_heating=adap_coeff_heating,

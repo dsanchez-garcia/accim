@@ -7,7 +7,7 @@
 from besos import eppy_funcs as ef
 from besos import eplus_funcs as ep
 from besos.IDF_class import IDF
-import accim.sim.aPMV_setpoints as apmv
+import accim.sim.apmv_setpoints as apmv
 ##
 
 building = ef.get_building('aPMV_testing_v01_no_script.idf')
@@ -47,7 +47,7 @@ df = apmv.generate_df_from_args(
 
 apmv.set_zones_always_occupied(building=building)
 
-building_with_apmv = apmv.add_apmv_ems_code(
+building_with_apmv = apmv.apply_apmv_setpoints(
     building=building,
     adap_coeff_cooling=adap_coeff_cooling,
     adap_coeff_heating=adap_coeff_heating,
