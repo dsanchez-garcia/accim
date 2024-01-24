@@ -5,8 +5,6 @@ This function transform fixed setpoint temperature
 building energy models into adaptive setpoint temperature energy models
 by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 """
-import pandas as pd
-from accim import __version__
 
 
 class addAccis:
@@ -160,21 +158,8 @@ class addAccis:
         # Output_take_dataframe: pd.DataFrame = None,
         EnergyPlus_version: str = None,
         TempCtrl: str = None,
-        ComfStand: any = None,
-        CAT: any = None,
-        ComfMod: any = None,
-        SetpointAcc: float = 10000,
-        CoolSeasonStart: any = 121,
-        CoolSeasonEnd: any = 274,
-        HVACmode: any = None,
-        VentCtrl: any = None,
-        MaxTempDiffVOF: float = 20,
-        MinTempDiffVOF: float = 0.5,
-        MultiplierVOF: float = 0.25,
-        VSToffset: any = [0],
-        MinOToffset: any = [50],
-        MaxWindSpeed: any = [50],
-        ASTtol: float = 0.1,
+
+
         # ASTtol_start: float = 0.1,
         # ASTtol_end_input: float = 0.1,
         # ASTtol_steps: float = 0.1,
@@ -186,11 +171,9 @@ class addAccis:
         Constructor method.
         """
 
-        import accim.sim.accim_Main_for_dsb as accim_Main
-        from os import listdir, remove
-        import accim
-        import pandas as pd
-
+        import accim.sim.accim_Main_single_idf as accim_Main
+        import besos
+        from besos.errors import InstallationError
 
         # IDF.setiddname(api_environment.EnergyPlusInputIddPath)
         # file = IDF(api_environment.EnergyPlusInputIdfPath)
@@ -200,6 +183,13 @@ class addAccis:
             print('''\n=======================START OF GENERIC IDF FILE GENERATION PROCESS=======================\n''')
             print('Starting with file:')
             # print(file)
+
+        if EnergyPlus_version is None:
+            try:
+                EnergyPlus_version = f'{file.idd_version[0]}.{file.idd_version[1]}'
+            except besos.errors.InstallationError:
+                pass
+
         z = accim_Main.accimJob(
             idf_class_instance=file,
             ScriptType=ScriptType,
@@ -281,33 +271,53 @@ class addAccis:
             if Output_type.lower() == 'custom':
                 z.outputsSpecified()
 
-        SetInputData = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
-                         program.Name == 'SetInputData'])
-        SetVOFinputData = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
-                            program.Name == 'SetVOFinputData'])
-        SetAST = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
-                   program.Name == 'SetAST'])
+        self.SetInputData = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
+                         program.Name == 'SetInputData'][0])
+        self.SetVOFinputData = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
+                            program.Name == 'SetVOFinputData'][0])
+        self.SetAST = ([program for program in file.idfobjects['EnergyManagementSystem:Program'] if
+                   program.Name == 'SetAST'][0])
+
+        self.file = file
+
+    def modifyAccis(
+            self,
+            ComfStand: int = None,
+            CAT: int = None,
+            ComfMod: float = None,
+            SetpointAcc: float = 10000,
+            CoolSeasonStart: any = 121,
+            CoolSeasonEnd: any = 274,
+            HVACmode: int = None,
+            VentCtrl: int = None,
+            MaxTempDiffVOF: float = 20,
+            MinTempDiffVOF: float = 0.5,
+            MultiplierVOF: float = 0.25,
+            VSToffset: int = 0,
+            MinOToffset: int = 50,
+            MaxWindSpeed: int = 50,
+            ASTtol: int = 0.1,
+
+    ):
 
         while SetpointAcc < 0:
             raise ValueError('The value for SetpointAcc cannot be less than 0.')
 
 
+        self.SetInputData.Program_Line_1 = 'set ComfStand = ' + repr(ComfStand)
+        self.SetInputData.Program_Line_2 = 'set CAT = ' + repr(CAT)
+        self.SetInputData.Program_Line_3 = 'set ComfMod = ' + repr(ComfMod)
+        self.SetInputData.Program_Line_4 = 'set HVACmode = ' + repr(HVACmode)
+        self.SetInputData.Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl)
+        self.SetInputData.Program_Line_6 = 'set VSToffset = ' + repr(VSToffset)
+        self.SetInputData.Program_Line_7 = 'set MinOToffset = ' + repr(MinOToffset)
+        self.SetInputData.Program_Line_8 = 'set MaxWindSpeed = ' + repr(MaxWindSpeed)
+        self.SetInputData.Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol)
+        self.SetInputData.Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol)
+        self.SetInputData.Program_Line_11 = 'set CoolSeasonStart = ' + repr(CoolSeasonStart)
+        self.SetInputData.Program_Line_12 = 'set CoolSeasonEnd = ' + repr(CoolSeasonEnd)
+        self.SetAST.Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
 
-        SetInputData[0].Program_Line_1 = 'set ComfStand = ' + repr(ComfStand)
-        SetInputData[0].Program_Line_2 = 'set CAT = ' + repr(CAT)
-        SetInputData[0].Program_Line_3 = 'set ComfMod = ' + repr(ComfMod)
-        SetInputData[0].Program_Line_4 = 'set HVACmode = ' + repr(HVACmode)
-        SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl)
-        SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(VSToffset)
-        SetInputData[0].Program_Line_7 = 'set MinOToffset = ' + repr(MinOToffset)
-        SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = ' + repr(MaxWindSpeed)
-        SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol)
-        SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol)
-        SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(CoolSeasonStart)
-        SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(CoolSeasonEnd)
-        SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
-
-
-        SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(MaxTempDiffVOF)
-        SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(MinTempDiffVOF)
-        SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(MultiplierVOF)
+        self.SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(MaxTempDiffVOF)
+        self.SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + repr(MinTempDiffVOF)
+        self.SetVOFinputData.Program_Line_3 = 'set MultiplierVOF = ' + repr(MultiplierVOF)

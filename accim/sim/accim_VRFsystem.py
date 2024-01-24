@@ -1384,7 +1384,7 @@ def addDetHVACobj(
     for zn in self.zonenames_orig:
         self.idf1.newidfobject(
             'ZoneHVAC:EquipmentList',
-            defaultvalues=False,
+            # defaultvalues=False,
             Name=zn+' Equipment',
             Load_Distribution_Scheme='SequentialLoad',
             Zone_Equipment_1_Object_Type=
