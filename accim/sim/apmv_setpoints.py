@@ -836,7 +836,7 @@ def change_adaptive_coeff(building, df_arguments):
         program = [p
                    for p
                    in building.idfobjects['EnergyManagementSystem:Program']
-                   if 'apply_aPMV' in p.Name
+                   if 'set_zone_input_data' in p.Name
                    and zonename.lower() in p.Name.lower()
                    ][0]
         program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}',
@@ -859,7 +859,7 @@ def change_pmv_setpoints(building, df_arguments):
         program = [p
                    for p
                    in building.idfobjects['EnergyManagementSystem:Program']
-                   if 'apply_aPMV' in p.Name
+                   if 'set_zone_input_data' in p.Name
                    and zonename.lower() in p.Name.lower()
                    ][0]
         # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}',
@@ -882,7 +882,7 @@ def change_pmv_heating_setpoint(building, df_arguments):
         program = [p
                    for p
                    in building.idfobjects['EnergyManagementSystem:Program']
-                   if 'apply_aPMV' in p.Name
+                   if 'set_zone_input_data' in p.Name
                    and zonename.lower() in p.Name.lower()
                    ][0]
         # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}',
@@ -905,7 +905,7 @@ def change_pmv_cooling_setpoint(building, df_arguments):
         program = [p
                    for p
                    in building.idfobjects['EnergyManagementSystem:Program']
-                   if 'apply_aPMV' in p.Name
+                   if 'set_zone_input_data' in p.Name
                    and zonename.lower() in p.Name.lower()
                    ][0]
         # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, "adap_coeff_cooling"]}',
