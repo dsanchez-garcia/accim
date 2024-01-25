@@ -83,6 +83,62 @@ class addAccis:
         # IDF.setiddname(api_environment.EnergyPlusInputIddPath)
         # idf = IDF(api_environment.EnergyPlusInputIdfPath)
 
+        fullScriptTypeList = [
+            'vrf_ac',
+            'vrf_mm',
+            'ex_mm',
+            'ex_ac',
+        ]
+
+        SupplyAirTempInputMethodList = [
+            'supply air temperature',
+            'temperature difference'
+        ]
+
+        fullOutputsTypeList = [
+            'Standard',
+            'standard',
+            'Simplified',
+            'simplified',
+            'Detailed',
+            'detailed',
+            'Custom',
+            'custom',
+            # 'Show outputs',
+            # 'show outputs'
+        ]
+
+        fullOutputsFreqList = [
+            'Timestep',
+            'timestep',
+            'Hourly',
+            'hourly',
+            'Daily',
+            'daily',
+            'Monthly',
+            'monthly',
+            'Runperiod',
+            'runperiod'
+        ]
+
+        fullEPversionsList = [
+            '9.1',
+            '9.2',
+            '9.3',
+            '9.4',
+            '9.5',
+            '9.6',
+            '22.1',
+            '22.2',
+            '23.1',
+        ]
+
+        fullTempCtrllist = [
+            'temperature',
+            'temp',
+            'pmv'
+        ]
+
 
         print(
             '\n--------------------------------------------------------'
@@ -105,6 +161,8 @@ class addAccis:
             '\n'
             '\nStarting with the process.'
         )
+
+
 
         if verboseMode:
             print('Basic input data:')
@@ -138,6 +196,8 @@ class addAccis:
             print(fullOutputsFreqList)
             raise ValueError('Some of the Output frequencies in '+Output_freqs + " is not a valid Output. "
                                        "All Output frequencies must be included in the list above.")
+        if EnergyPlus_version is None:
+            EnergyPlus_version = f'{idf.idd_version[0]}.{idf.idd_version[1]}'
         if verboseMode:
             print('EnergyPlus version is: '+EnergyPlus_version)
         if EnergyPlus_version not in fullEPversionsList:
@@ -154,20 +214,18 @@ class addAccis:
             raise ValueError(TempCtrl + " is not a valid Temperature Control method. "
                                                   "You must choose a Temperature Control method"
                                                   "from the list above.")
-        self.arguments = {}
-        self.arguments.update(
-            {
-                'ScriptType': ScriptType,
-                'SupplyAirTempInputMethod': SupplyAirTempInputMethod,
-                'Output_type': Output_type,
-                'Output_freqs': Output_freqs,
-                'Output_keep_existing': Output_keep_existing,
-                'Output_gen_dataframe': Output_gen_dataframe,
-                'Output_take_dataframe': Output_take_dataframe,
-                'EnergyPlus_version': EnergyPlus_version,
-                'TempCtrl': TempCtrl,
-            }
-        )
+        self.arguments = {
+            'ScriptType': ScriptType,
+            'SupplyAirTempInputMethod': SupplyAirTempInputMethod,
+            'Output_type': Output_type,
+            'Output_freqs': Output_freqs,
+            'Output_keep_existing': Output_keep_existing,
+            'Output_gen_dataframe': Output_gen_dataframe,
+            'Output_take_dataframe': Output_take_dataframe,
+            'EnergyPlus_version': EnergyPlus_version,
+            'TempCtrl': TempCtrl,
+            'verboseMode': verboseMode
+        }
 
 
         if verboseMode:
@@ -175,8 +233,6 @@ class addAccis:
             print('Starting with file:')
             # print(idf)
 
-        if EnergyPlus_version is None:
-            EnergyPlus_version = f'{idf.idd_version[0]}.{idf.idd_version[1]}'
 
         z = accim_Main.accimJob(
             idf_class_instance=idf,
@@ -263,7 +319,7 @@ class addAccis:
 
         if Output_take_dataframe is not None:
             z.takeOutputDataFrame(
-                idf_filename=file,
+                idf_filename=idf.idfname.split('.idf')[0],
                 df_outputs_in=Output_take_dataframe,
                 verboseMode=verboseMode
             )
@@ -271,8 +327,11 @@ class addAccis:
         z.removeDuplicatedOutputVariables()
 
         if Output_gen_dataframe:
-            z.genOutputDataframe(idf_filename=file)
-            df_outputs_to_concat.append(z.df_outputs_temp)
+            z.genOutputDataframe(idf_filename=idf.idfname.split('.idf')[0])
+            self.df_outputs = z.df_outputs_temp
+
+        if verboseMode:
+            print('''\n=======================END OF OUTPUT IDF FILE GENERATION PROCESS=======================\n''')
 
         self.SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                          program.Name == 'SetInputData'][0])
@@ -379,8 +438,51 @@ class addAccis:
         :param ASTtol: The default is 0.1. Please refer to documentation.
         :type ASTtol: float
         """
+
+        self.arguments_accis = {
+            'ComfStand': ComfStand,
+            'CAT': CAT,
+            'ComfMod': ComfMod,
+            'SetpointAcc': SetpointAcc,
+            'CoolSeasonStart': CoolSeasonStart,
+            'CoolSeasonEnd': CoolSeasonEnd,
+            'HVACmode': HVACmode,
+            'VentCtrl': VentCtrl,
+            'MaxTempDiffVOF': MaxTempDiffVOF,
+            'MinTempDiffVOF': MinTempDiffVOF,
+            'MultiplierVOF': MultiplierVOF,
+            'VSToffset': VSToffset,
+            'MinOToffset': MinOToffset,
+            'MaxWindSpeed': MaxWindSpeed,
+            'ASTtol': ASTtol
+        }
+
         while SetpointAcc < 0:
             raise ValueError('The value for SetpointAcc cannot be less than 0.')
+        
+        if type(CoolSeasonStart) is int:
+            if CoolSeasonStart <= 365 and CoolSeasonStart > 0:
+                pass
+        elif type(CoolSeasonStart) is str:
+            if len(CoolSeasonStart.split('/')) == 2:
+                day = int(CoolSeasonStart.split('/')[0])
+                month = int(CoolSeasonStart.split('/')[1])
+                from datetime import date
+                day_of_year = date(year=2007, month=month, day=day).timetuple().tm_yday
+                CoolSeasonStart = day_of_year
+
+        if type(CoolSeasonEnd) is int:
+            if CoolSeasonEnd <= 365 and CoolSeasonEnd > 0:
+                pass
+        elif type(CoolSeasonEnd) is str:
+            if len(CoolSeasonEnd.split('/')) == 2:
+                day = int(CoolSeasonEnd.split('/')[0])
+                month = int(CoolSeasonEnd.split('/')[1])
+                from datetime import date
+                day_of_year = date(year=2007, month=month, day=day).timetuple().tm_yday
+                CoolSeasonEnd = day_of_year
+
+
 
         self.SetInputData.Program_Line_1 = 'set ComfStand = ' + repr(ComfStand)
         self.SetInputData.Program_Line_2 = 'set CAT = ' + repr(CAT)

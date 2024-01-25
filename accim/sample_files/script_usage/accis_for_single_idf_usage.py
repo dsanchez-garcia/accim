@@ -4,7 +4,7 @@ from accim.sim import accis_single_idf as accis
 import besos.eppy_funcs as ef
 from besos.errors import InstallationError
 
-## Using eppy
+# Using eppy
 
 # iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
 #
@@ -13,7 +13,7 @@ from besos.errors import InstallationError
 # IDF.setiddname(iddfile)
 # idf = IDF(fname)
 
-## Using besos
+# Using besos
 fname = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940.idf'
 
 try:
@@ -24,7 +24,7 @@ except InstallationError:
     idf = ef.get_building(fname)
 
 
-##
+
 # idf.idfobjects['zone']
 
 # Using class structure
@@ -40,6 +40,7 @@ adaptive_idf = accis.addAccis(
     Output_freqs=['hourly'],
     EnergyPlus_version='9.4',
     TempCtrl='temperature',
+    Output_gen_dataframe=True,
 
 )
 
@@ -52,6 +53,8 @@ adaptive_idf.modifyAccis(
     # SetpointAcc=1000,
     HVACmode=2,
     VentCtrl=0,
+    CoolSeasonStart='01/02',
+    CoolSeasonEnd='01/03'
     # VSToffset=0,
     # MinOToffset=50,
     # MaxWindSpeed=50
@@ -63,4 +66,8 @@ adaptive_idf.SetInputData
 adaptive_idf.SetVOFinputData
 adaptive_idf.SetAST
 
-idf.savecopy('z_modified_to_adaptive_2.idf')
+# idf.savecopy('z_modified_to_adaptive_3.idf')
+
+##
+
+idf.idfobjects['output:variable']
