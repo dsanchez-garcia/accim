@@ -15,7 +15,7 @@ from accim.utils import print_available_outputs_mod
 import numpy as np
 
 import accim.sim.apmv_setpoints as apmv
-import accim.funcs_for_besos.apmv as bf
+import accim.funcs_for_besos.param_apmv as bf
 
 
 
