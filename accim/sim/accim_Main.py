@@ -53,10 +53,12 @@ class accimJob():
     from accim.sim.accim_VRFsystem_EMS import \
         addEMSSensorsVRFsystem
 
+    from accim.utils import amend_idf_version_from_dsb
+
     def __init__(self,
                  filename_temp,
                  ScriptType: str = None,
-                 EnergyPlus_version: str = None,
+                 EnergyPlus_version: str = 'auto',
                  TempCtrl: str = None,
                  verboseMode: bool = True,
                  accimNotWorking: bool = False):
@@ -66,42 +68,63 @@ class accimJob():
         from eppy import modeleditor
         from eppy.modeleditor import IDF
         self.accimNotWorking = accimNotWorking
+        from accim.utils import amend_idf_version_from_dsb
+        from besos.eppy_funcs import get_building
 
-        if EnergyPlus_version.lower() == '9.1':
-            iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '9.2':
-            iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '9.3':
-            iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '9.4':
-            iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '9.5':
-            iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '9.6':
-            iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
-        elif EnergyPlus_version.lower() == '22.1':
-            iddfile = 'C:\EnergyPlusV22-1-0\Energy+.idd'
-        elif EnergyPlus_version.lower() == '22.2':
-            iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
-        elif EnergyPlus_version.lower() == '23.1':
-            iddfile = 'C:\EnergyPlusV23-1-0\Energy+.idd'
+        fname1 = filename_temp + '.idf'
+
+        # Checking if idf version is suitable: when exported from Designbuilder 7.X, the version is 9.4.0.002
+        amend_idf_version_from_dsb(fname1)
+
+        idf_created = False
+
+        if EnergyPlus_version.lower() != 'auto':
+            if EnergyPlus_version.lower() == '9.1':
+                iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
+            elif EnergyPlus_version.lower() == '9.2':
+                iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
+            elif EnergyPlus_version.lower() == '9.3':
+                iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
+            elif EnergyPlus_version.lower() == '9.4':
+                iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
+            elif EnergyPlus_version.lower() == '9.5':
+                iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
+            elif EnergyPlus_version.lower() == '9.6':
+                iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
+            elif EnergyPlus_version.lower() == '22.1':
+                iddfile = 'C:\EnergyPlusV22-1-0\Energy+.idd'
+            elif EnergyPlus_version.lower() == '22.2':
+                iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
+            elif EnergyPlus_version.lower() == '23.1':
+                iddfile = 'C:\EnergyPlusV23-1-0\Energy+.idd'
+            else:
+                raise ValueError("""EnergyPlus version not supported.\n
+                                         Only works for versions between EnergyPlus 9.1 (enter 9.1) and EnergyPlus 23.1 (enter 23.1)""")
+            if verboseMode:
+                print('IDD location is: '+iddfile)
+            IDF.setiddname(iddfile)
+            self.idf0 = IDF(fname1)
+            idf_from_eppy = True
+
         else:
-            raise ValueError("""EnergyPlus version not supported.\n
-                                     Only works for versions between EnergyPlus 9.1 (enter 9.1) and EnergyPlus 23.1 (enter 23.1)""")
-        if verboseMode:
-            print('IDD location is: '+iddfile)
-        IDF.setiddname(iddfile)
+            self.idf0 = get_building(fname1)
+            EnergyPlus_version = '.'.join([str(i) for i in self.idf0.idd_version[:2]])
+            if verboseMode:
+                print('IDD location is: '+self.idf0.iddname)
+            idf_from_eppy = False
 
 
-
-        fname1 = filename_temp+'.idf'
-        self.idf0 = IDF(fname1)
 
         self.idf0.savecopy(filename_temp+'_pymod.idf')
 
         self.filename = filename_temp+'_pymod'
         fname1 = self.filename+'.idf'
-        self.idf1 = IDF(fname1)
+
+        if idf_from_eppy:
+            self.idf1 = IDF(fname1)
+        else:
+            self.idf1 = get_building(fname1)
+
         self.filename = filename_temp+'_pymod'
 
         self.output_idf_dict = {}

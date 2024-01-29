@@ -43,8 +43,8 @@ class addAccis:
         with Output_gen_dataframe, which the user has filtered to keep only the rows
         related to the Output:Variable objects that need to be kept in the model.
     :type Output_take_dataframe: bool
-    :param EnergyPlus_version: The default is None.
-        Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'.
+    :param EnergyPlus_version: The default is 'auto'.
+        Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1' or 'auto'.
     :type EnergyPlus_version: str
     :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
     :type TempCtrl: str
@@ -157,7 +157,7 @@ class addAccis:
         Output_keep_existing: bool = None,
         Output_gen_dataframe: bool = None,
         Output_take_dataframe: pd.DataFrame = None,
-        EnergyPlus_version: str = None,
+        EnergyPlus_version: str = 'auto',
         TempCtrl: str = None,
         ComfStand: any = None,
         CAT: any = None,
@@ -205,7 +205,7 @@ class addAccis:
             Output_type is not None,
             Output_freqs is not None,
             Output_keep_existing is not None,
-            EnergyPlus_version is not None,
+            # EnergyPlus_version is not None,
             TempCtrl is not None,
         )
 
@@ -257,6 +257,7 @@ class addAccis:
             '22.1',
             '22.2',
             '23.1',
+            'auto',
         ]
 
         fullTempCtrllist = [
@@ -347,10 +348,10 @@ class addAccis:
                 Output_gen_dataframe = True
             elif Output_gen_dataframe.lower() == 'false':
                 Output_gen_dataframe = False
-            EnergyPlus_version = input("\nEnter the EnergyPlus version (9.1 to 23.1): ")
+            EnergyPlus_version = input("\nEnter the EnergyPlus version (9.1 to 23.1, or auto): ")
             while EnergyPlus_version not in fullEPversionsList:
                 EnergyPlus_version = input("    EnergyPlus version was not correct. "
-                                           "Please, enter the EnergyPlus version (9.1 to 23.1): ")
+                                           "Please, enter the EnergyPlus version (9.1 to 23.1, or auto): ")
             TempCtrl = input('\nEnter the Temperature Control method (temperature or pmv): ')
             while TempCtrl not in fullTempCtrllist:
                 TempCtrl = input("  Temperature Control method was not correct. "
@@ -388,14 +389,15 @@ class addAccis:
             print(fullOutputsFreqList)
             raise ValueError('Some of the Output frequencies in '+Output_freqs + " is not a valid Output. "
                                        "All Output frequencies must be included in the list above.")
-        if verboseMode:
-            print('EnergyPlus version is: '+EnergyPlus_version)
-        if EnergyPlus_version not in fullEPversionsList:
-            print('Valid EnergyPlus_version: ')
-            print(fullEPversionsList)
-            raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
-                                                  "You must choose a EnergyPlus_version"
-                                                  "from the list above.")
+        if EnergyPlus_version.lower() != 'auto':
+            if verboseMode:
+                print('EnergyPlus version is: '+EnergyPlus_version)
+            if EnergyPlus_version not in fullEPversionsList:
+                print('Valid EnergyPlus_version: ')
+                print(fullEPversionsList)
+                raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
+                                                      "You must choose a EnergyPlus_version"
+                                                      "from the list above.")
         if verboseMode:
             print('Temperature Control method is: '+TempCtrl)
         if TempCtrl not in fullTempCtrllist:
@@ -440,6 +442,10 @@ class addAccis:
                 TempCtrl=TempCtrl,
                 verboseMode=verboseMode
             )
+
+            if EnergyPlus_version.lower() == 'auto':
+                EnergyPlus_version = '.'.join([str(i) for i in z.idf1.idd_version[:2]])
+
             self.input_idfs.update({file: z.idf0})
             self.occupied_zones.update({file: z.occupiedZones})
             self.occupied_zones_original_name.update({file: z.occupiedZones_orig})

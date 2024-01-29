@@ -778,6 +778,7 @@ def genIDF(self,
     import numpy
     from eppy import modeleditor
     from eppy.modeleditor import IDF
+    from besos.eppy_funcs import get_building
     # import time
     # from tqdm import tqdm
 
@@ -1125,7 +1126,9 @@ def genIDF(self,
             filename = file.replace('_pymod', '')
             # if verboseMode:
             #     print(f'Taking "{fname1}" as input IDF file:')
-            idf1 = IDF(fname1)
+
+            # idf1 = IDF(fname1)
+            idf1 = get_building(fname1)
 
             # print(filename)
             SetInputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
