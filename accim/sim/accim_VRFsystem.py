@@ -917,6 +917,8 @@ def addDetHVACobj(
         EnergyPlus_version: str = None,
         verboseMode: bool = True,
         SupplyAirTempInputMethod: str = None,
+        eer: float = 2,
+        cop: float = 2.1,
 ):
     """Add Detailed HVAC objects for VRFsystem to work.
 
@@ -942,7 +944,7 @@ def addDetHVACobj(
                     Heat_Pump_Name='VRF Outdoor Unit_'+zn,
                     Availability_Schedule_Name='On 24/7',
                     Gross_Rated_Total_Cooling_Capacity='autosize',
-                    Gross_Rated_Cooling_COP=2,
+                    Gross_Rated_Cooling_COP=eer,
                     Minimum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=-20,
                     Maximum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=80,
                     # Minimum_Outdoor_Temperature_in_Cooling_Mode=-6,
@@ -966,7 +968,7 @@ def addDetHVACobj(
                     Cooling_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
                     Gross_Rated_Heating_Capacity='autosize',
                     Rated_Heating_Capacity_Sizing_Ratio=1,
-                    Gross_Rated_Heating_COP=2.1,
+                    Gross_Rated_Heating_COP=cop,
                     Minimum_Condenser_Inlet_Node_Temperature_in_Heating_Mode=-20,
                     Maximum_Condenser_Inlet_Node_Temperature_in_Heating_Mode=80,
                     Heating_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=
@@ -1051,7 +1053,7 @@ def addDetHVACobj(
                     Heat_Pump_Name='VRF Outdoor Unit_' + zn,
                     Availability_Schedule_Name='On 24/7',
                     Gross_Rated_Total_Cooling_Capacity='autosize',
-                    Gross_Rated_Cooling_COP=2,
+                    Gross_Rated_Cooling_COP=eer,
                     # Minimum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=-6,
                     # Maximum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode=43,
                     Minimum_Outdoor_Temperature_in_Cooling_Mode=-20,
@@ -1075,7 +1077,7 @@ def addDetHVACobj(
                     Cooling_PartLoad_Fraction_Correlation_Curve_Name='VRFCPLFFPLR',
                     Gross_Rated_Heating_Capacity='autosize',
                     Rated_Heating_Capacity_Sizing_Ratio=1,
-                    Gross_Rated_Heating_COP=2.1,
+                    Gross_Rated_Heating_COP=cop,
                     Minimum_Outdoor_Temperature_in_Heating_Mode=-20,
                     Maximum_Outdoor_Temperature_in_Heating_Mode=80,
                     Heating_Capacity_Ratio_Modifier_Function_of_Low_Temperature_Curve_Name=

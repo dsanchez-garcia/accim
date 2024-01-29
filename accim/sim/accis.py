@@ -178,7 +178,9 @@ class addAccis:
         ASTtol_steps: float = 0.1,
         NameSuffix: str = '',
         verboseMode: bool = True,
-        confirmGen: bool = None
+        confirmGen: bool = None,
+        eer: float = 2,
+        cop: float = 2.1,
     ):
         """
         Constructor method.
@@ -460,7 +462,13 @@ class addAccis:
                 z.setAvailSchOn(verboseMode=verboseMode)
                 z.addVRFsystemSch(verboseMode=verboseMode)
                 z.addCurveObj(verboseMode=verboseMode)
-                z.addDetHVACobj(EnergyPlus_version=EnergyPlus_version, verboseMode=verboseMode, SupplyAirTempInputMethod=SupplyAirTempInputMethod)
+                z.addDetHVACobj(
+                    EnergyPlus_version=EnergyPlus_version,
+                    verboseMode=verboseMode,
+                    SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+                    eer=eer,
+                    cop=cop,
+                )
                 if ScriptType.lower() == 'vrf_mm':
                     z.checkVentIsOn(verboseMode=verboseMode)
                 z.addForscriptSchVRFsystem(verboseMode=verboseMode)
