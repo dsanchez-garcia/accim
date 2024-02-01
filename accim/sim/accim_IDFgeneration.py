@@ -31,7 +31,6 @@ def inputData(self, ScriptType: str = None):
         '20 = MEX Oropeza HumTropic': [[80, 90], [0, 1, 2, 3]],
         '21 = CHL Perez-Fargallo': [[80, 90], [2, 3]],
         '22 = INT ISO7730': [[1, 2, 3], [0]],
-
     }
 
     CS_CA_CM_data_dict = {

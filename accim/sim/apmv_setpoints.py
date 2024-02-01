@@ -114,8 +114,10 @@ def apply_apmv_setpoints(
     # Managing cooling season start user input: transform dd/mm date into number if needed
 
     if type(cooling_season_start) is str:
+        from accim.utils import transform_ddmm_to_int
         cooling_season_start = transform_ddmm_to_int(cooling_season_start)
     if type(cooling_season_end) is str:
+        from accim.utils import transform_ddmm_to_int
         cooling_season_end = transform_ddmm_to_int(cooling_season_end)
 
     # Gathering adap_coeff_cooling, adap_coeff_heating, pmv_cooling_sp, pmv_heating_sp arguments into df
@@ -644,18 +646,6 @@ def set_zones_always_occupied(
     return
 
 
-def transform_ddmm_to_int(string_date: str) -> int:
-    """
-    This function converts a date string in the format "dd/mm" to the day of the year as an integer.
-
-    :param string_date: A string representing the date in format "dd/mm"
-    :return: The day of the year as an integer
-    :rtype: int
-    """
-    num_date = list(int(num) for num in string_date.split('/'))
-    from datetime import date
-    day_of_year = date(2007, num_date[1], num_date[0]).timetuple().tm_yday
-    return day_of_year
 
 
 def generate_df_from_args(

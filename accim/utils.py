@@ -86,3 +86,16 @@ class print_available_outputs_mod:
 #             available_outputs[i][0].split(',')[1],
 #             available_outputs[i][1]
 #         ]
+
+def transform_ddmm_to_int(string_date: str) -> int:
+    """
+    This function converts a date string in the format "dd/mm" to the day of the year as an integer.
+
+    :param string_date: A string representing the date in format "dd/mm"
+    :return: The day of the year as an integer
+    :rtype: int
+    """
+    num_date = list(int(num) for num in string_date.split('/'))
+    from datetime import date
+    day_of_year = date(2007, num_date[1], num_date[0]).timetuple().tm_yday
+    return day_of_year

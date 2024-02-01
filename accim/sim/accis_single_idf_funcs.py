@@ -358,7 +358,6 @@ def modifyAccis(
         MinOToffset: int = 50,
         MaxWindSpeed: int = 50,
         ASTtol: int = 0.1,
-
 ):
     """
     :param ComfStand: The default is None.
@@ -508,3 +507,37 @@ def modifyAccis(
     SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(MaxTempDiffVOF)
     SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + repr(MinTempDiffVOF)
     SetVOFinputData.Program_Line_3 = 'set MultiplierVOF = ' + repr(MultiplierVOF)
+
+
+def modify_param(idf, parameter, value):
+
+    SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
+                     program.Name == 'SetInputData'][0])
+    SetVOFinputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
+                        program.Name == 'SetVOFinputData'][0])
+    SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
+               program.Name == 'SetAST'][0])
+
+    valid_params = [
+        'ComfStand',
+        'CAT',
+        'ComfMod',
+        'SetpointAcc',
+        'CoolSeasonStart',
+        'CoolSeasonEnd',
+        'HVACmode',
+        'VentCtrl',
+        'MaxTempDiffVOF',
+        'MinTempDiffVOF',
+        'MultiplierVOF',
+        'VSToffset',
+        'MinOToffset',
+        'MaxWindSpeed',
+        'ASTtol',
+    ]
+
+    if parameter.lower() not in [i.lower() for i in valid_params]:
+        raise ValueError(f'The {parameter} parameter you have entered is not valid. Valid parameters are {valid_params}')
+
+    #todo WIP
+
