@@ -70,6 +70,7 @@ class addAccis:
         Output_take_dataframe: pd.DataFrame = None,
         EnergyPlus_version: str = None,
         TempCtrl: str = None,
+        VRFschedule: str = 'On 24/7',
         verboseMode: bool = True,
         eer: float = 2,
         cop: float = 2.1,
@@ -266,6 +267,7 @@ class addAccis:
                 SupplyAirTempInputMethod=SupplyAirTempInputMethod,
                 eer=eer,
                 cop=cop,
+                VRFschedule=VRFschedule
             )
             if ScriptType.lower() == 'vrf_mm':
                 z.checkVentIsOn(verboseMode=verboseMode)
