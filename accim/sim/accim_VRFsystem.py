@@ -1296,8 +1296,8 @@ def addDetHVACobj(
             Outdoor_Air_Flow_per_Zone_Floor_Area=0,
             Outdoor_Air_Flow_per_Zone=0,
             Outdoor_Air_Flow_Air_Changes_per_Hour=0,
-            Outdoor_Air_Schedule_Name=VRFschedule
-            )
+            Outdoor_Air_Schedule_Name='On 24/7',
+        )
         if verboseMode:
             print(zn+' Design Specification Outdoor Air Object has been added')
 
@@ -1419,7 +1419,6 @@ def addDetHVACobj(
         self.idf1.newidfobject(
             'ZoneHVAC:TerminalUnit:VariableRefrigerantFlow',
             Zone_Terminal_Unit_Name=zn+' VRF Indoor Unit',
-            # todo take Terminal_Unit_Availability_Schedule: ADD SCHEDULE AND APPLY IT TO ALL HVAC OBJECTS
             Terminal_Unit_Availability_Schedule=VRFschedule,
             Terminal_Unit_Air_Inlet_Node_Name=zn+' VRF Indoor Unit Return',
             Terminal_Unit_Air_Outlet_Node_Name=
@@ -1431,7 +1430,7 @@ def addDetHVACobj(
             Cooling_Outdoor_Air_Flow_Rate=0,
             Heating_Outdoor_Air_Flow_Rate=0,
             No_Load_Outdoor_Air_Flow_Rate=0,
-            Supply_Air_Fan_Operating_Mode_Schedule_Name=VRFschedule,
+            Supply_Air_Fan_Operating_Mode_Schedule_Name='On 24/7',
             Supply_Air_Fan_Placement='DrawThrough',
             Supply_Air_Fan_Object_Type='Fan:ConstantVolume',
             Supply_Air_Fan_Object_Name=zn+' VRF Indoor Unit Supply Fan',
@@ -1468,7 +1467,7 @@ def addDetHVACobj(
         self.idf1.newidfobject(
             'Coil:Cooling:DX:VariableRefrigerantFlow',
             Name=zn+' VRF Indoor Unit DX Cooling Coil',
-            Availability_Schedule_Name=VRFschedule,
+            Availability_Schedule_Name='On 24/7',
             Gross_Rated_Total_Cooling_Capacity='autosize',
             Gross_Rated_Sensible_Heat_Ratio='autosize',
             Rated_Air_Flow_Rate='autosize',
@@ -1502,7 +1501,7 @@ def addDetHVACobj(
         self.idf1.newidfobject(
             'Coil:Heating:DX:VariableRefrigerantFlow',
             Name=zn+' VRF Indoor Unit DX Heating Coil',
-            Availability_Schedule=VRFschedule,
+            Availability_Schedule='On 24/7',
             Gross_Rated_Heating_Capacity='autosize',
             Rated_Air_Flow_Rate='autosize',
             Coil_Air_Inlet_Node=zn+' VRF Indoor Unit DX Cooling Coil Outlet',
