@@ -1,0 +1,49 @@
+from accim.sim.accis import addAccis
+from testing_chile_cleaned_v01 import apply_heating_activation_time_sch
+
+idfpath = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940.idf'
+
+
+# apply_heating_activation_time_sch('comb 03.idf')
+
+# apply_heating_activation_time_sch(idfpath)
+
+##
+x = addAccis(
+    ScriptType='vrf_mm',
+    SupplyAirTempInputMethod='temperature difference',
+    Output_keep_existing=False,
+    Output_type='detailed',
+    Output_freqs=['timestep'],
+    EnergyPlus_version='9.4',
+    TempCtrl='temp',
+    ComfStand=[1],
+    CAT=[3],
+    ComfMod=[3],
+    HVACmode=[2],
+    VentCtrl=[0],
+    VSToffset=[0],
+    MinOToffset=[50],
+    MaxWindSpeed=[50],
+    ASTtol_steps=0.1,
+    ASTtol_start=0.1,
+    ASTtol_end_input=0.1,
+    confirmGen=True,
+    VRFschedule='Heating_activation_time_chile',
+)
+
+##
+
+from besos import eplus_funcs
+from besos import eppy_funcs
+import os
+
+new_idf = [i for i in os.listdir() if i.endswith('.idf') and idfpath not in i][0]
+
+building = eppy_funcs.get_building(idfpath)
+
+eplus_funcs.run_energyplus(
+    building_path=new_idf,
+    epw='Mulchen-hour.epw',
+    out_dir='temp_sim_outputs'
+)

@@ -1,0 +1,132 @@
+Heating_activation_time_chile,    !- Name
+     Fraction,                 !- Schedule Type Limits Name
+     Through: 1/31,            !- Field 1
+     For: AllDays,             !- Field 2
+     Until: 6:00,              !- Field 3
+     0,                        !- Field 4
+     Until: 9:00,              !- Field 5
+     1,                        !- Field 6
+     Until: 17:00,             !- Field 7
+     0,                        !- Field 8
+     Until: 23:00,             !- Field 9
+     1,                        !- Field 10
+     Until: 24:00,             !- Field 11
+     0,                        !- Field 12
+     Through: 2/28,            !- Field 13
+     For: AllDays,             !- Field 14
+     Until: 6:00,              !- Field 15
+     0,                        !- Field 16
+     Until: 9:00,              !- Field 17
+     1,                        !- Field 18
+     Until: 17:00,             !- Field 19
+     0,                        !- Field 20
+     Until: 23:00,             !- Field 21
+     1,                        !- Field 22
+     Until: 24:00,             !- Field 23
+     0,                        !- Field 24
+     Through: 3/31,            !- Field 25
+     For: AllDays,             !- Field 26
+     Until: 6:00,              !- Field 27
+     0,                        !- Field 28
+     Until: 9:00,              !- Field 29
+     1,                        !- Field 30
+     Until: 17:00,             !- Field 31
+     0,                        !- Field 32
+     Until: 23:00,             !- Field 33
+     1,                        !- Field 34
+     Until: 24:00,             !- Field 35
+     0,                        !- Field 36
+     Through: 4/30,            !- Field 37
+     For: AllDays,             !- Field 38
+     Until: 6:00,              !- Field 39
+     0,                        !- Field 40
+     Until: 9:00,              !- Field 41
+     1,                        !- Field 42
+     Until: 17:00,             !- Field 43
+     0,                        !- Field 44
+     Until: 23:00,             !- Field 45
+     1,                        !- Field 46
+     Until: 24:00,             !- Field 47
+     0,                        !- Field 48
+     Through: 5/31,            !- Field 49
+     For: AllDays,             !- Field 50
+     Until: 6:00,              !- Field 51
+     0,                        !- Field 52
+     Until: 9:00,              !- Field 53
+     1,                        !- Field 54
+     Until: 17:00,             !- Field 55
+     0,                        !- Field 56
+     Until: 24:00,             !- Field 57
+     1,                        !- Field 58
+     Through: 6/30,            !- Field 59
+     For: AllDays,             !- Field 60
+     Until: 6:00,              !- Field 61
+     0,                        !- Field 62
+     Until: 9:00,              !- Field 63
+     1,                        !- Field 64
+     Until: 17:00,             !- Field 65
+     0,                        !- Field 66
+     Until: 24:00,             !- Field 67
+     1,                        !- Field 68
+     Through: 7/31,            !- Field 69
+     For: AllDays,             !- Field 70
+     Until: 6:00,              !- Field 71
+     0,                        !- Field 72
+     Until: 9:00,              !- Field 73
+     1,                        !- Field 74
+     Until: 17:00,             !- Field 75
+     0,                        !- Field 76
+     Until: 24:00,             !- Field 77
+     1,                        !- Field 78
+     Through: 8/31,            !- Field 79
+     For: AllDays,             !- Field 80
+     Until: 6:00,              !- Field 81
+     0,                        !- Field 82
+     Until: 9:00,              !- Field 83
+     1,                        !- Field 84
+     Until: 17:00,             !- Field 85
+     0,                        !- Field 86
+     Until: 24:00,             !- Field 87
+     1,                        !- Field 88
+     Through: 9/30,            !- Field 89
+     For: AllDays,             !- Field 90
+     Until: 6:00,              !- Field 91
+     0,                        !- Field 92
+     Until: 9:00,              !- Field 93
+     1,                        !- Field 94
+     Until: 17:00,             !- Field 95
+     0,                        !- Field 96
+     Until: 23:00,             !- Field 97
+     1,                        !- Field 98
+     Until: 24:00,             !- Field 99
+     0,                        !- Field 100
+     Through: 10/31,           !- Field 101
+     For: AllDays,             !- Field 102
+     Until: 6:00,              !- Field 103
+     0,                        !- Field 104
+     Until: 9:00,              !- Field 105
+     1,                        !- Field 106
+     Until: 17:00,             !- Field 107
+     0,                        !- Field 108
+     Until: 24:00,             !- Field 109
+     1,                        !- Field 110
+     Through: 11/30,           !- Field 111
+     For: AllDays,             !- Field 112
+     Until: 6:00,              !- Field 113
+     0,                        !- Field 114
+     Until: 9:00,              !- Field 115
+     1,                        !- Field 116
+     Until: 17:00,             !- Field 117
+     0,                        !- Field 118
+     Until: 24:00,             !- Field 119
+     1,                        !- Field 120
+     Through: 12/31,           !- Field 121
+     For: AllDays,             !- Field 122
+     Until: 6:00,              !- Field 123
+     0,                        !- Field 124
+     Until: 9:00,              !- Field 125
+     1,                        !- Field 126
+     Until: 17:00,             !- Field 127
+     0,                        !- Field 128
+     Until: 24:00,             !- Field 129
+     1;                        !- Field 130

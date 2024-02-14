@@ -1,0 +1,385 @@
+! Profile: Off
+Schedule:Day:Interval, 11 , Any number, No, 
+24:00,  0;
+
+! Profile: 9H CALF MULCHEN 2022
+Schedule:Day:List, 10019 , Any number, No, 
+60,
+0,
+0,
+0,
+0,
+0,
+0,
+1,
+1,
+1,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+1,
+1,
+1,
+1,
+1,
+1,
+0;
+
+
+
+
+!TODO AQUI
+
+
+
+! Profile: 10H CALF MULCHEN 2022
+Schedule:Day:List, 10020 , Any number, No, 
+60,
+0,
+0,
+0,
+0,
+0,
+0,
+1,
+1,
+1,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+0,
+1,
+1,
+1,
+1,
+1,
+1,
+1;
+
+! Schedule: HORARIO ACT CALF MULCHEN 2O22
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_Jan,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   11,                                            !- Sunday
+   11,                                            !- Monday
+   11,                                            !- Tuesday
+   11,                                            !- Wednesday
+   11,                                            !- Thursday
+   11,                                            !- Friday
+   11,                                            !- Saturday
+   11,                                            !- Holiday
+   11,                                            !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   11,                                            !- CustomDay1
+   11;                                            !- CustomDay2
+
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_Feb,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   11,                                            !- Sunday
+   11,                                            !- Monday
+   11,                                            !- Tuesday
+   11,                                            !- Wednesday
+   11,                                            !- Thursday
+   11,                                            !- Friday
+   11,                                            !- Saturday
+   11,                                            !- Holiday
+   11,                                            !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   11,                                            !- CustomDay1
+   11;                                            !- CustomDay2
+
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_Mar,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   10019,                                         !- Sunday
+   10019,                                         !- Monday
+   10019,                                         !- Tuesday
+   10019,                                         !- Wednesday
+   10019,                                         !- Thursday
+   10019,                                         !- Friday
+   10019,                                         !- Saturday
+   10019,                                         !- Holiday
+   10019,                                         !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   10019,                                         !- CustomDay1
+   10019;                                         !- CustomDay2
+
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_Apr,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   10019,                                         !- Sunday
+   10019,                                         !- Monday
+   10019,                                         !- Tuesday
+   10019,                                         !- Wednesday
+   10019,                                         !- Thursday
+   10019,                                         !- Friday
+   10019,                                         !- Saturday
+   10019,                                         !- Holiday
+   10019,                                         !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   10019,                                         !- CustomDay1
+   10019;                                         !- CustomDay2
+
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_May,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   10020,                                         !- Sunday
+   10020,                                         !- Monday
+   10020,                                         !- Tuesday
+   10020,                                         !- Wednesday
+   10020,                                         !- Thursday
+   10020,                                         !- Friday
+   10020,                                         !- Saturday
+   10020,                                         !- Holiday
+   10020,                                         !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   10020,                                         !- CustomDay1
+   10020;                                         !- CustomDay2
+
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_Jun,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   10020,                                         !- Sunday
+   10020,                                         !- Monday
+   10020,                                         !- Tuesday
+   10020,                                         !- Wednesday
+   10020,                                         !- Thursday
+   10020,                                         !- Friday
+   10020,                                         !- Saturday
+   10020,                                         !- Holiday
+   10020,                                         !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   10020,                                         !- CustomDay1
+   10020;                                         !- CustomDay2
+
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_Jul,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   10020,                                         !- Sunday
+   10020,                                         !- Monday
+   10020,                                         !- Tuesday
+   10020,                                         !- Wednesday
+   10020,                                         !- Thursday
+   10020,                                         !- Friday
+   10020,                                         !- Saturday
+   10020,                                         !- Holiday
+   10020,                                         !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   10020,                                         !- CustomDay1
+   10020;                                         !- CustomDay2
+
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_Aug,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   10020,                                         !- Sunday
+   10020,                                         !- Monday
+   10020,                                         !- Tuesday
+   10020,                                         !- Wednesday
+   10020,                                         !- Thursday
+   10020,                                         !- Friday
+   10020,                                         !- Saturday
+   10020,                                         !- Holiday
+   10020,                                         !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   10020,                                         !- CustomDay1
+   10020;                                         !- CustomDay2
+
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_Sep,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   10019,                                         !- Sunday
+   10019,                                         !- Monday
+   10019,                                         !- Tuesday
+   10019,                                         !- Wednesday
+   10019,                                         !- Thursday
+   10019,                                         !- Friday
+   10019,                                         !- Saturday
+   10019,                                         !- Holiday
+   10019,                                         !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   10019,                                         !- CustomDay1
+   10019;                                         !- CustomDay2
+
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_Oct,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   10020,                                         !- Sunday
+   10020,                                         !- Monday
+   10020,                                         !- Tuesday
+   10020,                                         !- Wednesday
+   10020,                                         !- Thursday
+   10020,                                         !- Friday
+   10020,                                         !- Saturday
+   10020,                                         !- Holiday
+   10020,                                         !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   10020,                                         !- CustomDay1
+   10020;                                         !- CustomDay2
+
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_Nov,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   11,                                            !- Sunday
+   11,                                            !- Monday
+   11,                                            !- Tuesday
+   11,                                            !- Wednesday
+   11,                                            !- Thursday
+   11,                                            !- Friday
+   11,                                            !- Saturday
+   11,                                            !- Holiday
+   11,                                            !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   11,                                            !- CustomDay1
+   11;                                            !- CustomDay2
+
+Schedule:Week:Daily, HORARIO ACT CALF MULCHEN 2O22_Dec,  !- A Schedule:Week:Daily contains 12 DAYSCHEDULES, one for each day type
+   11,                                            !- Sunday
+   11,                                            !- Monday
+   11,                                            !- Tuesday
+   11,                                            !- Wednesday
+   11,                                            !- Thursday
+   11,                                            !- Friday
+   11,                                            !- Saturday
+   11,                                            !- Holiday
+   11,                                            !- SummerDesignDay
+   11,                                            !- WinterDesignDay
+   11,                                            !- CustomDay1
+   11;                                            !- CustomDay2
+
+! Schedule: HORARIO ACT CALF MULCHEN 2O22
+Schedule:Year, HORARIO ACT CALF MULCHEN 2O22, Any number,  !- A SCHEDULE contains from 1 to 18 Schedule:Week:Daily
+   HORARIO ACT CALF MULCHEN 2O22_Jan, 1, 1, 1, 31,!- Schedule:Week:Daily - From date to date
+   HORARIO ACT CALF MULCHEN 2O22_Feb, 2, 1, 2, 28,!- Schedule:Week:Daily - From date to date
+   HORARIO ACT CALF MULCHEN 2O22_Mar, 3, 1, 3, 31,!- Schedule:Week:Daily - From date to date
+   HORARIO ACT CALF MULCHEN 2O22_Apr, 4, 1, 4, 30,!- Schedule:Week:Daily - From date to date
+   HORARIO ACT CALF MULCHEN 2O22_May, 5, 1, 5, 31,!- Schedule:Week:Daily - From date to date
+   HORARIO ACT CALF MULCHEN 2O22_Jun, 6, 1, 6, 30,!- Schedule:Week:Daily - From date to date
+   HORARIO ACT CALF MULCHEN 2O22_Jul, 7, 1, 7, 31,!- Schedule:Week:Daily - From date to date
+   HORARIO ACT CALF MULCHEN 2O22_Aug, 8, 1, 8, 31,!- Schedule:Week:Daily - From date to date
+   HORARIO ACT CALF MULCHEN 2O22_Sep, 9, 1, 9, 30,!- Schedule:Week:Daily - From date to date
+   HORARIO ACT CALF MULCHEN 2O22_Oct, 10, 1, 10, 31,  !- Schedule:Week:Daily - From date to date
+   HORARIO ACT CALF MULCHEN 2O22_Nov, 11, 1, 11, 30,  !- Schedule:Week:Daily - From date to date
+   HORARIO ACT CALF MULCHEN 2O22_Dec, 12, 1, 12, 31;  !- Schedule:Week:Daily - From date to date
+
+
+
+
+
+
+
+
+
+
+! HVAC OBJECTS
+
+AirConditioner:VariableRefrigerantFlow,
+   VRF Outdoor Unit,                                                                                   ! - Component name
+   HORARIO ACT CALF MULCHEN 2O22,                                                                      ! - Availability schedule
+   autosize,                                                                                           ! - Gross rated total cooling Capacity (W)
+   1.000,                                                                                              ! - Gross rated cooling COP
+   -6.00,                                                                                              ! - Minimum outdoor temperature in cooling mode (C)
+   43.00,                                                                                              ! - Maximum outdoor temperature in cooling mode (C)
+   VRFCoolCapFT,                                                                                       ! - Cooling capacity ratio modifier function of low temperature curve
+   VRFCoolCapFTBoundary,                                                                               ! - Cooling capacity ratio boundary curve
+   VRFCoolCapFTHi,                                                                                     ! - Cooling capacity ratio modifier function of high temperature curve
+   VRFCoolEIRFT,                                                                                       ! - Cooling energy input ratio modifier function of low temperature curve
+   VRFCoolEIRFTBoundary,                                                                               ! - Cooling energy input ratio boundary curve
+   VRFCoolEIRFTHi,                                                                                     ! - Cooling energy input ratio modifier function of high temperature curve
+   CoolingEIRLowPLR,                                                                                   ! - Cooling energy input ratio modifier function of low part load ratio curve
+   CoolingEIRHiPLR,                                                                                    ! - Cooling energy input ratio modifier function of high part load ratio curve
+   CoolingCombRatio,                                                                                   ! - Cooling combination ratio correction factor curve
+   VRFCPLFFPLR,                                                                                        ! - Cooling part load fraction correlation curve
+   autosize,                                                                                           ! - Gross rated heating capacity (W)
+   1.00,                                                                                               ! - Rated heating capacity sizing ratio
+   0.800,                                                                                              ! - Gross rated heating COP
+   -20.00,                                                                                             ! - Minimum outdoor temperature in heating mode (C)
+   40.00,                                                                                              ! - Maximum outdoor temperature in heating mode (C)
+   VRFHeatCapFT,                                                                                       ! - Heating capacity ratio modifier function of low temperature curve
+   VRFHeatCapFTBoundary,                                                                               ! - Heating capacity ratio boundary curve
+   VRFHeatCapFTHi,                                                                                     ! - Heating capacity ratio modifier function of high temperature curve
+   VRFHeatEIRFT,                                                                                       ! - Heating energy input ratio modifier function of low temperature curve
+   VRFHeatEIRFTBoundary,                                                                               ! - Heating energy input ratio boundary curve
+   VRFHeatEIRFTHi,                                                                                     ! - Heating energy input ratio modifier function of high temperature curve
+   WetBulbTemperature,                                                                                 ! - Heating performance curve outdoor temperature type
+   HeatingEIRLowPLR,                                                                                   ! - Heating energy input ratio modifier function of low part load ratio curve
+   HeatingEIRHiPLR,                                                                                    ! - Heating energy input ratio modifier function of high part load ratio curve
+   HeatingCombRatio,                                                                                   ! - Heating combination ratio correction factor curve
+   VRFCPLFFPLR,                                                                                        ! - Heating part load fraction correlation curve
+   0.20,                                                                                               ! - Minimum heat pump part load ratio
+   ,                                                                                                   ! - Zone name for master thermostat location
+   LoadPriority,                                                                                       ! - Master thermostat priority control type
+   ,                                                                                                   ! - Thermostat priority schedule
+   VRF Outdoor Unit Zone List,                                                                         ! - Zone terminal unit list
+   Yes,                                                                                                ! - Heat pump waste heat recovery
+   50.00,                                                                                              ! - Equivalent piping length used for piping correction factor in cooling mode (m)
+   15.00,                                                                                              ! - Vertical height used for piping correction factor (m)
+   CoolingLengthCorrectionFactor,                                                                      ! - Piping correction factor for length in cooling mode curve
+   -0.00,                                                                                              ! - Piping correction factor for height in cooling mode coefficient
+   50.00,                                                                                              ! - Equivalent piping length used for piping correction factor in heating mode
+   VRF Piping Correction Factor for Length in Heating Mode,                                            ! - Piping correction factor for length in heating mode curve
+   0.0000,                                                                                             ! - Piping correction factor for height in heating mode coefficient
+   15.000,                                                                                             ! - Crankcase heater power per compressor (W)
+   2,                                                                                                  ! - Number of compressors
+   0.5000,                                                                                             ! - Ratio of compressor size to total compressor capacity
+   5.00,                                                                                               ! - Maximum outdoor dry-bulb temperature for crankcase heater
+   Resistive,                                                                                          ! - Defrost strategy
+   Timed,                                                                                              ! - Defrost control
+   ,                                                                                                   ! - Defrost energy input ratio modifier function of temperature curve
+   0.0000,                                                                                             ! - Defrost time period fraction
+   autosize,                                                                                           ! - Resistive defrost heater capacity (W)
+   5.00,                                                                                               ! - Maximum outdoor dry-bulb temperature for defrost operation (C)
+   AirCooled,                                                                                          ! - Condenser type
+   VRF Outdoor Unit Outdoor Air Node,                                                                  ! - Condenser inlet node name
+   ,                                                                                                   ! - Condenser outlet node name
+   autosize,                                                                                           ! - Water condenser volume flow rate (m3/s)
+   0.9000,                                                                                             ! - Evaporative condenser effectiveness
+   autosize,                                                                                           ! - Evaporative condenser air flow rate (m3/s)
+   autosize,                                                                                           ! - Evaporative condenser pump rated power consumption (W)
+   ,                                                                                                   ! - Supply water storage tank
+   0.000,                                                                                              ! - Basin heater capacity (W)
+   2.00,                                                                                               ! - Basin heater setpoint temperature (C)
+   On 24/7,                                                                                            ! - Basin heater operating schedule
+   Electricity,                                                                                        ! - Fuel type
+   -10.00,                                                                                             ! - Minimum outdoor temperature in heat recovery mode (C)
+   40.00,                                                                                              ! - Maximum outdoor temperature in heat recovery mode (C)
+   VRF Heat Recovery Cooling Capacity Modifier,                                                        ! - Heat recovery cooling capacity modifier curve
+   0.50,                                                                                               ! - Initial heat recovery cooling capacity fraction
+   0.1500,                                                                                             ! - Heat recovery cooling capacity time constant
+   VRF Heat Recovery Cooling Energy Modifier,                                                          ! - Heat recovery cooling energy modifier curve
+   1.0000,                                                                                             ! - Initial heat recovery cooling energy fraction
+   0.0000,                                                                                             ! - Heat recovery cooling energy time constant
+   VRF Heat Recovery Heating Capacity Modifier,                                                        ! - Heat recovery heating capacity modifier curve
+   1.0000,                                                                                             ! - Initial heat recovery heating capacity fraction
+   0.1500,                                                                                             ! - Heat recovery heating capacity time constant
+   VRF Heat Recovery Heating Energy Modifier,                                                          ! - Heat recovery heating energy modifier curve
+   1.0000,                                                                                             ! - Initial heat recovery heating energy fraction
+   0.0000;                                                                                             ! - Heat recovery heating energy time constant
+
+
+ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,
+   BLOQUE1:SALON VRF Indoor Unit,                                                                      ! - Component name
+   HORARIO ACT CALF MULCHEN 2O22,                                                                      ! - Availability schedule
+   BLOQUE1:SALON VRF Indoor Unit Return,                                                               ! - Air inlet node to heat pump; also a zone exhaust node
+   BLOQUE1:SALON VRF Indoor Unit Supply Outlet,                                                        ! - Air outlet node to heat pump; also a zone inlet node
+   autosize,                                                                                           ! - Supply air flow rate during cooling operation (m3/s)
+   autosize,                                                                                           ! - Supply air flow rate when no cooling is needed (m3/s)
+   autosize,                                                                                           ! - Supply air flow rate during heating operation (m3/s)
+   autosize,                                                                                           ! - Supply air flow rate when no heating is needed (m3/s)
+   0.0,                                                                                                ! - Outdoor air flow rate during cooling operation (m3/s)
+   0.0,                                                                                                ! - Outdoor air flow rate during heating operation (m3/s)
+   0.0,                                                                                                ! - Outdoor air flow rate when no heating or cooling is needed (m3/s)
+   On 24/7,                                                                                            ! - Supply air fan operating mode schedule
+   DrawThrough,                                                                                        ! - Fan placement
+   Fan:ConstantVolume,                                                                                 ! - Type of supply fan
+   BLOQUE1:SALON VRF Indoor Unit Supply Fan,                                                           ! - Name of supply fan
+   ,                                                                                                   ! - Outdoor air mixer object type
+   ,                                                                                                   ! - Outdoor air mixer name
+   Coil:Cooling:DX:VariableRefrigerantFlow,                                                            ! - DX cooling coil object type
+   BLOQUE1:SALON VRF Indoor Unit DX Cooling Coil,                                                      ! - Name of DX cooling coil
+   Coil:Heating:DX:VariableRefrigerantFlow,                                                            ! - DX heating coil object type
+   BLOQUE1:SALON VRF Indoor Unit DX Heating Coil,                                                      ! - Name of DX heating coil
+   30.0000,                                                                                            ! - Zone terminal unit on parasitic electric energy use (W)
+   20.0000,                                                                                            ! - Zone terminal unit off parasitic electric energy use (W)
+   ,                                                                                                   ! - Rated total heating capacity sizing ratio (W/W)
+   ;                                                                                                   ! - Availability manager list name
+
+Fan:ConstantVolume,
+   BLOQUE1:SALON VRF Indoor Unit Supply Fan,                                                           ! - Component name
+   HORARIO ACT CALF MULCHEN 2O22,                                                                      ! - Availability schedule
+   0.700000,                                                                                           ! - Fan efficiency
+   100.00,                                                                                             ! - Pressure rise (Pa)
+   autosize,                                                                                           ! - Max flow rate (m3/s)
+   0.900000,                                                                                           ! - Motor efficiency
+   1.00,                                                                                               ! - Motor in air stream fraction
+   BLOQUE1:SALON VRF Indoor Unit DX Heating Coil Outlet,                                               ! - Air inlet node name
+   BLOQUE1:SALON VRF Indoor Unit Supply Outlet,                                                        ! - Air outlet node name
+   General;                                                                                            ! - End Use Sub-Category
+
