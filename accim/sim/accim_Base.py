@@ -246,3 +246,23 @@ def setPMVsetpoint(self, verboseMode: bool = True):
             )
             if verboseMode:
                 print(f'{zone} Dual Comfort Setpoint ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint has been added')
+
+def addControlFilesObjects(self, verboseMode: bool = True):
+
+    outputcontrolfiles = [i for i in self.idf1.idfobjects['OutputControl:Files']]
+
+    if len(outputcontrolfiles) == 0:
+        self.idf1.newidfobject(
+            'OutputControl:Files',
+            Output_CSV='Yes',
+            Output_MTR='Yes',
+            Output_ESO='Yes'
+        )
+        if verboseMode:
+            print(f'Added - OutputControl:Files object')
+    else:
+        outputcontrolfiles[0].Output_CSV = 'Yes'
+        outputcontrolfiles[0].Output_MTR = 'Yes'
+        outputcontrolfiles[0].Output_ESO = 'Yes'
+        if verboseMode:
+            print(f'Not added - OutputControl:Files object - Output CSV, MTR and ESO fields set to Yes')

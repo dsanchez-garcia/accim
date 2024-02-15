@@ -19,7 +19,8 @@ class accimJob():
     from accim.sim.accim_Base import \
         setComfFieldsPeople, \
         saveaccim, \
-        setPMVsetpoint
+        setPMVsetpoint, \
+        addControlFilesObjects
     from accim.sim.accim_Base_EMS import \
         addEMSActuatorsBase, \
         addEMSOutputVariableBase, \

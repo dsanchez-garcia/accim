@@ -498,6 +498,8 @@ class addAccis:
 
             z.addEMSPCMBase(verboseMode=verboseMode)
 
+            z.addControlFilesObjects(verboseMode=verboseMode)
+
             if Output_keep_existing == 'true':
                 Output_keep_existing = True
             elif Output_keep_existing == 'false':
@@ -509,7 +511,7 @@ class addAccis:
 
             if Output_type.lower() == 'simplified':
                 z.addOutputVariablesSimplified(
-                    Output_freqs=Output_freqs,
+                    Outputs_freq=Output_freqs,
                     TempCtrl=TempCtrl,
                     verboseMode=verboseMode
                 )

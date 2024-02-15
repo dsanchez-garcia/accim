@@ -298,7 +298,7 @@ def addAccis(
 
     if Output_type.lower() == 'simplified':
         z.addOutputVariablesSimplified(
-            Output_freqs=Output_freqs,
+            Outputs_freq=Output_freqs,
             TempCtrl=TempCtrl,
             verboseMode=verboseMode
         )
@@ -332,6 +332,8 @@ def addAccis(
         )
 
     z.removeDuplicatedOutputVariables()
+
+    z.addControlFilesObjects(verboseMode=verboseMode)
 
     # if Output_gen_dataframe:
     #     z.genOutputDataframe(idf_filename=idf.idfname.split('.idf')[0])

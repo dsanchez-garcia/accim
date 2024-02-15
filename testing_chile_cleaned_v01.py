@@ -7,7 +7,7 @@ def apply_heating_activation_time_sch(idf_path: str):
 
     sch_comp = [i.Name for i in building.idfobjects['SCHEDULE:COMPACT']]
 
-    if 'Heating_activation_time_chile' in sch_comp:
+    if 'Heating_activation_time_chile' not in sch_comp:
         building.newidfobject(
             key='SCHEDULE:COMPACT',
             Name='Heating_activation_time_chile',
@@ -143,9 +143,8 @@ def apply_heating_activation_time_sch(idf_path: str):
             Field_129=' Until: 24:00 ',
             Field_130='1'
         )
+        new_idf = idf_path.split('.idf')[0] + '_heat_act_time_added.idf'
+        building.savecopy(new_idf)
     else:
         print('Heating_activation_time_chile already was in the model.')
 
-
-
-    building.save()
