@@ -1,5 +1,4 @@
 from accim.sim.accis import addAccis
-from testing_chile_cleaned_v01 import apply_heating_activation_time_sch
 
 idfpath = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940.idf'
 
@@ -36,7 +35,6 @@ x = addAccis(
 
 from besos import eplus_funcs
 from besos import eppy_funcs
-import os
 
 # new_idf = [i for i in os.listdir() if i.endswith('.idf') and idfpath not in i][0]
 new_idf = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
