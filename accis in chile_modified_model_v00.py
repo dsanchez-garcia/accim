@@ -2,6 +2,7 @@ from accim.sim.accis import addAccis
 from accim.utils import amend_idf_version_from_dsb
 from accim.sim.chile_funcs import apply_heating_activation_time_sch
 
+##
 # idfpath = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940.idf'
 # idfpath = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940_heat_act_time_added.idf'
 # idfpath = 'caso_01.1_3.idf'
@@ -20,11 +21,11 @@ x = addAccis(
     SupplyAirTempInputMethod='temperature difference',
     Output_keep_existing=False,
     Output_type='standard',
-    Output_freqs=['timestep'],
+    Output_freqs=['timestep', 'monthly', 'runperiod'],
     EnergyPlus_version='9.4',
     TempCtrl='temp',
-    ComfStand=[1],
-    CAT=[3],
+    ComfStand=[21],
+    CAT=[80],
     ComfMod=[3],
     HVACmode=[0],
     VentCtrl=[0],
@@ -36,6 +37,8 @@ x = addAccis(
     ASTtol_end_input=0.1,
     confirmGen=True,
     VRFschedule='Heating_activation_time_chile',
+    eer=1,
+    cop=0.8,
 )
 
 ##
@@ -50,12 +53,13 @@ from besos import eppy_funcs
 # new_idf = 'testmodel_chile_2_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
 # new_idf = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
 # new_idf = 'testmodel_chile_2_lightweight_uninsulated_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
-new_idf = 'COMB 03_mod_no-door_lightweight_uninsulated_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
+# new_idf = 'COMB 03_mod_no-door_lightweight_uninsulated_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
+new_idf = 'COMB 03_mod_no-door_lightweight_uninsulated_heat_act_time_added[CS_CHL Perez-Fargallo[CA_80[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
 
 building = eppy_funcs.get_building(new_idf)
 
 eplus_funcs.run_energyplus(
     building_path=new_idf,
-    epw='Mulchen-hour.epw',
+    epw='CHL_Concepcion.856820_IWEC.epw',
     out_dir='temp_sim_outputs'
 )
