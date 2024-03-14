@@ -3,11 +3,13 @@
 !TODO:
 !Parametrizar el vent opening factor; ahora mismo es 1 o 0, y se podria parametrizar en funcion de la velocidad maxima del viento; estudiar con cuidado porque seria una variable para zada zona aplicada a las ventanas
 !Permitir la seleccion del modelo estatico aplicado cuando no se cumple aplicabilidad del adaptativo como una segunda variable
+todo añadir argumentos para modificar los modelos de confort
 
 !PENDIENTE DE ARREGLAR:
 ! HAY QUE MODIFICAR EL SCRIPT DE PYTHON PARA QUE AÑADA UN FORSCRIPT_SCHEDULE PARA CADA ZONA, PARA QUE PUEDA ACTIVARSE O DESACTIVARSE EL HVAC INDEPENDIENTEMENTE DE LAS OTRAS.
 ! ADEMÁS HABRÁ QUE HACER UN FOR LOOP PARA ASIGNAR A CADA ZONA SU DUALSETPOINTTEMPERATURE, QUE SERÁ EL FORSCRIPT DE LA ZONA CORRESPONDIENTE
 ! HAY QUE COMPROBAR QUE EL PROGRAMA ApplyAST_MixedMode FUNCIONA CORRECTAMENTE DESPUÉS DE ESOS CAMBIOS. QUIZÁS HAYA QUE ASIGNAR EL FORSCRIPT AL AST EN UN PROGRAMA PARALELO CON LoopZoneIDFName
+
 
 
 !Para que funcione correctamente:

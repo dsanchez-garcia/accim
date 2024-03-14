@@ -184,17 +184,21 @@ class rename_epw_files:
 
         epw_df['EPW_mod_filtered'] = epw_df['EPW_names'].str.replace('-', '_').str.replace('.', '_').str.split('_')
 
-        rcpdict = {
+        future_scenario_dict = {
             'Present': ['Presente', 'Actual', 'Present', 'Current'],
             'RCP26': ['RCP2.6', 'RCP26', 'RCP2.5', 'RCP25'],
             'RCP45': ['RCP4.5', 'RCP45'],
             'RCP60': ['RCP6.0', 'RCP60'],
-            'RCP85': ['RCP8.5', 'RCP85']
+            'RCP85': ['RCP8.5', 'RCP85'],
+            'SSP126': ['ssp126'],
+            'SSP245': ['ssp245'],
+            'SSP370': ['ssp370'],
+            'SSP585': ['ssp585'],
         }
 
         for i in range(len(epw_df['EPW_names'])):
-            for j in rcpdict:
-                for k in rcpdict[j]:
+            for j in future_scenario_dict:
+                for k in future_scenario_dict[j]:
                     if k.lower() in epw_df.loc[i, 'EPW_names'].lower():
                         epw_df.loc[i, 'EPW_scenario'] = j
                         try:
@@ -202,21 +206,21 @@ class rename_epw_files:
                         except IndexError:
                             continue
 
-        rcp_not_found_list = []
+        future_scenario_not_found_list = []
 
         for i in range(len(epw_df['EPW_names'])):
             try:
                 if type(epw_df.loc[i, 'EPW_scenario']) is float:
                     epw_df.loc[i, 'EPW_scenario'] = 'Present'
-                    rcp_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
+                    future_scenario_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
             except KeyError:
                 epw_df.loc[i, 'EPW_scenario'] = 'Present'
-                rcp_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
+                future_scenario_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
 
-        if len(rcp_not_found_list) > 0:
-            print('Since no match has been found between RCP scenarios and EPW file name, '
+        if len(future_scenario_not_found_list) > 0:
+            print('Since no match has been found between RCP or SSP scenarios and EPW file name, '
                   'Present scenario has been assigned to the following EPW files:')
-            print(*rcp_not_found_list, sep='\n')
+            print(*future_scenario_not_found_list, sep='\n')
 
         for i in range(len(epw_df['EPW_names'])):
             for j in range(2000, 2101, 10):
@@ -226,7 +230,7 @@ class rename_epw_files:
                         epw_df.loc[i, 'EPW_mod_filtered'].remove(str(j))
                     except ValueError:
                         continue
-                        # print('Year has nt ben identified.')
+                        # print('Year has not been identified.')
 
         for i in range(len(epw_df['EPW_names'])):
             if epw_df.loc[i, 'EPW_scenario'] == 'Present':
@@ -244,7 +248,7 @@ class rename_epw_files:
                 epw_df.loc[i, 'EPW_year'] = 'Present'
                 year_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
         if len(year_not_found_list) > 0:
-            print('Since no match has been found between RCP scenario Year and EPW file name, '
+            print('Since no match has been found between RCP or SSP scenario Year and EPW file name, '
                   'Present year has been assigned to the following EPW files:')
             print(*year_not_found_list, sep='\n')
 
