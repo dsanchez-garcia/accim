@@ -447,6 +447,14 @@ def inputData(self, ScriptType: str = None):
             print('          The setpoint accuracy number is not correct. It must be a number greater than 0. Please enter the number again.')
             self.SetpointAcc = float(input('         Enter the setpoint accuracy number (any number greater than 0): '))
 
+    self.CATcoolOffset = float(input('\nEnter the number for the CAT cooling offset modifier (value will be summed to the ACST): '))
+    while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+        self.CATcoolOffset = float(input('      Enter the number for the CAT cooling offset modifier (value will be summed to the ACST): '))
+
+    self.CATheatOffset = float(input('\nEnter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
+    while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+        self.CATheatOffset = float(input('      Enter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
+
     if (any(i in [1, 2] for i in self.ComfStand_List) and 0 in self.ComfMod_List) or 22 in self.ComfStand_List:
         self.CoolSeasonStart = list(
             int(num)
@@ -704,6 +712,8 @@ def inputData(self, ScriptType: str = None):
     self.user_input_arguments = {
         'ComfStand': self.ComfStand_List,
         'CAT': self.CAT_List,
+        'CATcoolOffset': self.CATcoolOffset,
+        'CATheatOffset': self.CATheatOffset,
         'ComfMod': self.ComfMod_List,
         'SetpointAcc': self.SetpointAcc,
         'CoolSeasonStart': self.CoolSeasonStart,
@@ -723,29 +733,31 @@ def inputData(self, ScriptType: str = None):
 
 
 def genIDF(self,
-           ScriptType: str = None,
-           TempCtrl: str = None,
-           ComfStand=None,
-           CAT=None,
-           ComfMod=None,
-           SetpointAcc=10000,
-           CoolSeasonStart=121,
-           CoolSeasonEnd=274,
-           HVACmode=None,
-           VentCtrl=None,
-           MaxTempDiffVOF=20,
-           MinTempDiffVOF=0.5,
-           MultiplierVOF=0.25,
-           VSToffset=[0],
-           MinOToffset=[50],
-           MaxWindSpeed=[50],
-           ASTtol_start=0.1,
-           ASTtol_end_input=0.1,
-           ASTtol_steps=0.1,
-           NameSuffix='',
-           verboseMode: bool = True,
-           confirmGen: bool = None
-           ):
+    ScriptType: str = None,
+    TempCtrl: str = None,
+    ComfStand=None,
+    CAT=None,
+    CATcoolOffset=0,
+    CATheatOffset=0,
+    ComfMod=None,
+    SetpointAcc=10000,
+    CoolSeasonStart=121,
+    CoolSeasonEnd=274,
+    HVACmode=None,
+    VentCtrl=None,
+    MaxTempDiffVOF=20,
+    MinTempDiffVOF=0.5,
+    MultiplierVOF=0.25,
+    VSToffset=[0],
+    MinOToffset=[50],
+    MaxWindSpeed=[50],
+    ASTtol_start=0.1,
+    ASTtol_end_input=0.1,
+    ASTtol_steps=0.1,
+    NameSuffix='',
+    verboseMode: bool = True,
+    confirmGen: bool = None
+    ):
     """Generate IDFs.
 
     :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
@@ -753,6 +765,8 @@ def genIDF(self,
     :param TempCtrl: Inherited from class ``accim.sim.accis.addAccis``
     :param ComfStand: Inherited from class ``accim.sim.accis.addAccis``
     :param CAT: Inherited from class ``accim.sim.accis.addAccis``
+    :param CATcoolOffset: Inherited from class ``accim.sim.accis.addAccis``
+    :param CATheatOffset: Inherited from class ``accim.sim.accis.addAccis``
     :param ComfMod: Inherited from :class:``accim.sim.accis.addAccis``
     :param SetpointAcc: Inherited from :class:``accim.sim.accis.addAccis``
     :param CoolSeasonStart: Inherited from :class:``accim.sim.accis.addAccis``
@@ -783,6 +797,8 @@ def genIDF(self,
 
     arguments = (ComfStand is None,
                  CAT is None,
+                 CATcoolOffset == 0,
+                 CATheatOffset == 0,
                  ComfMod is None,
                  SetpointAcc == 10000,
                  CoolSeasonStart == 121,
@@ -812,6 +828,8 @@ def genIDF(self,
         self.CAT_List = CAT
         self.ComfMod_List = ComfMod
         self.SetpointAcc = SetpointAcc
+        self.CATcoolOffset = CATcoolOffset
+        self.CATheatOffset = CATheatOffset
         
         if type(CoolSeasonStart) is str:
             CoolSeasonStart = list(int(num) for num in CoolSeasonStart.split('/'))
@@ -1132,6 +1150,8 @@ def genIDF(self,
             # print(filename)
             SetInputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
                              program.Name == 'SetInputData'])
+            ApplyCAT = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
+                             program.Name == 'ApplyCAT'])
             SetVOFinputData = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
                              program.Name == 'SetVOFinputData'])
             SetAST = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
@@ -1151,6 +1171,8 @@ def genIDF(self,
                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
                                     SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
                                     SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
+                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
                                     SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                     outputname = (
                                             filename
@@ -1195,6 +1217,8 @@ def genIDF(self,
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
                                                     SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
                                                     SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
+                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
                                                     SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                                     outputname = (
                                                             filename
@@ -1241,6 +1265,8 @@ def genIDF(self,
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
                                                     SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
                                                     SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
+                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
                                                     SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                                     outputname = (
                                                             filename
@@ -1287,6 +1313,9 @@ def genIDF(self,
                                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
                                                                     SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
                                                                     SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
+                                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
+
                                                                     SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                                                     outputname = (
                                                                             filename
@@ -1336,6 +1365,8 @@ def genIDF(self,
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
                                                     SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
                                                     SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
+                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
                                                     SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                                     outputname = (
                                                             filename
@@ -1380,6 +1411,8 @@ def genIDF(self,
                                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
                                                                     SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
                                                                     SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
+                                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
                                                                     SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
                                                                     outputname = (
                                                                             filename

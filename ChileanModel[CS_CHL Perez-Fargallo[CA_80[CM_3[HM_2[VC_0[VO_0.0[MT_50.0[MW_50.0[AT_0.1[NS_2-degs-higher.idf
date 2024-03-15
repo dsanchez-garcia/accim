@@ -12328,161 +12328,163 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     ApplyCAT,                 !- Name
-    if (ComfStand == 1 ),     !- Program Line 1
-    if (CAT == 1),            !- Program Line 2
-    set ACSToffset = 2,       !- Program Line 3
-    set AHSToffset = -3,      !- Program Line 4
-    elseif (CAT == 2),        !- Program Line 5
-    set ACSToffset = 3,       !- Program Line 6
-    set AHSToffset = -4,      !- Program Line 7
-    elseif (CAT == 3),        !- Program Line 8
-    set ACSToffset = 4,       !- Program Line 9
-    set AHSToffset = -5,      !- Program Line 10
-    endif,                    !- Program Line 11
-    elseif ComfStand == 2 || ComfStand == 3 || ComfStand == 11,    !- Program Line 12
-    if (CAT == 90),           !- Program Line 13
-    set ACSToffset = 2.5,     !- Program Line 14
-    set AHSToffset = -2.5,    !- Program Line 15
-    elseif (CAT == 80),       !- Program Line 16
-    set ACSToffset = 3.5,     !- Program Line 17
-    set AHSToffset = -3.5,    !- Program Line 18
-    endif,                    !- Program Line 19
-    elseif (ComfStand == 4 ) || (ComfStand == 5) || (ComfStand == 6),    !- Program Line 20
-    set ACSToffset = 0,       !- Program Line 21
-    set AHSToffset = 0,       !- Program Line 22
-    elseif (ComfStand == 7),    !- Program Line 23
-    if (CAT == 90),           !- Program Line 24
-    set ACSToffset = 2.4,     !- Program Line 25
-    set AHSToffset = -2.4,    !- Program Line 26
-    elseif (CAT == 85),       !- Program Line 27
-    set ACSToffset = 3.3,     !- Program Line 28
-    set AHSToffset = -3.3,    !- Program Line 29
-    elseif (CAT == 80),       !- Program Line 30
-    set ACSToffset = 4.1,     !- Program Line 31
-    set AHSToffset = -4.1,    !- Program Line 32
-    endif,                    !- Program Line 33
-    elseif (ComfStand == 8),    !- Program Line 34
-    if (CAT == 90),           !- Program Line 35
-    set ACSToffset = 3.5,     !- Program Line 36
-    set AHSToffset = -3.5,    !- Program Line 37
-    elseif (CAT == 85),       !- Program Line 38
-    set ACSToffset = 4.8,     !- Program Line 39
-    set AHSToffset = -4.8,    !- Program Line 40
-    elseif (CAT == 80),       !- Program Line 41
-    set ACSToffset = 5.9,     !- Program Line 42
-    set AHSToffset = -5.9,    !- Program Line 43
-    endif,                    !- Program Line 44
-    elseif ComfStand == 9 || ComfStand == 10,    !- Program Line 45
-    if (CAT == 90),           !- Program Line 46
-    set ACSToffset = 2.15,    !- Program Line 47
-    set AHSToffset = -2.15,    !- Program Line 48
-    elseif (CAT == 80),       !- Program Line 49
-    set ACSToffset = 3.6,     !- Program Line 50
-    set AHSToffset = -3.6,    !- Program Line 51
-    endif,                    !- Program Line 52
-    elseif ComfStand == 12,    !- Program Line 53
-    if (CAT == 90),           !- Program Line 54
-    set ACSToffset = 1.7,     !- Program Line 55
-    set AHSToffset = -1.7,    !- Program Line 56
-    elseif (CAT == 80),       !- Program Line 57
-    set ACSToffset = 2.89,    !- Program Line 58
-    set AHSToffset = -2.89,    !- Program Line 59
-    endif,                    !- Program Line 60
-    elseif ComfStand == 13,    !- Program Line 61
-    if (CAT == 90),           !- Program Line 62
-    set ACSToffset = 3.45,    !- Program Line 63
-    set AHSToffset = -3.45,    !- Program Line 64
-    elseif (CAT == 80),       !- Program Line 65
-    set ACSToffset = 4.55,    !- Program Line 66
-    set AHSToffset = -4.55,    !- Program Line 67
-    endif,                    !- Program Line 68
-    elseif ComfStand == 14,    !- Program Line 69
-    if (CAT == 90),           !- Program Line 70
-    set ACSToffset = 3.5,     !- Program Line 71
-    set AHSToffset = -3.5,    !- Program Line 72
-    elseif (CAT == 80),       !- Program Line 73
-    set ACSToffset = 4.5,     !- Program Line 74
-    set AHSToffset = -4.5,    !- Program Line 75
-    endif,                    !- Program Line 76
-    elseif ComfStand == 15,    !- Program Line 77
-    if (CAT == 90),           !- Program Line 78
-    set ACSToffset = 2.8,     !- Program Line 79
-    set AHSToffset = -2.8,    !- Program Line 80
-    elseif (CAT == 80),       !- Program Line 81
-    set ACSToffset = 3.8,     !- Program Line 82
-    set AHSToffset = -3.8,    !- Program Line 83
-    endif,                    !- Program Line 84
-    elseif ComfStand == 16,    !- Program Line 85
-    if (CAT == 90),           !- Program Line 86
-    set ACSToffset = 1.1,     !- Program Line 87
-    set AHSToffset = -1.1,    !- Program Line 88
-    elseif (CAT == 80),       !- Program Line 89
-    set ACSToffset = 2.1,     !- Program Line 90
-    set AHSToffset = -2.1,    !- Program Line 91
-    endif,                    !- Program Line 92
-    elseif (ComfStand == 17) || (ComfStand == 18),    !- Program Line 93
-    if CAT == 90,             !- Program Line 94
-    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 95
-    set ACSToffset = 2,       !- Program Line 96
-    set AHSToffset = -2,      !- Program Line 97
-    else,                     !- Program Line 98
-    set ACSToffset = 2,       !- Program Line 99
-    set AHSToffset = -2,      !- Program Line 100
-    endif,                    !- Program Line 101
-    elseif CAT == 80,         !- Program Line 102
-    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 103
-    set ACSToffset = 3,       !- Program Line 104
-    set AHSToffset = -3,      !- Program Line 105
-    else,                     !- Program Line 106
-    set ACSToffset = 3,       !- Program Line 107
-    set AHSToffset = -3,      !- Program Line 108
-    endif,                    !- Program Line 109
-    endif,                    !- Program Line 110
-    elseif ComfStand == 19,    !- Program Line 111
-    if CAT == 90,             !- Program Line 112
-    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 113
-    set ACSToffset = 2,       !- Program Line 114
-    set AHSToffset = -2,      !- Program Line 115
-    else,                     !- Program Line 116
-    set ACSToffset = 1,       !- Program Line 117
-    set AHSToffset = -1,      !- Program Line 118
-    endif,                    !- Program Line 119
-    elseif CAT == 80,         !- Program Line 120
-    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 121
-    set ACSToffset = 3,       !- Program Line 122
-    set AHSToffset = -3,      !- Program Line 123
-    else,                     !- Program Line 124
-    set ACSToffset = 2,       !- Program Line 125
-    set AHSToffset = -2,      !- Program Line 126
-    endif,                    !- Program Line 127
-    endif,                    !- Program Line 128
-    elseif ComfStand == 20,    !- Program Line 129
-    if CAT == 90,             !- Program Line 130
-    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 131
-    set ACSToffset = 2,       !- Program Line 132
-    set AHSToffset = -2,      !- Program Line 133
-    else,                     !- Program Line 134
-    set ACSToffset = 5,       !- Program Line 135
-    set AHSToffset = -5,      !- Program Line 136
-    endif,                    !- Program Line 137
-    elseif CAT == 80,         !- Program Line 138
-    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 139
-    set ACSToffset = 3,       !- Program Line 140
-    set AHSToffset = -3,      !- Program Line 141
-    else,                     !- Program Line 142
-    set ACSToffset = 6,       !- Program Line 143
-    set AHSToffset = -6,      !- Program Line 144
-    endif,                    !- Program Line 145
-    endif,                    !- Program Line 146
-    elseif ComfStand == 21,    !- Program Line 147
-    if (CAT == 90),           !- Program Line 148
-    set ACSToffset = 2.5,     !- Program Line 149
-    set AHSToffset = -2.5,    !- Program Line 150
-    elseif (CAT == 80),       !- Program Line 151
-    set ACSToffset = 4,       !- Program Line 152
-    set AHSToffset = -4,      !- Program Line 153
-    endif,                    !- Program Line 154
-    endif;                    !- Program Line 155
+    set CATcoolOffset = 2,    !- Program Line 1
+    set CATheatOffset = 2,    !- Program Line 2
+    if (ComfStand == 1 ),     !- Program Line 3
+    if (CAT == 1),            !- Program Line 4
+    set ACSToffset = 2+CATcoolOffset,    !- Program Line 5
+    set AHSToffset = -3+CATheatOffset,    !- Program Line 6
+    elseif (CAT == 2),        !- Program Line 7
+    set ACSToffset = 3+CATcoolOffset,    !- Program Line 8
+    set AHSToffset = -4+CATheatOffset,    !- Program Line 9
+    elseif (CAT == 3),        !- Program Line 10
+    set ACSToffset = 4+CATcoolOffset,    !- Program Line 11
+    set AHSToffset = -5+CATheatOffset,    !- Program Line 12
+    endif,                    !- Program Line 13
+    elseif ComfStand == 2 || ComfStand == 3 || ComfStand == 11,    !- Program Line 14
+    if (CAT == 90),           !- Program Line 15
+    set ACSToffset = 2.5+CATcoolOffset,    !- Program Line 16
+    set AHSToffset = -2.5+CATheatOffset,    !- Program Line 17
+    elseif (CAT == 80),       !- Program Line 18
+    set ACSToffset = 3.5+CATcoolOffset,    !- Program Line 19
+    set AHSToffset = -3.5+CATheatOffset,    !- Program Line 20
+    endif,                    !- Program Line 21
+    elseif (ComfStand == 4 ) || (ComfStand == 5) || (ComfStand == 6),    !- Program Line 22
+    set ACSToffset = 0+CATcoolOffset,    !- Program Line 23
+    set AHSToffset = 0+CATheatOffset,    !- Program Line 24
+    elseif (ComfStand == 7),    !- Program Line 25
+    if (CAT == 90),           !- Program Line 26
+    set ACSToffset = 2.4+CATcoolOffset,    !- Program Line 27
+    set AHSToffset = -2.4+CATheatOffset,    !- Program Line 28
+    elseif (CAT == 85),       !- Program Line 29
+    set ACSToffset = 3.3+CATcoolOffset,    !- Program Line 30
+    set AHSToffset = -3.3+CATheatOffset,    !- Program Line 31
+    elseif (CAT == 80),       !- Program Line 32
+    set ACSToffset = 4.1+CATcoolOffset,    !- Program Line 33
+    set AHSToffset = -4.1+CATheatOffset,    !- Program Line 34
+    endif,                    !- Program Line 35
+    elseif (ComfStand == 8),    !- Program Line 36
+    if (CAT == 90),           !- Program Line 37
+    set ACSToffset = 3.5+CATcoolOffset,    !- Program Line 38
+    set AHSToffset = -3.5+CATheatOffset,    !- Program Line 39
+    elseif (CAT == 85),       !- Program Line 40
+    set ACSToffset = 4.8+CATcoolOffset,    !- Program Line 41
+    set AHSToffset = -4.8+CATheatOffset,    !- Program Line 42
+    elseif (CAT == 80),       !- Program Line 43
+    set ACSToffset = 5.9+CATcoolOffset,    !- Program Line 44
+    set AHSToffset = -5.9+CATheatOffset,    !- Program Line 45
+    endif,                    !- Program Line 46
+    elseif ComfStand == 9 || ComfStand == 10,    !- Program Line 47
+    if (CAT == 90),           !- Program Line 48
+    set ACSToffset = 2.15+CATcoolOffset,    !- Program Line 49
+    set AHSToffset = -2.15+CATheatOffset,    !- Program Line 50
+    elseif (CAT == 80),       !- Program Line 51
+    set ACSToffset = 3.6+CATcoolOffset,    !- Program Line 52
+    set AHSToffset = -3.6+CATheatOffset,    !- Program Line 53
+    endif,                    !- Program Line 54
+    elseif ComfStand == 12,    !- Program Line 55
+    if (CAT == 90),           !- Program Line 56
+    set ACSToffset = 1.7+CATcoolOffset,    !- Program Line 57
+    set AHSToffset = -1.7+CATheatOffset,    !- Program Line 58
+    elseif (CAT == 80),       !- Program Line 59
+    set ACSToffset = 2.89+CATcoolOffset,    !- Program Line 60
+    set AHSToffset = -2.89+CATheatOffset,    !- Program Line 61
+    endif,                    !- Program Line 62
+    elseif ComfStand == 13,    !- Program Line 63
+    if (CAT == 90),           !- Program Line 64
+    set ACSToffset = 3.45+CATcoolOffset,    !- Program Line 65
+    set AHSToffset = -3.45+CATheatOffset,    !- Program Line 66
+    elseif (CAT == 80),       !- Program Line 67
+    set ACSToffset = 4.55+CATcoolOffset,    !- Program Line 68
+    set AHSToffset = -4.55+CATheatOffset,    !- Program Line 69
+    endif,                    !- Program Line 70
+    elseif ComfStand == 14,    !- Program Line 71
+    if (CAT == 90),           !- Program Line 72
+    set ACSToffset = 3.5+CATcoolOffset,    !- Program Line 73
+    set AHSToffset = -3.5+CATheatOffset,    !- Program Line 74
+    elseif (CAT == 80),       !- Program Line 75
+    set ACSToffset = 4.5+CATcoolOffset,    !- Program Line 76
+    set AHSToffset = -4.5+CATheatOffset,    !- Program Line 77
+    endif,                    !- Program Line 78
+    elseif ComfStand == 15,    !- Program Line 79
+    if (CAT == 90),           !- Program Line 80
+    set ACSToffset = 2.8+CATcoolOffset,    !- Program Line 81
+    set AHSToffset = -2.8+CATheatOffset,    !- Program Line 82
+    elseif (CAT == 80),       !- Program Line 83
+    set ACSToffset = 3.8+CATcoolOffset,    !- Program Line 84
+    set AHSToffset = -3.8+CATheatOffset,    !- Program Line 85
+    endif,                    !- Program Line 86
+    elseif ComfStand == 16,    !- Program Line 87
+    if (CAT == 90),           !- Program Line 88
+    set ACSToffset = 1.1+CATcoolOffset,    !- Program Line 89
+    set AHSToffset = -1.1+CATheatOffset,    !- Program Line 90
+    elseif (CAT == 80),       !- Program Line 91
+    set ACSToffset = 2.1+CATcoolOffset,    !- Program Line 92
+    set AHSToffset = -2.1+CATheatOffset,    !- Program Line 93
+    endif,                    !- Program Line 94
+    elseif (ComfStand == 17) || (ComfStand == 18),    !- Program Line 95
+    if CAT == 90,             !- Program Line 96
+    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 97
+    set ACSToffset = 2+CATcoolOffset,    !- Program Line 98
+    set AHSToffset = -2+CATheatOffset,    !- Program Line 99
+    else,                     !- Program Line 100
+    set ACSToffset = 2+CATcoolOffset,    !- Program Line 101
+    set AHSToffset = -2+CATheatOffset,    !- Program Line 102
+    endif,                    !- Program Line 103
+    elseif CAT == 80,         !- Program Line 104
+    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 105
+    set ACSToffset = 3+CATcoolOffset,    !- Program Line 106
+    set AHSToffset = -3+CATheatOffset,    !- Program Line 107
+    else,                     !- Program Line 108
+    set ACSToffset = 3+CATcoolOffset,    !- Program Line 109
+    set AHSToffset = -3+CATheatOffset,    !- Program Line 110
+    endif,                    !- Program Line 111
+    endif,                    !- Program Line 112
+    elseif ComfStand == 19,    !- Program Line 113
+    if CAT == 90,             !- Program Line 114
+    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 115
+    set ACSToffset = 2+CATcoolOffset,    !- Program Line 116
+    set AHSToffset = -2+CATheatOffset,    !- Program Line 117
+    else,                     !- Program Line 118
+    set ACSToffset = 1+CATcoolOffset,    !- Program Line 119
+    set AHSToffset = -1+CATheatOffset,    !- Program Line 120
+    endif,                    !- Program Line 121
+    elseif CAT == 80,         !- Program Line 122
+    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 123
+    set ACSToffset = 3+CATcoolOffset,    !- Program Line 124
+    set AHSToffset = -3+CATheatOffset,    !- Program Line 125
+    else,                     !- Program Line 126
+    set ACSToffset = 2+CATcoolOffset,    !- Program Line 127
+    set AHSToffset = -2+CATheatOffset,    !- Program Line 128
+    endif,                    !- Program Line 129
+    endif,                    !- Program Line 130
+    elseif ComfStand == 20,    !- Program Line 131
+    if CAT == 90,             !- Program Line 132
+    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 133
+    set ACSToffset = 2+CATcoolOffset,    !- Program Line 134
+    set AHSToffset = -2+CATheatOffset,    !- Program Line 135
+    else,                     !- Program Line 136
+    set ACSToffset = 5+CATcoolOffset,    !- Program Line 137
+    set AHSToffset = -5+CATheatOffset,    !- Program Line 138
+    endif,                    !- Program Line 139
+    elseif CAT == 80,         !- Program Line 140
+    if (DayOfYear <= 121) || (DayOfYear > 295),    !- Program Line 141
+    set ACSToffset = 3+CATcoolOffset,    !- Program Line 142
+    set AHSToffset = -3+CATheatOffset,    !- Program Line 143
+    else,                     !- Program Line 144
+    set ACSToffset = 6+CATcoolOffset,    !- Program Line 145
+    set AHSToffset = -6+CATheatOffset,    !- Program Line 146
+    endif,                    !- Program Line 147
+    endif,                    !- Program Line 148
+    elseif ComfStand == 21,    !- Program Line 149
+    if (CAT == 90),           !- Program Line 150
+    set ACSToffset = 2.5+CATcoolOffset,    !- Program Line 151
+    set AHSToffset = -2.5+CATheatOffset,    !- Program Line 152
+    elseif (CAT == 80),       !- Program Line 153
+    set ACSToffset = 4+CATcoolOffset,    !- Program Line 154
+    set AHSToffset = -4+CATheatOffset,    !- Program Line 155
+    endif,                    !- Program Line 156
+    endif;                    !- Program Line 157
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetAST,                   !- Name
@@ -19268,25 +19270,91 @@ OutputControl:ReportingTolerances,
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Comfortable Hours_No Applicability_BLOQUE1_LIVINGXROOM,    !- Variable Name
     Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Heating Coil Heating Rate,    !- Variable Name
+    Comfortable Hours_No Applicability_BLOQUE1_BEDROOM1,    !- Variable Name
     Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Facility Total HVAC Electric Demand Power,    !- Variable Name
+    Comfortable Hours_No Applicability_BLOQUE1_MASTERBEDROOM,    !- Variable Name
     Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Facility Total HVAC Electricity Demand Rate,    !- Variable Name
+    Comfortable Hours_No Applicability_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BEDROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_LIVINGXROOM,    !- Variable Name
     Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
 
@@ -19299,90 +19367,6 @@ OUTPUT:VARIABLE,
 OUTPUT:VARIABLE,
     *,                        !- Key Value
     VRF Heat Pump Heating Electricity Energy,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_LIVINGXROOM VRF Indoor Unit DX Cooling Coil,    !- Key Value
-    Cooling Coil Total Cooling Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_LIVINGXROOM VRF Indoor Unit DX Heating Coil,    !- Key Value
-    Heating Coil Heating Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_BEDROOM1 VRF Indoor Unit DX Cooling Coil,    !- Key Value
-    Cooling Coil Total Cooling Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_BEDROOM1 VRF Indoor Unit DX Heating Coil,    !- Key Value
-    Heating Coil Heating Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_MASTERBEDROOM VRF Indoor Unit DX Cooling Coil,    !- Key Value
-    Cooling Coil Total Cooling Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_MASTERBEDROOM VRF Indoor Unit DX Heating Coil,    !- Key Value
-    Heating Coil Heating Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_BATHROOM1 VRF Indoor Unit DX Cooling Coil,    !- Key Value
-    Cooling Coil Total Cooling Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_BATHROOM1 VRF Indoor Unit DX Heating Coil,    !- Key Value
-    Heating Coil Heating Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_BEDROOM2 VRF Indoor Unit DX Cooling Coil,    !- Key Value
-    Cooling Coil Total Cooling Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_BEDROOM2 VRF Indoor Unit DX Heating Coil,    !- Key Value
-    Heating Coil Heating Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_KITCHEN VRF Indoor Unit DX Cooling Coil,    !- Key Value
-    Cooling Coil Total Cooling Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_KITCHEN VRF Indoor Unit DX Heating Coil,    !- Key Value
-    Heating Coil Heating Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_BATHROOM2 VRF Indoor Unit DX Cooling Coil,    !- Key Value
-    Cooling Coil Total Cooling Rate,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    BLOQUE1_BATHROOM2 VRF Indoor Unit DX Heating Coil,    !- Key Value
-    Heating Coil Heating Rate,    !- Variable Name
     Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
 
