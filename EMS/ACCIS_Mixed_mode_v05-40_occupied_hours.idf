@@ -91,6 +91,8 @@ EnergyManagementSystem:GlobalVariable,
 	DiscomfNonAppColdHours_<LoopZoneVariableName>,         !Hora no aplicable de disconfort por frio
 	ComfHoursNoApp_<LoopZoneVariableName>,                 !Horas de confort para calculo de ATCCI
 	VentHours_<LoopZoneVariableName>,
+	OccHours_<LoopZoneVariableName>,
+	OccComfHoursNoApp_<LoopZoneVariableName>,
 	NormHeatDem_<LoopZoneVariableName>,
 	NormCoolDem_<LoopZoneVariableName>,
 	NormHeatCon_<LoopZoneVariableName>,
@@ -3373,15 +3375,28 @@ CountHoursNoApp,
 	EnergyManagementSystem:Program,
     CountHoursNoApp,
 	<ForAllOccupiedZones>
+
 	if (<LoopZoneVariableName>_OpT <= ACSTnoTol),
 		if (<LoopZoneVariableName>_OpT >= AHSTnoTol),
 			set ComfHoursNoApp_<LoopZoneVariableName> = 1*ZoneTimeStep,
+			if Occ_count_<LoopZoneVariableName>,
+			    set OccComfHoursNoApp_<LoopZoneVariableName> = 1*ZoneTimeStep,
+            else,
+                set OccComfHoursNoApp_<LoopZoneVariableName> = 0,
+            endif,
 		else,
 			set ComfHoursNoApp_<LoopZoneVariableName> = 0,
 		endif,
 	else,
 		set ComfHoursNoApp_<LoopZoneVariableName> = 0,
 	endif,
+
+    if Occ_count_<LoopZoneVariableName> > 0,
+	    set OccHours_<LoopZoneVariableName> = 1*ZoneTimeStep,
+    else,
+        set OccHours_<LoopZoneVariableName> = 0,
+    endif,
+
 	<LoopNextZone>;
 
 !Normalise energy demand per area units
@@ -3515,6 +3530,22 @@ Adaptive Heating Setpoint Temperature_No Tolerance,
 EnergyManagementSystem:OutputVariable,
 Comfortable Hours_No Applicability_<LoopZoneVariableName> (summed),
 	ComfHoursNoApp_<LoopZoneVariableName>,
+	Summed,
+	ZoneTimestep,
+	,
+	h;
+
+EnergyManagementSystem:OutputVariable,
+Occupied Comfortable Hours_No Applicability_<LoopZoneVariableName> (summed),
+	OccComfHoursNoApp_<LoopZoneVariableName>,
+	Summed,
+	ZoneTimestep,
+	,
+	h;
+
+EnergyManagementSystem:OutputVariable,
+Occupied Hours_<LoopZoneVariableName> (summed),
+	OccHours_<LoopZoneVariableName>,
 	Summed,
 	ZoneTimestep,
 	,

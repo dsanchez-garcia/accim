@@ -12328,8 +12328,8 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     ApplyCAT,                 !- Name
-    set CATcoolOffset = 2,    !- Program Line 1
-    set CATheatOffset = 2,    !- Program Line 2
+    set CATcoolOffset = 0,    !- Program Line 1
+    set CATheatOffset = 0,    !- Program Line 2
     if (ComfStand == 1 ),     !- Program Line 3
     if (CAT == 1),            !- Program Line 4
     set ACSToffset = 2+CATcoolOffset,    !- Program Line 5
@@ -14682,13 +14682,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     CountHoursNoApp_BLOQUE1_LIVINGXROOM,    !- Name
     if (BLOQUE1_LIVINGXROOM_OpT <= ACSTnoTol),    !- Program Line 1
     if (BLOQUE1_LIVINGXROOM_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_BLOQUE1_LIVINGXROOM  = 1*ZoneTimeStep,    !- Program Line 3
-    else,                     !- Program Line 4
-    set ComfHoursNoApp_BLOQUE1_LIVINGXROOM = 0,    !- Program Line 5
-    endif,                    !- Program Line 6
-    else,                     !- Program Line 7
-    set ComfHoursNoApp_BLOQUE1_LIVINGXROOM = 0,    !- Program Line 8
-    endif;                    !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_LIVINGXROOM = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_BLOQUE1_LIVINGXROOM,    !- Program Line 4
+    set OccComfHoursNoApp_BLOQUE1_LIVINGXROOM = 1*ZoneTimeStep,    !- Program Line 5
+    else,                     !- Program Line 6
+    set OccComfHoursNoApp_BLOQUE1_LIVINGXROOM = 0,    !- Program Line 7
+    endif,                    !- Program Line 8
+    else,                     !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_LIVINGXROOM = 0,    !- Program Line 10
+    endif,                    !- Program Line 11
+    else,                     !- Program Line 12
+    set ComfHoursNoApp_BLOQUE1_LIVINGXROOM = 0,    !- Program Line 13
+    endif,                    !- Program Line 14
+    if Occ_count_BLOQUE1_LIVINGXROOM > 0,    !- Program Line 15
+    set OccHours_BLOQUE1_LIVINGXROOM = 1*ZoneTimeStep,    !- Program Line 16
+    else,                     !- Program Line 17
+    set OccHours_BLOQUE1_LIVINGXROOM = 0,    !- Program Line 18
+    endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetGeoVarBLOQUE1_LIVINGXROOM,    !- Name
@@ -14699,13 +14709,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     CountHoursNoApp_BLOQUE1_BEDROOM1,    !- Name
     if (BLOQUE1_BEDROOM1_OpT <= ACSTnoTol),    !- Program Line 1
     if (BLOQUE1_BEDROOM1_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_BLOQUE1_BEDROOM1  = 1*ZoneTimeStep,    !- Program Line 3
-    else,                     !- Program Line 4
-    set ComfHoursNoApp_BLOQUE1_BEDROOM1 = 0,    !- Program Line 5
-    endif,                    !- Program Line 6
-    else,                     !- Program Line 7
-    set ComfHoursNoApp_BLOQUE1_BEDROOM1 = 0,    !- Program Line 8
-    endif;                    !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_BEDROOM1 = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_BLOQUE1_BEDROOM1,    !- Program Line 4
+    set OccComfHoursNoApp_BLOQUE1_BEDROOM1 = 1*ZoneTimeStep,    !- Program Line 5
+    else,                     !- Program Line 6
+    set OccComfHoursNoApp_BLOQUE1_BEDROOM1 = 0,    !- Program Line 7
+    endif,                    !- Program Line 8
+    else,                     !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_BEDROOM1 = 0,    !- Program Line 10
+    endif,                    !- Program Line 11
+    else,                     !- Program Line 12
+    set ComfHoursNoApp_BLOQUE1_BEDROOM1 = 0,    !- Program Line 13
+    endif,                    !- Program Line 14
+    if Occ_count_BLOQUE1_BEDROOM1 > 0,    !- Program Line 15
+    set OccHours_BLOQUE1_BEDROOM1 = 1*ZoneTimeStep,    !- Program Line 16
+    else,                     !- Program Line 17
+    set OccHours_BLOQUE1_BEDROOM1 = 0,    !- Program Line 18
+    endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetGeoVarBLOQUE1_BEDROOM1,    !- Name
@@ -14716,13 +14736,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     CountHoursNoApp_BLOQUE1_MASTERBEDROOM,    !- Name
     if (BLOQUE1_MASTERBEDROOM_OpT <= ACSTnoTol),    !- Program Line 1
     if (BLOQUE1_MASTERBEDROOM_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_BLOQUE1_MASTERBEDROOM  = 1*ZoneTimeStep,    !- Program Line 3
-    else,                     !- Program Line 4
-    set ComfHoursNoApp_BLOQUE1_MASTERBEDROOM = 0,    !- Program Line 5
-    endif,                    !- Program Line 6
-    else,                     !- Program Line 7
-    set ComfHoursNoApp_BLOQUE1_MASTERBEDROOM = 0,    !- Program Line 8
-    endif;                    !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_MASTERBEDROOM = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_BLOQUE1_MASTERBEDROOM,    !- Program Line 4
+    set OccComfHoursNoApp_BLOQUE1_MASTERBEDROOM = 1*ZoneTimeStep,    !- Program Line 5
+    else,                     !- Program Line 6
+    set OccComfHoursNoApp_BLOQUE1_MASTERBEDROOM = 0,    !- Program Line 7
+    endif,                    !- Program Line 8
+    else,                     !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_MASTERBEDROOM = 0,    !- Program Line 10
+    endif,                    !- Program Line 11
+    else,                     !- Program Line 12
+    set ComfHoursNoApp_BLOQUE1_MASTERBEDROOM = 0,    !- Program Line 13
+    endif,                    !- Program Line 14
+    if Occ_count_BLOQUE1_MASTERBEDROOM > 0,    !- Program Line 15
+    set OccHours_BLOQUE1_MASTERBEDROOM = 1*ZoneTimeStep,    !- Program Line 16
+    else,                     !- Program Line 17
+    set OccHours_BLOQUE1_MASTERBEDROOM = 0,    !- Program Line 18
+    endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetGeoVarBLOQUE1_MASTERBEDROOM,    !- Name
@@ -14733,13 +14763,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     CountHoursNoApp_BLOQUE1_BATHROOM1,    !- Name
     if (BLOQUE1_BATHROOM1_OpT <= ACSTnoTol),    !- Program Line 1
     if (BLOQUE1_BATHROOM1_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_BLOQUE1_BATHROOM1  = 1*ZoneTimeStep,    !- Program Line 3
-    else,                     !- Program Line 4
-    set ComfHoursNoApp_BLOQUE1_BATHROOM1 = 0,    !- Program Line 5
-    endif,                    !- Program Line 6
-    else,                     !- Program Line 7
-    set ComfHoursNoApp_BLOQUE1_BATHROOM1 = 0,    !- Program Line 8
-    endif;                    !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_BATHROOM1 = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_BLOQUE1_BATHROOM1,    !- Program Line 4
+    set OccComfHoursNoApp_BLOQUE1_BATHROOM1 = 1*ZoneTimeStep,    !- Program Line 5
+    else,                     !- Program Line 6
+    set OccComfHoursNoApp_BLOQUE1_BATHROOM1 = 0,    !- Program Line 7
+    endif,                    !- Program Line 8
+    else,                     !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_BATHROOM1 = 0,    !- Program Line 10
+    endif,                    !- Program Line 11
+    else,                     !- Program Line 12
+    set ComfHoursNoApp_BLOQUE1_BATHROOM1 = 0,    !- Program Line 13
+    endif,                    !- Program Line 14
+    if Occ_count_BLOQUE1_BATHROOM1 > 0,    !- Program Line 15
+    set OccHours_BLOQUE1_BATHROOM1 = 1*ZoneTimeStep,    !- Program Line 16
+    else,                     !- Program Line 17
+    set OccHours_BLOQUE1_BATHROOM1 = 0,    !- Program Line 18
+    endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetGeoVarBLOQUE1_BATHROOM1,    !- Name
@@ -14750,13 +14790,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     CountHoursNoApp_BLOQUE1_BEDROOM2,    !- Name
     if (BLOQUE1_BEDROOM2_OpT <= ACSTnoTol),    !- Program Line 1
     if (BLOQUE1_BEDROOM2_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_BLOQUE1_BEDROOM2  = 1*ZoneTimeStep,    !- Program Line 3
-    else,                     !- Program Line 4
-    set ComfHoursNoApp_BLOQUE1_BEDROOM2 = 0,    !- Program Line 5
-    endif,                    !- Program Line 6
-    else,                     !- Program Line 7
-    set ComfHoursNoApp_BLOQUE1_BEDROOM2 = 0,    !- Program Line 8
-    endif;                    !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_BEDROOM2 = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_BLOQUE1_BEDROOM2,    !- Program Line 4
+    set OccComfHoursNoApp_BLOQUE1_BEDROOM2 = 1*ZoneTimeStep,    !- Program Line 5
+    else,                     !- Program Line 6
+    set OccComfHoursNoApp_BLOQUE1_BEDROOM2 = 0,    !- Program Line 7
+    endif,                    !- Program Line 8
+    else,                     !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_BEDROOM2 = 0,    !- Program Line 10
+    endif,                    !- Program Line 11
+    else,                     !- Program Line 12
+    set ComfHoursNoApp_BLOQUE1_BEDROOM2 = 0,    !- Program Line 13
+    endif,                    !- Program Line 14
+    if Occ_count_BLOQUE1_BEDROOM2 > 0,    !- Program Line 15
+    set OccHours_BLOQUE1_BEDROOM2 = 1*ZoneTimeStep,    !- Program Line 16
+    else,                     !- Program Line 17
+    set OccHours_BLOQUE1_BEDROOM2 = 0,    !- Program Line 18
+    endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetGeoVarBLOQUE1_BEDROOM2,    !- Name
@@ -14767,13 +14817,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     CountHoursNoApp_BLOQUE1_KITCHEN,    !- Name
     if (BLOQUE1_KITCHEN_OpT <= ACSTnoTol),    !- Program Line 1
     if (BLOQUE1_KITCHEN_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_BLOQUE1_KITCHEN  = 1*ZoneTimeStep,    !- Program Line 3
-    else,                     !- Program Line 4
-    set ComfHoursNoApp_BLOQUE1_KITCHEN = 0,    !- Program Line 5
-    endif,                    !- Program Line 6
-    else,                     !- Program Line 7
-    set ComfHoursNoApp_BLOQUE1_KITCHEN = 0,    !- Program Line 8
-    endif;                    !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_KITCHEN = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_BLOQUE1_KITCHEN,    !- Program Line 4
+    set OccComfHoursNoApp_BLOQUE1_KITCHEN = 1*ZoneTimeStep,    !- Program Line 5
+    else,                     !- Program Line 6
+    set OccComfHoursNoApp_BLOQUE1_KITCHEN = 0,    !- Program Line 7
+    endif,                    !- Program Line 8
+    else,                     !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_KITCHEN = 0,    !- Program Line 10
+    endif,                    !- Program Line 11
+    else,                     !- Program Line 12
+    set ComfHoursNoApp_BLOQUE1_KITCHEN = 0,    !- Program Line 13
+    endif,                    !- Program Line 14
+    if Occ_count_BLOQUE1_KITCHEN > 0,    !- Program Line 15
+    set OccHours_BLOQUE1_KITCHEN = 1*ZoneTimeStep,    !- Program Line 16
+    else,                     !- Program Line 17
+    set OccHours_BLOQUE1_KITCHEN = 0,    !- Program Line 18
+    endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetGeoVarBLOQUE1_KITCHEN,    !- Name
@@ -14784,13 +14844,23 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     CountHoursNoApp_BLOQUE1_BATHROOM2,    !- Name
     if (BLOQUE1_BATHROOM2_OpT <= ACSTnoTol),    !- Program Line 1
     if (BLOQUE1_BATHROOM2_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_BLOQUE1_BATHROOM2  = 1*ZoneTimeStep,    !- Program Line 3
-    else,                     !- Program Line 4
-    set ComfHoursNoApp_BLOQUE1_BATHROOM2 = 0,    !- Program Line 5
-    endif,                    !- Program Line 6
-    else,                     !- Program Line 7
-    set ComfHoursNoApp_BLOQUE1_BATHROOM2 = 0,    !- Program Line 8
-    endif;                    !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_BATHROOM2 = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_BLOQUE1_BATHROOM2,    !- Program Line 4
+    set OccComfHoursNoApp_BLOQUE1_BATHROOM2 = 1*ZoneTimeStep,    !- Program Line 5
+    else,                     !- Program Line 6
+    set OccComfHoursNoApp_BLOQUE1_BATHROOM2 = 0,    !- Program Line 7
+    endif,                    !- Program Line 8
+    else,                     !- Program Line 9
+    set ComfHoursNoApp_BLOQUE1_BATHROOM2 = 0,    !- Program Line 10
+    endif,                    !- Program Line 11
+    else,                     !- Program Line 12
+    set ComfHoursNoApp_BLOQUE1_BATHROOM2 = 0,    !- Program Line 13
+    endif,                    !- Program Line 14
+    if Occ_count_BLOQUE1_BATHROOM2 > 0,    !- Program Line 15
+    set OccHours_BLOQUE1_BATHROOM2 = 1*ZoneTimeStep,    !- Program Line 16
+    else,                     !- Program Line 17
+    set OccHours_BLOQUE1_BATHROOM2 = 0,    !- Program Line 18
+    endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetGeoVarBLOQUE1_BATHROOM2,    !- Name
@@ -14799,8 +14869,8 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetInputData,             !- Name
-    set ComfStand = 21,       !- Program Line 1
-    set CAT = 80,             !- Program Line 2
+    set ComfStand = 1,        !- Program Line 1
+    set CAT = 3,              !- Program Line 2
     set ComfMod = 3,          !- Program Line 3
     set HVACmode = 2,         !- Program Line 4
     set VentCtrl = 0,         !- Program Line 5
@@ -17752,7 +17822,9 @@ ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     DiscomfNonAppColdHours_BLOQUE1_LIVINGXROOM,    !- Erl Variable 5 Name
     ComfHoursNoApp_BLOQUE1_LIVINGXROOM,    !- Erl Variable 6 Name
     ZoneFloorArea_BLOQUE1_LIVINGXROOM,    !- Erl Variable 7 Name
-    ZoneAirVolume_BLOQUE1_LIVINGXROOM;    !- Erl Variable 8 Name
+    ZoneAirVolume_BLOQUE1_LIVINGXROOM,    !- Erl Variable 8 Name
+    OccHours_BLOQUE1_LIVINGXROOM,    !- Erl Variable 9 Name
+    OccComfHoursNoApp_BLOQUE1_LIVINGXROOM;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     ComfHours_BLOQUE1_BEDROOM1,    !- Erl Variable 1 Name
@@ -17762,7 +17834,9 @@ ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     DiscomfNonAppColdHours_BLOQUE1_BEDROOM1,    !- Erl Variable 5 Name
     ComfHoursNoApp_BLOQUE1_BEDROOM1,    !- Erl Variable 6 Name
     ZoneFloorArea_BLOQUE1_BEDROOM1,    !- Erl Variable 7 Name
-    ZoneAirVolume_BLOQUE1_BEDROOM1;    !- Erl Variable 8 Name
+    ZoneAirVolume_BLOQUE1_BEDROOM1,    !- Erl Variable 8 Name
+    OccHours_BLOQUE1_BEDROOM1,    !- Erl Variable 9 Name
+    OccComfHoursNoApp_BLOQUE1_BEDROOM1;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     ComfHours_BLOQUE1_MASTERBEDROOM,    !- Erl Variable 1 Name
@@ -17772,7 +17846,9 @@ ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     DiscomfNonAppColdHours_BLOQUE1_MASTERBEDROOM,    !- Erl Variable 5 Name
     ComfHoursNoApp_BLOQUE1_MASTERBEDROOM,    !- Erl Variable 6 Name
     ZoneFloorArea_BLOQUE1_MASTERBEDROOM,    !- Erl Variable 7 Name
-    ZoneAirVolume_BLOQUE1_MASTERBEDROOM;    !- Erl Variable 8 Name
+    ZoneAirVolume_BLOQUE1_MASTERBEDROOM,    !- Erl Variable 8 Name
+    OccHours_BLOQUE1_MASTERBEDROOM,    !- Erl Variable 9 Name
+    OccComfHoursNoApp_BLOQUE1_MASTERBEDROOM;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     ComfHours_BLOQUE1_BATHROOM1,    !- Erl Variable 1 Name
@@ -17782,7 +17858,9 @@ ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     DiscomfNonAppColdHours_BLOQUE1_BATHROOM1,    !- Erl Variable 5 Name
     ComfHoursNoApp_BLOQUE1_BATHROOM1,    !- Erl Variable 6 Name
     ZoneFloorArea_BLOQUE1_BATHROOM1,    !- Erl Variable 7 Name
-    ZoneAirVolume_BLOQUE1_BATHROOM1;    !- Erl Variable 8 Name
+    ZoneAirVolume_BLOQUE1_BATHROOM1,    !- Erl Variable 8 Name
+    OccHours_BLOQUE1_BATHROOM1,    !- Erl Variable 9 Name
+    OccComfHoursNoApp_BLOQUE1_BATHROOM1;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     ComfHours_BLOQUE1_BEDROOM2,    !- Erl Variable 1 Name
@@ -17792,7 +17870,9 @@ ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     DiscomfNonAppColdHours_BLOQUE1_BEDROOM2,    !- Erl Variable 5 Name
     ComfHoursNoApp_BLOQUE1_BEDROOM2,    !- Erl Variable 6 Name
     ZoneFloorArea_BLOQUE1_BEDROOM2,    !- Erl Variable 7 Name
-    ZoneAirVolume_BLOQUE1_BEDROOM2;    !- Erl Variable 8 Name
+    ZoneAirVolume_BLOQUE1_BEDROOM2,    !- Erl Variable 8 Name
+    OccHours_BLOQUE1_BEDROOM2,    !- Erl Variable 9 Name
+    OccComfHoursNoApp_BLOQUE1_BEDROOM2;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     ComfHours_BLOQUE1_KITCHEN,    !- Erl Variable 1 Name
@@ -17802,7 +17882,9 @@ ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     DiscomfNonAppColdHours_BLOQUE1_KITCHEN,    !- Erl Variable 5 Name
     ComfHoursNoApp_BLOQUE1_KITCHEN,    !- Erl Variable 6 Name
     ZoneFloorArea_BLOQUE1_KITCHEN,    !- Erl Variable 7 Name
-    ZoneAirVolume_BLOQUE1_KITCHEN;    !- Erl Variable 8 Name
+    ZoneAirVolume_BLOQUE1_KITCHEN,    !- Erl Variable 8 Name
+    OccHours_BLOQUE1_KITCHEN,    !- Erl Variable 9 Name
+    OccComfHoursNoApp_BLOQUE1_KITCHEN;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     ComfHours_BLOQUE1_BATHROOM2,    !- Erl Variable 1 Name
@@ -17812,7 +17894,9 @@ ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     DiscomfNonAppColdHours_BLOQUE1_BATHROOM2,    !- Erl Variable 5 Name
     ComfHoursNoApp_BLOQUE1_BATHROOM2,    !- Erl Variable 6 Name
     ZoneFloorArea_BLOQUE1_BATHROOM2,    !- Erl Variable 7 Name
-    ZoneAirVolume_BLOQUE1_BATHROOM2;    !- Erl Variable 8 Name
+    ZoneAirVolume_BLOQUE1_BATHROOM2,    !- Erl Variable 8 Name
+    OccHours_BLOQUE1_BATHROOM2,    !- Erl Variable 9 Name
+    OccComfHoursNoApp_BLOQUE1_BATHROOM2;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     VST,                      !- Erl Variable 1 Name
@@ -18088,6 +18172,118 @@ ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
 ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
     Comfortable Hours_Applicability_BLOQUE1_BATHROOM2,    !- Name
     ComfHours_BLOQUE1_BATHROOM2,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_LIVINGXROOM,    !- Name
+    OccComfHoursNoApp_BLOQUE1_LIVINGXROOM,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BEDROOM1,    !- Name
+    OccComfHoursNoApp_BLOQUE1_BEDROOM1,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_MASTERBEDROOM,    !- Name
+    OccComfHoursNoApp_BLOQUE1_MASTERBEDROOM,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BATHROOM1,    !- Name
+    OccComfHoursNoApp_BLOQUE1_BATHROOM1,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BEDROOM2,    !- Name
+    OccComfHoursNoApp_BLOQUE1_BEDROOM2,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_KITCHEN,    !- Name
+    OccComfHoursNoApp_BLOQUE1_KITCHEN,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BATHROOM2,    !- Name
+    OccComfHoursNoApp_BLOQUE1_BATHROOM2,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Hours_BLOQUE1_LIVINGXROOM,    !- Name
+    OccHours_BLOQUE1_LIVINGXROOM,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Hours_BLOQUE1_BEDROOM1,    !- Name
+    OccHours_BLOQUE1_BEDROOM1,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Hours_BLOQUE1_MASTERBEDROOM,    !- Name
+    OccHours_BLOQUE1_MASTERBEDROOM,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Hours_BLOQUE1_BATHROOM1,    !- Name
+    OccHours_BLOQUE1_BATHROOM1,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Hours_BLOQUE1_BEDROOM2,    !- Name
+    OccHours_BLOQUE1_BEDROOM2,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Hours_BLOQUE1_KITCHEN,    !- Name
+    OccHours_BLOQUE1_KITCHEN,    !- EMS Variable Name
+    Summed,                   !- Type of Data in Variable
+    ZoneTimestep,             !- Update Frequency
+    ,                         !- EMS Program or Subroutine Name
+    H;                        !- Units
+
+ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
+    Occupied Hours_BLOQUE1_BATHROOM2,    !- Name
+    OccHours_BLOQUE1_BATHROOM2,    !- EMS Variable Name
     Summed,                   !- Type of Data in Variable
     ZoneTimestep,             !- Update Frequency
     ,                         !- EMS Program or Subroutine Name
@@ -19312,6 +19508,90 @@ OUTPUT:VARIABLE,
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BEDROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
     Zone Floor Area_BLOQUE1_LIVINGXROOM,    !- Variable Name
     Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
@@ -19349,12 +19629,6 @@ OUTPUT:VARIABLE,
 OUTPUT:VARIABLE,
     *,                        !- Key Value
     Zone Floor Area_BLOQUE1_BATHROOM2,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    People Occupant Count_BLOQUE1_LIVINGXROOM,    !- Variable Name
     Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
 
