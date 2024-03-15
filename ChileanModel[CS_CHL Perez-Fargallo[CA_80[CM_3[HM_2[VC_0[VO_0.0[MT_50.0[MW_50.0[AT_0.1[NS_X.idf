@@ -12328,8 +12328,8 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     ApplyCAT,                 !- Name
-    set CATcoolOffset = 0,    !- Program Line 1
-    set CATheatOffset = 0,    !- Program Line 2
+    set CATcoolOffset = 2,    !- Program Line 1
+    set CATheatOffset = 2,    !- Program Line 2
     if (ComfStand == 1 ),     !- Program Line 3
     if (CAT == 1),            !- Program Line 4
     set ACSToffset = 2+CATcoolOffset,    !- Program Line 5
@@ -19466,6 +19466,900 @@ OutputControl:ReportingTolerances,
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
+    Comfort Temperature,      !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Cooling Setpoint Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Heating Setpoint Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Cooling Setpoint Temperature_No Tolerance,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Heating Setpoint Temperature_No Tolerance,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Setpoint Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Minimum Outdoor Temperature for ventilation,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Minimum Outdoor Temperature Difference for ventilation,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Maximum Outdoor Temperature Difference for ventilation,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Multiplier for Ventilation Opening Factor,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Operative Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Facility Total HVAC Electric Demand Power,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Facility Total HVAC Electricity Demand Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Surface Venting Window or Door Opening Factor,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Infiltration Air Change Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Infiltration Volume,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Ventilation Air Change Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Ventilation Volume,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Environment,              !- Key Value
+    Site Outdoor Air Drybulb Temperature,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Environment,              !- Key Value
+    Site Wind Speed,          !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Environment,              !- Key Value
+    Site Outdoor Air Relative Humidity,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_LIVINGXROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_LIVINGXROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BEDROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BEDROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_MASTERBEDROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_MASTERBEDROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BATHROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BATHROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BEDROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BEDROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_KITCHEN,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_KITCHEN,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BATHROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BATHROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    VRF Heat Pump Cooling Electricity Energy,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    VRF Heat Pump Heating Electricity Energy,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_LIVINGXROOM VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_LIVINGXROOM VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM1 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM1 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_MASTERBEDROOM VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_MASTERBEDROOM VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM1 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM1 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM2 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM2 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_KITCHEN VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_KITCHEN VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM2 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM2 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Hourly,                   !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfort Temperature,      !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Cooling Setpoint Temperature,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Heating Setpoint Temperature,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Cooling Setpoint Temperature_No Tolerance,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Heating Setpoint Temperature_No Tolerance,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Setpoint Temperature,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Minimum Outdoor Temperature for ventilation,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Minimum Outdoor Temperature Difference for ventilation,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Maximum Outdoor Temperature Difference for ventilation,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Multiplier for Ventilation Opening Factor,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
     Comfortable Hours_No Applicability_BLOQUE1_LIVINGXROOM,    !- Variable Name
     Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
@@ -19503,6 +20397,48 @@ OUTPUT:VARIABLE,
 OUTPUT:VARIABLE,
     *,                        !- Key Value
     Comfortable Hours_No Applicability_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BEDROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BATHROOM2,    !- Variable Name
     Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
 
@@ -19592,6 +20528,174 @@ OUTPUT:VARIABLE,
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
     Zone Floor Area_BLOQUE1_LIVINGXROOM,    !- Variable Name
     Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
@@ -19634,6 +20738,306 @@ OUTPUT:VARIABLE,
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BEDROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BEDROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Operative Temperature,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Facility Total HVAC Electric Demand Power,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Facility Total HVAC Electricity Demand Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Surface Venting Window or Door Opening Factor,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Infiltration Air Change Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Infiltration Volume,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Ventilation Air Change Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Ventilation Volume,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Environment,              !- Key Value
+    Site Outdoor Air Drybulb Temperature,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Environment,              !- Key Value
+    Site Wind Speed,          !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Environment,              !- Key Value
+    Site Outdoor Air Relative Humidity,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_LIVINGXROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_LIVINGXROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BEDROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BEDROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_MASTERBEDROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_MASTERBEDROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BATHROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BATHROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BEDROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BEDROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_KITCHEN,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_KITCHEN,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BATHROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BATHROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
     VRF Heat Pump Cooling Electricity Energy,    !- Variable Name
     Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
@@ -19642,6 +21046,924 @@ OUTPUT:VARIABLE,
     *,                        !- Key Value
     VRF Heat Pump Heating Electricity Energy,    !- Variable Name
     Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_LIVINGXROOM VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_LIVINGXROOM VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM1 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM1 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_MASTERBEDROOM VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_MASTERBEDROOM VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM1 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM1 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM2 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM2 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_KITCHEN VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_KITCHEN VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM2 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM2 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Monthly,                  !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfort Temperature,      !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Cooling Setpoint Temperature,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Heating Setpoint Temperature,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Cooling Setpoint Temperature_No Tolerance,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Adaptive Heating Setpoint Temperature_No Tolerance,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Setpoint Temperature,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Minimum Outdoor Temperature for ventilation,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Minimum Outdoor Temperature Difference for ventilation,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Maximum Outdoor Temperature Difference for ventilation,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Multiplier for Ventilation Opening Factor,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_No Applicability_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Comfortable Hours_Applicability_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Comfortable Hours_No Applicability_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Occupied Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Hot Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Applicable Cold Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Hot Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Discomfortable Non Applicable Cold Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Floor Area_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Air Volume_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    People Occupant Count_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_LIVINGXROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BEDROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_MASTERBEDROOM,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BATHROOM1,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BEDROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_KITCHEN,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Ventilation Hours_BLOQUE1_BATHROOM2,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Operative Temperature,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Facility Total HVAC Electric Demand Power,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    Facility Total HVAC Electricity Demand Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Surface Venting Window or Door Opening Factor,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Infiltration Air Change Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Infiltration Volume,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Ventilation Air Change Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    AFN Zone Ventilation Volume,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Environment,              !- Key Value
+    Site Outdoor Air Drybulb Temperature,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Environment,              !- Key Value
+    Site Wind Speed,          !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    Environment,              !- Key Value
+    Site Outdoor Air Relative Humidity,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_LIVINGXROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_LIVINGXROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BEDROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BEDROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_MASTERBEDROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_MASTERBEDROOM,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BATHROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BATHROOM1,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BEDROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BEDROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_KITCHEN,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_KITCHEN,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    AHST_Sch_BLOQUE1_BATHROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    ACST_Sch_BLOQUE1_BATHROOM2,    !- Key Value
+    Schedule Value,           !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    VRF Heat Pump Cooling Electricity Energy,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    *,                        !- Key Value
+    VRF Heat Pump Heating Electricity Energy,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_LIVINGXROOM VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_LIVINGXROOM VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM1 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM1 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_MASTERBEDROOM VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_MASTERBEDROOM VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM1 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM1 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM2 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BEDROOM2 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_KITCHEN VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_KITCHEN VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM2 VRF Indoor Unit DX Cooling Coil,    !- Key Value
+    Cooling Coil Total Cooling Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
+    ;                         !- Schedule Name
+
+OUTPUT:VARIABLE,
+    BLOQUE1_BATHROOM2 VRF Indoor Unit DX Heating Coil,    !- Key Value
+    Heating Coil Heating Rate,    !- Variable Name
+    Runperiod,                !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUTCONTROL:FILES,
