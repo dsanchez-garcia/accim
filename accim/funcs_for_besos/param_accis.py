@@ -201,6 +201,20 @@ def modify_CAT(idf, value):
 
     return
 
+def modify_CATcoolOffset(idf, value):
+    ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
+                 program.Name == 'ApplyCAT'][0])
+    ApplyCAT.Program_Line_1 = f'set CATcoolOffset = {value}'
+
+    return
+
+def modify_CATheatOffset(idf, value):
+    ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
+                 program.Name == 'ApplyCAT'][0])
+    ApplyCAT.Program_Line_2 = f'set CATheatOffset = {value}'
+
+    return
+
 def modify_ComfMod(idf, value):
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])

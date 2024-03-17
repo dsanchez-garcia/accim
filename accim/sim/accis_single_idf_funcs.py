@@ -349,6 +349,8 @@ def modifyAccis(
         idf,
         ComfStand: int = None,
         CAT: int = None,
+        CATcoolOffset: float = 0,
+        CATheatOffset: float = 0,
         ComfMod: float = None,
         SetpointAcc: float = 10000,
         CoolSeasonStart: any = 121,
@@ -447,10 +449,14 @@ def modifyAccis(
                         program.Name == 'SetVOFinputData'][0])
     SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                program.Name == 'SetAST'][0])
+    ApplyCAT = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
+                 program.Name == 'ApplyCAT'][0])
 
     arguments_accis = {
         'ComfStand': ComfStand,
         'CAT': CAT,
+        'CATcoolOffset': CATcoolOffset,
+        'CATheatOffset': CATheatOffset,
         'ComfMod': ComfMod,
         'SetpointAcc': SetpointAcc,
         'CoolSeasonStart': CoolSeasonStart,
@@ -511,6 +517,9 @@ def modifyAccis(
     SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(MaxTempDiffVOF)
     SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + repr(MinTempDiffVOF)
     SetVOFinputData.Program_Line_3 = 'set MultiplierVOF = ' + repr(MultiplierVOF)
+
+    ApplyCAT.Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
+    ApplyCAT.Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
 
 
 def modify_param(idf, parameter, value):

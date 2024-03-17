@@ -162,6 +162,7 @@ class addAccis:
         VRFschedule: str = 'On 24/7',
         ComfStand: any = None,
         CAT: any = None,
+            #todo avoid AHST higher than ACST when CAT offsets are used
         CATcoolOffset: float = 0,
         CATheatOffset: float = 0,
         ComfMod: any = None,
