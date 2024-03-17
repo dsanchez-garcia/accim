@@ -668,6 +668,45 @@ ApplyCAT,
 !Programa: establecimiento de las consignas adaptativas
 
 EnergyManagementSystem:ProgramCallingManager,
+SetCustomAST,
+    BeginTimestepBeforePredictor,
+    SetCustomAST;
+
+	EnergyManagementSystem:Program,
+	SetCustomAST,
+    if ComfStand == 99,
+        set ACSToffset = 2.5+CATcoolOffset,
+        set AHSToffset = -2.5+CATheatOffset,
+		set ACSTaul = 30,
+		set ACSTall = 10,
+		set AHSTaul = 30,
+		set AHSTall = 10,
+		set m = 0.33,
+		set n = 18.8,
+
+
+    if (ComfStand == 99) && (ComfMod == 3),
+		if (RMOT >= ACSTall) && (RMOT <= ACSTaul),
+			set ACST = RMOT*m+n+ACSToffset+ACSTtol,
+		elseif RMOT < ACSTall,
+			set ACST = ACSTall*m+n+ACSToffset+ACSTtol,
+		elseif RMOT > ACSTaul,
+			set ACST = ACSTaulm+n+ACSToffset+ACSTtol,
+		endif,
+	endif,
+
+	if (ComfStand == 99) && (ComfMod == 3),
+		if (RMOT >= AHSTall) && (RMOT <= AHSTaul),
+			set AHST = RMOT*m+n+AHSToffset+AHSTtol,
+		elseif RMOT < AHSTall,
+			set AHST = AHSTall*m+n+AHSToffset+AHSTtol,
+		elseif RMOT > AHSTaul,
+			set AHST = AHSTaul*m+n+AHSToffset+AHSTtol,
+		endif,
+	endif,
+
+
+EnergyManagementSystem:ProgramCallingManager,
 SetAST,
     BeginTimestepBeforePredictor,
     SetAST;
