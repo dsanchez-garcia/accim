@@ -57,9 +57,7 @@ SetInputData,
 	    set ACSTtol = -0.25,             !Este valor se sumara a la consigna adaptativa de refrigeracion. Debe ser negativo o 0.
 	    set AHSTtol = 0.25,              !Este valor se sumara a la consigna adaptativa de calefaccion. Debe ser positivo o 0.ç
 		set CoolSeasonStart = 121,
-		set CoolSeasonEnd = 274,
-		set CATheatOffset = 0,
-		set CATcoolOffset = 0;
+		set CoolSeasonEnd = 274;
 
 
 !NO EDITAR NADA A PARTIR DE AQUI
