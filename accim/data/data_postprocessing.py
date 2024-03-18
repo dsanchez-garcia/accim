@@ -744,24 +744,30 @@ class Table:
                 f'[standard_outputs-{standard_outputs}'
                 f'[CSVconcatenated.csv'
             )
-            if len(rows_with_NaN) > 0:
-                rows_with_NaN.to_csv(
-                    f'{concatenated_csv_name}'
-                    f'[srcfreq-{source_frequency}'
-                    f'[freq-{frequency}'
-                    f'[frequency_agg_func-{frequency_agg_func}'
-                    f'[standard_outputs-{standard_outputs}'
-                    f'[Rows_with_NaNs.csv'
-                )
-            if len(not_correct_agg) > 0:
-                not_correct_agg.to_csv(
-                    f'{concatenated_csv_name}'
-                    f'[srcfreq-{source_frequency}'
-                    f'[freq-{frequency}'
-                    f'[frequency_agg_func-{frequency_agg_func}'
-                    f'[standard_outputs-{standard_outputs}'
-                    f'[Rows_not_corr_agg.csv'
-                )
+            try:
+                if len(rows_with_NaN) > 0:
+                    rows_with_NaN.to_csv(
+                        f'{concatenated_csv_name}'
+                        f'[srcfreq-{source_frequency}'
+                        f'[freq-{frequency}'
+                        f'[frequency_agg_func-{frequency_agg_func}'
+                        f'[standard_outputs-{standard_outputs}'
+                        f'[Rows_with_NaNs.csv'
+                    )
+            except UnboundLocalError:
+                print('No NaN has been found.')
+            try:
+                if len(not_correct_agg) > 0:
+                    not_correct_agg.to_csv(
+                        f'{concatenated_csv_name}'
+                        f'[srcfreq-{source_frequency}'
+                        f'[freq-{frequency}'
+                        f'[frequency_agg_func-{frequency_agg_func}'
+                        f'[standard_outputs-{standard_outputs}'
+                        f'[Rows_not_corr_agg.csv'
+                    )
+            except UnboundLocalError:
+                print('All rows have been correctly aggregated')
             return
 
         checkpoint = checkpoint + 1
