@@ -70,6 +70,8 @@ EnergyManagementSystem:GlobalVariable,
     ACSTnoTol,                      !Temperatura de consigna adaptativa de refrigeracion sin tolerancia
     AHSTnoTol,                      !Temperatura de consigna adaptativa de calefaccion sin tolerancia
     ComfStand,                      !Norma usada
+    m,
+    n,
     ACSTaul,                        !Limite superior de aplicabilidad del limite superior de confort (Adaptive Cooling Setpoint Temperature applicability upper limit)
     ACSTall,                        !Limite inferior de aplicabilidad del limite superior de confort (Adaptive Cooling Setpoint Temperature applicability lower limit)
     AHSTaul,                        !Limite superior de aplicabilidad del limite inferior de confort (Adaptive Heating Setpoint Temperature applicability upper limit)
@@ -212,7 +214,7 @@ SetComfTemp,
     EnergyManagementSystem:Program,
     SetComfTemp,
         if ComfStand == 99,
-		    set ComfTemp = PMOT*0.31+17.8,
+		    set ComfTemp = PMOT*m+n,
 	    elseif ComfStand == 1,
 		    set ComfTemp = RMOT*0.33+18.8,
 	    elseif ComfStand == 2,

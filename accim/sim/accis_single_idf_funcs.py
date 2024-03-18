@@ -353,6 +353,14 @@ def modifyAccis(
         CATheatOffset: float = 0,
         ComfMod: float = None,
         SetpointAcc: float = 10000,
+        CustAST_ACSTaul: float = 0,
+        CustAST_ACSTall: float = 0,
+        CustAST_AHSTaul: float = 0,
+        CustAST_AHSTall: float = 0,
+        CustAST_m: float = 0,
+        CustAST_n: float = 0,
+        CustAST_ACSToffset: float = 0,
+        CustAST_AHSToffset: float = 0,
         CoolSeasonStart: any = 121,
         CoolSeasonEnd: any = 274,
         HVACmode: int = None,
@@ -449,8 +457,13 @@ def modifyAccis(
                         program.Name == 'SetVOFinputData'][0])
     SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                program.Name == 'SetAST'][0])
-    ApplyCAT = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
+    ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
+
+    SetComfTemp = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
+                    program.Name == 'SetComfTemp'][0])
+    SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
+                     program.Name == 'SetAppLimits'][0])
 
     arguments_accis = {
         'ComfStand': ComfStand,
@@ -459,6 +472,14 @@ def modifyAccis(
         'CATheatOffset': CATheatOffset,
         'ComfMod': ComfMod,
         'SetpointAcc': SetpointAcc,
+        'CustAST_ACSTaul': CustAST_ACSTaul,
+        'CustAST_ACSTall': CustAST_ACSTall,
+        'CustAST_AHSTaul': CustAST_AHSTaul,
+        'CustAST_AHSTall': CustAST_AHSTall,
+        'CustAST_m': CustAST_m,
+        'CustAST_n': CustAST_n,
+        'CustAST_ACSToffset': CustAST_ACSToffset,
+        'CustAST_AHSToffset': CustAST_AHSToffset,
         'CoolSeasonStart': CoolSeasonStart,
         'CoolSeasonEnd': CoolSeasonEnd,
         'HVACmode': HVACmode,
@@ -512,14 +533,25 @@ def modifyAccis(
     SetInputData.Program_Line_11 = 'set CoolSeasonStart = ' + repr(CoolSeasonStart)
     SetInputData.Program_Line_12 = 'set CoolSeasonEnd = ' + repr(CoolSeasonEnd)
 
+    SetComfTemp.Program_Line_2 = f'set ComfTemp = PMOT*{repr(CustAST_m)}+{repr(CustAST_n)}'
+
+    SetAppLimits.Program_Line_2 = f'set ACSTaul = {repr(CustAST_ACSTaul)}'
+    SetAppLimits.Program_Line_3 = f'set ACSTall = {repr(CustAST_ACSTall)}'
+    SetAppLimits.Program_Line_4 = f'set AHSTaul = {repr(CustAST_AHSTaul)}'
+    SetAppLimits.Program_Line_5 = f'set AHSTall = {repr(CustAST_AHSTall)}'
+
     SetAST.Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
+    SetAST.Program_Line_2 = 'set m = ' + repr(CustAST_m)
+    SetAST.Program_Line_3 = 'set n = ' + repr(CustAST_n)
 
     SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(MaxTempDiffVOF)
     SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + repr(MinTempDiffVOF)
     SetVOFinputData.Program_Line_3 = 'set MultiplierVOF = ' + repr(MultiplierVOF)
 
-    ApplyCAT.Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
-    ApplyCAT.Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
+    ApplyCAT.Program_Line_1 = 'set CATcoolOffset = ' + repr(CATcoolOffset)
+    ApplyCAT.Program_Line_2 = 'set CATheatOffset = ' + repr(CATheatOffset)
+    ApplyCAT.Program_Line_4 = f'set ACSToffset = {repr(CustAST_ACSToffset)} + {repr(CATcoolOffset)}'
+    ApplyCAT.Program_Line_5 = f'set AHSToffset = {repr(CustAST_AHSToffset)} + {repr(CATheatOffset)}'
 
 
 def modify_param(idf, parameter, value):

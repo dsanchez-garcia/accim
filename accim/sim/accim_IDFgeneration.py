@@ -716,6 +716,14 @@ def inputData(self, ScriptType: str = None):
         'CATheatOffset': self.CATheatOffset,
         'ComfMod': self.ComfMod_List,
         'SetpointAcc': self.SetpointAcc,
+        'CustAST_ACSTaul': self.CustAST_ACSTaul,
+        'CustAST_ACSTall': self.CustAST_ACSTall,
+        'CustAST_AHSTaul': self.CustAST_AHSTaul,
+        'CustAST_AHSTall': self.CustAST_AHSTall,
+        'CustAST_m': self.CustAST_m,
+        'CustAST_n': self.CustAST_n,
+        'CustAST_ACSToffset': self.CustAST_ACSToffset,
+        'CustAST_AHSToffset': self.CustAST_AHSToffset,
         'CoolSeasonStart': self.CoolSeasonStart,
         'CoolSeasonEnd': self.CoolSeasonEnd,
         'HVACmode': self.HVACmode_List,
@@ -741,6 +749,14 @@ def genIDF(self,
     CATheatOffset=0,
     ComfMod=None,
     SetpointAcc=10000,
+    CustAST_ACSTaul: float = 0,
+    CustAST_ACSTall: float = 0,
+    CustAST_AHSTaul: float = 0,
+    CustAST_AHSTall: float = 0,
+    CustAST_m: float = 0,
+    CustAST_n: float = 0,
+    CustAST_ACSToffset: float = 0,
+    CustAST_AHSToffset: float = 0,
     CoolSeasonStart=121,
     CoolSeasonEnd=274,
     HVACmode=None,
@@ -801,6 +817,14 @@ def genIDF(self,
                  CATheatOffset == 0,
                  ComfMod is None,
                  SetpointAcc == 10000,
+                 CustAST_ACSTaul == 0,
+                 CustAST_ACSTall == 0,
+                 CustAST_AHSTaul == 0,
+                 CustAST_AHSTall == 0,
+                 CustAST_m == 0,
+                 CustAST_n == 0,
+                 CustAST_ACSToffset == 0,
+                 CustAST_AHSToffset == 0,
                  CoolSeasonStart == 121,
                  CoolSeasonEnd == 274,
                  HVACmode is None,
@@ -830,6 +854,15 @@ def genIDF(self,
         self.SetpointAcc = SetpointAcc
         self.CATcoolOffset = CATcoolOffset
         self.CATheatOffset = CATheatOffset
+        self.CustAST_ACSTaul = CustAST_ACSTaul
+        self.CustAST_ACSTall = CustAST_ACSTall
+        self.CustAST_AHSTaul = CustAST_AHSTaul
+        self.CustAST_AHSTall = CustAST_AHSTall
+        self.CustAST_m = CustAST_m
+        self.CustAST_n = CustAST_n
+        self.CustAST_ACSToffset = CustAST_ACSToffset
+        self.CustAST_AHSToffset = CustAST_AHSToffset
+
         
         if type(CoolSeasonStart) is str:
             CoolSeasonStart = list(int(num) for num in CoolSeasonStart.split('/'))
@@ -923,6 +956,7 @@ def genIDF(self,
         20: '[CS_MEX Oropeza HumTropic',
         21: '[CS_CHL Perez-Fargallo',
         22: '[CS_INT ISO7730',
+        99: '[CS_CUSTOM',
     }
 
     outputlist = []
@@ -1038,7 +1072,7 @@ def genIDF(self,
                                                                             + '.idf'
                                                                     )
                                                                     outputlist.append(outputname)
-                elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]:
+                elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 99]:
                     for CAT_value in self.CAT_List:
                         if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
                                                20, 21] and CAT_value not in range(80, 91, 10):
@@ -1156,6 +1190,10 @@ def genIDF(self,
                              program.Name == 'SetVOFinputData'])
             SetAST = ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
                              program.Name == 'SetAST'])
+            SetComfTemp= ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
+                       program.Name == 'SetComfTemp'])
+            SetAppLimits= ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
+                       program.Name == 'SetAppLimits'])
             if TempCtrl.lower() == 'temp' or TempCtrl.lower() == 'temperature':
                 for ComfStand_value in self.ComfStand_List:
                     SetInputData[0].Program_Line_1 = 'set ComfStand = ' + repr(ComfStand_value)
@@ -1337,7 +1375,7 @@ def genIDF(self,
                                                                         # pbar.update(1)
                                                                     idf1.savecopy(outputname)
                                                                     self.output_idf_dict.update({outputname: idf1})
-                    elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]:
+                    elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 99]:
                         for CAT_value in self.CAT_List:
                             if ComfStand_value in [2, 3, 6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
                                                    20, 21] and CAT_value not in range(80, 91, 10):
@@ -1365,9 +1403,18 @@ def genIDF(self,
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
                                                     SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
                                                     SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                    # SetComfTemp[0].Program_Line_2 = f'set ComfTemp = PMOT*{repr(self.CustAST_m)}+{repr(self.CustAST_n)}'
+                                                    SetAppLimits[0].Program_Line_2 = f'set ACSTaul = {repr(self.CustAST_ACSTaul)}'
+                                                    SetAppLimits[0].Program_Line_3 = f'set ACSTall = {repr(self.CustAST_ACSTall)}'
+                                                    SetAppLimits[0].Program_Line_4 = f'set AHSTaul = {repr(self.CustAST_AHSTaul)}'
+                                                    SetAppLimits[0].Program_Line_5 = f'set AHSTall = {repr(self.CustAST_AHSTall)}'
                                                     ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
                                                     ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
+                                                    ApplyCAT[0].Program_Line_4 = f'set ACSToffset = {repr(self.CustAST_ACSToffset)} + {repr(self.CATcoolOffset)}'
+                                                    ApplyCAT[0].Program_Line_5 = f'set AHSToffset = {repr(self.CustAST_AHSToffset)} + {repr(self.CATheatOffset)}'
                                                     SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
+                                                    SetAST[0].Program_Line_2 = 'set m = ' + repr(self.CustAST_m)
+                                                    SetAST[0].Program_Line_3 = 'set n = ' + repr(self.CustAST_n)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
@@ -1411,9 +1458,20 @@ def genIDF(self,
                                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
                                                                     SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
                                                                     SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
+                                                                    # SetComfTemp[0].Program_Line_2 = f'set ComfTemp = PMOT*{repr(self.CustAST_m)}+{repr(self.CustAST_n)}'
+                                                                    SetAppLimits[0].Program_Line_2 = f'set ACSTaul = {repr(self.CustAST_ACSTaul)}'
+                                                                    SetAppLimits[0].Program_Line_3 = f'set ACSTall = {repr(self.CustAST_ACSTall)}'
+                                                                    SetAppLimits[0].Program_Line_4 = f'set AHSTaul = {repr(self.CustAST_AHSTaul)}'
+                                                                    SetAppLimits[0].Program_Line_5 = f'set AHSTall = {repr(self.CustAST_AHSTall)}'
+
                                                                     ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
                                                                     ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
+                                                                    ApplyCAT[0].Program_Line_4 = f'set ACSToffset = {repr(self.CustAST_ACSToffset)} + {repr(self.CATcoolOffset)}'
+                                                                    ApplyCAT[0].Program_Line_5 = f'set AHSToffset = {repr(self.CustAST_AHSToffset)} + {repr(self.CATheatOffset)}'
                                                                     SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
+                                                                    SetAST[0].Program_Line_2 = 'set m = ' + repr(self.CustAST_m)
+                                                                    SetAST[0].Program_Line_3 = 'set n = ' + repr(self.CustAST_n)
+
                                                                     outputname = (
                                                                             filename
                                                                             + ComfStand_dict[ComfStand_value]
