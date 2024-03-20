@@ -118,3 +118,148 @@ def extract_first_two_alphanumeric(string):
 input_string = "VRF OUTDOOR UNIT_BLOQUE1:BEDROOM1:VRF Heat Pump Heating Electricity Energy [J](Monthly)"
 result = extract_first_two_alphanumeric(input_string)
 print("First two alphanumeric words:", result)
+
+##
+
+import re
+
+def extract_first_two_alphanumeric(string):
+    # Split the string at colons (:)
+    parts = string.split(':')
+
+    # Extract the first two alphanumeric words
+    alphanumeric_words = []
+    for part in parts:
+        # Split the part by underscore (_) and extract the first alphanumeric word
+        words = re.findall(r'\w+', part)
+        for word in words:
+            if word.isalnum():
+                alphanumeric_words.append(word)
+                if len(alphanumeric_words) == 2:
+                    break
+        if len(alphanumeric_words) == 2:
+            break
+
+    return alphanumeric_words
+
+# Example usage:
+input_string = "VRF OUTDOOR UNIT_BLOQUE1:BEDROOM1:VRF Heat Pump Heating Electricity Energy [J](Monthly)"
+result = extract_first_two_alphanumeric(input_string)
+print("First two alphanumeric words:", result)
+
+
+##
+
+def extract_first_two_alphanumeric(string):
+    # Split the string at colons (:)
+    parts = string.split(':')
+
+    # Extract the first two alphanumeric words
+    alphanumeric_words = []
+    for part in parts:
+        # Remove leading and trailing spaces
+        part = part.strip()
+        # Extract alphanumeric words from the part
+        words = ''.join(c for c in part if c.isalnum() or c == '_').split('_')
+        # Check if the part contains at least one alphanumeric word
+        for word in words:
+            if word:
+                alphanumeric_words.append(word)
+                if len(alphanumeric_words) == 2:
+                    break
+        if len(alphanumeric_words) == 2:
+            break
+
+    return alphanumeric_words
+
+# Example usage:
+input_string = "VRF OUTDOOR UNIT_BLOQUE1:BEDROOM1:VRF Heat Pump Heating Electricity Energy [J](Monthly)"
+result = extract_first_two_alphanumeric(input_string)
+print("First two alphanumeric words:", result)
+
+##
+
+import re
+
+def extract_alphanumeric_with_colon(string):
+    # Define the pattern to match alphanumeric words joined by ":"
+    pattern = r'\b[a-zA-Z0-9_]+\b'
+
+    # Use regular expression to find matches
+    matches = re.findall(pattern, string)
+
+    # Join the matches separated by ":"
+    result = ':'.join(matches)
+
+    return result
+
+# Example usage:
+input_string = "VRF OUTDOOR UNIT_BLOQUE1:BEDROOM1:VRF Heat Pump Heating Electricity Energy [J](Monthly)"
+result = extract_alphanumeric_with_colon(input_string)
+print("Alphanumeric words joined by colon:", result)
+
+##
+
+import re
+
+def extract_alphanumeric_with_colon(string):
+    # Define the pattern to match alphanumeric words joined by ":"
+    # allowing other non-alphanumeric characters such as "_" and " "
+    pattern = r'\b[a-zA-Z0-9_]+(?::[a-zA-Z0-9_]+)*\b'
+
+    # Use regular expression to find matches
+    matches = re.findall(pattern, string)
+
+    # Join the matches separated by ":"
+    result = ':'.join(matches)
+
+    return result
+
+# Example usage:
+input_string = "VRF OUTDOOR UNIT_BLOQUE1:BEDROOM1:VRF Heat Pump Heating Electricity Energy [J](Monthly)"
+result = extract_alphanumeric_with_colon(input_string)
+print("Alphanumeric words joined by colon:", result)
+
+##
+
+import re
+
+def find_alphanumeric_with_colon(string):
+    # Define the pattern to match alphanumeric characters on both sides of a colon
+    pattern = r'\b([a-zA-Z0-9]+):([a-zA-Z0-9]+):([a-zA-Z0-9]+)'
+
+    # Use regular expression to find matches
+    matches = re.findall(pattern, string)
+
+    # If there are no matches with alphanumeric characters on both sides of a colon,
+    # extract alphanumeric substrings joined by ":"
+    # if not matches:
+    #     # Define the pattern to match alphanumeric substrings joined by colon
+    #     pattern = r'\b(?:[a-zA-Z0-9]+:?)+\b'
+    #     # Use regular expression to find matches
+    #     matches = re.findall(pattern, string)
+
+    return matches
+
+# Example usage:
+input_string = "VRF OUTDOOR UNIT_BLOQUE1:BEDROOM1:VRF Heat Pump Heating Electricity Energy [J](Monthly)"
+result = find_alphanumeric_with_colon(input_string)
+print("Alphanumeric characters with colon or joined by colon:", result)
+
+##
+
+import re
+
+def extract_alphanumeric_with_colon(string):
+    # Define the pattern to match alphanumeric words separated by ":"
+    pattern = r'\b[a-zA-Z0-9_]+\b'
+
+    # Use regular expression to find matches
+    matches = re.findall(pattern, string)
+
+    return matches
+
+# Example usage:
+input_string = "VRF OUTDOOR UNIT_BLOQUE1:BEDROOM1:VRF Heat Pump Heating Electricity Energy [J](Monthly)"
+result = extract_alphanumeric_with_colon(input_string)
+print("Alphanumeric words separated by colon:", result)
