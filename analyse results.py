@@ -23,3 +23,10 @@ data_analysis = Table(
     split_epw_names=True,
     block_zone_hierarchy=block_zone
 )
+
+##
+
+import pandas as pd
+
+df = pd.read_csv('ACCIM_Chile[srcfreq-monthly[freq-monthly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv')
+df.columns
