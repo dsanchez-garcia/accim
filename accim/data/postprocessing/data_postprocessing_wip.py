@@ -673,14 +673,19 @@ class Table:
             # hierarchy_dict = block_zone_hierarchy
             hierarchy_dict = {i.upper(): [k.upper() for k in j] for i, j in block_zone_hierarchy.items()}
 
+        rename_dict = {}
+
         for i in hierarchy_dict:
             for j in hierarchy_dict[i]:
                 # df.columns = [k.replace(j, i + '_' + j) for k in df.columns]
                 for c in df.columns:
-                    if i+'_'+j in c or i+':'+j in c:
+                    if i + '_' + j in c or i + ':' + j in c:
                         continue
                     else:
-                        df
+                        rename_dict.update({c: c.replace(j, i + '_' + j)})
+
+        df = df.rename(columns=rename_dict)
+
         print('Finally, the occupied zones after renaming them following the pattern block_zone are:')
         occupied_zone_list = []
         for i in hierarchy_dict:
