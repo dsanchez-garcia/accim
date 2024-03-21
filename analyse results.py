@@ -13,22 +13,22 @@ block_zone = {
 }
 
 data_analysis = Table(
-    source_concatenated_csv_filepath='ACCIM_Chile[srcfreq-monthly[freq-monthly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv',
-    source_frequency='monthly',
+    # source_concatenated_csv_filepath='WIP_data_postprocessing/ACCIM_Chile[srcfreq-monthly[freq-monthly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv',
+    source_frequency='hourly',
     frequency='monthly',
     frequency_agg_func='sum',
     standard_outputs=True,
-    level=['building'],
+    level=['block','building'],
     level_agg_func=['sum'],
     split_epw_names=True,
-    block_zone_hierarchy=block_zone
+    # block_zone_hierarchy=block_zone
 )
 
 ##
 
 import pandas as pd
 
-df = pd.read_csv('ACCIM_Chile[srcfreq-monthly[freq-monthly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv')
+df = pd.read_csv('WIP_data_postprocessing/ACCIM_Chile[srcfreq-monthly[freq-monthly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv')
 df.columns
 
 hierarchy_dict = {
@@ -116,22 +116,50 @@ for col in df.columns:
 import pandas as pd
 from besos.eppy_funcs import get_building
 
-df = pd.read_csv('ACCIM_Chile[srcfreq-monthly[freq-monthly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv')
+df = pd.read_csv('WIP_data_postprocessing/ACCIM_Chile[srcfreq-monthly[freq-monthly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv')
 df.columns
 
-# building = get_building('ChileanModel.idf')
-building = get_building('OSM_SmallOffice_exHVAC.idf')
+building = get_building('ChileanModel.idf')
+# building = get_building('OSM_SmallOffice_exHVAC.idf')
 
 
 allzones = [i.Name for i in building.idfobjects['zone']]
 
-occupied_zones
+occupied_zones = []
 for zone in allzones:
     for col in df.columns:
+        if zone.lower() in col.lower():
+            occupied_zones.append(zone)
+occupied_zones = list(set(occupied_zones))
 
+if not(all(len(i.split(':')) == 2 for i in occupied_zones)):
+    if block_zone_hierarchy is None:
+        print(
+            'Regarding occupied zones, we have not found a clear hierarchical pattern of blocks and zones. '
+            'The zones we have found are:'
+        )
+        print(occupied_zones)
+        block_list = list(i.upper() for i in input('Please enter all Blocks separated by semicolon (;): ').split(';'))
+        hierarchy_dict = {}
+        for i in block_list:
+            temp_zones = list(i.upper() for i in input(f'Please enter the zones for {i}, considering these cannot be at the same time in more than one block, separated by semicolon (;): ').split(';'))
+            temp_dict = {i: temp_zones}
+            hierarchy_dict.update(temp_dict)
+    else:
+        # hierarchy_dict = block_zone_hierarchy
+        hierarchy_dict = {i.upper(): [k.upper() for k in j] for i, j in block_zone_hierarchy.items()}
 
+    for i in hierarchy_dict:
+        for j in hierarchy_dict[i]:
+            df.columns = [k.replace(j, i + '_' + j) for k in df.columns]
+            # df.columns = [k.replace(j.upper().replace(' ', '_'), i + '_' + j) for k in df.columns]
 
-
+    print('Finally, the occupied zones after renaming them following the pattern block_zone are:')
+    occupied_zone_list = []
+    for i in hierarchy_dict:
+        for j in hierarchy_dict[i]:
+            occupied_zone_list.append(f'{i}_{j}')
+            print(f'{i}_{j}')
 
 ##
 # def find_alphanumeric_with_semicolon(string):

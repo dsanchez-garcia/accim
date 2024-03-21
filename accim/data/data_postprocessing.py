@@ -1097,10 +1097,10 @@ class Table:
         # df.to_excel('checkpoint_03-2.xlsx')
 
         # Step: removing '_pymod' from columns
-        df.set_axis(
+        df = df.set_axis(
             labels=[c[:-6] if c.endswith('_pymod') else c for c in df],
             axis=1,
-            inplace=True
+            # inplace=True
         )
 
         # Step: splitting and managing column names
