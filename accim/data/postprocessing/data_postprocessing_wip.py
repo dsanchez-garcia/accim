@@ -1,4 +1,5 @@
-
+import os
+from typing import Union
 
 class Table:
     """Generates a table or dataframe using the EnergyPlus simulation
@@ -96,6 +97,7 @@ class Table:
         standard_outputs: bool = None,
         output_cols_to_keep: list = None,
         concatenated_csv_name: str = None,
+        idfpath: Union[str, bytes, os.PathLike] = None,
         level: list = None,
         level_agg_func: list = None,
         level_excluded_zones: list = None,
@@ -129,6 +131,7 @@ class Table:
         import glob
         import numpy as np
         import csv
+        from besos.eppy_funcs import get_building
 
         self.frequency = frequency
         self.normalised_energy_units = normalised_energy_units
@@ -656,66 +659,30 @@ class Table:
         #Step: scanning occupied zones
         block_list = []
 
-        if block_zone_hierarchy is None:
-            print(
-                'Regarding occupied zones, we have not found a clear hierarchical pattern of blocks and zones. '
-            )
-            block_list = list(
-                i.upper() for i in input('Please enter all Blocks separated by semicolon (;): ').split(';'))
-            hierarchy_dict = {}
-            for i in block_list:
-                temp_zones = list(i.upper() for i in input(
-                    f'Please enter the zones for {i}, considering these cannot be at the same time in more than one block, separated by semicolon (;): ').split(
-                    ';'))
-                temp_dict = {i: temp_zones}
-                hierarchy_dict.update(temp_dict)
-        else:
-            # hierarchy_dict = block_zone_hierarchy
-            hierarchy_dict = {i.upper(): [k.upper() for k in j] for i, j in block_zone_hierarchy.items()}
+        building = get_building(idfpath)
+        # building = get_building('OSM_SmallOffice_exHVAC.idf')
 
-        rename_dict = {}
+        allzones = [i.Name for i in building.idfobjects['ZONE']]
 
-        for i in hierarchy_dict:
-            for j in hierarchy_dict[i]:
-                # df.columns = [k.replace(j, i + '_' + j) for k in df.columns]
-                for c in df.columns:
-                    if i + '_' + j in c or i + ':' + j in c:
-                        continue
-                    else:
-                        rename_dict.update({c: c.replace(j, i + '_' + j)})
-
-        df = df.rename(columns=rename_dict)
-
-        print('Finally, the occupied zones after renaming them following the pattern block_zone are:')
         occupied_zone_list = []
-        for i in hierarchy_dict:
-            for j in hierarchy_dict[i]:
-                occupied_zone_list.append(f'{i}_{j}')
-                print(f'{i}_{j}')
+        for zone in allzones:
+            for col in df.columns:
+                if zone.lower() in col.lower():
+                    occupied_zone_list.append(zone)
+        occupied_zone_list = list(set(occupied_zone_list))
 
-        if all([j == 2 for j in [i.count(':') for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]):
-            occupied_zone_list = [i.split(' ')[0][:-5] for i in [i for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]
-        else:
-            if all([j == 1 for j in [i.count(':') for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]):
-                total_occupied_zones = [i.split(':')[0].upper() for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]
-                for i in total_occupied_zones:
-                    df.columns = [j.replace(i, i.replace(' ', '_')) for j in df.columns]
-                total_occupied_zones = [i.replace(' ', '_') for i in total_occupied_zones]
-            else:
-                occupied_zone_list_1 = [i.split(' ')[0][:-5] for i in [i for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]
-                occupied_zone_list_2 = [i.split(':')[0] for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]
-                total_occupied_zones = occupied_zone_list_1 + occupied_zone_list_2
-                total_occupied_zones = list(dict.fromkeys(total_occupied_zones))
+        if not(all(len(i.split(':')) == 2 for i in occupied_zone_list)):
             if block_zone_hierarchy is None:
                 print(
                     'Regarding occupied zones, we have not found a clear hierarchical pattern of blocks and zones. '
                     'The zones we have found are:'
-                    )
-                print(total_occupied_zones)
+                )
+                print(occupied_zone_list)
                 block_list = list(i.upper() for i in input('Please enter all Blocks separated by semicolon (;): ').split(';'))
                 hierarchy_dict = {}
                 for i in block_list:
-                    temp_zones = list(i.upper() for i in input(f'Please enter the zones for {i}, considering these cannot be at the same time in more than one block, separated by semicolon (;): ').split(';'))
+                    temp_zones = list(
+                        i.upper() for i in input(f'Please enter the zones for {i}, considering these cannot be at the same time in more than one block, separated by semicolon (;): ').split(';'))
                     temp_dict = {i: temp_zones}
                     hierarchy_dict.update(temp_dict)
             else:
@@ -724,18 +691,15 @@ class Table:
 
             for i in hierarchy_dict:
                 for j in hierarchy_dict[i]:
-                    df.columns = [k.replace(j, i+'_'+j) for k in df.columns]
+                    df.columns = [k.replace(j, i + '_' + j) for k in df.columns]
                     # df.columns = [k.replace(j.upper().replace(' ', '_'), i + '_' + j) for k in df.columns]
 
             print('Finally, the occupied zones after renaming them following the pattern block_zone are:')
             occupied_zone_list = []
             for i in hierarchy_dict:
                 for j in hierarchy_dict[i]:
-                    occupied_zone_list.append(f'{i}_{j}')
-                    print(f'{i}_{j}')
-
-
-
+                    occupied_zone_list.append(f'{i}:{j}')
+                    # print(f'{i}_{j}')
 
         # if len(occupied_zone_list) == 0:
         #     occupied_zone_list = [i.split(' ')[0][:-5]
@@ -753,26 +717,15 @@ class Table:
 
         # Step: scanning zones for hvac_zone_list
 
-        if all([j == 2 for j in [i.count(':') for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]):
-            hvac_zone_list = [i.split(' ')[0] for i in [i for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]
-        else:
-            if all([j == 1 for j in [i.count(':') for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]):
-                hvac_zone_list = [i.split(':')[0].split()[0].upper() for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]
-
-        # hvac_zone_list = [i.split(' ')[0] for i in [i for i in df.columns if 'Cooling Coil Total Cooling Rate'.upper() in i]]
+        hvac_zone_list = [i.Zone_or_ZoneList_Name for i in building.idfobjects['ZoneControl:Thermostat']]
 
         hvac_zone_list = list(dict.fromkeys(hvac_zone_list))
         hvac_zone_list_underscore = [i.replace(':', '_') for i in hvac_zone_list]
 
         # Step: scanning blocks for block_list
-        if len(block_list) == 0:
-            if all([j == 2 for j in [i.count(':') for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]):
-                block_list = [i.split(':')[0] for i in occupied_zone_list]
-            elif all([j == 1 for j in [i.count(':') for i in df.columns if 'ZONE OPERATIVE TEMPERATURE' in i]]):
-                block_list = [i.split('_')[0] for i in occupied_zone_list]
-            block_list = list(dict.fromkeys(block_list))
+        block_list = list(set([i.split(':')[0] for i in occupied_zone_list]))
 
-        # Step: renaming all columns containing BlockX_ZoneX patterns to BlockX:ZoneX.
+        # Step: renaming all columns containing BlockX_ZoneY patterns to BlockX:ZoneY.
         renamezonesdict = {}
         for i in range(len(occBZlist_underscore)):
             for j in df.columns:
@@ -986,10 +939,9 @@ class Table:
         # df.to_excel('checkpoint_03-2.xlsx')
 
         # Step: removing '_pymod' from columns
-        df.set_axis(
+        df = df.set_axis(
             labels=[c[:-6] if c.endswith('_pymod') else c for c in df],
             axis=1,
-            inplace=True
         )
 
         # Step: splitting and managing column names
