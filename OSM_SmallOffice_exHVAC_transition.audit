@@ -1,0 +1,34 @@
+
+Conversion 22.1 => 22.2
+ Starting new Transition.audit
+ Will create new full IDFs
+ Will create new IDF lines with units where applicable
+ Will create new IDF lines leaving blank incoming fields as blank (no default fill)
+ Processing IDF -- D:\Python\accim_project\accim\OSM_SmallOffice_exHVAC.idf
+   ** Warning ** Object=Sizing:Zone, name=Core_ZN ZN, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Sizing:Zone, name=Perimeter_ZN_1 ZN, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Sizing:Zone, name=Perimeter_ZN_2 ZN, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Sizing:Zone, name=Perimeter_ZN_3 ZN, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Sizing:Zone, name=Perimeter_ZN_4 ZN, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+
+Conversion 22.2 => 23.1
+ Starting new Transition.audit
+ Will create new full IDFs
+ Will create new IDF lines with units where applicable
+ Will create new IDF lines leaving blank incoming fields as blank (no default fill)
+ Processing IDF -- D:\Python\accim_project\accim\OSM_SmallOffice_exHVAC.idf
+   ** Warning ** Object=Coil:Heating:DX:SingleSpeed, name=Core_ZN ZN HP Htg Coil 26 Clg kBtu/hr 8.0HSPF, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Heating:DX:SingleSpeed, name=Perimeter_ZN_1 ZN HP Htg Coil 27 Clg kBtu/hr 8.0HSPF, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Heating:DX:SingleSpeed, name=Perimeter_ZN_2 ZN HP Htg Coil 21 Clg kBtu/hr 8.0HSPF, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Heating:DX:SingleSpeed, name=Perimeter_ZN_3 ZN HP Htg Coil 26 Clg kBtu/hr 8.0HSPF, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Heating:DX:SingleSpeed, name=Perimeter_ZN_4 ZN HP Htg Coil 24 Clg kBtu/hr 8.0HSPF, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
