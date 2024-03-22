@@ -10,18 +10,18 @@ x = addAccis(
     Output_keep_existing=False,
     Output_type='standard',
     Output_freqs=['hourly'],
-    EnergyPlus_version='23.1',
+    EnergyPlus_version='23.2',
     TempCtrl='temp',
 
-    ComfStand=[99],
-    CustAST_ACSTall=10,
-    CustAST_ACSTaul=35,
-    CustAST_AHSTall=10,
-    CustAST_AHSTaul=35,
-    CustAST_ACSToffset=4,
-    CustAST_AHSToffset=-4,
-    CustAST_m=0.4,
-    CustAST_n=15,
+    ComfStand=[2],
+    # CustAST_ACSTall=10,
+    # CustAST_ACSTaul=35,
+    # CustAST_AHSTall=10,
+    # CustAST_AHSTaul=35,
+    # CustAST_ACSToffset=4,
+    # CustAST_AHSToffset=-4,
+    # CustAST_m=0.4,
+    # CustAST_n=15,
 
     CAT=[80],
     # CATcoolOffset=2,
@@ -51,20 +51,12 @@ x = addAccis(
 from besos import eplus_funcs
 from besos import eppy_funcs
 
-# new_idf = [i for i in os.listdir() if i.endswith('.idf') and idfpath not in i][0]
-# new_idf = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
-# new_idf = 'caso_01.1_2_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
-# new_idf = 'caso_01.1_3[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
-# new_idf = 'testmodel_chile_2_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
-# new_idf = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
-# new_idf = 'testmodel_chile_2_lightweight_uninsulated_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
-# new_idf = 'COMB 03_mod_no-door_lightweight_uninsulated_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
-new_idf = 'COMB 03_mod_no-door_lightweight_uninsulated_heat_act_time_added[CS_CHL Perez-Fargallo[CA_80[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
+new_idf = r'D:\Python\accim_project\accim\smalloffice_osm_no_hvac[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
 
 building = eppy_funcs.get_building(new_idf)
 
 eplus_funcs.run_energyplus(
     building_path=new_idf,
-    epw='CHL_Concepcion.856820_IWEC.epw',
+    epw=r'D:\Python\accim_project\accim\Mulchen-hour.epw',
     out_dir='temp_sim_outputs'
 )

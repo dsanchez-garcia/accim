@@ -1,0 +1,37 @@
+Program Version,EnergyPlus, Version 23.2.0-7636e6b3e9, YMD=2024.03.22 11:53
+1,5,Environment Title[],Latitude[deg],Longitude[deg],Time Zone[],Elevation[m]
+2,8,Day of Simulation[],Month[],Day of Month[],DST Indicator[1=yes 0=no],Hour[],StartMinute[],EndMinute[],DayType
+3,5,Cumulative Day of Simulation[],Month[],Day of Month[],DST Indicator[1=yes 0=no],DayType  ! When Daily Report Variables Requested
+4,2,Cumulative Days of Simulation[],Month[]  ! When Monthly Report Variables Requested
+5,1,Cumulative Days of Simulation[] ! When Run Period Report Variables Requested
+6,1,Calendar Year of Simulation[] ! When Annual Report Variables Requested
+7,1,Environment,Site Outdoor Air Drybulb Temperature [C] !Hourly
+8,1,Environment,Site Outdoor Air Relative Humidity [%] !Hourly
+9,1,Environment,Site Wind Speed [m/s] !Hourly
+483,1,EMS,Comfort Temperature [C] !Hourly
+484,1,EMS,Adaptive Cooling Setpoint Temperature [C] !Hourly
+485,1,EMS,Adaptive Heating Setpoint Temperature [C] !Hourly
+486,1,EMS,Adaptive Cooling Setpoint Temperature_No Tolerance [C] !Hourly
+487,1,EMS,Adaptive Heating Setpoint Temperature_No Tolerance [C] !Hourly
+488,1,EMS,Ventilation Setpoint Temperature [C] !Hourly
+489,1,EMS,Minimum Outdoor Temperature for ventilation [C] !Hourly
+490,1,EMS,Minimum Outdoor Temperature Difference for ventilation [C] !Hourly
+491,1,EMS,Maximum Outdoor Temperature Difference for ventilation [C] !Hourly
+492,1,EMS,Multiplier for Ventilation Opening Factor [] !Hourly
+493,1,ATTIC ZN,Zone Operative Temperature [C] !Hourly
+494,1,CORE_ZN ZN,Zone Operative Temperature [C] !Hourly
+495,1,PERIMETER_ZN_1 ZN,Zone Operative Temperature [C] !Hourly
+496,1,PERIMETER_ZN_2 ZN,Zone Operative Temperature [C] !Hourly
+497,1,PERIMETER_ZN_3 ZN,Zone Operative Temperature [C] !Hourly
+498,1,PERIMETER_ZN_4 ZN,Zone Operative Temperature [C] !Hourly
+1090,1,Whole Building,Facility Total HVAC Electricity Demand Rate [W] !Hourly
+1091,1,PERIMETER_ZN_1 OFFICE WHOLEBUILDING - SM OFFICE PEOPLE,Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C] !Hourly
+1092,1,PERIMETER_ZN_1 OFFICE WHOLEBUILDING - SM OFFICE PEOPLE,Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C] !Hourly
+1093,1,PERIMETER_ZN_2 OFFICE WHOLEBUILDING - SM OFFICE PEOPLE,Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C] !Hourly
+1094,1,PERIMETER_ZN_2 OFFICE WHOLEBUILDING - SM OFFICE PEOPLE,Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C] !Hourly
+1095,1,PERIMETER_ZN_3 OFFICE WHOLEBUILDING - SM OFFICE PEOPLE,Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C] !Hourly
+1096,1,PERIMETER_ZN_3 OFFICE WHOLEBUILDING - SM OFFICE PEOPLE,Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C] !Hourly
+1097,1,PERIMETER_ZN_4 OFFICE WHOLEBUILDING - SM OFFICE PEOPLE,Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C] !Hourly
+1098,1,PERIMETER_ZN_4 OFFICE WHOLEBUILDING - SM OFFICE PEOPLE,Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C] !Hourly
+1099,1,CORE_ZN OFFICE WHOLEBUILDING - SM OFFICE PEOPLE,Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature [C] !Hourly
+1100,1,CORE_ZN OFFICE WHOLEBUILDING - SM OFFICE PEOPLE,Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature [C] !Hourly

@@ -44,7 +44,7 @@ class addAccis:
         related to the Output:Variable objects that need to be kept in the model.
     :type Output_take_dataframe: bool
     :param EnergyPlus_version: The default is 'auto'.
-        Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1' or 'auto'.
+        Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2' or 'auto'.
     :type EnergyPlus_version: str
     :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
     :type TempCtrl: str
@@ -269,6 +269,7 @@ class addAccis:
             '22.1',
             '22.2',
             '23.1',
+            '23.2',
             'auto',
         ]
 
@@ -360,10 +361,10 @@ class addAccis:
                 Output_gen_dataframe = True
             elif Output_gen_dataframe.lower() == 'false':
                 Output_gen_dataframe = False
-            EnergyPlus_version = input("\nEnter the EnergyPlus version (9.1 to 23.1, or auto): ")
+            EnergyPlus_version = input("\nEnter the EnergyPlus version (9.1 to 23.2, or auto): ")
             while EnergyPlus_version not in fullEPversionsList:
                 EnergyPlus_version = input("    EnergyPlus version was not correct. "
-                                           "Please, enter the EnergyPlus version (9.1 to 23.1, or auto): ")
+                                           "Please, enter the EnergyPlus version (9.1 to 23.2, or auto): ")
             TempCtrl = input('\nEnter the Temperature Control method (temperature or pmv): ')
             while TempCtrl not in fullTempCtrllist:
                 TempCtrl = input("  Temperature Control method was not correct. "

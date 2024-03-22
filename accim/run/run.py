@@ -49,7 +49,7 @@ def runEp(
     :param num_CPUs: An integer. The number of CPUs to be used.
     :type num_CPUs: int
     :param EnergyPlus_version: A string.
-        It should be the EnergyPlus version of the IDFs, from '9.0' to '23.1'.
+        It should be the EnergyPlus version of the IDFs, from '9.0' to '23.2'.
     :type EnergyPlus_version: str
     """
 
@@ -63,6 +63,7 @@ def runEp(
         '22.1',
         '22.2',
         '23.1',
+        '23.2',
     ]
 
     if EnergyPlus_version is None:
@@ -88,6 +89,8 @@ def runEp(
         iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
     elif EnergyPlus_version.lower() == '23.1':
         iddfile = 'C:\EnergyPlusV23-1-0\Energy+.idd'
+    elif EnergyPlus_version.lower() == '23.2':
+        iddfile = 'C:\EnergyPlusV23-2-0\Energy+.idd'
     else:
         while EnergyPlus_version.lower() not in fullEPversionsList:
             print(f'{EnergyPlus_version} is not available. You must enter one of the following list:')
