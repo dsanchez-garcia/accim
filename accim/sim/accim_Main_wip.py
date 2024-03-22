@@ -133,24 +133,43 @@ class accimJob():
         self.output_idf_dict = {}
 
         # print(self.filename)
+        # Scanning occupied zones
         self.occupiedZones_orig = []
 
+        # Check if model comes from OpenStudio
+
+        # Check if ZoneList or SpaceList are used
         occupiedZones_orig_osm = []
-        if len([h for h in self.idf1.idfobjects['zonelist']]) > 0:
-            if len(self.idf1.idfobjects['zone']) == 1:
-                no_of_zones = range(1, 2)
-            else:
-                no_of_zones = range(1, len(self.idf1.idfobjects['zone']))
 
-            for i in no_of_zones:
-                for j in self.idf1.idfobjects['zonelist']:
-                    for k in self.idf1.idfobjects['zone']:
-                        if k.Name in j[f'Zone_{i}_Name']:
-                            occupiedZones_orig_osm.append(k.Name)
+        self.spacelist_use = False
+        if len(self.idf1.idfobjects['SPACELIST']) > 0:
+            self.spacelist_use = True
+            self.spacenames_for_ems_uniquekey = []
+            self.spacenames_for_ems_name = []
+            for people in self.idf1.idfobjects['PEOPLE']:
+                for spacelist in [i for i in self.idf1.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
+                    for space in [i for i in self.idf1.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
+                        self.spacenames_for_ems_uniquekey.append(f'{space.Name} {people.Name}')
+                        self.spacenames_for_ems_name.append(space.Name)
+                        occupiedZones_orig_osm.append(space.Zone_Name)
 
-            # for i in self.idf1.idfobjects['zone']:
-            #     if all(i.Name not in [j for j in occupiedZones_orig_osm]):
-            #         occupiedZones_orig_osm.append(i.Name)
+
+        # occupiedZones_orig_osm = []
+        # if len([h for h in self.idf1.idfobjects['zonelist']]) > 0:
+        #     if len(self.idf1.idfobjects['zone']) == 1:
+        #         no_of_zones = range(1, 2)
+        #     else:
+        #         no_of_zones = range(1, len(self.idf1.idfobjects['zone']))
+        #
+        #     for i in no_of_zones:
+        #         for j in self.idf1.idfobjects['zonelist']:
+        #             for k in self.idf1.idfobjects['zone']:
+        #                 if k.Name in j[f'Zone_{i}_Name']:
+        #                     occupiedZones_orig_osm.append(k.Name)
+        #
+        #     # for i in self.idf1.idfobjects['zone']:
+        #     #     if all(i.Name not in [j for j in occupiedZones_orig_osm]):
+        #     #         occupiedZones_orig_osm.append(i.Name)
 
         occupiedZones_orig_dsb = []
         for i in self.idf1.idfobjects['ZONE']:
@@ -158,14 +177,16 @@ class accimJob():
                 if i.Name in k.Name:
                     occupiedZones_orig_dsb.append(i.Name.upper())
 
-        if any([':' in i for i in occupiedZones_orig_dsb]):
-            self.occupiedZones_orig = occupiedZones_orig_dsb
-            self.occupiedZones = [i.replace(':', '_') for i in self.occupiedZones_orig]
-            self.origin_dsb = True
-        else:
+        if self.spacelist_use:
             self.occupiedZones_orig = occupiedZones_orig_osm
             self.occupiedZones = [i.replace(' ', '_') for i in self.occupiedZones_orig]
             self.origin_dsb = False
+        else:
+            self.occupiedZones_orig = occupiedZones_orig_dsb
+            self.occupiedZones = [i.replace(':', '_') for i in self.occupiedZones_orig]
+            self.origin_dsb = True
+
+
 
 
         if verboseMode:

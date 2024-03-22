@@ -3232,25 +3232,44 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
     }
 
     for i in EMSOutputVariableZone_dict:
-        for zonename in self.occupiedZones:
-            if i+'_'+zonename in outputvariablelist:
-                if verboseMode:
-                    print('Not added - '+i+'_'
-                          + zonename + ' Output Variable')
-            else:
-                self.idf1.newidfobject(
-                    'EnergyManagementSystem:OutputVariable',
-                    Name=i + '_' + zonename,
-                    EMS_Variable_Name=EMSOutputVariableZone_dict[i][0]+'_'
-                    + zonename,
-                    Type_of_Data_in_Variable=EMSOutputVariableZone_dict[i][2],
-                    Update_Frequency='ZoneTimestep',
-                    EMS_Program_or_Subroutine_Name='',
-                    Units=EMSOutputVariableZone_dict[i][1]
+        if self.spacelist_use:
+            for n in range(len(self.spacenames_for_ems_uniquekey)):
+                if i + '_' + self.spacenames_for_ems_name[n] in outputvariablelist:
+                    if verboseMode:
+                        print('Not added - ' + i + '_'
+                              + self.spacenames_for_ems_name[n] + ' Output Variable')
+                else:
+                    self.idf1.newidfobject(
+                        'EnergyManagementSystem:OutputVariable',
+                        Name=i + '_' + self.spacenames_for_ems_name[n],
+                        EMS_Variable_Name=EMSOutputVariableZone_dict[i][0] + '_' + self.spacenames_for_ems_name[n],
+                        Type_of_Data_in_Variable=EMSOutputVariableZone_dict[i][2],
+                        Update_Frequency='ZoneTimestep',
+                        EMS_Program_or_Subroutine_Name='',
+                        Units=EMSOutputVariableZone_dict[i][1]
                     )
-                if verboseMode:
-                    print('Added - '+i+'_'
-                          + zonename + ' Output Variable')
+                    if verboseMode:
+                        print('Added - ' + i + '_'
+                              + self.spacenames_for_ems_name[n] + ' Output Variable')
+        else:
+            for zonename in self.occupiedZones:
+                if i+'_'+zonename in outputvariablelist:
+                    if verboseMode:
+                        print('Not added - '+i+'_'
+                              + zonename + ' Output Variable')
+                else:
+                    self.idf1.newidfobject(
+                        'EnergyManagementSystem:OutputVariable',
+                        Name=i + '_' + zonename,
+                        EMS_Variable_Name=EMSOutputVariableZone_dict[i][0]+'_' + zonename,
+                        Type_of_Data_in_Variable=EMSOutputVariableZone_dict[i][2],
+                        Update_Frequency='ZoneTimestep',
+                        EMS_Program_or_Subroutine_Name='',
+                        Units=EMSOutputVariableZone_dict[i][1]
+                        )
+                    if verboseMode:
+                        print('Added - '+i+'_'
+                              + zonename + ' Output Variable')
                 # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i+'_'+zonename'])
 
     if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
@@ -3931,6 +3950,14 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
 
     if len([i.Name for i in self.idf1.idfobjects['zonelist']]) > 0:
         ppl_key_name = self.occupiedZones_orig[0] + ' People'
+    elif len([i.Name for i in self.idf1.idfobjects['spacelist']]) > 0:
+        # space_list = []
+        # for people in self.idf1.idfobjects['PEOPLE']:
+        #     for spacelist in [i for i in self.idf1.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
+        #         for space in [i for i in self.idf1.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
+        #             space_list.append(f'{space.Name} {people.Name}')
+        # ppl_key_name = space_list[0]
+        ppl_key_name = self.spacenames_for_ems_uniquekey[0]
     else:
         ppl_key_name = [i for i in self.idf1.idfobjects['PEOPLE']][0].Name
 
@@ -3943,6 +3970,7 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
         self.idf1.newidfobject(
             'EnergyManagementSystem:Sensor',
             Name='RMOT',
+            #todo if there is spacelist, the key name must be f'{space.Name} {people.Name}', for instance 'PERIMETER_ZN_1 OFFICE WHOLEBUILDING - SM OFFICE PEOPLE'
             OutputVariable_or_OutputMeter_Index_Key_Name=ppl_key_name,
             OutputVariable_or_OutputMeter_Name='Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature'
             )
@@ -3964,6 +3992,37 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
             print('Added - PMOT Sensor')
     #    print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name=='PMOT'])
 
+
+    if self.spacelist_use:
+        for i in range(len(self.spacenames_for_ems_uniquekey)):
+            if f'Occ_count_{self.spacenames_for_ems_name[i]}' in sensorlist:
+                if verboseMode:
+                    print(f'Not added - Occ_count_{self.spacenames_for_ems_name[i]} Sensor')
+            else:
+                self.idf1.newidfobject(
+                    'EnergyManagementSystem:Sensor',
+                    Name=f'Occ_count_{self.spacenames_for_ems_name[i]}',
+                    OutputVariable_or_OutputMeter_Index_Key_Name=self.spacenames_for_ems_uniquekey[i],
+                    OutputVariable_or_OutputMeter_Name='People Occupant Count'
+                )
+                if verboseMode:
+                    print(f'Added - Occ_count_{self.spacenames_for_ems_name[i]} Sensor')
+    else:
+        for i in range(len(self.zonenames)):
+            if f'Occ_count_{self.zonenames[i]}' in sensorlist:
+                if verboseMode:
+                    print(f'Not added - Occ_count_{self.zonenames[i]} Sensor')
+            else:
+                self.idf1.newidfobject(
+                    'EnergyManagementSystem:Sensor',
+                    Name=f'Occ_count_{self.zonenames[i]}',
+                    OutputVariable_or_OutputMeter_Index_Key_Name='People '+self.zonenames_orig[i],
+                    OutputVariable_or_OutputMeter_Name='People Occupant Count'
+                )
+                if verboseMode:
+                    print(f'Added - Occ_count_{self.zonenames[i]} Sensor')
+
+
     for i in range(len(self.zonenames)):
         if self.zonenames[i]+'_OpT' in sensorlist:
             if verboseMode:
@@ -3978,19 +4037,7 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
             if verboseMode:
                 print('Added - '+self.zonenames[i]+'_OpT Sensor')
     #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_OpT'])
-        
-        if f'Occ_count_{self.zonenames[i]}' in sensorlist:
-            if verboseMode:
-                print(f'Not added - Occ_count_{self.zonenames[i]} Sensor')
-        else:
-            self.idf1.newidfobject(
-                'EnergyManagementSystem:Sensor',
-                Name=f'Occ_count_{self.zonenames[i]}',
-                OutputVariable_or_OutputMeter_Index_Key_Name='People '+self.zonenames_orig[i],
-                OutputVariable_or_OutputMeter_Name='People Occupant Count'
-            )
-            if verboseMode:
-                print(f'Added - Occ_count_{self.zonenames[i]} Sensor')
+
 
         
         if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
