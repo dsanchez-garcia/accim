@@ -6279,77 +6279,77 @@ ENERGYMANAGEMENTSYSTEM:SENSOR,
     People Occupant Count;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Core_ZN_ZN_OpT,           !- Name
+    Core_ZN_OpT,              !- Name
     Core_ZN ZN,               !- OutputVariable or OutputMeter Index Key Name
     Zone Operative Temperature;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Core_ZN_ZN_WindSpeed,     !- Name
+    Core_ZN_WindSpeed,        !- Name
     Core_ZN ZN,               !- OutputVariable or OutputMeter Index Key Name
     Zone Outdoor Air Wind Speed;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Core_ZN_ZN_OutT,          !- Name
+    Core_ZN_OutT,             !- Name
     Core_ZN ZN,               !- OutputVariable or OutputMeter Index Key Name
     Zone Outdoor Air Drybulb Temperature;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_1_ZN_OpT,    !- Name
+    Perimeter_ZN_1_OpT,       !- Name
     Perimeter_ZN_1 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Operative Temperature;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_1_ZN_WindSpeed,    !- Name
+    Perimeter_ZN_1_WindSpeed,    !- Name
     Perimeter_ZN_1 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Outdoor Air Wind Speed;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_1_ZN_OutT,    !- Name
+    Perimeter_ZN_1_OutT,      !- Name
     Perimeter_ZN_1 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Outdoor Air Drybulb Temperature;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_2_ZN_OpT,    !- Name
+    Perimeter_ZN_2_OpT,       !- Name
     Perimeter_ZN_2 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Operative Temperature;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_2_ZN_WindSpeed,    !- Name
+    Perimeter_ZN_2_WindSpeed,    !- Name
     Perimeter_ZN_2 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Outdoor Air Wind Speed;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_2_ZN_OutT,    !- Name
+    Perimeter_ZN_2_OutT,      !- Name
     Perimeter_ZN_2 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Outdoor Air Drybulb Temperature;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_3_ZN_OpT,    !- Name
+    Perimeter_ZN_3_OpT,       !- Name
     Perimeter_ZN_3 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Operative Temperature;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_3_ZN_WindSpeed,    !- Name
+    Perimeter_ZN_3_WindSpeed,    !- Name
     Perimeter_ZN_3 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Outdoor Air Wind Speed;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_3_ZN_OutT,    !- Name
+    Perimeter_ZN_3_OutT,      !- Name
     Perimeter_ZN_3 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Outdoor Air Drybulb Temperature;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_4_ZN_OpT,    !- Name
+    Perimeter_ZN_4_OpT,       !- Name
     Perimeter_ZN_4 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Operative Temperature;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_4_ZN_WindSpeed,    !- Name
+    Perimeter_ZN_4_WindSpeed,    !- Name
     Perimeter_ZN_4 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Outdoor Air Wind Speed;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_4_ZN_OutT,    !- Name
+    Perimeter_ZN_4_OutT,      !- Name
     Perimeter_ZN_4 ZN,        !- OutputVariable or OutputMeter Index Key Name
     Zone Outdoor Air Drybulb Temperature;    !- OutputVariable or OutputMeter Name
 
@@ -6359,52 +6359,52 @@ ENERGYMANAGEMENTSYSTEM:SENSOR,
     Site Outdoor Air Drybulb Temperature;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Core_ZN_ZN_CoolCoil,      !- Name
+    Core_ZN_CoolCoil,         !- Name
     Core_ZN ZN VRF Indoor Unit DX Cooling Coil,    !- OutputVariable or OutputMeter Index Key Name
     Cooling Coil Total Cooling Rate;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Core_ZN_ZN_HeatCoil,      !- Name
+    Core_ZN_HeatCoil,         !- Name
     Core_ZN ZN VRF Indoor Unit DX Heating Coil,    !- OutputVariable or OutputMeter Index Key Name
     Heating Coil Heating Rate;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_1_ZN_CoolCoil,    !- Name
+    Perimeter_ZN_1_CoolCoil,    !- Name
     Perimeter_ZN_1 ZN VRF Indoor Unit DX Cooling Coil,    !- OutputVariable or OutputMeter Index Key Name
     Cooling Coil Total Cooling Rate;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_1_ZN_HeatCoil,    !- Name
+    Perimeter_ZN_1_HeatCoil,    !- Name
     Perimeter_ZN_1 ZN VRF Indoor Unit DX Heating Coil,    !- OutputVariable or OutputMeter Index Key Name
     Heating Coil Heating Rate;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_2_ZN_CoolCoil,    !- Name
+    Perimeter_ZN_2_CoolCoil,    !- Name
     Perimeter_ZN_2 ZN VRF Indoor Unit DX Cooling Coil,    !- OutputVariable or OutputMeter Index Key Name
     Cooling Coil Total Cooling Rate;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_2_ZN_HeatCoil,    !- Name
+    Perimeter_ZN_2_HeatCoil,    !- Name
     Perimeter_ZN_2 ZN VRF Indoor Unit DX Heating Coil,    !- OutputVariable or OutputMeter Index Key Name
     Heating Coil Heating Rate;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_3_ZN_CoolCoil,    !- Name
+    Perimeter_ZN_3_CoolCoil,    !- Name
     Perimeter_ZN_3 ZN VRF Indoor Unit DX Cooling Coil,    !- OutputVariable or OutputMeter Index Key Name
     Cooling Coil Total Cooling Rate;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_3_ZN_HeatCoil,    !- Name
+    Perimeter_ZN_3_HeatCoil,    !- Name
     Perimeter_ZN_3 ZN VRF Indoor Unit DX Heating Coil,    !- OutputVariable or OutputMeter Index Key Name
     Heating Coil Heating Rate;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_4_ZN_CoolCoil,    !- Name
+    Perimeter_ZN_4_CoolCoil,    !- Name
     Perimeter_ZN_4 ZN VRF Indoor Unit DX Cooling Coil,    !- OutputVariable or OutputMeter Index Key Name
     Cooling Coil Total Cooling Rate;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
-    Perimeter_ZN_4_ZN_HeatCoil,    !- Name
+    Perimeter_ZN_4_HeatCoil,    !- Name
     Perimeter_ZN_4 ZN VRF Indoor Unit DX Heating Coil,    !- OutputVariable or OutputMeter Index Key Name
     Heating Coil Heating Rate;    !- OutputVariable or OutputMeter Name
 
@@ -6474,29 +6474,29 @@ ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
     SetComfTemp;              !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    CountHours_Core_ZN_ZN,    !- Name
+    CountHours_Core_ZN,       !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    CountHours_Core_ZN_ZN;    !- Program Name 1
+    CountHours_Core_ZN;       !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    CountHours_Perimeter_ZN_1_ZN,    !- Name
+    CountHours_Perimeter_ZN_1,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    CountHours_Perimeter_ZN_1_ZN;    !- Program Name 1
+    CountHours_Perimeter_ZN_1;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    CountHours_Perimeter_ZN_2_ZN,    !- Name
+    CountHours_Perimeter_ZN_2,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    CountHours_Perimeter_ZN_2_ZN;    !- Program Name 1
+    CountHours_Perimeter_ZN_2;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    CountHours_Perimeter_ZN_3_ZN,    !- Name
+    CountHours_Perimeter_ZN_3,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    CountHours_Perimeter_ZN_3_ZN;    !- Program Name 1
+    CountHours_Perimeter_ZN_3;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    CountHours_Perimeter_ZN_4_ZN,    !- Name
+    CountHours_Perimeter_ZN_4,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    CountHours_Perimeter_ZN_4_ZN;    !- Program Name 1
+    CountHours_Perimeter_ZN_4;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
     SetAppLimits,             !- Name
@@ -6519,54 +6519,54 @@ ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
     SetASTnoTol;              !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    CountHoursNoApp_Core_ZN_ZN,    !- Name
+    CountHoursNoApp_Core_ZN,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    CountHoursNoApp_Core_ZN_ZN;    !- Program Name 1
+    CountHoursNoApp_Core_ZN;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    SetGeoVarCore_ZN_ZN,      !- Name
+    SetGeoVarCore_ZN,         !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    SetGeoVarCore_ZN_ZN;      !- Program Name 1
+    SetGeoVarCore_ZN;         !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    CountHoursNoApp_Perimeter_ZN_1_ZN,    !- Name
+    CountHoursNoApp_Perimeter_ZN_1,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    CountHoursNoApp_Perimeter_ZN_1_ZN;    !- Program Name 1
+    CountHoursNoApp_Perimeter_ZN_1;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    SetGeoVarPerimeter_ZN_1_ZN,    !- Name
+    SetGeoVarPerimeter_ZN_1,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    SetGeoVarPerimeter_ZN_1_ZN;    !- Program Name 1
+    SetGeoVarPerimeter_ZN_1;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    CountHoursNoApp_Perimeter_ZN_2_ZN,    !- Name
+    CountHoursNoApp_Perimeter_ZN_2,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    CountHoursNoApp_Perimeter_ZN_2_ZN;    !- Program Name 1
+    CountHoursNoApp_Perimeter_ZN_2;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    SetGeoVarPerimeter_ZN_2_ZN,    !- Name
+    SetGeoVarPerimeter_ZN_2,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    SetGeoVarPerimeter_ZN_2_ZN;    !- Program Name 1
+    SetGeoVarPerimeter_ZN_2;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    CountHoursNoApp_Perimeter_ZN_3_ZN,    !- Name
+    CountHoursNoApp_Perimeter_ZN_3,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    CountHoursNoApp_Perimeter_ZN_3_ZN;    !- Program Name 1
+    CountHoursNoApp_Perimeter_ZN_3;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    SetGeoVarPerimeter_ZN_3_ZN,    !- Name
+    SetGeoVarPerimeter_ZN_3,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    SetGeoVarPerimeter_ZN_3_ZN;    !- Program Name 1
+    SetGeoVarPerimeter_ZN_3;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    CountHoursNoApp_Perimeter_ZN_4_ZN,    !- Name
+    CountHoursNoApp_Perimeter_ZN_4,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    CountHoursNoApp_Perimeter_ZN_4_ZN;    !- Program Name 1
+    CountHoursNoApp_Perimeter_ZN_4;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    SetGeoVarPerimeter_ZN_4_ZN,    !- Name
+    SetGeoVarPerimeter_ZN_4,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    SetGeoVarPerimeter_ZN_4_ZN;    !- Program Name 1
+    SetGeoVarPerimeter_ZN_4;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
     SetInputData,             !- Name
@@ -6584,29 +6584,29 @@ ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
     SetVST;                   !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    ApplyAST_Core_ZN_ZN,      !- Name
+    ApplyAST_Core_ZN,         !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    ApplyAST_Core_ZN_ZN;      !- Program Name 1
+    ApplyAST_Core_ZN;         !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    ApplyAST_Perimeter_ZN_1_ZN,    !- Name
+    ApplyAST_Perimeter_ZN_1,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    ApplyAST_Perimeter_ZN_1_ZN;    !- Program Name 1
+    ApplyAST_Perimeter_ZN_1;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    ApplyAST_Perimeter_ZN_2_ZN,    !- Name
+    ApplyAST_Perimeter_ZN_2,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    ApplyAST_Perimeter_ZN_2_ZN;    !- Program Name 1
+    ApplyAST_Perimeter_ZN_2;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    ApplyAST_Perimeter_ZN_3_ZN,    !- Name
+    ApplyAST_Perimeter_ZN_3,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    ApplyAST_Perimeter_ZN_3_ZN;    !- Program Name 1
+    ApplyAST_Perimeter_ZN_3;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
-    ApplyAST_Perimeter_ZN_4_ZN,    !- Name
+    ApplyAST_Perimeter_ZN_4,    !- Name
     BeginTimestepBeforePredictor,    !- EnergyPlus Model Calling Point
-    ApplyAST_Perimeter_ZN_4_ZN;    !- Program Name 1
+    ApplyAST_Perimeter_ZN_4;    !- Program Name 1
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetComfTemp,              !- Name
@@ -6673,382 +6673,382 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     endif;                    !- Program Line 61
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    CountHours_Core_ZN_ZN,    !- Name
+    CountHours_Core_ZN,       !- Name
     if (ComfStand == 1) || (ComfStand == 10),    !- Program Line 1
     if (RMOT >= AHSTall) && (RMOT <= ACSTaul),    !- Program Line 2
-    if (Core_ZN_ZN_OpT <= ACSTnoTol),    !- Program Line 3
-    if (Core_ZN_ZN_OpT >= AHSTnoTol),    !- Program Line 4
-    set ComfHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 5
-    set DiscomfAppHotHours_Core_ZN_ZN = 0,    !- Program Line 6
-    set DiscomfAppColdHours_Core_ZN_ZN = 0,    !- Program Line 7
-    set DiscomfNonAppHotHours_Core_ZN_ZN = 0,    !- Program Line 8
-    set DiscomfNonAppColdHours_Core_ZN_ZN = 0,    !- Program Line 9
+    if (Core_ZN_OpT <= ACSTnoTol),    !- Program Line 3
+    if (Core_ZN_OpT >= AHSTnoTol),    !- Program Line 4
+    set ComfHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 5
+    set DiscomfAppHotHours_Core_ZN = 0,    !- Program Line 6
+    set DiscomfAppColdHours_Core_ZN = 0,    !- Program Line 7
+    set DiscomfNonAppHotHours_Core_ZN = 0,    !- Program Line 8
+    set DiscomfNonAppColdHours_Core_ZN = 0,    !- Program Line 9
     endif,                    !- Program Line 10
-    elseif (Core_ZN_ZN_OpT > ACSTnoTol),    !- Program Line 11
-    set ComfHours_Core_ZN_ZN = 0,    !- Program Line 12
-    set DiscomfAppHotHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 13
-    set DiscomfAppColdHours_Core_ZN_ZN = 0,    !- Program Line 14
-    set DiscomfNonAppHotHours_Core_ZN_ZN = 0,    !- Program Line 15
-    set DiscomfNonAppColdHours_Core_ZN_ZN = 0,    !- Program Line 16
-    elseif (Core_ZN_ZN_OpT < AHSTnoTol),    !- Program Line 17
-    set ComfHours_Core_ZN_ZN = 0,    !- Program Line 18
-    set DiscomfAppHotHours_Core_ZN_ZN = 0,    !- Program Line 19
-    set DiscomfAppColdHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 20
-    set DiscomfNonAppHotHours_Core_ZN_ZN = 0,    !- Program Line 21
-    set DiscomfNonAppColdHours_Core_ZN_ZN = 0,    !- Program Line 22
+    elseif (Core_ZN_OpT > ACSTnoTol),    !- Program Line 11
+    set ComfHours_Core_ZN = 0,    !- Program Line 12
+    set DiscomfAppHotHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 13
+    set DiscomfAppColdHours_Core_ZN = 0,    !- Program Line 14
+    set DiscomfNonAppHotHours_Core_ZN = 0,    !- Program Line 15
+    set DiscomfNonAppColdHours_Core_ZN = 0,    !- Program Line 16
+    elseif (Core_ZN_OpT < AHSTnoTol),    !- Program Line 17
+    set ComfHours_Core_ZN = 0,    !- Program Line 18
+    set DiscomfAppHotHours_Core_ZN = 0,    !- Program Line 19
+    set DiscomfAppColdHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 20
+    set DiscomfNonAppHotHours_Core_ZN = 0,    !- Program Line 21
+    set DiscomfNonAppColdHours_Core_ZN = 0,    !- Program Line 22
     endif,                    !- Program Line 23
     elseif (RMOT > ACSTaul),    !- Program Line 24
-    set ComfHours_Core_ZN_ZN = 0,    !- Program Line 25
-    set DiscomfAppHotHours_Core_ZN_ZN = 0,    !- Program Line 26
-    set DiscomfAppColdHours_Core_ZN_ZN = 0,    !- Program Line 27
-    set DiscomfNonAppHotHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 28
-    set DiscomfNonAppColdHours_Core_ZN_ZN = 0,    !- Program Line 29
+    set ComfHours_Core_ZN = 0,    !- Program Line 25
+    set DiscomfAppHotHours_Core_ZN = 0,    !- Program Line 26
+    set DiscomfAppColdHours_Core_ZN = 0,    !- Program Line 27
+    set DiscomfNonAppHotHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 28
+    set DiscomfNonAppColdHours_Core_ZN = 0,    !- Program Line 29
     elseif (RMOT < AHSTall),    !- Program Line 30
-    set ComfHours_Core_ZN_ZN = 0,    !- Program Line 31
-    set DiscomfAppHotHours_Core_ZN_ZN = 0,    !- Program Line 32
-    set DiscomfAppColdHours_Core_ZN_ZN = 0,    !- Program Line 33
-    set DiscomfNonAppHotHours_Core_ZN_ZN = 0,    !- Program Line 34
-    set DiscomfNonAppColdHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 35
+    set ComfHours_Core_ZN = 0,    !- Program Line 31
+    set DiscomfAppHotHours_Core_ZN = 0,    !- Program Line 32
+    set DiscomfAppColdHours_Core_ZN = 0,    !- Program Line 33
+    set DiscomfNonAppHotHours_Core_ZN = 0,    !- Program Line 34
+    set DiscomfNonAppColdHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 35
     endif,                    !- Program Line 36
     else,                     !- Program Line 37
     if (PMOT >= AHSTall) && (PMOT <= ACSTaul),    !- Program Line 38
-    if (Core_ZN_ZN_OpT <= ACSTnoTol),    !- Program Line 39
-    if (Core_ZN_ZN_OpT >= AHSTnoTol),    !- Program Line 40
-    set ComfHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 41
-    set DiscomfAppHotHours_Core_ZN_ZN = 0,    !- Program Line 42
-    set DiscomfAppColdHours_Core_ZN_ZN = 0,    !- Program Line 43
-    set DiscomfNonAppHotHours_Core_ZN_ZN = 0,    !- Program Line 44
-    set DiscomfNonAppColdHours_Core_ZN_ZN = 0,    !- Program Line 45
+    if (Core_ZN_OpT <= ACSTnoTol),    !- Program Line 39
+    if (Core_ZN_OpT >= AHSTnoTol),    !- Program Line 40
+    set ComfHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 41
+    set DiscomfAppHotHours_Core_ZN = 0,    !- Program Line 42
+    set DiscomfAppColdHours_Core_ZN = 0,    !- Program Line 43
+    set DiscomfNonAppHotHours_Core_ZN = 0,    !- Program Line 44
+    set DiscomfNonAppColdHours_Core_ZN = 0,    !- Program Line 45
     endif,                    !- Program Line 46
-    elseif (Core_ZN_ZN_OpT > ACSTnoTol),    !- Program Line 47
-    set ComfHours_Core_ZN_ZN = 0,    !- Program Line 48
-    set DiscomfAppHotHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 49
-    set DiscomfAppColdHours_Core_ZN_ZN = 0,    !- Program Line 50
-    set DiscomfNonAppHotHours_Core_ZN_ZN = 0,    !- Program Line 51
-    set DiscomfNonAppColdHours_Core_ZN_ZN = 0,    !- Program Line 52
-    elseif (Core_ZN_ZN_OpT < AHSTnoTol),    !- Program Line 53
-    set ComfHours_Core_ZN_ZN = 0,    !- Program Line 54
-    set DiscomfAppHotHours_Core_ZN_ZN = 0,    !- Program Line 55
-    set DiscomfAppColdHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 56
-    set DiscomfNonAppHotHours_Core_ZN_ZN = 0,    !- Program Line 57
-    set DiscomfNonAppColdHours_Core_ZN_ZN = 0,    !- Program Line 58
+    elseif (Core_ZN_OpT > ACSTnoTol),    !- Program Line 47
+    set ComfHours_Core_ZN = 0,    !- Program Line 48
+    set DiscomfAppHotHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 49
+    set DiscomfAppColdHours_Core_ZN = 0,    !- Program Line 50
+    set DiscomfNonAppHotHours_Core_ZN = 0,    !- Program Line 51
+    set DiscomfNonAppColdHours_Core_ZN = 0,    !- Program Line 52
+    elseif (Core_ZN_OpT < AHSTnoTol),    !- Program Line 53
+    set ComfHours_Core_ZN = 0,    !- Program Line 54
+    set DiscomfAppHotHours_Core_ZN = 0,    !- Program Line 55
+    set DiscomfAppColdHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 56
+    set DiscomfNonAppHotHours_Core_ZN = 0,    !- Program Line 57
+    set DiscomfNonAppColdHours_Core_ZN = 0,    !- Program Line 58
     endif,                    !- Program Line 59
     elseif (PMOT > ACSTaul),    !- Program Line 60
-    set ComfHours_Core_ZN_ZN = 0,    !- Program Line 61
-    set DiscomfAppHotHours_Core_ZN_ZN = 0,    !- Program Line 62
-    set DiscomfAppColdHours_Core_ZN_ZN = 0,    !- Program Line 63
-    set DiscomfNonAppHotHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 64
-    set DiscomfNonAppColdHours_Core_ZN_ZN = 0,    !- Program Line 65
+    set ComfHours_Core_ZN = 0,    !- Program Line 61
+    set DiscomfAppHotHours_Core_ZN = 0,    !- Program Line 62
+    set DiscomfAppColdHours_Core_ZN = 0,    !- Program Line 63
+    set DiscomfNonAppHotHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 64
+    set DiscomfNonAppColdHours_Core_ZN = 0,    !- Program Line 65
     elseif (PMOT < AHSTall),    !- Program Line 66
-    set ComfHours_Core_ZN_ZN = 0,    !- Program Line 67
-    set DiscomfAppHotHours_Core_ZN_ZN = 0,    !- Program Line 68
-    set DiscomfAppColdHours_Core_ZN_ZN = 0,    !- Program Line 69
-    set DiscomfNonAppHotHours_Core_ZN_ZN = 0,    !- Program Line 70
-    set DiscomfNonAppColdHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 71
+    set ComfHours_Core_ZN = 0,    !- Program Line 67
+    set DiscomfAppHotHours_Core_ZN = 0,    !- Program Line 68
+    set DiscomfAppColdHours_Core_ZN = 0,    !- Program Line 69
+    set DiscomfNonAppHotHours_Core_ZN = 0,    !- Program Line 70
+    set DiscomfNonAppColdHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 71
     endif,                    !- Program Line 72
     endif;                    !- Program Line 73
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    CountHours_Perimeter_ZN_1_ZN,    !- Name
+    CountHours_Perimeter_ZN_1,    !- Name
     if (ComfStand == 1) || (ComfStand == 10),    !- Program Line 1
     if (RMOT >= AHSTall) && (RMOT <= ACSTaul),    !- Program Line 2
-    if (Perimeter_ZN_1_ZN_OpT <= ACSTnoTol),    !- Program Line 3
-    if (Perimeter_ZN_1_ZN_OpT >= AHSTnoTol),    !- Program Line 4
-    set ComfHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 5
-    set DiscomfAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 6
-    set DiscomfAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 7
-    set DiscomfNonAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 8
-    set DiscomfNonAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 9
+    if (Perimeter_ZN_1_OpT <= ACSTnoTol),    !- Program Line 3
+    if (Perimeter_ZN_1_OpT >= AHSTnoTol),    !- Program Line 4
+    set ComfHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 5
+    set DiscomfAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 6
+    set DiscomfAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 7
+    set DiscomfNonAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 8
+    set DiscomfNonAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 9
     endif,                    !- Program Line 10
-    elseif (Perimeter_ZN_1_ZN_OpT > ACSTnoTol),    !- Program Line 11
-    set ComfHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 12
-    set DiscomfAppHotHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 13
-    set DiscomfAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 14
-    set DiscomfNonAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 15
-    set DiscomfNonAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 16
-    elseif (Perimeter_ZN_1_ZN_OpT < AHSTnoTol),    !- Program Line 17
-    set ComfHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 18
-    set DiscomfAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 19
-    set DiscomfAppColdHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 20
-    set DiscomfNonAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 21
-    set DiscomfNonAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 22
+    elseif (Perimeter_ZN_1_OpT > ACSTnoTol),    !- Program Line 11
+    set ComfHours_Perimeter_ZN_1 = 0,    !- Program Line 12
+    set DiscomfAppHotHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 13
+    set DiscomfAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 14
+    set DiscomfNonAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 15
+    set DiscomfNonAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 16
+    elseif (Perimeter_ZN_1_OpT < AHSTnoTol),    !- Program Line 17
+    set ComfHours_Perimeter_ZN_1 = 0,    !- Program Line 18
+    set DiscomfAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 19
+    set DiscomfAppColdHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 20
+    set DiscomfNonAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 21
+    set DiscomfNonAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 22
     endif,                    !- Program Line 23
     elseif (RMOT > ACSTaul),    !- Program Line 24
-    set ComfHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 25
-    set DiscomfAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 26
-    set DiscomfAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 27
-    set DiscomfNonAppHotHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 28
-    set DiscomfNonAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 29
+    set ComfHours_Perimeter_ZN_1 = 0,    !- Program Line 25
+    set DiscomfAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 26
+    set DiscomfAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 27
+    set DiscomfNonAppHotHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 28
+    set DiscomfNonAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 29
     elseif (RMOT < AHSTall),    !- Program Line 30
-    set ComfHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 31
-    set DiscomfAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 32
-    set DiscomfAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 33
-    set DiscomfNonAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 34
-    set DiscomfNonAppColdHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 35
+    set ComfHours_Perimeter_ZN_1 = 0,    !- Program Line 31
+    set DiscomfAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 32
+    set DiscomfAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 33
+    set DiscomfNonAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 34
+    set DiscomfNonAppColdHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 35
     endif,                    !- Program Line 36
     else,                     !- Program Line 37
     if (PMOT >= AHSTall) && (PMOT <= ACSTaul),    !- Program Line 38
-    if (Perimeter_ZN_1_ZN_OpT <= ACSTnoTol),    !- Program Line 39
-    if (Perimeter_ZN_1_ZN_OpT >= AHSTnoTol),    !- Program Line 40
-    set ComfHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 41
-    set DiscomfAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 42
-    set DiscomfAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 43
-    set DiscomfNonAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 44
-    set DiscomfNonAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 45
+    if (Perimeter_ZN_1_OpT <= ACSTnoTol),    !- Program Line 39
+    if (Perimeter_ZN_1_OpT >= AHSTnoTol),    !- Program Line 40
+    set ComfHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 41
+    set DiscomfAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 42
+    set DiscomfAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 43
+    set DiscomfNonAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 44
+    set DiscomfNonAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 45
     endif,                    !- Program Line 46
-    elseif (Perimeter_ZN_1_ZN_OpT > ACSTnoTol),    !- Program Line 47
-    set ComfHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 48
-    set DiscomfAppHotHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 49
-    set DiscomfAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 50
-    set DiscomfNonAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 51
-    set DiscomfNonAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 52
-    elseif (Perimeter_ZN_1_ZN_OpT < AHSTnoTol),    !- Program Line 53
-    set ComfHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 54
-    set DiscomfAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 55
-    set DiscomfAppColdHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 56
-    set DiscomfNonAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 57
-    set DiscomfNonAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 58
+    elseif (Perimeter_ZN_1_OpT > ACSTnoTol),    !- Program Line 47
+    set ComfHours_Perimeter_ZN_1 = 0,    !- Program Line 48
+    set DiscomfAppHotHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 49
+    set DiscomfAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 50
+    set DiscomfNonAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 51
+    set DiscomfNonAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 52
+    elseif (Perimeter_ZN_1_OpT < AHSTnoTol),    !- Program Line 53
+    set ComfHours_Perimeter_ZN_1 = 0,    !- Program Line 54
+    set DiscomfAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 55
+    set DiscomfAppColdHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 56
+    set DiscomfNonAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 57
+    set DiscomfNonAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 58
     endif,                    !- Program Line 59
     elseif (PMOT > ACSTaul),    !- Program Line 60
-    set ComfHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 61
-    set DiscomfAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 62
-    set DiscomfAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 63
-    set DiscomfNonAppHotHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 64
-    set DiscomfNonAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 65
+    set ComfHours_Perimeter_ZN_1 = 0,    !- Program Line 61
+    set DiscomfAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 62
+    set DiscomfAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 63
+    set DiscomfNonAppHotHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 64
+    set DiscomfNonAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 65
     elseif (PMOT < AHSTall),    !- Program Line 66
-    set ComfHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 67
-    set DiscomfAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 68
-    set DiscomfAppColdHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 69
-    set DiscomfNonAppHotHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 70
-    set DiscomfNonAppColdHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 71
+    set ComfHours_Perimeter_ZN_1 = 0,    !- Program Line 67
+    set DiscomfAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 68
+    set DiscomfAppColdHours_Perimeter_ZN_1 = 0,    !- Program Line 69
+    set DiscomfNonAppHotHours_Perimeter_ZN_1 = 0,    !- Program Line 70
+    set DiscomfNonAppColdHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 71
     endif,                    !- Program Line 72
     endif;                    !- Program Line 73
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    CountHours_Perimeter_ZN_2_ZN,    !- Name
+    CountHours_Perimeter_ZN_2,    !- Name
     if (ComfStand == 1) || (ComfStand == 10),    !- Program Line 1
     if (RMOT >= AHSTall) && (RMOT <= ACSTaul),    !- Program Line 2
-    if (Perimeter_ZN_2_ZN_OpT <= ACSTnoTol),    !- Program Line 3
-    if (Perimeter_ZN_2_ZN_OpT >= AHSTnoTol),    !- Program Line 4
-    set ComfHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 5
-    set DiscomfAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 6
-    set DiscomfAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 7
-    set DiscomfNonAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 8
-    set DiscomfNonAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 9
+    if (Perimeter_ZN_2_OpT <= ACSTnoTol),    !- Program Line 3
+    if (Perimeter_ZN_2_OpT >= AHSTnoTol),    !- Program Line 4
+    set ComfHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 5
+    set DiscomfAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 6
+    set DiscomfAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 7
+    set DiscomfNonAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 8
+    set DiscomfNonAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 9
     endif,                    !- Program Line 10
-    elseif (Perimeter_ZN_2_ZN_OpT > ACSTnoTol),    !- Program Line 11
-    set ComfHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 12
-    set DiscomfAppHotHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 13
-    set DiscomfAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 14
-    set DiscomfNonAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 15
-    set DiscomfNonAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 16
-    elseif (Perimeter_ZN_2_ZN_OpT < AHSTnoTol),    !- Program Line 17
-    set ComfHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 18
-    set DiscomfAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 19
-    set DiscomfAppColdHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 20
-    set DiscomfNonAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 21
-    set DiscomfNonAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 22
+    elseif (Perimeter_ZN_2_OpT > ACSTnoTol),    !- Program Line 11
+    set ComfHours_Perimeter_ZN_2 = 0,    !- Program Line 12
+    set DiscomfAppHotHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 13
+    set DiscomfAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 14
+    set DiscomfNonAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 15
+    set DiscomfNonAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 16
+    elseif (Perimeter_ZN_2_OpT < AHSTnoTol),    !- Program Line 17
+    set ComfHours_Perimeter_ZN_2 = 0,    !- Program Line 18
+    set DiscomfAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 19
+    set DiscomfAppColdHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 20
+    set DiscomfNonAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 21
+    set DiscomfNonAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 22
     endif,                    !- Program Line 23
     elseif (RMOT > ACSTaul),    !- Program Line 24
-    set ComfHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 25
-    set DiscomfAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 26
-    set DiscomfAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 27
-    set DiscomfNonAppHotHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 28
-    set DiscomfNonAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 29
+    set ComfHours_Perimeter_ZN_2 = 0,    !- Program Line 25
+    set DiscomfAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 26
+    set DiscomfAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 27
+    set DiscomfNonAppHotHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 28
+    set DiscomfNonAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 29
     elseif (RMOT < AHSTall),    !- Program Line 30
-    set ComfHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 31
-    set DiscomfAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 32
-    set DiscomfAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 33
-    set DiscomfNonAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 34
-    set DiscomfNonAppColdHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 35
+    set ComfHours_Perimeter_ZN_2 = 0,    !- Program Line 31
+    set DiscomfAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 32
+    set DiscomfAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 33
+    set DiscomfNonAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 34
+    set DiscomfNonAppColdHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 35
     endif,                    !- Program Line 36
     else,                     !- Program Line 37
     if (PMOT >= AHSTall) && (PMOT <= ACSTaul),    !- Program Line 38
-    if (Perimeter_ZN_2_ZN_OpT <= ACSTnoTol),    !- Program Line 39
-    if (Perimeter_ZN_2_ZN_OpT >= AHSTnoTol),    !- Program Line 40
-    set ComfHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 41
-    set DiscomfAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 42
-    set DiscomfAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 43
-    set DiscomfNonAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 44
-    set DiscomfNonAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 45
+    if (Perimeter_ZN_2_OpT <= ACSTnoTol),    !- Program Line 39
+    if (Perimeter_ZN_2_OpT >= AHSTnoTol),    !- Program Line 40
+    set ComfHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 41
+    set DiscomfAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 42
+    set DiscomfAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 43
+    set DiscomfNonAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 44
+    set DiscomfNonAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 45
     endif,                    !- Program Line 46
-    elseif (Perimeter_ZN_2_ZN_OpT > ACSTnoTol),    !- Program Line 47
-    set ComfHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 48
-    set DiscomfAppHotHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 49
-    set DiscomfAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 50
-    set DiscomfNonAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 51
-    set DiscomfNonAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 52
-    elseif (Perimeter_ZN_2_ZN_OpT < AHSTnoTol),    !- Program Line 53
-    set ComfHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 54
-    set DiscomfAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 55
-    set DiscomfAppColdHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 56
-    set DiscomfNonAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 57
-    set DiscomfNonAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 58
+    elseif (Perimeter_ZN_2_OpT > ACSTnoTol),    !- Program Line 47
+    set ComfHours_Perimeter_ZN_2 = 0,    !- Program Line 48
+    set DiscomfAppHotHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 49
+    set DiscomfAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 50
+    set DiscomfNonAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 51
+    set DiscomfNonAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 52
+    elseif (Perimeter_ZN_2_OpT < AHSTnoTol),    !- Program Line 53
+    set ComfHours_Perimeter_ZN_2 = 0,    !- Program Line 54
+    set DiscomfAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 55
+    set DiscomfAppColdHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 56
+    set DiscomfNonAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 57
+    set DiscomfNonAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 58
     endif,                    !- Program Line 59
     elseif (PMOT > ACSTaul),    !- Program Line 60
-    set ComfHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 61
-    set DiscomfAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 62
-    set DiscomfAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 63
-    set DiscomfNonAppHotHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 64
-    set DiscomfNonAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 65
+    set ComfHours_Perimeter_ZN_2 = 0,    !- Program Line 61
+    set DiscomfAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 62
+    set DiscomfAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 63
+    set DiscomfNonAppHotHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 64
+    set DiscomfNonAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 65
     elseif (PMOT < AHSTall),    !- Program Line 66
-    set ComfHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 67
-    set DiscomfAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 68
-    set DiscomfAppColdHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 69
-    set DiscomfNonAppHotHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 70
-    set DiscomfNonAppColdHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 71
+    set ComfHours_Perimeter_ZN_2 = 0,    !- Program Line 67
+    set DiscomfAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 68
+    set DiscomfAppColdHours_Perimeter_ZN_2 = 0,    !- Program Line 69
+    set DiscomfNonAppHotHours_Perimeter_ZN_2 = 0,    !- Program Line 70
+    set DiscomfNonAppColdHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 71
     endif,                    !- Program Line 72
     endif;                    !- Program Line 73
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    CountHours_Perimeter_ZN_3_ZN,    !- Name
+    CountHours_Perimeter_ZN_3,    !- Name
     if (ComfStand == 1) || (ComfStand == 10),    !- Program Line 1
     if (RMOT >= AHSTall) && (RMOT <= ACSTaul),    !- Program Line 2
-    if (Perimeter_ZN_3_ZN_OpT <= ACSTnoTol),    !- Program Line 3
-    if (Perimeter_ZN_3_ZN_OpT >= AHSTnoTol),    !- Program Line 4
-    set ComfHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 5
-    set DiscomfAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 6
-    set DiscomfAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 7
-    set DiscomfNonAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 8
-    set DiscomfNonAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 9
+    if (Perimeter_ZN_3_OpT <= ACSTnoTol),    !- Program Line 3
+    if (Perimeter_ZN_3_OpT >= AHSTnoTol),    !- Program Line 4
+    set ComfHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 5
+    set DiscomfAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 6
+    set DiscomfAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 7
+    set DiscomfNonAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 8
+    set DiscomfNonAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 9
     endif,                    !- Program Line 10
-    elseif (Perimeter_ZN_3_ZN_OpT > ACSTnoTol),    !- Program Line 11
-    set ComfHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 12
-    set DiscomfAppHotHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 13
-    set DiscomfAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 14
-    set DiscomfNonAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 15
-    set DiscomfNonAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 16
-    elseif (Perimeter_ZN_3_ZN_OpT < AHSTnoTol),    !- Program Line 17
-    set ComfHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 18
-    set DiscomfAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 19
-    set DiscomfAppColdHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 20
-    set DiscomfNonAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 21
-    set DiscomfNonAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 22
+    elseif (Perimeter_ZN_3_OpT > ACSTnoTol),    !- Program Line 11
+    set ComfHours_Perimeter_ZN_3 = 0,    !- Program Line 12
+    set DiscomfAppHotHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 13
+    set DiscomfAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 14
+    set DiscomfNonAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 15
+    set DiscomfNonAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 16
+    elseif (Perimeter_ZN_3_OpT < AHSTnoTol),    !- Program Line 17
+    set ComfHours_Perimeter_ZN_3 = 0,    !- Program Line 18
+    set DiscomfAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 19
+    set DiscomfAppColdHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 20
+    set DiscomfNonAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 21
+    set DiscomfNonAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 22
     endif,                    !- Program Line 23
     elseif (RMOT > ACSTaul),    !- Program Line 24
-    set ComfHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 25
-    set DiscomfAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 26
-    set DiscomfAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 27
-    set DiscomfNonAppHotHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 28
-    set DiscomfNonAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 29
+    set ComfHours_Perimeter_ZN_3 = 0,    !- Program Line 25
+    set DiscomfAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 26
+    set DiscomfAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 27
+    set DiscomfNonAppHotHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 28
+    set DiscomfNonAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 29
     elseif (RMOT < AHSTall),    !- Program Line 30
-    set ComfHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 31
-    set DiscomfAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 32
-    set DiscomfAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 33
-    set DiscomfNonAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 34
-    set DiscomfNonAppColdHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 35
+    set ComfHours_Perimeter_ZN_3 = 0,    !- Program Line 31
+    set DiscomfAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 32
+    set DiscomfAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 33
+    set DiscomfNonAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 34
+    set DiscomfNonAppColdHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 35
     endif,                    !- Program Line 36
     else,                     !- Program Line 37
     if (PMOT >= AHSTall) && (PMOT <= ACSTaul),    !- Program Line 38
-    if (Perimeter_ZN_3_ZN_OpT <= ACSTnoTol),    !- Program Line 39
-    if (Perimeter_ZN_3_ZN_OpT >= AHSTnoTol),    !- Program Line 40
-    set ComfHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 41
-    set DiscomfAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 42
-    set DiscomfAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 43
-    set DiscomfNonAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 44
-    set DiscomfNonAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 45
+    if (Perimeter_ZN_3_OpT <= ACSTnoTol),    !- Program Line 39
+    if (Perimeter_ZN_3_OpT >= AHSTnoTol),    !- Program Line 40
+    set ComfHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 41
+    set DiscomfAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 42
+    set DiscomfAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 43
+    set DiscomfNonAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 44
+    set DiscomfNonAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 45
     endif,                    !- Program Line 46
-    elseif (Perimeter_ZN_3_ZN_OpT > ACSTnoTol),    !- Program Line 47
-    set ComfHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 48
-    set DiscomfAppHotHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 49
-    set DiscomfAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 50
-    set DiscomfNonAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 51
-    set DiscomfNonAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 52
-    elseif (Perimeter_ZN_3_ZN_OpT < AHSTnoTol),    !- Program Line 53
-    set ComfHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 54
-    set DiscomfAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 55
-    set DiscomfAppColdHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 56
-    set DiscomfNonAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 57
-    set DiscomfNonAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 58
+    elseif (Perimeter_ZN_3_OpT > ACSTnoTol),    !- Program Line 47
+    set ComfHours_Perimeter_ZN_3 = 0,    !- Program Line 48
+    set DiscomfAppHotHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 49
+    set DiscomfAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 50
+    set DiscomfNonAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 51
+    set DiscomfNonAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 52
+    elseif (Perimeter_ZN_3_OpT < AHSTnoTol),    !- Program Line 53
+    set ComfHours_Perimeter_ZN_3 = 0,    !- Program Line 54
+    set DiscomfAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 55
+    set DiscomfAppColdHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 56
+    set DiscomfNonAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 57
+    set DiscomfNonAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 58
     endif,                    !- Program Line 59
     elseif (PMOT > ACSTaul),    !- Program Line 60
-    set ComfHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 61
-    set DiscomfAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 62
-    set DiscomfAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 63
-    set DiscomfNonAppHotHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 64
-    set DiscomfNonAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 65
+    set ComfHours_Perimeter_ZN_3 = 0,    !- Program Line 61
+    set DiscomfAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 62
+    set DiscomfAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 63
+    set DiscomfNonAppHotHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 64
+    set DiscomfNonAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 65
     elseif (PMOT < AHSTall),    !- Program Line 66
-    set ComfHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 67
-    set DiscomfAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 68
-    set DiscomfAppColdHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 69
-    set DiscomfNonAppHotHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 70
-    set DiscomfNonAppColdHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 71
+    set ComfHours_Perimeter_ZN_3 = 0,    !- Program Line 67
+    set DiscomfAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 68
+    set DiscomfAppColdHours_Perimeter_ZN_3 = 0,    !- Program Line 69
+    set DiscomfNonAppHotHours_Perimeter_ZN_3 = 0,    !- Program Line 70
+    set DiscomfNonAppColdHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 71
     endif,                    !- Program Line 72
     endif;                    !- Program Line 73
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    CountHours_Perimeter_ZN_4_ZN,    !- Name
+    CountHours_Perimeter_ZN_4,    !- Name
     if (ComfStand == 1) || (ComfStand == 10),    !- Program Line 1
     if (RMOT >= AHSTall) && (RMOT <= ACSTaul),    !- Program Line 2
-    if (Perimeter_ZN_4_ZN_OpT <= ACSTnoTol),    !- Program Line 3
-    if (Perimeter_ZN_4_ZN_OpT >= AHSTnoTol),    !- Program Line 4
-    set ComfHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 5
-    set DiscomfAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 6
-    set DiscomfAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 7
-    set DiscomfNonAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 8
-    set DiscomfNonAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 9
+    if (Perimeter_ZN_4_OpT <= ACSTnoTol),    !- Program Line 3
+    if (Perimeter_ZN_4_OpT >= AHSTnoTol),    !- Program Line 4
+    set ComfHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 5
+    set DiscomfAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 6
+    set DiscomfAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 7
+    set DiscomfNonAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 8
+    set DiscomfNonAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 9
     endif,                    !- Program Line 10
-    elseif (Perimeter_ZN_4_ZN_OpT > ACSTnoTol),    !- Program Line 11
-    set ComfHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 12
-    set DiscomfAppHotHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 13
-    set DiscomfAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 14
-    set DiscomfNonAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 15
-    set DiscomfNonAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 16
-    elseif (Perimeter_ZN_4_ZN_OpT < AHSTnoTol),    !- Program Line 17
-    set ComfHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 18
-    set DiscomfAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 19
-    set DiscomfAppColdHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 20
-    set DiscomfNonAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 21
-    set DiscomfNonAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 22
+    elseif (Perimeter_ZN_4_OpT > ACSTnoTol),    !- Program Line 11
+    set ComfHours_Perimeter_ZN_4 = 0,    !- Program Line 12
+    set DiscomfAppHotHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 13
+    set DiscomfAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 14
+    set DiscomfNonAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 15
+    set DiscomfNonAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 16
+    elseif (Perimeter_ZN_4_OpT < AHSTnoTol),    !- Program Line 17
+    set ComfHours_Perimeter_ZN_4 = 0,    !- Program Line 18
+    set DiscomfAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 19
+    set DiscomfAppColdHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 20
+    set DiscomfNonAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 21
+    set DiscomfNonAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 22
     endif,                    !- Program Line 23
     elseif (RMOT > ACSTaul),    !- Program Line 24
-    set ComfHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 25
-    set DiscomfAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 26
-    set DiscomfAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 27
-    set DiscomfNonAppHotHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 28
-    set DiscomfNonAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 29
+    set ComfHours_Perimeter_ZN_4 = 0,    !- Program Line 25
+    set DiscomfAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 26
+    set DiscomfAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 27
+    set DiscomfNonAppHotHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 28
+    set DiscomfNonAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 29
     elseif (RMOT < AHSTall),    !- Program Line 30
-    set ComfHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 31
-    set DiscomfAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 32
-    set DiscomfAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 33
-    set DiscomfNonAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 34
-    set DiscomfNonAppColdHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 35
+    set ComfHours_Perimeter_ZN_4 = 0,    !- Program Line 31
+    set DiscomfAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 32
+    set DiscomfAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 33
+    set DiscomfNonAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 34
+    set DiscomfNonAppColdHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 35
     endif,                    !- Program Line 36
     else,                     !- Program Line 37
     if (PMOT >= AHSTall) && (PMOT <= ACSTaul),    !- Program Line 38
-    if (Perimeter_ZN_4_ZN_OpT <= ACSTnoTol),    !- Program Line 39
-    if (Perimeter_ZN_4_ZN_OpT >= AHSTnoTol),    !- Program Line 40
-    set ComfHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 41
-    set DiscomfAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 42
-    set DiscomfAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 43
-    set DiscomfNonAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 44
-    set DiscomfNonAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 45
+    if (Perimeter_ZN_4_OpT <= ACSTnoTol),    !- Program Line 39
+    if (Perimeter_ZN_4_OpT >= AHSTnoTol),    !- Program Line 40
+    set ComfHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 41
+    set DiscomfAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 42
+    set DiscomfAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 43
+    set DiscomfNonAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 44
+    set DiscomfNonAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 45
     endif,                    !- Program Line 46
-    elseif (Perimeter_ZN_4_ZN_OpT > ACSTnoTol),    !- Program Line 47
-    set ComfHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 48
-    set DiscomfAppHotHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 49
-    set DiscomfAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 50
-    set DiscomfNonAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 51
-    set DiscomfNonAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 52
-    elseif (Perimeter_ZN_4_ZN_OpT < AHSTnoTol),    !- Program Line 53
-    set ComfHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 54
-    set DiscomfAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 55
-    set DiscomfAppColdHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 56
-    set DiscomfNonAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 57
-    set DiscomfNonAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 58
+    elseif (Perimeter_ZN_4_OpT > ACSTnoTol),    !- Program Line 47
+    set ComfHours_Perimeter_ZN_4 = 0,    !- Program Line 48
+    set DiscomfAppHotHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 49
+    set DiscomfAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 50
+    set DiscomfNonAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 51
+    set DiscomfNonAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 52
+    elseif (Perimeter_ZN_4_OpT < AHSTnoTol),    !- Program Line 53
+    set ComfHours_Perimeter_ZN_4 = 0,    !- Program Line 54
+    set DiscomfAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 55
+    set DiscomfAppColdHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 56
+    set DiscomfNonAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 57
+    set DiscomfNonAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 58
     endif,                    !- Program Line 59
     elseif (PMOT > ACSTaul),    !- Program Line 60
-    set ComfHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 61
-    set DiscomfAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 62
-    set DiscomfAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 63
-    set DiscomfNonAppHotHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 64
-    set DiscomfNonAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 65
+    set ComfHours_Perimeter_ZN_4 = 0,    !- Program Line 61
+    set DiscomfAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 62
+    set DiscomfAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 63
+    set DiscomfNonAppHotHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 64
+    set DiscomfNonAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 65
     elseif (PMOT < AHSTall),    !- Program Line 66
-    set ComfHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 67
-    set DiscomfAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 68
-    set DiscomfAppColdHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 69
-    set DiscomfNonAppHotHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 70
-    set DiscomfNonAppColdHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 71
+    set ComfHours_Perimeter_ZN_4 = 0,    !- Program Line 67
+    set DiscomfAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 68
+    set DiscomfAppColdHours_Perimeter_ZN_4 = 0,    !- Program Line 69
+    set DiscomfNonAppHotHours_Perimeter_ZN_4 = 0,    !- Program Line 70
+    set DiscomfNonAppColdHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 71
     endif,                    !- Program Line 72
     endif;                    !- Program Line 73
 
@@ -9567,139 +9567,139 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set AHSTnoTol = AHST-AHSTtol;    !- Program Line 2
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    CountHoursNoApp_Core_ZN_ZN,    !- Name
-    if (Core_ZN_ZN_OpT <= ACSTnoTol),    !- Program Line 1
-    if (Core_ZN_ZN_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 3
-    if Occ_count_Core_ZN_ZN,    !- Program Line 4
-    set OccComfHoursNoApp_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 5
+    CountHoursNoApp_Core_ZN,    !- Name
+    if (Core_ZN_OpT <= ACSTnoTol),    !- Program Line 1
+    if (Core_ZN_OpT >= AHSTnoTol),    !- Program Line 2
+    set ComfHoursNoApp_Core_ZN = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_Core_ZN,     !- Program Line 4
+    set OccComfHoursNoApp_Core_ZN = 1*ZoneTimeStep,    !- Program Line 5
     else,                     !- Program Line 6
-    set OccComfHoursNoApp_Core_ZN_ZN = 0,    !- Program Line 7
+    set OccComfHoursNoApp_Core_ZN = 0,    !- Program Line 7
     endif,                    !- Program Line 8
     else,                     !- Program Line 9
-    set ComfHoursNoApp_Core_ZN_ZN = 0,    !- Program Line 10
+    set ComfHoursNoApp_Core_ZN = 0,    !- Program Line 10
     endif,                    !- Program Line 11
     else,                     !- Program Line 12
-    set ComfHoursNoApp_Core_ZN_ZN = 0,    !- Program Line 13
+    set ComfHoursNoApp_Core_ZN = 0,    !- Program Line 13
     endif,                    !- Program Line 14
-    if Occ_count_Core_ZN_ZN > 0,    !- Program Line 15
-    set OccHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 16
+    if Occ_count_Core_ZN > 0,    !- Program Line 15
+    set OccHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 16
     else,                     !- Program Line 17
-    set OccHours_Core_ZN_ZN = 0,    !- Program Line 18
+    set OccHours_Core_ZN = 0,    !- Program Line 18
     endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    SetGeoVarCore_ZN_ZN,      !- Name
-    set ZoneFloorArea_Core_ZN_ZN = ZFA_Core_ZN_ZN/2,    !- Program Line 1
-    set ZoneAirVolume_Core_ZN_ZN = ZAV_Core_ZN_ZN/2;    !- Program Line 2
+    SetGeoVarCore_ZN,         !- Name
+    set ZoneFloorArea_Core_ZN = ZFA_Core_ZN/2,    !- Program Line 1
+    set ZoneAirVolume_Core_ZN = ZAV_Core_ZN/2;    !- Program Line 2
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    CountHoursNoApp_Perimeter_ZN_1_ZN,    !- Name
-    if (Perimeter_ZN_1_ZN_OpT <= ACSTnoTol),    !- Program Line 1
-    if (Perimeter_ZN_1_ZN_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 3
-    if Occ_count_Perimeter_ZN_1_ZN,    !- Program Line 4
-    set OccComfHoursNoApp_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 5
+    CountHoursNoApp_Perimeter_ZN_1,    !- Name
+    if (Perimeter_ZN_1_OpT <= ACSTnoTol),    !- Program Line 1
+    if (Perimeter_ZN_1_OpT >= AHSTnoTol),    !- Program Line 2
+    set ComfHoursNoApp_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_Perimeter_ZN_1,    !- Program Line 4
+    set OccComfHoursNoApp_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 5
     else,                     !- Program Line 6
-    set OccComfHoursNoApp_Perimeter_ZN_1_ZN = 0,    !- Program Line 7
+    set OccComfHoursNoApp_Perimeter_ZN_1 = 0,    !- Program Line 7
     endif,                    !- Program Line 8
     else,                     !- Program Line 9
-    set ComfHoursNoApp_Perimeter_ZN_1_ZN = 0,    !- Program Line 10
+    set ComfHoursNoApp_Perimeter_ZN_1 = 0,    !- Program Line 10
     endif,                    !- Program Line 11
     else,                     !- Program Line 12
-    set ComfHoursNoApp_Perimeter_ZN_1_ZN = 0,    !- Program Line 13
+    set ComfHoursNoApp_Perimeter_ZN_1 = 0,    !- Program Line 13
     endif,                    !- Program Line 14
-    if Occ_count_Perimeter_ZN_1_ZN > 0,    !- Program Line 15
-    set OccHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 16
+    if Occ_count_Perimeter_ZN_1 > 0,    !- Program Line 15
+    set OccHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 16
     else,                     !- Program Line 17
-    set OccHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 18
+    set OccHours_Perimeter_ZN_1 = 0,    !- Program Line 18
     endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    SetGeoVarPerimeter_ZN_1_ZN,    !- Name
-    set ZoneFloorArea_Perimeter_ZN_1_ZN = ZFA_Perimeter_ZN_1_ZN/2,    !- Program Line 1
-    set ZoneAirVolume_Perimeter_ZN_1_ZN = ZAV_Perimeter_ZN_1_ZN/2;    !- Program Line 2
+    SetGeoVarPerimeter_ZN_1,    !- Name
+    set ZoneFloorArea_Perimeter_ZN_1 = ZFA_Perimeter_ZN_1/2,    !- Program Line 1
+    set ZoneAirVolume_Perimeter_ZN_1 = ZAV_Perimeter_ZN_1/2;    !- Program Line 2
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    CountHoursNoApp_Perimeter_ZN_2_ZN,    !- Name
-    if (Perimeter_ZN_2_ZN_OpT <= ACSTnoTol),    !- Program Line 1
-    if (Perimeter_ZN_2_ZN_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 3
-    if Occ_count_Perimeter_ZN_2_ZN,    !- Program Line 4
-    set OccComfHoursNoApp_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 5
+    CountHoursNoApp_Perimeter_ZN_2,    !- Name
+    if (Perimeter_ZN_2_OpT <= ACSTnoTol),    !- Program Line 1
+    if (Perimeter_ZN_2_OpT >= AHSTnoTol),    !- Program Line 2
+    set ComfHoursNoApp_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_Perimeter_ZN_2,    !- Program Line 4
+    set OccComfHoursNoApp_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 5
     else,                     !- Program Line 6
-    set OccComfHoursNoApp_Perimeter_ZN_2_ZN = 0,    !- Program Line 7
+    set OccComfHoursNoApp_Perimeter_ZN_2 = 0,    !- Program Line 7
     endif,                    !- Program Line 8
     else,                     !- Program Line 9
-    set ComfHoursNoApp_Perimeter_ZN_2_ZN = 0,    !- Program Line 10
+    set ComfHoursNoApp_Perimeter_ZN_2 = 0,    !- Program Line 10
     endif,                    !- Program Line 11
     else,                     !- Program Line 12
-    set ComfHoursNoApp_Perimeter_ZN_2_ZN = 0,    !- Program Line 13
+    set ComfHoursNoApp_Perimeter_ZN_2 = 0,    !- Program Line 13
     endif,                    !- Program Line 14
-    if Occ_count_Perimeter_ZN_2_ZN > 0,    !- Program Line 15
-    set OccHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 16
+    if Occ_count_Perimeter_ZN_2 > 0,    !- Program Line 15
+    set OccHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 16
     else,                     !- Program Line 17
-    set OccHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 18
+    set OccHours_Perimeter_ZN_2 = 0,    !- Program Line 18
     endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    SetGeoVarPerimeter_ZN_2_ZN,    !- Name
-    set ZoneFloorArea_Perimeter_ZN_2_ZN = ZFA_Perimeter_ZN_2_ZN/2,    !- Program Line 1
-    set ZoneAirVolume_Perimeter_ZN_2_ZN = ZAV_Perimeter_ZN_2_ZN/2;    !- Program Line 2
+    SetGeoVarPerimeter_ZN_2,    !- Name
+    set ZoneFloorArea_Perimeter_ZN_2 = ZFA_Perimeter_ZN_2/2,    !- Program Line 1
+    set ZoneAirVolume_Perimeter_ZN_2 = ZAV_Perimeter_ZN_2/2;    !- Program Line 2
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    CountHoursNoApp_Perimeter_ZN_3_ZN,    !- Name
-    if (Perimeter_ZN_3_ZN_OpT <= ACSTnoTol),    !- Program Line 1
-    if (Perimeter_ZN_3_ZN_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 3
-    if Occ_count_Perimeter_ZN_3_ZN,    !- Program Line 4
-    set OccComfHoursNoApp_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 5
+    CountHoursNoApp_Perimeter_ZN_3,    !- Name
+    if (Perimeter_ZN_3_OpT <= ACSTnoTol),    !- Program Line 1
+    if (Perimeter_ZN_3_OpT >= AHSTnoTol),    !- Program Line 2
+    set ComfHoursNoApp_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_Perimeter_ZN_3,    !- Program Line 4
+    set OccComfHoursNoApp_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 5
     else,                     !- Program Line 6
-    set OccComfHoursNoApp_Perimeter_ZN_3_ZN = 0,    !- Program Line 7
+    set OccComfHoursNoApp_Perimeter_ZN_3 = 0,    !- Program Line 7
     endif,                    !- Program Line 8
     else,                     !- Program Line 9
-    set ComfHoursNoApp_Perimeter_ZN_3_ZN = 0,    !- Program Line 10
+    set ComfHoursNoApp_Perimeter_ZN_3 = 0,    !- Program Line 10
     endif,                    !- Program Line 11
     else,                     !- Program Line 12
-    set ComfHoursNoApp_Perimeter_ZN_3_ZN = 0,    !- Program Line 13
+    set ComfHoursNoApp_Perimeter_ZN_3 = 0,    !- Program Line 13
     endif,                    !- Program Line 14
-    if Occ_count_Perimeter_ZN_3_ZN > 0,    !- Program Line 15
-    set OccHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 16
+    if Occ_count_Perimeter_ZN_3 > 0,    !- Program Line 15
+    set OccHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 16
     else,                     !- Program Line 17
-    set OccHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 18
+    set OccHours_Perimeter_ZN_3 = 0,    !- Program Line 18
     endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    SetGeoVarPerimeter_ZN_3_ZN,    !- Name
-    set ZoneFloorArea_Perimeter_ZN_3_ZN = ZFA_Perimeter_ZN_3_ZN/2,    !- Program Line 1
-    set ZoneAirVolume_Perimeter_ZN_3_ZN = ZAV_Perimeter_ZN_3_ZN/2;    !- Program Line 2
+    SetGeoVarPerimeter_ZN_3,    !- Name
+    set ZoneFloorArea_Perimeter_ZN_3 = ZFA_Perimeter_ZN_3/2,    !- Program Line 1
+    set ZoneAirVolume_Perimeter_ZN_3 = ZAV_Perimeter_ZN_3/2;    !- Program Line 2
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    CountHoursNoApp_Perimeter_ZN_4_ZN,    !- Name
-    if (Perimeter_ZN_4_ZN_OpT <= ACSTnoTol),    !- Program Line 1
-    if (Perimeter_ZN_4_ZN_OpT >= AHSTnoTol),    !- Program Line 2
-    set ComfHoursNoApp_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 3
-    if Occ_count_Perimeter_ZN_4_ZN,    !- Program Line 4
-    set OccComfHoursNoApp_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 5
+    CountHoursNoApp_Perimeter_ZN_4,    !- Name
+    if (Perimeter_ZN_4_OpT <= ACSTnoTol),    !- Program Line 1
+    if (Perimeter_ZN_4_OpT >= AHSTnoTol),    !- Program Line 2
+    set ComfHoursNoApp_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 3
+    if Occ_count_Perimeter_ZN_4,    !- Program Line 4
+    set OccComfHoursNoApp_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 5
     else,                     !- Program Line 6
-    set OccComfHoursNoApp_Perimeter_ZN_4_ZN = 0,    !- Program Line 7
+    set OccComfHoursNoApp_Perimeter_ZN_4 = 0,    !- Program Line 7
     endif,                    !- Program Line 8
     else,                     !- Program Line 9
-    set ComfHoursNoApp_Perimeter_ZN_4_ZN = 0,    !- Program Line 10
+    set ComfHoursNoApp_Perimeter_ZN_4 = 0,    !- Program Line 10
     endif,                    !- Program Line 11
     else,                     !- Program Line 12
-    set ComfHoursNoApp_Perimeter_ZN_4_ZN = 0,    !- Program Line 13
+    set ComfHoursNoApp_Perimeter_ZN_4 = 0,    !- Program Line 13
     endif,                    !- Program Line 14
-    if Occ_count_Perimeter_ZN_4_ZN > 0,    !- Program Line 15
-    set OccHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 16
+    if Occ_count_Perimeter_ZN_4 > 0,    !- Program Line 15
+    set OccHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 16
     else,                     !- Program Line 17
-    set OccHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 18
+    set OccHours_Perimeter_ZN_4 = 0,    !- Program Line 18
     endif;                    !- Program Line 19
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    SetGeoVarPerimeter_ZN_4_ZN,    !- Name
-    set ZoneFloorArea_Perimeter_ZN_4_ZN = ZFA_Perimeter_ZN_4_ZN/2,    !- Program Line 1
-    set ZoneAirVolume_Perimeter_ZN_4_ZN = ZAV_Perimeter_ZN_4_ZN/2;    !- Program Line 2
+    SetGeoVarPerimeter_ZN_4,    !- Name
+    set ZoneFloorArea_Perimeter_ZN_4 = ZFA_Perimeter_ZN_4/2,    !- Program Line 1
+    set ZoneAirVolume_Perimeter_ZN_4 = ZAV_Perimeter_ZN_4/2;    !- Program Line 2
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetInputData,             !- Name
@@ -9760,9 +9760,9 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     endif;                    !- Program Line 34
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    ApplyAST_Core_ZN_ZN,      !- Name
-    if Core_ZN_ZN_CoolCoil==0,    !- Program Line 1
-    if Core_ZN_ZN_HeatCoil==0,    !- Program Line 2
+    ApplyAST_Core_ZN,         !- Name
+    if Core_ZN_CoolCoil==0,    !- Program Line 1
+    if Core_ZN_HeatCoil==0,    !- Program Line 2
     set NoH_NoC_reqs = 1,     !- Program Line 3
     else,                     !- Program Line 4
     set NoH_NoC_reqs = 0,     !- Program Line 5
@@ -9770,10 +9770,10 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     else,                     !- Program Line 7
     set NoH_NoC_reqs = 0,     !- Program Line 8
     endif,                    !- Program Line 9
-    if Core_ZN_ZN_OpT<roundedACST,    !- Program Line 10
-    if Core_ZN_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 11
-    if Core_ZN_ZN_OutT>MinOutTemp,    !- Program Line 12
-    if Core_ZN_ZN_OutT < Core_ZN_ZN_OpT,    !- Program Line 13
+    if Core_ZN_OpT<roundedACST,    !- Program Line 10
+    if Core_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 11
+    if Core_ZN_OutT>MinOutTemp,    !- Program Line 12
+    if Core_ZN_OutT < Core_ZN_OpT,    !- Program Line 13
     set meets_base_reqs = 1,    !- Program Line 14
     else,                     !- Program Line 15
     set meets_base_reqs = 0,    !- Program Line 16
@@ -9788,87 +9788,87 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if Core_ZN_ZN_OpT>VST,    !- Program Line 28
-    set Ventilates_HVACmode2_Core_ZN_ZN = 1,    !- Program Line 29
+    if Core_ZN_OpT>VST,       !- Program Line 28
+    set Ventilates_HVACmode2_Core_ZN = 1,    !- Program Line 29
     else,                     !- Program Line 30
-    set Ventilates_HVACmode2_Core_ZN_ZN = 0,    !- Program Line 31
+    set Ventilates_HVACmode2_Core_ZN = 0,    !- Program Line 31
     endif,                    !- Program Line 32
     else,                     !- Program Line 33
-    set Ventilates_HVACmode2_Core_ZN_ZN = 0,    !- Program Line 34
+    set Ventilates_HVACmode2_Core_ZN = 0,    !- Program Line 34
     endif,                    !- Program Line 35
     if VentCtrl == 0,         !- Program Line 36
-    if Core_ZN_ZN_OutT < Core_ZN_ZN_OpT,    !- Program Line 37
-    if Core_ZN_ZN_OutT>MinOutTemp,    !- Program Line 38
-    if Core_ZN_ZN_OpT > VST,    !- Program Line 39
-    if Core_ZN_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 40
-    set Ventilates_HVACmode1_Core_ZN_ZN = 1,    !- Program Line 41
+    if Core_ZN_OutT < Core_ZN_OpT,    !- Program Line 37
+    if Core_ZN_OutT>MinOutTemp,    !- Program Line 38
+    if Core_ZN_OpT > VST,     !- Program Line 39
+    if Core_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_Core_ZN = 1,    !- Program Line 41
     else,                     !- Program Line 42
-    set Ventilates_HVACmode1_Core_ZN_ZN = 0,    !- Program Line 43
+    set Ventilates_HVACmode1_Core_ZN = 0,    !- Program Line 43
     endif,                    !- Program Line 44
     else,                     !- Program Line 45
-    set Ventilates_HVACmode1_Core_ZN_ZN = 0,    !- Program Line 46
+    set Ventilates_HVACmode1_Core_ZN = 0,    !- Program Line 46
     endif,                    !- Program Line 47
     else,                     !- Program Line 48
-    set Ventilates_HVACmode1_Core_ZN_ZN = 0,    !- Program Line 49
+    set Ventilates_HVACmode1_Core_ZN = 0,    !- Program Line 49
     endif,                    !- Program Line 50
     else,                     !- Program Line 51
-    set Ventilates_HVACmode1_Core_ZN_ZN = 0,    !- Program Line 52
+    set Ventilates_HVACmode1_Core_ZN = 0,    !- Program Line 52
     endif,                    !- Program Line 53
     elseif VentCtrl == 1,     !- Program Line 54
-    if Core_ZN_ZN_OutT<Core_ZN_ZN_OpT,    !- Program Line 55
-    if Core_ZN_ZN_OutT>MinOutTemp,    !- Program Line 56
-    if Core_ZN_ZN_OpT > ACSTnoTol,    !- Program Line 57
-    if Core_ZN_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 58
-    set Ventilates_HVACmode1_Core_ZN_ZN = 1,    !- Program Line 59
+    if Core_ZN_OutT<Core_ZN_OpT,    !- Program Line 55
+    if Core_ZN_OutT>MinOutTemp,    !- Program Line 56
+    if Core_ZN_OpT > ACSTnoTol,    !- Program Line 57
+    if Core_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_Core_ZN = 1,    !- Program Line 59
     else,                     !- Program Line 60
-    set Ventilates_HVACmode1_Core_ZN_ZN = 0,    !- Program Line 61
+    set Ventilates_HVACmode1_Core_ZN = 0,    !- Program Line 61
     endif,                    !- Program Line 62
     else,                     !- Program Line 63
-    set Ventilates_HVACmode1_Core_ZN_ZN = 0,    !- Program Line 64
+    set Ventilates_HVACmode1_Core_ZN = 0,    !- Program Line 64
     endif,                    !- Program Line 65
     else,                     !- Program Line 66
-    set Ventilates_HVACmode1_Core_ZN_ZN = 0,    !- Program Line 67
+    set Ventilates_HVACmode1_Core_ZN = 0,    !- Program Line 67
     endif,                    !- Program Line 68
     else,                     !- Program Line 69
-    set Ventilates_HVACmode1_Core_ZN_ZN = 0,    !- Program Line 70
+    set Ventilates_HVACmode1_Core_ZN = 0,    !- Program Line 70
     endif,                    !- Program Line 71
     endif,                    !- Program Line 72
     if HVACmode == 0,         !- Program Line 73
-    if Occ_count_Core_ZN_ZN == 0,    !- Program Line 74
-    Set ACST_Act_Core_ZN_ZN = 100,    !- Program Line 75
-    Set AHST_Act_Core_ZN_ZN = -100,    !- Program Line 76
+    if Occ_count_Core_ZN == 0,    !- Program Line 74
+    Set ACST_Act_Core_ZN = 100,    !- Program Line 75
+    Set AHST_Act_Core_ZN = -100,    !- Program Line 76
     else,                     !- Program Line 77
-    set ACST_Act_Core_ZN_ZN = roundedACST,    !- Program Line 78
-    set AHST_Act_Core_ZN_ZN = roundedAHST,    !- Program Line 79
+    set ACST_Act_Core_ZN = roundedACST,    !- Program Line 78
+    set AHST_Act_Core_ZN = roundedAHST,    !- Program Line 79
     endif,                    !- Program Line 80
     elseif HVACmode == 1,     !- Program Line 81
-    Set ACST_Act_Core_ZN_ZN = 100,    !- Program Line 82
-    Set AHST_Act_Core_ZN_ZN = -100,    !- Program Line 83
-    if Ventilates_HVACmode1_Core_ZN_ZN == 1 && Occ_count_Core_ZN_ZN > 0,    !- Program Line 84
-    set VentHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 85
+    Set ACST_Act_Core_ZN = 100,    !- Program Line 82
+    Set AHST_Act_Core_ZN = -100,    !- Program Line 83
+    if Ventilates_HVACmode1_Core_ZN == 1 && Occ_count_Core_ZN > 0,    !- Program Line 84
+    set VentHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 85
     else,                     !- Program Line 86
-    set VentHours_Core_ZN_ZN = 0,    !- Program Line 87
+    set VentHours_Core_ZN = 0,    !- Program Line 87
     endif,                    !- Program Line 88
     elseif HVACmode == 2,     !- Program Line 89
-    if Occ_count_Core_ZN_ZN == 0,    !- Program Line 90
-    Set ACST_Act_Core_ZN_ZN = 100,    !- Program Line 91
-    Set AHST_Act_Core_ZN_ZN = -100,    !- Program Line 92
-    set VentHours_Core_ZN_ZN = 0,    !- Program Line 93
+    if Occ_count_Core_ZN == 0,    !- Program Line 90
+    Set ACST_Act_Core_ZN = 100,    !- Program Line 91
+    Set AHST_Act_Core_ZN = -100,    !- Program Line 92
+    set VentHours_Core_ZN = 0,    !- Program Line 93
     else,                     !- Program Line 94
-    if Ventilates_HVACmode2_Core_ZN_ZN == 1,    !- Program Line 95
-    set VentHours_Core_ZN_ZN = 1*ZoneTimeStep,    !- Program Line 96
-    elseif Ventilates_HVACmode2_Core_ZN_ZN == 0,    !- Program Line 97
-    set VentHours_Core_ZN_ZN = 0,    !- Program Line 98
-    set ACST_Act_Core_ZN_ZN = roundedACST,    !- Program Line 99
-    set AHST_Act_Core_ZN_ZN = roundedAHST,    !- Program Line 100
+    if Ventilates_HVACmode2_Core_ZN == 1,    !- Program Line 95
+    set VentHours_Core_ZN = 1*ZoneTimeStep,    !- Program Line 96
+    elseif Ventilates_HVACmode2_Core_ZN == 0,    !- Program Line 97
+    set VentHours_Core_ZN = 0,    !- Program Line 98
+    set ACST_Act_Core_ZN = roundedACST,    !- Program Line 99
+    set AHST_Act_Core_ZN = roundedAHST,    !- Program Line 100
     endif,                    !- Program Line 101
     endif,                    !- Program Line 102
     endif;                    !- Program Line 103
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    ApplyAST_Perimeter_ZN_1_ZN,    !- Name
-    if Perimeter_ZN_1_ZN_CoolCoil==0,    !- Program Line 1
-    if Perimeter_ZN_1_ZN_HeatCoil==0,    !- Program Line 2
+    ApplyAST_Perimeter_ZN_1,    !- Name
+    if Perimeter_ZN_1_CoolCoil==0,    !- Program Line 1
+    if Perimeter_ZN_1_HeatCoil==0,    !- Program Line 2
     set NoH_NoC_reqs = 1,     !- Program Line 3
     else,                     !- Program Line 4
     set NoH_NoC_reqs = 0,     !- Program Line 5
@@ -9876,10 +9876,10 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     else,                     !- Program Line 7
     set NoH_NoC_reqs = 0,     !- Program Line 8
     endif,                    !- Program Line 9
-    if Perimeter_ZN_1_ZN_OpT<roundedACST,    !- Program Line 10
-    if Perimeter_ZN_1_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 11
-    if Perimeter_ZN_1_ZN_OutT>MinOutTemp,    !- Program Line 12
-    if Perimeter_ZN_1_ZN_OutT < Perimeter_ZN_1_ZN_OpT,    !- Program Line 13
+    if Perimeter_ZN_1_OpT<roundedACST,    !- Program Line 10
+    if Perimeter_ZN_1_WindSpeed <= MaxWindSpeed,    !- Program Line 11
+    if Perimeter_ZN_1_OutT>MinOutTemp,    !- Program Line 12
+    if Perimeter_ZN_1_OutT < Perimeter_ZN_1_OpT,    !- Program Line 13
     set meets_base_reqs = 1,    !- Program Line 14
     else,                     !- Program Line 15
     set meets_base_reqs = 0,    !- Program Line 16
@@ -9894,87 +9894,87 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if Perimeter_ZN_1_ZN_OpT>VST,    !- Program Line 28
-    set Ventilates_HVACmode2_Perimeter_ZN_1_ZN = 1,    !- Program Line 29
+    if Perimeter_ZN_1_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_Perimeter_ZN_1 = 1,    !- Program Line 29
     else,                     !- Program Line 30
-    set Ventilates_HVACmode2_Perimeter_ZN_1_ZN = 0,    !- Program Line 31
+    set Ventilates_HVACmode2_Perimeter_ZN_1 = 0,    !- Program Line 31
     endif,                    !- Program Line 32
     else,                     !- Program Line 33
-    set Ventilates_HVACmode2_Perimeter_ZN_1_ZN = 0,    !- Program Line 34
+    set Ventilates_HVACmode2_Perimeter_ZN_1 = 0,    !- Program Line 34
     endif,                    !- Program Line 35
     if VentCtrl == 0,         !- Program Line 36
-    if Perimeter_ZN_1_ZN_OutT < Perimeter_ZN_1_ZN_OpT,    !- Program Line 37
-    if Perimeter_ZN_1_ZN_OutT>MinOutTemp,    !- Program Line 38
-    if Perimeter_ZN_1_ZN_OpT > VST,    !- Program Line 39
-    if Perimeter_ZN_1_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 40
-    set Ventilates_HVACmode1_Perimeter_ZN_1_ZN = 1,    !- Program Line 41
+    if Perimeter_ZN_1_OutT < Perimeter_ZN_1_OpT,    !- Program Line 37
+    if Perimeter_ZN_1_OutT>MinOutTemp,    !- Program Line 38
+    if Perimeter_ZN_1_OpT > VST,    !- Program Line 39
+    if Perimeter_ZN_1_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_Perimeter_ZN_1 = 1,    !- Program Line 41
     else,                     !- Program Line 42
-    set Ventilates_HVACmode1_Perimeter_ZN_1_ZN = 0,    !- Program Line 43
+    set Ventilates_HVACmode1_Perimeter_ZN_1 = 0,    !- Program Line 43
     endif,                    !- Program Line 44
     else,                     !- Program Line 45
-    set Ventilates_HVACmode1_Perimeter_ZN_1_ZN = 0,    !- Program Line 46
+    set Ventilates_HVACmode1_Perimeter_ZN_1 = 0,    !- Program Line 46
     endif,                    !- Program Line 47
     else,                     !- Program Line 48
-    set Ventilates_HVACmode1_Perimeter_ZN_1_ZN = 0,    !- Program Line 49
+    set Ventilates_HVACmode1_Perimeter_ZN_1 = 0,    !- Program Line 49
     endif,                    !- Program Line 50
     else,                     !- Program Line 51
-    set Ventilates_HVACmode1_Perimeter_ZN_1_ZN = 0,    !- Program Line 52
+    set Ventilates_HVACmode1_Perimeter_ZN_1 = 0,    !- Program Line 52
     endif,                    !- Program Line 53
     elseif VentCtrl == 1,     !- Program Line 54
-    if Perimeter_ZN_1_ZN_OutT<Perimeter_ZN_1_ZN_OpT,    !- Program Line 55
-    if Perimeter_ZN_1_ZN_OutT>MinOutTemp,    !- Program Line 56
-    if Perimeter_ZN_1_ZN_OpT > ACSTnoTol,    !- Program Line 57
-    if Perimeter_ZN_1_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 58
-    set Ventilates_HVACmode1_Perimeter_ZN_1_ZN = 1,    !- Program Line 59
+    if Perimeter_ZN_1_OutT<Perimeter_ZN_1_OpT,    !- Program Line 55
+    if Perimeter_ZN_1_OutT>MinOutTemp,    !- Program Line 56
+    if Perimeter_ZN_1_OpT > ACSTnoTol,    !- Program Line 57
+    if Perimeter_ZN_1_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_Perimeter_ZN_1 = 1,    !- Program Line 59
     else,                     !- Program Line 60
-    set Ventilates_HVACmode1_Perimeter_ZN_1_ZN = 0,    !- Program Line 61
+    set Ventilates_HVACmode1_Perimeter_ZN_1 = 0,    !- Program Line 61
     endif,                    !- Program Line 62
     else,                     !- Program Line 63
-    set Ventilates_HVACmode1_Perimeter_ZN_1_ZN = 0,    !- Program Line 64
+    set Ventilates_HVACmode1_Perimeter_ZN_1 = 0,    !- Program Line 64
     endif,                    !- Program Line 65
     else,                     !- Program Line 66
-    set Ventilates_HVACmode1_Perimeter_ZN_1_ZN = 0,    !- Program Line 67
+    set Ventilates_HVACmode1_Perimeter_ZN_1 = 0,    !- Program Line 67
     endif,                    !- Program Line 68
     else,                     !- Program Line 69
-    set Ventilates_HVACmode1_Perimeter_ZN_1_ZN = 0,    !- Program Line 70
+    set Ventilates_HVACmode1_Perimeter_ZN_1 = 0,    !- Program Line 70
     endif,                    !- Program Line 71
     endif,                    !- Program Line 72
     if HVACmode == 0,         !- Program Line 73
-    if Occ_count_Perimeter_ZN_1_ZN == 0,    !- Program Line 74
-    Set ACST_Act_Perimeter_ZN_1_ZN = 100,    !- Program Line 75
-    Set AHST_Act_Perimeter_ZN_1_ZN = -100,    !- Program Line 76
+    if Occ_count_Perimeter_ZN_1 == 0,    !- Program Line 74
+    Set ACST_Act_Perimeter_ZN_1 = 100,    !- Program Line 75
+    Set AHST_Act_Perimeter_ZN_1 = -100,    !- Program Line 76
     else,                     !- Program Line 77
-    set ACST_Act_Perimeter_ZN_1_ZN = roundedACST,    !- Program Line 78
-    set AHST_Act_Perimeter_ZN_1_ZN = roundedAHST,    !- Program Line 79
+    set ACST_Act_Perimeter_ZN_1 = roundedACST,    !- Program Line 78
+    set AHST_Act_Perimeter_ZN_1 = roundedAHST,    !- Program Line 79
     endif,                    !- Program Line 80
     elseif HVACmode == 1,     !- Program Line 81
-    Set ACST_Act_Perimeter_ZN_1_ZN = 100,    !- Program Line 82
-    Set AHST_Act_Perimeter_ZN_1_ZN = -100,    !- Program Line 83
-    if Ventilates_HVACmode1_Perimeter_ZN_1_ZN == 1 && Occ_count_Perimeter_ZN_1_ZN > 0,    !- Program Line 84
-    set VentHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 85
+    Set ACST_Act_Perimeter_ZN_1 = 100,    !- Program Line 82
+    Set AHST_Act_Perimeter_ZN_1 = -100,    !- Program Line 83
+    if Ventilates_HVACmode1_Perimeter_ZN_1 == 1 && Occ_count_Perimeter_ZN_1 > 0,    !- Program Line 84
+    set VentHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 85
     else,                     !- Program Line 86
-    set VentHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 87
+    set VentHours_Perimeter_ZN_1 = 0,    !- Program Line 87
     endif,                    !- Program Line 88
     elseif HVACmode == 2,     !- Program Line 89
-    if Occ_count_Perimeter_ZN_1_ZN == 0,    !- Program Line 90
-    Set ACST_Act_Perimeter_ZN_1_ZN = 100,    !- Program Line 91
-    Set AHST_Act_Perimeter_ZN_1_ZN = -100,    !- Program Line 92
-    set VentHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 93
+    if Occ_count_Perimeter_ZN_1 == 0,    !- Program Line 90
+    Set ACST_Act_Perimeter_ZN_1 = 100,    !- Program Line 91
+    Set AHST_Act_Perimeter_ZN_1 = -100,    !- Program Line 92
+    set VentHours_Perimeter_ZN_1 = 0,    !- Program Line 93
     else,                     !- Program Line 94
-    if Ventilates_HVACmode2_Perimeter_ZN_1_ZN == 1,    !- Program Line 95
-    set VentHours_Perimeter_ZN_1_ZN = 1*ZoneTimeStep,    !- Program Line 96
-    elseif Ventilates_HVACmode2_Perimeter_ZN_1_ZN == 0,    !- Program Line 97
-    set VentHours_Perimeter_ZN_1_ZN = 0,    !- Program Line 98
-    set ACST_Act_Perimeter_ZN_1_ZN = roundedACST,    !- Program Line 99
-    set AHST_Act_Perimeter_ZN_1_ZN = roundedAHST,    !- Program Line 100
+    if Ventilates_HVACmode2_Perimeter_ZN_1 == 1,    !- Program Line 95
+    set VentHours_Perimeter_ZN_1 = 1*ZoneTimeStep,    !- Program Line 96
+    elseif Ventilates_HVACmode2_Perimeter_ZN_1 == 0,    !- Program Line 97
+    set VentHours_Perimeter_ZN_1 = 0,    !- Program Line 98
+    set ACST_Act_Perimeter_ZN_1 = roundedACST,    !- Program Line 99
+    set AHST_Act_Perimeter_ZN_1 = roundedAHST,    !- Program Line 100
     endif,                    !- Program Line 101
     endif,                    !- Program Line 102
     endif;                    !- Program Line 103
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    ApplyAST_Perimeter_ZN_2_ZN,    !- Name
-    if Perimeter_ZN_2_ZN_CoolCoil==0,    !- Program Line 1
-    if Perimeter_ZN_2_ZN_HeatCoil==0,    !- Program Line 2
+    ApplyAST_Perimeter_ZN_2,    !- Name
+    if Perimeter_ZN_2_CoolCoil==0,    !- Program Line 1
+    if Perimeter_ZN_2_HeatCoil==0,    !- Program Line 2
     set NoH_NoC_reqs = 1,     !- Program Line 3
     else,                     !- Program Line 4
     set NoH_NoC_reqs = 0,     !- Program Line 5
@@ -9982,10 +9982,10 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     else,                     !- Program Line 7
     set NoH_NoC_reqs = 0,     !- Program Line 8
     endif,                    !- Program Line 9
-    if Perimeter_ZN_2_ZN_OpT<roundedACST,    !- Program Line 10
-    if Perimeter_ZN_2_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 11
-    if Perimeter_ZN_2_ZN_OutT>MinOutTemp,    !- Program Line 12
-    if Perimeter_ZN_2_ZN_OutT < Perimeter_ZN_2_ZN_OpT,    !- Program Line 13
+    if Perimeter_ZN_2_OpT<roundedACST,    !- Program Line 10
+    if Perimeter_ZN_2_WindSpeed <= MaxWindSpeed,    !- Program Line 11
+    if Perimeter_ZN_2_OutT>MinOutTemp,    !- Program Line 12
+    if Perimeter_ZN_2_OutT < Perimeter_ZN_2_OpT,    !- Program Line 13
     set meets_base_reqs = 1,    !- Program Line 14
     else,                     !- Program Line 15
     set meets_base_reqs = 0,    !- Program Line 16
@@ -10000,87 +10000,87 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if Perimeter_ZN_2_ZN_OpT>VST,    !- Program Line 28
-    set Ventilates_HVACmode2_Perimeter_ZN_2_ZN = 1,    !- Program Line 29
+    if Perimeter_ZN_2_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_Perimeter_ZN_2 = 1,    !- Program Line 29
     else,                     !- Program Line 30
-    set Ventilates_HVACmode2_Perimeter_ZN_2_ZN = 0,    !- Program Line 31
+    set Ventilates_HVACmode2_Perimeter_ZN_2 = 0,    !- Program Line 31
     endif,                    !- Program Line 32
     else,                     !- Program Line 33
-    set Ventilates_HVACmode2_Perimeter_ZN_2_ZN = 0,    !- Program Line 34
+    set Ventilates_HVACmode2_Perimeter_ZN_2 = 0,    !- Program Line 34
     endif,                    !- Program Line 35
     if VentCtrl == 0,         !- Program Line 36
-    if Perimeter_ZN_2_ZN_OutT < Perimeter_ZN_2_ZN_OpT,    !- Program Line 37
-    if Perimeter_ZN_2_ZN_OutT>MinOutTemp,    !- Program Line 38
-    if Perimeter_ZN_2_ZN_OpT > VST,    !- Program Line 39
-    if Perimeter_ZN_2_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 40
-    set Ventilates_HVACmode1_Perimeter_ZN_2_ZN = 1,    !- Program Line 41
+    if Perimeter_ZN_2_OutT < Perimeter_ZN_2_OpT,    !- Program Line 37
+    if Perimeter_ZN_2_OutT>MinOutTemp,    !- Program Line 38
+    if Perimeter_ZN_2_OpT > VST,    !- Program Line 39
+    if Perimeter_ZN_2_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_Perimeter_ZN_2 = 1,    !- Program Line 41
     else,                     !- Program Line 42
-    set Ventilates_HVACmode1_Perimeter_ZN_2_ZN = 0,    !- Program Line 43
+    set Ventilates_HVACmode1_Perimeter_ZN_2 = 0,    !- Program Line 43
     endif,                    !- Program Line 44
     else,                     !- Program Line 45
-    set Ventilates_HVACmode1_Perimeter_ZN_2_ZN = 0,    !- Program Line 46
+    set Ventilates_HVACmode1_Perimeter_ZN_2 = 0,    !- Program Line 46
     endif,                    !- Program Line 47
     else,                     !- Program Line 48
-    set Ventilates_HVACmode1_Perimeter_ZN_2_ZN = 0,    !- Program Line 49
+    set Ventilates_HVACmode1_Perimeter_ZN_2 = 0,    !- Program Line 49
     endif,                    !- Program Line 50
     else,                     !- Program Line 51
-    set Ventilates_HVACmode1_Perimeter_ZN_2_ZN = 0,    !- Program Line 52
+    set Ventilates_HVACmode1_Perimeter_ZN_2 = 0,    !- Program Line 52
     endif,                    !- Program Line 53
     elseif VentCtrl == 1,     !- Program Line 54
-    if Perimeter_ZN_2_ZN_OutT<Perimeter_ZN_2_ZN_OpT,    !- Program Line 55
-    if Perimeter_ZN_2_ZN_OutT>MinOutTemp,    !- Program Line 56
-    if Perimeter_ZN_2_ZN_OpT > ACSTnoTol,    !- Program Line 57
-    if Perimeter_ZN_2_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 58
-    set Ventilates_HVACmode1_Perimeter_ZN_2_ZN = 1,    !- Program Line 59
+    if Perimeter_ZN_2_OutT<Perimeter_ZN_2_OpT,    !- Program Line 55
+    if Perimeter_ZN_2_OutT>MinOutTemp,    !- Program Line 56
+    if Perimeter_ZN_2_OpT > ACSTnoTol,    !- Program Line 57
+    if Perimeter_ZN_2_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_Perimeter_ZN_2 = 1,    !- Program Line 59
     else,                     !- Program Line 60
-    set Ventilates_HVACmode1_Perimeter_ZN_2_ZN = 0,    !- Program Line 61
+    set Ventilates_HVACmode1_Perimeter_ZN_2 = 0,    !- Program Line 61
     endif,                    !- Program Line 62
     else,                     !- Program Line 63
-    set Ventilates_HVACmode1_Perimeter_ZN_2_ZN = 0,    !- Program Line 64
+    set Ventilates_HVACmode1_Perimeter_ZN_2 = 0,    !- Program Line 64
     endif,                    !- Program Line 65
     else,                     !- Program Line 66
-    set Ventilates_HVACmode1_Perimeter_ZN_2_ZN = 0,    !- Program Line 67
+    set Ventilates_HVACmode1_Perimeter_ZN_2 = 0,    !- Program Line 67
     endif,                    !- Program Line 68
     else,                     !- Program Line 69
-    set Ventilates_HVACmode1_Perimeter_ZN_2_ZN = 0,    !- Program Line 70
+    set Ventilates_HVACmode1_Perimeter_ZN_2 = 0,    !- Program Line 70
     endif,                    !- Program Line 71
     endif,                    !- Program Line 72
     if HVACmode == 0,         !- Program Line 73
-    if Occ_count_Perimeter_ZN_2_ZN == 0,    !- Program Line 74
-    Set ACST_Act_Perimeter_ZN_2_ZN = 100,    !- Program Line 75
-    Set AHST_Act_Perimeter_ZN_2_ZN = -100,    !- Program Line 76
+    if Occ_count_Perimeter_ZN_2 == 0,    !- Program Line 74
+    Set ACST_Act_Perimeter_ZN_2 = 100,    !- Program Line 75
+    Set AHST_Act_Perimeter_ZN_2 = -100,    !- Program Line 76
     else,                     !- Program Line 77
-    set ACST_Act_Perimeter_ZN_2_ZN = roundedACST,    !- Program Line 78
-    set AHST_Act_Perimeter_ZN_2_ZN = roundedAHST,    !- Program Line 79
+    set ACST_Act_Perimeter_ZN_2 = roundedACST,    !- Program Line 78
+    set AHST_Act_Perimeter_ZN_2 = roundedAHST,    !- Program Line 79
     endif,                    !- Program Line 80
     elseif HVACmode == 1,     !- Program Line 81
-    Set ACST_Act_Perimeter_ZN_2_ZN = 100,    !- Program Line 82
-    Set AHST_Act_Perimeter_ZN_2_ZN = -100,    !- Program Line 83
-    if Ventilates_HVACmode1_Perimeter_ZN_2_ZN == 1 && Occ_count_Perimeter_ZN_2_ZN > 0,    !- Program Line 84
-    set VentHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 85
+    Set ACST_Act_Perimeter_ZN_2 = 100,    !- Program Line 82
+    Set AHST_Act_Perimeter_ZN_2 = -100,    !- Program Line 83
+    if Ventilates_HVACmode1_Perimeter_ZN_2 == 1 && Occ_count_Perimeter_ZN_2 > 0,    !- Program Line 84
+    set VentHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 85
     else,                     !- Program Line 86
-    set VentHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 87
+    set VentHours_Perimeter_ZN_2 = 0,    !- Program Line 87
     endif,                    !- Program Line 88
     elseif HVACmode == 2,     !- Program Line 89
-    if Occ_count_Perimeter_ZN_2_ZN == 0,    !- Program Line 90
-    Set ACST_Act_Perimeter_ZN_2_ZN = 100,    !- Program Line 91
-    Set AHST_Act_Perimeter_ZN_2_ZN = -100,    !- Program Line 92
-    set VentHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 93
+    if Occ_count_Perimeter_ZN_2 == 0,    !- Program Line 90
+    Set ACST_Act_Perimeter_ZN_2 = 100,    !- Program Line 91
+    Set AHST_Act_Perimeter_ZN_2 = -100,    !- Program Line 92
+    set VentHours_Perimeter_ZN_2 = 0,    !- Program Line 93
     else,                     !- Program Line 94
-    if Ventilates_HVACmode2_Perimeter_ZN_2_ZN == 1,    !- Program Line 95
-    set VentHours_Perimeter_ZN_2_ZN = 1*ZoneTimeStep,    !- Program Line 96
-    elseif Ventilates_HVACmode2_Perimeter_ZN_2_ZN == 0,    !- Program Line 97
-    set VentHours_Perimeter_ZN_2_ZN = 0,    !- Program Line 98
-    set ACST_Act_Perimeter_ZN_2_ZN = roundedACST,    !- Program Line 99
-    set AHST_Act_Perimeter_ZN_2_ZN = roundedAHST,    !- Program Line 100
+    if Ventilates_HVACmode2_Perimeter_ZN_2 == 1,    !- Program Line 95
+    set VentHours_Perimeter_ZN_2 = 1*ZoneTimeStep,    !- Program Line 96
+    elseif Ventilates_HVACmode2_Perimeter_ZN_2 == 0,    !- Program Line 97
+    set VentHours_Perimeter_ZN_2 = 0,    !- Program Line 98
+    set ACST_Act_Perimeter_ZN_2 = roundedACST,    !- Program Line 99
+    set AHST_Act_Perimeter_ZN_2 = roundedAHST,    !- Program Line 100
     endif,                    !- Program Line 101
     endif,                    !- Program Line 102
     endif;                    !- Program Line 103
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    ApplyAST_Perimeter_ZN_3_ZN,    !- Name
-    if Perimeter_ZN_3_ZN_CoolCoil==0,    !- Program Line 1
-    if Perimeter_ZN_3_ZN_HeatCoil==0,    !- Program Line 2
+    ApplyAST_Perimeter_ZN_3,    !- Name
+    if Perimeter_ZN_3_CoolCoil==0,    !- Program Line 1
+    if Perimeter_ZN_3_HeatCoil==0,    !- Program Line 2
     set NoH_NoC_reqs = 1,     !- Program Line 3
     else,                     !- Program Line 4
     set NoH_NoC_reqs = 0,     !- Program Line 5
@@ -10088,10 +10088,10 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     else,                     !- Program Line 7
     set NoH_NoC_reqs = 0,     !- Program Line 8
     endif,                    !- Program Line 9
-    if Perimeter_ZN_3_ZN_OpT<roundedACST,    !- Program Line 10
-    if Perimeter_ZN_3_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 11
-    if Perimeter_ZN_3_ZN_OutT>MinOutTemp,    !- Program Line 12
-    if Perimeter_ZN_3_ZN_OutT < Perimeter_ZN_3_ZN_OpT,    !- Program Line 13
+    if Perimeter_ZN_3_OpT<roundedACST,    !- Program Line 10
+    if Perimeter_ZN_3_WindSpeed <= MaxWindSpeed,    !- Program Line 11
+    if Perimeter_ZN_3_OutT>MinOutTemp,    !- Program Line 12
+    if Perimeter_ZN_3_OutT < Perimeter_ZN_3_OpT,    !- Program Line 13
     set meets_base_reqs = 1,    !- Program Line 14
     else,                     !- Program Line 15
     set meets_base_reqs = 0,    !- Program Line 16
@@ -10106,87 +10106,87 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if Perimeter_ZN_3_ZN_OpT>VST,    !- Program Line 28
-    set Ventilates_HVACmode2_Perimeter_ZN_3_ZN = 1,    !- Program Line 29
+    if Perimeter_ZN_3_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_Perimeter_ZN_3 = 1,    !- Program Line 29
     else,                     !- Program Line 30
-    set Ventilates_HVACmode2_Perimeter_ZN_3_ZN = 0,    !- Program Line 31
+    set Ventilates_HVACmode2_Perimeter_ZN_3 = 0,    !- Program Line 31
     endif,                    !- Program Line 32
     else,                     !- Program Line 33
-    set Ventilates_HVACmode2_Perimeter_ZN_3_ZN = 0,    !- Program Line 34
+    set Ventilates_HVACmode2_Perimeter_ZN_3 = 0,    !- Program Line 34
     endif,                    !- Program Line 35
     if VentCtrl == 0,         !- Program Line 36
-    if Perimeter_ZN_3_ZN_OutT < Perimeter_ZN_3_ZN_OpT,    !- Program Line 37
-    if Perimeter_ZN_3_ZN_OutT>MinOutTemp,    !- Program Line 38
-    if Perimeter_ZN_3_ZN_OpT > VST,    !- Program Line 39
-    if Perimeter_ZN_3_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 40
-    set Ventilates_HVACmode1_Perimeter_ZN_3_ZN = 1,    !- Program Line 41
+    if Perimeter_ZN_3_OutT < Perimeter_ZN_3_OpT,    !- Program Line 37
+    if Perimeter_ZN_3_OutT>MinOutTemp,    !- Program Line 38
+    if Perimeter_ZN_3_OpT > VST,    !- Program Line 39
+    if Perimeter_ZN_3_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_Perimeter_ZN_3 = 1,    !- Program Line 41
     else,                     !- Program Line 42
-    set Ventilates_HVACmode1_Perimeter_ZN_3_ZN = 0,    !- Program Line 43
+    set Ventilates_HVACmode1_Perimeter_ZN_3 = 0,    !- Program Line 43
     endif,                    !- Program Line 44
     else,                     !- Program Line 45
-    set Ventilates_HVACmode1_Perimeter_ZN_3_ZN = 0,    !- Program Line 46
+    set Ventilates_HVACmode1_Perimeter_ZN_3 = 0,    !- Program Line 46
     endif,                    !- Program Line 47
     else,                     !- Program Line 48
-    set Ventilates_HVACmode1_Perimeter_ZN_3_ZN = 0,    !- Program Line 49
+    set Ventilates_HVACmode1_Perimeter_ZN_3 = 0,    !- Program Line 49
     endif,                    !- Program Line 50
     else,                     !- Program Line 51
-    set Ventilates_HVACmode1_Perimeter_ZN_3_ZN = 0,    !- Program Line 52
+    set Ventilates_HVACmode1_Perimeter_ZN_3 = 0,    !- Program Line 52
     endif,                    !- Program Line 53
     elseif VentCtrl == 1,     !- Program Line 54
-    if Perimeter_ZN_3_ZN_OutT<Perimeter_ZN_3_ZN_OpT,    !- Program Line 55
-    if Perimeter_ZN_3_ZN_OutT>MinOutTemp,    !- Program Line 56
-    if Perimeter_ZN_3_ZN_OpT > ACSTnoTol,    !- Program Line 57
-    if Perimeter_ZN_3_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 58
-    set Ventilates_HVACmode1_Perimeter_ZN_3_ZN = 1,    !- Program Line 59
+    if Perimeter_ZN_3_OutT<Perimeter_ZN_3_OpT,    !- Program Line 55
+    if Perimeter_ZN_3_OutT>MinOutTemp,    !- Program Line 56
+    if Perimeter_ZN_3_OpT > ACSTnoTol,    !- Program Line 57
+    if Perimeter_ZN_3_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_Perimeter_ZN_3 = 1,    !- Program Line 59
     else,                     !- Program Line 60
-    set Ventilates_HVACmode1_Perimeter_ZN_3_ZN = 0,    !- Program Line 61
+    set Ventilates_HVACmode1_Perimeter_ZN_3 = 0,    !- Program Line 61
     endif,                    !- Program Line 62
     else,                     !- Program Line 63
-    set Ventilates_HVACmode1_Perimeter_ZN_3_ZN = 0,    !- Program Line 64
+    set Ventilates_HVACmode1_Perimeter_ZN_3 = 0,    !- Program Line 64
     endif,                    !- Program Line 65
     else,                     !- Program Line 66
-    set Ventilates_HVACmode1_Perimeter_ZN_3_ZN = 0,    !- Program Line 67
+    set Ventilates_HVACmode1_Perimeter_ZN_3 = 0,    !- Program Line 67
     endif,                    !- Program Line 68
     else,                     !- Program Line 69
-    set Ventilates_HVACmode1_Perimeter_ZN_3_ZN = 0,    !- Program Line 70
+    set Ventilates_HVACmode1_Perimeter_ZN_3 = 0,    !- Program Line 70
     endif,                    !- Program Line 71
     endif,                    !- Program Line 72
     if HVACmode == 0,         !- Program Line 73
-    if Occ_count_Perimeter_ZN_3_ZN == 0,    !- Program Line 74
-    Set ACST_Act_Perimeter_ZN_3_ZN = 100,    !- Program Line 75
-    Set AHST_Act_Perimeter_ZN_3_ZN = -100,    !- Program Line 76
+    if Occ_count_Perimeter_ZN_3 == 0,    !- Program Line 74
+    Set ACST_Act_Perimeter_ZN_3 = 100,    !- Program Line 75
+    Set AHST_Act_Perimeter_ZN_3 = -100,    !- Program Line 76
     else,                     !- Program Line 77
-    set ACST_Act_Perimeter_ZN_3_ZN = roundedACST,    !- Program Line 78
-    set AHST_Act_Perimeter_ZN_3_ZN = roundedAHST,    !- Program Line 79
+    set ACST_Act_Perimeter_ZN_3 = roundedACST,    !- Program Line 78
+    set AHST_Act_Perimeter_ZN_3 = roundedAHST,    !- Program Line 79
     endif,                    !- Program Line 80
     elseif HVACmode == 1,     !- Program Line 81
-    Set ACST_Act_Perimeter_ZN_3_ZN = 100,    !- Program Line 82
-    Set AHST_Act_Perimeter_ZN_3_ZN = -100,    !- Program Line 83
-    if Ventilates_HVACmode1_Perimeter_ZN_3_ZN == 1 && Occ_count_Perimeter_ZN_3_ZN > 0,    !- Program Line 84
-    set VentHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 85
+    Set ACST_Act_Perimeter_ZN_3 = 100,    !- Program Line 82
+    Set AHST_Act_Perimeter_ZN_3 = -100,    !- Program Line 83
+    if Ventilates_HVACmode1_Perimeter_ZN_3 == 1 && Occ_count_Perimeter_ZN_3 > 0,    !- Program Line 84
+    set VentHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 85
     else,                     !- Program Line 86
-    set VentHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 87
+    set VentHours_Perimeter_ZN_3 = 0,    !- Program Line 87
     endif,                    !- Program Line 88
     elseif HVACmode == 2,     !- Program Line 89
-    if Occ_count_Perimeter_ZN_3_ZN == 0,    !- Program Line 90
-    Set ACST_Act_Perimeter_ZN_3_ZN = 100,    !- Program Line 91
-    Set AHST_Act_Perimeter_ZN_3_ZN = -100,    !- Program Line 92
-    set VentHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 93
+    if Occ_count_Perimeter_ZN_3 == 0,    !- Program Line 90
+    Set ACST_Act_Perimeter_ZN_3 = 100,    !- Program Line 91
+    Set AHST_Act_Perimeter_ZN_3 = -100,    !- Program Line 92
+    set VentHours_Perimeter_ZN_3 = 0,    !- Program Line 93
     else,                     !- Program Line 94
-    if Ventilates_HVACmode2_Perimeter_ZN_3_ZN == 1,    !- Program Line 95
-    set VentHours_Perimeter_ZN_3_ZN = 1*ZoneTimeStep,    !- Program Line 96
-    elseif Ventilates_HVACmode2_Perimeter_ZN_3_ZN == 0,    !- Program Line 97
-    set VentHours_Perimeter_ZN_3_ZN = 0,    !- Program Line 98
-    set ACST_Act_Perimeter_ZN_3_ZN = roundedACST,    !- Program Line 99
-    set AHST_Act_Perimeter_ZN_3_ZN = roundedAHST,    !- Program Line 100
+    if Ventilates_HVACmode2_Perimeter_ZN_3 == 1,    !- Program Line 95
+    set VentHours_Perimeter_ZN_3 = 1*ZoneTimeStep,    !- Program Line 96
+    elseif Ventilates_HVACmode2_Perimeter_ZN_3 == 0,    !- Program Line 97
+    set VentHours_Perimeter_ZN_3 = 0,    !- Program Line 98
+    set ACST_Act_Perimeter_ZN_3 = roundedACST,    !- Program Line 99
+    set AHST_Act_Perimeter_ZN_3 = roundedAHST,    !- Program Line 100
     endif,                    !- Program Line 101
     endif,                    !- Program Line 102
     endif;                    !- Program Line 103
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
-    ApplyAST_Perimeter_ZN_4_ZN,    !- Name
-    if Perimeter_ZN_4_ZN_CoolCoil==0,    !- Program Line 1
-    if Perimeter_ZN_4_ZN_HeatCoil==0,    !- Program Line 2
+    ApplyAST_Perimeter_ZN_4,    !- Name
+    if Perimeter_ZN_4_CoolCoil==0,    !- Program Line 1
+    if Perimeter_ZN_4_HeatCoil==0,    !- Program Line 2
     set NoH_NoC_reqs = 1,     !- Program Line 3
     else,                     !- Program Line 4
     set NoH_NoC_reqs = 0,     !- Program Line 5
@@ -10194,10 +10194,10 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     else,                     !- Program Line 7
     set NoH_NoC_reqs = 0,     !- Program Line 8
     endif,                    !- Program Line 9
-    if Perimeter_ZN_4_ZN_OpT<roundedACST,    !- Program Line 10
-    if Perimeter_ZN_4_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 11
-    if Perimeter_ZN_4_ZN_OutT>MinOutTemp,    !- Program Line 12
-    if Perimeter_ZN_4_ZN_OutT < Perimeter_ZN_4_ZN_OpT,    !- Program Line 13
+    if Perimeter_ZN_4_OpT<roundedACST,    !- Program Line 10
+    if Perimeter_ZN_4_WindSpeed <= MaxWindSpeed,    !- Program Line 11
+    if Perimeter_ZN_4_OutT>MinOutTemp,    !- Program Line 12
+    if Perimeter_ZN_4_OutT < Perimeter_ZN_4_OpT,    !- Program Line 13
     set meets_base_reqs = 1,    !- Program Line 14
     else,                     !- Program Line 15
     set meets_base_reqs = 0,    !- Program Line 16
@@ -10212,79 +10212,79 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set meets_base_reqs = 0,    !- Program Line 25
     endif,                    !- Program Line 26
     if (NoH_NoC_reqs == 1) && (meets_base_reqs == 1),    !- Program Line 27
-    if Perimeter_ZN_4_ZN_OpT>VST,    !- Program Line 28
-    set Ventilates_HVACmode2_Perimeter_ZN_4_ZN = 1,    !- Program Line 29
+    if Perimeter_ZN_4_OpT>VST,    !- Program Line 28
+    set Ventilates_HVACmode2_Perimeter_ZN_4 = 1,    !- Program Line 29
     else,                     !- Program Line 30
-    set Ventilates_HVACmode2_Perimeter_ZN_4_ZN = 0,    !- Program Line 31
+    set Ventilates_HVACmode2_Perimeter_ZN_4 = 0,    !- Program Line 31
     endif,                    !- Program Line 32
     else,                     !- Program Line 33
-    set Ventilates_HVACmode2_Perimeter_ZN_4_ZN = 0,    !- Program Line 34
+    set Ventilates_HVACmode2_Perimeter_ZN_4 = 0,    !- Program Line 34
     endif,                    !- Program Line 35
     if VentCtrl == 0,         !- Program Line 36
-    if Perimeter_ZN_4_ZN_OutT < Perimeter_ZN_4_ZN_OpT,    !- Program Line 37
-    if Perimeter_ZN_4_ZN_OutT>MinOutTemp,    !- Program Line 38
-    if Perimeter_ZN_4_ZN_OpT > VST,    !- Program Line 39
-    if Perimeter_ZN_4_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 40
-    set Ventilates_HVACmode1_Perimeter_ZN_4_ZN = 1,    !- Program Line 41
+    if Perimeter_ZN_4_OutT < Perimeter_ZN_4_OpT,    !- Program Line 37
+    if Perimeter_ZN_4_OutT>MinOutTemp,    !- Program Line 38
+    if Perimeter_ZN_4_OpT > VST,    !- Program Line 39
+    if Perimeter_ZN_4_WindSpeed <= MaxWindSpeed,    !- Program Line 40
+    set Ventilates_HVACmode1_Perimeter_ZN_4 = 1,    !- Program Line 41
     else,                     !- Program Line 42
-    set Ventilates_HVACmode1_Perimeter_ZN_4_ZN = 0,    !- Program Line 43
+    set Ventilates_HVACmode1_Perimeter_ZN_4 = 0,    !- Program Line 43
     endif,                    !- Program Line 44
     else,                     !- Program Line 45
-    set Ventilates_HVACmode1_Perimeter_ZN_4_ZN = 0,    !- Program Line 46
+    set Ventilates_HVACmode1_Perimeter_ZN_4 = 0,    !- Program Line 46
     endif,                    !- Program Line 47
     else,                     !- Program Line 48
-    set Ventilates_HVACmode1_Perimeter_ZN_4_ZN = 0,    !- Program Line 49
+    set Ventilates_HVACmode1_Perimeter_ZN_4 = 0,    !- Program Line 49
     endif,                    !- Program Line 50
     else,                     !- Program Line 51
-    set Ventilates_HVACmode1_Perimeter_ZN_4_ZN = 0,    !- Program Line 52
+    set Ventilates_HVACmode1_Perimeter_ZN_4 = 0,    !- Program Line 52
     endif,                    !- Program Line 53
     elseif VentCtrl == 1,     !- Program Line 54
-    if Perimeter_ZN_4_ZN_OutT<Perimeter_ZN_4_ZN_OpT,    !- Program Line 55
-    if Perimeter_ZN_4_ZN_OutT>MinOutTemp,    !- Program Line 56
-    if Perimeter_ZN_4_ZN_OpT > ACSTnoTol,    !- Program Line 57
-    if Perimeter_ZN_4_ZN_WindSpeed <= MaxWindSpeed,    !- Program Line 58
-    set Ventilates_HVACmode1_Perimeter_ZN_4_ZN = 1,    !- Program Line 59
+    if Perimeter_ZN_4_OutT<Perimeter_ZN_4_OpT,    !- Program Line 55
+    if Perimeter_ZN_4_OutT>MinOutTemp,    !- Program Line 56
+    if Perimeter_ZN_4_OpT > ACSTnoTol,    !- Program Line 57
+    if Perimeter_ZN_4_WindSpeed <= MaxWindSpeed,    !- Program Line 58
+    set Ventilates_HVACmode1_Perimeter_ZN_4 = 1,    !- Program Line 59
     else,                     !- Program Line 60
-    set Ventilates_HVACmode1_Perimeter_ZN_4_ZN = 0,    !- Program Line 61
+    set Ventilates_HVACmode1_Perimeter_ZN_4 = 0,    !- Program Line 61
     endif,                    !- Program Line 62
     else,                     !- Program Line 63
-    set Ventilates_HVACmode1_Perimeter_ZN_4_ZN = 0,    !- Program Line 64
+    set Ventilates_HVACmode1_Perimeter_ZN_4 = 0,    !- Program Line 64
     endif,                    !- Program Line 65
     else,                     !- Program Line 66
-    set Ventilates_HVACmode1_Perimeter_ZN_4_ZN = 0,    !- Program Line 67
+    set Ventilates_HVACmode1_Perimeter_ZN_4 = 0,    !- Program Line 67
     endif,                    !- Program Line 68
     else,                     !- Program Line 69
-    set Ventilates_HVACmode1_Perimeter_ZN_4_ZN = 0,    !- Program Line 70
+    set Ventilates_HVACmode1_Perimeter_ZN_4 = 0,    !- Program Line 70
     endif,                    !- Program Line 71
     endif,                    !- Program Line 72
     if HVACmode == 0,         !- Program Line 73
-    if Occ_count_Perimeter_ZN_4_ZN == 0,    !- Program Line 74
-    Set ACST_Act_Perimeter_ZN_4_ZN = 100,    !- Program Line 75
-    Set AHST_Act_Perimeter_ZN_4_ZN = -100,    !- Program Line 76
+    if Occ_count_Perimeter_ZN_4 == 0,    !- Program Line 74
+    Set ACST_Act_Perimeter_ZN_4 = 100,    !- Program Line 75
+    Set AHST_Act_Perimeter_ZN_4 = -100,    !- Program Line 76
     else,                     !- Program Line 77
-    set ACST_Act_Perimeter_ZN_4_ZN = roundedACST,    !- Program Line 78
-    set AHST_Act_Perimeter_ZN_4_ZN = roundedAHST,    !- Program Line 79
+    set ACST_Act_Perimeter_ZN_4 = roundedACST,    !- Program Line 78
+    set AHST_Act_Perimeter_ZN_4 = roundedAHST,    !- Program Line 79
     endif,                    !- Program Line 80
     elseif HVACmode == 1,     !- Program Line 81
-    Set ACST_Act_Perimeter_ZN_4_ZN = 100,    !- Program Line 82
-    Set AHST_Act_Perimeter_ZN_4_ZN = -100,    !- Program Line 83
-    if Ventilates_HVACmode1_Perimeter_ZN_4_ZN == 1 && Occ_count_Perimeter_ZN_4_ZN > 0,    !- Program Line 84
-    set VentHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 85
+    Set ACST_Act_Perimeter_ZN_4 = 100,    !- Program Line 82
+    Set AHST_Act_Perimeter_ZN_4 = -100,    !- Program Line 83
+    if Ventilates_HVACmode1_Perimeter_ZN_4 == 1 && Occ_count_Perimeter_ZN_4 > 0,    !- Program Line 84
+    set VentHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 85
     else,                     !- Program Line 86
-    set VentHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 87
+    set VentHours_Perimeter_ZN_4 = 0,    !- Program Line 87
     endif,                    !- Program Line 88
     elseif HVACmode == 2,     !- Program Line 89
-    if Occ_count_Perimeter_ZN_4_ZN == 0,    !- Program Line 90
-    Set ACST_Act_Perimeter_ZN_4_ZN = 100,    !- Program Line 91
-    Set AHST_Act_Perimeter_ZN_4_ZN = -100,    !- Program Line 92
-    set VentHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 93
+    if Occ_count_Perimeter_ZN_4 == 0,    !- Program Line 90
+    Set ACST_Act_Perimeter_ZN_4 = 100,    !- Program Line 91
+    Set AHST_Act_Perimeter_ZN_4 = -100,    !- Program Line 92
+    set VentHours_Perimeter_ZN_4 = 0,    !- Program Line 93
     else,                     !- Program Line 94
-    if Ventilates_HVACmode2_Perimeter_ZN_4_ZN == 1,    !- Program Line 95
-    set VentHours_Perimeter_ZN_4_ZN = 1*ZoneTimeStep,    !- Program Line 96
-    elseif Ventilates_HVACmode2_Perimeter_ZN_4_ZN == 0,    !- Program Line 97
-    set VentHours_Perimeter_ZN_4_ZN = 0,    !- Program Line 98
-    set ACST_Act_Perimeter_ZN_4_ZN = roundedACST,    !- Program Line 99
-    set AHST_Act_Perimeter_ZN_4_ZN = roundedAHST,    !- Program Line 100
+    if Ventilates_HVACmode2_Perimeter_ZN_4 == 1,    !- Program Line 95
+    set VentHours_Perimeter_ZN_4 = 1*ZoneTimeStep,    !- Program Line 96
+    elseif Ventilates_HVACmode2_Perimeter_ZN_4 == 0,    !- Program Line 97
+    set VentHours_Perimeter_ZN_4 = 0,    !- Program Line 98
+    set ACST_Act_Perimeter_ZN_4 = roundedACST,    !- Program Line 99
+    set AHST_Act_Perimeter_ZN_4 = roundedAHST,    !- Program Line 100
     endif,                    !- Program Line 101
     endif,                    !- Program Line 102
     endif;                    !- Program Line 103
@@ -10315,64 +10315,64 @@ ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     n;                        !- Erl Variable 23 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
-    ComfHours_Core_ZN_ZN,     !- Erl Variable 1 Name
-    DiscomfAppHotHours_Core_ZN_ZN,    !- Erl Variable 2 Name
-    DiscomfAppColdHours_Core_ZN_ZN,    !- Erl Variable 3 Name
-    DiscomfNonAppHotHours_Core_ZN_ZN,    !- Erl Variable 4 Name
-    DiscomfNonAppColdHours_Core_ZN_ZN,    !- Erl Variable 5 Name
-    ComfHoursNoApp_Core_ZN_ZN,    !- Erl Variable 6 Name
-    ZoneFloorArea_Core_ZN_ZN,    !- Erl Variable 7 Name
-    ZoneAirVolume_Core_ZN_ZN,    !- Erl Variable 8 Name
-    OccHours_Core_ZN_ZN,      !- Erl Variable 9 Name
-    OccComfHoursNoApp_Core_ZN_ZN;    !- Erl Variable 10 Name
+    ComfHours_Core_ZN,        !- Erl Variable 1 Name
+    DiscomfAppHotHours_Core_ZN,    !- Erl Variable 2 Name
+    DiscomfAppColdHours_Core_ZN,    !- Erl Variable 3 Name
+    DiscomfNonAppHotHours_Core_ZN,    !- Erl Variable 4 Name
+    DiscomfNonAppColdHours_Core_ZN,    !- Erl Variable 5 Name
+    ComfHoursNoApp_Core_ZN,    !- Erl Variable 6 Name
+    ZoneFloorArea_Core_ZN,    !- Erl Variable 7 Name
+    ZoneAirVolume_Core_ZN,    !- Erl Variable 8 Name
+    OccHours_Core_ZN,         !- Erl Variable 9 Name
+    OccComfHoursNoApp_Core_ZN;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
-    ComfHours_Perimeter_ZN_1_ZN,    !- Erl Variable 1 Name
-    DiscomfAppHotHours_Perimeter_ZN_1_ZN,    !- Erl Variable 2 Name
-    DiscomfAppColdHours_Perimeter_ZN_1_ZN,    !- Erl Variable 3 Name
-    DiscomfNonAppHotHours_Perimeter_ZN_1_ZN,    !- Erl Variable 4 Name
-    DiscomfNonAppColdHours_Perimeter_ZN_1_ZN,    !- Erl Variable 5 Name
-    ComfHoursNoApp_Perimeter_ZN_1_ZN,    !- Erl Variable 6 Name
-    ZoneFloorArea_Perimeter_ZN_1_ZN,    !- Erl Variable 7 Name
-    ZoneAirVolume_Perimeter_ZN_1_ZN,    !- Erl Variable 8 Name
-    OccHours_Perimeter_ZN_1_ZN,    !- Erl Variable 9 Name
-    OccComfHoursNoApp_Perimeter_ZN_1_ZN;    !- Erl Variable 10 Name
+    ComfHours_Perimeter_ZN_1,    !- Erl Variable 1 Name
+    DiscomfAppHotHours_Perimeter_ZN_1,    !- Erl Variable 2 Name
+    DiscomfAppColdHours_Perimeter_ZN_1,    !- Erl Variable 3 Name
+    DiscomfNonAppHotHours_Perimeter_ZN_1,    !- Erl Variable 4 Name
+    DiscomfNonAppColdHours_Perimeter_ZN_1,    !- Erl Variable 5 Name
+    ComfHoursNoApp_Perimeter_ZN_1,    !- Erl Variable 6 Name
+    ZoneFloorArea_Perimeter_ZN_1,    !- Erl Variable 7 Name
+    ZoneAirVolume_Perimeter_ZN_1,    !- Erl Variable 8 Name
+    OccHours_Perimeter_ZN_1,    !- Erl Variable 9 Name
+    OccComfHoursNoApp_Perimeter_ZN_1;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
-    ComfHours_Perimeter_ZN_2_ZN,    !- Erl Variable 1 Name
-    DiscomfAppHotHours_Perimeter_ZN_2_ZN,    !- Erl Variable 2 Name
-    DiscomfAppColdHours_Perimeter_ZN_2_ZN,    !- Erl Variable 3 Name
-    DiscomfNonAppHotHours_Perimeter_ZN_2_ZN,    !- Erl Variable 4 Name
-    DiscomfNonAppColdHours_Perimeter_ZN_2_ZN,    !- Erl Variable 5 Name
-    ComfHoursNoApp_Perimeter_ZN_2_ZN,    !- Erl Variable 6 Name
-    ZoneFloorArea_Perimeter_ZN_2_ZN,    !- Erl Variable 7 Name
-    ZoneAirVolume_Perimeter_ZN_2_ZN,    !- Erl Variable 8 Name
-    OccHours_Perimeter_ZN_2_ZN,    !- Erl Variable 9 Name
-    OccComfHoursNoApp_Perimeter_ZN_2_ZN;    !- Erl Variable 10 Name
+    ComfHours_Perimeter_ZN_2,    !- Erl Variable 1 Name
+    DiscomfAppHotHours_Perimeter_ZN_2,    !- Erl Variable 2 Name
+    DiscomfAppColdHours_Perimeter_ZN_2,    !- Erl Variable 3 Name
+    DiscomfNonAppHotHours_Perimeter_ZN_2,    !- Erl Variable 4 Name
+    DiscomfNonAppColdHours_Perimeter_ZN_2,    !- Erl Variable 5 Name
+    ComfHoursNoApp_Perimeter_ZN_2,    !- Erl Variable 6 Name
+    ZoneFloorArea_Perimeter_ZN_2,    !- Erl Variable 7 Name
+    ZoneAirVolume_Perimeter_ZN_2,    !- Erl Variable 8 Name
+    OccHours_Perimeter_ZN_2,    !- Erl Variable 9 Name
+    OccComfHoursNoApp_Perimeter_ZN_2;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
-    ComfHours_Perimeter_ZN_3_ZN,    !- Erl Variable 1 Name
-    DiscomfAppHotHours_Perimeter_ZN_3_ZN,    !- Erl Variable 2 Name
-    DiscomfAppColdHours_Perimeter_ZN_3_ZN,    !- Erl Variable 3 Name
-    DiscomfNonAppHotHours_Perimeter_ZN_3_ZN,    !- Erl Variable 4 Name
-    DiscomfNonAppColdHours_Perimeter_ZN_3_ZN,    !- Erl Variable 5 Name
-    ComfHoursNoApp_Perimeter_ZN_3_ZN,    !- Erl Variable 6 Name
-    ZoneFloorArea_Perimeter_ZN_3_ZN,    !- Erl Variable 7 Name
-    ZoneAirVolume_Perimeter_ZN_3_ZN,    !- Erl Variable 8 Name
-    OccHours_Perimeter_ZN_3_ZN,    !- Erl Variable 9 Name
-    OccComfHoursNoApp_Perimeter_ZN_3_ZN;    !- Erl Variable 10 Name
+    ComfHours_Perimeter_ZN_3,    !- Erl Variable 1 Name
+    DiscomfAppHotHours_Perimeter_ZN_3,    !- Erl Variable 2 Name
+    DiscomfAppColdHours_Perimeter_ZN_3,    !- Erl Variable 3 Name
+    DiscomfNonAppHotHours_Perimeter_ZN_3,    !- Erl Variable 4 Name
+    DiscomfNonAppColdHours_Perimeter_ZN_3,    !- Erl Variable 5 Name
+    ComfHoursNoApp_Perimeter_ZN_3,    !- Erl Variable 6 Name
+    ZoneFloorArea_Perimeter_ZN_3,    !- Erl Variable 7 Name
+    ZoneAirVolume_Perimeter_ZN_3,    !- Erl Variable 8 Name
+    OccHours_Perimeter_ZN_3,    !- Erl Variable 9 Name
+    OccComfHoursNoApp_Perimeter_ZN_3;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
-    ComfHours_Perimeter_ZN_4_ZN,    !- Erl Variable 1 Name
-    DiscomfAppHotHours_Perimeter_ZN_4_ZN,    !- Erl Variable 2 Name
-    DiscomfAppColdHours_Perimeter_ZN_4_ZN,    !- Erl Variable 3 Name
-    DiscomfNonAppHotHours_Perimeter_ZN_4_ZN,    !- Erl Variable 4 Name
-    DiscomfNonAppColdHours_Perimeter_ZN_4_ZN,    !- Erl Variable 5 Name
-    ComfHoursNoApp_Perimeter_ZN_4_ZN,    !- Erl Variable 6 Name
-    ZoneFloorArea_Perimeter_ZN_4_ZN,    !- Erl Variable 7 Name
-    ZoneAirVolume_Perimeter_ZN_4_ZN,    !- Erl Variable 8 Name
-    OccHours_Perimeter_ZN_4_ZN,    !- Erl Variable 9 Name
-    OccComfHoursNoApp_Perimeter_ZN_4_ZN;    !- Erl Variable 10 Name
+    ComfHours_Perimeter_ZN_4,    !- Erl Variable 1 Name
+    DiscomfAppHotHours_Perimeter_ZN_4,    !- Erl Variable 2 Name
+    DiscomfAppColdHours_Perimeter_ZN_4,    !- Erl Variable 3 Name
+    DiscomfNonAppHotHours_Perimeter_ZN_4,    !- Erl Variable 4 Name
+    DiscomfNonAppColdHours_Perimeter_ZN_4,    !- Erl Variable 5 Name
+    ComfHoursNoApp_Perimeter_ZN_4,    !- Erl Variable 6 Name
+    ZoneFloorArea_Perimeter_ZN_4,    !- Erl Variable 7 Name
+    ZoneAirVolume_Perimeter_ZN_4,    !- Erl Variable 8 Name
+    OccHours_Perimeter_ZN_4,    !- Erl Variable 9 Name
+    OccComfHoursNoApp_Perimeter_ZN_4;    !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     VST,                      !- Erl Variable 1 Name
@@ -10387,19 +10387,19 @@ ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
     MultiplierVOF;            !- Erl Variable 10 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
-    VentHours_Core_ZN_ZN;     !- Erl Variable 1 Name
+    VentHours_Core_ZN;        !- Erl Variable 1 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
-    VentHours_Perimeter_ZN_1_ZN;    !- Erl Variable 1 Name
+    VentHours_Perimeter_ZN_1;    !- Erl Variable 1 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
-    VentHours_Perimeter_ZN_2_ZN;    !- Erl Variable 1 Name
+    VentHours_Perimeter_ZN_2;    !- Erl Variable 1 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
-    VentHours_Perimeter_ZN_3_ZN;    !- Erl Variable 1 Name
+    VentHours_Perimeter_ZN_3;    !- Erl Variable 1 Name
 
 ENERGYMANAGEMENTSYSTEM:GLOBALVARIABLE,
-    VentHours_Perimeter_ZN_4_ZN;    !- Erl Variable 1 Name
+    VentHours_Perimeter_ZN_4;    !- Erl Variable 1 Name
 
 ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
     Comfort Temperature,      !- Name
@@ -10922,92 +10922,92 @@ ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
     ;                         !- Units
 
 ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
-    Ventilation Hours_Core_ZN_ZN,    !- Name
-    VentHours_Core_ZN_ZN,     !- EMS Variable Name
+    Ventilation Hours_Core_ZN,    !- Name
+    VentHours_Core_ZN,        !- EMS Variable Name
     Summed,                   !- Type of Data in Variable
     ZoneTimestep,             !- Update Frequency
     ,                         !- EMS Program or Subroutine Name
     H;                        !- Units
 
 ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
-    Ventilation Hours_Perimeter_ZN_1_ZN,    !- Name
-    VentHours_Perimeter_ZN_1_ZN,    !- EMS Variable Name
+    Ventilation Hours_Perimeter_ZN_1,    !- Name
+    VentHours_Perimeter_ZN_1,    !- EMS Variable Name
     Summed,                   !- Type of Data in Variable
     ZoneTimestep,             !- Update Frequency
     ,                         !- EMS Program or Subroutine Name
     H;                        !- Units
 
 ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
-    Ventilation Hours_Perimeter_ZN_2_ZN,    !- Name
-    VentHours_Perimeter_ZN_2_ZN,    !- EMS Variable Name
+    Ventilation Hours_Perimeter_ZN_2,    !- Name
+    VentHours_Perimeter_ZN_2,    !- EMS Variable Name
     Summed,                   !- Type of Data in Variable
     ZoneTimestep,             !- Update Frequency
     ,                         !- EMS Program or Subroutine Name
     H;                        !- Units
 
 ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
-    Ventilation Hours_Perimeter_ZN_3_ZN,    !- Name
-    VentHours_Perimeter_ZN_3_ZN,    !- EMS Variable Name
+    Ventilation Hours_Perimeter_ZN_3,    !- Name
+    VentHours_Perimeter_ZN_3,    !- EMS Variable Name
     Summed,                   !- Type of Data in Variable
     ZoneTimestep,             !- Update Frequency
     ,                         !- EMS Program or Subroutine Name
     H;                        !- Units
 
 ENERGYMANAGEMENTSYSTEM:OUTPUTVARIABLE,
-    Ventilation Hours_Perimeter_ZN_4_ZN,    !- Name
-    VentHours_Perimeter_ZN_4_ZN,    !- EMS Variable Name
+    Ventilation Hours_Perimeter_ZN_4,    !- Name
+    VentHours_Perimeter_ZN_4,    !- EMS Variable Name
     Summed,                   !- Type of Data in Variable
     ZoneTimestep,             !- Update Frequency
     ,                         !- EMS Program or Subroutine Name
     H;                        !- Units
 
 ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE,
-    ZFA_Core_ZN_ZN,           !- Name
+    ZFA_Core_ZN,              !- Name
     Core_ZN ZN,               !- Internal Data Index Key Name
     Zone Floor Area;          !- Internal Data Type
 
 ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE,
-    ZAV_Core_ZN_ZN,           !- Name
+    ZAV_Core_ZN,              !- Name
     Core_ZN ZN,               !- Internal Data Index Key Name
     Zone Air Volume;          !- Internal Data Type
 
 ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE,
-    ZFA_Perimeter_ZN_1_ZN,    !- Name
+    ZFA_Perimeter_ZN_1,       !- Name
     Perimeter_ZN_1 ZN,        !- Internal Data Index Key Name
     Zone Floor Area;          !- Internal Data Type
 
 ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE,
-    ZAV_Perimeter_ZN_1_ZN,    !- Name
+    ZAV_Perimeter_ZN_1,       !- Name
     Perimeter_ZN_1 ZN,        !- Internal Data Index Key Name
     Zone Air Volume;          !- Internal Data Type
 
 ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE,
-    ZFA_Perimeter_ZN_2_ZN,    !- Name
+    ZFA_Perimeter_ZN_2,       !- Name
     Perimeter_ZN_2 ZN,        !- Internal Data Index Key Name
     Zone Floor Area;          !- Internal Data Type
 
 ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE,
-    ZAV_Perimeter_ZN_2_ZN,    !- Name
+    ZAV_Perimeter_ZN_2,       !- Name
     Perimeter_ZN_2 ZN,        !- Internal Data Index Key Name
     Zone Air Volume;          !- Internal Data Type
 
 ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE,
-    ZFA_Perimeter_ZN_3_ZN,    !- Name
+    ZFA_Perimeter_ZN_3,       !- Name
     Perimeter_ZN_3 ZN,        !- Internal Data Index Key Name
     Zone Floor Area;          !- Internal Data Type
 
 ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE,
-    ZAV_Perimeter_ZN_3_ZN,    !- Name
+    ZAV_Perimeter_ZN_3,       !- Name
     Perimeter_ZN_3 ZN,        !- Internal Data Index Key Name
     Zone Air Volume;          !- Internal Data Type
 
 ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE,
-    ZFA_Perimeter_ZN_4_ZN,    !- Name
+    ZFA_Perimeter_ZN_4,       !- Name
     Perimeter_ZN_4 ZN,        !- Internal Data Index Key Name
     Zone Floor Area;          !- Internal Data Type
 
 ENERGYMANAGEMENTSYSTEM:INTERNALVARIABLE,
-    ZAV_Perimeter_ZN_4_ZN,    !- Name
+    ZAV_Perimeter_ZN_4,       !- Name
     Perimeter_ZN_4 ZN,        !- Internal Data Index Key Name
     Zone Air Volume;          !- Internal Data Type
 
@@ -11750,6 +11750,11 @@ Output:VariableDictionary,
     IDF,                      !- Key Field
     Unsorted;                 !- Sort Option
 
+Output:EnergyManagementSystem,
+    Verbose,                  !- Actuator Availability Dictionary Reporting
+    Verbose,                  !- Internal Variable Availability Dictionary Reporting
+    Verbose;                  !- EMS Runtime Language Debug Output Level
+
 Output:Table:SummaryReports,
     AllSummary;               !- Report 1 Name
 
@@ -12152,31 +12157,31 @@ OUTPUT:VARIABLE,
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Ventilation Hours_Core_ZN_ZN,    !- Variable Name
+    Ventilation Hours_Core_ZN,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Ventilation Hours_Perimeter_ZN_1_ZN,    !- Variable Name
+    Ventilation Hours_Perimeter_ZN_1,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Ventilation Hours_Perimeter_ZN_2_ZN,    !- Variable Name
+    Ventilation Hours_Perimeter_ZN_2,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Ventilation Hours_Perimeter_ZN_3_ZN,    !- Variable Name
+    Ventilation Hours_Perimeter_ZN_3,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Ventilation Hours_Perimeter_ZN_4_ZN,    !- Variable Name
+    Ventilation Hours_Perimeter_ZN_4,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 

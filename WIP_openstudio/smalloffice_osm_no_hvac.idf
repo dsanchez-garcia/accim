@@ -4510,3 +4510,7 @@ LifeCycleCost:NonrecurringCost,
   0,                                      !- Cost
   ServicePeriod;                          !- Start of Costs
 
+Output:EnergyManagementSystem,
+     Verbose,
+     Verbose,
+     Verbose;

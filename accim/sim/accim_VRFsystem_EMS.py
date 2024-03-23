@@ -9,32 +9,32 @@ def addEMSSensorsVRFsystem(self, ScriptType: str = None, verboseMode: bool = Tru
     :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
     """
     sensorlist = ([sensor.Name for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor']])
-    for i in range(len(self.zonenames)):
-        if self.zonenames[i] + '_CoolCoil' in sensorlist:
+    for i in range(len(self.ems_objs_name)):
+        if self.ems_objs_name[i] + '_CoolCoil' in sensorlist:
             if verboseMode:
-                print('Not added - ' + self.zonenames[i] + '_CoolCoil Sensor')
+                print('Not added - ' + self.ems_objs_name[i] + '_CoolCoil Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
-                Name=self.zonenames[i] + '_CoolCoil',
-                OutputVariable_or_OutputMeter_Index_Key_Name=self.zonenames_orig[i] + ' VRF Indoor Unit DX Cooling Coil',
+                Name=self.ems_objs_name[i] + '_CoolCoil',
+                OutputVariable_or_OutputMeter_Index_Key_Name=self.ems_zonenames[i] + ' VRF Indoor Unit DX Cooling Coil',
                 OutputVariable_or_OutputMeter_Name='Cooling Coil Total Cooling Rate'
             )
             if verboseMode:
-                print('Added - ' + self.zonenames[i] + '_CoolCoil Sensor')
+                print('Added - ' + self.ems_objs_name[i] + '_CoolCoil Sensor')
         #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_CoolCoil'])
-        if self.zonenames[i] + '_HeatCoil' in sensorlist:
+        if self.ems_objs_name[i] + '_HeatCoil' in sensorlist:
             if verboseMode:
-                print('Not added - ' + self.zonenames[i] + '_HeatCoil Sensor')
+                print('Not added - ' + self.ems_objs_name[i] + '_HeatCoil Sensor')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Sensor',
-                Name=self.zonenames[i] + '_HeatCoil',
-                OutputVariable_or_OutputMeter_Index_Key_Name=self.zonenames_orig[i] + ' VRF Indoor Unit DX Heating Coil',
+                Name=self.ems_objs_name[i] + '_HeatCoil',
+                OutputVariable_or_OutputMeter_Index_Key_Name=self.ems_zonenames[i] + ' VRF Indoor Unit DX Heating Coil',
                 OutputVariable_or_OutputMeter_Name='Heating Coil Heating Rate'
             )
             if verboseMode:
-                print('Added - ' + self.zonenames[i] + '_HeatCoil Sensor')
+                print('Added - ' + self.ems_objs_name[i] + '_HeatCoil Sensor')
     #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_HeatCoil'])
 
     if ScriptType == 'vrf_mm':

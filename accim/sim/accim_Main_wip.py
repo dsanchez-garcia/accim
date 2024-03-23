@@ -146,12 +146,18 @@ class accimJob():
             self.spacelist_use = True
             self.spacenames_for_ems_uniquekey = []
             self.spacenames_for_ems_name = []
+            self.spacenames_for_ems_uniquekey_people = []
+            self.zonenames_for_ems_with_sl = []
             for people in self.idf1.idfobjects['PEOPLE']:
                 for spacelist in [i for i in self.idf1.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
                     for space in [i for i in self.idf1.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
-                        self.spacenames_for_ems_uniquekey.append(f'{space.Name} {people.Name}')
+                        self.spacenames_for_ems_uniquekey.append(f'{space.Name} {spacelist.Name}')
                         self.spacenames_for_ems_name.append(space.Name)
+                        self.spacenames_for_ems_uniquekey_people.append(f'{space.Name} {people.Name}')
                         occupiedZones_orig_osm.append(space.Zone_Name)
+                        for zone in [i for i in self.idf1.idfobjects['ZONE'] if space.Zone_Name == i.Name]:
+                            self.zonenames_for_ems_with_sl.append(zone.Name)
+
 
 
         # occupiedZones_orig_osm = []
@@ -181,12 +187,17 @@ class accimJob():
             self.occupiedZones_orig = occupiedZones_orig_osm
             self.occupiedZones = [i.replace(' ', '_') for i in self.occupiedZones_orig]
             self.origin_dsb = False
+            self.ems_objs_name = self.spacenames_for_ems_name
+            self.ems_objs_key = self.spacenames_for_ems_uniquekey
+            self.ems_zonenames = self.zonenames_for_ems_with_sl
+
         else:
             self.occupiedZones_orig = occupiedZones_orig_dsb
             self.occupiedZones = [i.replace(':', '_') for i in self.occupiedZones_orig]
             self.origin_dsb = True
-
-
+            self.ems_objs_name = self.occupiedZones
+            self.ems_objs_key = self.occupiedZones_orig
+            self.ems_zonenames = self.occupiedZones_orig
 
 
         if verboseMode:
