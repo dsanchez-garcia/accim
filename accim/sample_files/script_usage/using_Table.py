@@ -39,7 +39,7 @@ print(*[i for i in os.listdir() if i.endswith('.csv') and 'TestModel_onlyGeometr
 # In[2]:
 
 
-from accim.data.data_postprocessing import Table
+from accim.data.postprocessing.main import Table
 dataset_hourly = Table(
     #datasets=list #Since we are not specifying any list, it will use all available CSVs in the folder
     source_frequency='hourly', # This lets accim know which is the frequency of the input CSVs. Input CSVs with multiple frequencies are also allowed. It can be 'hourly', 'daily', 'monthly' and 'runperiod'. It can also be 'timestep' but might generate errors.

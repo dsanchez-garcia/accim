@@ -1,4 +1,4 @@
-from accim.data.postprocessing.data_postprocessing_wip import Table
+from accim.data.postprocessing.main import Table
 import pandas as pd
 
 data_analysis = Table(
