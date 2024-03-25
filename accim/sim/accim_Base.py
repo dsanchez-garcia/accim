@@ -248,7 +248,11 @@ def setPMVsetpoint(self, verboseMode: bool = True):
                 print(f'{zone} Dual Comfort Setpoint ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint has been added')
 
 def addControlFilesObjects(self, verboseMode: bool = True):
+    """
+    Adds an OutputControl:Files object to request the generation of CSV, MRT and ESO files.
 
+    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
+    """
     outputcontrolfiles = [i for i in self.idf1.idfobjects['OutputControl:Files']]
 
     if len(outputcontrolfiles) == 0:
@@ -268,7 +272,12 @@ def addControlFilesObjects(self, verboseMode: bool = True):
             print(f'Not added - OutputControl:Files object - Output CSV, MTR and ESO fields set to Yes')
 
 def addOutputVariableDictionaryObject(self, verboseMode: bool = True):
+    """
+    Adds an Output:VariableDictionary object to request the generation of the RDD file.
 
+
+    :param verboseMode:
+    """
     variabledictionaryfile = [i for i in self.idf1.idfobjects['Output:VariableDictionary']]
 
     if len(variabledictionaryfile) == 0:

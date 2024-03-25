@@ -232,7 +232,6 @@ outputs = evaluator.df_apply(
 # outputs_mod['energy ratio'] = outputs_mod['HVAC Electricity Usage'] / outputs_mod['Total Electricity Usage']
 
 
-# todo use generate_building or _generate_building_from_row to save each idf from the parametric analysis sample
 
 # generated_buildings = [evaluator.generate_building(df=samples_short, index=i, file_name=f'short_sample_row_{i}') for i in range(5)]
 evaluator.generate_building(df=samples_short, index=0, file_name='num_0')
