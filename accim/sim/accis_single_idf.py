@@ -79,6 +79,7 @@ class addAccis:
         Constructor method.
         """
 
+        # import accim.sim.accim_Main_single_idf as accim_Main
         import accim.sim.accim_Main_single_idf as accim_Main
         import besos
         from besos.errors import InstallationError
@@ -248,8 +249,9 @@ class addAccis:
 
         self.occupied_zones = z.occupiedZones
         self.occupied_zones_original_name = z.occupiedZones_orig
-        self.windows_and_doors = z.windownamelist
-        self.windows_and_doors_original_name = z.windownamelist_orig
+        if z.ismixedmode:
+            self.windows_and_doors = z.windownamelist
+            self.windows_and_doors_original_name = z.windownamelist_orig
 
         z.setComfFieldsPeople(EnergyPlus_version=EnergyPlus_version, TempCtrl=TempCtrl, verboseMode=verboseMode)
 
@@ -342,6 +344,8 @@ class addAccis:
             self.df_outputs = z.df_outputs_temp
 
         z.addControlFilesObjects(verboseMode=verboseMode)
+
+        z.addOutputVariableDictionaryObject(verboseMode=verboseMode)
 
         if verboseMode:
             print('''\n=======================END OF OUTPUT IDF FILE GENERATION PROCESS=======================\n''')
@@ -553,8 +557,8 @@ class addAccis:
         self.SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + repr(MinTempDiffVOF)
         self.SetVOFinputData.Program_Line_3 = 'set MultiplierVOF = ' + repr(MultiplierVOF)
 
-        self.ApplyCAT.Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
-        self.ApplyCAT.Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
+        self.ApplyCAT.Program_Line_1 = 'set CATcoolOffset = ' + repr(CATcoolOffset)
+        self.ApplyCAT.Program_Line_2 = 'set CATheatOffset = ' + repr(CATheatOffset)
         self.ApplyCAT.Program_Line_4 = f'set ACSToffset = {repr(CustAST_ACSToffset)} + {repr(CATcoolOffset)}'
         self.ApplyCAT.Program_Line_5 = f'set AHSToffset = {repr(CustAST_AHSToffset)} + {repr(CATheatOffset)}'
 

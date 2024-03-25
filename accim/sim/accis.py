@@ -199,7 +199,7 @@ class addAccis:
         """
 
         # import accim.sim.accim_Main as accim_Main
-        import accim.sim.accim_Main_wip as accim_Main
+        import accim.sim.accim_Main as accim_Main
 
         from os import listdir, remove
         import accim
@@ -464,8 +464,9 @@ class addAccis:
             self.input_idfs.update({file: z.idf0})
             self.occupied_zones.update({file: z.occupiedZones})
             self.occupied_zones_original_name.update({file: z.occupiedZones_orig})
-            self.windows_and_doors.update({file: z.windownamelist})
-            self.windows_and_doors_original_name.update({file: z.windownamelist_orig})
+            if z.ismixedmode:
+                self.windows_and_doors.update({file: z.windownamelist})
+                self.windows_and_doors_original_name.update({file: z.windownamelist_orig})
 
             if z.accimNotWorking is True:
                 # raise KeyError(f'accim is not going to work with {file}')
@@ -513,6 +514,8 @@ class addAccis:
             z.addEMSPCMBase(verboseMode=verboseMode)
 
             z.addControlFilesObjects(verboseMode=verboseMode)
+
+            z.addOutputVariableDictionaryObject(verboseMode=verboseMode)
 
             if Output_keep_existing == 'true':
                 Output_keep_existing = True

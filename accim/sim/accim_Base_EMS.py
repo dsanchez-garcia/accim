@@ -3741,7 +3741,8 @@ def addOutputVariablesStandard(
                            for outputvariable
                            in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']])
     addittionaloutputs = [
-        # 'Zone Thermostat Operative Temperature',
+        'Zone Thermostat Operative Temperature',
+        'Zone Thermostat Air Temperature',
         'Zone Operative Temperature',
         'Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature',
         'Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature',

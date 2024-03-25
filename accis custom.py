@@ -1,16 +1,17 @@
 from accim.sim.accis import addAccis
 from accim.utils import amend_idf_version_from_dsb
 from accim.sim.chile_funcs import apply_heating_activation_time_sch
+import os
 
-
+orig_idf = [i for i in os.listdir() if i.endswith('.idf')][0]
 
 x = addAccis(
-    ScriptType='vrf_mm',
+    ScriptType='ex_ac',
     SupplyAirTempInputMethod='temperature difference',
     Output_keep_existing=False,
     Output_type='standard',
     Output_freqs=['hourly'],
-    EnergyPlus_version='23.2',
+    # EnergyPlus_version='auto',
     TempCtrl='temp',
 
     ComfStand=[2],
@@ -51,8 +52,11 @@ x = addAccis(
 from besos import eplus_funcs
 from besos import eppy_funcs
 
-new_idf = r'D:\Python\accim_project\accim\smalloffice_osm_no_hvac[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
+# new_idf = r'D:\Python\accim_project\accim\smalloffice_osm_no_hvac[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
 # new_idf = r'C:\Python\accim\smalloffice_osm_no_hvac[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
+new_idf = [i for i in os.listdir() if i.endswith('.idf') if i != orig_idf][0]
+# new_idf = 'OSM_SmallOffice_exHVAC_always-occ_V2320.idf'
+# new_idf = 'smalloffice_osm_hvac_always_occ[CS_INT ASHRAE55[CA_80[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
 
 building = eppy_funcs.get_building(new_idf)
 

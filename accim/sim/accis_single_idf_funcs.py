@@ -76,7 +76,9 @@ def addAccis(
     """
 
 
+    # import accim.sim.accim_Main_single_idf as accim_Main
     import accim.sim.accim_Main_single_idf as accim_Main
+
     import besos
     from besos.errors import InstallationError
 
@@ -335,6 +337,8 @@ def addAccis(
     z.removeDuplicatedOutputVariables()
 
     z.addControlFilesObjects(verboseMode=verboseMode)
+
+    z.addOutputVariableDictionaryObject(verboseMode=verboseMode)
 
     # if Output_gen_dataframe:
     #     z.genOutputDataframe(idf_filename=idf.idfname.split('.idf')[0])

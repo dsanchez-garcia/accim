@@ -266,3 +266,21 @@ def addControlFilesObjects(self, verboseMode: bool = True):
         outputcontrolfiles[0].Output_ESO = 'Yes'
         if verboseMode:
             print(f'Not added - OutputControl:Files object - Output CSV, MTR and ESO fields set to Yes')
+
+def addOutputVariableDictionaryObject(self, verboseMode: bool = True):
+
+    variabledictionaryfile = [i for i in self.idf1.idfobjects['Output:VariableDictionary']]
+
+    if len(variabledictionaryfile) == 0:
+        self.idf1.newidfobject(
+            'Output:VariableDictionary',
+            Key_Field='IDF',
+            Sort_Option='Unsorted',
+        )
+        if verboseMode:
+            print(f'Added - Output:VariableDictionary object')
+    else:
+        if verboseMode:
+            print(f'Not added - Output:VariableDictionary object - Output CSV, MTR and ESO fields set to Yes')
+
+
