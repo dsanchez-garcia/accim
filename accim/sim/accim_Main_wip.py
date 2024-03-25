@@ -190,6 +190,7 @@ class accimJob():
             self.ems_objs_name = self.spacenames_for_ems_name
             self.ems_objs_key = self.spacenames_for_ems_uniquekey
             self.ems_zonenames = self.zonenames_for_ems_with_sl
+            self.ems_zonenames_underscore = [i.replace(' ', '_') for i in self.ems_zonenames]
 
         else:
             self.occupiedZones_orig = occupiedZones_orig_dsb
@@ -198,7 +199,7 @@ class accimJob():
             self.ems_objs_name = self.occupiedZones
             self.ems_objs_key = self.occupiedZones_orig
             self.ems_zonenames = self.occupiedZones_orig
-
+            self.ems_zonenames_underscore = self.occupiedZones_orig
 
         if verboseMode:
             print(f'The occupied zones in the model {filename_temp} are:')

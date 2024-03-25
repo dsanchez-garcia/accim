@@ -2282,7 +2282,7 @@ SCHEDULE:COMPACT,
     24;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    AHST_Sch_Core_ZN_ZN,      !- Name
+    AHST_Sch_Core_ZN,         !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -2290,7 +2290,7 @@ SCHEDULE:COMPACT,
     20;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    ACST_Sch_Core_ZN_ZN,      !- Name
+    ACST_Sch_Core_ZN,         !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -2298,7 +2298,7 @@ SCHEDULE:COMPACT,
     24;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    AHST_Sch_Perimeter_ZN_1_ZN,    !- Name
+    AHST_Sch_Perimeter_ZN_1,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -2306,7 +2306,7 @@ SCHEDULE:COMPACT,
     20;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    ACST_Sch_Perimeter_ZN_1_ZN,    !- Name
+    ACST_Sch_Perimeter_ZN_1,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -2314,7 +2314,7 @@ SCHEDULE:COMPACT,
     24;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    AHST_Sch_Perimeter_ZN_2_ZN,    !- Name
+    AHST_Sch_Perimeter_ZN_2,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -2322,7 +2322,7 @@ SCHEDULE:COMPACT,
     20;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    ACST_Sch_Perimeter_ZN_2_ZN,    !- Name
+    ACST_Sch_Perimeter_ZN_2,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -2330,7 +2330,7 @@ SCHEDULE:COMPACT,
     24;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    AHST_Sch_Perimeter_ZN_3_ZN,    !- Name
+    AHST_Sch_Perimeter_ZN_3,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -2338,7 +2338,7 @@ SCHEDULE:COMPACT,
     20;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    ACST_Sch_Perimeter_ZN_3_ZN,    !- Name
+    ACST_Sch_Perimeter_ZN_3,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -2346,7 +2346,7 @@ SCHEDULE:COMPACT,
     24;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    AHST_Sch_Perimeter_ZN_4_ZN,    !- Name
+    AHST_Sch_Perimeter_ZN_4,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -2354,7 +2354,7 @@ SCHEDULE:COMPACT,
     20;                       !- Field 4
 
 SCHEDULE:COMPACT,
-    ACST_Sch_Perimeter_ZN_4_ZN,    !- Name
+    ACST_Sch_Perimeter_ZN_4,    !- Name
     Any Number,               !- Schedule Type Limits Name
     Through: 12/31,           !- Field 1
     For: AllDays,             !- Field 2
@@ -4581,7 +4581,7 @@ InternalMass,
 PEOPLE,
     Office WholeBuilding - Sm Office People,    !- Name
     Office WholeBuilding - Sm Office,    !- Zone or ZoneList or Space or SpaceList Name
-    OfficeSmall BLDG_OCC_SCH,    !- Number of People Schedule Name
+    On 24/7,    !- Number of People Schedule Name
     People/Area,              !- Number of People Calculation Method
     ,                         !- Number of People
     0.0602778983335744,       !- People per Floor Area
@@ -5307,28 +5307,28 @@ ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
 
 THERMOSTATSETPOINT:DUALSETPOINT,
     Core_ZN ZN Dual SP,       !- Name
-    AHST_Sch_Core_ZN_ZN,      !- Heating Setpoint Temperature Schedule Name
-    ACST_Sch_Core_ZN_ZN;      !- Cooling Setpoint Temperature Schedule Name
+    AHST_Sch_Core_ZN,         !- Heating Setpoint Temperature Schedule Name
+    ACST_Sch_Core_ZN;         !- Cooling Setpoint Temperature Schedule Name
 
 THERMOSTATSETPOINT:DUALSETPOINT,
     Perimeter_ZN_1 ZN Dual SP,    !- Name
-    AHST_Sch_Perimeter_ZN_1_ZN,    !- Heating Setpoint Temperature Schedule Name
-    ACST_Sch_Perimeter_ZN_1_ZN;    !- Cooling Setpoint Temperature Schedule Name
+    AHST_Sch_Perimeter_ZN_1,    !- Heating Setpoint Temperature Schedule Name
+    ACST_Sch_Perimeter_ZN_1;    !- Cooling Setpoint Temperature Schedule Name
 
 THERMOSTATSETPOINT:DUALSETPOINT,
     Perimeter_ZN_2 ZN Dual SP,    !- Name
-    AHST_Sch_Perimeter_ZN_2_ZN,    !- Heating Setpoint Temperature Schedule Name
-    ACST_Sch_Perimeter_ZN_2_ZN;    !- Cooling Setpoint Temperature Schedule Name
+    AHST_Sch_Perimeter_ZN_2,    !- Heating Setpoint Temperature Schedule Name
+    ACST_Sch_Perimeter_ZN_2;    !- Cooling Setpoint Temperature Schedule Name
 
 THERMOSTATSETPOINT:DUALSETPOINT,
     Perimeter_ZN_3 ZN Dual SP,    !- Name
-    AHST_Sch_Perimeter_ZN_3_ZN,    !- Heating Setpoint Temperature Schedule Name
-    ACST_Sch_Perimeter_ZN_3_ZN;    !- Cooling Setpoint Temperature Schedule Name
+    AHST_Sch_Perimeter_ZN_3,    !- Heating Setpoint Temperature Schedule Name
+    ACST_Sch_Perimeter_ZN_3;    !- Cooling Setpoint Temperature Schedule Name
 
 THERMOSTATSETPOINT:DUALSETPOINT,
     Perimeter_ZN_4 ZN Dual SP,    !- Name
-    AHST_Sch_Perimeter_ZN_4_ZN,    !- Heating Setpoint Temperature Schedule Name
-    ACST_Sch_Perimeter_ZN_4_ZN;    !- Cooling Setpoint Temperature Schedule Name
+    AHST_Sch_Perimeter_ZN_4,    !- Heating Setpoint Temperature Schedule Name
+    ACST_Sch_Perimeter_ZN_4;    !- Cooling Setpoint Temperature Schedule Name
 
 ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
     Core_ZN ZN VRF Indoor Unit,    !- Zone Terminal Unit Name
@@ -6409,62 +6409,62 @@ ENERGYMANAGEMENTSYSTEM:SENSOR,
     Heating Coil Heating Rate;    !- OutputVariable or OutputMeter Name
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    AHST_Act_Core_ZN_ZN,      !- Name
-    AHST_Sch_Core_ZN_ZN,      !- Actuated Component Unique Name
+    AHST_Act_Core_ZN,         !- Name
+    AHST_Sch_Core_ZN,         !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    ACST_Act_Core_ZN_ZN,      !- Name
-    ACST_Sch_Core_ZN_ZN,      !- Actuated Component Unique Name
+    ACST_Act_Core_ZN,         !- Name
+    ACST_Sch_Core_ZN,         !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    AHST_Act_Perimeter_ZN_1_ZN,    !- Name
-    AHST_Sch_Perimeter_ZN_1_ZN,    !- Actuated Component Unique Name
+    AHST_Act_Perimeter_ZN_1,    !- Name
+    AHST_Sch_Perimeter_ZN_1,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    ACST_Act_Perimeter_ZN_1_ZN,    !- Name
-    ACST_Sch_Perimeter_ZN_1_ZN,    !- Actuated Component Unique Name
+    ACST_Act_Perimeter_ZN_1,    !- Name
+    ACST_Sch_Perimeter_ZN_1,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    AHST_Act_Perimeter_ZN_2_ZN,    !- Name
-    AHST_Sch_Perimeter_ZN_2_ZN,    !- Actuated Component Unique Name
+    AHST_Act_Perimeter_ZN_2,    !- Name
+    AHST_Sch_Perimeter_ZN_2,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    ACST_Act_Perimeter_ZN_2_ZN,    !- Name
-    ACST_Sch_Perimeter_ZN_2_ZN,    !- Actuated Component Unique Name
+    ACST_Act_Perimeter_ZN_2,    !- Name
+    ACST_Sch_Perimeter_ZN_2,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    AHST_Act_Perimeter_ZN_3_ZN,    !- Name
-    AHST_Sch_Perimeter_ZN_3_ZN,    !- Actuated Component Unique Name
+    AHST_Act_Perimeter_ZN_3,    !- Name
+    AHST_Sch_Perimeter_ZN_3,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    ACST_Act_Perimeter_ZN_3_ZN,    !- Name
-    ACST_Sch_Perimeter_ZN_3_ZN,    !- Actuated Component Unique Name
+    ACST_Act_Perimeter_ZN_3,    !- Name
+    ACST_Sch_Perimeter_ZN_3,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    AHST_Act_Perimeter_ZN_4_ZN,    !- Name
-    AHST_Sch_Perimeter_ZN_4_ZN,    !- Actuated Component Unique Name
+    AHST_Act_Perimeter_ZN_4,    !- Name
+    AHST_Sch_Perimeter_ZN_4,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
 ENERGYMANAGEMENTSYSTEM:ACTUATOR,
-    ACST_Act_Perimeter_ZN_4_ZN,    !- Name
-    ACST_Sch_Perimeter_ZN_4_ZN,    !- Actuated Component Unique Name
+    ACST_Act_Perimeter_ZN_4,    !- Name
+    ACST_Sch_Perimeter_ZN_4,    !- Actuated Component Unique Name
     Schedule:Compact,         !- Actuated Component Type
     Schedule Value;           !- Actuated Component Control Type
 
@@ -12276,61 +12276,61 @@ OUTPUT:VARIABLE,
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    AHST_Sch_Core_ZN_ZN,      !- Key Value
+    AHST_Sch_Core_ZN,         !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    ACST_Sch_Core_ZN_ZN,      !- Key Value
+    ACST_Sch_Core_ZN,         !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    AHST_Sch_Perimeter_ZN_1_ZN,    !- Key Value
+    AHST_Sch_Perimeter_ZN_1,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    ACST_Sch_Perimeter_ZN_1_ZN,    !- Key Value
+    ACST_Sch_Perimeter_ZN_1,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    AHST_Sch_Perimeter_ZN_2_ZN,    !- Key Value
+    AHST_Sch_Perimeter_ZN_2,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    ACST_Sch_Perimeter_ZN_2_ZN,    !- Key Value
+    ACST_Sch_Perimeter_ZN_2,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    AHST_Sch_Perimeter_ZN_3_ZN,    !- Key Value
+    AHST_Sch_Perimeter_ZN_3,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    ACST_Sch_Perimeter_ZN_3_ZN,    !- Key Value
+    ACST_Sch_Perimeter_ZN_3,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    AHST_Sch_Perimeter_ZN_4_ZN,    !- Key Value
+    AHST_Sch_Perimeter_ZN_4,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
-    ACST_Sch_Perimeter_ZN_4_ZN,    !- Key Value
+    ACST_Sch_Perimeter_ZN_4,    !- Key Value
     Schedule Value,           !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name

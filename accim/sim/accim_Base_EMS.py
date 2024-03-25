@@ -3882,7 +3882,7 @@ def addOutputVariablesStandard(
                 if verboseMode:
                     print('Added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
 
-        for zonename in self.zonenames:
+        for zonename in self.ems_objs_name:
             self.idf1.newidfobject(
                 'Output:Variable',
                 Key_Value='AHST_Sch_'+zonename,
@@ -4223,35 +4223,35 @@ def addEMSActuatorsBase(self, ScriptType: str = None, verboseMode: bool = True):
     """
     actuatorlist = ([actuator.Name for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator']])
 
-    for zonename in self.zonenames:
-        if 'AHST_Act_'+zonename in actuatorlist:
+    for i in range(len(self.ems_objs_name)):
+        if 'AHST_Act_'+self.ems_objs_name[i] in actuatorlist:
             if verboseMode:
-                print('Not added - AHST_Act_'+zonename+' Actuator')
+                print('Not added - AHST_Act_'+self.ems_objs_name[i]+' Actuator')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Actuator',
-                Name='AHST_Act_'+zonename,
-                Actuated_Component_Unique_Name='AHST_Sch_'+zonename,
+                Name='AHST_Act_'+self.ems_objs_name[i],
+                Actuated_Component_Unique_Name='AHST_Sch_'+self.ems_objs_name[i],
                 Actuated_Component_Type='Schedule:Compact',
                 Actuated_Component_Control_Type='Schedule Value'
                 )
             if verboseMode:
-                print('Added - AHST_Act_'+zonename+' Actuator')
+                print('Added - AHST_Act_'+self.ems_objs_name[i]+' Actuator')
         #    print([actuator for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator'] if actuator.Name=='AHST_Act_'+zonename])
 
-        if 'ACST_Act_'+zonename in actuatorlist:
+        if 'ACST_Act_'+self.ems_objs_name[i] in actuatorlist:
             if verboseMode:
-                print('Not added - ACST_Act_'+zonename+' Actuator')
+                print('Not added - ACST_Act_'+self.ems_objs_name[i]+' Actuator')
         else:
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Actuator',
-                Name='ACST_Act_'+zonename,
-                Actuated_Component_Unique_Name='ACST_Sch_'+zonename,
+                Name='ACST_Act_'+self.ems_objs_name[i],
+                Actuated_Component_Unique_Name='ACST_Sch_'+self.ems_objs_name[i],
                 Actuated_Component_Type='Schedule:Compact',
                 Actuated_Component_Control_Type='Schedule Value'
                 )
             if verboseMode:
-                print('Added - ACST_Act_'+zonename+' Actuator')
+                print('Added - ACST_Act_'+self.ems_zonenames[i]+' Actuator')
         #    print([actuator for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator'] if actuator.Name=='ACST_Act_'+zonename])
 
     if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':

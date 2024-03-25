@@ -1548,7 +1548,7 @@ def addForscriptSchVRFsystem(self, verboseMode: bool = True):
     :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
     :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
     """
-    for zn in self.zonenames:
+    for zn in self.ems_objs_name:
         if "AHST_Sch_"+zn in [sch.Name
                                     for sch
                                     in self.idf1.idfobjects['Schedule:Compact']]:
@@ -1597,14 +1597,14 @@ def addForscriptSchVRFsystem(self, verboseMode: bool = True):
 
     del TSDSlist
 
-    for i in range(len(self.zonenames_orig)):
+    for i in range(len(self.ems_objs_name)):
         self.idf1.newidfobject(
             'ThermostatSetpoint:DualSetpoint',
-            Name=self.zonenames_orig[i]+' Dual SP',
+            Name=self.ems_zonenames[i]+' Dual SP',
             Heating_Setpoint_Temperature_Schedule_Name=
-            "AHST_Sch_"+self.zonenames[i],
+            "AHST_Sch_"+self.ems_objs_name[i],
             Cooling_Setpoint_Temperature_Schedule_Name=
-            "ACST_Sch_"+self.zonenames[i]
+            "ACST_Sch_"+self.ems_objs_name[i]
             )
 
 
