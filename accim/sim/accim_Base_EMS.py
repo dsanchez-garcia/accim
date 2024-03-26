@@ -2726,39 +2726,6 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
             print('Added - SetASTnoTol Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetASTnoTol'])
 
-    # if self.spacelist_use:
-    #     for zonename in self.spacenames_for_ems_name:
-    #         if 'CountHoursNoApp_' + zonename in programlist:
-    #             if verboseMode:
-    #                 print('Not added - CountHoursNoApp_' + zonename + ' Program')
-    #         else:
-    #             self.idf1.newidfobject(
-    #                 'EnergyManagementSystem:Program',
-    #                 Name='CountHoursNoApp_' + zonename,
-    #                 Program_Line_1='if (' + zonename + '_OpT <= ACSTnoTol)',
-    #                 Program_Line_2='if (' + zonename + '_OpT >= AHSTnoTol)',
-    #                 Program_Line_3='set ComfHoursNoApp_' + zonename + ' = 1*ZoneTimeStep',
-    #                 Program_Line_4='if Occ_count_' + zonename + '',
-    #                 Program_Line_5='set OccComfHoursNoApp_' + zonename + ' = 1*ZoneTimeStep',
-    #                 Program_Line_6='else',
-    #                 Program_Line_7='set OccComfHoursNoApp_' + zonename + ' = 0',
-    #                 Program_Line_8='endif',
-    #                 Program_Line_9='else',
-    #                 Program_Line_10='set ComfHoursNoApp_' + zonename + ' = 0',
-    #                 Program_Line_11='endif',
-    #                 Program_Line_12='else',
-    #                 Program_Line_13='set ComfHoursNoApp_' + zonename + ' = 0',
-    #                 Program_Line_14='endif',
-    #                 Program_Line_15='if Occ_count_' + zonename + ' > 0',
-    #                 Program_Line_16='set OccHours_' + zonename + ' = 1*ZoneTimeStep',
-    #                 Program_Line_17='else',
-    #                 Program_Line_18='set OccHours_' + zonename + ' = 0',
-    #                 Program_Line_19='endif',
-    #             )
-    #             if verboseMode:
-    #                 print('Added - CountHoursNoApp_' + zonename + ' Program')
-    #     #        print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'CountHoursNoApp_'+zonename])
-    # else:
     for zonename in self.ems_objs_name:
         if 'CountHoursNoApp_'+zonename in programlist:
             if verboseMode:
@@ -3380,24 +3347,7 @@ def addGlobVarList(self, ScriptType: str = None, verboseMode: bool = True):
         Erl_Variable_22_Name='m',
         Erl_Variable_23_Name='n',
     )
-    # if self.spacelist_use:
-    #     for zonename in self.spacenames_for_ems_name:
-    #         self.idf1.newidfobject(
-    #             'EnergyManagementSystem:GlobalVariable',
-    #             Erl_Variable_1_Name='ComfHours_' + zonename,
-    #             Erl_Variable_2_Name='DiscomfAppHotHours_' + zonename,
-    #             Erl_Variable_3_Name='DiscomfAppColdHours_' + zonename,
-    #             Erl_Variable_4_Name='DiscomfNonAppHotHours_' + zonename,
-    #             Erl_Variable_5_Name='DiscomfNonAppColdHours_' + zonename,
-    #             Erl_Variable_6_Name='ComfHoursNoApp_' + zonename,
-    #             Erl_Variable_7_Name='ZoneFloorArea_' + zonename,
-    #             Erl_Variable_8_Name='ZoneAirVolume_' + zonename,
-    #             Erl_Variable_9_Name='OccHours_' + zonename,
-    #             Erl_Variable_10_Name='OccComfHoursNoApp_' + zonename,
-    #             # Erl_Variable_11_Name='VentHours_' + zonename
-    #
-    #         )
-    # else:
+
     for zonename in self.ems_objs_name:
         self.idf1.newidfobject(
             'EnergyManagementSystem:GlobalVariable',

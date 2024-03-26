@@ -33,6 +33,8 @@ class Table:
     :type output_cols_to_keep: list
     :param concatenated_csv_name: Used as the name for the concatenated csv file.
     :type concatenated_csv_name: str
+    :param idfpath: The path of the IDF used for the simulations.
+    :type path-like
     :param drop_nan: If True, drops the rows with NaNs before
         exporting the CSV using concatenated_csv_name.
     :type drop_nan: bool
@@ -282,6 +284,8 @@ class Table:
                 'EMS:Discomfortable Applicable Cold Hours',
                 'EMS:Discomfortable Non Applicable Hot Hours',
                 'EMS:Discomfortable Non Applicable Cold Hours',
+                'EMS:Occupied Comfortable Hours_No Applicability',
+                'EMS:Occupied Hours',
                 'EMS:Ventilation Hours',
                 'AFN Zone Infiltration Volume',
                 'AFN Zone Infiltration Air Change Rate',
@@ -665,10 +669,27 @@ class Table:
         allzones = [i.Name for i in building.idfobjects['ZONE']]
 
         occupied_zone_list = []
-        for zone in allzones:
-            for col in df.columns:
-                if zone.lower() in col.lower():
-                    occupied_zone_list.append(zone)
+        if len(building.idfobjects['SPACELIST']) > 0:
+            # spacenames_for_ems_uniquekey = []
+            spacenames = []
+            # spacenames_for_ems_uniquekey_people = []
+            zonenames_from_space = []
+            for people in building.idfobjects['PEOPLE']:
+                for spacelist in [i for i in building.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
+                    for space in [i for i in building.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
+                        # spacenames_for_ems_uniquekey.append(f'{space.Name} {spacelist.Name}')
+                        spacenames.append(space.Name)
+                        # spacenames_for_ems_uniquekey_people.append(f'{space.Name} {people.Name}')
+                        # occupiedZones_orig_osm.append(space.Zone_Name)
+                        occupied_zone_list.append(space.Name)
+                        for zone in [i for i in building.idfobjects['ZONE'] if space.Zone_Name == i.Name]:
+                            zonenames_from_space.append(zone.Name)
+                            df.columns = [i.replace(zone.Name.upper(), space.Name.upper()) for i in df.columns]
+        else:
+            for zone in allzones:
+                for col in df.columns:
+                    if zone.lower() in col.lower():
+                        occupied_zone_list.append(zone)
         occupied_zone_list = list(set(occupied_zone_list))
 
         if not(all(len(i.split(':')) == 2 for i in occupied_zone_list)):
