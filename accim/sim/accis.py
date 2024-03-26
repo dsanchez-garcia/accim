@@ -71,11 +71,36 @@ class addAccis:
         '19 = MEX Oropeza Temperate;
         '20 = MEX Oropeza HumTropic;
         '21 = CHL Perez-Fargallo;
-        '22 = INT ISO7730
+        '22 = INT ISO7730;
+        '99 = CUSTOM;
     :type ComfStand: list
+    :param CustAST_m: The m coefficient (slope) of custom model linear regression (mx+n)
+    :type CustAST_m: float
+    :param CustAST_n: The n coefficient of custom model linear regression (mx+n)
+    :type CustAST_n: float
+    :param CustAST_AHSToffset: The offset for heating setpoint from neutral temperature
+        for the custom model linear regression. This value will be summed, therefore, it must be negative.
+    :type CustAST_AHSToffset: float
+    :param CustAST_ACSToffset: The offset for cooling setpoint from neutral temperature
+        for the custom model linear regression. This value will be summed, therefore, it must be positive.
+    :type CustAST_ACSToffset: float
+    :param CustAST_ACSTaul: The value for the cooling setpoint applicability upper limit (ACSTaul).
+    :type CustAST_ACSTaul: float
+    :param CustAST_ACSTall: The value for the cooling setpoint applicability lower limit (ACSTall).
+    :type CustAST_ACSTall: float
+    :param CustAST_AHSTaul: The value for the heating setpoint applicability upper limit (AHSTaul).
+    :type CustAST_AHSTaul: float
+    :param CustAST_AHSTall: The value for the heating setpoint applicability lower limit (AHSTall).
+    :type CustAST_AHSTall: float
     :param CAT: The default is None.
         (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT)
     :type CAT: list
+    :param CATcoolOffset: An offset to modify comfort models.
+        This value is summed to the predefined cooling setpoint offset for the CAT value.
+    :type CATcoolOffset: float
+    :param CATheatOffset: An offset to modify comfort models.
+        This value is summed to the predefined heating setpoint offset for the CAT value.
+    :type CATheatOffset: float
     :param ComfMod: The default is None.
         (0/0.X = Static;
         1/1.X = Adaptive when applicable, otherwise relevant local static model;
@@ -162,7 +187,6 @@ class addAccis:
         VRFschedule: str = 'On 24/7',
         ComfStand: any = None,
         CAT: any = None,
-            #todo avoid AHST higher than ACST when CAT offsets are used
         CATcoolOffset: float = 0,
         CATheatOffset: float = 0,
         ComfMod: any = None,
@@ -212,6 +236,8 @@ class addAccis:
             raise FileNotFoundError('No idf files were found. There must be at least 1 idf file located at the path where this script is being run.')
 
         filelist = ([file.split('.idf')[0] for file in filelist])
+
+        # todo avoid AHST higher than ACST when CAT offsets are used
 
         objArgsDef = (
             ScriptType is not None,

@@ -1543,7 +1543,7 @@ def addDetHVACobj(
 
 
 def addForscriptSchVRFsystem(self, verboseMode: bool = True):
-    """Add FORSCRIPT Schedules for each zone for VRFsystem.
+    """Add AST Schedules for each zone for VRFsystem.
 
     :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
     :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
