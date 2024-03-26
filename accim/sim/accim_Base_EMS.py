@@ -3474,9 +3474,7 @@ def addIntVarList(self, verboseMode: bool = True):
     if verboseMode:
         print("Internal variables objects have been added")
 
-def removeExistingOutputVariables(
-        self,
-):
+def removeExistingOutputVariables(self):
     """Remove existing Output:Variable objects for accim.
 
     :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
@@ -3498,9 +3496,7 @@ def removeExistingOutputVariables(
     del EnvironmentalImpactFactorslist, outputmeterlist, alloutputs, \
         # firstEnvironmentalImpactFactor, firstoutputmeter, firstoutput
 
-def removeDuplicatedOutputVariables(
-        self,
-):
+def removeDuplicatedOutputVariables(self):
     """Remove duplicated Output:Variable objects for accim.
 
     :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
@@ -3727,7 +3723,8 @@ def addOutputVariablesStandard(
         Outputs_freq: any = None,
         ScriptType: str = None,
         TempCtrl: str = None,
-        verboseMode: bool = True):
+        verboseMode: bool = True
+):
     """Add Output:Variable objects for accim.
 
     :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
@@ -3959,7 +3956,8 @@ def addOutputVariablesStandard(
 def addOutputVariablesDetailed(
         self,
         Outputs_freq: any = None,
-        verboseMode: bool = True):
+        verboseMode: bool = True
+):
     """Add Output:Variable objects for accim.
 
     :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``

@@ -31,6 +31,7 @@ def inputData(self, ScriptType: str = None):
         '20 = MEX Oropeza HumTropic': [[80, 90], [0, 1, 2, 3]],
         '21 = CHL Perez-Fargallo': [[80, 90], [2, 3]],
         '22 = INT ISO7730': [[1, 2, 3], [0]],
+        '99 = CUSTOM': [['n/a'], [3]],
     }
 
     CS_CA_CM_data_dict = {
@@ -344,10 +345,21 @@ def inputData(self, ScriptType: str = None):
                 0: 'ISO 7730 Static setpoints',
             }
         },
+        99: {
+            'name': '99 = CUSTOM',
+            'CAT': {
+                'n/a': 'n/a'
+            },
+            'ComfMod': {
+                3: 'Custom Model Adaptive setpoints when applicable, otherwise Adaptive setpoints horizontally extended',
+            }
+        },
+
     }
 
     print('The information you will be required to enter below will be used to generate the customised output IDFs:')
-    fullComfStandList = list(range(len(CS_CA_CM_list_dict)))
+    fullComfStandList = list(range(len(CS_CA_CM_list_dict)-1))
+    fullComfStandList.append(99)
     self.ComfStand_List = list(int(num) for num in input(
         'Enter the Comfort Standard numbers separated by space (\n'
         '0 = ESP CTE;\n'
@@ -373,6 +385,7 @@ def inputData(self, ScriptType: str = None):
         '20 = MEX Oropeza HumTropic;\n'
         '21 = CHL Perez-Fargallo;\n'
         '22 = INT ISO7730;\n'
+        '99 = CUSTOM;\n'
         'Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html\n'
         '): '
     ).split())
@@ -387,6 +400,52 @@ def inputData(self, ScriptType: str = None):
             print('          Comfort Standard numbers are not correct. Please enter the numbers again.')
             self.ComfStand_List = list(
                 int(num) for num in input("     Enter the Comfort Standard numbers separated by space: ").split())
+    if 99 in self.ComfStand_List:
+        print('\nYou have requested the use of a custom comfort model. Please enter the following data necessary to build the custom comfort model:')
+
+        self.CustAST_m = float(input('\nEnter the m coefficient (slope) of comfort model linear regression (mx+n) (any number greater than 0): '))
+        while self.CustAST_m < 0:
+            print(f'          The number you entered for CustAST_m is {self.CustAST_m}, which is smaller than 0, and that is not allowed. ')
+            self.CustAST_m = float(input('          Enter the m coefficient (slope) of comfort model linear regression (mx+n) (any number greater than 0): '))
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CustAST_m = float(input('          Enter the m coefficient (slope) of comfort model linear regression (mx+n) (any number greater than 0): '))
+
+        self.CustAST_n = float(input('\nEnter the n coefficient of comfort model linear regression (mx+n): '))
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CustAST_n = float(input('          Enter the n coefficient of comfort model linear regression (mx+n): '))
+
+        self.CustAST_AHSToffset = float(input('\nEnter the offset from neutral temperature for the heating setpoint (value will be summed, therefore, it should be negative): '))
+        while self.CustAST_AHSToffset > 0:
+            print(f'          The number you entered for CustAST_AHSToffset is {self.CustAST_AHSToffset}, which is larger than 0, and that is not allowed. ')
+            self.CustAST_AHSToffset = float(input('          Enter the offset from neutral temperature for the heating setpoint (value will be summed, therefore, it should be negative): '))
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CustAST_AHSToffset = float(input('          Enter the offset from neutral temperature for the heating setpoint (value will be summed, therefore, it should be negative): '))
+
+        self.CustAST_ACSToffset = float(input('\nEnter the offset from neutral temperature for the cooling setpoint (value will be summed, therefore, it should be positive): '))
+        while self.CustAST_ACSToffset < 0:
+            print(f'          The number you entered for CustAST_ACSToffset is {self.CustAST_ACSToffset}, which is smaller than 0, and that is not allowed. ')
+            self.CustAST_ACSToffset = float(input('          Enter the offset from neutral temperature for the cooling setpoint (value will be summed, therefore, it should be positive): '))
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CustAST_ACSToffset = float(input('          Enter the offset from neutral temperature for the cooling setpoint (value will be summed, therefore, it should be positive): '))
+
+        self.CustAST_ACSTall = float(input('\nEnter the value for the cooling setpoint applicability lower limit (ACSTall): '))
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CustAST_ACSTall = float(input('          Enter the value for the cooling setpoint applicability lower limit (ACSTall): '))
+
+        self.CustAST_ACSTaul = float(input('\nEnter the value for the cooling setpoint applicability upper limit (ACSTall): '))
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CustAST_ACSTaul = float(input('          Enter the value for the cooling setpoint applicability upper limit (ACSTaul): '))
+
+        self.CustAST_AHSTall = float(
+            input('\nEnter the value for the heating setpoint applicability lower limit (ACSTall): '))
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CustAST_AHSTall = float(input('          Enter the value for the heating setpoint applicability lower limit (AHSTall): '))
+
+        self.CustAST_AHSTaul = float(
+            input('\nEnter the value for the heating setpoint applicability upper limit (ACSTall): '))
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CustAST_AHSTaul = float(input('          Enter the value for the heating setpoint applicability upper limit (AHSTaul): '))
+
     print('\n')
     for i in self.ComfStand_List:
         print('For the comfort standard ' + CS_CA_CM_data_dict[i]['name'] + ', the available categories you can choose are: ')
@@ -394,16 +453,24 @@ def inputData(self, ScriptType: str = None):
             print(str(j) + ' = ' + CS_CA_CM_data_dict[i]['CAT'][j])
 
     fullCATlist = [1, 2, 3, 80, 85, 90]
-    self.CAT_List = list(int(num) for num in input(
-        "Enter the Category numbers separated by space (\n"
-        "1 = CAT I / CAT A;\n"
-        "2 = CAT II / CAT B;\n"
-        "3 = CAT III / CAT C;\n"
-        "80 = 80% ACCEPT;\n"
-        "85 = 85% ACCEPT;\n"
-        "90 = 90% ACCEPT;\n"
-        "Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html\n"
-        "): ").split())
+    availableCATlist = []
+    for i in self.ComfStand_List:
+        availableCATlist.extend([j for j in CS_CA_CM_data_dict[i]['CAT'].keys() if j != 'n/a'])
+    print("Enter the Category numbers separated by space (")
+    if 1 in availableCATlist:
+        print("1 = CAT I / CAT A;")
+    if 2 in availableCATlist:
+        print("2 = CAT II / CAT B;")
+    if 3 in availableCATlist:
+        print("3 = CAT III / CAT C;")
+    if 80 in availableCATlist:
+        print("80 = 80% ACCEPT;")
+    if 85 in availableCATlist:
+        print("85 = 85% ACCEPT;")
+    if 90 in availableCATlist:
+        print("90 = 90% ACCEPT;")
+    print("Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html")
+    self.CAT_List = list(int(num) for num in input('):').split())
     while len(self.CAT_List) == 0 or not all(elem in fullCATlist for elem in self.CAT_List):
         print('          Category numbers are not correct. Please enter the numbers again.')
         self.CAT_List = list(int(num) for num in input("Enter the Category numbers separated by space: ").split())
@@ -454,6 +521,15 @@ def inputData(self, ScriptType: str = None):
     self.CATheatOffset = float(input('\nEnter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
     while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
         self.CATheatOffset = float(input('      Enter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
+    while self.CATheatOffset > self.CATcoolOffset:
+        print(f'          You have entered a CATheatOffset ({self.CATheatOffset}) larger than the CATcoolOffset ({self.CATcoolOffset}), '
+              f'which will probably lead to an error in the EnergyPlus simulation.')
+        self.CATcoolOffset = float(input('\nEnter the number for the CAT cooling offset modifier (value will be summed to the ACST): '))
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CATcoolOffset = float(input('      Enter the number for the CAT cooling offset modifier (value will be summed to the ACST): '))
+        self.CATheatOffset = float(input('\nEnter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
+        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+            self.CATheatOffset = float(input('      Enter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
 
     if (any(i in [1, 2] for i in self.ComfStand_List) and 0 in self.ComfMod_List) or 22 in self.ComfStand_List:
         self.CoolSeasonStart = list(
@@ -773,13 +849,21 @@ def genIDF(self,
     NameSuffix='',
     verboseMode: bool = True,
     confirmGen: bool = None
-    ):
+):
     """Generate IDFs.
 
     :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
     :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``
     :param TempCtrl: Inherited from class ``accim.sim.accis.addAccis``
     :param ComfStand: Inherited from class ``accim.sim.accis.addAccis``
+    :param CustAST_m: Inherited from class ``accim.sim.accis.addAccis``
+    :param CustAST_n: Inherited from class ``accim.sim.accis.addAccis``
+    :param CustAST_ACSToffset: Inherited from class ``accim.sim.accis.addAccis``
+    :param CustAST_AHSToffset: Inherited from class ``accim.sim.accis.addAccis``
+    :param CustAST_ACSTall: Inherited from class ``accim.sim.accis.addAccis``
+    :param CustAST_ACSTaul: Inherited from class ``accim.sim.accis.addAccis``
+    :param CustAST_AHSTall: Inherited from class ``accim.sim.accis.addAccis``
+    :param CustAST_AHSTaul: Inherited from class ``accim.sim.accis.addAccis``
     :param CAT: Inherited from class ``accim.sim.accis.addAccis``
     :param CATcoolOffset: Inherited from class ``accim.sim.accis.addAccis``
     :param CATheatOffset: Inherited from class ``accim.sim.accis.addAccis``
