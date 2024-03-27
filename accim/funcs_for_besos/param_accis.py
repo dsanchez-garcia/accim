@@ -197,7 +197,7 @@ def modify_ComfStand(idf, value: int):
 def modify_CustAST_ACSTaul(idf, value):
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
-    SetAppLimits.Program_Line_2 = f'set ACSTaul = {repr(value)}'
+    SetAppLimits.Program_Line_2 = f'set ACSTaul = {value}'
 
     return
 
@@ -222,6 +222,22 @@ def modify_CustAST_AHSTall(idf, value):
 
     return
 
+def modify_CustAST_ASTall(idf, value):
+    SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
+                          program.Name == 'SetAppLimits'][0])
+    SetAppLimits.Program_Line_3 = f'set ACSTall = {value}'
+    SetAppLimits.Program_Line_5 = f'set AHSTall = {value}'
+
+    return
+
+def modify_CustAST_ASTaul(idf, value):
+    SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
+                          program.Name == 'SetAppLimits'][0])
+    SetAppLimits.Program_Line_2 = f'set ACSTaul = {value}'
+    SetAppLimits.Program_Line_4 = f'set AHSTaul = {value}'
+
+    return
+
 def modify_CustAST_m(idf, value):
     SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                program.Name == 'SetAST'][0])
@@ -240,7 +256,7 @@ def modify_CustAST_n(idf, value):
 def modify_CustAST_ACSToffset(idf, value):
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
-    ApplyCAT.Program_Line_4 = f'set ACSToffset = {repr(value)}'
+    ApplyCAT.Program_Line_4 = f'set ACSToffset = {value}'
 
     return
 
@@ -248,7 +264,15 @@ def modify_CustAST_ACSToffset(idf, value):
 def modify_CustAST_AHSToffset(idf, value):
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
-    ApplyCAT.Program_Line_5 = f'set AHSToffset = {repr(value)}'
+    ApplyCAT.Program_Line_5 = f'set AHSToffset = {value}'
+
+    return
+
+def modify_CustAST_ASToffset(idf, value):
+    ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
+                 program.Name == 'ApplyCAT'][0])
+    ApplyCAT.Program_Line_4 = f'set ACSToffset = {value}'
+    ApplyCAT.Program_Line_5 = f'set AHSToffset = {-value}'
 
     return
 
