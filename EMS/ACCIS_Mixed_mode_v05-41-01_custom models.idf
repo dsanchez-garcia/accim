@@ -691,7 +691,7 @@ SetCustomAST,
 		elseif RMOT < ACSTall,
 			set ACST = ACSTall*m+n+ACSToffset+ACSTtol,
 		elseif RMOT > ACSTaul,
-			set ACST = ACSTaulm+n+ACSToffset+ACSTtol,
+			set ACST = ACSTaul*m+n+ACSToffset+ACSTtol,
 		endif,
 	endif,
 

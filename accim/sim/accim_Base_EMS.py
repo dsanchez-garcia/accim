@@ -525,7 +525,7 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
             Program_Line_20='elseif RMOT < ACSTall',
             Program_Line_21='set ACST = ACSTall*m+n+ACSToffset+ACSTtol',
             Program_Line_22='elseif RMOT > ACSTaul',
-            Program_Line_23='set ACST = ACSTaulm+n+ACSToffset+ACSTtol',
+            Program_Line_23='set ACST = ACSTaul*m+n+ACSToffset+ACSTtol',
             Program_Line_24='endif',
             Program_Line_25='endif',
             Program_Line_26='if (ComfStand == 99) && (ComfMod == 3)',

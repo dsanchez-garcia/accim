@@ -4311,7 +4311,7 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     elseif RMOT < ACSTall,    !- Program Line 20
     set ACST = ACSTall*m+n+ACSToffset+ACSTtol,    !- Program Line 21
     elseif RMOT > ACSTaul,    !- Program Line 22
-    set ACST = ACSTaulm+n+ACSToffset+ACSTtol,    !- Program Line 23
+    set ACST = ACSTaul*m+n+ACSToffset+ACSTtol,    !- Program Line 23
     endif,                    !- Program Line 24
     endif,                    !- Program Line 25
     if (ComfStand == 99) && (ComfMod == 3),    !- Program Line 26
