@@ -6,7 +6,7 @@ import os
 orig_idf = [i for i in os.listdir() if i.endswith('.idf')][0]
 
 x = addAccis(
-    ScriptType='ex_ac',
+    ScriptType='vrf_mm',
     SupplyAirTempInputMethod='temperature difference',
     Output_keep_existing=False,
     Output_type='standard',
