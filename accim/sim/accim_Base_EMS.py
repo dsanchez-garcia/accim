@@ -2744,15 +2744,20 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
                 Program_Line_8='endif',
                 Program_Line_9='else',
                 Program_Line_10='set ComfHoursNoApp_' + zonename + ' = 0',
-                Program_Line_11='endif',
-                Program_Line_12='else',
-                Program_Line_13='set ComfHoursNoApp_' + zonename + ' = 0',
-                Program_Line_14='endif',
-                Program_Line_15='if Occ_count_' + zonename + ' > 0',
-                Program_Line_16='set OccHours_' + zonename + ' = 1*ZoneTimeStep',
+                Program_Line_11='if Occ_count_' + zonename + '',
+                Program_Line_12='set OccDiscomfHoursNoApp_' + zonename + ' = 1*ZoneTimeStep',
+                Program_Line_13='else',
+                Program_Line_14='set OccDiscomfHoursNoApp_' + zonename + ' = 0',
+                Program_Line_15='endif',
+                Program_Line_16='endif',
                 Program_Line_17='else',
-                Program_Line_18='set OccHours_' + zonename + ' = 0',
+                Program_Line_18='set ComfHoursNoApp_' + zonename + ' = 0',
                 Program_Line_19='endif',
+                Program_Line_20='if Occ_count_' + zonename + ' > 0',
+                Program_Line_21='set OccHours_' + zonename + ' = 1*ZoneTimeStep',
+                Program_Line_22='else',
+                Program_Line_23='set OccHours_' + zonename + ' = 0',
+                Program_Line_24='endif',
             )
             if verboseMode:
                 print('Added - CountHoursNoApp_'+zonename+' Program')
@@ -3361,6 +3366,7 @@ def addGlobVarList(self, ScriptType: str = None, verboseMode: bool = True):
             Erl_Variable_8_Name='ZoneAirVolume_' + zonename,
             Erl_Variable_9_Name='OccHours_' + zonename,
             Erl_Variable_10_Name='OccComfHoursNoApp_' + zonename,
+            Erl_Variable_11_Name='OccDiscomfHoursNoApp_' + zonename,
             # Erl_Variable_11_Name='VentHours_' + zonename
         )
 

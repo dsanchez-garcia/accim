@@ -38,6 +38,7 @@ for k, key in enumerate(vars_to_avg.keys()):
 # gvs_occ_comf = [i for i in gvs_all if 'OccComfHoursNoApp' in i]
 # summed_gvs = '+'.join(gvs_occ_comf)
 
+# todo continue here: make for loops for vars_to_avg
 building.newidfobject(
     'EnergyManagementSystem:GlobalVariable',
     Erl_Variable_1_Name='AvgOccComfHoursNoApp'

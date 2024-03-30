@@ -1,0 +1,16 @@
+=======================START OF GENERIC IDF FILE GENERATION PROCESS=======================
+Starting with file:
+TestModel_onlyGeometryForVRFsystem_20zones_CalcVent_V940
+IDD location is: C:\EnergyPlusV9-4-0\Energy+.idd
+Traceback (most recent call last):
+  File "C:\Users\sanga\AppData\Local\Programs\Python\Python39\lib\site-packages\IPython\core\interactiveshell.py", line 3444, in run_code
+    exec(code_obj, self.user_global_ns, self.user_ns)
+  File "<ipython-input-2-feaa36d90c49>", line 8, in <module>
+    x = addAccis(
+  File "C:\Python\accim\accim\sim\accis.py", line 479, in __init__
+    z = accim_Main.accimJob(
+  File "C:\Python\accim\accim\sim\accim_Main.py", line 146, in __init__
+    if len(self.idf1.idfobjects['SPACELIST']) > 0:
+  File "C:\Users\sanga\AppData\Local\Programs\Python\Python39\lib\site-packages\besos\IDF_class.py", line 24, in __getitem__
+    return super().__getitem__(key.upper())
+KeyError: 'SPACELIST'

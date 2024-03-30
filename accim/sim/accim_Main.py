@@ -158,8 +158,9 @@ class accimJob():
                         occupiedZones_orig_osm.append(space.Zone_Name)
                         for zone in [i for i in self.idf1.idfobjects['ZONE'] if space.Zone_Name == i.Name]:
                             self.zonenames_for_ems_with_sl.append(zone.Name)
-
-
+            self.spacenames_for_ems_uniquekey = list(set(self.spacenames_for_ems_uniquekey))
+            self.spacenames_for_ems_name = list(set(self.spacenames_for_ems_name))
+            self.spacenames_for_ems_uniquekey_people = list(set(self.spacenames_for_ems_uniquekey_people))
 
         # occupiedZones_orig_osm = []
         # if len([h for h in self.idf1.idfobjects['zonelist']]) > 0:
@@ -181,7 +182,7 @@ class accimJob():
         occupiedZones_orig_dsb = []
         for i in self.idf1.idfobjects['ZONE']:
             for k in self.idf1.idfobjects['PEOPLE']:
-                if i.Name in k.Name:
+                if i.Name == k.Zone_or_ZoneList_or_Space_or_SpaceList_Name:
                     occupiedZones_orig_dsb.append(i.Name.upper())
 
         if self.spacelist_use:
@@ -222,7 +223,7 @@ class accimJob():
                       or window.Name.endswith('_Door')
                       ]:
                 for k in self.occupiedZones_orig:
-                    if i.split('_')[0].lower() in k.lower():
+                    if i.split('_')[0].lower() == k.lower():
                         self.windownamelist_orig.append(i)
 
             self.windownamelist = [i.replace(':', '_') for i in self.windownamelist_orig]
