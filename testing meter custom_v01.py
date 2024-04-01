@@ -36,15 +36,15 @@ accis.addAccis(
 # gv = [i for i in building.idfobjects['EnergyManagementSystem:GlobalVariable']]
 
 
-# building.newidfobject(
-#     key='Meter:Custom',
-#     Name='Total Occupied Discomfortable hours',
-#     Resource_Type='Generic',
-#     Key_Name_1='EMS',
-#     Output_Variable_or_Meter_Name_1='Occupied Discomfortable Hours_No Applicability_BLOCK1_ZONE2',
-#     Key_Name_2='EMS',
-#     Output_Variable_or_Meter_Name_2='Occupied Discomfortable Hours_No Applicability_BLOCK1_ZONE2'
-# )
+building.newidfobject(
+    key='Meter:Custom',
+    Name='Total Occupied Discomfortable hours',
+    Resource_Type='Generic',
+    Key_Name_1='EMS',
+    Output_Variable_or_Meter_Name_1='Occupied Discomfortable Hours_No Applicability_BLOCK1_ZONE1',
+    Key_Name_2='EMS',
+    Output_Variable_or_Meter_Name_2='Occupied Discomfortable Hours_No Applicability_BLOCK1_ZONE2'
+)
 
 meters = [
     'HeatingCoils:EnergyTransfer',
@@ -52,7 +52,7 @@ meters = [
     'Heating:Electricity',
     'Cooling:Electricity',
     'Electricity:HVAC',
-    # 'TOTAL OCCUPIED DISCOMFORTABLE HOURS'
+    'TOTAL OCCUPIED DISCOMFORTABLE HOURS'
 ]
 for meter in meters:
     building.newidfobject(
@@ -142,7 +142,7 @@ parameters = [
 ##
 
 def avg(result):
-    return result.data["Value"]/2
+    return result.data["Value"].sum()/2
 
 def mean(result):
     return result.data["Value"].mean()
@@ -234,10 +234,15 @@ evaluator.generate_building(df=inputs_lhs, index=4, file_name='num_4')
 
 ##
 
-test_outputs = outputs.copy()
+# test_outputs = outputs.copy()
+#
+# test_outputs['TOTAL OCCUPIED COMFORTABLE HOURS']/2
+#
+# test_outputs['TOTAL OCCUPIED COMFORTABLE HOURS'].values/2
+#
+# test_outputs['AVERAGE OCCUPIED COMFORTABLE HOURS'][0]
 
-test_outputs['TOTAL OCCUPIED COMFORTABLE HOURS']/2
+import pandas as pd
+df = pd.DataFrame([[4, 9]] * 3, columns=['A', 'B'])
 
-test_outputs['TOTAL OCCUPIED COMFORTABLE HOURS'].values/2
-
-test_outputs['AVERAGE OCCUPIED COMFORTABLE HOURS'][0]
+df['A'].sum()/2
