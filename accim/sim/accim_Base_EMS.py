@@ -2744,20 +2744,24 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
                 Program_Line_8='endif',
                 Program_Line_9='else',
                 Program_Line_10='set ComfHoursNoApp_' + zonename + ' = 0',
-                Program_Line_11='if Occ_count_' + zonename + '',
-                Program_Line_12='set OccDiscomfHoursNoApp_' + zonename + ' = 1*ZoneTimeStep',
-                Program_Line_13='else',
-                Program_Line_14='set OccDiscomfHoursNoApp_' + zonename + ' = 0',
-                Program_Line_15='endif',
-                Program_Line_16='endif',
-                Program_Line_17='else',
-                Program_Line_18='set ComfHoursNoApp_' + zonename + ' = 0',
-                Program_Line_19='endif',
-                Program_Line_20='if Occ_count_' + zonename + ' > 0',
-                Program_Line_21='set OccHours_' + zonename + ' = 1*ZoneTimeStep',
-                Program_Line_22='else',
-                Program_Line_23='set OccHours_' + zonename + ' = 0',
-                Program_Line_24='endif',
+                Program_Line_11='endif',
+                Program_Line_12='else',
+                Program_Line_13='set ComfHoursNoApp_' + zonename + ' = 0',
+                Program_Line_14='endif',
+                Program_Line_15='if ' + zonename + '_OpT > ACSTnoTol || ' + zonename + '_OpT < AHSTnoTol',
+                Program_Line_16='if Occ_count_' + zonename + '',
+                Program_Line_17='set OccDiscomfHoursNoApp_' + zonename + ' = 1*ZoneTimeStep',
+                Program_Line_18='else',
+                Program_Line_19='set OccDiscomfHoursNoApp_' + zonename + ' = 0',
+                Program_Line_20='endif',
+                Program_Line_21='else',
+                Program_Line_22='set OccDiscomfHoursNoApp_' + zonename + ' = 0',
+                Program_Line_23='endif',
+                Program_Line_24='if Occ_count_' + zonename + ' > 0',
+                Program_Line_25='set OccHours_' + zonename + ' = 1*ZoneTimeStep',
+                Program_Line_26='else',
+                Program_Line_27='set OccHours_' + zonename + ' = 0',
+                Program_Line_28='endif',
             )
             if verboseMode:
                 print('Added - CountHoursNoApp_'+zonename+' Program')
@@ -3224,43 +3228,21 @@ def addEMSOutputVariableBase(self, ScriptType: str = None, verboseMode: bool = T
                 print('Added - '+i+' Output Variable')
             # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i])
 
-    EMSOutputVariableZone_dict = {
-        'Comfortable Hours_No Applicability': ['ComfHoursNoApp', 'H', 'Summed'],
-        'Comfortable Hours_Applicability': ['ComfHours', 'H', 'Summed'],
-        'Occupied Comfortable Hours_No Applicability': ['OccComfHoursNoApp', 'H', 'Summed'],
-        'Occupied Hours': ['OccHours', 'H', 'Summed'],
-        'Discomfortable Applicable Hot Hours': ['DiscomfAppHotHours', 'H', 'Summed'],
-        'Discomfortable Applicable Cold Hours': ['DiscomfAppColdHours', 'H', 'Summed'],
-        'Discomfortable Non Applicable Hot Hours': ['DiscomfNonAppHotHours', 'H', 'Summed'],
-        'Discomfortable Non Applicable Cold Hours': ['DiscomfNonAppColdHours', 'H', 'Summed'],
-        'Zone Floor Area': ['ZoneFloorArea', 'm2', 'Averaged'],
-        'Zone Air Volume': ['ZoneAirVolume', 'm3', 'Averaged'],
-        'People Occupant Count': ['Occ_count', '', 'Summed'],
-    }
-
-
-
+    # EMSOutputVariableZone_dict = {
+    #     'Comfortable Hours_No Applicability': ['ComfHoursNoApp', 'H', 'Summed'],
+    #     'Comfortable Hours_Applicability': ['ComfHours', 'H', 'Summed'],
+    #     'Occupied Comfortable Hours_No Applicability': ['OccComfHoursNoApp', 'H', 'Summed'],
+    #     'Occupied Hours': ['OccHours', 'H', 'Summed'],
+    #     'Discomfortable Applicable Hot Hours': ['DiscomfAppHotHours', 'H', 'Summed'],
+    #     'Discomfortable Applicable Cold Hours': ['DiscomfAppColdHours', 'H', 'Summed'],
+    #     'Discomfortable Non Applicable Hot Hours': ['DiscomfNonAppHotHours', 'H', 'Summed'],
+    #     'Discomfortable Non Applicable Cold Hours': ['DiscomfNonAppColdHours', 'H', 'Summed'],
+    #     'Zone Floor Area': ['ZoneFloorArea', 'm2', 'Averaged'],
+    #     'Zone Air Volume': ['ZoneAirVolume', 'm3', 'Averaged'],
+    #     'People Occupant Count': ['Occ_count', '', 'Summed'],
+    # }
+    from accim.sim.dicts import EMSOutputVariableZone_dict
     for i in EMSOutputVariableZone_dict:
-        # if self.spacelist_use:
-        #     for n in range(len(self.spacenames_for_ems_name)):
-        #         if i + '_' + self.spacenames_for_ems_name[n] in outputvariablelist:
-        #             if verboseMode:
-        #                 print('Not added - ' + i + '_'
-        #                       + self.spacenames_for_ems_name[n] + ' Output Variable')
-        #         else:
-        #             self.idf1.newidfobject(
-        #                 'EnergyManagementSystem:OutputVariable',
-        #                 Name=i + '_' + self.spacenames_for_ems_name[n],
-        #                 EMS_Variable_Name=EMSOutputVariableZone_dict[i][0] + '_' + self.spacenames_for_ems_name[n],
-        #                 Type_of_Data_in_Variable=EMSOutputVariableZone_dict[i][2],
-        #                 Update_Frequency='ZoneTimestep',
-        #                 EMS_Program_or_Subroutine_Name='',
-        #                 Units=EMSOutputVariableZone_dict[i][1]
-        #             )
-        #             if verboseMode:
-        #                 print('Added - ' + i + '_'
-        #                       + self.spacenames_for_ems_name[n] + ' Output Variable')
-        # else:
         for zonename in self.ems_objs_name:
             if i+'_'+zonename in outputvariablelist:
                 if verboseMode:
@@ -3961,7 +3943,7 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
 
     if len([i.Name for i in self.idf1.idfobjects['zonelist']]) > 0:
         ppl_key_name = self.occupiedZones_orig[0] + ' People'
-    elif len([i.Name for i in self.idf1.idfobjects['spacelist']]) > 0:
+    elif self.spacelist_use:
         # space_list = []
         # for people in self.idf1.idfobjects['PEOPLE']:
         #     for spacelist in [i for i in self.idf1.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
@@ -4227,3 +4209,109 @@ def addEMSActuatorsBase(self, ScriptType: str = None, verboseMode: bool = True):
     del actuatorlist
 
 
+def makeAverages(self, verboseMode):
+    """
+    Makes averages for some variables.
+
+    :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    """
+
+    gvs = [i.obj for i in self.idf1.idfobjects['EnergyManagementSystem:GlobalVariable']]
+
+    vars_to_avg = {
+        'ComfHours': {'gvs': []},
+        'DiscomfAppHotHours': {'gvs': []},
+        'DiscomfAppColdHours': {'gvs': []},
+        'DiscomfNonAppHotHours': {'gvs': []},
+        'DiscomfNonAppColdHours': {'gvs': []},
+        'ComfHoursNoApp': {'gvs': []},
+        'OccHours': {'gvs': []},
+        'OccComfHoursNoApp': {'gvs': []},
+        'OccDiscomfHoursNoApp': {'gvs': []},
+        'VentHours': {'gvs': []},
+    }
+
+    for i in gvs:
+        for j in i:
+            if 'energymanagementsystem' not in j.lower():
+                for k, key in enumerate(vars_to_avg.keys()):
+                    if key.lower() == j.split('_')[0].lower():
+                        vars_to_avg[key]['gvs'].append(j)
+                        # gvs_all.append(j)
+
+    for k, key in enumerate(vars_to_avg.keys()):
+        vars_to_avg[key].update({'summed_gvs': '+'.join(vars_to_avg[key]['gvs'])})
+
+    from accim.sim.dicts import EMSOutputVariableZone_dict
+
+    gvs_all = []
+    for i in gvs:
+        for j in i:
+            if 'energymanagementsystem' not in j.lower():
+                gvs_all.append(j)
+
+    for i, key in enumerate(vars_to_avg.keys()):
+
+        if f'{key}BuildAvg' in gvs_all:
+            if verboseMode:
+                print(f'Not added - Make{key}BuildAvg ProgramCallingManager')
+        else:
+            self.idf1.newidfobject(
+                key='EnergyManagementSystem:GlobalVariable',
+                Erl_Variable_1_Name=f'{key}BuildAvg'
+            )
+            if verboseMode:
+                print(f'Added - {key}BuildAvg GlobalVariable')
+
+        if f'Make{key}BuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager']]:
+            if verboseMode:
+                print(f'Not added - Make{key}BuildAvg ProgramCallingManager')
+        else:
+            self.idf1.newidfobject(
+                key='EnergyManagementSystem:ProgramCallingManager',
+                Name=f'Make{key}BuildAvg',
+                EnergyPlus_Model_Calling_Point='BeginTimestepBeforePredictor',
+                Program_Name_1=f'Make{key}BuildAvg',
+            )
+            if verboseMode:
+                print(f'Added - Make{key}BuildAvg ProgramCallingManager')
+
+        if f'Make{key}BuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:Program']]:
+            if verboseMode:
+                print(f'Not added - Make{key}BuildAvg Program')
+        else:
+            self.idf1.newidfobject(
+                'EnergyManagementSystem:Program',
+                Name=f'Make{key}BuildAvg',
+                Program_Line_1=f'set {key}BuildAvgNum = ' + vars_to_avg[key]['summed_gvs'],
+                Program_Line_2=f'set {key}BuildAvgDen = ' + str(len(vars_to_avg[key]['gvs'])),
+                Program_Line_3=f'set {key}BuildAvg = {key}BuildAvgNum/{key}BuildAvgDen'
+            )
+            if verboseMode:
+                print(f'Added - Make{key}BuildAvg Program')
+
+        for j, output in enumerate(EMSOutputVariableZone_dict.keys()):
+            if EMSOutputVariableZone_dict[output][0].lower() == key.lower():
+
+                if f'{output}_Building_Average' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']]:
+                    if verboseMode:
+                        print(f'Not added - {output}_Building_Average EMS OutputVariable')
+                else:
+                    self.idf1.newidfobject(
+                    key='EnergyManagementSystem:OutputVariable',
+                    Name=f'{output}_Building_Average',
+                    EMS_Variable_Name=f'{key}BuildAvg',
+                    Type_of_Data_in_Variable='Summed',
+                    Update_Frequency='ZoneTimestep',
+                    Units='H'
+                    )
+                    if verboseMode:
+                        print(f'Added - {output}_Building_Average EMS OutputVariable')
+
+                # self.idf1.newidfobject(
+                #     key='Output:Variable',
+                #     Key_Value='*',
+                #     Variable_Name=f'{output}_Building_Average',
+                #     Reporting_Frequency='Hourly'
+                # )

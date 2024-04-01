@@ -51,6 +51,14 @@ class addAccis:
     :type TempCtrl: str
     :param verboseMode: True to print the process on screen. Default is True.
     :type verboseMode: bool
+    :param eer: The energy efficiency ratio of the VRF system for each zone,
+    added when using ScriptType vrf_mm or vrf_ac
+    :type: eer: int
+    :param cop: The coefficient of performance of the VRF system for each zone,
+    added when using ScriptType vrf_mm or vrf_ac
+    :type: cop: int
+    :param make_averages: Used to make averages of hour-counting variables.
+    :type make_averages: bool
     :ivar arguments: A dictionary containing all arguments
     :ivar df_outputs: the pandas DataFrame instance created with argument ``Output_gen_dataframe``
     :ivar occupied_zones: A list containing all occupied zone names within the input idf.
@@ -74,6 +82,7 @@ class addAccis:
         verboseMode: bool = True,
         eer: float = 2,
         cop: float = 2.1,
+        make_averages: bool = False,
     ):
         """
         Constructor method.
@@ -292,6 +301,9 @@ class addAccis:
             z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
 
         z.addEMSPCMBase(verboseMode=verboseMode)
+
+        if make_averages:
+            z.makeAverages(verboseMode=verboseMode)
 
         if Output_keep_existing == 'true':
             Output_keep_existing = True

@@ -37,7 +37,8 @@ class accimJob():
         removeDuplicatedOutputVariables, \
         outputsSpecified, \
         genOutputDataframe, \
-        takeOutputDataFrame
+        takeOutputDataFrame, \
+        makeAverages
 
     from accim.sim.accim_ExistingHVAC import \
         addForscriptSchExistHVAC
@@ -67,7 +68,7 @@ class accimJob():
         """
         Constructor method.
         """
-        from eppy import modeleditor
+        import eppy
         from eppy.modeleditor import IDF
         self.accimNotWorking = accimNotWorking
         from accim.utils import amend_idf_version_from_dsb
@@ -143,24 +144,29 @@ class accimJob():
         occupiedZones_orig_osm = []
 
         self.spacelist_use = False
-        if len(self.idf1.idfobjects['SPACELIST']) > 0:
-            self.spacelist_use = True
-            self.spacenames_for_ems_uniquekey = []
-            self.spacenames_for_ems_name = []
-            self.spacenames_for_ems_uniquekey_people = []
-            self.zonenames_for_ems_with_sl = []
-            for people in self.idf1.idfobjects['PEOPLE']:
-                for spacelist in [i for i in self.idf1.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
-                    for space in [i for i in self.idf1.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
-                        self.spacenames_for_ems_uniquekey.append(f'{space.Name} {spacelist.Name}')
-                        self.spacenames_for_ems_name.append(space.Name)
-                        self.spacenames_for_ems_uniquekey_people.append(f'{space.Name} {people.Name}')
-                        occupiedZones_orig_osm.append(space.Zone_Name)
-                        for zone in [i for i in self.idf1.idfobjects['ZONE'] if space.Zone_Name == i.Name]:
-                            self.zonenames_for_ems_with_sl.append(zone.Name)
-            self.spacenames_for_ems_uniquekey = list(set(self.spacenames_for_ems_uniquekey))
-            self.spacenames_for_ems_name = list(set(self.spacenames_for_ems_name))
-            self.spacenames_for_ems_uniquekey_people = list(set(self.spacenames_for_ems_uniquekey_people))
+        try:
+            if len(self.idf1.idfobjects['SPACELIST']) > 0:
+                self.spacelist_use = True
+                self.spacenames_for_ems_uniquekey = []
+                self.spacenames_for_ems_name = []
+                self.spacenames_for_ems_uniquekey_people = []
+                self.zonenames_for_ems_with_sl = []
+                for people in self.idf1.idfobjects['PEOPLE']:
+                    for spacelist in [i for i in self.idf1.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
+                        for space in [i for i in self.idf1.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
+                            self.spacenames_for_ems_uniquekey.append(f'{space.Name} {spacelist.Name}')
+                            self.spacenames_for_ems_name.append(space.Name)
+                            self.spacenames_for_ems_uniquekey_people.append(f'{space.Name} {people.Name}')
+                            occupiedZones_orig_osm.append(space.Zone_Name)
+                            for zone in [i for i in self.idf1.idfobjects['ZONE'] if space.Zone_Name == i.Name]:
+                                self.zonenames_for_ems_with_sl.append(zone.Name)
+                self.spacenames_for_ems_uniquekey = list(set(self.spacenames_for_ems_uniquekey))
+                self.spacenames_for_ems_name = list(set(self.spacenames_for_ems_name))
+                self.spacenames_for_ems_uniquekey_people = list(set(self.spacenames_for_ems_uniquekey_people))
+        except KeyError:
+            idd = '-'.join([str(i) for i in self.idf1.idd_version])
+            print('Searching Spacelist objects returned KeyError. '
+                  f'That means these are not supported in the EnergyPlus version {idd}')
 
         # occupiedZones_orig_osm = []
         # if len([h for h in self.idf1.idfobjects['zonelist']]) > 0:
@@ -182,8 +188,12 @@ class accimJob():
         occupiedZones_orig_dsb = []
         for i in self.idf1.idfobjects['ZONE']:
             for k in self.idf1.idfobjects['PEOPLE']:
-                if i.Name == k.Zone_or_ZoneList_or_Space_or_SpaceList_Name:
-                    occupiedZones_orig_dsb.append(i.Name.upper())
+                try:
+                    if i.Name == k.Zone_or_ZoneList_or_Space_or_SpaceList_Name:
+                        occupiedZones_orig_dsb.append(i.Name.upper())
+                except eppy.bunch_subclass.BadEPFieldError:
+                    if i.Name == k.Zone_or_ZoneList_Name:
+                        occupiedZones_orig_dsb.append(i.Name.upper())
 
         if self.spacelist_use:
             self.occupiedZones_orig = occupiedZones_orig_osm

@@ -154,6 +154,14 @@ class addAccis:
     :type ASTtol_steps: float
     :param NameSuffix: The default is '' (an empty string). Please refer to documentation.
     :type NameSuffix: str
+    :param eer: The energy efficiency ratio of the VRF system for each zone,
+    added when using ScriptType vrf_mm or vrf_ac
+    :type: eer: int
+    :param cop: The coefficient of performance of the VRF system for each zone,
+    added when using ScriptType vrf_mm or vrf_ac
+    :type: cop: int
+    :param make_averages: Used to make averages of hour-counting variables.
+    :type make_averages: bool
     :param verboseMode: True to print the process on screen. Default is True.
     :type verboseMode: bool
     :param confirmGen: True to skip confirmation of output IDF generation. Default is None.
@@ -217,6 +225,7 @@ class addAccis:
         confirmGen: bool = None,
         eer: float = 2,
         cop: float = 2.1,
+        make_averages: bool = False,
     ):
         """
         Constructor method.
@@ -538,6 +547,9 @@ class addAccis:
                 z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
 
             z.addEMSPCMBase(verboseMode=verboseMode)
+
+            if make_averages:
+                z.makeAverages(verboseMode=verboseMode)
 
             z.addControlFilesObjects(verboseMode=verboseMode)
 
