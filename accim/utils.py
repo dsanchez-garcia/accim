@@ -2,6 +2,45 @@ from tempfile import mkstemp
 from shutil import move, copymode
 from os import fdopen, remove, rename
 
+
+def reduce_runtime(
+        idf_object,
+        minimal_shadowing: bool = True,
+        shading_calculation_update_frequency: int = 20,
+        maximum_figures_in_shadow_overlap_calculations: int = 200,
+        timesteps: int = 6,
+):
+    if shading_calculation_update_frequency < 1 or shading_calculation_update_frequency > 365:
+        raise ValueError('shading_calculation_update_frequency cannot be smaller than 1 or larger than 365')
+    if timesteps < 2 or timesteps > 60:
+        raise ValueError('timesteps cannot be smaller than 2 or larger than 60')
+
+    if minimal_shadowing:
+        obj_building = [i for i in idf_object.idfobjects['Building']][0]
+        if obj_building.Solar_Distribution == 'MinimalShadowing':
+            print('Solar distribution is already set to MinimalShadowing, therefore no action has been performed.')
+        else:
+            obj_building.Solar_Distribution = 'MinimalShadowing'
+            print('Solar distribution has been set to MinimalShadowing.')
+
+    obj_shadowcalc = [i for i in idf_object.idfobjects['ShadowCalculation']][0]
+    shadowcalc_freq_prev = obj_shadowcalc.Shading_Calculation_Update_Frequency
+    obj_shadowcalc.Shading_Calculation_Update_Frequency = shading_calculation_update_frequency
+    print(f'Shading Calculation Update Frequency was previously set to '
+          f'{shadowcalc_freq_prev} days, and it has been modified to {shading_calculation_update_frequency} days.')
+    shadowcalc_maxfigs_prev = obj_shadowcalc.Maximum_Figures_in_Shadow_Overlap_Calculations
+    obj_shadowcalc.Maximum_Figures_in_Shadow_Overlap_Calculations = maximum_figures_in_shadow_overlap_calculations
+    print(f'Maximum Figures in Shadow Overlap Calculations was previously set to '
+          f'{shadowcalc_maxfigs_prev} days, and it has been modified to {maximum_figures_in_shadow_overlap_calculations} days.')
+
+    obj_timestep = [i for i in idf_object.idfobjects['Timestep']][0]
+    timestep_prev = obj_timestep.Number_of_Timesteps_per_Hour
+    obj_timestep.Number_of_Timesteps_per_Hour = timesteps
+    print(f'Number of Timesteps per Hour was previously set to '
+          f'{timestep_prev} days, and it has been modified to {timesteps} days.')
+
+
+
 def amend_idf_version_from_dsb(file_path, version=9.4):
 
     if version == 9.4:
