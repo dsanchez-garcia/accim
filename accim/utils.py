@@ -15,6 +15,31 @@ def modify_timesteps_path(idfpath, timesteps: int):
     modify_timesteps(idf_object=building, timesteps=timesteps)
     building.save()
 
+def set_occupancy_to_always(idf_object):
+    if 'On 24/7' in [i.Name for i in idf_object.idfobjects['Schedule:Compact']]:
+        print('On 24/7 Schedule:Compact object was already in the model.')
+    else:
+        idf_object.newidfobject(
+            key='Schedule:Compact',
+            Schedule_Type_Limits_Name='Any Number',
+            Field_1='Through: 12/31',
+            Field_2='For: AllDays',
+            Field_3='Until: 24:00',
+            Field_4='1'
+        )
+
+    obj_ppl = [i for i in idf_object.idfobjects['people']]
+    for ppl in obj_ppl:
+        ppl.Number_of_People_Schedule_Name = 'On 24/7'
+        print(f'{ppl.Name} Number of People Schedule Name has been set to always occupied.')
+
+
+def set_occupancy_to_always_path(idfpath):
+    from besos.eppy_funcs import get_building
+    building = get_building(idfpath)
+    set_occupancy_to_always(idf_object=building)
+    building.save()
+
 def reduce_runtime(
         idf_object,
         minimal_shadowing: bool = True,

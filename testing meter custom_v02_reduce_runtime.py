@@ -12,7 +12,7 @@ from platypus import Archive, Hypervolume, Solution
 from besos.eplus_funcs import print_available_outputs
 from besos.objectives import VariableReader, MeterReader
 
-from accim.utils import print_available_outputs_mod
+from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always
 import numpy as np
 
 import accim.sim.accis_single_idf_funcs as accis
@@ -31,7 +31,7 @@ accis.addAccis(
     TempCtrl='temperature',
     # Output_gen_dataframe=True,
     make_averages=True,
-    debugging=True
+    # debugging=True
 )
 
 ##
@@ -74,33 +74,16 @@ def reduce_runtime(
 #     maximum_figures_in_shadow_overlap_calculations=200
 # )
 
-def modify_timesteps(idf_object, timesteps: int):
-    obj_timestep = [i for i in idf_object.idfobjects['Timestep']][0]
-    timestep_prev = obj_timestep.Number_of_Timesteps_per_Hour
-    obj_timestep.Number_of_Timesteps_per_Hour = timesteps
-    print(f'Number of Timesteps per Hour was previously set to '
-          f'{timestep_prev} days, and it has been modified to {timesteps} days.')
+# def modify_timesteps(idf_object, timesteps: int):
+#     obj_timestep = [i for i in idf_object.idfobjects['Timestep']][0]
+#     timestep_prev = obj_timestep.Number_of_Timesteps_per_Hour
+#     obj_timestep.Number_of_Timesteps_per_Hour = timesteps
+#     print(f'Number of Timesteps per Hour was previously set to '
+#           f'{timestep_prev} days, and it has been modified to {timesteps} days.')
 
-modify_timesteps(idf_object=building, timesteps=2)
+modify_timesteps(idf_object=building, timesteps=6)
 
 
-def set_occupancy_to_always(idf_object):
-    if 'On 24/7' in [i.Name for i in idf_object.idfobjects['Schedule:Compact']]:
-        print('On 24/7 Schedule:Compact object was already in the model.')
-    else:
-        idf_object.newidfobject(
-            key='Schedule:Compact',
-            Schedule_Type_Limits_Name='Any Number',
-            Field_1='Through: 12/31',
-            Field_2='For: AllDays',
-            Field_3='Until: 24:00',
-            Field_4='1'
-        )
-
-    obj_ppl = [i for i in idf_object.idfobjects['people']]
-    for ppl in obj_ppl:
-        ppl.Number_of_People_Schedule_Name = 'On 24/7'
-        print(f'{ppl.Name} Number of People Schedule Name has been set to always occupied.')
 
 set_occupancy_to_always(idf_object=building)
 
@@ -274,7 +257,7 @@ problem = EPProblem(
 ##
 
 
-inputs_lhs = sampling.dist_sampler(sampling.lhs, problem, num_samples=2)
+inputs_lhs = sampling.dist_sampler(sampling.lhs, problem, num_samples=5)
 inputs_lhs
 
 num_samples = 1
@@ -293,7 +276,7 @@ evaluator = EvaluatorEP(
     problem=problem,
     building=building,
     epw='Sydney.epw',
-    out_dir='besos_outdir_10timesteps_sydney_vof-0.1-max-6_debug'
+    out_dir='besos_outdir_6timesteps_sydney_vof-0.1-max-6'
 )
 
 outputs = evaluator.df_apply(
@@ -309,8 +292,8 @@ outputs.to_excel('outputs_with_avg_to_be_refined.xlsx')
 # outputs_mod['energy ratio'] = outputs_mod['HVAC Electricity Usage'] / outputs_mod['Total Electricity Usage']
 
 # generated_buildings = [evaluator.generate_building(df=samples_short, index=i, file_name=f'short_sample_row_{i}') for i in range(5)]
-evaluator.generate_building(df=inputs_lhs, index=0, file_name='num_0')
-evaluator.generate_building(df=inputs_lhs, index=1, file_name='num_1')
+# evaluator.generate_building(df=inputs_lhs, index=0, file_name='num_0')
+# evaluator.generate_building(df=inputs_lhs, index=1, file_name='num_1')
 # evaluator.generate_building(df=inputs_lhs, index=2, file_name='num_2')
 # evaluator.generate_building(df=inputs_lhs, index=3, file_name='num_3')
 # evaluator.generate_building(df=inputs_lhs, index=4, file_name='num_4')
