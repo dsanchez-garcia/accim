@@ -162,6 +162,9 @@ class addAccis:
     :type: cop: int
     :param make_averages: Used to make averages of hour-counting variables.
     :type make_averages: bool
+    :param debugging: If True, an Output:EnergyManagementSystem object is used
+        to generate the EDD file.
+    :type debugging: bool
     :param verboseMode: True to print the process on screen. Default is True.
     :type verboseMode: bool
     :param confirmGen: True to skip confirmation of output IDF generation. Default is None.

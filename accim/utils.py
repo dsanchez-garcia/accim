@@ -1,21 +1,52 @@
+import os
 from tempfile import mkstemp
 from shutil import move, copymode
 from os import fdopen, remove, rename
 
-def modify_timesteps(idf_object, timesteps: int):
+import besos.IDF_class
+from besos.IDF_class import IDF
+import besos
+from os import PathLike
+def modify_timesteps(idf_object: besos.IDF_class.IDF, timesteps: int) -> besos.IDF_class.IDF:
+    """
+    Modifies the timesteps of the idf object.
+
+    :param idf_object: the IDF class from besos or eppy
+    :type idf_object: IDF
+    :param timesteps: The number of timesteps.
+        Allowable values include 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, and 60
+    :type timesteps: int
+    """
+    if timesteps not in [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60]:
+        raise ValueError(f'{timesteps} not in allowable values: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, and 60')
     obj_timestep = [i for i in idf_object.idfobjects['Timestep']][0]
     timestep_prev = obj_timestep.Number_of_Timesteps_per_Hour
     obj_timestep.Number_of_Timesteps_per_Hour = timesteps
     print(f'Number of Timesteps per Hour was previously set to '
           f'{timestep_prev} days, and it has been modified to {timesteps} days.')
 
-def modify_timesteps_path(idfpath, timesteps: int):
+def modify_timesteps_path(idfpath: os.PathLike, timesteps: int):
+    """
+    Modifies the timesteps of the idf.
+
+    :param idfpath: the path to the idf
+    :type idfpath: PathLike
+    :param timesteps: The number of timesteps.
+        Allowable values include 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, and 60
+    :type timesteps: int
+    """
     from besos.eppy_funcs import get_building
     building = get_building(idfpath)
     modify_timesteps(idf_object=building, timesteps=timesteps)
     building.save()
 
-def set_occupancy_to_always(idf_object):
+def set_occupancy_to_always(idf_object: besos.IDF_class.IDF) -> besos.IDF_class.IDF:
+    """
+    Sets the occupancy to always occupied for all zones with people object.
+
+    :param idf_object: the IDF class from besos or eppy
+    :type idf_object: IDF
+    """
     if 'On 24/7' in [i.Name for i in idf_object.idfobjects['Schedule:Compact']]:
         print('On 24/7 Schedule:Compact object was already in the model.')
     else:
@@ -34,19 +65,26 @@ def set_occupancy_to_always(idf_object):
         print(f'{ppl.Name} Number of People Schedule Name has been set to always occupied.')
 
 
-def set_occupancy_to_always_path(idfpath):
+def set_occupancy_to_always_path(idfpath: os.PathLike):
+    """
+    Sets the occupancy to always occupied for all zones with people object.
+
+    :param idfpath: the path to the idf
+    :type idfpath: PathLike
+    """
     from besos.eppy_funcs import get_building
     building = get_building(idfpath)
     set_occupancy_to_always(idf_object=building)
     building.save()
 
 def reduce_runtime(
-        idf_object,
+        idf_object: besos.IDF_class.IDF,
         minimal_shadowing: bool = True,
         shading_calculation_update_frequency: int = 20,
         maximum_figures_in_shadow_overlap_calculations: int = 200,
         timesteps: int = 6,
-):
+) -> besos.IDF_class.IDF:
+
     if shading_calculation_update_frequency < 1 or shading_calculation_update_frequency > 365:
         raise ValueError('shading_calculation_update_frequency cannot be smaller than 1 or larger than 365')
     if timesteps < 2 or timesteps > 60:
@@ -78,11 +116,16 @@ def reduce_runtime(
 
 
 
-def amend_idf_version_from_dsb(file_path, version=9.4):
+def amend_idf_version_from_dsb(file_path: os.PathLike):
+    """
+    Amends the idf version of the Designbuilder-sourced idf file, for Designbuilder v7.X.
+    Replaces the string 'Version, 9.4.0.002' with 'Version, 9.4'.
 
-    if version == 9.4:
-        pattern = 'Version, 9.4.0.002'
-        subst = 'Version, 9.4'
+    :param idfpath: the path to the idf
+    :type idfpath: PathLike
+    """
+    pattern = 'Version, 9.4.0.002'
+    subst = 'Version, 9.4'
 
     #Create temp file
     fh, abs_path = mkstemp()

@@ -59,6 +59,9 @@ class addAccis:
     :type: cop: int
     :param make_averages: Used to make averages of hour-counting variables.
     :type make_averages: bool
+    :param debugging: If True, an Output:EnergyManagementSystem object is used
+        to generate the EDD file.
+    :type debugging: bool
     :ivar arguments: A dictionary containing all arguments
     :ivar df_outputs: the pandas DataFrame instance created with argument ``Output_gen_dataframe``
     :ivar occupied_zones: A list containing all occupied zone names within the input idf.
