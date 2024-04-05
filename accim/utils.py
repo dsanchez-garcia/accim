@@ -9,6 +9,12 @@ def modify_timesteps(idf_object, timesteps: int):
     print(f'Number of Timesteps per Hour was previously set to '
           f'{timestep_prev} days, and it has been modified to {timesteps} days.')
 
+def modify_timesteps_path(idfpath, timesteps: int):
+    from besos.eppy_funcs import get_building
+    building = get_building(idfpath)
+    modify_timesteps(idf_object=building, timesteps=timesteps)
+    building.save()
+
 def reduce_runtime(
         idf_object,
         minimal_shadowing: bool = True,
