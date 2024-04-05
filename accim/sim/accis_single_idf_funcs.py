@@ -26,6 +26,7 @@ def addAccis(
     eer: float = 2,
     cop: float = 2.1,
     make_averages: bool = False,
+    debugging: bool = False,
 ):
 
     """
@@ -351,6 +352,9 @@ def addAccis(
     z.addControlFilesObjects(verboseMode=verboseMode)
 
     z.addOutputVariableDictionaryObject(verboseMode=verboseMode)
+
+    if debugging:
+        z.addOutputEnergyManagementSystem(verboseMode=verboseMode)
 
     # if Output_gen_dataframe:
     #     z.genOutputDataframe(idf_filename=idf.idfname.split('.idf')[0])

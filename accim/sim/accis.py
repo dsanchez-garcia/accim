@@ -226,6 +226,7 @@ class addAccis:
         eer: float = 2,
         cop: float = 2.1,
         make_averages: bool = False,
+        debugging: bool = False,
     ):
         """
         Constructor method.
@@ -554,6 +555,9 @@ class addAccis:
             z.addControlFilesObjects(verboseMode=verboseMode)
 
             z.addOutputVariableDictionaryObject(verboseMode=verboseMode)
+
+            if debugging:
+                z.addOutputEnergyManagementSystem(verboseMode=verboseMode)
 
             if Output_keep_existing == 'true':
                 Output_keep_existing = True

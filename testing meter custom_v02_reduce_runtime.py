@@ -31,6 +31,7 @@ accis.addAccis(
     TempCtrl='temperature',
     # Output_gen_dataframe=True,
     make_averages=True,
+    debugging=True
 )
 
 ##
@@ -80,7 +81,7 @@ def modify_timesteps(idf_object, timesteps: int):
     print(f'Number of Timesteps per Hour was previously set to '
           f'{timestep_prev} days, and it has been modified to {timesteps} days.')
 
-modify_timesteps(idf_object=building, timesteps=10)
+modify_timesteps(idf_object=building, timesteps=2)
 
 
 def set_occupancy_to_always(idf_object):
@@ -147,8 +148,11 @@ bf.modify_MaxWindSpeed(building, 50)
 bf.modify_VentCtrl(building, 2)
 
 [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setvofinputdata']
-bf.modify_MultiplierVOF(building, 0.5)
+bf.modify_MultiplierVOF(building, 0.1)
 bf.modify_MaxTempDiffVOF(building, 6)
+
+
+[i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'applycat']
 
 ##
 available_outputs = print_available_outputs_mod(building)
@@ -270,7 +274,7 @@ problem = EPProblem(
 ##
 
 
-inputs_lhs = sampling.dist_sampler(sampling.lhs, problem, num_samples=5)
+inputs_lhs = sampling.dist_sampler(sampling.lhs, problem, num_samples=2)
 inputs_lhs
 
 num_samples = 1
@@ -289,7 +293,7 @@ evaluator = EvaluatorEP(
     problem=problem,
     building=building,
     epw='Sydney.epw',
-    out_dir='besos_outdir_10timesteps_sydney_vof-mod-max-6'
+    out_dir='besos_outdir_10timesteps_sydney_vof-0.1-max-6_debug'
 )
 
 outputs = evaluator.df_apply(
@@ -305,8 +309,8 @@ outputs.to_excel('outputs_with_avg_to_be_refined.xlsx')
 # outputs_mod['energy ratio'] = outputs_mod['HVAC Electricity Usage'] / outputs_mod['Total Electricity Usage']
 
 # generated_buildings = [evaluator.generate_building(df=samples_short, index=i, file_name=f'short_sample_row_{i}') for i in range(5)]
-# evaluator.generate_building(df=inputs_lhs, index=0, file_name='num_0')
-# evaluator.generate_building(df=inputs_lhs, index=1, file_name='num_1')
+evaluator.generate_building(df=inputs_lhs, index=0, file_name='num_0')
+evaluator.generate_building(df=inputs_lhs, index=1, file_name='num_1')
 # evaluator.generate_building(df=inputs_lhs, index=2, file_name='num_2')
 # evaluator.generate_building(df=inputs_lhs, index=3, file_name='num_3')
 # evaluator.generate_building(df=inputs_lhs, index=4, file_name='num_4')

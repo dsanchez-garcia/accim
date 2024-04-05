@@ -2,6 +2,12 @@ from tempfile import mkstemp
 from shutil import move, copymode
 from os import fdopen, remove, rename
 
+def modify_timesteps(idf_object, timesteps: int):
+    obj_timestep = [i for i in idf_object.idfobjects['Timestep']][0]
+    timestep_prev = obj_timestep.Number_of_Timesteps_per_Hour
+    obj_timestep.Number_of_Timesteps_per_Hour = timesteps
+    print(f'Number of Timesteps per Hour was previously set to '
+          f'{timestep_prev} days, and it has been modified to {timesteps} days.')
 
 def reduce_runtime(
         idf_object,

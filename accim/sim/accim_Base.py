@@ -293,3 +293,20 @@ def addOutputVariableDictionaryObject(self, verboseMode: bool = True):
             print(f'Not added - Output:VariableDictionary object - Output CSV, MTR and ESO fields set to Yes')
 
 
+def addOutputEnergyManagementSystem(self, verboseMode: bool = True):
+
+    outputEMSobj = [i for i in self.idf1.idfobjects['Output:EnergyManagementSystem']]
+
+    if len(outputEMSobj) == 0:
+        self.idf1.newidfobject(
+            key='Output:EnergyManagementSystem',
+            Actuator_Availability_Dictionary_Reporting='Verbose',
+            Internal_Variable_Availability_Dictionary_Reporting='Verbose',
+            EMS_Runtime_Language_Debug_Output_Level='Verbose'
+        )
+        if verboseMode:
+            print(f'Added - Output:EnergyManagementSystem object')
+    else:
+        if verboseMode:
+            print(f'Not added - Output:EnergyManagementSystem object')
+
