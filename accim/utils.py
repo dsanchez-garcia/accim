@@ -9,6 +9,7 @@ import besos
 from os import PathLike
 from unidecode import unidecode
 
+
 def modify_timesteps(idf_object: besos.IDF_class.IDF, timesteps: int) -> besos.IDF_class.IDF:
     """
     Modifies the timesteps of the idf object.
@@ -27,12 +28,13 @@ def modify_timesteps(idf_object: besos.IDF_class.IDF, timesteps: int) -> besos.I
     print(f'Number of Timesteps per Hour was previously set to '
           f'{timestep_prev} days, and it has been modified to {timesteps} days.')
 
-def modify_timesteps_path(idfpath: os.PathLike, timesteps: int):
+
+def modify_timesteps_path(idfpath: str, timesteps: int):
     """
     Modifies the timesteps of the idf.
 
     :param idfpath: the path to the idf
-    :type idfpath: PathLike
+    :type idfpath: str
     :param timesteps: The number of timesteps.
         Allowable values include 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, and 60
     :type timesteps: int
@@ -41,6 +43,7 @@ def modify_timesteps_path(idfpath: os.PathLike, timesteps: int):
     building = get_building(idfpath)
     modify_timesteps(idf_object=building, timesteps=timesteps)
     building.save()
+
 
 def set_occupancy_to_always(idf_object: besos.IDF_class.IDF) -> besos.IDF_class.IDF:
     """
@@ -67,17 +70,18 @@ def set_occupancy_to_always(idf_object: besos.IDF_class.IDF) -> besos.IDF_class.
         print(f'{ppl.Name} Number of People Schedule Name has been set to always occupied.')
 
 
-def set_occupancy_to_always_path(idfpath: os.PathLike):
+def set_occupancy_to_always_path(idfpath: str):
     """
     Sets the occupancy to always occupied for all zones with people object.
 
     :param idfpath: the path to the idf
-    :type idfpath: PathLike
+    :type idfpath: str
     """
     from besos.eppy_funcs import get_building
     building = get_building(idfpath)
     set_occupancy_to_always(idf_object=building)
     building.save()
+
 
 def reduce_runtime(
         idf_object: besos.IDF_class.IDF,
@@ -86,7 +90,6 @@ def reduce_runtime(
         maximum_figures_in_shadow_overlap_calculations: int = 200,
         timesteps: int = 6,
 ) -> besos.IDF_class.IDF:
-
     if shading_calculation_update_frequency < 1 or shading_calculation_update_frequency > 365:
         raise ValueError('shading_calculation_update_frequency cannot be smaller than 1 or larger than 365')
     if timesteps < 2 or timesteps > 60:
@@ -117,29 +120,28 @@ def reduce_runtime(
           f'{timestep_prev} days, and it has been modified to {timesteps} days.')
 
 
-
-def amend_idf_version_from_dsb(file_path: os.PathLike):
+def amend_idf_version_from_dsb(file_path: str):
     """
     Amends the idf version of the Designbuilder-sourced idf file, for Designbuilder v7.X.
     Replaces the string 'Version, 9.4.0.002' with 'Version, 9.4'.
 
     :param idfpath: the path to the idf
-    :type idfpath: PathLike
+    :type idfpath: str
     """
     pattern = 'Version, 9.4.0.002'
     subst = 'Version, 9.4'
 
-    #Create temp file
+    # Create temp file
     fh, abs_path = mkstemp()
-    with fdopen(fh,'w') as new_file:
+    with fdopen(fh, 'w') as new_file:
         with open(file_path) as old_file:
             for line in old_file:
                 new_file.write(line.replace(pattern, subst))
-    #Copy the file permissions from the old file to the new file
+    # Copy the file permissions from the old file to the new file
     copymode(file_path, abs_path)
-    #Remove original file
+    # Remove original file
     remove(file_path)
-    #Move new file
+    # Move new file
     move(abs_path, file_path)
 
 
@@ -151,13 +153,13 @@ from besos.eplus_funcs import get_idf_version, run_building
 
 class print_available_outputs_mod:
     def __init__(
-        self,
-        building,
-        version=None,
-        name=None,
-        frequency=None,
+            self,
+            building,
+            version=None,
+            name=None,
+            frequency=None,
     ):
-    # backwards compatibility
+        # backwards compatibility
         if version:
             warnings.warn(
                 "the version argument is deprecated for print_available_outputs,"
@@ -198,6 +200,7 @@ class print_available_outputs_mod:
                 self.meterreaderlist.append(outputlist[i])
         # return outputlist, self.meterreaderlist, self.variablereaderlist
 
+
 # available_outputs = print_available_outputs_mod(building)
 
 # for i in range(len(available_outputs)):
@@ -221,10 +224,17 @@ def transform_ddmm_to_int(string_date: str) -> int:
     day_of_year = date(2007, num_date[1], num_date[0]).timetuple().tm_yday
     return day_of_year
 
-def remove_accents(input_str):
+
+def remove_accents(input_str: str) -> str:
     return unidecode(input_str)
 
-def remove_accents_in_idf(idf_path):
+
+def remove_accents_in_idf(idf_path: str):
+    """
+    Replaces all letters with accent with the same letter without accent.
+
+    :type idf_path: str
+    """
     with open(idf_path, 'r', encoding='utf-8') as file:
         content = file.read()
 
