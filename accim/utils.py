@@ -7,6 +7,8 @@ import besos.IDF_class
 from besos.IDF_class import IDF
 import besos
 from os import PathLike
+from unidecode import unidecode
+
 def modify_timesteps(idf_object: besos.IDF_class.IDF, timesteps: int) -> besos.IDF_class.IDF:
     """
     Modifies the timesteps of the idf object.
@@ -218,3 +220,15 @@ def transform_ddmm_to_int(string_date: str) -> int:
     from datetime import date
     day_of_year = date(2007, num_date[1], num_date[0]).timetuple().tm_yday
     return day_of_year
+
+def remove_accents(input_str):
+    return unidecode(input_str)
+
+def remove_accents_in_idf(idf_path):
+    with open(idf_path, 'r', encoding='utf-8') as file:
+        content = file.read()
+
+    content_without_accents = remove_accents(content)
+
+    with open(idf_path, 'w', encoding='utf-8') as file:
+        file.write(content_without_accents)
