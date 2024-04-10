@@ -338,7 +338,7 @@ def modify_MaxWindSpeed(idf, value):
 def modify_ASTtol(idf, value):
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
-    SetInputData.Program_Line_9 = f'set ACSTtol = {value}'
+    SetInputData.Program_Line_9 = f'set ACSTtol = {-value}'
     SetInputData.Program_Line_10 = f'set AHSTtol = {value}'
     return
 
