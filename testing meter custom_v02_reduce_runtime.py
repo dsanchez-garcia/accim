@@ -30,7 +30,7 @@ accis.addAccis(
     # EnergyPlus_version='9.4',
     TempCtrl='temperature',
     # Output_gen_dataframe=True,
-    make_averages=True,
+    # make_averages=True,
     # debugging=True
 )
 
