@@ -669,23 +669,24 @@ class Table:
         allzones = [i.Name for i in building.idfobjects['ZONE']]
 
         occupied_zone_list = []
-        if len(building.idfobjects['SPACELIST']) > 0:
-            # spacenames_for_ems_uniquekey = []
-            spacenames = []
-            # spacenames_for_ems_uniquekey_people = []
-            zonenames_from_space = []
-            for people in building.idfobjects['PEOPLE']:
-                for spacelist in [i for i in building.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
-                    for space in [i for i in building.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
-                        # spacenames_for_ems_uniquekey.append(f'{space.Name} {spacelist.Name}')
-                        spacenames.append(space.Name)
-                        # spacenames_for_ems_uniquekey_people.append(f'{space.Name} {people.Name}')
-                        # occupiedZones_orig_osm.append(space.Zone_Name)
-                        occupied_zone_list.append(space.Name)
-                        for zone in [i for i in building.idfobjects['ZONE'] if space.Zone_Name == i.Name]:
-                            zonenames_from_space.append(zone.Name)
-                            df.columns = [i.replace(zone.Name.upper(), space.Name.upper()) for i in df.columns]
-        else:
+        try:
+            if len(building.idfobjects['SPACELIST']) > 0:
+                # spacenames_for_ems_uniquekey = []
+                spacenames = []
+                # spacenames_for_ems_uniquekey_people = []
+                zonenames_from_space = []
+                for people in building.idfobjects['PEOPLE']:
+                    for spacelist in [i for i in building.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
+                        for space in [i for i in building.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
+                            # spacenames_for_ems_uniquekey.append(f'{space.Name} {spacelist.Name}')
+                            spacenames.append(space.Name)
+                            # spacenames_for_ems_uniquekey_people.append(f'{space.Name} {people.Name}')
+                            # occupiedZones_orig_osm.append(space.Zone_Name)
+                            occupied_zone_list.append(space.Name)
+                            for zone in [i for i in building.idfobjects['ZONE'] if space.Zone_Name == i.Name]:
+                                zonenames_from_space.append(zone.Name)
+                                df.columns = [i.replace(zone.Name.upper(), space.Name.upper()) for i in df.columns]
+        except KeyError:
             for zone in allzones:
                 for col in df.columns:
                     if zone.lower() in col.lower():
@@ -910,7 +911,7 @@ class Table:
         if normalised_energy_units:
             for i in df.columns:
                 if '(Wh)' in i or '(WH)' in i:
-                    for j in hvac_zone_list:
+                    for j in hvac_zone_list_underscore:
                         if j in i:
                             df[i] = df[i] / df[[i for i in df.columns if 'Zone Floor Area'.upper() in i.upper() and j.lower() in i.lower()][0]]
                     for k in block_list:

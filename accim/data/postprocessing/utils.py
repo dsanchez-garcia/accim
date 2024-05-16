@@ -76,7 +76,7 @@ def genCSVconcatenated(
     :type drop_nan: bool
     """
     import pandas as pd
-    from accim.data.data_postprocessing import Table
+    from accim.data.postprocessing.main import Table
     from time import time
     import os
     import gc
