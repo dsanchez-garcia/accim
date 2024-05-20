@@ -186,6 +186,7 @@ class addAccis:
     """
     def __init__(
         self,
+        idfs: list = None,
         ScriptType: str = None,
         SupplyAirTempInputMethod: str = None,
         Output_type: str = None,
@@ -242,9 +243,15 @@ class addAccis:
         import accim
         import pandas as pd
 
-        filelist = ([file for file in listdir() if file.endswith('.idf')
-                     and not '[' in file
-                     and not '_pymod' in file])
+        if idfs is None:
+            filelist = ([file for file in listdir() if file.endswith('.idf')
+                         and not '[' in file
+                         and not '_pymod' in file])
+        else:
+            filelist = [file for file in idfs
+                        if file.endswith('.idf')
+                        and not '[' in file
+                        and not '_pymod' in file]
         if len(filelist) == 0:
             raise FileNotFoundError('No idf files were found. There must be at least 1 idf file located at the path where this script is being run.')
 

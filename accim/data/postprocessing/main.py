@@ -353,6 +353,9 @@ class Table:
                 # df['Source'] = file.name
                 df['Source'] = file
 
+                # Step: df columns has no trailing space
+                df = df.rename(columns=lambda x: x.strip())
+
                 # df['Date/Time_orig'] = df['Date/Time'].copy()
                 if source_frequency in ['timestep', 'hourly']:
                     df[['TBD1', 'Month/Day', 'TBD2', 'Hour']] = df['Date/Time'].str.split(' ', expand=True)
@@ -494,6 +497,9 @@ class Table:
             df = df[cols]
 
         checkpoint = checkpoint + 1
+
+        # Step: df columns has no trailing space
+        df = df.rename(columns=lambda x: x.strip())
 
         # Step: checking for NaNs and not correct aggregations based on count
         is_NaN = df.isna()
