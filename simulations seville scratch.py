@@ -19,7 +19,7 @@ accis.addAccis(
     CustAST_AHSTall=10,
     CustAST_ACSTaul=33.5,
     CustAST_ACSTall=10,
-    HVACmode=[2],
+    HVACmode=[1],
     VentCtrl=[0],
     NameSuffix='seville'
 )
@@ -27,6 +27,7 @@ accis.addAccis(
 from accim.sim import accis
 
 accis.addAccis(
+    idfs=['ALJARAFE CENTER_onlyGeometry.idf'],
     ScriptType='vrf_mm',
     SupplyAirTempInputMethod='temperature difference',
     Output_type='standard',
@@ -36,7 +37,7 @@ accis.addAccis(
     ComfStand=[2],
     CAT=[80],
     ComfMod=[3],
-    HVACmode=[2],
+    HVACmode=[1],
     VentCtrl=[0],
 )
 ##
@@ -61,7 +62,7 @@ accis.addAccis(
     CustAST_AHSTall=10,
     CustAST_ACSTaul=33.5,
     CustAST_ACSTall=10,
-    HVACmode=[2],
+    HVACmode=[1],
     VentCtrl=[0],
     NameSuffix='rite'
 )

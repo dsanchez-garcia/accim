@@ -117,7 +117,7 @@ setuptools.setup(
         'eppy>=0.5.63',
         'pycountry',
         # 'geopy',
-        'matplotlib',
+        'matplotlib<=3.7',
         'pandas',
         'datapackage',
         'unidecode',

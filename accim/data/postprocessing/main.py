@@ -2228,8 +2228,15 @@ class Table:
             print('In relation to the variables to be gathered in columns,')
             self.enter_vars_to_gather(vars_to_gather_cols)
 
-        df_for_graph['col_to_gather_in_rows'] = df_for_graph[vars_to_gather_rows].agg('['.join, axis=1)
-        df_for_graph['col_to_gather_in_cols'] = df_for_graph[vars_to_gather_cols].agg('['.join, axis=1)
+        if len(vars_to_gather_rows) > 1:
+            df_for_graph['col_to_gather_in_rows'] = df_for_graph[vars_to_gather_rows].agg('['.join, axis=1)
+        else:
+            df_for_graph['col_to_gather_in_rows'] = df_for_graph[vars_to_gather_rows]
+
+        if len(vars_to_gather_cols) > 1:
+            df_for_graph['col_to_gather_in_cols'] = df_for_graph[vars_to_gather_cols].agg('['.join, axis=1)
+        else:
+            df_for_graph['col_to_gather_in_cols'] = df_for_graph[vars_to_gather_cols]
 
         all_cols = list(set(df_for_graph['col_to_gather_in_cols']))
         rows = list(set(df_for_graph['col_to_gather_in_rows']))
