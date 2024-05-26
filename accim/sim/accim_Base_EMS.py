@@ -3591,6 +3591,7 @@ def takeOutputDataFrame(
         idf_filename,
         df_outputs_in,
         verboseMode,
+        singleidf=False,
 ):
     """
     Used to read a pandas DataFrame containing the Output:Variable objects to be kept.
@@ -3601,10 +3602,12 @@ def takeOutputDataFrame(
     :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
     """
     import pandas as pd
-    df_outputs_in = df_outputs_in[
-        df_outputs_in['file'].str.contains(idf_filename)
-    ]
-    df_outputs_in = df_outputs_in.set_index([pd.RangeIndex(len(df_outputs_in))])
+
+    if not singleidf:
+        df_outputs_in = df_outputs_in[
+            df_outputs_in['file'].str.contains(idf_filename)
+        ]
+        df_outputs_in = df_outputs_in.set_index([pd.RangeIndex(len(df_outputs_in))])
 
     alloutputs = [
         output
@@ -3614,7 +3617,7 @@ def takeOutputDataFrame(
     for i in alloutputs:
         self.idf1.removeidfobject(i)
 
-    for i in range(len(df_outputs_in)):
+    for i in df_outputs_in.index:
         self.idf1.newidfobject(
             'Output:Variable',
             Key_Value=df_outputs_in.loc[i, 'key_value'],

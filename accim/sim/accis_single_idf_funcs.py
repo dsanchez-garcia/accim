@@ -347,7 +347,8 @@ def addAccis(
         z.takeOutputDataFrame(
             idf_filename=idf.idfname.split('.idf')[0],
             df_outputs_in=Output_take_dataframe,
-            verboseMode=verboseMode
+            verboseMode=verboseMode,
+            singleidf=True,
         )
 
     z.removeDuplicatedOutputVariables()
@@ -368,6 +369,48 @@ def addAccis(
 
 
     # self.idf = idf
+
+def gen_outputs_df(
+        idf: besos.IDF_class = None,
+        ScriptType: str = None,
+        Output_type: str = None,
+        Output_freqs: any = None,
+        Output_keep_existing: bool = None,
+        TempCtrl: str = None,
+        make_averages: bool = False,
+        verboseMode: bool = False
+
+):
+    addAccis(
+        idf=idf,
+        ScriptType=ScriptType,
+        Output_type=Output_type,
+        Output_freqs=Output_freqs,
+        Output_keep_existing=Output_keep_existing,
+        TempCtrl=TempCtrl,
+        make_averages=make_averages,
+        SupplyAirTempInputMethod='temperature difference',
+        verboseMode=verboseMode
+    )
+    
+    import pandas as pd
+    alloutputs = [
+        output
+        for output
+        in idf.idfobjects['Output:Variable']
+    ]
+    df_outputs_temp = pd.DataFrame(columns=['key_value', 'variable_name', 'reporting_frequency', 'schedule_name'])
+    for i in range(len(alloutputs)):
+        df_outputs_temp.loc[i, 'key_value'] = alloutputs[i].Key_Value
+        df_outputs_temp.loc[i, 'variable_name'] = alloutputs[i].Variable_Name
+        df_outputs_temp.loc[i, 'reporting_frequency'] = alloutputs[i].Reporting_Frequency
+        df_outputs_temp.loc[i, 'schedule_name'] = alloutputs[i].Schedule_Name
+
+    return df_outputs_temp
+    pass
+
+
+
 
 def modifyAccis(
         idf,
