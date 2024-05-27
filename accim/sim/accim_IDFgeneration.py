@@ -432,7 +432,7 @@ def inputData(self, ScriptType: str = None):
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
             self.CustAST_ACSTall = float(input('          Enter the value for the cooling setpoint applicability lower limit (ACSTall): '))
 
-        self.CustAST_ACSTaul = float(input('\nEnter the value for the cooling setpoint applicability upper limit (ACSTall): '))
+        self.CustAST_ACSTaul = float(input('\nEnter the value for the cooling setpoint applicability upper limit (ACSTaul): '))
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
             self.CustAST_ACSTaul = float(input('          Enter the value for the cooling setpoint applicability upper limit (ACSTaul): '))
 
@@ -445,6 +445,15 @@ def inputData(self, ScriptType: str = None):
             input('\nEnter the value for the heating setpoint applicability upper limit (ACSTall): '))
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
             self.CustAST_AHSTaul = float(input('          Enter the value for the heating setpoint applicability upper limit (AHSTaul): '))
+    else:
+        self.CustAST_m = 0
+        self.CustAST_n = 0
+        self.CustAST_AHSToffset = 0
+        self.CustAST_ACSToffset = 0
+        self.CustAST_ACSTall = 0
+        self.CustAST_ACSTaul = 0
+        self.CustAST_AHSTall = 0
+        self.CustAST_AHSTaul = 0
 
     print('\n')
     for i in self.ComfStand_List:

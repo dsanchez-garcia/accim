@@ -692,6 +692,11 @@ class Table:
                             for zone in [i for i in building.idfobjects['ZONE'] if space.Zone_Name == i.Name]:
                                 zonenames_from_space.append(zone.Name)
                                 df.columns = [i.replace(zone.Name.upper(), space.Name.upper()) for i in df.columns]
+            else:
+                for zone in allzones:
+                    for col in df.columns:
+                        if zone.lower() in col.lower():
+                            occupied_zone_list.append(zone)
         except KeyError:
             for zone in allzones:
                 for col in df.columns:

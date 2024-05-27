@@ -8,7 +8,7 @@ slightly modified so that takes multiple sample_EPWs located in the local folder
 """
 
 import os
-from eppy.modeleditor import IDF
+from eppy.modeleditor import IDF, IDDAlreadySetError
 from eppy.runner.run_functions import runIDFs
 
 
@@ -97,7 +97,10 @@ def runEp(
             print(fullEPversionsList)
             EnergyPlus_version = input('Please enter the desired EnergyPlus version: ')
 
-    IDF.setiddname(iddfile)
+    try:
+        IDF.setiddname(iddfile)
+    except IDDAlreadySetError:
+        print('IDD was already set.')
 
     if runOnlyAccim is None:
         runOnlyAccim = input('Do you want to run only ACCIM output IDFs? [y or n]: ')
