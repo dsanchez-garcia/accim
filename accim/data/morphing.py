@@ -12,7 +12,7 @@ def morph_epws(
 ):
     """
     This function is a wrapper for the use of the FutureWeatherGenerator tool (https://future-weather-generator.adai.pt/),
-    developed by Eugènio Rodrigues et al, in command line.
+    developed by Eugènio Rodrigues et al., in command line.
     It will move the epws in the working directory to a folder with the same name,
     will morph them within their respective directories,
     then will rename them using the original epw filename with the suffix depending on the scenario

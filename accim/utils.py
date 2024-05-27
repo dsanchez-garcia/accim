@@ -90,6 +90,16 @@ def reduce_runtime(
         maximum_figures_in_shadow_overlap_calculations: int = 200,
         timesteps: int = 6,
 ) -> besos.IDF_class.IDF:
+    """
+    Modifies the idf to reduce the simulation runtime.
+
+    :param idf_object:
+    :param minimal_shadowing: True or False. If True, applies minimal shadowing setting.
+    :param shading_calculation_update_frequency: An integer. Sets the intervals for the shading calculation update
+    :param maximum_figures_in_shadow_overlap_calculations: An integer.
+        Applies the number to the maximum figures in shadow overlap calculations.
+    :param timesteps: An integer. Sets the number of timesteps.
+    """
     if shading_calculation_update_frequency < 1 or shading_calculation_update_frequency > 365:
         raise ValueError('shading_calculation_update_frequency cannot be smaller than 1 or larger than 365')
     if timesteps < 2 or timesteps > 60:
@@ -125,8 +135,8 @@ def amend_idf_version_from_dsb(file_path: str):
     Amends the idf version of the Designbuilder-sourced idf file, for Designbuilder v7.X.
     Replaces the string 'Version, 9.4.0.002' with 'Version, 9.4'.
 
-    :param idfpath: the path to the idf
-    :type idfpath: str
+    :param idf_path: the path to the idf
+    :type idf_path: str
     """
     pattern = 'Version, 9.4.0.002'
     subst = 'Version, 9.4'
@@ -159,6 +169,14 @@ class print_available_outputs_mod:
             name=None,
             frequency=None,
     ):
+        """
+        A modified version of besos' print_available_outputs function.
+
+        :param building: The besos or eppy idf class instance.
+        :param version: Deprecated.
+        :param name:
+        :param frequency:
+        """
         # backwards compatibility
         if version:
             warnings.warn(

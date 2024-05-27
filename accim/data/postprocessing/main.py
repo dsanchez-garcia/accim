@@ -33,7 +33,7 @@ class Table:
     :type output_cols_to_keep: list
     :param concatenated_csv_name: Used as the name for the concatenated csv file.
     :type concatenated_csv_name: str
-    :param idfpath: The path of the IDF used for the simulations.
+    :param idf_path: The path of the IDF used for the simulations.
     :type path-like
     :param drop_nan: If True, drops the rows with NaNs before
         exporting the CSV using concatenated_csv_name.
@@ -99,7 +99,7 @@ class Table:
         standard_outputs: bool = None,
         output_cols_to_keep: list = None,
         concatenated_csv_name: str = None,
-        idfpath: Union[str, bytes, os.PathLike] = None,
+        idf_path: str = None,
         level: list = None,
         level_agg_func: list = None,
         level_excluded_zones: list = None,
@@ -669,7 +669,7 @@ class Table:
         #Step: scanning occupied zones
         block_list = []
 
-        building = get_building(idfpath)
+        building = get_building(idf_path)
         # building = get_building('OSM_SmallOffice_exHVAC.idf')
 
         allzones = [i.Name for i in building.idfobjects['ZONE']]
@@ -1960,7 +1960,7 @@ class Table:
                     baseline_col = [col for col in wrangled_df_unstacked.columns if baseline in col and i in col][0]
                     for j in other_than_baseline:
                         for x in [col for col in wrangled_df_unstacked.columns if i in col and j in col]:
-                            if any(['others compared to baseline' in i for i in comparison_mode]):
+                            if any(['others compared to baseline' in o for o in comparison_mode]):
                                 if any('relative' in k for k in comparison_cols):
                                     wrangled_df_unstacked[f'{i}[1-({j}/{baseline})'] = (
                                             1 -
@@ -1970,7 +1970,7 @@ class Table:
                                     wrangled_df_unstacked[f'{i}[{baseline} - {j}'] = (
                                             wrangled_df_unstacked[baseline_col] - wrangled_df_unstacked[x]
                                     )
-                            if any(['baseline compared to others' in i for i in comparison_mode]):
+                            if any(['baseline compared to others' in o for o in comparison_mode]):
                                 if any('relative' in k for k in comparison_cols):
                                     wrangled_df_unstacked[f'{i}[1-({baseline}/{j})'] = (
                                             1 -

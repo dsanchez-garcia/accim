@@ -1,4 +1,17 @@
-def apply_heating_activation_time_sch(idf_path: str, apply_to_occupancy: bool = True):
+""" Functions for building energy modelling research in Chile"""
+
+
+from besos import IDF_class
+def apply_heating_activation_time_sch(idf_path: str, apply_to_occupancy: bool = True) -> object:
+    """
+    Applies the heating activation time for Chile.
+    See reference: https://www.sciencedirect.com/science/article/pii/S0378778823003833
+
+    :param idf_path: The eppy or besos idf class instance.
+    :type idf_path: IDF_class
+    :param apply_to_occupancy: True to apply the same schedule to the occupancy.
+    :type apply_to_occupancy: bool
+    """
     # idf_path ='shoebox_sch.idf'
 
     from besos.eppy_funcs import get_building

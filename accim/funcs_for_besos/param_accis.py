@@ -1,3 +1,4 @@
+import besos.IDF_class
 
 # def modify_VSToffset(building, value):
 #     import accim.sim.accis_single_idf_funcs as accis
@@ -187,42 +188,84 @@ def drop_invalid_param_combinations(samples_df):
     return samples_cleaned
 
 
-def modify_ComfStand(idf, value: int):
+def modify_ComfStand(idf: besos.IDF_class, value: int):
+    """
+    Modifies the ComfStand argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
     SetInputData.Program_Line_1 = f'set ComfStand = {value}'
 
     return
 
-def modify_CustAST_ACSTaul(idf, value):
+def modify_CustAST_ACSTaul(idf: besos.IDF_class, value: float):
+    """
+    Modifies the CustAST_ACSTaul argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
     SetAppLimits.Program_Line_2 = f'set ACSTaul = {value}'
 
     return
 
-def modify_CustAST_ACSTall(idf, value):
+def modify_CustAST_ACSTall(idf: besos.IDF_class, value: float):
+    """
+    Modifies the CustAST_ACSTall argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
     SetAppLimits.Program_Line_3 = f'set ACSTall = {value}'
 
     return
 
-def modify_CustAST_AHSTaul(idf, value):
+def modify_CustAST_AHSTaul(idf: besos.IDF_class, value: float):
+    """
+    Modifies the CustAST_AHSTaul argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
     SetAppLimits.Program_Line_4 = f'set AHSTaul = {value}'
 
     return
 
-def modify_CustAST_AHSTall(idf, value):
+def modify_CustAST_AHSTall(idf: besos.IDF_class, value: float):
+    """
+    Modifies the CustAST_AHSTall argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
     SetAppLimits.Program_Line_5 = f'set AHSTall = {value}'
 
     return
 
-def modify_CustAST_ASTall(idf, value):
+def modify_CustAST_ASTall(idf: besos.IDF_class, value: float):
+    """
+    Modifies the CustAST_ACSTall and CustAST_AHSTall arguments to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
     SetAppLimits.Program_Line_3 = f'set ACSTall = {value}'
@@ -230,7 +273,14 @@ def modify_CustAST_ASTall(idf, value):
 
     return
 
-def modify_CustAST_ASTaul(idf, value):
+def modify_CustAST_ASTaul(idf: besos.IDF_class, value: float):
+    """
+    Modifies the CustAST_ACSTaul and CustAST_AHSTaul arguments to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
     SetAppLimits.Program_Line_2 = f'set ACSTaul = {value}'
@@ -238,7 +288,14 @@ def modify_CustAST_ASTaul(idf, value):
 
     return
 
-def modify_CustAST_m(idf, value):
+def modify_CustAST_m(idf: besos.IDF_class, value: float):
+    """
+    Modifies the CustAST_m argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                program.Name == 'SetAST'][0])
     SetAST.Program_Line_2 = f'set m = {value}'
@@ -246,14 +303,28 @@ def modify_CustAST_m(idf, value):
     return
 
 
-def modify_CustAST_n(idf, value):
+def modify_CustAST_n(idf: besos.IDF_class, value: float):
+    """
+    Modifies the CustAST_n argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                program.Name == 'SetAST'][0])
     SetAST.Program_Line_3 = f'set n = {value}'
 
     return
 
-def modify_CustAST_ACSToffset(idf, value):
+def modify_CustAST_ACSToffset(idf: besos.IDF_class, value: float):
+    """
+    Modifies the ACSToffset argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
     ApplyCAT.Program_Line_4 = f'set ACSToffset = {value}'
@@ -261,14 +332,28 @@ def modify_CustAST_ACSToffset(idf, value):
     return
 
 
-def modify_CustAST_AHSToffset(idf, value):
+def modify_CustAST_AHSToffset(idf: besos.IDF_class, value: float):
+    """
+    Modifies the AHSToffset argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
     ApplyCAT.Program_Line_5 = f'set AHSToffset = {value}'
 
     return
 
-def modify_CustAST_ASToffset(idf, value):
+def modify_CustAST_ASToffset(idf: besos.IDF_class, value: float):
+    """
+    Modifies the ACSToffset and AHSToffset arguments symmetrically to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
     ApplyCAT.Program_Line_4 = f'set ACSToffset = {value}'
@@ -277,72 +362,150 @@ def modify_CustAST_ASToffset(idf, value):
     return
 
 
-def modify_CAT(idf, value):
+def modify_CAT(idf: besos.IDF_class, value: int):
+    """
+    Modifies the CAT argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
     SetInputData.Program_Line_2 = f'set CAT = {value}'
 
     return
 
-def modify_CATcoolOffset(idf, value):
+def modify_CATcoolOffset(idf: besos.IDF_class, value: float):
+    """
+    Modifies the CATcoolOffset argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
     ApplyCAT.Program_Line_1 = f'set CATcoolOffset = {value}'
 
     return
 
-def modify_CATheatOffset(idf, value):
+def modify_CATheatOffset(idf: besos.IDF_class, value: float):
+    """
+    Modifies the CATheatOffset argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
     ApplyCAT.Program_Line_2 = f'set CATheatOffset = {value}'
 
     return
 
-def modify_ComfMod(idf, value):
+def modify_ComfMod(idf: besos.IDF_class, value: float):
+    """
+    Modifies the ComfMod argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
     SetInputData.Program_Line_3 = f'set ComfMod = {value}'
 
     return
 
-def modify_HVACmode(idf, value):
+def modify_HVACmode(idf: besos.IDF_class, value: int):
+    """
+    Modifies the HVACmode argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
     SetInputData.Program_Line_4 = f'set HVACmode = {value}'
     return
 
-def modify_VentCtrl(idf, value):
+def modify_VentCtrl(idf: besos.IDF_class, value: int):
+    """
+    Modifies the VentCtrl argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
     SetInputData.Program_Line_5 = f'set VentCtrl = {value}'
     return
 
-def modify_VSToffset(idf, value):
+def modify_VSToffset(idf: besos.IDF_class, value: float):
+    """
+    Modifies the VSToffset argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
     SetInputData.Program_Line_6 = f'set VSToffset = {value}'
     return
 
-def modify_MinOToffset(idf, value):
+def modify_MinOToffset(idf: besos.IDF_class, value: float):
+    """
+    Modifies the MinOToffset argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
     SetInputData.Program_Line_7 = f'set MinOToffset = {value}'
     return
 
-def modify_MaxWindSpeed(idf, value):
+def modify_MaxWindSpeed(idf: besos.IDF_class, value: float):
+    """
+    Modifies the MaxWindSpeed argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
     SetInputData.Program_Line_8 = f'set MaxWindSpeed = {value}'
     return
 
-def modify_ASTtol(idf, value):
+def modify_ASTtol(idf: besos.IDF_class, value: float):
+    """
+    Modifies the ACSTtol and AHSTtol arguments symmetrically to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
     SetInputData.Program_Line_9 = f'set ACSTtol = {-value}'
     SetInputData.Program_Line_10 = f'set AHSTtol = {value}'
     return
 
-def modify_CoolSeasonStart(idf, value):
+def modify_CoolSeasonStart(idf: besos.IDF_class, value: any):
+    """
+    Modifies the CoolSeasonStart argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument. Can be an integer representing the day of the year, or the
+        date in format dd/mm.
+    :return:
+    """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
     if type(value) is str:
@@ -352,7 +515,15 @@ def modify_CoolSeasonStart(idf, value):
     SetInputData.Program_Line_11 = f'set CoolSeasonStart = {value}'
     return
 
-def modify_CoolSeasonEnd(idf, value):
+def modify_CoolSeasonEnd(idf: besos.IDF_class, value: any):
+    """
+    Modifies the CoolSeasonEnd argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument. Can be an integer representing the day of the year, or the
+        date in format dd/mm.
+    :return:
+    """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
     if type(value) is str:
@@ -362,25 +533,53 @@ def modify_CoolSeasonEnd(idf, value):
     SetInputData.Program_Line_12 = f'set CoolSeasonEnd = {value}'
     return
 
-def modify_SetpointAcc(idf, value):
+def modify_SetpointAcc(idf: besos.IDF_class, value: float):
+    """
+    Modifies the SetpointAcc argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                program.Name == 'SetAST'][0])
     SetAST.Program_Line_1 = f'set SetpointAcc = {value}'
     return
 
-def modify_MaxTempDiffVOF(idf, value):
+def modify_MaxTempDiffVOF(idf: besos.IDF_class, value: float):
+    """
+    Modifies the MaxTempDiffVOF argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetVOFinputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                         program.Name == 'SetVOFinputData'][0])
     SetVOFinputData.Program_Line_1 = f'set MaxTempDiffVOF = {value}'
     return
 
-def modify_MinTempDiffVOF(idf, value):
+def modify_MinTempDiffVOF(idf: besos.IDF_class, value: float):
+    """
+    Modifies the MinTempDiffVOF argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetVOFinputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                         program.Name == 'SetVOFinputData'][0])
     SetVOFinputData.Program_Line_2 = f'set MinTempDiffVOF = {value}'
     return
 
-def modify_MultiplierVOF(idf, value):
+def modify_MultiplierVOF(idf: besos.IDF_class, value: int):
+    """
+    Modifies the MultiplierVOF argument to match the entered value.
+
+    :param idf: The eppy or besos IDF class instance.
+    :param value: The value to be applied in the argument.
+    :return:
+    """
     SetVOFinputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                         program.Name == 'SetVOFinputData'][0])
     SetVOFinputData.Program_Line_3 = f'set MultiplierVOF = {value}'

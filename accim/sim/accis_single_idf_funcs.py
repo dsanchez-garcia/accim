@@ -17,7 +17,6 @@ def addAccis(
     Output_type: str = None,
     Output_freqs: any = None,
     Output_keep_existing: bool = None,
-    Output_gen_dataframe: bool = None,
     Output_take_dataframe: pd.DataFrame = None,
     EnergyPlus_version: str = None,
     TempCtrl: str = None,
@@ -33,6 +32,8 @@ def addAccis(
     Adds the Adaptive-Comfort-Control Implementation Script, which is an EnergyManagementSystem
     script that applies adaptive setpoint temperatures to EnergyPlus building energy models.
 
+    :param idf: The besos or eppy IDF class instance.
+    :type idf: besos.IDF_class
     :param ScriptType: The default is None.
         'vrf_ac' for VRF system with full air-conditioning mode,
         'vrf_mm' for VRF system with mixed-mode,
@@ -236,7 +237,6 @@ def addAccis(
         'Output_type': Output_type,
         'Output_freqs': Output_freqs,
         'Output_keep_existing': Output_keep_existing,
-        'Output_gen_dataframe': Output_gen_dataframe,
         'Output_take_dataframe': Output_take_dataframe,
         'EnergyPlus_version': EnergyPlus_version,
         'TempCtrl': TempCtrl,
@@ -360,10 +360,6 @@ def addAccis(
     if debugging:
         z.addOutputEnergyManagementSystem(verboseMode=verboseMode)
 
-    # if Output_gen_dataframe:
-    #     z.genOutputDataframe(idf_filename=idf.idfname.split('.idf')[0])
-    #     self.df_outputs = z.df_outputs_temp
-
     if verboseMode:
         print('''\n=======================END OF OUTPUT IDF FILE GENERATION PROCESS=======================\n''')
 
@@ -379,8 +375,36 @@ def gen_outputs_df(
         TempCtrl: str = None,
         make_averages: bool = False,
         verboseMode: bool = False
+) -> pd.DataFrame:
+    """
+    Returns a pandas.Dataframe instance which contains the Output:Variable objects in the idf.
 
-):
+    :param idf: The besos or eppy IDF class instance.
+    :type idf: besos.IDF_class
+    :param ScriptType: The default is None.
+        'vrf_ac' for VRF system with full air-conditioning mode,
+        'vrf_mm' for VRF system with mixed-mode,
+        'ex_ac' for existing HVAC only with full air-conditioning mode,
+        'ex_mm' for existing HVAC with mixed-mode.
+    :type ScriptType: str
+    :param Output_type: The default is None.
+        Can be 'standard', 'simplified', 'detailed' or 'custom'.
+    :type Output_type: str
+    :param Output_freqs: The default is None.
+         A list containing the following strings:
+         ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
+    :type Output_freqs: list
+    :param Output_keep_existing: The default is None.
+        It is a boolean (True or False) to keep the existing Output:Variable objects or not.
+    :type Output_keep_existing: bool
+    :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
+    :type TempCtrl: str
+    :param make_averages: Used to make averages of hour-counting variables.
+    :type make_averages: bool
+    :param verboseMode: True to print the process on screen. Default is True.
+    :type verboseMode: bool
+    :return: pandas.Dataframe instance which contains the Output:Variable objects in the idf
+    """
     addAccis(
         idf=idf,
         ScriptType=ScriptType,
@@ -466,9 +490,33 @@ def modifyAccis(
         '21 = CHL Perez-Fargallo;
         '22 = INT ISO7730
     :type ComfStand: int
+    :param CustAST_m: The m coefficient (slope) of custom model linear regression (mx+n)
+    :type CustAST_m: float
+    :param CustAST_n: The n coefficient of custom model linear regression (mx+n)
+    :type CustAST_n: float
+    :param CustAST_AHSToffset: The offset for heating setpoint from neutral temperature
+        for the custom model linear regression. This value will be summed, therefore, it must be negative.
+    :type CustAST_AHSToffset: float
+    :param CustAST_ACSToffset: The offset for cooling setpoint from neutral temperature
+        for the custom model linear regression. This value will be summed, therefore, it must be positive.
+    :type CustAST_ACSToffset: float
+    :param CustAST_ACSTaul: The value for the cooling setpoint applicability upper limit (ACSTaul).
+    :type CustAST_ACSTaul: float
+    :param CustAST_ACSTall: The value for the cooling setpoint applicability lower limit (ACSTall).
+    :type CustAST_ACSTall: float
+    :param CustAST_AHSTaul: The value for the heating setpoint applicability upper limit (AHSTaul).
+    :type CustAST_AHSTaul: float
+    :param CustAST_AHSTall: The value for the heating setpoint applicability lower limit (AHSTall).
+    :type CustAST_AHSTall: float
     :param CAT: The default is None.
         (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT)
     :type CAT: int
+    :param CATcoolOffset: An offset to modify comfort models.
+        This value is summed to the predefined cooling setpoint offset for the CAT value.
+    :type CATcoolOffset: float
+    :param CATheatOffset: An offset to modify comfort models.
+        This value is summed to the predefined heating setpoint offset for the CAT value.
+    :type CATheatOffset: float
     :param ComfMod: The default is None.
         (0/0.X = Static;
         1/1.X = Adaptive when applicable, otherwise relevant local static model;

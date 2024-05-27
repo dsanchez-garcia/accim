@@ -1,6 +1,6 @@
 from besos.eppy_funcs import get_building
-# idfpath = r'C:\Python\accim\TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
-# idfpath = r'C:\Python\accim\TestModel_onlyGeometryForVRFsystem_20zones_CalcVent_V2320[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
+# idf_path = r'C:\Python\accim\TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2310[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
+# idf_path = r'C:\Python\accim\TestModel_onlyGeometryForVRFsystem_20zones_CalcVent_V2320[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
 idfpath = r'D:\Python\accim_project\accim\TestModel_onlyGeometryForVRFsystem_20zones_CalcVent_V2320[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
 building = get_building(idfpath)
 

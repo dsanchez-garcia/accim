@@ -10,7 +10,7 @@ data_analysis = Table(
     level=['building'],
     level_agg_func=['sum'],
     # split_epw_names=True,
-    idfpath='OSM_SmallOffice_exHVAC_always-occ_V2320[CS_INT ASHRAE55[CA_80[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf',
+    idf_path='OSM_SmallOffice_exHVAC_always-occ_V2320[CS_INT ASHRAE55[CA_80[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf',
     level_excluded_zones=[],
     normalised_energy_units=True,
 

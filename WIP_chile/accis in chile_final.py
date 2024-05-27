@@ -41,7 +41,7 @@ x = addAccis(
 from besos import eplus_funcs
 from besos import eppy_funcs
 
-# new_idf = [i for i in os.listdir() if i.endswith('.idf') and idfpath not in i][0]
+# new_idf = [i for i in os.listdir() if i.endswith('.idf') and idf_path not in i][0]
 # new_idf = 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
 # new_idf = 'caso_01.1_2_heat_act_time_added[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
 # new_idf = 'caso_01.1_3[CS_INT EN16798[CA_3[CM_3[HM_0[VC_X[VO_X[MT_X[MW_X[AT_0.1[NS_X.idf'
