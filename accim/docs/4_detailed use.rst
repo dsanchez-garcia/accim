@@ -6,25 +6,25 @@
 
 Four main branches of functions have been developed, which are:
 
--  VRF system with full air-conditioning mode: This mode has been
+-  VRF system with full air-conditioning mode (ScriptType='vrf_ac'): This mode has been
    developed mainly to support models originated with OpenStudio, which
    up to date does not support Airflow Network objects and subsequently
    Calculated Natural Ventilation. It adds standard VRF systems for each
    occupied zone and applies the adaptive or PMV-based setpoint
    temperatures, but only works with full air-conditioning mode.
 
--  VRF system with mixed mode: It adds standard VRF systems for each
+-  VRF system with mixed mode (ScriptType='vrf_mm'): It adds standard VRF systems for each
    occupied zone and applies the adaptive or PMV-based setpoint
    temperatures. Works with Calculated Natural Ventilation, although
    full air-conditioning mode can also be used. If mixed mode is used,
    the model must be generally developed with DesignBuilder.
 
--  Existing HVAC system only with full air-conditioning mode: Keeps the
+-  Existing HVAC system only with full air-conditioning mode (ScriptType='ex_ac'): Keeps the
    existing HVAC systems and modify the existing setpoint temperatures
    to adaptive or PMV-based setpoint temperatures. However, mixed-mode
    and naturally ventilated modes are not available in this mode.
 
--  Existing HVAC system with mixed mode: UNDER DEVELOPMENT. IT IS NOT
+-  Existing HVAC system with mixed mode (ScriptType='ex_mm'): UNDER DEVELOPMENT. IT IS NOT
    ADVISABLE TO USE IT YET. Keeps the existing HVAC systems and modify
    the existing setpoint temperatures to adaptive or PMV-based setpoint
    temperatures, considering mixed-mode. In order to properly work,
@@ -248,11 +248,11 @@ instead of those specified in the function call. Each argument is
 explained below:
 
 -  ComfStand: refers to the thermal comfort standard or model to be
-   applied. Enter any number from 0 to 22 to select the comfort standard
+   applied. Enter any number from 0 to 22 or 99 to select the comfort standard
    or model to be used; you can see which model is each number in the
    table below. For example, if you enter ‘0 1 2 3’, you’ll get IDFs for CTE,
    EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for
-   Japanese dwellings. If you don’t enter any number, it’ll ask you to
+   Japanese dwellings. If you enter 99, that means you want to use some custom adaptive model. Therefore, you'll be asked to enter the slope, y-intercept among other parameters. If you don’t enter any number, it’ll ask you to
    enter the numbers again.
 
 +---+---+---+--------------------------------------------------------------+---+
@@ -587,6 +587,10 @@ explained below:
    you’re asking for EN16798 model), but then enter ‘80’ or ‘90’ in the
    Category value (which are categories used in ASHRAE55), you won’t get
    the results you want.
+
+-  CATcoolOffset: it is an offset in celsius degrees summed to the upper comfort limit. For instance, ASHRAE 55 80% acceptability is +-3.5K; if 1 was entered in CATcoolOffset, then the upper comfort limit would be raised to 4.5K
+
+-  CATheatOffset: it is an offset in celsius degrees summed to the lower comfort limit. For instance, ASHRAE 55 80% acceptability is +-3.5K; if -1 was entered in CATheatOffset, then the lower comfort limit would be lowered to 4.5K
 
 -  ComfMod: is the Comfort Mode, and refers to the setpoint behaviour.
    It controls if the setpoints are static (when ComfMod = 0 or 0.X) or

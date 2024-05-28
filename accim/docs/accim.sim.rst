@@ -52,6 +52,14 @@ accim.sim.accim\_Main module
    :undoc-members:
    :show-inheritance:
 
+accim.sim.accim\_Main\_single\_idf module
+-----------------------------------------
+
+.. automodule:: accim.sim.accim_Main_single_idf
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 accim.sim.accim\_VRFsystem module
 ---------------------------------
 
@@ -72,6 +80,46 @@ accim.sim.accis module
 ----------------------
 
 .. automodule:: accim.sim.accis
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+accim.sim.accis\_single\_idf module
+-----------------------------------
+
+.. automodule:: accim.sim.accis_single_idf
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+accim.sim.accis\_single\_idf\_funcs module
+------------------------------------------
+
+.. automodule:: accim.sim.accis_single_idf_funcs
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+accim.sim.apmv\_setpoints module
+--------------------------------
+
+.. automodule:: accim.sim.apmv_setpoints
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+accim.sim.chile\_funcs module
+-----------------------------
+
+.. automodule:: accim.sim.chile_funcs
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+accim.sim.dicts module
+----------------------
+
+.. automodule:: accim.sim.dicts
    :members:
    :undoc-members:
    :show-inheritance:

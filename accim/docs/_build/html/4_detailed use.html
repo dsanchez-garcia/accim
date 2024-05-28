@@ -1,133 +1,57 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
-<head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>4. Detailed use &mdash; accim  documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script src="_static/js/theme.js"></script>
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>4. Detailed use and explanation of arguments &#8212; accim 0.7.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=c98573da"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="5. Troubleshooting" href="5_troubleshooting.html" />
-    <link rel="prev" title="3. Quick tutorial" href="3_quick%20tutorial.html" /> 
-</head>
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+  
+  
 
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
           
-          
-          <a href="index.html" class="icon icon-home">
-            accim
-          </a>
-              <div class="version">
-                0.7.0
-              </div>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="1_requirements.html">1. Requirements</a></li>
-<li class="toctree-l1"><a class="reference internal" href="2_installation.html">2. Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="3_quick%20tutorial.html">3. Quick tutorial</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">4. Detailed use</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#first-steps">4.1 First steps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#setting-up-the-target-idfs">4.2 Setting up the target IDFs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#full-list-of-setpoint-temperatures">4.3 Full list of setpoint temperatures</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#putting-it-into-practice-adaptive-setpoint-temperatures-step-by-step">4.4 Putting it into practice: Adaptive setpoint temperatures step by step</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#renaming-epw-files-for-later-data-analysis">4.5 Renaming epw files for later data analysis</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#running-simulations">4.6 Running simulations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#functions-and-methods-for-data-analysis-making-figures-and-tables">4.7 Functions and methods for data analysis; making figures and tables</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="5_troubleshooting.html">5. Troubleshooting</a></li>
-<li class="toctree-l1"><a class="reference internal" href="6_citation.html">6. Citation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="7_credits.html">7. Credits</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
-<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/full_example/full_example.html">Full example of adaptive setpoint temperature simulation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
-<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">accim</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
-</ul>
 
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">accim</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">4. Detailed use</li>
-      <li class="wy-breadcrumbs-aside">
-            <a href="_sources/4_detailed use.rst.txt" rel="nofollow"> View page source</a>
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
-  <section id="detailed-use">
-<h1>4. Detailed use<a class="headerlink" href="#detailed-use" title="Permalink to this heading"></a></h1>
+          <div class="body" role="main">
+            
+  <section id="detailed-use-and-explanation-of-arguments">
+<h1>4. Detailed use and explanation of arguments<a class="headerlink" href="#detailed-use-and-explanation-of-arguments" title="Link to this heading">¶</a></h1>
 <section id="first-steps">
-<h2>4.1 First steps<a class="headerlink" href="#first-steps" title="Permalink to this heading"></a></h2>
-<p>There has been developed 4 main branches of functions, which are:</p>
+<h2>4.1 First steps<a class="headerlink" href="#first-steps" title="Link to this heading">¶</a></h2>
+<p>Four main branches of functions have been developed, which are:</p>
 <ul class="simple">
-<li><p>VRF system with full air-conditioning mode: This mode has been
+<li><p>VRF system with full air-conditioning mode (ScriptType=’vrf_ac’): This mode has been
 developed mainly to support models originated with OpenStudio, which
 up to date does not support Airflow Network objects and subsequently
 Calculated Natural Ventilation. It adds standard VRF systems for each
 occupied zone and applies the adaptive or PMV-based setpoint
 temperatures, but only works with full air-conditioning mode.</p></li>
-<li><p>VRF system with mixed mode: It adds standard VRF systems for each
+<li><p>VRF system with mixed mode (ScriptType=’vrf_mm’): It adds standard VRF systems for each
 occupied zone and applies the adaptive or PMV-based setpoint
 temperatures. Works with Calculated Natural Ventilation, although
 full air-conditioning mode can also be used. If mixed mode is used,
 the model must be generally developed with DesignBuilder.</p></li>
-<li><p>Existing HVAC system only with full air-conditioning mode: Keeps the
+<li><p>Existing HVAC system only with full air-conditioning mode (ScriptType=’ex_ac’): Keeps the
 existing HVAC systems and modify the existing setpoint temperatures
 to adaptive or PMV-based setpoint temperatures. However, mixed-mode
 and naturally ventilated modes are not available in this mode.</p></li>
-<li><p>Existing HVAC system with mixed mode: UNDER DEVELOPMENT. IT IS NOT
+<li><p>Existing HVAC system with mixed mode (ScriptType=’ex_mm’): UNDER DEVELOPMENT. IT IS NOT
 ADVISABLE TO USE IT YET. Keeps the existing HVAC systems and modify
 the existing setpoint temperatures to adaptive or PMV-based setpoint
 temperatures, considering mixed-mode. In order to properly work,
@@ -260,7 +184,7 @@ desire. Please refer to the section titled ‘Setting up the target IDFs’.</p>
 severe errors. This is something I’m currently working on.</p>
 </section>
 <section id="setting-up-the-target-idfs">
-<h2>4.2 Setting up the target IDFs<a class="headerlink" href="#setting-up-the-target-idfs" title="Permalink to this heading"></a></h2>
+<h2>4.2 Setting up the target IDFs<a class="headerlink" href="#setting-up-the-target-idfs" title="Link to this heading">¶</a></h2>
 <p>If you have run <code class="docutils literal notranslate"><span class="pre">accis.addAccis()</span></code>, you will be asked in the prompt to
 enter a few more values separated by space to set up the desired IDFs.
 However, you can also skip the command prompt process by running accis
@@ -335,11 +259,11 @@ instead of those specified in the function call. Each argument is
 explained below:</p>
 <ul class="simple">
 <li><p>ComfStand: refers to the thermal comfort standard or model to be
-applied. Enter any number from 0 to 21 to select the comfort standard
+applied. Enter any number from 0 to 22 or 99 to select the comfort standard
 or model to be used; you can see which model is each number in the
 table below. For example, if you enter ‘0 1 2 3’, you’ll get IDFs for CTE,
 EN16798-1, ASHRAE 55 and the local model developed by Rijal et al for
-Japanese dwellings. If you don’t enter any number, it’ll ask you to
+Japanese dwellings. If you enter 99, that means you want to use some custom adaptive model. Therefore, you’ll be asked to enter the slope, y-intercept among other parameters. If you don’t enter any number, it’ll ask you to
 enter the numbers again.</p></li>
 </ul>
 <table class="docutils align-default">
@@ -1007,9 +931,11 @@ If, for instance, you enter ‘1’ in the Comfort Standard value (means
 you’re asking for EN16798 model), but then enter ‘80’ or ‘90’ in the
 Category value (which are categories used in ASHRAE55), you won’t get
 the results you want.</p></li>
-<li><p>ComfMod: is the Comfort Mode, and refers to the comfort modes used in
-accim. It controls if the setpoints are static (when ComfMod = 0) or
-adaptive (when ComfMod = 1, 2 or 3). When they are adaptive, it also
+<li><p>CATcoolOffset: it is an offset in celsius degrees summed to the upper comfort limit. For instance, ASHRAE 55 80% acceptability is +-3.5K; if 1 was entered in CATcoolOffset, then the upper comfort limit would be raised to 4.5K</p></li>
+<li><p>CATheatOffset: it is an offset in celsius degrees summed to the lower comfort limit. For instance, ASHRAE 55 80% acceptability is +-3.5K; if -1 was entered in CATheatOffset, then the lower comfort limit would be lowered to 4.5K</p></li>
+<li><p>ComfMod: is the Comfort Mode, and refers to the setpoint behaviour.
+It controls if the setpoints are static (when ComfMod = 0 or 0.X) or
+adaptive (when ComfMod = 1 or 1.X, 2 or 3). When they are adaptive, it also
 controls the comfort model applied when the adaptive model is not
 applicable (that is, when the running mean outdoor temperature limits
 are exceeded), in which case a PMV-based model is applied. Each
@@ -1211,7 +1137,7 @@ for HVAC Mode), or if you use the ‘ex_ac’ ScriptType, where the output
 IDF would contain in its name ‘[HM_0[VC_X[VO_X[MT_X[MW_X’.</p>
 </section>
 <section id="full-list-of-setpoint-temperatures">
-<h2>4.3 Full list of setpoint temperatures<a class="headerlink" href="#full-list-of-setpoint-temperatures" title="Permalink to this heading"></a></h2>
+<h2>4.3 Full list of setpoint temperatures<a class="headerlink" href="#full-list-of-setpoint-temperatures" title="Link to this heading">¶</a></h2>
 <p>Depending on the arguments ComfStand, CAT and ComfMod, cooling and
 heating setpoint temperatures will be the following:</p>
 <p>(If it is too small, you can look at it also at the <a class="reference external" href="https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html">Github
@@ -1221,7 +1147,7 @@ repository</a>)</p>
 </figure>
 </section>
 <section id="putting-it-into-practice-adaptive-setpoint-temperatures-step-by-step">
-<h2>4.4 Putting it into practice: Adaptive setpoint temperatures step by step<a class="headerlink" href="#putting-it-into-practice-adaptive-setpoint-temperatures-step-by-step" title="Permalink to this heading"></a></h2>
+<h2>4.4 Putting it into practice: Adaptive setpoint temperatures step by step<a class="headerlink" href="#putting-it-into-practice-adaptive-setpoint-temperatures-step-by-step" title="Link to this heading">¶</a></h2>
 <p>You can see a Jupyter Notebook either in the How-to Guide section of this documentation or in the link below:</p>
 <p><a class="reference external" href="https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb">https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb</a></p>
 <p>You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
@@ -1526,7 +1452,7 @@ simulations you need, you’ll get the files you usually get when you run
 any simulation, including the hourly results on a CSV file.</p>
 </section>
 <section id="renaming-epw-files-for-later-data-analysis">
-<h2>4.5 Renaming epw files for later data analysis<a class="headerlink" href="#renaming-epw-files-for-later-data-analysis" title="Permalink to this heading"></a></h2>
+<h2>4.5 Renaming epw files for later data analysis<a class="headerlink" href="#renaming-epw-files-for-later-data-analysis" title="Link to this heading">¶</a></h2>
 <p>You can see a Jupyter Notebook either in the How-to Guide section of this documentation or in the link below:</p>
 <p><a class="reference external" href="https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb">https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb</a></p>
 <p>You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
@@ -1538,7 +1464,7 @@ YOUR_USERNAME:</p>
 <p>Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run “jupyter notebook”. After that, an internet browser will pop up, and you will be able to open the .ipynb file.</p>
 </section>
 <section id="running-simulations">
-<h2>4.6 Running simulations<a class="headerlink" href="#running-simulations" title="Permalink to this heading"></a></h2>
+<h2>4.6 Running simulations<a class="headerlink" href="#running-simulations" title="Link to this heading">¶</a></h2>
 <p>You can see a Jupyter Notebook either in the How-to Guide section of this documentation or in the link below:</p>
 <p><a class="reference external" href="https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb">https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb</a></p>
 <p>You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
@@ -1666,7 +1592,7 @@ IDFs, .py scripts and the hourly CSV values which contains the results
 of the simulations.</p>
 </section>
 <section id="functions-and-methods-for-data-analysis-making-figures-and-tables">
-<h2>4.7 Functions and methods for data analysis; making figures and tables<a class="headerlink" href="#functions-and-methods-for-data-analysis-making-figures-and-tables" title="Permalink to this heading"></a></h2>
+<h2>4.7 Functions and methods for data analysis; making figures and tables<a class="headerlink" href="#functions-and-methods-for-data-analysis-making-figures-and-tables" title="Link to this heading">¶</a></h2>
 <p>You can see a Jupyter Notebook either in the How-to Guide section of this documentation or in the link below:</p>
 <p><a class="reference external" href="https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb">https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb</a></p>
 <p>You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
@@ -1680,34 +1606,66 @@ YOUR_USERNAME:</p>
 </section>
 
 
-           </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="3_quick%20tutorial.html" class="btn btn-neutral float-left" title="3. Quick tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="5_troubleshooting.html" class="btn btn-neutral float-right" title="5. Troubleshooting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2023, Daniel Sánchez-García.</p>
-  </div>
-
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
+          
         </div>
       </div>
-    </section>
-  </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">accim</a></h1>
 
-</body>
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Daniel Sánchez-García.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.3.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/4_detailed use.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
 </html>

@@ -1,110 +1,39 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
-<head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>5. Troubleshooting &mdash; accim  documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script src="_static/js/theme.js"></script>
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>5. Troubleshooting &#8212; accim 0.7.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <script src="_static/documentation_options.js?v=c98573da"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="6. Citation" href="6_citation.html" />
-    <link rel="prev" title="4. Detailed use" href="4_detailed%20use.html" /> 
-</head>
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+  
+  
 
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
           
-          
-          <a href="index.html" class="icon icon-home">
-            accim
-          </a>
-              <div class="version">
-                0.7.0
-              </div>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="1_requirements.html">1. Requirements</a></li>
-<li class="toctree-l1"><a class="reference internal" href="2_installation.html">2. Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="3_quick%20tutorial.html">3. Quick tutorial</a></li>
-<li class="toctree-l1"><a class="reference internal" href="4_detailed%20use.html">4. Detailed use</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">5. Troubleshooting</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#errors-you-might-get">5.1 Errors you might get</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#general-recommendations">6.2 General recommendations</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="6_citation.html">6. Citation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="7_credits.html">7. Credits</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
-<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/full_example/full_example.html">Full example of adaptive setpoint temperature simulation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
-<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">accim</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
-</ul>
 
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">accim</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">5. Troubleshooting</li>
-      <li class="wy-breadcrumbs-aside">
-            <a href="_sources/5_troubleshooting.rst.txt" rel="nofollow"> View page source</a>
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
+          <div class="body" role="main">
+            
   <section id="troubleshooting">
-<h1>5. Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this heading"></a></h1>
+<h1>5. Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading">¶</a></h1>
 <section id="errors-you-might-get">
-<h2>5.1 Errors you might get<a class="headerlink" href="#errors-you-might-get" title="Permalink to this heading"></a></h2>
+<h2>5.1 Errors you might get<a class="headerlink" href="#errors-you-might-get" title="Link to this heading">¶</a></h2>
 <p>Below you can see a few errors you might get when trying to run
 <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code>:</p>
 <hr class="docutils" />
@@ -172,67 +101,99 @@ file to update, select the new version and finally update file.</p>
 <figure class="align-default" id="id1">
 <img alt="Troubleshooting_IDFversion_01" src="_images/accim_troubleshooting_02_idf_version.png" />
 <figcaption>
-<p><span class="caption-text">Troubleshooting_IDFversion_01</span><a class="headerlink" href="#id1" title="Permalink to this image"></a></p>
+<p><span class="caption-text">Troubleshooting_IDFversion_01</span><a class="headerlink" href="#id1" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <figure class="align-default" id="id2">
 <img alt="Troubleshooting_IDFversion_02" src="_images/accim_troubleshooting_03_idf_version.png" />
 <figcaption>
-<p><span class="caption-text">Troubleshooting_IDFversion_02</span><a class="headerlink" href="#id2" title="Permalink to this image"></a></p>
+<p><span class="caption-text">Troubleshooting_IDFversion_02</span><a class="headerlink" href="#id2" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 </section>
 <hr class="docutils" />
 <section id="general-recommendations">
-<h2>6.2 General recommendations<a class="headerlink" href="#general-recommendations" title="Permalink to this heading"></a></h2>
+<h2>5.2 General recommendations<a class="headerlink" href="#general-recommendations" title="Link to this heading">¶</a></h2>
 <p>If you are using only one version of Python in your computer, you should
 check on the option ‘Add to PATH’. Otherwise, the python interpreter
 won’t be able to find the accis package.</p>
 <figure class="align-default" id="id3">
 <img alt="Troubleshooting_Path" src="_images/accim_troubleshooting_01_path.jpg" />
 <figcaption>
-<p><span class="caption-text">Troubleshooting_Path</span><a class="headerlink" href="#id3" title="Permalink to this image"></a></p>
+<p><span class="caption-text">Troubleshooting_Path</span><a class="headerlink" href="#id3" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 <p>Also, once you have installed Python 3.9, you should also diable the path length limit:</p>
 <figure class="align-default" id="id4">
 <img alt="Troubleshooting_Disable_length_limit" src="_images/accim_troubleshooting_04_disable_length.jpg" />
 <figcaption>
-<p><span class="caption-text">Troubleshooting_Disable_length_limit</span><a class="headerlink" href="#id4" title="Permalink to this image"></a></p>
+<p><span class="caption-text">Troubleshooting_Disable_length_limit</span><a class="headerlink" href="#id4" title="Link to this image">¶</a></p>
 </figcaption>
 </figure>
 </section>
 </section>
 
 
-           </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="4_detailed%20use.html" class="btn btn-neutral float-left" title="4. Detailed use" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="6_citation.html" class="btn btn-neutral float-right" title="6. Citation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2023, Daniel Sánchez-García.</p>
-  </div>
-
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
+          
         </div>
       </div>
-    </section>
-  </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">accim</a></h1>
 
-</body>
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Daniel Sánchez-García.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.3.7</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/5_troubleshooting.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
 </html>
