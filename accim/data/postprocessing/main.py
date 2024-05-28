@@ -1034,7 +1034,9 @@ class Table:
         if drop_nan == True:
             df = df.dropna(axis='columns', how='all')
             df = df.dropna(axis='index', how='any')
-            df = df.set_index([pd.RangeIndex(len(df))])
+            # df = df.set_index([pd.RangeIndex(len(df))])
+            df = df.reset_index()
+            df = df.drop(columns=['index'])
 
         # Step: do not know what it is this for
         frequency_dict = {
@@ -2873,6 +2875,9 @@ class Table:
                         for x in range(len(self.y_list_main[i][j][k]['dataframe'])):
                             if self.y_list_main[i][j][k]['best fit line deg'][x] > 0:
                                 poly_features = PolynomialFeatures(degree=self.y_list_main[i][j][k]['best fit line deg'][x], include_bias=False)
+                                # todo: not sure, but I think when some csv has rows,
+                                #  it must be removed for all datasets to have the same size,
+                                #  otherwise it is filled with a NaN
                                 X_poly = poly_features.fit_transform(self.x_list[i][j][2].to_numpy())
                                 lin_reg = LinearRegression()
                                 lin_reg.fit(X_poly, self.y_list_main[i][j][k]['dataframe'][x].to_numpy())
