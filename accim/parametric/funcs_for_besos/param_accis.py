@@ -584,3 +584,5 @@ def modify_MultiplierVOF(idf: besos.IDF_class, value: int):
                         program.Name == 'SetVOFinputData'][0])
     SetVOFinputData.Program_Line_3 = f'set MultiplierVOF = {value}'
     return
+
+

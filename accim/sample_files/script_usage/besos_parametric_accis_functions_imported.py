@@ -3,10 +3,10 @@ from besos.evaluator import EvaluatorEP
 from besos.optimizer import NSGAII
 from besos.parameters import RangeParameter,  Parameter, GenericSelector
 from besos.problem import EPProblem
-from besos.objectives import VariableReader, MeterReader
+from besos.objectives import MeterReader
 
 import accim.sim.accis_single_idf_funcs as accis
-import accim.funcs_for_besos.param_accis as bf
+import accim.parametric.funcs_for_besos.param_accis as bf
 
 ##
 

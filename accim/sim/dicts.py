@@ -1,5 +1,7 @@
 "Dictionaries to be used in multiple files."
 
+
+
 EMSOutputVariableZone_dict = {
     'Comfortable Hours_No Applicability': ['ComfHoursNoApp', 'H', 'Summed'],
     'Comfortable Hours_Applicability': ['ComfHours', 'H', 'Summed'],
@@ -14,3 +16,4 @@ EMSOutputVariableZone_dict = {
     'Zone Air Volume': ['ZoneAirVolume', 'm3', 'Averaged'],
     'People Occupant Count': ['Occ_count', '', 'Summed'],
 }
+

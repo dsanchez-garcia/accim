@@ -1,21 +1,14 @@
 import pandas as pd
-import warnings
-from besos import eppy_funcs as ef, sampling
+from besos import eppy_funcs as ef
 from besos.evaluator import EvaluatorEP
-from besos.optimizer import NSGAII, df_solution_to_solutions
-from besos.parameters import RangeParameter, expand_plist, wwr, FieldSelector, Parameter, GenericSelector, CategoryParameter
+from besos.parameters import Parameter, GenericSelector, CategoryParameter
 from besos.problem import EPProblem
-from besos.eplus_funcs import get_idf_version, run_building
-from matplotlib import pyplot as plt
-from platypus import Archive, Hypervolume, Solution
-from besos.eplus_funcs import print_available_outputs
-from besos.objectives import VariableReader, MeterReader
+from besos.objectives import MeterReader
 
-from accim.utils import print_available_outputs_mod
 import numpy as np
 
 import accim.sim.apmv_setpoints as apmv
-import accim.funcs_for_besos.param_apmv as bf
+import accim.parametric.funcs_for_besos.param_apmv as bf
 
 
 
