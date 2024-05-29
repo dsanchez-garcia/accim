@@ -20,7 +20,9 @@ import accim.parametric.funcs_for_besos.param_accis as bf
 
 import accim.parametric.parameters_accis as params
 
-
+# 1. check output data
+# 2. check input dataframe
+# 3. run parametric simulation
 
 #Arguments
 idf_path = 'TestModel.idf'
@@ -38,11 +40,11 @@ output_meters = [
 df = pd.DataFrame()
 
 #Parameters
-parameters = {
+accis_parameters = {
     'CustAST_m': [0.3, 0.4, 0.5],
     'CustAST_n': [15, 20]
 }
-
+other_parameters = []
 
 
 
@@ -111,45 +113,8 @@ bf.modify_MaxTempDiffVOF(building, 6)
 
 available_outputs = print_available_outputs_mod(building)
 
-parameters_list = [params.accis_parameter(k, v) for k, v in parameters.items()]
-
-# parameters = [
-#     Parameter(
-#         name='CustAST_m',
-#         # selector=GenericSelector(set=change_adaptive_coeff),
-#         selector=GenericSelector(set=bf.modify_CustAST_m),
-#         # value_descriptors=RangeParameter(name='CustAST_m', min_val=0, max_val=0.7),
-#         value_descriptors=CategoryParameter(name='CustAST_m', options=[round(i, 2) for i in np.arange(0, 0.8, 0.1)]),
-#     ),
-#     Parameter(
-#         name='CustAST_n',
-#         # selector=GenericSelector(set=change_PMV_setpoints),
-#         selector=GenericSelector(set=bf.modify_CustAST_n),
-#         # value_descriptors=RangeParameter(name='CustAST_n', min_val=10, max_val=25),
-#         value_descriptors=CategoryParameter(name='CustAST_n', options=[round(i, 2) for i in np.arange(5, 25, 2.5)]),
-#     ),
-#     Parameter(
-#         name='CustAST_ASToffset',
-#         # selector=GenericSelector(set=change_PMV_setpoints),
-#         selector=GenericSelector(set=bf.modify_CustAST_ASToffset),
-#         # value_descriptors=RangeParameter(name='CustAST_AHSToffset', min_val=-5, max_val=-1),
-#         value_descriptors=CategoryParameter(name='CustAST_ASToffset', options=[round(i, 2) for i in np.arange(1, 6, 1)]),
-#     ),
-#     Parameter(
-#         name='CustAST_ASTall',
-#         # selector=GenericSelector(set=change_PMV_setpoints),
-#         selector=GenericSelector(set=bf.modify_CustAST_ASTall),
-#         # value_descriptors=RangeParameter(name='CustAST_AHSToffset', min_val=-5, max_val=-1),
-#         value_descriptors=CategoryParameter(name='CustAST_ASTall', options=[round(i, 2) for i in np.arange(5, 22, 2)]),
-#     ),
-#     Parameter(
-#         name='CustAST_ASTaul',
-#         # selector=GenericSelector(set=change_PMV_setpoints),
-#         selector=GenericSelector(set=bf.modify_CustAST_ASTaul),
-#         # value_descriptors=RangeParameter(name='CustAST_AHSToffset', min_val=-5, max_val=-1),
-#         value_descriptors=CategoryParameter(name='CustAST_ASTaul', options=[round(i, 2) for i in np.arange(20, 42, 2)]),
-#     ),
-# ]
+parameters_list = [params.accis_parameter(k, v) for k, v in accis_parameters.items()]
+parameters_list.extend(other_parameters)
 
 
 
@@ -203,7 +168,7 @@ problem = EPProblem(
 
 num_samples = 1
 parameters_values = {}
-# for p in parameters:
+# for p in accis_parameters:
 #     num_samples = num_samples*len(p.value_descriptor.options)
 for p in parameters_list:
     num_samples = num_samples*len(p.value_descriptors[0].options)
