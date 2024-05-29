@@ -35,38 +35,30 @@ building = ef.get_building(idf_path)
 
 
 
-# Outputs
-output_type = 'standard'
-output_variables = []
-output_meters = [
-    'HeatingCoils:EnergyTransfer',
-    'CoolingCoils:EnergyTransfer',
-    'Heating:Electricity',
-    'Cooling:Electricity',
-    'Electricity:HVAC',
-]
-df = pd.DataFrame()
-
-#Parameters
-accis_parameters = {
-    'CustAST_m': [0.3, 0.4, 0.5],
-    'CustAST_n': [15, 20]
-}
-other_parameters = []
-
-
-output_variable_df = accis.gen_outputs_df(
-    idf=building,
-    ScriptType='vrf_mm',
-    Output_keep_existing=False,
-    Output_type=output_type,
-    Output_freqs=['hourly'],
-    TempCtrl='temperature',
-)
+# # Outputs
+# output_type = 'standard'
+# output_variables = []
+# output_meters = [
+#     'HeatingCoils:EnergyTransfer',
+#     'CoolingCoils:EnergyTransfer',
+#     'Heating:Electricity',
+#     'Cooling:Electricity',
+#     'Electricity:HVAC',
+# ]
+# df = pd.DataFrame()
+#
+# #Parameters
+# accis_parameters = {
+#     'CustAST_m': [0.3, 0.4, 0.5],
+#     'CustAST_n': [15, 20]
+# }
+# other_parameters = []
 
 
 
-##
+
+
+
 # accis.modifyAccis(
 #     idf=building,
 #
@@ -113,20 +105,52 @@ class ParametricSimulation:
             )
 
         pass
+    def get_outputs_df_from_testsim(self):
+        available_outputs = print_available_outputs_mod(building)
+        df_outputmeters = pd.DataFrame(
+            available_outputs.meterreaderlist,
+            columns=['output:meter', 'frequency']
+        )
+        df_outputvariables = pd.DataFrame(
+            available_outputs.variablereaderlist,
+            columns=['area', 'output:variable', 'frequency']
+        )
+
+        return df_outputmeters, df_outputvariables
 
     def set_output_variable_df(self):
         pass
 
-    def get_outputs_df_from_testsim(self):
-        pass
 
+##
+
+test_class_instance = ParametricSimulation(building=building)
+
+output_variable_df = accis.gen_outputs_df(
+    idf=building,
+    ScriptType='vrf_mm',
+    Output_keep_existing=False,
+    Output_type='standard',
+    Output_freqs=['hourly'],
+    TempCtrl='temperature',
+)
+
+output_variable_df_mod = output_variable_df.copy()
+output_variable_df_mod = output_variable_df_mod[
+    (
+        output_variable_df_mod['variable_name'].str.contains('Setpoint Temperature_No Tolerance')
+        |
+        output_variable_df_mod['variable_name'].str.contains('AFN Zone Ventilation Air Change Rate')
+    )
+]
+
+test_class_instance = ParametricSimulation(building=building, set_outputs_df=output_variable_df_mod)
+
+
+df_outputmeters_2, df_outputvariables_2 = test_class_instance.get_outputs_df_from_testsim()
+
+##
 # remove_accents_in_idf(idf_path=idf_path)
-
-
-
-
-
-
 
 # gv = [i for i in building.idfobjects['EnergyManagementSystem:GlobalVariable']]
 # [i.Variable_Name for i in building.idfobjects['output:variable'] if 'Occupied Discomfortable' in i.Variable_Name]

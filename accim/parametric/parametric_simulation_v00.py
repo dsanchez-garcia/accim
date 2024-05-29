@@ -113,6 +113,9 @@ bf.modify_MaxTempDiffVOF(building, 6)
 
 available_outputs = print_available_outputs_mod(building)
 
+df_meters = pd.DataFrame(available_outputs.meterreaderlist, columns=['output:meter', 'frequency'])
+df_variables = pd.DataFrame(available_outputs.variablereaderlist, columns=['area','output:variable', 'frequency'])
+
 parameters_list = [params.accis_parameter(k, v) for k, v in accis_parameters.items()]
 parameters_list.extend(other_parameters)
 
