@@ -101,6 +101,13 @@ class ParametricSimulation:
 
         pass
     def get_outputs_df_from_idf(self):
+        """
+        Gets a pandas DataFrame which contains the Output:Variable objects from the idf.
+        Therefore, it may contain wildcards such as '*', which means the variable is requested
+        for all zones.
+
+        :return:
+        """
         output_variable_df = accis.gen_outputs_df(
             idf=building,
             ScriptType=self.ScriptType,
@@ -113,6 +120,14 @@ class ParametricSimulation:
         return output_variable_df
 
     def set_outputs_df_to_idf(self, outputs_df: pd.DataFrame = None):
+        """
+        Keeps the Output:Variable objects contained in the input pandas DataFrame and removes
+        all others. This is important to save space if thousands of simulations with heavy outputs
+        are run.
+
+        :param outputs_df:
+        :return:
+        """
         accis.addAccis(
             idf=building,
             ScriptType=self.ScriptType,
@@ -130,6 +145,12 @@ class ParametricSimulation:
         )
 
     def get_outputs_df_from_testsim(self):
+        """
+        Gets a pandas DataFrame which contains the Output:Variable objects from a test simulation.
+        Therefore, it won't contain wildcards such as '*'.
+
+        :return:
+        """
         available_outputs = print_available_outputs_mod(building)
         df_outputmeters = pd.DataFrame(
             available_outputs.meterreaderlist,
@@ -142,6 +163,8 @@ class ParametricSimulation:
 
         return df_outputmeters, df_outputvariables
 
+    def set_outputs_for_parametric_simulation(self, df_output_variable, df_output_meter):
+        pass
 
 
 ##
