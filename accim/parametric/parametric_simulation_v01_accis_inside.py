@@ -71,38 +71,21 @@ class ParametricSimulation:
             output_type: str = 'standard',
             set_outputs_df: pd.DataFrame = None
     ):
-        if set_outputs_df is None:
-            accis.addAccis(
-                idf=building,
-                ScriptType='vrf_mm',
-                SupplyAirTempInputMethod='temperature difference',
-                Output_keep_existing=False,
-                Output_type=output_type,
-                # Output_take_dataframe=df,
-                Output_freqs=['hourly'],
+        accis.addAccis(
+            idf=building,
+            ScriptType='vrf_mm',
+            SupplyAirTempInputMethod='temperature difference',
+            Output_keep_existing=False,
+            Output_type=output_type,
+            Output_take_dataframe=set_outputs_df,
+            Output_freqs=['hourly'],
 
-                # EnergyPlus_version='9.4',
-                TempCtrl='temperature',
-                # Output_gen_dataframe=True,
-                # make_averages=True,
-                # debugging=True
-            )
-        else:
-            accis.addAccis(
-                idf=building,
-                ScriptType='vrf_mm',
-                SupplyAirTempInputMethod='temperature difference',
-                Output_keep_existing=False,
-                Output_type=output_type,
-                Output_take_dataframe=set_outputs_df,
-                Output_freqs=['hourly'],
-
-                # EnergyPlus_version='9.4',
-                TempCtrl='temperature',
-                # Output_gen_dataframe=True,
-                # make_averages=True,
-                # debugging=True
-            )
+            # EnergyPlus_version='9.4',
+            TempCtrl='temperature',
+            # Output_gen_dataframe=True,
+            # make_averages=True,
+            # debugging=True
+        )
 
         pass
     def get_outputs_df_from_testsim(self):
