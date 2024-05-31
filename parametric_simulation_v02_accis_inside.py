@@ -226,40 +226,48 @@ class ParametricSimulation:
     def sum(result):
         return result.data["Value"].sum()
 
-    def set_outputs_for_parametric_simulation(self, df_output_variable, df_output_meter):
+    def set_outputs_for_parametric_simulation(
+            self,
+            df_output_variable: pd.DataFrame = None,
+            df_output_meter: pd.DataFrame = None
+    ):
         # objs_meters = [MeterReader(key_name=i, name=i) for i in output_meters]
-        if 'func' in df_output_variable.columns:
-            df_output_variable = df_output_variable.fillna(sum)
-        else:
-            df_output_variable['func'] = sum
+        if df_output_variable is not None:
+            if 'func' in df_output_variable.columns:
+                df_output_variable = df_output_variable.fillna(sum)
+            else:
+                df_output_variable['func'] = sum
 
-        if 'func' in df_output_meter.columns:
-            df_output_meter = df_output_meter.fillna(sum)
-        else:
-            df_output_meter['func'] = sum
+        if df_output_meter is not None:
+            if 'func' in df_output_meter.columns:
+                df_output_meter = df_output_meter.fillna(sum)
+            else:
+                df_output_meter['func'] = sum
 
         objs_meters = []
-        for i in df_output_meter.index:
-            objs_meters.append(
-                    MeterReader(
-                        key_name=df_output_meter.loc[i, 'meter_name'],
-                        frequency=df_output_meter.loc[i, 'frequency'],
-                        name=df_output_meter.loc[i, 'meter_name'],
-                        func=df_output_meter.loc[i, 'func'],
+        if df_output_meter is not None:
+            for i in df_output_meter.index:
+                objs_meters.append(
+                        MeterReader(
+                            key_name=df_output_meter.loc[i, 'meter_name'],
+                            frequency=df_output_meter.loc[i, 'frequency'],
+                            name=df_output_meter.loc[i, 'meter_name'],
+                            func=df_output_meter.loc[i, 'func'],
+                        )
                     )
-                )
 
         objs_variables = []
-        for i in df_output_variable.index:
-            objs_variables.append(
-                    VariableReader(
-                        key_value=df_output_variable.loc[i, 'key_value'],
-                        variable_name=df_output_variable.loc[i, 'variable_name'],
-                        frequency=df_output_variable.loc[i, 'frequency'],
-                        name=df_output_variable.loc[i, 'variable_name'],
-                        func=df_output_variable.loc[i, 'func'],
+        if df_output_variable is not None:
+            for i in df_output_variable.index:
+                objs_variables.append(
+                        VariableReader(
+                            key_value=df_output_variable.loc[i, 'key_value'],
+                            variable_name=df_output_variable.loc[i, 'variable_name'],
+                            frequency=df_output_variable.loc[i, 'frequency'],
+                            name=df_output_variable.loc[i, 'variable_name'],
+                            func=df_output_variable.loc[i, 'func'],
+                        )
                     )
-                )
         self.param_sim_outputs = objs_meters + objs_variables
 
     def set_parameters(self, accis_params_dict, additional_params: list = None):
@@ -340,6 +348,20 @@ class ParametricSimulation:
         )
         self.parameters_values_df = parameters_values_df
 
+    def set_evaluator(
+            self,
+            epw: str,
+            out_dir: str,
+    ):
+        evaluator = EvaluatorEP(
+            problem=self.problem,
+            building=building,
+            epw=epw,
+            out_dir=out_dir
+        )
+        return evaluator
+
+
     def run_parametric_simulation(
             self,
             epw: str,
@@ -414,7 +436,7 @@ for i in df_outputvariables_3.index:
 
 test_class_instance.set_outputs_for_parametric_simulation(
     df_output_meter=df_outputmeters_2,
-    df_output_variable=df_outputvariables_3,
+    # df_output_variable=df_outputvariables_3,
 )
 
 # At this point, the outputs of each energyplus simulation has been set. So, next step is setting parameters
@@ -441,12 +463,22 @@ temp_full_fac = test_class_instance.parameters_values_df
 test_class_instance.sampling_lhs(num_samples=6)
 temp_lhs = test_class_instance.parameters_values_df
 
-outputs = test_class_instance.run_parametric_simulation(
-    epw='Sydney.epw',
-    out_dir='testing sim sydney',
+# outputs = test_class_instance.run_parametric_simulation(
+#     epw='Sydney.epw',
+#     out_dir='testing sim sydney',
+#     df=temp_lhs,
+#     processes=6,
+# )
+##
+evaluator = test_class_instance.set_evaluator(epw='Sydney.epw', out_dir='testing accim param sydney')
+
+outputs = evaluator.df_apply(
     df=temp_lhs,
-    processes=6,
+    keep_input=True,
+    keep_dirs=True,
+    processes=6
 )
+
 ##
 
 

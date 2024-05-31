@@ -1,48 +1,59 @@
 from accim.parametric.funcs_for_besos import param_accis
 
-def accis_parameter(parameter_name, value_options):
+def accis_parameter(parameter_name, values):
+    #Checking value entered is a list containing floats or a tuple containing the minimum and maximum values
+    descriptor_has_options = False
+    if type(values) == tuple and len(values) == 2 and all([type(i) == float or type(i) == int for i in values]):
+        pass
+    elif type(values) == list and all(type(j) == float or type(j) == int for j in values):
+        descriptor_has_options = True
+    else:
+        raise ValueError('values argument must be, FOR ALL CASES, '
+                         'a list containing int or float, '
+                         'or a tuple which contains the minimum and maximum values for the range')
 
-        functions_params = {
-            'ComfStand': param_accis.modify_ComfStand,
-            'CAT': param_accis.modify_CAT,
-            'CATcoolOffset': param_accis.modify_CATcoolOffset,
-            'CATheatOffset': param_accis.modify_CATheatOffset,
-            'ComfMod': param_accis.modify_ComfMod,
-            'SetpointAcc': param_accis.modify_SetpointAcc,
-            'CustAST_ACSTaul': param_accis.modify_CustAST_ACSTaul,
-            'CustAST_ACSTall': param_accis.modify_CustAST_ACSTall,
-            'CustAST_AHSTaul': param_accis.modify_CustAST_AHSTaul,
-            'CustAST_AHSTall': param_accis.modify_CustAST_AHSTall,
-            'CustAST_ASTaul': param_accis.modify_CustAST_ASTaul,
-            'CustAST_ASTall': param_accis.modify_CustAST_ASTall,
-            'CustAST_m': param_accis.modify_CustAST_m,
-            'CustAST_n': param_accis.modify_CustAST_n,
-            'CustAST_ACSToffset': param_accis.modify_CustAST_ACSToffset,
-            'CustAST_AHSToffset': param_accis.modify_CustAST_AHSToffset,
-            'CoolSeasonStart': param_accis.modify_CoolSeasonStart,
-            'CoolSeasonEnd': param_accis.modify_CoolSeasonEnd,
-            'HVACmode': param_accis.modify_HVACmode,
-            'VentCtrl': param_accis.modify_VentCtrl,
-            'MaxTempDiffVOF': param_accis.modify_MaxTempDiffVOF,
-            'MinTempDiffVOF': param_accis.modify_MinTempDiffVOF,
-            'MultiplierVOF': param_accis.modify_MultiplierVOF,
-            'VSToffset': param_accis.modify_VSToffset,
-            'MinOToffset': param_accis.modify_MinOToffset,
-            'MaxWindSpeed': param_accis.modify_MaxWindSpeed,
-            'ASTtol': param_accis.modify_ASTtol,
-        }
+    functions_params = {
+        'ComfStand': param_accis.modify_ComfStand,
+        'CAT': param_accis.modify_CAT,
+        'CATcoolOffset': param_accis.modify_CATcoolOffset,
+        'CATheatOffset': param_accis.modify_CATheatOffset,
+        'ComfMod': param_accis.modify_ComfMod,
+        'SetpointAcc': param_accis.modify_SetpointAcc,
+        'CustAST_ACSTaul': param_accis.modify_CustAST_ACSTaul,
+        'CustAST_ACSTall': param_accis.modify_CustAST_ACSTall,
+        'CustAST_AHSTaul': param_accis.modify_CustAST_AHSTaul,
+        'CustAST_AHSTall': param_accis.modify_CustAST_AHSTall,
+        'CustAST_ASTaul': param_accis.modify_CustAST_ASTaul,
+        'CustAST_ASTall': param_accis.modify_CustAST_ASTall,
+        'CustAST_m': param_accis.modify_CustAST_m,
+        'CustAST_n': param_accis.modify_CustAST_n,
+        'CustAST_ACSToffset': param_accis.modify_CustAST_ACSToffset,
+        'CustAST_AHSToffset': param_accis.modify_CustAST_AHSToffset,
+        'CoolSeasonStart': param_accis.modify_CoolSeasonStart,
+        'CoolSeasonEnd': param_accis.modify_CoolSeasonEnd,
+        'HVACmode': param_accis.modify_HVACmode,
+        'VentCtrl': param_accis.modify_VentCtrl,
+        'MaxTempDiffVOF': param_accis.modify_MaxTempDiffVOF,
+        'MinTempDiffVOF': param_accis.modify_MinTempDiffVOF,
+        'MultiplierVOF': param_accis.modify_MultiplierVOF,
+        'VSToffset': param_accis.modify_VSToffset,
+        'MinOToffset': param_accis.modify_MinOToffset,
+        'MaxWindSpeed': param_accis.modify_MaxWindSpeed,
+        'ASTtol': param_accis.modify_ASTtol,
+    }
 
 
-        if parameter_name.lower() not in [k.lower() for k in functions_params.keys()]:
-            raise KeyError(f'Parameter do not exist.'
-                           f'You need to chose one of the following list: {functions_params.keys()}')
+    if parameter_name.lower() not in [k.lower() for k in functions_params.keys()]:
+        raise KeyError(f'Parameter do not exist.'
+                       f'You need to chose one of the following list: {functions_params.keys()}')
 
-        name = [i for i in functions_params.keys() if i.lower() == parameter_name.lower()][0]
+    name = [i for i in functions_params.keys() if i.lower() == parameter_name.lower()][0]
 
-        from besos.parameters import Parameter, GenericSelector, CategoryParameter
-        import accim.parametric.funcs_for_besos.param_accis as bf
-        import numpy as np
+    from besos.parameters import Parameter, GenericSelector, CategoryParameter, RangeParameter
+    import accim.parametric.funcs_for_besos.param_accis as bf
+    import numpy as np
 
+    if descriptor_has_options:
         parameter = Parameter(
             name=name,
             # selector=GenericSelector(set=change_adaptive_coeff),
@@ -50,11 +61,23 @@ def accis_parameter(parameter_name, value_options):
             # value_descriptors=RangeParameter(name='CustAST_m', min_val=0, max_val=0.7),
             value_descriptors=CategoryParameter(
                 name=name,
-                options=value_options
+                options=values
+            ),
+        ),
+    else:
+        parameter = Parameter(
+            name=name,
+            # selector=GenericSelector(set=change_adaptive_coeff),
+            selector=GenericSelector(set=functions_params[name]),
+            # value_descriptors=RangeParameter(name='CustAST_m', min_val=0, max_val=0.7),
+            value_descriptors=RangeParameter(
+                name=name,
+                min_val=values[0],
+                max_val=values[1],
             ),
         ),
 
-        return parameter[0]
+    return parameter[0]
 
 
 class Parameter:
