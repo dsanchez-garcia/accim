@@ -251,7 +251,7 @@ class ParametricSimulation:
                             key_name=df_output_meter.loc[i, 'meter_name'],
                             frequency=df_output_meter.loc[i, 'frequency'],
                             name=df_output_meter.loc[i, 'meter_name'],
-                            # func=df_output_meter.loc[i, 'func'],
+                            func=df_output_meter.loc[i, 'func'],
                         )
                     )
 
@@ -264,7 +264,7 @@ class ParametricSimulation:
                             variable_name=df_output_variable.loc[i, 'variable_name'],
                             frequency=df_output_variable.loc[i, 'frequency'],
                             name=df_output_variable.loc[i, 'variable_name'],
-                            # func=df_output_variable.loc[i, 'func'],
+                            func=df_output_variable.loc[i, 'func'],
                         )
                     )
         self.param_sim_outputs = objs_meters + objs_variables
@@ -390,7 +390,6 @@ class ParametricSimulation:
             outputs_dict.update({epwname: outputs})
         all_outputs = pd.concat([df for df in outputs_dict.values()])
         return all_outputs
-            # return outputs
 
 
 test_class_instance = ParametricSimulation(
@@ -455,11 +454,14 @@ for i in alloutputs:
 
 test_class_instance.set_outputs_for_parametric_simulation(
     df_output_meter=df_outputmeters_2,
-    df_output_variable=df_outputvariables_3,
+    # df_output_variable=df_outputvariables_3,
+    df_output_variable=df_outputvariables_2,
+
 )
 
 # At this point, the outputs of each energyplus simulation has been set. So, next step is setting parameters
 
+#todo make 3 different types: predefined_accis, custom_accis and apmv_setpoints
 accis.modifyAccis(
     idf=building,
     ComfStand=99,
