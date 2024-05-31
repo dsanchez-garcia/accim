@@ -251,7 +251,8 @@ class ParametricSimulation:
                             key_name=df_output_meter.loc[i, 'meter_name'],
                             frequency=df_output_meter.loc[i, 'frequency'],
                             name=df_output_meter.loc[i, 'meter_name'],
-                            func=df_output_meter.loc[i, 'func'],
+                            # todo func not working
+                            # func=df_output_meter.loc[i, 'func'],
                         )
                     )
 
@@ -264,7 +265,8 @@ class ParametricSimulation:
                             variable_name=df_output_variable.loc[i, 'variable_name'],
                             frequency=df_output_variable.loc[i, 'frequency'],
                             name=df_output_variable.loc[i, 'variable_name'],
-                            func=df_output_variable.loc[i, 'func'],
+                            # todo func not working
+                            # func=df_output_variable.loc[i, 'func'],
                         )
                     )
         self.param_sim_outputs = objs_meters + objs_variables
