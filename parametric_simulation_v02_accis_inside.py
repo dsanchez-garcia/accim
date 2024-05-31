@@ -72,6 +72,7 @@ class ParametricSimulation:
             output_freqs: list = ['hourly'],
             ScriptType: str = 'vrf_mm',
             SupplyAirTempInputMethod: str = 'temperature difference',
+            debugging: bool = False,
 
     ):
         self.ScriptType = ScriptType
@@ -94,10 +95,8 @@ class ParametricSimulation:
             TempCtrl='temperature',
             # Output_gen_dataframe=True,
             # make_averages=True,
-            # debugging=True
+            debugging=debugging
         )
-
-        pass
     def get_output_var_df_from_idf(self):
         """
         Gets a pandas DataFrame which contains the Output:Variable objects from the idf.
@@ -223,7 +222,7 @@ class ParametricSimulation:
 
         return meter_list
 
-    def sum(result):
+    def sum_results(result):
         return result.data["Value"].sum()
 
     def set_outputs_for_parametric_simulation(
@@ -234,15 +233,15 @@ class ParametricSimulation:
         # objs_meters = [MeterReader(key_name=i, name=i) for i in output_meters]
         if df_output_variable is not None:
             if 'func' in df_output_variable.columns:
-                df_output_variable = df_output_variable.fillna(sum)
+                df_output_variable = df_output_variable.fillna(self.sum_results)
             else:
-                df_output_variable['func'] = sum
+                df_output_variable['func'] = self.sum_results
 
         if df_output_meter is not None:
             if 'func' in df_output_meter.columns:
-                df_output_meter = df_output_meter.fillna(sum)
+                df_output_meter = df_output_meter.fillna(self.sum_results)
             else:
-                df_output_meter['func'] = sum
+                df_output_meter['func'] = self.sum_results
 
         objs_meters = []
         if df_output_meter is not None:
@@ -252,7 +251,7 @@ class ParametricSimulation:
                             key_name=df_output_meter.loc[i, 'meter_name'],
                             frequency=df_output_meter.loc[i, 'frequency'],
                             name=df_output_meter.loc[i, 'meter_name'],
-                            func=df_output_meter.loc[i, 'func'],
+                            # func=df_output_meter.loc[i, 'func'],
                         )
                     )
 
@@ -265,7 +264,7 @@ class ParametricSimulation:
                             variable_name=df_output_variable.loc[i, 'variable_name'],
                             frequency=df_output_variable.loc[i, 'frequency'],
                             name=df_output_variable.loc[i, 'variable_name'],
-                            func=df_output_variable.loc[i, 'func'],
+                            # func=df_output_variable.loc[i, 'func'],
                         )
                     )
         self.param_sim_outputs = objs_meters + objs_variables
@@ -364,31 +363,41 @@ class ParametricSimulation:
 
     def run_parametric_simulation(
             self,
-            epw: str,
+            epws: list,
             out_dir: str,
             df: pd.DataFrame,
             processes: int = 2,
             keep_input: bool = True,
             keep_dirs: bool = True,
     ):
-        #todo allow for multiple epws, and return concatenated df
-        evaluator = EvaluatorEP(
-            problem=self.problem,
-            building=building,
-            epw=epw,
-            out_dir=out_dir
-        )
+        outputs_dict = {}
+        for epw in epws:
+            epwname = epw.split('.epw')[0]
+            evaluator = EvaluatorEP(
+                problem=self.problem,
+                building=building,
+                epw=epw,
+                out_dir=out_dir
+            )
 
-        outputs = evaluator.df_apply(
-            df=df,
-            keep_input=keep_input,
-            keep_dirs=keep_dirs,
-            processes=processes
-        )
-        return outputs
+            outputs = evaluator.df_apply(
+                df=df,
+                keep_input=keep_input,
+                keep_dirs=keep_dirs,
+                processes=processes
+            )
+            outputs['epw'] = epwname
+            outputs_dict.update({epwname: outputs})
+        all_outputs = pd.concat([df for df in outputs_dict.values()])
+        return all_outputs
+            # return outputs
 
 
-test_class_instance = ParametricSimulation(building=building, output_keep_existing=True)
+test_class_instance = ParametricSimulation(
+    building=building,
+    # output_keep_existing=False,
+    # debugging=True
+)
 
 # Setting the Output:Variable and Output:Meter objects in the idf
 #todo do not print on screen the process of accis, only the first time
@@ -402,6 +411,8 @@ df_output_variables_idf_mod = df_output_variables_idf_mod[
         df_output_variables_idf_mod['variable_name'].str.contains('AFN Zone Ventilation Air Change Rate')
     )
 ]
+
+[i for i in building.idfobjects['energymanagementsystem:program'] if i.Name.lower() == 'setinputdata']
 
 test_class_instance.set_output_var_df_to_idf(outputs_df=df_output_variables_idf_mod)
 
@@ -424,33 +435,54 @@ meter_list = test_class_instance.parse_mtd_file()
 
 # To end with outputs, let's set the objective outputs (outputs for the Problem object), which are those displayed by BESOS in case of parametric analysis, or used in case of optimisation
 
-def mean(result):
+def average_results(result):
     return result.data["Value"].mean()
 
 # df_outputvariables_2['func'] = mean
 df_outputvariables_3 = df_outputvariables_2.copy()
 for i in df_outputvariables_3.index:
     if 'Setpoint Temperature' in df_outputvariables_3.loc[i, 'variable_name']:
-        df_outputvariables_3.loc[i, 'func'] = mean
+        df_outputvariables_3.loc[i, 'func'] = average_results
+
+alloutputs = [
+    output
+    for output
+    in building.idfobjects['Output:Variable']
+]
+for i in alloutputs:
+    building.removeidfobject(i)
 
 
 test_class_instance.set_outputs_for_parametric_simulation(
     df_output_meter=df_outputmeters_2,
-    # df_output_variable=df_outputvariables_3,
+    df_output_variable=df_outputvariables_3,
 )
 
 # At this point, the outputs of each energyplus simulation has been set. So, next step is setting parameters
 
+accis.modifyAccis(
+    idf=building,
+    ComfStand=99,
+    ComfMod=3,
+    CAT=80,
+    HVACmode=2,
+    VentCtrl=0,
+)
+
+
 accis_parameters = {
     'CustAST_m': (0.01, 0.99),
-    'CustAST_n': (5, 23)
+    'CustAST_n': (5, 23),
+    'CustAST_ASToffset': (2, 4),
+    'CustAST_ASTall': (10, 15),
+    'CustAST_ASTaul': (30, 35),
 }
-# from besos.parameters import wwr, RangeParameter
-# other_parameters = [wwr(RangeParameter(0.1, 0.9))]
+from besos.parameters import wwr, RangeParameter
+other_parameters = [wwr(RangeParameter(0.1, 0.9))]
 
 test_class_instance.set_parameters(
     accis_params_dict=accis_parameters,
-    # additional_params=other_parameters
+    additional_params=other_parameters
 )
 
 # Let's set the problem
@@ -460,24 +492,25 @@ test_class_instance.set_problem()
 test_class_instance.sampling_full_factorial(level=5)
 temp_full_fac = test_class_instance.parameters_values_df
 
-test_class_instance.sampling_lhs(num_samples=6)
+test_class_instance.sampling_lhs(num_samples=3)
 temp_lhs = test_class_instance.parameters_values_df
 
-# outputs = test_class_instance.run_parametric_simulation(
-#     epw='Sydney.epw',
-#     out_dir='testing sim sydney',
-#     df=temp_lhs,
-#     processes=6,
-# )
-##
-evaluator = test_class_instance.set_evaluator(epw='Sydney.epw', out_dir='testing accim param sydney')
-
-outputs = evaluator.df_apply(
+#todo try to return series of pmot, acst, ahst and optemp and plot them in facetgrid
+outputs = test_class_instance.run_parametric_simulation(
+    epws=['Sydney.epw', 'Seville.epw'],
+    out_dir='testing sim sydney-seville',
     df=temp_lhs,
-    keep_input=True,
-    keep_dirs=True,
-    processes=6
+    processes=6,
 )
+
+# evaluator = test_class_instance.set_evaluator(epw='Sydney.epw', out_dir='testing accim param sydney')
+#
+# outputs = evaluator.df_apply(
+#     df=temp_lhs,
+#     keep_input=True,
+#     keep_dirs=True,
+#     processes=6
+# )
 
 ##
 

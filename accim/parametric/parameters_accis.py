@@ -29,6 +29,7 @@ def accis_parameter(parameter_name, values):
         'CustAST_n': param_accis.modify_CustAST_n,
         'CustAST_ACSToffset': param_accis.modify_CustAST_ACSToffset,
         'CustAST_AHSToffset': param_accis.modify_CustAST_AHSToffset,
+        'CustAST_ASToffset': param_accis.modify_CustAST_ASToffset,
         'CoolSeasonStart': param_accis.modify_CoolSeasonStart,
         'CoolSeasonEnd': param_accis.modify_CoolSeasonEnd,
         'HVACmode': param_accis.modify_HVACmode,
