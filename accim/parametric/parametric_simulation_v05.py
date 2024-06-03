@@ -37,6 +37,7 @@ class ParametricSimulation:
     def __init__(
             self,
             building: besos.IDF_class,
+            parametric_simulation_type: str,
             output_type: str = 'standard',
             output_keep_existing: bool = False,
             output_freqs: list = ['hourly'],
@@ -45,11 +46,24 @@ class ParametricSimulation:
             debugging: bool = False,
 
     ):
+
+        if parametric_simulation_type == 'accim custom model':
+            temp_ctrl = 'temperature'
+        elif parametric_simulation_type == 'accim predefined model':
+            temp_ctrl = 'temperature'
+        elif parametric_simulation_type == 'apmv setpoints':
+            temp_ctrl = 'PMV'
+        else:
+            raise KeyError(f'String {parametric_simulation_type} entered in argument parametric_simulation_type '
+                           f'is not supported. Valid strings are: '
+                           f'"accim custom model", "accim predefined model" or "apmv setpoints".')
+
         self.ScriptType = ScriptType
+        self.parametric_simulation_type = parametric_simulation_type
+        self.temp_ctrl = temp_ctrl
         self.SupplyAirTempInputMethod = SupplyAirTempInputMethod
         self.output_keep_existing = output_keep_existing
         self.output_type = output_type
-        # self.output_take_dataframe = set_outputs_df
         self.output_freqs = output_freqs
         self.building = building
 
@@ -63,7 +77,7 @@ class ParametricSimulation:
             Output_freqs=output_freqs,
 
             # EnergyPlus_version='9.4',
-            TempCtrl='temperature',
+            TempCtrl=temp_ctrl,
             # Output_gen_dataframe=True,
             # make_averages=True,
             debugging=debugging
@@ -82,7 +96,7 @@ class ParametricSimulation:
             Output_keep_existing=self.output_keep_existing,
             Output_type=self.output_type,
             Output_freqs=self.output_freqs,
-            TempCtrl='temperature',
+            TempCtrl=self.temp_ctrl,
         )
 
         return output_variable_df
@@ -107,7 +121,7 @@ class ParametricSimulation:
             Output_freqs=self.output_freqs,
 
             # EnergyPlus_version='9.4',
-            TempCtrl='temperature',
+            TempCtrl=self.temp_ctrl,
             # Output_gen_dataframe=True,
             # make_averages=True,
             # debugging=True
@@ -294,6 +308,21 @@ class ParametricSimulation:
         if descriptors_has_options is False and descriptors_has_range is False:
             raise TypeError('All Descriptors are not CategoryParameters or RangeParameters.')
 
+        if self.parametric_simulation_type == 'accim custom model':
+            accis.modifyAccis(
+                idf=self.building,
+                ComfStand=99,
+                ComfMod=3,
+                CAT=80,
+                # HVACmode=2,
+                # VentCtrl=0,
+            )
+            #todo if HVACmode and/or VentCtrl are None, set default value
+        elif self.parametric_simulation_type == 'accim predefined model':
+            if descriptors_has_range:
+                raise KeyError('Accim predefined models approach is only valid with options descriptors.')
+
+
         parameters_list = [params.accis_parameter(k, v) for k, v in accis_params_dict.items()]
         if additional_params is not None:
             parameters_list.extend(additional_params)
@@ -318,6 +347,11 @@ class ParametricSimulation:
             from itertools import product
             combinations = list(product(*parameters_values.values()))
             parameters_values_df = pd.DataFrame(combinations, columns=parameters_values.keys())
+
+
+        if self.parametric_simulation_type == 'accim predefined model':
+            parameters_values_df = bf.drop_invalid_param_combinations(parameters_values_df)
+
 
         self.parameters_values_df = parameters_values_df
 

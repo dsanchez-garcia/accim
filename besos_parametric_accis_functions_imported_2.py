@@ -8,7 +8,7 @@ from besos.objectives import MeterReader
 import accim.sim.accis_single_idf_funcs as accis
 import accim.parametric.funcs_for_besos.param_accis as bf
 
-building = ef.get_building('TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2310.idf')
+building = ef.get_building('TestModel.idf')
 
 accis.addAccis(
     idf=building,
@@ -120,7 +120,7 @@ problem = EPProblem(
 evaluator = EvaluatorEP(
     problem=problem,
     building=building,
-    out_dir='outdir'
+    out_dir='WIP_testing_accim_predef'
 )
 
 outputs = evaluator.df_apply(
@@ -136,8 +136,8 @@ outputs = evaluator.df_apply(
 
 
 # generated_buildings = [evaluator.generate_building(df=samples_short, index=i, file_name=f'short_sample_row_{i}') for i in range(5)]
-evaluator.generate_building(df=samples, index=0, file_name='num_0')
-evaluator.generate_building(df=samples, index=1, file_name='num_1')
-evaluator.generate_building(df=samples, index=2, file_name='num_2')
+# evaluator.generate_building(df=samples, index=0, file_name='num_0')
+# evaluator.generate_building(df=samples, index=1, file_name='num_1')
+# evaluator.generate_building(df=samples, index=2, file_name='num_2')
 # evaluator.generate_building(df=samples_short, index=3, file_name='num_3')
 # evaluator.generate_building(df=samples_short, index=4, file_name='num_4')

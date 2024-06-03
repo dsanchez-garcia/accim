@@ -24,7 +24,7 @@ import accim.sim.accis_single_idf_funcs as accis
 import accim.parametric.funcs_for_besos.param_accis as bf
 
 import accim.parametric.parameters_accis as params
-from accim.parametric.parametric_simulation_v03_accis_inside import ParametricSimulation
+from accim.parametric.parametric_simulation_v05 import ParametricSimulation
 
 # 1. check output data
 # 2. check input dataframe
@@ -42,8 +42,10 @@ accim.utils.set_occupancy_to_always(idf_object=building)
 
 test_class_instance = ParametricSimulation(
     building=building,
+    parametric_simulation_type='accim predefined model'
     # output_keep_existing=False,
     # debugging=True
+
 )
 
 # Setting the Output:Variable and Output:Meter objects in the idf
@@ -113,29 +115,39 @@ test_class_instance.set_outputs_for_parametric_simulation(
 # At this point, the outputs of each energyplus simulation has been set. So, next step is setting parameters
 
 #todo make 3 different types: predefined_accis, custom_accis and apmv_setpoints
-accis.modifyAccis(
-    idf=building,
-    ComfStand=99,
-    ComfMod=3,
-    CAT=80,
-    HVACmode=2,
-    VentCtrl=0,
-)
+
+# accis.modifyAccis(
+#     idf=building,
+#     ComfStand=99,
+#     ComfMod=3,
+#     CAT=80,
+#     HVACmode=2,
+#     VentCtrl=0,
+# )
 
 
+# accis_parameters = {
+#     'CustAST_m': (0.01, 0.99),
+#     'CustAST_n': (5, 23),
+#     'CustAST_ASToffset': (2, 4),
+#     'CustAST_ASTall': (10, 15),
+#     'CustAST_ASTaul': (30, 35),
+# }
+
+##
 accis_parameters = {
-    'CustAST_m': (0.01, 0.99),
-    'CustAST_n': (5, 23),
-    'CustAST_ASToffset': (2, 4),
-    'CustAST_ASTall': (10, 15),
-    'CustAST_ASTaul': (30, 35),
+    'ComfStand': [1, 2, 3],
+    'CAT': [1, 2, 3],
+    'ComfMod': [3],
 }
-from besos.parameters import wwr, RangeParameter
-other_parameters = [wwr(RangeParameter(0.1, 0.9))]
+
+
+# from besos.parameters import wwr, RangeParameter
+# other_parameters = [wwr(RangeParameter(0.1, 0.9))]
 
 test_class_instance.set_parameters(
     accis_params_dict=accis_parameters,
-    additional_params=other_parameters
+    # additional_params=other_parameters
 )
 
 # Let's set the problem
@@ -148,14 +160,17 @@ temp_full_fac = test_class_instance.parameters_values_df
 test_class_instance.sampling_lhs(num_samples=3)
 temp_lhs = test_class_instance.parameters_values_df
 
+test_class_instance.sampling_full_set()
+temp_full_set = test_class_instance.parameters_values_df
+
 #todo try to return series of pmot, acst, ahst and optemp and plot them in facetgrid
 outputs = test_class_instance.run_parametric_simulation(
     epws=[
         'Sydney.epw',
         # 'Seville.epw'
     ],
-    out_dir='WIP_testing sim sydney_test func',
-    df=temp_lhs,
+    out_dir='WIP_testing predefined models',
+    df=temp_full_set,
     processes=6,
 )
 
