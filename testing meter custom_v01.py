@@ -8,7 +8,7 @@ from besos.objectives import VariableReader, MeterReader
 from accim.utils import print_available_outputs_mod
 
 import accim.sim.accis_single_idf_funcs as accis
-import accim.parametric.funcs_for_besos.param_accis as bf
+import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
 
 building = ef.get_building('TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940.idf')
 

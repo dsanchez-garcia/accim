@@ -21,14 +21,14 @@ from accim.utils import print_available_outputs_mod, modify_timesteps, set_occup
 import numpy as np
 
 import accim.sim.accis_single_idf_funcs as accis
-import accim.parametric.funcs_for_besos.param_accis as bf
+import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
 
-import accim.parametric.parameters_accis as params
-from accim.parametric.parametric_simulation_v05 import ParametricSimulation
+import accim.parametric_and_optimisation.parameters_accis as params
+from accim.parametric_and_optimisation.main import OptimParamSimulation
 
 # 1. check output data
 # 2. check input dataframe
-# 3. run parametric simulation
+# 3. run parametric_and_optimisation simulation
 
 
 
@@ -40,9 +40,9 @@ building = ef.get_building(idf_path)
 
 accim.utils.set_occupancy_to_always(idf_object=building)
 
-test_class_instance = ParametricSimulation(
+test_class_instance = OptimParamSimulation(
     building=building,
-    parametric_simulation_type='accim custom model'
+    parameters_type='accim custom model'
     # output_keep_existing=False,
     # debugging=True
 
@@ -88,7 +88,7 @@ df_mdd = test_class_instance.get_mdd_file_as_df()
 meter_list = test_class_instance.parse_mtd_file()
 
 
-# To end with outputs, let's set the objective outputs (outputs for the Problem object), which are those displayed by BESOS in case of parametric analysis, or used in case of optimisation
+# To end with outputs, let's set the objective outputs (outputs for the Problem object), which are those displayed by BESOS in case of parametric_and_optimisation analysis, or used in case of optimisation
 
 def average_results(result):
     return result.data["Value"].mean()
@@ -109,7 +109,7 @@ test_class_instance.set_outputs_for_parametric_simulation(
     df_output_meter=df_outputmeters_2,
     df_output_variable=df_outputvariables_3,
 )
-##
+
 # At this point, the outputs of each energyplus simulation has been set. So, next step is setting parameters
 
 #todo make 3 different types: predefined_accis, custom_accis and apmv_setpoints
@@ -159,7 +159,7 @@ test_class_instance.set_parameters(
 
 # Let's set the problem
 test_class_instance.set_problem(
-    minimize_outputs=[True, True, None, None, None, None, None]
+    minimize_outputs=[True, True, False, False, False, False, False]
 )
 
 # Let's generate a sampling dataframe

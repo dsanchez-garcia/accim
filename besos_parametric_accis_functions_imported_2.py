@@ -6,7 +6,7 @@ from besos.problem import EPProblem
 from besos.objectives import MeterReader
 
 import accim.sim.accis_single_idf_funcs as accis
-import accim.parametric.funcs_for_besos.param_accis as bf
+import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
 
 building = ef.get_building('TestModel.idf')
 

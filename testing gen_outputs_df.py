@@ -3,7 +3,7 @@ from besos import eppy_funcs as ef
 from accim.utils import print_available_outputs_mod
 
 import accim.sim.accis_single_idf_funcs as accis
-import accim.parametric.funcs_for_besos.param_accis as bf
+import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
 
 building = ef.get_building('ALJARAFE CENTER_onlyGeometry.idf')
 

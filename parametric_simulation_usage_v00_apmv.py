@@ -21,14 +21,14 @@ from accim.utils import print_available_outputs_mod, modify_timesteps, set_occup
 import numpy as np
 
 import accim.sim.accis_single_idf_funcs as accis
-import accim.parametric.funcs_for_besos.param_accis as bf
+import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
 
-import accim.parametric.parameters_accis as params
-from accim.parametric.parametric_simulation_v05 import ParametricSimulation
+import accim.parametric_and_optimisation.parameters_accis as params
+from accim.parametric_and_optimisation.main import OptimParamSimulation
 
 # 1. check output data
 # 2. check input dataframe
-# 3. run parametric simulation
+# 3. run parametric_and_optimisation simulation
 
 
 
@@ -40,9 +40,9 @@ building = ef.get_building(idf_path)
 
 accim.utils.set_occupancy_to_always(idf_object=building)
 
-test_class_instance = ParametricSimulation(
+test_class_instance = OptimParamSimulation(
     building=building,
-    parametric_simulation_type='accim predefined model'
+    parameters_type='accim predefined model'
     # output_keep_existing=False,
     # debugging=True
 
@@ -88,7 +88,7 @@ df_mdd = test_class_instance.get_mdd_file_as_df()
 meter_list = test_class_instance.parse_mtd_file()
 
 
-# To end with outputs, let's set the objective outputs (outputs for the Problem object), which are those displayed by BESOS in case of parametric analysis, or used in case of optimisation
+# To end with outputs, let's set the objective outputs (outputs for the Problem object), which are those displayed by BESOS in case of parametric_and_optimisation analysis, or used in case of optimisation
 
 def average_results(result):
     return result.data["Value"].mean()
