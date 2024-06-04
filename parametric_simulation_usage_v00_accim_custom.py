@@ -216,8 +216,6 @@ for i in outputs.index:
         )
 
 
-
-
 ##
 
 ##

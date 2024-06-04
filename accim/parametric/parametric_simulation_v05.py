@@ -362,10 +362,24 @@ class ParametricSimulation:
         self.descriptors_has_options = descriptors_has_options
         self.descriptors_has_range = descriptors_has_range
 
-    def set_problem(self):
+    def set_problem(
+            self,
+            minimize_outputs: list = None,
+            constraints: list = None,
+            constraint_bounds: list = None,
+    ):
+        # if type == 'parametric simulation':
+        #     problem = EPProblem(
+        #         inputs=self.parameters_list,
+        #         outputs=self.param_sim_outputs
+        #     )
+        # elif type == 'optimisation':
         problem = EPProblem(
             inputs=self.parameters_list,
-            outputs=self.param_sim_outputs
+            outputs=self.param_sim_outputs,
+            minimize_outputs=minimize_outputs,
+            constraints=constraints,
+            constraint_bounds=constraint_bounds
         )
         self.problem = problem
 
@@ -440,11 +454,15 @@ class ParametricSimulation:
         outputs_dict = {}
         for epw in epws:
             epwname = epw.split('.epw')[0]
-            evaluator = EvaluatorEP(
-                problem=self.problem,
-                building=self.building,
+            # evaluator = EvaluatorEP(
+            #     problem=self.problem,
+            #     building=self.building,
+            #     epw=epw,
+            #     out_dir=out_dir
+            # )
+            evaluator = self.set_evaluator(
                 epw=epw,
-                out_dir=out_dir
+                out_dir=out_dir,
             )
 
             outputs = evaluator.df_apply(
@@ -457,6 +475,20 @@ class ParametricSimulation:
             outputs_dict.update({epwname: outputs})
         all_outputs = pd.concat([df for df in outputs_dict.values()])
         return all_outputs
+
+    def run_optimisation(
+            self,
+            epw: str,
+            out_dir: str,
+            evaluations: int,
+            population_size: int,
+    ):
+        evaluator = self.set_evaluator(
+            epw=epw,
+            out_dir=out_dir
+        )
+        results = NSGAII(evaluator, evaluations=evaluations, population_size=population_size)
+        return results
 
 class AccimPredefModelsParamSim(ParametricSimulation):
     def __init__(
