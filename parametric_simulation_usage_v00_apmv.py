@@ -134,7 +134,7 @@ test_class_instance.set_outputs_for_parametric_simulation(
 #     'CustAST_ASTaul': (30, 35),
 # }
 
-##
+
 accis_parameters = {
     'ComfStand': [1, 2, 3],
     'CAT': [1, 2, 3],
@@ -167,7 +167,7 @@ temp_full_set = test_class_instance.parameters_values_df
 outputs = test_class_instance.run_parametric_simulation(
     epws=[
         'Sydney.epw',
-        # 'Seville.epw'
+        'Seville.epw'
     ],
     out_dir='WIP_testing predefined models',
     df=temp_full_set,
@@ -176,7 +176,7 @@ outputs = test_class_instance.run_parametric_simulation(
 
 outputs = outputs.reset_index()
 
-outputs.to_excel('WIP_outputs.xlsx')
+outputs.to_excel('WIP_outputs_predef.xlsx')
 
 ##
 

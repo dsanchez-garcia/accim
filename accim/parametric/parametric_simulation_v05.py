@@ -22,8 +22,10 @@ from accim.utils import print_available_outputs_mod, modify_timesteps, set_occup
 import numpy as np
 
 import accim.sim.accis_single_idf_funcs as accis
-import accim.parametric.funcs_for_besos.param_accis as bf
+import accim.sim.apmv_setpoints as apmv
 
+import accim.parametric.funcs_for_besos.param_accis as bf_accim
+import accim.parametric.funcs_for_besos.param_apmv as bf_apmv
 import accim.parametric.parameters_accis as params
 
 # 1. check output data
@@ -44,44 +46,57 @@ class ParametricSimulation:
             ScriptType: str = 'vrf_mm',
             SupplyAirTempInputMethod: str = 'temperature difference',
             debugging: bool = False,
-
     ):
-
+        is_accim_predef_model = False
+        is_accim_custom_model = False
+        is_apmv_setpoints = False
+        
         if parametric_simulation_type == 'accim custom model':
             temp_ctrl = 'temperature'
+            is_accim_custom_model = True
         elif parametric_simulation_type == 'accim predefined model':
             temp_ctrl = 'temperature'
+            is_accim_predef_model = True
         elif parametric_simulation_type == 'apmv setpoints':
             temp_ctrl = 'PMV'
+            is_apmv_setpoints = True
         else:
             raise KeyError(f'String {parametric_simulation_type} entered in argument parametric_simulation_type '
                            f'is not supported. Valid strings are: '
                            f'"accim custom model", "accim predefined model" or "apmv setpoints".')
+        if is_accim_custom_model or is_accim_predef_model:
+            self.ScriptType = ScriptType
+            self.parametric_simulation_type = parametric_simulation_type
+            self.temp_ctrl = temp_ctrl
+            self.SupplyAirTempInputMethod = SupplyAirTempInputMethod
+            self.output_keep_existing = output_keep_existing
+            self.output_type = output_type
 
-        self.ScriptType = ScriptType
-        self.parametric_simulation_type = parametric_simulation_type
-        self.temp_ctrl = temp_ctrl
-        self.SupplyAirTempInputMethod = SupplyAirTempInputMethod
-        self.output_keep_existing = output_keep_existing
-        self.output_type = output_type
-        self.output_freqs = output_freqs
+            accis.addAccis(
+                idf=building,
+                ScriptType=ScriptType,
+                SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+                Output_keep_existing=output_keep_existing,
+                Output_type=output_type,
+                # Output_take_dataframe=set_outputs_df,
+                Output_freqs=output_freqs,
+    
+                # EnergyPlus_version='9.4',
+                TempCtrl=temp_ctrl,
+                # Output_gen_dataframe=True,
+                # make_averages=True,
+                debugging=debugging
+            )
+        elif is_apmv_setpoints:
+            apmv.apply_apmv_setpoints(building=building, outputs_freq=output_freqs)
+
         self.building = building
+        self.output_freqs = output_freqs
 
-        accis.addAccis(
-            idf=building,
-            ScriptType=ScriptType,
-            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
-            Output_keep_existing=output_keep_existing,
-            Output_type=output_type,
-            # Output_take_dataframe=set_outputs_df,
-            Output_freqs=output_freqs,
+        self.is_accim_custom_model = is_accim_custom_model
+        self.is_accim_predef_model = is_accim_predef_model
+        self.is_apmv_setpoints = is_apmv_setpoints
 
-            # EnergyPlus_version='9.4',
-            TempCtrl=temp_ctrl,
-            # Output_gen_dataframe=True,
-            # make_averages=True,
-            debugging=debugging
-        )
     def get_output_var_df_from_idf(self):
         """
         Gets a pandas DataFrame which contains the Output:Variable objects from the idf.
@@ -90,14 +105,18 @@ class ParametricSimulation:
 
         :return:
         """
-        output_variable_df = accis.gen_outputs_df(
-            idf=self.building,
-            ScriptType=self.ScriptType,
-            Output_keep_existing=self.output_keep_existing,
-            Output_type=self.output_type,
-            Output_freqs=self.output_freqs,
-            TempCtrl=self.temp_ctrl,
-        )
+        if self.is_accim_custom_model or self.is_accim_predef_model:
+            output_variable_df = accis.gen_outputs_df(
+                idf=self.building,
+                ScriptType=self.ScriptType,
+                Output_keep_existing=self.output_keep_existing,
+                Output_type=self.output_type,
+                Output_freqs=self.output_freqs,
+                TempCtrl=self.temp_ctrl,
+            )
+        else:
+            raise KeyError('get_output_var_df_from_idf method is only available for "accim custom model" or '
+                           '"accim predefined model" types.')
 
         return output_variable_df
 
@@ -111,21 +130,27 @@ class ParametricSimulation:
         :param outputs_df: the DataFrame containing Output:Variable objects to be kept
         :return:
         """
-        accis.addAccis(
-            idf=self.building,
-            ScriptType=self.ScriptType,
-            SupplyAirTempInputMethod=self.SupplyAirTempInputMethod,
-            Output_keep_existing=self.output_keep_existing,
-            Output_type=self.output_type,
-            Output_take_dataframe=outputs_df,
-            Output_freqs=self.output_freqs,
+        if self.is_accim_custom_model or self.is_accim_predef_model:
+            accis.addAccis(
+                idf=self.building,
+                ScriptType=self.ScriptType,
+                SupplyAirTempInputMethod=self.SupplyAirTempInputMethod,
+                Output_keep_existing=self.output_keep_existing,
+                Output_type=self.output_type,
+                Output_take_dataframe=outputs_df,
+                Output_freqs=self.output_freqs,
 
-            # EnergyPlus_version='9.4',
-            TempCtrl=self.temp_ctrl,
-            # Output_gen_dataframe=True,
-            # make_averages=True,
-            # debugging=True
-        )
+                # EnergyPlus_version='9.4',
+                TempCtrl=self.temp_ctrl,
+                # Output_gen_dataframe=True,
+                # make_averages=True,
+                # debugging=True
+            )
+        else:
+            raise KeyError('get_output_var_df_from_idf method is only available for "accim custom model" or '
+                           '"accim predefined model" types.')
+
+
     def set_output_met_objects_to_idf(self, output_meters):
         for meter in output_meters:
             for freq in self.output_freqs:
@@ -274,7 +299,13 @@ class ParametricSimulation:
 
         self.param_sim_outputs = objs_meters + objs_variables
 
-    def set_parameters(self, accis_params_dict, additional_params: list = None):
+    def set_parameters(
+            self,
+            accis_params_dict,
+            additional_params: list = None,
+            HVACmode: int = 2,
+            VentCtrl: int = 0,
+    ):
         accis_descriptors_has_options = False
         add_descriptors_has_options = False
         descriptors_has_options = False
@@ -308,17 +339,17 @@ class ParametricSimulation:
         if descriptors_has_options is False and descriptors_has_range is False:
             raise TypeError('All Descriptors are not CategoryParameters or RangeParameters.')
 
-        if self.parametric_simulation_type == 'accim custom model':
+        if self.is_accim_custom_model:
             accis.modifyAccis(
                 idf=self.building,
                 ComfStand=99,
                 ComfMod=3,
                 CAT=80,
-                # HVACmode=2,
-                # VentCtrl=0,
+                HVACmode=HVACmode,
+                VentCtrl=VentCtrl,
             )
             #todo if HVACmode and/or VentCtrl are None, set default value
-        elif self.parametric_simulation_type == 'accim predefined model':
+        elif self.is_accim_predef_model:
             if descriptors_has_range:
                 raise KeyError('Accim predefined models approach is only valid with options descriptors.')
 
@@ -329,6 +360,7 @@ class ParametricSimulation:
 
         self.parameters_list = parameters_list
         self.descriptors_has_options = descriptors_has_options
+        self.descriptors_has_range = descriptors_has_range
 
     def set_problem(self):
         problem = EPProblem(
@@ -347,30 +379,39 @@ class ParametricSimulation:
             from itertools import product
             combinations = list(product(*parameters_values.values()))
             parameters_values_df = pd.DataFrame(combinations, columns=parameters_values.keys())
+        else:
+            raise KeyError('sampling_full_set method can only be used with option (i.e. category) descriptors.')
 
 
-        if self.parametric_simulation_type == 'accim predefined model':
-            parameters_values_df = bf.drop_invalid_param_combinations(parameters_values_df)
+        if self.is_accim_predef_model:
+            parameters_values_df = bf_accim.drop_invalid_param_combinations(parameters_values_df)
 
 
         self.parameters_values_df = parameters_values_df
 
     def sampling_full_factorial(self, level: int):
-        parameters_values_df = sampling.dist_sampler(
-            sampling.full_factorial,
-            self.problem,
-            num_samples=2,
-            level=level
-        )
+        if self.descriptors_has_range:
+            parameters_values_df = sampling.dist_sampler(
+                sampling.full_factorial,
+                self.problem,
+                num_samples=2,
+                level=level
+            )
+        else:
+            raise KeyError('sampling_full_factorial method can only be used with range descriptors.')
         self.parameters_values_df = parameters_values_df
 
 
     def sampling_lhs(self, num_samples: int):
-        parameters_values_df = sampling.dist_sampler(
-            sampling.lhs,
-            self.problem,
-            num_samples=num_samples
-        )
+        if self.descriptors_has_range:
+            parameters_values_df = sampling.dist_sampler(
+                sampling.lhs,
+                self.problem,
+                num_samples=num_samples
+            )
+        else:
+            raise KeyError('sampling_lhs method can only be used with range descriptors.')
+
         self.parameters_values_df = parameters_values_df
 
     def set_evaluator(
