@@ -24,7 +24,7 @@ import accim.sim.accis_single_idf_funcs as accis
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
 
 import accim.parametric_and_optimisation.parameters as params
-from accim.parametric_and_optimisation.main import OptimParamSimulation
+from accim.parametric_and_optimisation.main import OptimParamSimulation, get_mdd_file_as_df, get_rdd_file_as_df, parse_mtd_file
 
 # 1. check output data
 # 2. check input dataframe
@@ -83,9 +83,9 @@ test_class_instance.set_output_met_objects_to_idf(output_meters=output_meters)
 df_outputmeters_2, df_outputvariables_2 = test_class_instance.get_outputs_df_from_testsim()
 
 #Other variables could be reported. These can be read in the rdd, mdd and mtd files
-df_rdd = test_class_instance.get_rdd_file_as_df()
-df_mdd = test_class_instance.get_mdd_file_as_df()
-meter_list = test_class_instance.parse_mtd_file()
+df_rdd = get_rdd_file_as_df()
+df_mdd = get_mdd_file_as_df()
+meter_list = parse_mtd_file()
 
 
 # To end with outputs, let's set the objective outputs (outputs for the Problem object), which are those displayed by BESOS in case of parametric_and_optimisation analysis, or used in case of optimisation
@@ -105,7 +105,7 @@ meter_list = test_class_instance.parse_mtd_file()
 # df_outputvariables_3 = df_outputvariables_3.drop(index=[2, 4])
 # df_outputvariables_3['name'] = df_outputvariables_3['variable_name'] + '_time series'
 
-test_class_instance.set_outputs_for_parametric_simulation(
+test_class_instance.set_outputs_for_simulation(
     df_output_meter=df_outputmeters_2,
     # df_output_variable=df_outputvariables_3,
 )
@@ -183,10 +183,11 @@ test_class_instance.set_problem(
 # )
 
 outputs = test_class_instance.run_optimisation(
+    algorithm='NSGAII',
     epw='Sydney.epw',
     out_dir='WIP_testing optimisation',
-    evaluations=5,
-    population_size=10
+    evaluations=2,
+    population_size=4
 )
 
 
