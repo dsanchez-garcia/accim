@@ -26,7 +26,8 @@ import accim.sim.apmv_setpoints as apmv
 
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf_accim
 import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
-import accim.parametric_and_optimisation.parameters_accis as params
+import accim.parametric_and_optimisation.parameters as params
+import accim.parametric_and_optimisation.params_dicts as params_dicts
 
 # 1. check output data
 # 2. check input dataframe
@@ -115,10 +116,29 @@ class OptimParamSimulation:
                 TempCtrl=self.temp_ctrl,
             )
         else:
-            raise KeyError('get_output_var_df_from_idf method is only available for "accim custom model" or '
-                           '"accim predefined model" types.')
+            output_var_dict = {
+                'key_value': [i.Key_Value for i in self.building.idfobjects['Output:Variable']],
+                'variable_name': [i.Variable_Name for i in self.building.idfobjects['Output:Variable']],
+                'frequency': [i.Reporting_Frequency for i in self.building.idfobjects['Output:Variable']],
+                'schedule_name': [i.Schedule_Name for i in self.building.idfobjects['Output:Variable']],
+            }
+            output_variable_df = pd.DataFrame.from_dict(output_var_dict)
 
         return output_variable_df
+
+    def get_output_meter_df_from_idf(self):
+        """
+        Gets a pandas DataFrame which contains the Output:Meter objects from the idf.
+
+        :return:
+        """
+        output_meter_dict = {
+            'key_name': [i.Key_Name for i in self.building.idfobjects['Output:Meter']],
+            'frequency': [i.Reporting_Frequency for i in self.building.idfobjects['Output:Meter']],
+        }
+        output_meter_df = pd.DataFrame.from_dict(output_meter_dict)
+
+        return output_meter_df
 
     def set_output_var_df_to_idf(self, outputs_df: pd.DataFrame = None):
         """
@@ -147,8 +167,21 @@ class OptimParamSimulation:
                 # debugging=True
             )
         else:
-            raise KeyError('get_output_var_df_from_idf method is only available for "accim custom model" or '
-                           '"accim predefined model" types.')
+            alloutputs = [output for output in self.building.idfobjects['Output:Variable']]
+            for i in alloutputs:
+                self.building.removeidfobject(i)
+
+            for i in outputs_df.index:
+                self.building.newidfobject(
+                    'Output:Variable',
+                    Key_Value=outputs_df.loc[i, 'key_value'],
+                    Variable_Name=outputs_df.loc[i, 'variable_name'],
+                    Reporting_Frequency=outputs_df.loc[i, 'frequency'].capitalize(),
+                    Schedule_Name=outputs_df.loc[i, 'schedule_name']
+                )
+
+            # raise KeyError('get_output_var_df_from_idf method is only available for "accim custom model" or '
+            #                '"accim predefined model" types.')
 
 
     def set_output_met_objects_to_idf(self, output_meters):
@@ -298,6 +331,15 @@ class OptimParamSimulation:
                         )
 
         self.param_sim_outputs = objs_meters + objs_variables
+
+    def get_available_parameters(self):
+        if self.is_accim_predef_model:
+            available_params = [i for i in params_dicts.accim_predef_model_params.keys()]
+        elif self.is_accim_custom_model:
+            available_params = [i for i in params_dicts.accim_custom_model_params.keys()]
+        elif self.is_apmv_setpoints:
+            available_params = [i for i in params_dicts.apmv_setpoints_params.keys()]
+        return available_params
 
     def set_parameters(
             self,

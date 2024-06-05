@@ -21,10 +21,11 @@ from accim.utils import print_available_outputs_mod, modify_timesteps, set_occup
 import numpy as np
 
 import accim.sim.accis_single_idf_funcs as accis
-import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
+# import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
 
-import accim.parametric_and_optimisation.parameters_accis as params
+import accim.parametric_and_optimisation.parameters as params
 from accim.parametric_and_optimisation.main import OptimParamSimulation
+import accim.parametric_and_optimisation.objectives as obj
 
 # 1. check output data
 # 2. check input dataframe
@@ -34,7 +35,7 @@ from accim.parametric_and_optimisation.main import OptimParamSimulation
 
 
 #Arguments
-idf_path = 'TestModel.idf'
+idf_path = 'ALJARAFE CENTER_mod.idf'
 
 building = ef.get_building(idf_path)
 
@@ -42,11 +43,13 @@ accim.utils.set_occupancy_to_always(idf_object=building)
 
 test_class_instance = OptimParamSimulation(
     building=building,
-    parameters_type='accim predefined model'
+    parameters_type='apmv setpoints'
     # output_keep_existing=False,
     # debugging=True
 
 )
+
+
 
 # Setting the Output:Variable and Output:Meter objects in the idf
 #todo do not print on screen the process of accis, only the first time
@@ -54,19 +57,17 @@ df_output_variables_idf = test_class_instance.get_output_var_df_from_idf()
 
 df_output_variables_idf_mod = df_output_variables_idf.copy()
 
-[i for i in df_output_variables_idf['variable_name'] if 'Running Average Outdoor' in i]
 
 df_output_variables_idf_mod = df_output_variables_idf_mod[
     (
-        df_output_variables_idf_mod['variable_name'].str.contains('Setpoint Temperature_No Tolerance')
+        df_output_variables_idf_mod['variable_name'].str.contains('aPMV')
         |
         df_output_variables_idf_mod['variable_name'].str.contains('Zone Operative Temperature')
         |
-        df_output_variables_idf_mod['variable_name'].str.contains('Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature')
+        df_output_variables_idf_mod['variable_name'].str.contains('Comfortable Hours')
     )
 ]
 
-[i for i in building.idfobjects['energymanagementsystem:program'] if i.Name.lower() == 'setinputdata']
 
 test_class_instance.set_output_var_df_to_idf(outputs_df=df_output_variables_idf_mod)
 
@@ -90,23 +91,23 @@ meter_list = test_class_instance.parse_mtd_file()
 
 # To end with outputs, let's set the objective outputs (outputs for the Problem object), which are those displayed by BESOS in case of parametric_and_optimisation analysis, or used in case of optimisation
 
-def average_results(result):
-    return result.data["Value"].mean()
-def sum_results(result):
-    return result.data["Value"].sum()
+# def average_results(result):
+#     return result.data["Value"].mean()
+# def sum_results(result):
+#     return result.data["Value"].sum()
+#
+# def return_time_series(result):
+#     return result.data["Value"].to_list()
 
-def return_time_series(result):
-    return result.data["Value"].to_list()
-
-df_outputmeters_3 = df_outputmeters_2.copy()
+# df_outputmeters_3 = df_outputmeters_2.copy()
 df_outputvariables_3 = df_outputvariables_2.copy()
 
-df_outputvariables_3['func'] = return_time_series
-df_outputvariables_3 = df_outputvariables_3.drop(index=[2, 4])
+df_outputvariables_3['func'] = obj.return_time_series
+# df_outputvariables_3 = df_outputvariables_3.drop(index=[2, 4])
 df_outputvariables_3['name'] = df_outputvariables_3['variable_name'] + '_time series'
 
 test_class_instance.set_outputs_for_parametric_simulation(
-    df_output_meter=df_outputmeters_3,
+    df_output_meter=df_outputmeters_2,
     # df_output_variable=df_outputvariables_3,
     df_output_variable=df_outputvariables_3,
     # func=average_results
@@ -126,19 +127,13 @@ test_class_instance.set_outputs_for_parametric_simulation(
 # )
 
 
-# accis_parameters = {
-#     'CustAST_m': (0.01, 0.99),
-#     'CustAST_n': (5, 23),
-#     'CustAST_ASToffset': (2, 4),
-#     'CustAST_ASTall': (10, 15),
-#     'CustAST_ASTaul': (30, 35),
-# }
 
+##
+available_params = test_class_instance.get_available_parameters()
 
-accis_parameters = {
-    'ComfStand': [1, 2, 3],
-    'CAT': [1, 2, 3],
-    'ComfMod': [3],
+apmv_parameters = {
+    'Adaptive coefficient': (0.2, 0.6),
+    'PMV setpoint': (0.2, 0.7),
 }
 
 
@@ -146,7 +141,7 @@ accis_parameters = {
 # other_parameters = [wwr(RangeParameter(0.1, 0.9))]
 
 test_class_instance.set_parameters(
-    accis_params_dict=accis_parameters,
+    accis_params_dict=apmv_parameters,
     # additional_params=other_parameters
 )
 
@@ -160,9 +155,9 @@ temp_full_fac = test_class_instance.parameters_values_df
 test_class_instance.sampling_lhs(num_samples=3)
 temp_lhs = test_class_instance.parameters_values_df
 
-test_class_instance.sampling_full_set()
-temp_full_set = test_class_instance.parameters_values_df
-
+# test_class_instance.sampling_full_set()
+# temp_full_set = test_class_instance.parameters_values_df
+##
 #todo try to return series of pmot, acst, ahst and optemp and plot them in facetgrid
 outputs = test_class_instance.run_parametric_simulation(
     epws=[
@@ -170,13 +165,13 @@ outputs = test_class_instance.run_parametric_simulation(
         'Seville.epw'
     ],
     out_dir='WIP_testing predefined models',
-    df=temp_full_set,
+    df=temp_lhs,
     processes=6,
 )
 
 outputs = outputs.reset_index()
 
-outputs.to_excel('WIP_outputs_predef.xlsx')
+outputs.to_excel('WIP_outputs_param_apmv.xlsx')
 
 ##
 

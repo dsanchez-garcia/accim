@@ -1,64 +1,66 @@
-from accim.parametric_and_optimisation.funcs_for_besos import param_accis
+from accim.parametric_and_optimisation.funcs_for_besos import param_accis, param_apmv
+import accim.parametric_and_optimisation.params_dicts as params_dicts
+from accim.parametric_and_optimisation.utils import descriptor_has_options
 
 def accis_parameter(parameter_name, values):
-    #Checking value entered is a list containing floats or a tuple containing the minimum and maximum values
-    descriptor_has_options = False
-    if type(values) == tuple and len(values) == 2 and all([type(i) == float or type(i) == int for i in values]):
-        pass
-    elif type(values) == list and all(type(j) == float or type(j) == int for j in values):
-        descriptor_has_options = True
-    else:
-        raise ValueError('values argument must be, FOR ALL CASES, '
-                         'a list containing int or float, '
-                         'or a tuple which contains the minimum and maximum values for the range')
+    desc_has_options = descriptor_has_options(values)
 
-    functions_params = {
-        'ComfStand': param_accis.modify_ComfStand,
-        'CAT': param_accis.modify_CAT,
-        'CATcoolOffset': param_accis.modify_CATcoolOffset,
-        'CATheatOffset': param_accis.modify_CATheatOffset,
-        'ComfMod': param_accis.modify_ComfMod,
-        'SetpointAcc': param_accis.modify_SetpointAcc,
-        'CustAST_ACSTaul': param_accis.modify_CustAST_ACSTaul,
-        'CustAST_ACSTall': param_accis.modify_CustAST_ACSTall,
-        'CustAST_AHSTaul': param_accis.modify_CustAST_AHSTaul,
-        'CustAST_AHSTall': param_accis.modify_CustAST_AHSTall,
-        'CustAST_ASTaul': param_accis.modify_CustAST_ASTaul,
-        'CustAST_ASTall': param_accis.modify_CustAST_ASTall,
-        'CustAST_m': param_accis.modify_CustAST_m,
-        'CustAST_n': param_accis.modify_CustAST_n,
-        'CustAST_ACSToffset': param_accis.modify_CustAST_ACSToffset,
-        'CustAST_AHSToffset': param_accis.modify_CustAST_AHSToffset,
-        'CustAST_ASToffset': param_accis.modify_CustAST_ASToffset,
-        'CoolSeasonStart': param_accis.modify_CoolSeasonStart,
-        'CoolSeasonEnd': param_accis.modify_CoolSeasonEnd,
-        'HVACmode': param_accis.modify_HVACmode,
-        'VentCtrl': param_accis.modify_VentCtrl,
-        'MaxTempDiffVOF': param_accis.modify_MaxTempDiffVOF,
-        'MinTempDiffVOF': param_accis.modify_MinTempDiffVOF,
-        'MultiplierVOF': param_accis.modify_MultiplierVOF,
-        'VSToffset': param_accis.modify_VSToffset,
-        'MinOToffset': param_accis.modify_MinOToffset,
-        'MaxWindSpeed': param_accis.modify_MaxWindSpeed,
-        'ASTtol': param_accis.modify_ASTtol,
-    }
+    # all_params = {
+    #     # accim predefined models parameters
+    #     'ComfStand': param_accis.modify_ComfStand,
+    #     'CAT': param_accis.modify_CAT,
+    #     'CATcoolOffset': param_accis.modify_CATcoolOffset,
+    #     'CATheatOffset': param_accis.modify_CATheatOffset,
+    #     'ComfMod': param_accis.modify_ComfMod,
+    #     'SetpointAcc': param_accis.modify_SetpointAcc,
+    #     'CoolSeasonStart': param_accis.modify_CoolSeasonStart,
+    #     'CoolSeasonEnd': param_accis.modify_CoolSeasonEnd,
+    #     'HVACmode': param_accis.modify_HVACmode,
+    #     'VentCtrl': param_accis.modify_VentCtrl,
+    #     'MaxTempDiffVOF': param_accis.modify_MaxTempDiffVOF,
+    #     'MinTempDiffVOF': param_accis.modify_MinTempDiffVOF,
+    #     'MultiplierVOF': param_accis.modify_MultiplierVOF,
+    #     'VSToffset': param_accis.modify_VSToffset,
+    #     'MinOToffset': param_accis.modify_MinOToffset,
+    #     'MaxWindSpeed': param_accis.modify_MaxWindSpeed,
+    #     'ASTtol': param_accis.modify_ASTtol,
+    #     # accim custom models parameters
+    #     'CustAST_ACSTaul': param_accis.modify_CustAST_ACSTaul,
+    #     'CustAST_ACSTall': param_accis.modify_CustAST_ACSTall,
+    #     'CustAST_AHSTaul': param_accis.modify_CustAST_AHSTaul,
+    #     'CustAST_AHSTall': param_accis.modify_CustAST_AHSTall,
+    #     'CustAST_ASTaul': param_accis.modify_CustAST_ASTaul,
+    #     'CustAST_ASTall': param_accis.modify_CustAST_ASTall,
+    #     'CustAST_m': param_accis.modify_CustAST_m,
+    #     'CustAST_n': param_accis.modify_CustAST_n,
+    #     'CustAST_ACSToffset': param_accis.modify_CustAST_ACSToffset,
+    #     'CustAST_AHSToffset': param_accis.modify_CustAST_AHSToffset,
+    #     'CustAST_ASToffset': param_accis.modify_CustAST_ASToffset,
+    #     #apmv setpoints parameters
+    #     'Adaptive coefficient': param_apmv.change_adaptive_coeff_all_zones,
+    #     'Adaptive cooling coefficient': param_apmv.change_adaptive_coeff_cooling_all_zones,
+    #     'Adaptive heating coefficient': param_apmv.change_adaptive_coeff_heating_all_zones,
+    #     'PMV setpoint': param_apmv.change_pmv_setpoint_all_zones,
+    #     'PMV cooling setpoint': param_apmv.change_pmv_cooling_setpoint_all_zones,
+    #     'PMV heating setpoint': param_apmv.change_pmv_heating_setpoint_all_zones,
+    # }
 
 
-    if parameter_name.lower() not in [k.lower() for k in functions_params.keys()]:
+    if parameter_name.lower() not in [k.lower() for k in params_dicts.all_params.keys()]:
         raise KeyError(f'Parameter do not exist.'
-                       f'You need to chose one of the following list: {functions_params.keys()}')
+                       f'You need to chose one of the following list: {params_dicts.all_params.keys()}')
 
-    name = [i for i in functions_params.keys() if i.lower() == parameter_name.lower()][0]
+    name = [i for i in params_dicts.all_params.keys() if i.lower() == parameter_name.lower()][0]
 
     from besos.parameters import Parameter, GenericSelector, CategoryParameter, RangeParameter
     import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
     import numpy as np
 
-    if descriptor_has_options:
+    if desc_has_options:
         parameter = Parameter(
             name=name,
             # selector=GenericSelector(set=change_adaptive_coeff),
-            selector=GenericSelector(set=functions_params[name]),
+            selector=GenericSelector(set=params_dicts.all_params[name]),
             # value_descriptors=RangeParameter(name='CustAST_m', min_val=0, max_val=0.7),
             value_descriptors=CategoryParameter(
                 name=name,
@@ -69,7 +71,7 @@ def accis_parameter(parameter_name, values):
         parameter = Parameter(
             name=name,
             # selector=GenericSelector(set=change_adaptive_coeff),
-            selector=GenericSelector(set=functions_params[name]),
+            selector=GenericSelector(set=params_dicts.all_params[name]),
             # value_descriptors=RangeParameter(name='CustAST_m', min_val=0, max_val=0.7),
             value_descriptors=RangeParameter(
                 name=name,
@@ -80,6 +82,15 @@ def accis_parameter(parameter_name, values):
 
     return parameter[0]
 
+def get_available_params_accim_predef_models():
+    param_dict = [k for k in params_dicts.accim_predef_model_params.keys()]
+    return param_dict
+def get_available_params_accim_custom_models():
+    param_dict = [k for k in params_dicts.accim_custom_model_params.keys()]
+    return param_dict
+def get_available_params_apmv_setpoints():
+    param_dict = [k for k in params_dicts.apmv_setpoints_params.keys()]
+    return param_dict
 
 class Parameter:
     def __init__(self, parameter):

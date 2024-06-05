@@ -23,7 +23,7 @@ import numpy as np
 import accim.sim.accis_single_idf_funcs as accis
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
 
-import accim.parametric_and_optimisation.parameters_accis as params
+import accim.parametric_and_optimisation.parameters as params
 from accim.parametric_and_optimisation.main import OptimParamSimulation
 
 # 1. check output data
