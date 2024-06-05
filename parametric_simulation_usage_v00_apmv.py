@@ -128,7 +128,7 @@ test_class_instance.set_outputs_for_parametric_simulation(
 
 
 
-##
+
 available_params = test_class_instance.get_available_parameters()
 
 apmv_parameters = {
@@ -157,7 +157,7 @@ temp_lhs = test_class_instance.parameters_values_df
 
 # test_class_instance.sampling_full_set()
 # temp_full_set = test_class_instance.parameters_values_df
-##
+
 #todo try to return series of pmot, acst, ahst and optemp and plot them in facetgrid
 outputs = test_class_instance.run_parametric_simulation(
     epws=[
@@ -175,33 +175,50 @@ outputs.to_excel('WIP_outputs_param_apmv.xlsx')
 
 ##
 
-
+import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
 import seaborn as sns
 import ast
-rmot = [i for i in outputs.columns if 'Running' in i][0]
-optemp = [i for i in outputs.columns if 'Operative' in i][0]
-ahst = [i for i in outputs.columns if 'Adaptive Heating' in i][0]
-acst = [i for i in outputs.columns if 'Adaptive Cooling' in i][0]
 
-# sns.scatterplot(
-#     x=[float(i) for i in outputs.loc[1][rmot]],
-#     y=[float(i) for i in outputs.loc[1][optemp]]
-# )
+[i for i in outputs.columns]
+apmv = 'aPMV_PlantaX08_Office_time series'
+# values = outputs[apmv]
+
+length = len(ast.literal_eval(outputs.loc[0, apmv]))
+
+start_datetime = datetime(2023, 1, 1, 1, 0)
+dates = [start_datetime + timedelta(hours=i) for i in range(length)]
+
+# plt.figure(figsize=(10, 5))
+# plt.plot(df['DateTime'], df['Value'], marker='o')
+# plt.plot(dates, values)
+# plt.xlabel('DateTime')
+# plt.ylabel('Value')
+# plt.title('Time Series Plot')
+# plt.grid(True)
+# plt.xticks(rotation=45)
+# plt.tight_layout()
+# plt.show()
 
 fig, axs = plt.subplots(
     nrows=len(outputs),
     figsize=(10, 5)
 )
 for i in outputs.index:
-    for c in [optemp, acst, ahst]:
-        x = ast.literal_eval(outputs.loc[0, rmot])
-        y = ast.literal_eval(outputs.loc[0, c])
+    for c in [apmv]:
+        x = dates
+        y = ast.literal_eval(outputs.loc[i, c])
 
-        sns.scatterplot(
+        sns.lineplot(
             x=x,
             y=y,
             ax=axs[i]
         )
+
+
+##
+
 
 
 

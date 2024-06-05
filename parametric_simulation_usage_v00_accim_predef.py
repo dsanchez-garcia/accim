@@ -199,8 +199,8 @@ fig, axs = plt.subplots(
 )
 for i in outputs.index:
     for c in [optemp, acst, ahst]:
-        x = ast.literal_eval(outputs.loc[0, rmot])
-        y = ast.literal_eval(outputs.loc[0, c])
+        x = ast.literal_eval(outputs.loc[i, rmot])
+        y = ast.literal_eval(outputs.loc[i, c])
 
         sns.scatterplot(
             x=x,
