@@ -50,7 +50,6 @@ test_class_instance = OptimParamSimulation(
 )
 
 # Setting the Output:Variable and Output:Meter objects in the idf
-#todo do not print on screen the process of accis, only the first time
 df_output_variables_idf = test_class_instance.get_output_var_df_from_idf()
 
 df_output_variables_idf_mod = df_output_variables_idf.copy()
@@ -115,7 +114,6 @@ test_class_instance.set_outputs_for_simulation(
 
 # At this point, the outputs of each energyplus simulation has been set. So, next step is setting parameters
 
-#todo make 3 different types: predefined_accis, custom_accis and apmv_setpoints
 
 # accis.modifyAccis(
 #     idf=building,
@@ -164,7 +162,6 @@ test_class_instance.set_problem()
 test_class_instance.sampling_full_set()
 temp_full_set = test_class_instance.parameters_values_df
 
-#todo try to return series of pmot, acst, ahst and optemp and plot them in facetgrid
 outputs = test_class_instance.run_parametric_simulation(
     epws=[
         'Sydney.epw',
@@ -272,77 +269,6 @@ from datetime import datetime, timedelta
 
 ##
 
-import pandas as pd
-import ast
-from datetime import datetime, timedelta
-
-
-def expand_to_hourly_dataframe(
-        df,
-        parameter_columns,
-        start_date='2024-01-01 01',
-        hourly_columns: list = None
-):
-    """
-    Expands a dataframe with hourly data columns into an hourly dataframe.
-
-    Parameters:
-    df (pd.DataFrame): The input dataframe containing parameters and hourly data columns.
-    parameter_columns (list): The list of column names that contain input parameters.
-    start_date (str): The start date and time in the format 'YYYY-MM-DD HH'.
-
-    Returns:
-    pd.DataFrame: The expanded dataframe with an additional datetime column.
-    """
-
-    # Identify columns with hourly data
-    if hourly_columns is None:
-        hourly_columns = [col for col in df.columns if df[col].apply(lambda x: isinstance(x, str) and x.startswith('[') and x.endswith(']')).all()]
-
-    # Keep only parameter columns and hourly columns
-    df = df[parameter_columns + hourly_columns]
-
-    # Convert string representations of lists into actual lists
-    for col in hourly_columns:
-        df[col] = df[col].apply(ast.literal_eval)
-
-    # Convert start_date to datetime object
-    start_datetime = datetime.strptime(start_date, '%Y-%m-%d %H')
-
-    # Function to expand the dataframe for hourly data
-    def expand_hourly_data(row):
-        num_hours = len(row[hourly_columns[0]])
-        expanded_rows = {col: [row[col]] * num_hours for col in parameter_columns}
-        expanded_rows['hour'] = list(range(1, num_hours + 1))
-        expanded_rows['datetime'] = [start_datetime + timedelta(hours=i) for i in range(num_hours)]
-        for col in hourly_columns:
-            expanded_rows[col] = row[col]
-        return pd.DataFrame(expanded_rows)
-
-    # Apply the function to each row and concatenate the results
-    expanded_df = pd.concat(df.apply(expand_hourly_data, axis=1).to_list(), ignore_index=True)
-
-    return expanded_df
-
-
-# Example usage
-# data = {
-#     'param1': [1, 2],
-#     'param2': ['A', 'B'],
-#     'hourly_data1': ['[1, 2, 3]', '[4, 5, 6]'],
-#     'hourly_data2': ['[7, 8, 9]', '[10, 11, 12]'],
-#     'other_col': [100, 200]
-# }
-#
-# df = pd.DataFrame(data)
-# parameter_columns = ['param1', 'param2']
-# start_date = '2023-01-01 00'
-#
-# expanded_df = expand_to_hourly_dataframe(df, parameter_columns, start_date)
-# print(expanded_df)
-
-parameter_columns = ['ComfStand', 'CAT', 'ComfMod']
-expanded_df_2 = expand_to_hourly_dataframe(outputs, parameter_columns)
 
 
 ##
