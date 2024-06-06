@@ -1,30 +1,6 @@
-import os
-import re
-
-import accim
-
-import pandas as pd
-import warnings
-from besos import eppy_funcs as ef, sampling
-from besos.evaluator import EvaluatorEP
-from besos.optimizer import NSGAII, df_solution_to_solutions
-from besos.parameters import RangeParameter, expand_plist, wwr, FieldSelector, Parameter, GenericSelector, \
-    CategoryParameter
-from besos.problem import EPProblem
-from besos.eplus_funcs import get_idf_version, run_building
-from matplotlib import pyplot as plt
-from platypus import Archive, Hypervolume, Solution
-from besos.eplus_funcs import print_available_outputs
-from besos.objectives import VariableReader, MeterReader
-
-from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always, remove_accents_in_idf
-import numpy as np
-
-import accim.sim.accis_single_idf_funcs as accis
-# import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
-
-import accim.parametric_and_optimisation.parameters as params
-from accim.parametric_and_optimisation.main import OptimParamSimulation
+from besos import eppy_funcs as ef
+from accim.utils import set_occupancy_to_always
+from accim.parametric_and_optimisation.main import OptimParamSimulation, get_mdd_file_as_df, get_rdd_file_as_df, parse_mtd_file
 import accim.parametric_and_optimisation.objectives as obj
 
 # 1. check output data
@@ -39,7 +15,7 @@ idf_path = 'ALJARAFE CENTER_mod.idf'
 
 building = ef.get_building(idf_path)
 
-accim.utils.set_occupancy_to_always(idf_object=building)
+set_occupancy_to_always(idf_object=building)
 
 test_class_instance = OptimParamSimulation(
     building=building,

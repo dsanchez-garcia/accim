@@ -331,7 +331,7 @@ class OptimParamSimulation:
         available_outputs = print_available_outputs_mod(self.building)
         df_outputmeters = pd.DataFrame(
             available_outputs.meterreaderlist,
-            columns=['meter_name', 'frequency']
+            columns=['key_name', 'frequency']
         )
         df_outputvariables = pd.DataFrame(
             available_outputs.variablereaderlist,
@@ -369,7 +369,7 @@ class OptimParamSimulation:
             if 'name' in df_output_meter.columns:
                 df_output_meter['output_name'] = df_output_meter['name']
             else:
-                df_output_meter['output_name'] = df_output_meter['meter_name']
+                df_output_meter['output_name'] = df_output_meter['key_name']
 
         objs_meters = []
         if df_output_meter is not None:
@@ -377,7 +377,7 @@ class OptimParamSimulation:
                 if 'func' in [c for c in df_output_meter.columns]:
                     objs_meters.append(
                             MeterReader(
-                                key_name=df_output_meter.loc[i, 'meter_name'],
+                                key_name=df_output_meter.loc[i, 'key_name'],
                                 frequency=df_output_meter.loc[i, 'frequency'],
                                 name=df_output_meter.loc[i, 'output_name'],
                                 func=df_output_meter.loc[i, 'func'],
@@ -386,7 +386,7 @@ class OptimParamSimulation:
                 else:
                     objs_meters.append(
                         MeterReader(
-                            key_name=df_output_meter.loc[i, 'meter_name'],
+                            key_name=df_output_meter.loc[i, 'key_name'],
                             frequency=df_output_meter.loc[i, 'frequency'],
                             name=df_output_meter.loc[i, 'output_name'],
                         )
