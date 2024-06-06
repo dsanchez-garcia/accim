@@ -156,28 +156,28 @@ def addAccis(
         'pmv'
     ]
 
-
-    print(
-        '\n--------------------------------------------------------'
-        f'\nAdaptive-Comfort-Control-Implemented Model (ACCIM) v{__version__}'
-        '\n--------------------------------------------------------'
-        '\n\nThis tool allows to apply adaptive setpoint temperatures. '
-        '\nFor further information, please read the documentation: '
-        '\nhttps://accim.readthedocs.io/en/master/'
-        '\nFor a visual understanding of the tool, please visit the following jupyter notebooks:'
-        '\n-    Using addAccis() to apply adaptive setpoint temperatures'
-        '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/addAccis/using_addAccis.html'
-        '\n-    Using rename_epw_files() to rename the EPWs for proper data analysis after simulation'
-        '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/rename_epw_files/using_rename_epw_files.html'
-        '\n-    Using runEp() to directly run simulations with EnergyPlus'
-        '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/runEp/using_runEp.html'
-        '\n-    Using the class Table() for data analysis'
-        '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/Table/using_Table.html'
-        '\n-    Full example'
-        '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/full_example/full_example.html'
-        '\n'
-        '\nStarting with the process.'
-    )
+    if verboseMode:
+        print(
+            '\n--------------------------------------------------------'
+            f'\nAdaptive-Comfort-Control-Implemented Model (ACCIM) v{__version__}'
+            '\n--------------------------------------------------------'
+            '\n\nThis tool allows to apply adaptive setpoint temperatures. '
+            '\nFor further information, please read the documentation: '
+            '\nhttps://accim.readthedocs.io/en/master/'
+            '\nFor a visual understanding of the tool, please visit the following jupyter notebooks:'
+            '\n-    Using addAccis() to apply adaptive setpoint temperatures'
+            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/addAccis/using_addAccis.html'
+            '\n-    Using rename_epw_files() to rename the EPWs for proper data analysis after simulation'
+            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/rename_epw_files/using_rename_epw_files.html'
+            '\n-    Using runEp() to directly run simulations with EnergyPlus'
+            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/runEp/using_runEp.html'
+            '\n-    Using the class Table() for data analysis'
+            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/Table/using_Table.html'
+            '\n-    Full example'
+            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/full_example/full_example.html'
+            '\n'
+            '\nStarting with the process.'
+        )
 
 
 

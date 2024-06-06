@@ -24,7 +24,7 @@ import accim.sim.accis_single_idf_funcs as accis
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
 
 import accim.parametric_and_optimisation.parameters as params
-from accim.parametric_and_optimisation.main import OptimParamSimulation
+from accim.parametric_and_optimisation.main import OptimParamSimulation, get_rdd_file_as_df, get_mdd_file_as_df, parse_mtd_file
 
 # 1. check output data
 # 2. check input dataframe
@@ -40,7 +40,6 @@ building = ef.get_building(idf_path)
 
 accim.utils.set_occupancy_to_always(idf_object=building)
 
-new_test = OptimParamSimulation()
 
 test_class_instance = OptimParamSimulation(
     building=building,
@@ -176,9 +175,10 @@ outputs = test_class_instance.run_parametric_simulation(
     processes=6,
 )
 
-outputs = outputs.reset_index()
+test_class_instance.get_hourly_df()
+# outputs = outputs.reset_index()
 
-outputs.to_excel('WIP_outputs.xlsx')
+# outputs.to_excel('WIP_outputs.xlsx')
 
 ##
 
@@ -215,8 +215,134 @@ for i in outputs.index:
 
 ##
 
+df = test_class_instance.outputs_param_simulation_hourly.copy()
+set(df['epw'])
+rmot = [i for i in df.columns if 'Running Average' in i][0]
+optemp = [i for i in df.columns if 'Zone Operative Temperature' in i][0]
+
+for c in df.columns:
+    if len(set(df[c])) == 1:
+        df = df.drop(columns=[c])
+df = df.drop(columns=['hour', 'datetime'])
+
+df = df.melt(id_vars=['CAT', 'epw', rmot])
+
+
+##
+import seaborn as sns
+
+g = sns.FacetGrid(
+    data=df,
+    row='CAT',
+    col='epw'
+)
+g.map_dataframe(
+    sns.scatterplot,
+    x=rmot,
+    y='value',
+    hue='variable',
+    s=1,
+    alpha=0.5
+)
+g.set_axis_labels('RMOT (°C)', 'Indoor Operative Temperature (°C)')
+g.add_legend()
+
+for lh in g._legend.legend_handles:
+    lh.set_markersize(5)
+
+# handles, lables = g.get_legend_handles_labels()
+# for h in handles:
+#     h.set_markersize(10)
+
+# plt.legend(
+#     # loc=[1.01,1.01],
+#     prop={'size': 13},
+#     markerscale=2
+# )
+
+
+
+
 ##
 
+import pandas as pd
+import ast
+from datetime import datetime, timedelta
+
+
+##
+
+import pandas as pd
+import ast
+from datetime import datetime, timedelta
+
+
+def expand_to_hourly_dataframe(
+        df,
+        parameter_columns,
+        start_date='2024-01-01 01',
+        hourly_columns: list = None
+):
+    """
+    Expands a dataframe with hourly data columns into an hourly dataframe.
+
+    Parameters:
+    df (pd.DataFrame): The input dataframe containing parameters and hourly data columns.
+    parameter_columns (list): The list of column names that contain input parameters.
+    start_date (str): The start date and time in the format 'YYYY-MM-DD HH'.
+
+    Returns:
+    pd.DataFrame: The expanded dataframe with an additional datetime column.
+    """
+
+    # Identify columns with hourly data
+    if hourly_columns is None:
+        hourly_columns = [col for col in df.columns if df[col].apply(lambda x: isinstance(x, str) and x.startswith('[') and x.endswith(']')).all()]
+
+    # Keep only parameter columns and hourly columns
+    df = df[parameter_columns + hourly_columns]
+
+    # Convert string representations of lists into actual lists
+    for col in hourly_columns:
+        df[col] = df[col].apply(ast.literal_eval)
+
+    # Convert start_date to datetime object
+    start_datetime = datetime.strptime(start_date, '%Y-%m-%d %H')
+
+    # Function to expand the dataframe for hourly data
+    def expand_hourly_data(row):
+        num_hours = len(row[hourly_columns[0]])
+        expanded_rows = {col: [row[col]] * num_hours for col in parameter_columns}
+        expanded_rows['hour'] = list(range(1, num_hours + 1))
+        expanded_rows['datetime'] = [start_datetime + timedelta(hours=i) for i in range(num_hours)]
+        for col in hourly_columns:
+            expanded_rows[col] = row[col]
+        return pd.DataFrame(expanded_rows)
+
+    # Apply the function to each row and concatenate the results
+    expanded_df = pd.concat(df.apply(expand_hourly_data, axis=1).to_list(), ignore_index=True)
+
+    return expanded_df
+
+
+# Example usage
+# data = {
+#     'param1': [1, 2],
+#     'param2': ['A', 'B'],
+#     'hourly_data1': ['[1, 2, 3]', '[4, 5, 6]'],
+#     'hourly_data2': ['[7, 8, 9]', '[10, 11, 12]'],
+#     'other_col': [100, 200]
+# }
+#
+# df = pd.DataFrame(data)
+# parameter_columns = ['param1', 'param2']
+# start_date = '2023-01-01 00'
+#
+# expanded_df = expand_to_hourly_dataframe(df, parameter_columns, start_date)
+# print(expanded_df)
+
+parameter_columns = ['ComfStand', 'CAT', 'ComfMod']
+expanded_df_2 = expand_to_hourly_dataframe(outputs, parameter_columns)
 
 
 ##

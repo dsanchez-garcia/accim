@@ -241,7 +241,8 @@ def addCurveObj(self, verboseMode: bool = True):
             print("VRFCoolCapFTBoundary Curve:Cubic Object has been added")
 
     if 'VRFCoolEIRFTBoundary' in [i.Name for i in self.idf1.idfobjects['Curve:Cubic']]:
-        print('VRFCoolEIRFTBoundary Curve:Cubic Object already was in the model')
+        if verboseMode:
+            print('VRFCoolEIRFTBoundary Curve:Cubic Object already was in the model')
     else:
         self.idf1.newidfobject(
             'Curve:Cubic',

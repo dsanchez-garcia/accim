@@ -22,6 +22,7 @@ from besos.objectives import VariableReader, MeterReader
 from besos import IDF_class
 
 from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always, remove_accents_in_idf
+from accim.parametric_and_optimisation.utils import expand_to_hourly_dataframe, identify_hourly_columns
 import numpy as np
 
 import accim.sim.accis_single_idf_funcs as accis
@@ -31,6 +32,7 @@ import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf_accim
 import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
 import accim.parametric_and_optimisation.parameters as params
 import accim.parametric_and_optimisation.params_dicts as params_dicts
+
 
 # 1. check output data
 # 2. check input dataframe
@@ -50,7 +52,8 @@ def get_rdd_file_as_df():
         filepath_or_buffer='available_outputs/eplusout.rdd',
         sep=',|;',
         skiprows=2,
-        names=['object', 'key_value', 'variable_name', 'frequency', 'units']
+        names=['object', 'key_value', 'variable_name', 'frequency', 'units'],
+        engine='python'
     )
     return rdd_df
 
@@ -106,7 +109,8 @@ def get_mdd_file_as_df():
         filepath_or_buffer='available_outputs/eplusout.mdd',
         sep=',|;',
         skiprows=2,
-        names=['object', 'meter_name', 'frequency', 'units']
+        names=['object', 'meter_name', 'frequency', 'units'],
+        engine='python'
     )
     return mdd_df
 
@@ -122,6 +126,7 @@ class OptimParamSimulation:
             ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
             SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
             debugging: bool = False,
+            verbosemode: bool = True,
     ):
         """
         Creates a class instance to run parametric simulations and optimisation.
@@ -195,7 +200,8 @@ class OptimParamSimulation:
                 TempCtrl=temp_ctrl,
                 # Output_gen_dataframe=True,
                 # make_averages=True,
-                debugging=debugging
+                debugging=debugging,
+                verboseMode=verbosemode
             )
         elif is_apmv_setpoints:
             apmv.apply_apmv_setpoints(building=building, outputs_freq=output_freqs)
@@ -227,6 +233,7 @@ class OptimParamSimulation:
                 Output_type=self.output_type,
                 Output_freqs=self.output_freqs,
                 TempCtrl=self.temp_ctrl,
+                verboseMode=False,
             )
         else:
             output_var_dict = {
@@ -277,7 +284,8 @@ class OptimParamSimulation:
                 TempCtrl=self.temp_ctrl,
                 # Output_gen_dataframe=True,
                 # make_averages=True,
-                # debugging=True
+                # debugging=True,
+                verboseMode=False,
             )
         else:
             alloutputs = [output for output in self.building.idfobjects['Output:Variable']]
@@ -513,6 +521,7 @@ class OptimParamSimulation:
             minimize_outputs: list = None,
             constraints: list = None,
             constraint_bounds: list = None,
+            **kwargs
     ):
         """
         Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters
@@ -536,7 +545,8 @@ class OptimParamSimulation:
             outputs=self.sim_outputs,
             minimize_outputs=minimize_outputs,
             constraints=constraints,
-            constraint_bounds=constraint_bounds
+            constraint_bounds=constraint_bounds,
+            **kwargs
         )
         self.problem = problem
 
@@ -666,8 +676,13 @@ class OptimParamSimulation:
             )
             outputs['epw'] = epwname
             outputs_dict.update({epwname: outputs})
-        all_outputs = pd.concat([df for df in outputs_dict.values()])
-        return all_outputs
+
+        outputs_param_simulation = pd.concat([df for df in outputs_dict.values()])
+        if len(epws) > 1:
+            outputs_param_simulation = outputs_param_simulation.reset_index()
+
+        self.outputs_param_simulation = outputs_param_simulation
+        # return outputs_param_simulation
 
     def run_optimisation(
             self,
@@ -676,6 +691,7 @@ class OptimParamSimulation:
             evaluations: int,
             population_size: int,
             algorithm: str = 'NSGAII',
+            **kwargs
     ) -> pd.DataFrame:
         """
         Runs the optimisation using
@@ -710,43 +726,57 @@ class OptimParamSimulation:
             'PESA2',
             'EpsNSGAII',
         ]
-        # results = NSGAII(evaluator, evaluations=evaluations, population_size=population_size)
+        # outputs_optimisation = NSGAII(evaluator, evaluations=evaluations, population_size=population_size)
         if algorithm == 'GeneticAlgorithm':
-            results = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'EvolutionaryStrategy':
-            results = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'NSGAII':
-            results = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'EpsMOEA':
-            results = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'GDE3':
-            results = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'SPEA2':
-            results = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'MOEAD':
-            results = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'NSGAIII':
-            results = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'ParticleSwarm':
-            results = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'OMOPSO':
-            results = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'SMPSO':
-            results = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'CMAES':
-            results = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'IBEA':
-            results = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'PAES':
-            results = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'PESA2':
-            results = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         elif algorithm == 'EpsNSGAII':
-            results = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size)
+            outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
         else:
             raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
 
-        return results
+        self.outputs_optimisation = outputs_optimisation
+        # return outputs_optimisation
+
+    def get_hourly_df(self):
+        """
+        Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame
+        named outputs_param_simulation_hourly.
+
+        """
+        parameter_columns = [i.name for i in self.parameters_list]
+        parameter_columns.append('epw')
+        self.outputs_hourly_columns = identify_hourly_columns(self.outputs_param_simulation)
+        self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(self.outputs_param_simulation, parameter_columns)
+
+
 
 class AccimPredefModelsParamSim(OptimParamSimulation):
     def __init__(

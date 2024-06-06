@@ -49,7 +49,6 @@ test_class_instance = OptimParamSimulation(
 )
 
 # Setting the Output:Variable and Output:Meter objects in the idf
-#todo do not print on screen the process of accis, only the first time
 df_output_variables_idf = test_class_instance.get_output_var_df_from_idf()
 
 df_output_variables_idf_mod = df_output_variables_idf.copy()
@@ -112,7 +111,6 @@ test_class_instance.set_outputs_for_simulation(
 
 # At this point, the outputs of each energyplus simulation has been set. So, next step is setting parameters
 
-#todo make 3 different types: predefined_accis, custom_accis and apmv_setpoints
 
 # accis.modifyAccis(
 #     idf=building,

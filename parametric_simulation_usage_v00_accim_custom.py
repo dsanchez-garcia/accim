@@ -24,7 +24,7 @@ import accim.sim.accis_single_idf_funcs as accis
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
 
 import accim.parametric_and_optimisation.parameters as params
-from accim.parametric_and_optimisation.main import OptimParamSimulation
+from accim.parametric_and_optimisation.main import OptimParamSimulation, get_mdd_file_as_df, get_rdd_file_as_df, parse_mtd_file
 
 # 1. check output data
 # 2. check input dataframe
@@ -86,7 +86,7 @@ df_outputmeters_2, df_outputvariables_2 = test_class_instance.get_outputs_df_fro
 df_rdd = get_rdd_file_as_df()
 df_mdd = get_mdd_file_as_df()
 meter_list = parse_mtd_file()
-
+##
 
 # To end with outputs, let's set the objective outputs (outputs for the Problem object), which are those displayed by BESOS in case of parametric_and_optimisation analysis, or used in case of optimisation
 
