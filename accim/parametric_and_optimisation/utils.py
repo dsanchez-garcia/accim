@@ -76,3 +76,15 @@ def identify_hourly_columns(df):
         df[col].apply(lambda x: isinstance(x, str) and x.startswith('[') and x.endswith(']')).all()
     ]
     return hourly_columns
+
+def make_all_combinations(parameters_values_dict: dict) -> pd.DataFrame:
+    """
+    Takes all values from all the parameters and return a pandas DataFrame with all possible combinations.
+
+    :param parameters_values_dict: a dictionary in the format {'parameter name': list_of_values}
+    :return: a pandas DataFrame with all possible combinations
+    """
+    from itertools import product
+    combinations = list(product(*parameters_values_dict.values()))
+    parameters_values_df = pd.DataFrame(combinations, columns=parameters_values_dict.keys())
+    return parameters_values_df

@@ -555,15 +555,17 @@ class OptimParamSimulation:
         Combines all values from all parameters and saves it into a pandas DataFrame, stored in an internal variable
         named parameters_values_df.
         """
+        from accim.parametric_and_optimisation.utils import make_all_combinations
         if self.descriptors_has_options:
             num_samples = 1
             parameters_values = {}
             for p in self.parameters_list:
                 num_samples = num_samples * len(p.value_descriptors[0].options)
                 parameters_values.update({p.value_descriptors[0].name: p.value_descriptors[0].options})
-            from itertools import product
-            combinations = list(product(*parameters_values.values()))
-            parameters_values_df = pd.DataFrame(combinations, columns=parameters_values.keys())
+            # from itertools import product
+            # combinations = list(product(*parameters_values.values()))
+            # parameters_values_df = pd.DataFrame(combinations, columns=parameters_values.keys())
+            parameters_values_df = make_all_combinations(parameters_values)
         else:
             raise KeyError('sampling_full_set method can only be used with option (i.e. category) descriptors.')
 
@@ -765,18 +767,27 @@ class OptimParamSimulation:
         self.outputs_optimisation = outputs_optimisation
         # return outputs_optimisation
 
-    def get_hourly_df(self):
+    def get_hourly_df(self, start_date: str = '2024-01-01 01'):
         """
-        Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame
-        named outputs_param_simulation_hourly.
+        Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame, saved in the
+         internal variable named outputs_param_simulation_hourly.
 
+        :param start_date: the start date for the simulation results, in format 'YYY-MM-DD HH'
         """
         parameter_columns = [i.name for i in self.parameters_list]
         parameter_columns.append('epw')
+        self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(
+            df=self.outputs_param_simulation,
+            parameter_columns=parameter_columns,
+            start_date=start_date
+        )
+
+    def get_hourly_df_columns(self):
+        """
+        Identifies the columns which contain hourly values, and save the names in a list, saved in the
+        internal variable named outputs_hourly_columns
+        """
         self.outputs_hourly_columns = identify_hourly_columns(self.outputs_param_simulation)
-        self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(self.outputs_param_simulation, parameter_columns)
-
-
 
 class AccimPredefModelsParamSim(OptimParamSimulation):
     def __init__(

@@ -125,7 +125,7 @@ parametric.set_parameters(
     accis_params_dict=accis_parameters,
     # additional_params=other_parameters
 )
-##
+
 # Let's set the problem
 parametric.set_problem()
 
@@ -139,7 +139,7 @@ parametric.set_problem()
 parametric.sampling_full_set()
 temp_full_set = parametric.parameters_values_df
 
-outputs = parametric.run_parametric_simulation(
+parametric.run_parametric_simulation(
     epws=[
         'Sydney.epw',
         'Seville.epw'
@@ -154,6 +154,7 @@ parametric.get_hourly_df()
 
 # outputs.to_excel('WIP_outputs.xlsx')
 
+[i.name for i in parametric.sim_outputs]
 ##
 
 
@@ -189,17 +190,21 @@ for i in outputs.index:
 
 ##
 
+#Let's make a copy of the dataframe to not to modify the original one
 df = parametric.outputs_param_simulation_hourly.copy()
-set(df['epw'])
-rmot = [i for i in df.columns if 'Running Average' in i][0]
-optemp = [i for i in df.columns if 'Zone Operative Temperature' in i][0]
 
+# The name of the column for the Running mean outdoor temperature is very long, so let's save it in the variable rmot:
+rmot = [i for i in df.columns if 'Running Average' in i][0]
+
+#Let's remove the columns where value is the same for all rows
 for c in df.columns:
     if len(set(df[c])) == 1:
         df = df.drop(columns=[c])
-df = df.drop(columns=['hour', 'datetime'])
+#Now let's remove the hour and datetime columns, since will
+df = df.drop(columns=['hour'])
 
-df = df.melt(id_vars=['CAT', 'epw', rmot])
+# Now let's reshape the df for plotting purposes
+df = df.melt(id_vars=['datetime', 'CAT', 'epw', rmot])
 
 
 ##
@@ -219,7 +224,7 @@ g.map_dataframe(
     alpha=0.5
 )
 g.set_axis_labels('RMOT (°C)', 'Indoor Operative Temperature (°C)')
-g.add_legend()
+g.add_legend(loc='lower center')
 
 for lh in g._legend.legend_handles:
     lh.set_markersize(5)
@@ -234,7 +239,30 @@ for lh in g._legend.legend_handles:
 #     markerscale=2
 # )
 
+plt.tight_layout()
 
+
+##
+import seaborn as sns
+g = sns.FacetGrid(
+    data=df,
+    row='CAT',
+    col='epw'
+)
+g.map_dataframe(
+    sns.lineplot,
+    x='datetime',
+    y='value',
+    hue='variable',
+    # s=1,
+    # alpha=0.5
+)
+g.set_axis_labels('RMOT (°C)', 'Indoor Operative Temperature (°C)')
+g.add_legend(loc='lower center')
+plt.tight_layout()
+
+# for lh in g._legend.legend_handles:
+#     lh.set_markersize(5)
 
 
 ##

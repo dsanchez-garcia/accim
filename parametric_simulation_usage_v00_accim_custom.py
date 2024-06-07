@@ -40,7 +40,7 @@ building = ef.get_building(idf_path)
 
 accim.utils.set_occupancy_to_always(idf_object=building)
 
-test_class_instance = OptimParamSimulation(
+parametric = OptimParamSimulation(
     building=building,
     parameters_type='accim custom model'
     # output_keep_existing=False,
@@ -50,7 +50,7 @@ test_class_instance = OptimParamSimulation(
 
 # Setting the Output:Variable and Output:Meter objects in the idf
 #todo do not print on screen the process of accis, only the first time
-df_output_variables_idf = test_class_instance.get_output_var_df_from_idf()
+df_output_variables_idf = parametric.get_output_var_df_from_idf()
 
 df_output_variables_idf_mod = df_output_variables_idf.copy()
 
@@ -68,7 +68,7 @@ df_output_variables_idf_mod = df_output_variables_idf_mod[
 
 [i for i in building.idfobjects['energymanagementsystem:program'] if i.Name.lower() == 'setinputdata']
 
-test_class_instance.set_output_var_df_to_idf(outputs_df=df_output_variables_idf_mod)
+parametric.set_output_var_df_to_idf(outputs_df=df_output_variables_idf_mod)
 
 output_meters = [
     # 'HeatingCoils:EnergyTransfer',
@@ -77,10 +77,10 @@ output_meters = [
     'Cooling:Electricity',
     'Electricity:HVAC',
 ]
-test_class_instance.set_output_met_objects_to_idf(output_meters=output_meters)
+parametric.set_output_met_objects_to_idf(output_meters=output_meters)
 
 # Checking the Output:Meter and Output:Variable objects in the simulation
-df_outputmeters_2, df_outputvariables_2 = test_class_instance.get_outputs_df_from_testsim()
+df_outputmeters_2, df_outputvariables_2 = parametric.get_outputs_df_from_testsim()
 
 #Other variables could be reported. These can be read in the rdd, mdd and mtd files
 df_rdd = get_rdd_file_as_df()
@@ -105,7 +105,7 @@ df_outputvariables_3['func'] = return_time_series
 df_outputvariables_3 = df_outputvariables_3.drop(index=[2, 4])
 df_outputvariables_3['name'] = df_outputvariables_3['variable_name'] + '_time series'
 
-test_class_instance.set_outputs_for_simulation(
+parametric.set_outputs_for_simulation(
     df_output_meter=df_outputmeters_3,
     # df_output_variable=df_outputvariables_3,
     df_output_variable=df_outputvariables_3,
@@ -145,33 +145,64 @@ accis_parameters = {
 # from besos.parameters import wwr, RangeParameter
 # other_parameters = [wwr(RangeParameter(0.1, 0.9))]
 
-test_class_instance.set_parameters(
+parametric.set_parameters(
     accis_params_dict=accis_parameters,
     # additional_params=other_parameters
 )
 
+##
+param_dict = {
+    'CustAST_m': [0.1, 0.6],
+    'CustAST_n': [22, 8],
+    'CustAST_ASToffset': [2.5, 4],
+    'CustAST_ASTall': [10, 10],
+    'CustAST_ASTaul': [35, 35],
+}
+from accim.parametric_and_optimisation.utils import make_all_combinations
+all_combinations = make_all_combinations(param_dict)
 
+##
 
 [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setinputdata']
 [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setvofinputdata']
 [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'applycat']
 
+##
+set_input_data = [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setinputdata'][0]
+set_vof_input_data = [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setvofinputdata'][0]
+applycat = [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'applycat'][0]
+setast = [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setast'][0]
+setapplimits = [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setapplimits'][0]
+other_args = {'SetpointAcc': setast.Program_Line_1}
+cust_ast_args = {
+    'ACSToffset': applycat.Program_Line_4,
+    'AHSToffset': applycat.Program_Line_5,
+    'm': setast.Program_Line_2,
+    'n': setast.Program_Line_3,
+    'ACSTaul': setapplimits.Program_Line_2,
+    'ACSTall': setapplimits.Program_Line_3,
+    'AHSTaul': setapplimits.Program_Line_4,
+    'AHSTall': setapplimits.Program_Line_5,
+}
 
+# building.savecopy('TestModel_mod.idf')
+
+##
 # Let's set the problem
-test_class_instance.set_problem()
+parametric.set_problem()
 
 # Let's generate a sampling dataframe
-test_class_instance.sampling_full_factorial(level=5)
-temp_full_fac = test_class_instance.parameters_values_df
+parametric.sampling_full_factorial(level=5)
+temp_full_fac = parametric.parameters_values_df
 
-test_class_instance.sampling_lhs(num_samples=3)
-temp_lhs = test_class_instance.parameters_values_df
+parametric.sampling_lhs(num_samples=3)
+temp_lhs = parametric.parameters_values_df
 
-# test_class_instance.sampling_full_set()
-# temp_full_set = test_class_instance.parameters_values_df
+# parametric.sampling_full_set()
+# temp_full_set = parametric.parameters_values_df
 
 #todo try to return series of pmot, acst, ahst and optemp and plot them in facetgrid
-outputs = test_class_instance.run_parametric_simulation(
+outputs = parametric.run_parametric_simulation(
     epws=[
         'Sydney.epw',
         'Seville.epw'
