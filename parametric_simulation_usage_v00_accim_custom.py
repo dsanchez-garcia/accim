@@ -78,7 +78,7 @@ output_meters = [
     'Electricity:HVAC',
 ]
 parametric.set_output_met_objects_to_idf(output_meters=output_meters)
-
+##
 # Checking the Output:Meter and Output:Variable objects in the simulation
 df_outputmeters_2, df_outputvariables_2 = parametric.get_outputs_df_from_testsim()
 
@@ -86,7 +86,7 @@ df_outputmeters_2, df_outputvariables_2 = parametric.get_outputs_df_from_testsim
 df_rdd = get_rdd_file_as_df()
 df_mdd = get_mdd_file_as_df()
 meter_list = parse_mtd_file()
-##
+
 
 # To end with outputs, let's set the objective outputs (outputs for the Problem object), which are those displayed by BESOS in case of parametric_and_optimisation analysis, or used in case of optimisation
 
@@ -114,7 +114,6 @@ parametric.set_outputs_for_simulation(
 
 # At this point, the outputs of each energyplus simulation has been set. So, next step is setting parameters
 
-#todo make 3 different types: predefined_accis, custom_accis and apmv_setpoints
 
 # accis.modifyAccis(
 #     idf=building,
@@ -125,15 +124,16 @@ parametric.set_outputs_for_simulation(
 #     VentCtrl=0,
 # )
 
-
+##
 accis_parameters = {
     'CustAST_m': (0.01, 0.99),
     'CustAST_n': (5, 23),
     'CustAST_ASToffset': (2, 4),
-    'CustAST_ASTall': (10, 15),
-    'CustAST_ASTaul': (30, 35),
+    # 'CustAST_ASTall': (10, 15),
+    # 'CustAST_ASTaul': (30, 35),
 }
 
+##
 
 # accis_parameters = {
 #     'ComfStand': [1, 2, 3],
@@ -149,6 +149,31 @@ parametric.set_parameters(
     accis_params_dict=accis_parameters,
     # additional_params=other_parameters
 )
+
+#todo if custom models, check if any of the arguments is not defined: those defined in the parameters can be 0, but the remaining cannot
+args = accim.utils.get_accim_args(building)
+#todo set in the name cuts off, for instance ACSToff
+parameters_defined = [i.value_descriptors[0].name for i in parametric.parameters_list]
+parameters_to_check = [k for k, v in args['CustAST'].items() if 'CustAST_'+k not in parameters_defined and v==0]
+if 'CustAST_ASToffset' in parameters_defined:
+    try:
+        parameters_to_check.remove('AHSToffset')
+        parameters_to_check.remove('ACSToffset')
+    except ValueError:
+        pass
+if 'CustAST_ASTall' in parameters_defined:
+    try:
+        parameters_to_check.remove('AHSTall')
+        parameters_to_check.remove('ACSTall')
+    except ValueError:
+        pass
+if 'CustAST_ASTaul' in parameters_defined:
+    try:
+        parameters_to_check.remove('AHSTaul')
+        parameters_to_check.remove('ACSTaul')
+    except ValueError:
+        pass
+
 
 ##
 param_dict = {
@@ -168,24 +193,15 @@ all_combinations = make_all_combinations(param_dict)
 [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'applycat']
 
 ##
-set_input_data = [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setinputdata'][0]
-set_vof_input_data = [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setvofinputdata'][0]
-applycat = [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'applycat'][0]
-setast = [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setast'][0]
-setapplimits = [i for i in building.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setapplimits'][0]
-other_args = {'SetpointAcc': setast.Program_Line_1}
-cust_ast_args = {
-    'ACSToffset': applycat.Program_Line_4,
-    'AHSToffset': applycat.Program_Line_5,
-    'm': setast.Program_Line_2,
-    'n': setast.Program_Line_3,
-    'ACSTaul': setapplimits.Program_Line_2,
-    'ACSTall': setapplimits.Program_Line_3,
-    'AHSTaul': setapplimits.Program_Line_4,
-    'AHSTall': setapplimits.Program_Line_5,
-}
+from accim.utils import get_accim_args
+
+args = get_accim_args(building)
+args['SetInputData'].obj
 
 # building.savecopy('TestModel_mod.idf')
+##
+
+
 
 ##
 # Let's set the problem
