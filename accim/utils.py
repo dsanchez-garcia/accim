@@ -305,7 +305,8 @@ def get_accim_args(idf_object: besos.IDF_class) -> dict:
             line = line.strip()
             if line.startswith("set"):
                 parts = line.split("=", 1)  # Split only at the first occurrence of "="
-                key = parts[0].replace("set", "").strip()
+                # key = parts[0].replace("set", "").strip()
+                key = parts[0][4:].strip()
                 value = parts[1].replace(",", "").strip()
                 try:
                     # Evaluate the expression to get the actual value

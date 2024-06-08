@@ -78,53 +78,45 @@ output_meters = [
     'Electricity:HVAC',
 ]
 parametric.set_output_met_objects_to_idf(output_meters=output_meters)
-##
+
 # Checking the Output:Meter and Output:Variable objects in the simulation
-df_outputmeters_2, df_outputvariables_2 = parametric.get_outputs_df_from_testsim()
+# df_outputmeters_2, df_outputvariables_2 = parametric.get_outputs_df_from_testsim()
 
 #Other variables could be reported. These can be read in the rdd, mdd and mtd files
-df_rdd = get_rdd_file_as_df()
-df_mdd = get_mdd_file_as_df()
-meter_list = parse_mtd_file()
+# df_rdd = get_rdd_file_as_df()
+# df_mdd = get_mdd_file_as_df()
+# meter_list = parse_mtd_file()
 
 
 # To end with outputs, let's set the objective outputs (outputs for the Problem object), which are those displayed by BESOS in case of parametric_and_optimisation analysis, or used in case of optimisation
 
-def average_results(result):
-    return result.data["Value"].mean()
-def sum_results(result):
-    return result.data["Value"].sum()
-
-def return_time_series(result):
-    return result.data["Value"].to_list()
-
-df_outputmeters_3 = df_outputmeters_2.copy()
-df_outputvariables_3 = df_outputvariables_2.copy()
-
-df_outputvariables_3['func'] = return_time_series
-df_outputvariables_3 = df_outputvariables_3.drop(index=[2, 4])
-df_outputvariables_3['name'] = df_outputvariables_3['variable_name'] + '_time series'
-
-parametric.set_outputs_for_simulation(
-    df_output_meter=df_outputmeters_3,
-    # df_output_variable=df_outputvariables_3,
-    df_output_variable=df_outputvariables_3,
-    # func=average_results
-)
+# def average_results(result):
+#     return result.data["Value"].mean()
+# def sum_results(result):
+#     return result.data["Value"].sum()
+#
+# def return_time_series(result):
+#     return result.data["Value"].to_list()
+#
+# df_outputmeters_3 = df_outputmeters_2.copy()
+# df_outputvariables_3 = df_outputvariables_2.copy()
+#
+# df_outputvariables_3['func'] = return_time_series
+# df_outputvariables_3 = df_outputvariables_3.drop(index=[2, 4])
+# df_outputvariables_3['name'] = df_outputvariables_3['variable_name'] + '_time series'
+#
+# parametric.set_outputs_for_simulation(
+#     df_output_meter=df_outputmeters_3,
+#     # df_output_variable=df_outputvariables_3,
+#     df_output_variable=df_outputvariables_3,
+#     # func=average_results
+# )
 
 # At this point, the outputs of each energyplus simulation has been set. So, next step is setting parameters
 
 
-# accis.modifyAccis(
-#     idf=building,
-#     ComfStand=99,
-#     ComfMod=3,
-#     CAT=80,
-#     HVACmode=2,
-#     VentCtrl=0,
-# )
 
-##
+
 accis_parameters = {
     'CustAST_m': (0.01, 0.99),
     'CustAST_n': (5, 23),
@@ -133,7 +125,6 @@ accis_parameters = {
     # 'CustAST_ASTaul': (30, 35),
 }
 
-##
 
 # accis_parameters = {
 #     'ComfStand': [1, 2, 3],
@@ -141,6 +132,8 @@ accis_parameters = {
 #     'ComfMod': [3],
 # }
 
+# bf.modify_CustAST_ASTaul(building, 35)
+# bf.modify_CustAST_ASTall(building, 10)
 
 # from besos.parameters import wwr, RangeParameter
 # other_parameters = [wwr(RangeParameter(0.1, 0.9))]
@@ -151,29 +144,38 @@ parametric.set_parameters(
 )
 
 #todo if custom models, check if any of the arguments is not defined: those defined in the parameters can be 0, but the remaining cannot
-args = accim.utils.get_accim_args(building)
-#todo set in the name cuts off, for instance ACSToff
-parameters_defined = [i.value_descriptors[0].name for i in parametric.parameters_list]
-parameters_to_check = [k for k, v in args['CustAST'].items() if 'CustAST_'+k not in parameters_defined and v==0]
-if 'CustAST_ASToffset' in parameters_defined:
-    try:
-        parameters_to_check.remove('AHSToffset')
-        parameters_to_check.remove('ACSToffset')
-    except ValueError:
-        pass
-if 'CustAST_ASTall' in parameters_defined:
-    try:
-        parameters_to_check.remove('AHSTall')
-        parameters_to_check.remove('ACSTall')
-    except ValueError:
-        pass
-if 'CustAST_ASTaul' in parameters_defined:
-    try:
-        parameters_to_check.remove('AHSTaul')
-        parameters_to_check.remove('ACSTaul')
-    except ValueError:
-        pass
 
+args = accim.utils.get_accim_args(building)
+args['CustAST']
+# parameters_defined = [i.value_descriptors[0].name for i in parametric.parameters_list]
+# parameters_to_check = [k for k, v in args['CustAST'].items() if 'CustAST_'+k not in parameters_defined and v==0]
+# if 'CustAST_ASToffset' in parameters_defined:
+#     try:
+#         parameters_to_check.remove('AHSToffset')
+#         parameters_to_check.remove('ACSToffset')
+#     except ValueError:
+#         pass
+# if 'CustAST_ASTall' in parameters_defined:
+#     try:
+#         parameters_to_check.remove('AHSTall')
+#         parameters_to_check.remove('ACSTall')
+#     except ValueError:
+#         pass
+# if 'CustAST_ASTaul' in parameters_defined:
+#     try:
+#         parameters_to_check.remove('AHSTaul')
+#         parameters_to_check.remove('ACSTaul')
+#     except ValueError:
+#         pass
+#
+# parameters_to_be_defined = []
+# for p in parameters_to_check:
+#     if args['CustAST'][p] == 0:
+#         parameters_to_be_defined.append(p)
+# if len(parameters_to_be_defined) > 0:
+#     raise ValueError(f'The following parameters are not included in the parameters to be set, '
+#                      f'and have not been defined yet (i.e. the value is 0): '
+#                      f'{parameters_to_be_defined}')
 
 ##
 param_dict = {

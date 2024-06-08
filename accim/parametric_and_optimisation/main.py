@@ -1,6 +1,7 @@
 import os
 import re
 from typing import Literal, List, Union
+import warnings
 
 import accim
 
@@ -503,6 +504,90 @@ class OptimParamSimulation:
                 HVACmode=HVACmode,
                 VentCtrl=VentCtrl,
             )
+
+            # Checking parameters are defined:
+            args = accim.utils.get_accim_args(self.building)
+            parameters_to_check = [k for k, v in args['CustAST'].items() if 'CustAST_' + k not in parameters and v == 0]
+            if 'CustAST_ASToffset' in parameters:
+                try:
+                    parameters_to_check.remove('AHSToffset')
+                    parameters_to_check.remove('ACSToffset')
+                except ValueError:
+                    pass
+            if 'CustAST_ASTall' in parameters:
+                try:
+                    parameters_to_check.remove('AHSTall')
+                    parameters_to_check.remove('ACSTall')
+                except ValueError:
+                    pass
+            if 'CustAST_ASTaul' in parameters:
+                try:
+                    parameters_to_check.remove('AHSTaul')
+                    parameters_to_check.remove('ACSTaul')
+                except ValueError:
+                    pass
+
+            parameters_to_be_defined = []
+            for p in parameters_to_check:
+                if args['CustAST'][p] == 0:
+                    parameters_to_be_defined.append(p)
+            if len(parameters_to_be_defined) > 0:
+                print(f'The following parameters are not included in the parameters to be set, '
+                                 f'and have not been defined yet (i.e. the value is 0): '
+                                 f'{parameters_to_be_defined}')
+                dflt_values = {
+                    'm': 0.31,
+                    'n': 17.8,
+                    'ACSToffset': 3.5,
+                    'AHSToffset': -3.5,
+                    'ACSTaul': 33.5,
+                    'ACSTall': 33.5,
+                    'AHSTaul': 10,
+                    'AHSTall': 10
+                }
+                print('If you want, default values can be set for these parameters. The default values are:')
+                for p in parameters_to_be_defined:
+                    print(f'{p}: {dflt_values[p]}')
+                user_decision = input('Do you want to continue with default values? [y/n]: ')
+                if user_decision.lower() == 'y' or user_decision == '':
+                    if 'm' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_m(self.building, dflt_values['m'])
+                    if 'n' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_n(self.building, dflt_values['n'])
+                    if 'ACSToffset' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSToffset(self.building, dflt_values['ACSToffset'])
+                    if 'AHSToffset' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSToffset(self.building, dflt_values['AHSToffset'])
+                    if 'ACSTaul' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSTaul(self.building, dflt_values['ACSTaul'])
+                    if 'ACSTall' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSTall(self.building, dflt_values['ACSTall'])
+                    if 'AHSTaul' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSTaul(self.building, dflt_values['AHSTaul'])
+                    if 'AHSTall' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSTall(self.building, dflt_values['AHSTall'])
+                else:
+                    user_values = {}
+                    for p in parameters_to_be_defined:
+                        value = float(input(f'Enter the value for argument {p}: '))
+                        user_values.update({p: value})
+                    if 'm' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_m(self.building, user_values['m'])
+                    if 'n' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_n(self.building, user_values['n'])
+                    if 'ACSToffset' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSToffset(self.building, user_values['ACSToffset'])
+                    if 'AHSToffset' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSToffset(self.building, user_values['AHSToffset'])
+                    if 'ACSTaul' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSTaul(self.building, user_values['ACSTaul'])
+                    if 'ACSTall' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSTall(self.building, user_values['ACSTall'])
+                    if 'AHSTaul' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSTaul(self.building, user_values['AHSTaul'])
+                    if 'AHSTall' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSTall(self.building, user_values['AHSTall'])
+
         elif self.is_accim_predef_model:
             if descriptors_has_range:
                 raise KeyError('Accim predefined models approach is only valid with options descriptors.')
