@@ -721,8 +721,8 @@ def inputData(self, ScriptType: str = None):
                     print('          The multiplier number is not correct. It must be a number between 0 and 1. Please enter the number again.')
                     self.MultiplierVOF = float(input('         Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
         else:
-            self.MaxTempDiffVOF = 20
-            self.MinTempDiffVOF = 0.5
+            self.MaxTempDiffVOF = 6
+            self.MinTempDiffVOF = 1
             self.MultiplierVOF = 0.25
 
         self.VSToffset_List = list(float(num) for num in input(
@@ -828,12 +828,12 @@ def inputData(self, ScriptType: str = None):
 def genIDF(self,
     ScriptType: str = None,
     TempCtrl: str = None,
-    ComfStand=None,
-    CAT=None,
-    CATcoolOffset=0,
-    CATheatOffset=0,
-    ComfMod=None,
-    SetpointAcc=10000,
+    ComfStand: list = None,
+    CAT: list = None,
+    CATcoolOffset: float = 0,
+    CATheatOffset: float = 0,
+    ComfMod: list = None,
+    SetpointAcc: float = 10000,
     CustAST_ACSTaul: float = 0,
     CustAST_ACSTall: float = 0,
     CustAST_AHSTaul: float = 0,
@@ -844,18 +844,18 @@ def genIDF(self,
     CustAST_AHSToffset: float = 0,
     CoolSeasonStart=121,
     CoolSeasonEnd=274,
-    HVACmode=None,
-    VentCtrl=None,
-    MaxTempDiffVOF=20,
-    MinTempDiffVOF=0.5,
-    MultiplierVOF=0.25,
-    VSToffset=[0],
-    MinOToffset=[50],
-    MaxWindSpeed=[50],
-    ASTtol_start=0.1,
-    ASTtol_end_input=0.1,
-    ASTtol_steps=0.1,
-    NameSuffix='',
+    HVACmode: list = None,
+    VentCtrl: list = None,
+    MaxTempDiffVOF: float = 6,
+    MinTempDiffVOF: float = 1,
+    MultiplierVOF: float = 0.25,
+    VSToffset: list = [0],
+    MinOToffset: list = [50],
+    MaxWindSpeed: list = [50],
+    ASTtol_start: float = 0.1,
+    ASTtol_end_input: float = 0.1,
+    ASTtol_steps: float = 0.1,
+    NameSuffix: str = '',
     verboseMode: bool = True,
     confirmGen: bool = None
 ):
@@ -922,8 +922,8 @@ def genIDF(self,
                  CoolSeasonEnd == 274,
                  HVACmode is None,
                  VentCtrl is None,
-                 MaxTempDiffVOF == 20,
-                 MinTempDiffVOF == 0.5,
+                 MaxTempDiffVOF == 6,
+                 MinTempDiffVOF == 1,
                  MultiplierVOF == 0.25,
                  VSToffset == [0],
                  MinOToffset == [50],

@@ -2819,8 +2819,8 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
             self.idf1.newidfobject(
                 'EnergyManagementSystem:Program',
                 Name='SetVOFinputData',
-                Program_Line_1='set MaxTempDiffVOF = 7.5',
-                Program_Line_2='set MinTempDiffVOF = 0',
+                Program_Line_1='set MaxTempDiffVOF = 6',
+                Program_Line_2='set MinTempDiffVOF = 1',
                 Program_Line_3='set MultiplierVOF = 0.25',
             )
             if verboseMode:
