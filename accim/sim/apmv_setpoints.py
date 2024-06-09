@@ -5,7 +5,8 @@ Contains the functions to apply setpoints based on the Adaptive Predicted Mean V
 import besos.IDF_class
 from typing import Union, List
 import pandas
-
+# from eppy.bunch_subclass import BadEPFieldError
+import eppy
 
 def apply_apmv_setpoints(
         building: besos.IDF_class,
@@ -106,6 +107,68 @@ def apply_apmv_setpoints(
     :return:
     """
     # Mapping occupied zones (i.e. zones that have a related people object)
+
+    #todo testing from here
+
+    # Scanning occupied zones
+    occupiedZones_orig = []
+
+    # Check if model comes from OpenStudio
+
+    # Check if ZoneList or SpaceList are used
+    occupiedZones_orig_osm = []
+
+    spacelist_use = False
+    try:
+        if len(building.idfobjects['SPACELIST']) > 0:
+            spacelist_use = True
+            spacenames_for_ems_uniquekey = []
+            spacenames_for_ems_name = []
+            spacenames_for_ems_uniquekey_people = []
+            zonenames_for_ems_with_sl = []
+            for people in building.idfobjects['PEOPLE']:
+                for spacelist in [i for i in building.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
+                    for space in [i for i in building.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
+                        spacenames_for_ems_uniquekey.append(f'{space.Name} {spacelist.Name}')
+                        spacenames_for_ems_name.append(space.Name)
+                        spacenames_for_ems_uniquekey_people.append(f'{space.Name} {people.Name}')
+                        occupiedZones_orig_osm.append(space.Zone_Name)
+                        for zone in [i for i in building.idfobjects['ZONE'] if space.Zone_Name == i.Name]:
+                            zonenames_for_ems_with_sl.append(zone.Name)
+    except KeyError:
+        idd = '-'.join([str(i) for i in building.idd_version])
+        print('Searching Spacelist objects returned KeyError. '
+              f'That means these are not supported in the EnergyPlus version {idd}')
+
+    occupiedZones_orig_dsb = []
+    for i in building.idfobjects['ZONE']:
+        for k in building.idfobjects['PEOPLE']:
+            try:
+                if i.Name == k.Zone_or_ZoneList_or_Space_or_SpaceList_Name:
+                    occupiedZones_orig_dsb.append(i.Name.upper())
+            except eppy.bunch_subclass.BadEPFieldError:
+                if i.Name == k.Zone_or_ZoneList_Name:
+                    occupiedZones_orig_dsb.append(i.Name.upper())
+
+    if spacelist_use:
+        occupiedZones_orig = occupiedZones_orig_osm
+        occupiedZones = [i.replace(' ', '_') for i in occupiedZones_orig]
+        origin_dsb = False
+        ems_objs_name = spacenames_for_ems_name
+        ems_objs_key = spacenames_for_ems_uniquekey
+        ems_zonenames = zonenames_for_ems_with_sl
+        ems_zonenames_underscore = [i.replace(' ', '_') for i in ems_zonenames]
+    else:
+        occupiedZones_orig = occupiedZones_orig_dsb
+        occupiedZones = [i.replace(':', '_') for i in occupiedZones_orig]
+        origin_dsb = True
+        ems_objs_name = occupiedZones
+        ems_objs_key = occupiedZones_orig
+        ems_zonenames = occupiedZones_orig
+        ems_zonenames_underscore = occupiedZones_orig
+
+    #todo testing until here
+
     ppl_temp = [[people.Zone_or_ZoneList_Name, people.Name] for people in building.idfobjects['People']]
     zones_with_ppl_colon = [ppl[0] for ppl in ppl_temp]
     ppl_names = [ppl[1] for ppl in ppl_temp]
