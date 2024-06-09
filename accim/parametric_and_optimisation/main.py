@@ -436,8 +436,9 @@ class OptimParamSimulation:
             self,
             accis_params_dict: dict,
             additional_params: list = None,
-            HVACmode: Literal[0, 1, 2] = 2,
-            VentCtrl: Literal[0, 1, 2, 3] = 0,
+            use_dflt_values: bool = False,
+            # HVACmode: Literal[0, 1, 2] = 2,
+            # VentCtrl: Literal[0, 1, 2, 3] = 0,
     ):
         """
         Sets the parameters for the parametric analysis or optimisation.
@@ -496,16 +497,25 @@ class OptimParamSimulation:
                              f'parameters_type {self.parameters_type}: {not_allowed_parameters}')
 
         if self.is_accim_custom_model:
-            accis.modifyAccis(
-                idf=self.building,
-                ComfStand=99,
-                ComfMod=3,
-                CAT=80,
-                HVACmode=HVACmode,
-                VentCtrl=VentCtrl,
-            )
+            # accis.modifyAccis(
+            #     idf=self.building,
+            #     ComfStand=99,
+            #     ComfMod=3,
+            #     CAT=80,
+            #     # HVACmode=HVACmode,
+            #     # VentCtrl=VentCtrl,
+            # )
+            bf_accim.modify_ComfStand(self.building, 99)
+            bf_accim.modify_ComfMod(self.building, 3)
+            bf_accim.modify_CAT(self.building, 80)
 
             # Checking parameters are defined:
+            bf_accim.modify_CustAST_m(self.building, 0)
+            bf_accim.modify_CustAST_n(self.building, 0)
+            bf_accim.modify_CustAST_ASToffset(self.building, 0)
+            bf_accim.modify_CustAST_ASTaul(self.building, 0)
+            bf_accim.modify_CustAST_ASTall(self.building, 0)
+
             args = accim.utils.get_accim_args(self.building)
             parameters_to_check = [k for k, v in args['CustAST'].items() if 'CustAST_' + k not in parameters and v == 0]
             if 'CustAST_ASToffset' in parameters:
@@ -541,52 +551,57 @@ class OptimParamSimulation:
                     'ACSToffset': 3.5,
                     'AHSToffset': -3.5,
                     'ACSTaul': 33.5,
-                    'ACSTall': 33.5,
-                    'AHSTaul': 10,
+                    'ACSTall': 10,
+                    'AHSTaul': 33.5,
                     'AHSTall': 10
                 }
-                print('If you want, default values can be set for these parameters. The default values are:')
-                for p in parameters_to_be_defined:
-                    print(f'{p}: {dflt_values[p]}')
-                user_decision = input('Do you want to continue with default values? [y/n]: ')
-                if user_decision.lower() == 'y' or user_decision == '':
-                    if 'm' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_m(self.building, dflt_values['m'])
-                    if 'n' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_n(self.building, dflt_values['n'])
-                    if 'ACSToffset' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_ACSToffset(self.building, dflt_values['ACSToffset'])
-                    if 'AHSToffset' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_AHSToffset(self.building, dflt_values['AHSToffset'])
-                    if 'ACSTaul' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_ACSTaul(self.building, dflt_values['ACSTaul'])
-                    if 'ACSTall' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_ACSTall(self.building, dflt_values['ACSTall'])
-                    if 'AHSTaul' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_AHSTaul(self.building, dflt_values['AHSTaul'])
-                    if 'AHSTall' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_AHSTall(self.building, dflt_values['AHSTall'])
-                else:
-                    user_values = {}
+                if use_dflt_values:
+                    print('Default values will be set for these parameters. The default values are:')
                     for p in parameters_to_be_defined:
-                        value = float(input(f'Enter the value for argument {p}: '))
-                        user_values.update({p: value})
-                    if 'm' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_m(self.building, user_values['m'])
-                    if 'n' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_n(self.building, user_values['n'])
-                    if 'ACSToffset' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_ACSToffset(self.building, user_values['ACSToffset'])
-                    if 'AHSToffset' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_AHSToffset(self.building, user_values['AHSToffset'])
-                    if 'ACSTaul' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_ACSTaul(self.building, user_values['ACSTaul'])
-                    if 'ACSTall' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_ACSTall(self.building, user_values['ACSTall'])
-                    if 'AHSTaul' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_AHSTaul(self.building, user_values['AHSTaul'])
-                    if 'AHSTall' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_AHSTall(self.building, user_values['AHSTall'])
+                        print(f'{p}: {dflt_values[p]}')
+                else:
+                    print('If you want, default values can be set for these parameters. The default values are:')
+                    for p in parameters_to_be_defined:
+                        print(f'{p}: {dflt_values[p]}')
+                    user_decision = input('Do you want to continue with default values? [y/n]: ')
+                    if user_decision.lower() == 'y' or user_decision == '':
+                        if 'm' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_m(self.building, dflt_values['m'])
+                        if 'n' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_n(self.building, dflt_values['n'])
+                        if 'ACSToffset' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_ACSToffset(self.building, dflt_values['ACSToffset'])
+                        if 'AHSToffset' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_AHSToffset(self.building, dflt_values['AHSToffset'])
+                        if 'ACSTaul' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_ACSTaul(self.building, dflt_values['ACSTaul'])
+                        if 'ACSTall' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_ACSTall(self.building, dflt_values['ACSTall'])
+                        if 'AHSTaul' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_AHSTaul(self.building, dflt_values['AHSTaul'])
+                        if 'AHSTall' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_AHSTall(self.building, dflt_values['AHSTall'])
+                    else:
+                        user_values = {}
+                        for p in parameters_to_be_defined:
+                            value = float(input(f'Enter the value for argument {p}: '))
+                            user_values.update({p: value})
+                        if 'm' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_m(self.building, user_values['m'])
+                        if 'n' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_n(self.building, user_values['n'])
+                        if 'ACSToffset' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_ACSToffset(self.building, user_values['ACSToffset'])
+                        if 'AHSToffset' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_AHSToffset(self.building, user_values['AHSToffset'])
+                        if 'ACSTaul' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_ACSTaul(self.building, user_values['ACSTaul'])
+                        if 'ACSTall' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_ACSTall(self.building, user_values['ACSTall'])
+                        if 'AHSTaul' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_AHSTaul(self.building, user_values['AHSTaul'])
+                        if 'AHSTall' in parameters_to_be_defined:
+                            bf_accim.modify_CustAST_AHSTall(self.building, user_values['AHSTall'])
 
         elif self.is_accim_predef_model:
             if descriptors_has_range:
@@ -742,6 +757,7 @@ class OptimParamSimulation:
         :return: a pandas DataFrame
         """
         outputs_dict = {}
+        evaluators = {}
         for epw in epws:
             epwname = epw.split('.epw')[0]
             # evaluator = EvaluatorEP(
@@ -754,7 +770,6 @@ class OptimParamSimulation:
                 epw=epw,
                 out_dir=out_dir,
             )
-
             outputs = evaluator.df_apply(
                 df=df,
                 keep_input=keep_input,
@@ -763,12 +778,14 @@ class OptimParamSimulation:
             )
             outputs['epw'] = epwname
             outputs_dict.update({epwname: outputs})
+            evaluators.update({epwname: evaluator})
 
         outputs_param_simulation = pd.concat([df for df in outputs_dict.values()])
         if len(epws) > 1:
             outputs_param_simulation = outputs_param_simulation.reset_index()
 
         self.outputs_param_simulation = outputs_param_simulation
+        self.evaluators = evaluators
         # return outputs_param_simulation
 
     def run_optimisation(
@@ -850,6 +867,7 @@ class OptimParamSimulation:
             raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
 
         self.outputs_optimisation = outputs_optimisation
+        self.evaluator = evaluator
         # return outputs_optimisation
 
     def get_hourly_df(self, start_date: str = '2024-01-01 01'):

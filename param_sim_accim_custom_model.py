@@ -119,6 +119,15 @@ df_output_variables_idf = df_output_variables_idf[
         df_output_variables_idf['variable_name'].str.contains('Zone Operative Temperature')
         |
         df_output_variables_idf['variable_name'].str.contains('Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature')
+        # |
+        # df_output_variables_idf['variable_name'].str.contains('People Occupant')
+        # |
+        # df_output_variables_idf['key_value'].str.contains('Sch_BLOCK')
+        # |
+        # df_output_variables_idf['variable_name'].str.contains('Site Outdoor Drybulb')
+        # |
+        # df_output_variables_idf['variable_name'].str.contains('z_test')
+
     )
 ]
 df_output_variables_idf
@@ -219,7 +228,7 @@ mtd_list[0:2]
 
 # In[36]:
 
-
+##
 df_output_variables_testsim['func'] = return_time_series
 df_output_variables_testsim['name'] = df_output_variables_testsim['variable_name'] + '_time series'
 df_output_variables_testsim = df_output_variables_testsim.drop(index=[2, 4])
@@ -285,28 +294,19 @@ available_parameters
 # In[42]:
 
 
-from IPython.lib.display import Audio
-import numpy as np
-
-framerate = 4410
-play_time_seconds = 3
-
-t = np.linspace(0, play_time_seconds, framerate*play_time_seconds)
-audio_data = np.sin(2*np.pi*300*t) + np.sin(2*np.pi*240*t)
-Audio(audio_data, rate=framerate, autoplay=True)
 
 
 # In[43]:
 
 
-accis_parameters = {
-    'CustAST_m': (0.01, 0.99),
-    'CustAST_n': (5, 23),
-    'CustAST_ASToffset': (2, 4),
-    'CustAST_ASTall': (10, 15),
-    'CustAST_ASTaul': (30, 35),
-}
-parametric.set_parameters(accis_params_dict=accis_parameters)
+# accis_parameters = {
+#     'CustAST_m': (0.01, 0.99),
+#     'CustAST_n': (5, 23),
+#     'CustAST_ASToffset': (2, 4),
+#     'CustAST_ASTall': (10, 15),
+#     'CustAST_ASTaul': (30, 35),
+# }
+# parametric.set_parameters(accis_params_dict=accis_parameters)
 
 
 # In this case, all parameters have been defined. Otherwise, we would be requested to continue with default values or to input them. Let's see Example 2.
@@ -318,12 +318,12 @@ parametric.set_parameters(accis_params_dict=accis_parameters)
 # In[44]:
 
 
-accis_parameters = {
-    'CustAST_m': (0.01, 0.99),
-    'CustAST_n': (5, 23),
-    'CustAST_ASToffset': (2, 4),
-}
-parametric.set_parameters(accis_params_dict=accis_parameters)
+# accis_parameters = {
+#     'CustAST_m': (0.01, 0.99),
+#     'CustAST_n': (5, 23),
+#     'CustAST_ASToffset': (2, 4),
+# }
+# parametric.set_parameters(accis_params_dict=accis_parameters)
 
 
 # In[ ]:
@@ -337,8 +337,8 @@ parametric.set_parameters(accis_params_dict=accis_parameters)
 # In[45]:
 
 
-args = get_accim_args(building)
-args['CustAST']
+# args = get_accim_args(building)
+# args['CustAST']
 
 
 # As you can see, 'm', 'n', 'ACSToffset' and 'AHSToffset' have the value 0, because these are the arguments included in the parameters, and their values will vary depending on the sample we specify later, and the values for the applicabiliy upper and lower limits have the values we just input.
@@ -350,11 +350,11 @@ args['CustAST']
 # In[46]:
 
 
-accis_parameters = {
-    'CustAST_m': [0, 0.3, 0.6],
-    'CustAST_n': [10, 23],
-}
-parametric.set_parameters(accis_params_dict=accis_parameters)
+# accis_parameters = {
+#     'CustAST_m': [0, 0.3, 0.6],
+#     'CustAST_n': [10, 23],
+# }
+# parametric.set_parameters(accis_params_dict=accis_parameters)
 
 
 # Again, let's take a look at the arguments:
@@ -362,8 +362,8 @@ parametric.set_parameters(accis_params_dict=accis_parameters)
 # In[47]:
 
 
-args = get_accim_args(building)
-args['CustAST']
+# args = get_accim_args(building)
+# args['CustAST']
 
 
 # So, let's continue with Example 2, dropping CustAST_ASToffset and using default values for the non-defined arguments:
@@ -375,8 +375,19 @@ accis_parameters = {
     'CustAST_m': (0.01, 0.99),
     'CustAST_n': (5, 23),
 }
-parametric.set_parameters(accis_params_dict=accis_parameters)
+parametric.set_parameters(accis_params_dict=accis_parameters, use_dflt_values=True)
 
+args = accim.utils.get_accim_args(building)
+args
+
+import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf
+bf.modify_VentCtrl(building, 2)
+bf.modify_MaxTempDiffVOF(building, 6)
+bf.modify_MinTempDiffVOF(building, 1)
+args_new = accim.utils.get_accim_args(building)
+args_new
+
+##
 
 # If you want to inspect the `Parameter` objects, you can see the internal variable `parameters_list`:
 
@@ -413,16 +424,16 @@ parametric.problem
 # In[52]:
 
 
-import pandas as pd
-param_dict = {
-    'CustAST_m': [0.1, 0.6], 
-    'CustAST_n': [22, 8], 
-    'CustAST_ASToffset': [2.5, 4],
-    'CustAST_ASTall': [10, 10],
-    'CustAST_ASTaul': [35, 35],
-}
-input_param_df = pd.DataFrame(data=param_dict)
-input_param_df
+# import pandas as pd
+# param_dict = {
+#     'CustAST_m': [0.1, 0.6],
+#     'CustAST_n': [22, 8],
+#     'CustAST_ASToffset': [2.5, 4],
+#     'CustAST_ASTall': [10, 10],
+#     'CustAST_ASTaul': [35, 35],
+# }
+# input_param_df = pd.DataFrame(data=param_dict)
+# input_param_df
 
 
 # We could input that df, which would result in 2 simulations. But now, imagine we want to make all possible combinations from the values we just did from scratch. We could use the function `make_all_combinations(parameters_values_dict)`. The argument `parameters_values_dict` must be a dictionary in the format {'parameter name': list_of_values}, such as the previouly defined param_dict, so let's input it. Let's see the possibilities:
@@ -430,8 +441,8 @@ input_param_df
 # In[53]:
 
 
-all_combinations = make_all_combinations(param_dict)
-all_combinations
+# all_combinations = make_all_combinations(param_dict)
+# all_combinations
 
 
 # Also, we can use the sampling functions from besos (`full_factorial` and `lhs`), which have been wrapped in the methods `sampling_full_factorial(level)` and `sampling_lhs(num_samples)`. After calling these, the samples are saved in the internal variable `parameters_values_df`. Let's see some examples:
@@ -439,8 +450,8 @@ all_combinations
 # In[54]:
 
 
-parametric.sampling_lhs(num_samples=3)
-parametric.parameters_values_df
+# parametric.sampling_lhs(num_samples=3)
+# parametric.parameters_values_df
 
 
 # In[55]:
@@ -459,9 +470,9 @@ parametric.parameters_values_df
 
 parametric.run_parametric_simulation(
     epws=['Sydney.epw', 'Seville.epw'],
-    out_dir='notebook_temp_dir',
+    out_dir='WIP_notebook_temp_dir_2',
     df=parametric.parameters_values_df,
-    processes=4, # The number of CPUs to be used. Default is 2.
+    processes=6, # The number of CPUs to be used. Default is 2.
     #keep_input=True, # To keep the input values of parameters, as entered in df argument. Default is True.
     #keep_dirs=True # To keep the simulation outputs. Default is True.
 )
@@ -559,12 +570,12 @@ df = df.melt(id_vars=['datetime', 'CustAST_m', 'CustAST_n','epw', rmot])
 # In[64]:
 
 
-g = sns.FacetGrid(
-    data=df[df['epw'].str.contains('Sydney')],
+g1 = sns.FacetGrid(
+    data=df[df['epw'].str.contains('Seville')],
     row='CustAST_m',
     col='CustAST_n'
 )
-g.map_dataframe(
+g1.map_dataframe(
     sns.scatterplot,
     x=rmot,
     y='value',
@@ -572,10 +583,10 @@ g.map_dataframe(
     s=1,
     #alpha=0.5
 )
-g.set_axis_labels('RMOT (°C)', 'Indoor Operative Temperature (°C)')
-g.add_legend(loc='upper center', bbox_to_anchor=(0.5, 0))
+g1.set_axis_labels('RMOT (°C)', 'Indoor Operative Temperature (°C)')
+g1.add_legend(loc='upper center', bbox_to_anchor=(0.5, 0))
 
-for lh in g._legend.legend_handles:
+for lh in g1._legend.legend_handles:
     lh.set_markersize(5)
 plt.tight_layout()
 
@@ -585,55 +596,56 @@ plt.tight_layout()
 # In[65]:
 
 
-g = sns.FacetGrid(
-    data=df[df['epw'].str.contains('Sydney')],
+g2 = sns.FacetGrid(
+    data=df[df['epw'].str.contains('Seville')],
     row='CustAST_m',
     col='CustAST_n'
 )
-g.map_dataframe(
+g2.map_dataframe(
     sns.lineplot,
     x='datetime',
     y='value',
     hue='variable',
 )
-g.set_axis_labels('Time', 'Indoor Operative Temperature (°C)')
-g.add_legend(loc='upper center', bbox_to_anchor=(0.5, 0))
+g2.set_axis_labels('Time', 'Indoor Operative Temperature (°C)')
+g2.add_legend(loc='upper center', bbox_to_anchor=(0.5, 0))
 plt.tight_layout()
 
 
 # In[66]:
 
 
-from IPython.lib.display import Audio
-import numpy as np
-
-framerate = 4410
-play_time_seconds = 3
-
-t = np.linspace(0, play_time_seconds, framerate*play_time_seconds)
-audio_data = np.sin(2*np.pi*300*t) + np.sin(2*np.pi*240*t)
-Audio(audio_data, rate=framerate, autoplay=True)
 
 
 # We're done with the example, so let's remove all new files, so that we can re-run it again.
 
 # In[48]:
 
+arguments = accim.utils.get_accim_args(building)
 
-current_files = [i for i in listdir()]
-new_files = set(current_files) - set(original_files)
-new_files
+parametric.parameters_values_df
+parametric.evaluators['Seville'].generate_building(df=parametric.parameters_values_df, index=8, file_name='num_8')
+
+
+
+
+
+
+
+# current_files = [i for i in listdir()]
+# new_files = set(current_files) - set(original_files)
+# new_files
 
 
 # In[51]:
 
 
-import os
-import shutil
-for item in new_files:
-    item_path = os.path.join(os.getcwd(), item)
-    if os.path.isfile(item_path):
-        os.remove(item_path)
-    elif os.path.isdir(item_path):
-        shutil.rmtree(item_path)
+# import os
+# import shutil
+# for item in new_files:
+#     item_path = os.path.join(os.getcwd(), item)
+#     if os.path.isfile(item_path):
+#         os.remove(item_path)
+#     elif os.path.isdir(item_path):
+#         shutil.rmtree(item_path)
 
