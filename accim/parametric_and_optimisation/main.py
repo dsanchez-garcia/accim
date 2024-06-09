@@ -6,25 +6,17 @@ import warnings
 import accim
 
 import pandas as pd
-import warnings
 import besos
-from besos import eppy_funcs as ef, sampling
+from besos import sampling
 from besos.evaluator import EvaluatorEP
 import besos.optimizer as optimizer
-from besos.optimizer import NSGAII, df_solution_to_solutions
-from besos.parameters import RangeParameter, expand_plist, wwr, FieldSelector, Parameter, GenericSelector, \
-    CategoryParameter
+from besos.parameters import RangeParameter, CategoryParameter
 from besos.problem import EPProblem
-from besos.eplus_funcs import get_idf_version, run_building
-from matplotlib import pyplot as plt
-from platypus import Archive, Hypervolume, Solution
-from besos.eplus_funcs import print_available_outputs
 from besos.objectives import VariableReader, MeterReader
 from besos import IDF_class
 
 from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always, remove_accents_in_idf
 from accim.parametric_and_optimisation.utils import expand_to_hourly_dataframe, identify_hourly_columns
-import numpy as np
 
 import accim.sim.accis_single_idf_funcs as accis
 import accim.sim.apmv_setpoints as apmv
@@ -33,11 +25,6 @@ import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf_accim
 import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
 import accim.parametric_and_optimisation.parameters as params
 import accim.parametric_and_optimisation.params_dicts as params_dicts
-
-
-# 1. check output data
-# 2. check input dataframe
-# 3. run parametric_and_optimisation simulation
 
 
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
