@@ -1,7 +1,9 @@
 from accim.sim import accis
+from accim.utils import set_occupancy_to_always_path
 
+set_occupancy_to_always_path('TestModel.idf')
 accis.addAccis(
-    idfs=['ALJARAFE CENTER_onlyGeometry.idf'],
+    idfs=['TestModel.idf'],
     ScriptType='vrf_mm',
     SupplyAirTempInputMethod='temperature difference',
     Output_type='standard',
@@ -19,7 +21,7 @@ accis.addAccis(
     CustAST_AHSTall=10,
     CustAST_ACSTaul=33.5,
     CustAST_ACSTall=10,
-    HVACmode=[1],
+    HVACmode=[2],
     VentCtrl=[0],
     NameSuffix='seville'
 )
@@ -76,8 +78,8 @@ import os
 # new_idf = r'D:\Python\accim_project\accim\smalloffice_osm_no_hvac[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
 # new_idf = r'C:\Python\accim\smalloffice_osm_no_hvac[CS_INT ASHRAE55[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
 
-new_idf = [i for i in os.listdir() if i.endswith('.idf') if i != 'ALJARAFE CENTER_onlyGeometry.idf'
-           and 'ALJARAFE CENTER_onlyGeometry' in i
+new_idf = [i for i in os.listdir() if i.endswith('.idf') if i != 'TestModel.idf'
+           and 'TestModel' in i
            ][0]
 
 # new_idf = 'OSM_SmallOffice_exHVAC_always-occ_V2320.idf'

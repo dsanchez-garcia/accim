@@ -50,7 +50,7 @@ original_files
 # In[7]:
 
 
-building = ef.get_building('TestModel.idf')
+building = ef.get_building('test_nohvac.idf')
 
 
 # For this analysis, we want to use the HVAC system in all hours of the year, so that temperature is always comfortable. Therefore, we are going to set the occupancy to always on by means of the function `accim.utils.set_occupancy_to_always`, in which we input the IDF class instance we read in the previous cell.
@@ -83,13 +83,13 @@ parametric = OptimParamSimulation(
     #verbosemode=False #
 )
 
-##
+
 # An initial and generic version of the Adaptive-Comfort-Control-Implementation Script (ACCIS) has been added to the idf instance `building`. For instance, you can take a look at the parameter values accis currently has:
 
 # In[21]:
 
 
-[i for i in building.idfobjects['energymanagementsystem:program'] if i.Name.lower() == 'setinputdata']
+[i for i in building.idfobjects['energymanagementsystem:program']]
 
 
 # ## Setting the outputs
@@ -125,11 +125,11 @@ df_output_meters_idf.head()
 
 df_output_variables_idf = df_output_variables_idf[
     (
-        df_output_variables_idf['variable_name'].str.contains('Setpoint Temperature_No Tolerance')
-        |
-        df_output_variables_idf['variable_name'].str.contains('Zone Operative Temperature')
-        |
-        df_output_variables_idf['variable_name'].str.contains('Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature')
+        df_output_variables_idf['variable_name'].str.contains('aPMV')
+        # |
+        # df_output_variables_idf['variable_name'].str.contains('Zone Operative Temperature')
+        # |
+        # df_output_variables_idf['variable_name'].str.contains('Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature')
     )
 ]
 df_output_variables_idf
@@ -170,10 +170,10 @@ df_output_meters_idf.head()
 # To successfully run the parametric simulation or optimisation, it is advisable running a test simulation to know the outputs that each simulation will have. We can do that with the method `get_outputs_df_from_testsim()`, which returns a tuple containing 2 DataFrames containing respectively the Output:Meter and Output:Variable objects from the simulation. In this case, you won't find wildcards such as "*".
 
 # In[28]:
-
+building.savecopy('test_nohvac_apmv.idf')
 
 df_output_meters_testsim, df_output_variables_testsim = parametric.get_outputs_df_from_testsim()
-
+##
 
 # In[29]:
 

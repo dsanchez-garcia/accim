@@ -192,6 +192,7 @@ class OptimParamSimulation:
                 verboseMode=verbosemode
             )
         elif is_apmv_setpoints:
+            # apmv.add_vrf_system(building=building)
             apmv.apply_apmv_setpoints(building=building, outputs_freq=output_freqs)
             print('Arguments output_type, output_keep_existing, ScriptType, and SupplyAirTempInputMethod '
                   'are only used in accim predefined and custom models, '
@@ -777,7 +778,7 @@ class OptimParamSimulation:
 
     def run_optimisation(
             self,
-            epw: str,
+            epws: list,
             out_dir: str,
             evaluations: int,
             population_size: int,
@@ -787,7 +788,7 @@ class OptimParamSimulation:
         """
         Runs the optimisation using
 
-        :param epw: The epw filename
+        :param epws: The epw filename
         :param out_dir: the directory name to save the outputs
         :param evaluations: The algorithm will be stopped once it uses more than this many evaluations.
             For more information, refer to besos.optimizer.platypus_alg
@@ -795,10 +796,6 @@ class OptimParamSimulation:
         
         :return: a pandas DataFrame
         """
-        evaluator = self.set_evaluator(
-            epw=epw,
-            out_dir=out_dir
-        )
         available_algorithms = [
             'GeneticAlgorithm',
             'EvolutionaryStrategy',
@@ -817,44 +814,62 @@ class OptimParamSimulation:
             'PESA2',
             'EpsNSGAII',
         ]
-        # outputs_optimisation = NSGAII(evaluator, evaluations=evaluations, population_size=population_size)
-        if algorithm == 'GeneticAlgorithm':
-            outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'EvolutionaryStrategy':
-            outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'NSGAII':
-            outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'EpsMOEA':
-            outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'GDE3':
-            outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'SPEA2':
-            outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'MOEAD':
-            outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'NSGAIII':
-            outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'ParticleSwarm':
-            outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'OMOPSO':
-            outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'SMPSO':
-            outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'CMAES':
-            outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'IBEA':
-            outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'PAES':
-            outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'PESA2':
-            outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        elif algorithm == 'EpsNSGAII':
-            outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-        else:
-            raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
+        outputs_dict = {}
+        evaluators = {}
+
+        for epw in epws:
+            evaluator = self.set_evaluator(
+                epw=epw,
+                out_dir=out_dir
+            )
+            # outputs_optimisation = NSGAII(evaluator, evaluations=evaluations, population_size=population_size)
+            if algorithm == 'GeneticAlgorithm':
+                outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'EvolutionaryStrategy':
+                outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'NSGAII':
+                outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'EpsMOEA':
+                outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'GDE3':
+                outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'SPEA2':
+                outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'MOEAD':
+                outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'NSGAIII':
+                outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'ParticleSwarm':
+                outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'OMOPSO':
+                outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'SMPSO':
+                outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'CMAES':
+                outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'IBEA':
+                outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'PAES':
+                outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'PESA2':
+                outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            elif algorithm == 'EpsNSGAII':
+                outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+            else:
+                raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
+
+            epwname = epw.split('.epw')[0]
+            outputs_optimisation['epw'] = epwname
+            outputs_dict.update({epwname: outputs_optimisation})
+            evaluators.update({epwname: evaluator})
+
+        outputs_optimisation = pd.concat([df for df in outputs_dict.values()])
+        if len(epws) > 1:
+            outputs_optimisation = outputs_optimisation.reset_index()
 
         self.outputs_optimisation = outputs_optimisation
-        self.evaluator = evaluator
+        self.evaluators = evaluators
+
         # return outputs_optimisation
 
     def get_hourly_df(self, start_date: str = '2024-01-01 01'):

@@ -318,30 +318,35 @@ def get_accim_args(idf_object: besos.IDF_class) -> dict:
         return parameters
 
     programs = {}
-    for p in ['SetInputData', 'SetVOFinputData']:
-        data = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == p.lower()][0].obj
-        programs.update({p: program_to_dict(data)})
+    try:
+        for p in ['SetInputData', 'SetVOFinputData']:
+            data = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == p.lower()][0].obj
+            programs.update({p: program_to_dict(data)})
 
-    setast = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setast'.lower()][0].obj[:3]
-    programs.update({'SetAST': program_to_dict(setast)})
+        setast = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setast'.lower()][0].obj[:3]
+        programs.update({'SetAST': program_to_dict(setast)})
 
-    applycat = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'applycat'][0]
-    setast = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setast'][0]
-    setapplimits = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setapplimits'][0]
+        applycat = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'applycat'][0]
+        setast = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setast'][0]
+        setapplimits = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if i.Name.lower() == 'setapplimits'][0]
 
-    cust_ast_args = [
-        'x',
-        'x',
-        applycat.Program_Line_4,
-        applycat.Program_Line_5,
-        setast.Program_Line_2,
-        setast.Program_Line_3,
-        setapplimits.Program_Line_2,
-        setapplimits.Program_Line_3,
-        setapplimits.Program_Line_4,
-        setapplimits.Program_Line_5,
-    ]
-    programs.update({'CustAST': program_to_dict(cust_ast_args)})
+        cust_ast_args = [
+            'x',
+            'x',
+            applycat.Program_Line_4,
+            applycat.Program_Line_5,
+            setast.Program_Line_2,
+            setast.Program_Line_3,
+            setapplimits.Program_Line_2,
+            setapplimits.Program_Line_3,
+            setapplimits.Program_Line_4,
+            setapplimits.Program_Line_5,
+        ]
+        programs.update({'CustAST': program_to_dict(cust_ast_args)})
+    except IndexError:
+        ems_programs = [i for i in idf_object.idfobjects['EnergyManagementSystem:Program'] if 'set_zone_input_data' in i.Name.lower()]
+        for p in ems_programs:
+            programs.update({p.Name: program_to_dict(p.obj)})
 
     return programs
 

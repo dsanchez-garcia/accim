@@ -74,7 +74,7 @@ output_meters = [
     # 'CoolingCoils:EnergyTransfer',
     'Heating:Electricity',
     'Cooling:Electricity',
-    'Electricity:HVAC',
+    # 'Electricity:HVAC',
 ]
 test_class_instance.set_output_met_objects_to_idf(output_meters=output_meters)
 
@@ -155,7 +155,7 @@ test_class_instance.set_parameters(
 
 # Let's set the problem
 test_class_instance.set_problem(
-    minimize_outputs=[True, True, None]
+    minimize_outputs=[True, True]
 )
 
 # Let's generate a sampling dataframe
@@ -180,21 +180,23 @@ test_class_instance.set_problem(
 #     processes=6,
 # )
 
-outputs = test_class_instance.run_optimisation(
+test_class_instance.run_optimisation(
     algorithm='NSGAII',
-    epw='Sydney.epw',
-    out_dir='WIP_testing optimisation',
-    evaluations=2,
-    population_size=4
+    epws=['Sydney.epw', 'Seville.epw'],
+    out_dir='WIP_testing optimisation_3',
+    evaluations=5,
+    population_size=10
 )
 
 
 # outputs = outputs.reset_index()
 
-outputs.to_excel('WIP_outputs_optimisation_custom.xlsx')
+# outputs.to_excel('WIP_outputs_optimisation_custom.xlsx')
 
 ##
 
+outputs = test_class_instance.outputs_optimisation.copy()
+outputs_seville = outputs[outputs['epw'].str.contains('Seville')]
 
 optres = outputs.loc[
     outputs["pareto-optimal"] == True, :
@@ -211,6 +213,18 @@ plt.ylabel("Heating demand")
 
 
 ##
+
+outputs = test_class_instance.outputs_optimisation.copy()
+outputs_seville = outputs[outputs['epw'].str.contains('Sydney')]
+
+import seaborn as sns
+
+sns.scatterplot(
+    data=outputs_seville,
+    x='Cooling:Electricity',
+    y='Heating:Electricity',
+    hue='pareto-optimal'
+)
 
 ##
 
