@@ -1,4 +1,8 @@
 def scan_zones(self):
+    """
+    Used to scan the occupied zones in an idf.
+
+    """
     import eppy
     self.occupiedZones_orig = []
 
