@@ -4234,7 +4234,7 @@ def makeAverages(self, verboseMode):
     :param self: Used as a method for :class:``accim.sim.accim_Main.accimJob``
     :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
     """
-
+    #Make average for hours variables
     gvs = [i.obj for i in self.idf1.idfobjects['EnergyManagementSystem:GlobalVariable']]
 
     vars_to_avg = {
@@ -4273,7 +4273,7 @@ def makeAverages(self, verboseMode):
 
         if f'{key}BuildAvg' in gvs_all:
             if verboseMode:
-                print(f'Not added - Make{key}BuildAvg ProgramCallingManager')
+                print(f'Not added - Make{key}BuildAvg GlobalVariable')
         else:
             self.idf1.newidfobject(
                 key='EnergyManagementSystem:GlobalVariable',
@@ -4333,3 +4333,64 @@ def makeAverages(self, verboseMode):
                 #     Variable_Name=f'{output}_Building_Average',
                 #     Reporting_Frequency='Hourly'
                 # )
+
+    # Make average for operative temperature
+    op_temp_sensors = [
+        i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if
+        'OpT' in i.Name and
+        i.OutputVariable_or_OutputMeter_Index_Key_Name in self.zonenames_orig
+    ]
+    op_temp_sum = '+'.join(op_temp_sensors)
+
+    if f'OpTempBuildAvg' in gvs_all:
+        if verboseMode:
+            print(f'Not added - MakeOpTempBuildAvg GlobalVariable')
+    else:
+        self.idf1.newidfobject(
+            key='EnergyManagementSystem:GlobalVariable',
+            Erl_Variable_1_Name=f'OpTempBuildAvg'
+        )
+        if verboseMode:
+            print(f'Added - OpTempBuildAvg GlobalVariable')
+
+    if f'MakeOpTempBuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager']]:
+        if verboseMode:
+            print(f'Not added - MakeOpTempBuildAvg ProgramCallingManager')
+    else:
+        self.idf1.newidfobject(
+            key='EnergyManagementSystem:ProgramCallingManager',
+            Name=f'MakeOpTempBuildAvg',
+            EnergyPlus_Model_Calling_Point='BeginTimestepBeforePredictor',
+            Program_Name_1=f'MakeOpTempBuildAvg',
+        )
+        if verboseMode:
+            print(f'Added - MakeOpTempBuildAvg ProgramCallingManager')
+
+    if f'MakeOpTempBuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:Program']]:
+        if verboseMode:
+            print(f'Not added - MakeOpTempBuildAvg Program')
+    else:
+        self.idf1.newidfobject(
+            'EnergyManagementSystem:Program',
+            Name=f'MakeOpTempBuildAvg',
+            Program_Line_1=f'set OpTempBuildAvgNum = ' + op_temp_sum,
+            Program_Line_2=f'set OpTempBuildAvgDen = ' + str(len(op_temp_sensors)),
+            Program_Line_3=f'set OpTempBuildAvg = OpTempBuildAvgNum/OpTempBuildAvgDen'
+        )
+        if verboseMode:
+            print(f'Added - MakeOpTempBuildAvg Program')
+
+    if f'OpTemp_Building_Average' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']]:
+        if verboseMode:
+            print(f'Not added - OpTemp_Building_Average EMS OutputVariable')
+    else:
+        self.idf1.newidfobject(
+            key='EnergyManagementSystem:OutputVariable',
+            Name=f'OpTemp_Building_Average',
+            EMS_Variable_Name=f'OpTempBuildAvg',
+            Type_of_Data_in_Variable='Averaged',
+            Update_Frequency='ZoneTimestep',
+            Units='C'
+        )
+        if verboseMode:
+            print(f'Added - OpTemp_Building_Average EMS OutputVariable')
