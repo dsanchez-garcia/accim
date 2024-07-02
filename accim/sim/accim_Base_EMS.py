@@ -4380,9 +4380,9 @@ def makeAverages(self, verboseMode):
         if verboseMode:
             print(f'Added - MakeOpTempBuildAvg Program')
 
-    if f'OpTemp_Building_Average' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']]:
+    if f'Zone Operative Temperature_Building_Average' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']]:
         if verboseMode:
-            print(f'Not added - OpTemp_Building_Average EMS OutputVariable')
+            print(f'Not added - Zone Operative Temperature_Building_Average EMS OutputVariable')
     else:
         self.idf1.newidfobject(
             key='EnergyManagementSystem:OutputVariable',

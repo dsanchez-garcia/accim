@@ -176,6 +176,7 @@ class OptimParamSimulation:
             self.SupplyAirTempInputMethod = SupplyAirTempInputMethod
             self.output_keep_existing = output_keep_existing
             self.output_type = output_type
+            self.make_averages = make_averages
 
             accis.addAccis(
                 idf=building,
@@ -274,7 +275,7 @@ class OptimParamSimulation:
                 # EnergyPlus_version='9.4',
                 TempCtrl=self.temp_ctrl,
                 # Output_gen_dataframe=True,
-                # make_averages=True,
+                make_averages=self.make_averages,
                 # debugging=True,
                 verboseMode=False,
             )
@@ -456,6 +457,11 @@ class OptimParamSimulation:
                     descriptors_has_options = True
             else:
                 descriptors_has_options = True
+
+        if descriptors_has_options is True:
+            for k, v in accis_params_dict.items():
+                accis_params_dict[k] = [round(float(i), 2) for i in v]
+
 
         accis_descriptors_has_range = False
         add_descriptors_has_range = False
