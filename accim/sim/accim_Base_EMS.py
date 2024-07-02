@@ -4386,7 +4386,7 @@ def makeAverages(self, verboseMode):
     else:
         self.idf1.newidfobject(
             key='EnergyManagementSystem:OutputVariable',
-            Name=f'OpTemp_Building_Average',
+            Name=f'Operative Temperature_Building_Average',
             EMS_Variable_Name=f'OpTempBuildAvg',
             Type_of_Data_in_Variable='Averaged',
             Update_Frequency='ZoneTimestep',
