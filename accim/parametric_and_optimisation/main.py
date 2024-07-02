@@ -113,6 +113,7 @@ class OptimParamSimulation:
             output_freqs: List[allowed_output_freqs] = ['hourly'],
             ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
             SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            make_averages: bool = False,
             debugging: bool = False,
             verbosemode: bool = True,
     ):
@@ -132,6 +133,7 @@ class OptimParamSimulation:
             for more information, please refer to addAccis()
         :param SupplyAirTempInputMethod: in case 'vrf_mm' or 'vrf_ac' ScriptTypes are used, specifies the supply air
             temperature input method for the VRF systems
+        :param make_averages: to make average outputs of hour-counting and operative temperature related outputs
         :param debugging: True to generate the .EDD file
         """
         is_accim_predef_model = False
@@ -187,7 +189,7 @@ class OptimParamSimulation:
                 # EnergyPlus_version='9.4',
                 TempCtrl=temp_ctrl,
                 # Output_gen_dataframe=True,
-                # make_averages=True,
+                make_averages=make_averages,
                 debugging=debugging,
                 verboseMode=verbosemode
             )
