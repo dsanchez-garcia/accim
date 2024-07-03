@@ -323,9 +323,20 @@ class OptimParamSimulation:
 
         :return: a tuple containing the DataFrames containing Output:Variable and Output:Meter
         """
+        building_for_testsim = self.building
+
         if reduce_sim_time:
-            reduce_runtime(idf_object=self.building, maximum_figures_in_shadow_overlap_calculations=200, timesteps=2)
-        available_outputs = print_available_outputs_mod(self.building)
+            from besos.eppy_funcs import get_building
+            self.building.savecopy('temp_reduced_runtime.idf')
+            building_for_testsim = get_building('temp_reduced_runtime.idf')
+            reduce_runtime(idf_object=building_for_testsim, maximum_figures_in_shadow_overlap_calculations=200, timesteps=2)
+
+        available_outputs = print_available_outputs_mod(building_for_testsim)
+
+        if reduce_sim_time:
+            from os import remove
+            remove('temp_reduced_runtime.idf')
+
         df_outputmeters = pd.DataFrame(
             available_outputs.meterreaderlist,
             columns=['key_name', 'frequency']
