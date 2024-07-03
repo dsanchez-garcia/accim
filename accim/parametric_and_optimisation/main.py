@@ -15,7 +15,8 @@ from besos.problem import EPProblem
 from besos.objectives import VariableReader, MeterReader
 from besos import IDF_class
 
-from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always, remove_accents_in_idf
+from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always, remove_accents_in_idf, \
+    reduce_runtime
 from accim.parametric_and_optimisation.utils import expand_to_hourly_dataframe, identify_hourly_columns
 
 import accim.sim.accis_single_idf_funcs as accis
@@ -313,13 +314,17 @@ class OptimParamSimulation:
                     Reporting_Frequency=freq
                 )
 
-    def get_outputs_df_from_testsim(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def get_outputs_df_from_testsim(self, reduce_sim_time: bool = True) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.
         Therefore, it won't contain wildcards such as '*'.
 
+        :param reduce_sim_time: True to reduce the simulation runtime
+
         :return: a tuple containing the DataFrames containing Output:Variable and Output:Meter
         """
+        if reduce_sim_time:
+            reduce_runtime(idf_object=self.building, maximum_figures_in_shadow_overlap_calculations=200, timesteps=2)
         available_outputs = print_available_outputs_mod(self.building)
         df_outputmeters = pd.DataFrame(
             available_outputs.meterreaderlist,

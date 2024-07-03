@@ -4317,12 +4317,12 @@ def makeAverages(self, verboseMode):
                         print(f'Not added - {output}_Building_Average EMS OutputVariable')
                 else:
                     self.idf1.newidfobject(
-                    key='EnergyManagementSystem:OutputVariable',
-                    Name=f'{output}_Building_Average',
-                    EMS_Variable_Name=f'{key}BuildAvg',
-                    Type_of_Data_in_Variable='Summed',
-                    Update_Frequency='ZoneTimestep',
-                    Units='H'
+                        key='EnergyManagementSystem:OutputVariable',
+                        Name=f'{output}_Building_Average',
+                        EMS_Variable_Name=f'{key}BuildAvg',
+                        Type_of_Data_in_Variable='Summed',
+                        Update_Frequency='ZoneTimestep',
+                        Units='H'
                     )
                     if verboseMode:
                         print(f'Added - {output}_Building_Average EMS OutputVariable')
@@ -4334,63 +4334,110 @@ def makeAverages(self, verboseMode):
                 #     Reporting_Frequency='Hourly'
                 # )
 
-    # Make average for operative temperature
-    op_temp_sensors = [
-        i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if
-        'OpT' in i.Name and
-        i.OutputVariable_or_OutputMeter_Index_Key_Name in self.zonenames_orig
-    ]
-    op_temp_sum = '+'.join(op_temp_sensors)
+    #Make average for output:variable (sensors) objects
 
-    if f'OpTempBuildAvg' in gvs_all:
-        if verboseMode:
-            print(f'Not added - MakeOpTempBuildAvg GlobalVariable')
-    else:
-        self.idf1.newidfobject(
-            key='EnergyManagementSystem:GlobalVariable',
-            Erl_Variable_1_Name=f'OpTempBuildAvg'
-        )
-        if verboseMode:
-            print(f'Added - OpTempBuildAvg GlobalVariable')
+    output_vars = {
+        'Zone Operative Temperature': {
+            'sensor_name': 'OpT',
+            'short_name': 'OpTemp',
+            'units': 'C',
+            'agg': 'Averaged'
+        },
+        'AFN Zone Ventilation Air Change Rate': {
+            'sensor_name': 'VentACR',
+            'short_name': 'VentACR',
+            'units': 'ach',
+            'agg': 'Averaged'
+        },
+        'AFN Zone Infiltration Air Change Rate': {
+            'sensor_name': 'InfACR',
+            'short_name': 'InfACR',
+            'units': 'ach',
+            'agg': 'Averaged'
+        }
 
-    if f'MakeOpTempBuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager']]:
-        if verboseMode:
-            print(f'Not added - MakeOpTempBuildAvg ProgramCallingManager')
-    else:
-        self.idf1.newidfobject(
-            key='EnergyManagementSystem:ProgramCallingManager',
-            Name=f'MakeOpTempBuildAvg',
-            EnergyPlus_Model_Calling_Point='BeginTimestepBeforePredictor',
-            Program_Name_1=f'MakeOpTempBuildAvg',
-        )
-        if verboseMode:
-            print(f'Added - MakeOpTempBuildAvg ProgramCallingManager')
+    }
 
-    if f'MakeOpTempBuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:Program']]:
-        if verboseMode:
-            print(f'Not added - MakeOpTempBuildAvg Program')
-    else:
-        self.idf1.newidfobject(
-            'EnergyManagementSystem:Program',
-            Name=f'MakeOpTempBuildAvg',
-            Program_Line_1=f'set OpTempBuildAvgNum = ' + op_temp_sum,
-            Program_Line_2=f'set OpTempBuildAvgDen = ' + str(len(op_temp_sensors)),
-            Program_Line_3=f'set OpTempBuildAvg = OpTempBuildAvgNum/OpTempBuildAvgDen'
-        )
-        if verboseMode:
-            print(f'Added - MakeOpTempBuildAvg Program')
+    for k, v in output_vars.items():
 
-    if f'Zone Operative Temperature_Building_Average' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']]:
-        if verboseMode:
-            print(f'Not added - Zone Operative Temperature_Building_Average EMS OutputVariable')
-    else:
-        self.idf1.newidfobject(
-            key='EnergyManagementSystem:OutputVariable',
-            Name=f'Zone Operative Temperature_Building_Average',
-            EMS_Variable_Name=f'OpTempBuildAvg',
-            Type_of_Data_in_Variable='Averaged',
-            Update_Frequency='ZoneTimestep',
-            Units='C'
-        )
-        if verboseMode:
-            print(f'Added - Zone Operative Temperature_Building_Average EMS OutputVariable')
+        sensorlist = [
+            i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if
+            i.OutputVariable_or_OutputMeter_Name == k
+        ]
+        for i, zone in enumerate(self.zonenames_orig):
+            sensorname = self.zonenames[i]+'_'+output_vars[k]['sensor_name']
+            if sensorname in sensorlist:
+                if verboseMode:
+                    print('Not added - '+sensorname+' Sensor')
+            else:
+                self.idf1.newidfobject(
+                    'EnergyManagementSystem:Sensor',
+                    Name=sensorname,
+                    OutputVariable_or_OutputMeter_Index_Key_Name=zone,
+                    OutputVariable_or_OutputMeter_Name=k
+                )
+                if verboseMode:
+                    print('Added - '+sensorname+' Sensor')
+
+        sensorlist = [
+            i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if
+            i.OutputVariable_or_OutputMeter_Name == k
+        ]
+        output_var_sum = '+'.join(sensorlist)
+
+
+        key = output_vars[k]['short_name']
+        if f'{key}BuildAvg' in gvs_all:
+            if verboseMode:
+                print(f'Not added - Make{key}BuildAvg GlobalVariable')
+        else:
+            self.idf1.newidfobject(
+                key='EnergyManagementSystem:GlobalVariable',
+                Erl_Variable_1_Name=f'{key}BuildAvg'
+            )
+            if verboseMode:
+                print(f'Added - {key}BuildAvg GlobalVariable')
+
+        if f'Make{key}BuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager']]:
+            if verboseMode:
+                print(f'Not added - Make{key}BuildAvg ProgramCallingManager')
+        else:
+            self.idf1.newidfobject(
+                key='EnergyManagementSystem:ProgramCallingManager',
+                Name=f'Make{key}BuildAvg',
+                EnergyPlus_Model_Calling_Point='BeginTimestepBeforePredictor',
+                Program_Name_1=f'Make{key}BuildAvg',
+            )
+            if verboseMode:
+                print(f'Added - Make{key}BuildAvg ProgramCallingManager')
+
+        if f'Make{key}BuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:Program']]:
+            if verboseMode:
+                print(f'Not added - Make{key}BuildAvg Program')
+        else:
+            self.idf1.newidfobject(
+                'EnergyManagementSystem:Program',
+                Name=f'Make{key}BuildAvg',
+                Program_Line_1=f'set {key}BuildAvgNum = ' + output_var_sum,
+                Program_Line_2=f'set {key}BuildAvgDen = ' + str(len(sensorlist)),
+                Program_Line_3=f'set {key}BuildAvg = {key}BuildAvgNum/{key}BuildAvgDen'
+            )
+            if verboseMode:
+                print(f'Added - Make{key}BuildAvg Program')
+
+
+        if f'{k}_Building_Average' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']]:
+            if verboseMode:
+                print(f'Not added - {k}_Building_Average EMS OutputVariable')
+        else:
+            self.idf1.newidfobject(
+                key='EnergyManagementSystem:OutputVariable',
+                Name=f'{k}_Building_Average',
+                EMS_Variable_Name=f'{key}BuildAvg',
+                Type_of_Data_in_Variable=output_vars[k]['agg'],
+                Update_Frequency='ZoneTimestep',
+                Units=output_vars[k]['units']
+            )
+            if verboseMode:
+                print(f'Added - {k}_Building_Average EMS OutputVariable')
+

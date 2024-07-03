@@ -23,7 +23,7 @@ parametric = OptimParamSimulation(
     #output_freqs=['hourly'], #
     #ScriptType='vrf_mm', #
     #SupplyAirTempInputMethod='temperature difference', #
-    #debugging=True, #
+    # debugging=True, #
     #verbosemode=False #
 )
 
@@ -39,9 +39,11 @@ df_output_variables_idf = df_output_variables_idf[
     (
         df_output_variables_idf['variable_name'].str.contains('Setpoint Temperature_No Tolerance')
         |
-        df_output_variables_idf['variable_name'].str.contains('Zone Operative Temperature_Building_Average')
+        df_output_variables_idf['variable_name'].str.contains('Zone Operative Temperature')
         |
         df_output_variables_idf['variable_name'].str.contains('Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature')
+        |
+        df_output_variables_idf['variable_name'].str.contains('AFN Zone Ventilation Air Change Rate')
     )
 ]
 df_output_variables_idf
@@ -65,11 +67,11 @@ df_output_meters_idf.head()
 
 
 
-df_output_meters_testsim, df_output_variables_testsim = parametric.get_outputs_df_from_testsim()
+df_output_meters_testsim, df_output_variables_testsim = parametric.get_outputs_df_from_testsim(reduce_sim_time=False)
 df_output_meters_testsim
 df_output_variables_testsim
 
-
+##
 
 df_output_variables_testsim = df_output_variables_testsim[
     ~(
@@ -115,11 +117,11 @@ all_combinations
 
 ##
 
-parametric.run_parametric_simulation(
-    epws=['Seville.epw'],
-    out_dir='notebook_temp_dir',
-    df=parametric.parameters_values_df,
-    processes=4, # The number of CPUs to be used. Default is 2.
-    #keep_input=True, # To keep the input values of parameters, as entered in df argument. Default is True.
-    #keep_dirs=True # To keep the simulation outputs. Default is True.
-)
+# parametric.run_parametric_simulation(
+#     epws=['Seville.epw'],
+#     out_dir='notebook_temp_dir',
+#     df=parametric.parameters_values_df,
+#     processes=4, # The number of CPUs to be used. Default is 2.
+#     #keep_input=True, # To keep the input values of parameters, as entered in df argument. Default is True.
+#     #keep_dirs=True # To keep the simulation outputs. Default is True.
+# )

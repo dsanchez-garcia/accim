@@ -89,6 +89,10 @@ def reduce_runtime(
         shading_calculation_update_frequency: int = 20,
         maximum_figures_in_shadow_overlap_calculations: int = 200,
         timesteps: int = 6,
+        runperiod_begin_month: int = 1,
+        runperiod_begin_day_of_month: int = 1,
+        runperiod_end_month: int = 1,
+        runperiod_end_day_of_month: int = 1,
 ) -> besos.IDF_class.IDF:
     """
     Modifies the idf to reduce the simulation runtime.
@@ -99,6 +103,10 @@ def reduce_runtime(
     :param maximum_figures_in_shadow_overlap_calculations: An integer.
         Applies the number to the maximum figures in shadow overlap calculations.
     :param timesteps: An integer. Sets the number of timesteps.
+    :param runperiod_begin_day_of_month: the day of the month to start the simulation
+    :param runperiod_begin_month: the month to start the simulation
+    :param runperiod_end_day_of_month: the day of the month to end the simulation
+    :param runperiod_end_month: the month to end the simulation
     """
     if shading_calculation_update_frequency < 1 or shading_calculation_update_frequency > 365:
         raise ValueError('shading_calculation_update_frequency cannot be smaller than 1 or larger than 365')
@@ -112,6 +120,12 @@ def reduce_runtime(
         else:
             obj_building.Solar_Distribution = 'MinimalShadowing'
             print('Solar distribution has been set to MinimalShadowing.')
+
+    runperiod_obj = [i for i in idf_object.idfobjects['Runperiod']][0]
+    runperiod_obj.Begin_Month = runperiod_begin_month
+    runperiod_obj.Begin_Day_of_Month = runperiod_begin_day_of_month
+    runperiod_obj.End_Month = runperiod_end_month
+    runperiod_obj.End_Day_of_Month = runperiod_end_day_of_month
 
     obj_shadowcalc = [i for i in idf_object.idfobjects['ShadowCalculation']][0]
     shadowcalc_freq_prev = obj_shadowcalc.Shading_Calculation_Update_Frequency
