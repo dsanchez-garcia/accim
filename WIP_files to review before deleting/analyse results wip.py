@@ -28,7 +28,8 @@ data_analysis = Table(
 
 import pandas as pd
 
-df = pd.read_csv('WIP_data_postprocessing/ACCIM_Chile[srcfreq-monthly[freq-monthly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv')
+df = pd.read_csv(
+    '../WIP_data_postprocessing/ACCIM_Chile[srcfreq-monthly[freq-monthly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv')
 df.columns
 
 hierarchy_dict = {
@@ -116,7 +117,8 @@ for col in df.columns:
 import pandas as pd
 from besos.eppy_funcs import get_building
 
-df = pd.read_csv('WIP_data_postprocessing/ACCIM_Chile[srcfreq-monthly[freq-monthly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv')
+df = pd.read_csv(
+    '../WIP_data_postprocessing/ACCIM_Chile[srcfreq-monthly[freq-monthly[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv')
 df.columns
 
 building = get_building('ChileanModel.idf')
