@@ -19,9 +19,11 @@ The figure below clearly explains the aim of adaptive setpoint temperatures: int
 
 If you use this package, please cite us:
 
-Sánchez-García, D., Bienvenido-Huertas, D., Rubio-Bellido, C., 2021. _Computational approach to extend the air-conditioning usage to adaptive comfort: Adaptive-Comfort-Control-Implementation Script._ Automation in Construction. 131, 103900. https://doi.org/10.1016/j.autcon.2021.103900
+[1] D. Sánchez-García, David Bienvenido-Huertas, Carlos Rubio-Bellido, Computational approach to extend the air-conditioning usage to adaptive comfort: Adaptive-Comfort-Control-Implementation Script, Automation in Construction 131 (2021) 103900. doi:10.1016/j.autcon.2021.103900. https://doi.org/10.1016/j.autcon.2021.103900
 
-Sánchez-García, D., Martínez-Crespo, J., Hernando, U.R.R., Alonso, C., 2023. _A detailed view of the Adaptive-Comfort-Control-Implementation Script (ACCIS): The capabilities of the automation system for adaptive setpoint temperatures in building energy models._ Energy and Buildings. 288. https://doi.org/10.1016/j.enbuild.2023.113019
+[2] Daniel Sánchez-García, Jorge Martínez-Crespo, Ulpiano Ruiz-Rivas Hernando, Carmen Alonso, A detailed view of the Adaptive-Comfort-Control-Implementation Script (ACCIS): The capabilities of the automation system for adaptive setpoint temperatures in building energy models, Energy and Buildings 288 (2023) 113019. doi:10.1016/j.enbuild.2023.113019. https://doi.org/10.1016/j.enbuild.2023.113019
+
+[3] Daniel Sánchez-García, David Bienvenido-Huertas, William O’Brien, accim: a Python library for adaptive setpoint temperatures in building performance simulations, Journal of Building Performance Simulation (2025) 1–13. doi:10.1080/19401493.2025.2472305. https://doi.org/10.1080/19401493.2025.2472305
 
 # 2. How to use
 
