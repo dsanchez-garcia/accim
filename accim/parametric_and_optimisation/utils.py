@@ -42,12 +42,28 @@ def expand_to_hourly_dataframe(
     if hourly_columns is None:
         hourly_columns = identify_hourly_columns(df)
 
+    # print(f"Hourly columns identified: {hourly_columns}")
+
     # Keep only parameter columns and hourly columns
-    df = df[parameter_columns + hourly_columns]
+    df_subset = df[parameter_columns + hourly_columns].copy()
 
     # Convert string representations of lists into actual lists
     for col in hourly_columns:
-        df[col] = df[col].apply(ast.literal_eval)
+        # print(f"Processing column: {col}")
+        if not df_subset[col].empty and isinstance(df_subset[col].iloc[0], str):
+            print(f"First element of '{col}' is a string. Attempting evaluation...")
+            evaluated_values = []
+            for value in df_subset[col]:
+                try:
+                    evaluated_values.append(ast.literal_eval(value.strip()))
+                except (ValueError, TypeError, SyntaxError, Exception) as e:
+                    print(f"Error evaluating in column '{col}': '{value}' - {e}")
+                    evaluated_values.append(None)
+            df_subset[col] = evaluated_values
+        else:
+            continue
+            # print(f"First element of '{col}' is not a string. Assuming it's already a list.")
+
 
     # Convert start_date to datetime object
     start_datetime = datetime.strptime(start_date, '%Y-%m-%d %H')
@@ -63,9 +79,10 @@ def expand_to_hourly_dataframe(
         return pd.DataFrame(expanded_rows)
 
     # Apply the function to each row and concatenate the results
-    expanded_df = pd.concat(df.apply(expand_hourly_data, axis=1).to_list(), ignore_index=True)
+    expanded_df = pd.concat(df_subset.apply(expand_hourly_data, axis=1).to_list(), ignore_index=True)
 
     return expanded_df
+
 
 def identify_hourly_columns(df):
     """
@@ -79,7 +96,7 @@ def identify_hourly_columns(df):
         df[col].apply(lambda x: isinstance(x, str) and x.startswith('[') and x.endswith(']')).all()
     ]
 
-    if len(hourly_columns) == 0:
+    if not hourly_columns:
         hourly_columns = [
             col for col in df.columns if
             df[col].astype(str).apply(lambda x: x.strip().startswith('[') and x.strip().endswith(']')).all()

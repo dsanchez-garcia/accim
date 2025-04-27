@@ -476,7 +476,7 @@ parametric.parameters_values_df
 #todo commented
 
 parametric.run_parametric_simulation(
-    epws=['Seville.epw'],
+    epws=['Sydney.epw', 'Seville.epw'],
     out_dir='notebook_temp_dir',
     df=parametric.parameters_values_df,
     processes=4, # The number of CPUs to be used. Default is 2.
@@ -560,6 +560,28 @@ parametric.outputs_param_simulation_hourly
 
 
 # Let's prepare the `outputs_param_simulation_hourly` df for plotting:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # In[ ]:
 
