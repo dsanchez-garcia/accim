@@ -78,6 +78,13 @@ def identify_hourly_columns(df):
         col for col in df.columns if
         df[col].apply(lambda x: isinstance(x, str) and x.startswith('[') and x.endswith(']')).all()
     ]
+
+    if len(hourly_columns) == 0:
+        hourly_columns = [
+            col for col in df.columns if
+            df[col].astype(str).apply(lambda x: x.strip().startswith('[') and x.strip().endswith(']')).all()
+        ]
+
     return hourly_columns
 
 def make_all_combinations(parameters_values_dict: dict) -> pd.DataFrame:
