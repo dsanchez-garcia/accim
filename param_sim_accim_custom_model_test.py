@@ -53,7 +53,7 @@ accim.utils.set_occupancy_to_always(idf_object=building)
 # - "accim predefined model", in which models are those previously defined in accim (ComfStand=0 to ComfStand=22);
 # - "accim custom model", in which key parameters of the adaptive comfort model are defined in the relevant arguments;
 # - "apmv setpoints", in which setpoints are based on the aPMV (Adaptive Predicted Mean Vote) instead of the PMV index;
-# 
+#
 # In this case, we're going to use the 'accim custom model' type, in which we can define the adaptive comfort model.
 
 # In[11]:
@@ -175,7 +175,7 @@ df_output_meters_testsim
 df_output_variables_testsim
 
 
-# We can get DataFrames from the .rdd and .mdd files generated from the test simulation using the functions `get_rdd_file_as_df()` and `get_mdd_file_as_df()`. 
+# We can get DataFrames from the .rdd and .mdd files generated from the test simulation using the functions `get_rdd_file_as_df()` and `get_mdd_file_as_df()`.
 
 # In[22]:
 
@@ -432,8 +432,8 @@ parametric.problem
 
 import pandas as pd
 param_dict = {
-    'CustAST_m': [0.1, 0.6], 
-    'CustAST_n': [22, 8], 
+    'CustAST_m': [0.1, 0.6],
+    'CustAST_n': [22, 8],
     'CustAST_ASToffset': [2.5, 4],
     'CustAST_ASTall': [10, 10],
     'CustAST_ASTaul': [35, 35],
@@ -456,14 +456,14 @@ all_combinations
 # In[49]:
 
 
-parametric.sampling_lhs(num_samples=3)
+parametric.sampling_lhs(num_samples=2)
 parametric.parameters_values_df
 
 
 # In[50]:
 
 
-parametric.sampling_full_factorial(level=3)
+parametric.sampling_full_factorial(level=2)
 parametric.parameters_values_df
 
 
@@ -475,14 +475,14 @@ parametric.parameters_values_df
 
 #todo commented
 
-# parametric.run_parametric_simulation(
-#     epws=['Sydney.epw', 'Seville.epw'],
-#     out_dir='notebook_temp_dir',
-#     df=parametric.parameters_values_df,
-#     processes=4, # The number of CPUs to be used. Default is 2.
-#     #keep_input=True, # To keep the input values of parameters, as entered in df argument. Default is True.
-#     #keep_dirs=True # To keep the simulation outputs. Default is True.
-# )
+parametric.run_parametric_simulation(
+    epws=['Seville.epw'],
+    out_dir='notebook_temp_dir',
+    df=parametric.parameters_values_df,
+    processes=4, # The number of CPUs to be used. Default is 2.
+    #keep_input=True, # To keep the input values of parameters, as entered in df argument. Default is True.
+    #keep_dirs=True # To keep the simulation outputs. Default is True.
+)
 
 
 # Let's take a look at the simulation results
@@ -544,12 +544,16 @@ sns.scatterplot(
 # parametric.outputs_param_simulation.to_excel('outputs_param_simulation.xlsx')
 # parametric.outputs_param_simulation.to_csv('outputs_param_simulation.csv')
 
-import pandas as pd
-temp_df = pd.read_csv('outputs_param_simulation.csv')
-temp_df = temp_df.drop(columns='Unnamed: 0')
-temp_df = temp_df.drop(columns='index')
-
-parametric.outputs_param_simulation = temp_df
+# import pandas as pd
+# temp_df = pd.read_csv('outputs_param_simulation.csv')
+# temp_df = temp_df.drop(columns='Unnamed: 0')
+# temp_df = temp_df.drop(columns='index')
+#
+# time_series = [i for i in temp_df.columns if '_time series' in i][0]
+#
+# temp_df[time_series][0]
+#
+# parametric.outputs_param_simulation = temp_df
 
 parametric.get_hourly_df()
 parametric.outputs_param_simulation_hourly
