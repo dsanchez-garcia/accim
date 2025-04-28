@@ -1,5 +1,5 @@
 """Add EnergyPlus objects in common to both ExistingHVAC and VRFsystem."""
-
+from accim.sim.lists import epvers_space_objs
 
 def setComfFieldsPeople(
         self,
@@ -18,9 +18,12 @@ def setComfFieldsPeople(
     :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
     """
     ppl = ([people for people in self.idf1.idfobjects['PEOPLE']])
+
+    # epversionslist = ['9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1']
+
     for i in range(len(ppl)):
         if TempCtrl == 'pmv':
-            if EnergyPlus_version.lower() == '9.6' or '22' in EnergyPlus_version.lower() or '23' in EnergyPlus_version.lower():
+            if any([EnergyPlus_version.lower() == v for v in epvers_space_objs]):
                 self.idf1.newidfobject(
                     'PEOPLE',
                     Name=ppl[i].Name,
@@ -87,7 +90,7 @@ def setComfFieldsPeople(
                 firstpeopleobject = self.idf1.idfobjects['PEOPLE'][0]
                 self.idf1.removeidfobject(firstpeopleobject)
         else:
-            if EnergyPlus_version.lower() == '9.6' or '22' in EnergyPlus_version.lower() or '23' in EnergyPlus_version.lower():
+            if any([EnergyPlus_version.lower() == v for v in epvers_space_objs]):
                 self.idf1.newidfobject(
                     'PEOPLE',
                     Name=ppl[i].Name,

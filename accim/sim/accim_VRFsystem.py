@@ -1,5 +1,6 @@
 """Add EnergyPlus objects only for VRFsystem."""
 
+from accim.sim.lists import epvers_space_objs
 
 def addOpTempTherm(self, verboseMode : bool = True):
     """
@@ -940,7 +941,7 @@ def addDetHVACobj(
                       ' AirConditioner:VariableRefrigerantFlow '
                       'Object already was in the model')
         else:
-            if EnergyPlus_version.lower() == '9.6' or '22' in EnergyPlus_version.lower() or '23' in EnergyPlus_version.lower():
+            if any([EnergyPlus_version.lower() == v for v in epvers_space_objs]):
                 self.idf1.newidfobject(
                     'AirConditioner:VariableRefrigerantFlow',
                     Heat_Pump_Name='VRF Outdoor Unit_'+zn,
