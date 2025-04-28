@@ -119,7 +119,7 @@ setuptools.setup(
         # 'geopy',
         'matplotlib<=3.7',
         'numpy<2.0.0',
-        'pandas==2.1.4',
+        'pandas',
         'datapackage',
         'unidecode',
         # 'shutil',
