@@ -30,7 +30,7 @@ If you use this package, please cite us:
 ## 2.0 Requirements
 To use accim, the following must be installed:
 - Python 3.9
-- EnergyPlus (any version between 9.1 and 23.1 those included)
+- EnergyPlus (any version between 9.1 and 25.1 those included)
 
 ## 2.1 Installation
 First of all, you need to install the package:
