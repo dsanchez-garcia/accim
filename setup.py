@@ -90,7 +90,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/dsanchez-garcia/accim',
     author='Daniel Sánchez-García',
-    author_email='dsanchez7@us.es',
+    author_email='daniel.sanchezgarcia@uca.es',
     license='MIT License',
     classifiers=[
         'License :: OSI Approved :: MIT License',
