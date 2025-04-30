@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """Add EnergyPlus objects in common to both ExistingHVAC and VRFsystem."""
-from accim.sim.lists import epvers_space_objs
+from accim.lists import epvers_space_objs
 
 def setComfFieldsPeople(
         self,

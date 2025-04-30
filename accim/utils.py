@@ -25,6 +25,7 @@ import besos
 from os import PathLike
 from unidecode import unidecode
 
+from accim import lists
 
 def modify_timesteps(idf_object: besos.IDF_class.IDF, timesteps: int) -> besos.IDF_class.IDF:
     """
@@ -399,3 +400,36 @@ def get_accim_args_flattened(idf_object):
     flattened_dict = flatten_dict(accim_args)
     # print(flattened_dict)
     return flattened_dict
+
+
+def get_idd_path_from_ep_version(EnergyPlus_version: str):
+    if EnergyPlus_version.lower() == '9.1':
+        iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == '9.2':
+        iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == '9.3':
+        iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == '9.4':
+        iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == '9.5':
+        iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == '9.6':
+        iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == '22.1':
+        iddfile = 'C:\EnergyPlusV22-1-0\Energy+.idd'
+    elif EnergyPlus_version.lower() == '22.2':
+        iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
+    elif EnergyPlus_version.lower() == '23.1':
+        iddfile = 'C:\EnergyPlusV23-1-0\Energy+.idd'
+    elif EnergyPlus_version.lower() == '23.2':
+        iddfile = 'C:\EnergyPlusV23-2-0\Energy+.idd'
+    elif EnergyPlus_version.lower() == '24.1':
+        iddfile = 'C:/EnergyPlusV24-1-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == '24.2':
+        iddfile = 'C:/EnergyPlusV24-2-0/Energy+.idd'
+    elif EnergyPlus_version.lower() == '25.1':
+        iddfile = 'C:/EnergyPlusV25-1-0/Energy+.idd'
+    else:
+        iddfile = 'not-supported'
+
+    return iddfile

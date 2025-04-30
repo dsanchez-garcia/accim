@@ -154,21 +154,21 @@ class addAccis:
             'runperiod'
         ]
 
-        fullEPversionsList = [
-            '9.1',
-            '9.2',
-            '9.3',
-            '9.4',
-            '9.5',
-            '9.6',
-            '22.1',
-            '22.2',
-            '23.1',
-            '23.2',
-            '24.1',
-            '24.2',
-            '25.1'
-        ]
+        # fullEPversionsList = [
+        #     '9.1',
+        #     '9.2',
+        #     '9.3',
+        #     '9.4',
+        #     '9.5',
+        #     '9.6',
+        #     '22.1',
+        #     '22.2',
+        #     '23.1',
+        #     '23.2',
+        #     '24.1',
+        #     '24.2',
+        #     '25.1'
+        # ]
 
         fullTempCtrllist = [
             'temperature',
@@ -237,12 +237,12 @@ class addAccis:
             EnergyPlus_version = f'{idf.idd_version[0]}.{idf.idd_version[1]}'
         if verboseMode:
             print('EnergyPlus version is: '+EnergyPlus_version)
-        if EnergyPlus_version not in fullEPversionsList:
-            print('Valid EnergyPlus_version: ')
-            print(fullEPversionsList)
-            raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
-                                                  "You must choose a EnergyPlus_version"
-                                                  "from the list above.")
+        # if EnergyPlus_version not in fullEPversionsList:
+        #     print('Valid EnergyPlus_version: ')
+        #     print(fullEPversionsList)
+        #     raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
+        #                                           "You must choose a EnergyPlus_version"
+        #                                           "from the list above.")
         if verboseMode:
             print('Temperature Control method is: '+TempCtrl)
         if TempCtrl not in fullTempCtrllist:

@@ -26,6 +26,8 @@ slightly modified so that takes multiple sample_EPWs located in the local folder
 import os
 from eppy.modeleditor import IDF, IDDAlreadySetError
 from eppy.runner.run_functions import runIDFs
+from accim.lists import fullEPversionsList
+from accim.utils import get_idd_path_from_ep_version
 
 
 def make_eplaunch_options(idf, epw):
@@ -69,45 +71,48 @@ def runEp(
     :type EnergyPlus_version: str
     """
 
-    fullEPversionsList = [
-        '9.1',
-        '9.2',
-        '9.3',
-        '9.4',
-        '9.5',
-        '9.6',
-        '22.1',
-        '22.2',
-        '23.1',
-        '23.2',
-    ]
+    # fullEPversionsList = [
+    #     '9.1',
+    #     '9.2',
+    #     '9.3',
+    #     '9.4',
+    #     '9.5',
+    #     '9.6',
+    #     '22.1',
+    #     '22.2',
+    #     '23.1',
+    #     '23.2',
+    # ]
 
     if EnergyPlus_version is None:
         print('You must enter an EnergyPlus version from the following list:')
         print(fullEPversionsList)
         EnergyPlus_version = input('Please enter the desired EnergyPlus version: ')
 
-    if EnergyPlus_version.lower() == '9.1':
-        iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == '9.2':
-        iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == '9.3':
-        iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == '9.4':
-        iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == '9.5':
-        iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == '9.6':
-        iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
-    elif EnergyPlus_version.lower() == '22.1':
-        iddfile = 'C:\EnergyPlusV22-1-0\Energy+.idd'
-    elif EnergyPlus_version.lower() == '22.2':
-        iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
-    elif EnergyPlus_version.lower() == '23.1':
-        iddfile = 'C:\EnergyPlusV23-1-0\Energy+.idd'
-    elif EnergyPlus_version.lower() == '23.2':
-        iddfile = 'C:\EnergyPlusV23-2-0\Energy+.idd'
-    else:
+    iddfile = get_idd_path_from_ep_version(EnergyPlus_version=EnergyPlus_version)
+
+    # if EnergyPlus_version.lower() == '9.1':
+    #     iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
+    # elif EnergyPlus_version.lower() == '9.2':
+    #     iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
+    # elif EnergyPlus_version.lower() == '9.3':
+    #     iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
+    # elif EnergyPlus_version.lower() == '9.4':
+    #     iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
+    # elif EnergyPlus_version.lower() == '9.5':
+    #     iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
+    # elif EnergyPlus_version.lower() == '9.6':
+    #     iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
+    # elif EnergyPlus_version.lower() == '22.1':
+    #     iddfile = 'C:\EnergyPlusV22-1-0\Energy+.idd'
+    # elif EnergyPlus_version.lower() == '22.2':
+    #     iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
+    # elif EnergyPlus_version.lower() == '23.1':
+    #     iddfile = 'C:\EnergyPlusV23-1-0\Energy+.idd'
+    # elif EnergyPlus_version.lower() == '23.2':
+    #     iddfile = 'C:\EnergyPlusV23-2-0\Energy+.idd'
+    # else:
+    if iddfile == 'not-supported':
         while EnergyPlus_version.lower() not in fullEPversionsList:
             print(f'{EnergyPlus_version} is not available. You must enter one of the following list:')
             print(fullEPversionsList)

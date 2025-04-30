@@ -16,7 +16,7 @@
 
 """Add EnergyPlus objects only for VRFsystem."""
 
-from accim.sim.lists import epvers_space_objs
+from accim.lists import epvers_space_objs
 
 def addOpTempTherm(self, verboseMode : bool = True):
     """

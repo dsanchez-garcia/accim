@@ -15,6 +15,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """Class for accim."""
+from accim.utils import get_idd_path_from_ep_version
+
 
 class accimJob():
     """Class to start the process to add the class ``accim.sim.accis.addAccis``.
@@ -73,8 +75,9 @@ class accimJob():
     from accim.sim.accim_VRFsystem_EMS import \
         addEMSSensorsVRFsystem
 
-    from accim.utils import amend_idf_version_from_dsb
+    from accim.utils import amend_idf_version_from_dsb, get_idd_path_from_ep_version
     from accim.sim.utils import scan_zones
+
 
     def __init__(self,
                  filename_temp,
@@ -100,33 +103,35 @@ class accimJob():
         idf_created = False
 
         if EnergyPlus_version.lower() != 'auto':
-            if EnergyPlus_version.lower() == '9.1':
-                iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '9.2':
-                iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '9.3':
-                iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '9.4':
-                iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '9.5':
-                iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '9.6':
-                iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '22.1':
-                iddfile = 'C:/EnergyPlusV22-1-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '22.2':
-                iddfile = 'C:/EnergyPlusV22-2-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '23.1':
-                iddfile = 'C:/EnergyPlusV23-1-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '23.2':
-                iddfile = 'C:/EnergyPlusV23-2-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '24.1':
-                iddfile = 'C:/EnergyPlusV24-1-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '24.2':
-                iddfile = 'C:/EnergyPlusV24-2-0/Energy+.idd'
-            elif EnergyPlus_version.lower() == '25.1':
-                iddfile = 'C:/EnergyPlusV25-1-0/Energy+.idd'
-            else:
+            iddfile = get_idd_path_from_ep_version(EnergyPlus_version=EnergyPlus_version)
+            # if EnergyPlus_version.lower() == '9.1':
+            #     iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '9.2':
+            #     iddfile = 'C:/EnergyPlusV9-2-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '9.3':
+            #     iddfile = 'C:/EnergyPlusV9-3-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '9.4':
+            #     iddfile = 'C:/EnergyPlusV9-4-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '9.5':
+            #     iddfile = 'C:/EnergyPlusV9-5-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '9.6':
+            #     iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '22.1':
+            #     iddfile = 'C:/EnergyPlusV22-1-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '22.2':
+            #     iddfile = 'C:/EnergyPlusV22-2-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '23.1':
+            #     iddfile = 'C:/EnergyPlusV23-1-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '23.2':
+            #     iddfile = 'C:/EnergyPlusV23-2-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '24.1':
+            #     iddfile = 'C:/EnergyPlusV24-1-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '24.2':
+            #     iddfile = 'C:/EnergyPlusV24-2-0/Energy+.idd'
+            # elif EnergyPlus_version.lower() == '25.1':
+            #     iddfile = 'C:/EnergyPlusV25-1-0/Energy+.idd'
+            # else:
+            if iddfile == 'not-supported':
                 raise ValueError("""EnergyPlus version not supported.\n
                                          Only works for versions between EnergyPlus 9.1 (enter 9.1) and EnergyPlus 25.1 (enter 25.1)""")
             if verboseMode:
