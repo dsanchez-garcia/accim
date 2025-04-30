@@ -91,13 +91,13 @@ setuptools.setup(
     url='https://github.com/dsanchez-garcia/accim',
     author='Daniel Sánchez-García',
     author_email='daniel.sanchezgarcia@uca.es',
-    license='MIT License',
+    license='GPL-3.0-or-later',
+    license_files=('LICENSE',),
     classifiers=[
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
         'Programming Language :: Python :: 3',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: MIT License',
-        'Operating System :: OS Independent',
+        'Operating System :: Microsoft :: Windows',
         'Topic :: Scientific/Engineering'
         ],
     packages=setuptools.find_packages(),
