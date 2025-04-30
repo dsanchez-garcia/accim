@@ -1,0 +1,251 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.data.morphing &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">accim.data.morphing</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for accim.data.morphing</h1><div class="highlight"><pre>
+<div class="viewcode-block" id="morph_epws">
+<a class="viewcode-back" href="../../../accim.data.html#accim.data.morphing.morph_epws">[docs]</a>
+<span></span><span class="k">def</span><span class="w"> </span><span class="nf">morph_epws</span><span class="p">(</span>
+        <span class="n">fwg_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">epw_filepaths</span><span class="p">:</span> <span class="nb">any</span> <span class="o">=</span> <span class="s1">&#39;all&#39;</span><span class="p">,</span>
+        <span class="n">delete_morphing_files</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">fwg_options_gcms</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">fwg_options_ensemble</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">fwg_options_month_transition_hours</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">72</span><span class="p">,</span>
+        <span class="n">fwg_options_do_multithread_computation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">fwg_options_interpolation_method_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">fwg_options_do_limit_variables</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function is a wrapper for the use of the FutureWeatherGenerator tool (https://future-weather-generator.adai.pt/),</span>
+<span class="sd">    developed by Eugènio Rodrigues et al., in command line.</span>
+<span class="sd">    It will move the epws in the working directory to a folder with the same name,</span>
+<span class="sd">    will morph them within their respective directories,</span>
+<span class="sd">    then will rename them using the original epw filename with the suffix depending on the scenario</span>
+<span class="sd">    (e.j. the future scenarios for Granada.epw will be Granada_ssp126_2050.epw, Granada_ssp126_2080.epw, etc.)</span>
+<span class="sd">    and move them back to the parent directory.</span>
+<span class="sd">    If requested, the files generated from the moprhing process will be deleted.</span>
+
+<span class="sd">    :param fwg_path: The path to the FutureWeatherGenerator tool.</span>
+<span class="sd">    :param epw_filepaths: A list of epw filenames to be morphed.</span>
+<span class="sd">    :param delete_morphing_files: True to delete all files resulting from the morphing process</span>
+<span class="sd">        except .epw files.</span>
+<span class="sd">    :param verbose: True to print on screen the performed actions.</span>
+<span class="sd">    :param fwg_options_gcms: The GCMs separated by a comma (without white space).</span>
+<span class="sd">    :param fwg_options_ensemble: Option to create an ensemble from the selected models: 0 is no, 1 is yes.</span>
+<span class="sd">    :param fwg_options_month_transition_hours: the number of hours to smooth the transition between months: 0 to 336 hours.</span>
+<span class="sd">    :param fwg_options_do_multithread_computation: True to do the computations in multithread.</span>
+<span class="sd">    :param fwg_options_interpolation_method_id: Selects the grid method: 0 – bilinear interpolation, 1 – an average of the four nearest points; 2 – nearest point.</span>
+<span class="sd">    :param fwg_options_do_limit_variables: True to bound each generated variable to its physical limits</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+
+    <span class="c1"># Get the absolute path of the current working directory</span>
+    <span class="n">cwd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+    <span class="c1"># Get a list of all .epw files in the current working directory</span>
+    <span class="k">if</span> <span class="n">epw_filepaths</span> <span class="o">==</span> <span class="s1">&#39;all&#39;</span><span class="p">:</span>
+        <span class="n">epw_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">file</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.epw&quot;</span><span class="p">)]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">epw_files</span> <span class="o">=</span> <span class="n">epw_filepaths</span>
+
+    <span class="k">if</span> <span class="n">fwg_options_gcms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">fwg_options_gcms</span> <span class="o">=</span> <span class="s1">&#39;BCC_CSM2_MR,CanESM5,CanESM5_1,CanESM5_CanOE,CAS_ESM2_0,CMCC_ESM2,CNRM_CM6_1_HR,CNRM_ESM2_1,EC_Earth3,EC_Earth3_Veg,FGOALS_g3,GISS_E2_1_G,GISS_E2_1_H,GISS_E2_2_G,IPSL_CM6A_LR,MIROC_ES2H,MIROC_ES2L,MIROC6,MRI_ESM2_0,UKESM1_0_LL&#39;</span>
+
+    <span class="c1"># List to store tuples of directories, EPW file names, absolute paths of folders, and absolute paths of EPW files</span>
+    <span class="n">directory_file_paths</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Iterate through each .epw file</span>
+    <span class="k">for</span> <span class="n">epw_file</span> <span class="ow">in</span> <span class="n">epw_files</span><span class="p">:</span>
+        <span class="c1"># Create a folder with the same name as the .epw file (without extension)</span>
+        <span class="n">folder_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">epw_file</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">folder_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cwd</span><span class="p">,</span> <span class="n">folder_name</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Move the .epw file into the created folder</span>
+        <span class="n">epw_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="n">epw_file</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">epw_file</span><span class="p">,</span> <span class="n">epw_file_path</span><span class="p">)</span>
+
+        <span class="c1"># Save the directory name, EPW file name, folder absolute path, and EPW file absolute path in the list</span>
+        <span class="n">directory_file_paths</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">folder_name</span><span class="p">,</span> <span class="n">epw_file</span><span class="p">,</span> <span class="n">folder_path</span><span class="p">,</span> <span class="n">epw_file_path</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Moved </span><span class="si">{</span><span class="n">epw_file</span><span class="si">}</span><span class="s2"> to folder </span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">folder_name</span><span class="p">,</span> <span class="n">epw_name</span><span class="p">,</span> <span class="n">folder_path</span><span class="p">,</span> <span class="n">epw_path</span> <span class="ow">in</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">directory_file_paths</span><span class="p">]:</span>
+        <span class="c1"># directory = os.path.dirname(epw)</span>
+        <span class="c1"># directory = r&#39;D:\OneDrive - ZER0CEM\Python\testing_morphing_python&#39;</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;java -cp &#39;</span>
+                       <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">fwg_path</span><span class="si">}</span><span class="s1">&quot; &#39;</span>
+                       <span class="sa">f</span><span class="s1">&#39;futureweathergenerator.Morph &quot;</span><span class="si">{</span><span class="n">epw_path</span><span class="si">}</span><span class="s1">&quot; &#39;</span>
+                       <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">fwg_options_gcms</span><span class="si">}</span><span class="s1"> &#39;</span>
+                       <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">fwg_options_ensemble</span><span class="si">}</span><span class="s1"> &#39;</span>
+                       <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">fwg_options_month_transition_hours</span><span class="si">}</span><span class="s1"> &#39;</span>
+                       <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">folder_path</span><span class="si">}</span><span class="s1">/&quot; &#39;</span>
+                       <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">fwg_options_do_multithread_computation</span><span class="si">}</span><span class="s1"> &#39;</span>
+                       <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">fwg_options_interpolation_method_id</span><span class="si">}</span><span class="s1"> &#39;</span>
+                       <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">fwg_options_do_limit_variables</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+
+    <span class="c1"># Search for new EPW files in the folder paths and rename them according to the pattern</span>
+    <span class="n">scenario_strings</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ssp126_2050&#39;</span><span class="p">,</span> <span class="s1">&#39;ssp126_2080&#39;</span><span class="p">,</span> <span class="s1">&#39;ssp245_2050&#39;</span><span class="p">,</span> <span class="s1">&#39;ssp245_2080&#39;</span><span class="p">,</span> <span class="s1">&#39;ssp370_2050&#39;</span><span class="p">,</span> <span class="s1">&#39;ssp370_2080&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;ssp585_2050&#39;</span><span class="p">,</span> <span class="s1">&#39;ssp585_2080&#39;</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">folder_name</span><span class="p">,</span> <span class="n">epw_name</span><span class="p">,</span> <span class="n">folder_path</span><span class="p">,</span> <span class="n">epw_path</span> <span class="ow">in</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">directory_file_paths</span><span class="p">]:</span>
+        <span class="c1"># List files in the folder path</span>
+        <span class="n">files_in_folder</span> <span class="o">=</span> <span class="p">[</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">folder_path</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.epw&#39;</span><span class="p">)]</span>
+
+        <span class="k">for</span> <span class="n">file_name</span> <span class="ow">in</span> <span class="n">files_in_folder</span><span class="p">:</span>
+            <span class="c1"># Check if the file name contains any of the scenario strings</span>
+            <span class="k">for</span> <span class="n">scenario</span> <span class="ow">in</span> <span class="n">scenario_strings</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">scenario</span> <span class="ow">in</span> <span class="n">file_name</span><span class="p">:</span>
+                    <span class="c1"># Rename the file following the specified pattern</span>
+                    <span class="n">new_file_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">scenario</span><span class="si">}</span><span class="s2">.epw&quot;</span>
+                    <span class="n">old_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
+                    <span class="n">new_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="n">new_file_name</span><span class="p">)</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">old_file_path</span><span class="p">,</span> <span class="n">new_file_path</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Renamed </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">new_file_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                    <span class="c1"># Move the renamed file to the parent folder</span>
+                    <span class="n">parent_folder_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">folder_path</span><span class="p">)</span>
+                    <span class="n">moved_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parent_folder_path</span><span class="p">,</span> <span class="n">new_file_name</span><span class="p">)</span>
+                    <span class="n">shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">new_file_path</span><span class="p">,</span> <span class="n">moved_file_path</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Moved </span><span class="si">{</span><span class="n">new_file_name</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">parent_folder_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Move the original EPW file to the parent folder</span>
+        <span class="n">original_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">folder_path</span><span class="p">,</span> <span class="n">folder_name</span> <span class="o">+</span> <span class="s2">&quot;.epw&quot;</span><span class="p">)</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">original_file_path</span><span class="p">,</span> <span class="n">parent_folder_path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Moved </span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="s2">.epw to </span><span class="si">{</span><span class="n">parent_folder_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">delete_morphing_files</span><span class="p">:</span>
+        <span class="c1"># Delete the folders created during the process</span>
+        <span class="k">for</span> <span class="n">folder_name</span><span class="p">,</span> <span class="n">epw_name</span><span class="p">,</span> <span class="n">folder_path</span><span class="p">,</span> <span class="n">epw_path</span> <span class="ow">in</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">directory_file_paths</span><span class="p">]:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">folder_path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Deleted folder: </span><span class="si">{</span><span class="n">folder_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

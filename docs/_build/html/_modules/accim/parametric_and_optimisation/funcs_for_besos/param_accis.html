@@ -1,0 +1,802 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.parametric_and_optimisation.funcs_for_besos.param_accis &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">accim.parametric_and_optimisation.funcs_for_besos.param_accis</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for accim.parametric_and_optimisation.funcs_for_besos.param_accis</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">besos.IDF_class</span>
+
+<span class="c1"># def modify_VSToffset(building, value):</span>
+<span class="c1">#     import accim.sim.accis_single_idf_funcs as accis</span>
+<span class="c1">#     accis.modifyAccis(</span>
+<span class="c1">#         idf=building,</span>
+<span class="c1">#         ComfStand=1,</span>
+<span class="c1">#         CAT=3,</span>
+<span class="c1">#         ComfMod=3,</span>
+<span class="c1">#         # SetpointAcc=1000,</span>
+<span class="c1">#         HVACmode=2,</span>
+<span class="c1">#         VentCtrl=0,</span>
+<span class="c1">#         CoolSeasonStart=&#39;01/02&#39;,</span>
+<span class="c1">#         CoolSeasonEnd=&#39;01/03&#39;,</span>
+<span class="c1">#         VSToffset=value,</span>
+<span class="c1">#         # MinOToffset=50,</span>
+<span class="c1">#         # MaxWindSpeed=50</span>
+<span class="c1">#     )</span>
+<span class="c1">#     return</span>
+
+
+<div class="viewcode-block" id="get_valid_param_combinations">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.get_valid_param_combinations">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_valid_param_combinations</span><span class="p">():</span>
+
+    <span class="c1"># CS_CA_CM_list_dict = {</span>
+    <span class="c1">#     0:{</span>
+    <span class="c1">#         &#39;name&#39;: &#39;0 = ESP CTE&#39;,</span>
+    <span class="c1">#         &#39;CAT&#39;: [&#39;n/a&#39;],</span>
+    <span class="c1">#         &#39;ComfMod&#39;: [&#39;n/a&#39;],</span>
+    <span class="c1">#     },</span>
+    <span class="c1">#     0: {</span>
+    <span class="c1">#         &#39;name&#39;: ,</span>
+    <span class="c1">#         &#39;CAT&#39;: ,</span>
+    <span class="c1">#         &#39;ComfMod&#39;: ,</span>
+    <span class="c1">#     },</span>
+    <span class="c1">#</span>
+    <span class="c1"># }</span>
+    <span class="c1">#     &#39;0 = ESP CTE&#39;: [, ],</span>
+    <span class="c1">#     &#39;1 = INT EN16798-1&#39;: [[1, 2, 3], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;2 = INT ASHRAE55&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;3 = JPN Rijal&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;4 = CHN GBT50785 Cold&#39;: [[1, 2], [3]],</span>
+    <span class="c1">#     &#39;5 = CHN GBT50785 HotMild&#39;: [[1, 2], [3]],</span>
+    <span class="c1">#     &#39;6 = CHN Yang&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;7 = IND IMAC C NV&#39;: [[80, 85, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;8 = IND IMAC C MM&#39;: [[80, 85, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;9 = IND IMAC R 7DRM&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;10 = IND IMAC R 30DRM&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;11 = IND Dhaka&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;12 = ROM Udrea&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;13 = AUS Williamson&#39;: [[80, 90], [0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5, 2, 3]],</span>
+    <span class="c1">#     &#39;14 = AUS DeDear&#39;: [[80, 90], [0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5, 2, 3]],</span>
+    <span class="c1">#     &#39;15 = BRA Rupp NV&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;16 = BRA Rupp AC&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;17 = MEX Oropeza Arid&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;18 = MEX Oropeza DryTropic&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;19 = MEX Oropeza Temperate&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;20 = MEX Oropeza HumTropic&#39;: [[80, 90], [0, 1, 2, 3]],</span>
+    <span class="c1">#     &#39;21 = CHL Perez-Fargallo&#39;: [[80, 90], [2, 3]],</span>
+    <span class="c1">#     &#39;22 = INT ISO7730&#39;: [[1, 2, 3], [0]],</span>
+    <span class="c1"># }</span>
+
+    <span class="n">CS_CA_CM_list_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="p">[[</span><span class="s1">&#39;n/a&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;n/a&#39;</span><span class="p">]],</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">2</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">3</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">4</span><span class="p">:</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">5</span><span class="p">:</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">6</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">7</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">85</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">8</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">85</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">9</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">10</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">11</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">12</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">13</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">,</span> <span class="mf">1.3</span><span class="p">,</span> <span class="mf">1.4</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">14</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">,</span> <span class="mf">1.3</span><span class="p">,</span> <span class="mf">1.4</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">15</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">16</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">17</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">18</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">19</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">20</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">21</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">22</span><span class="p">:</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">CS_CA_CM_list_dict</span></div>
+
+
+<div class="viewcode-block" id="drop_invalid_param_combinations">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.drop_invalid_param_combinations">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">drop_invalid_param_combinations</span><span class="p">(</span><span class="n">samples_df</span><span class="p">):</span>
+    <span class="n">samples_df</span> <span class="o">=</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+
+    <span class="n">valid_params</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="p">[[</span><span class="s1">&#39;n/a&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s1">&#39;n/a&#39;</span><span class="p">]],</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">2</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">3</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">4</span><span class="p">:</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">5</span><span class="p">:</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">6</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">7</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">85</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">8</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">85</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">9</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">10</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">11</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">12</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">13</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">,</span> <span class="mf">1.3</span><span class="p">,</span> <span class="mf">1.4</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">14</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="mf">1.2</span><span class="p">,</span> <span class="mf">1.3</span><span class="p">,</span> <span class="mf">1.4</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">15</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">16</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">17</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">18</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">19</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">20</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">21</span><span class="p">:</span> <span class="p">[[</span><span class="mi">80</span><span class="p">,</span> <span class="mi">90</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]],</span>
+        <span class="mi">22</span><span class="p">:</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+    <span class="p">}</span>
+
+    <span class="n">samples_df</span><span class="p">[</span><span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;CAT&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_params</span><span class="p">[</span><span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;ComfStand&#39;</span><span class="p">]][</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;ComfMod&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_params</span><span class="p">[</span><span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;ComfStand&#39;</span><span class="p">]][</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;VentCtrl&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;HVACmode&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;VSToffset&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;HVACmode&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;MinOToffset&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;HVACmode&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;MaxWindSpeed&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;HVACmode&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;SetpointAcc&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;MaxTempDiffVOF&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;MinTempDiffVOF&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;MinTempDiffVOF&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;MaxTempDiffVOF&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;MultiplierVOF&#39;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;MultiplierVOF&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">samples_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+
+    <span class="n">samples_cleaned</span> <span class="o">=</span> <span class="n">samples_df</span><span class="p">[</span><span class="n">samples_df</span><span class="p">[</span><span class="s1">&#39;valid&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">True</span><span class="p">]</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;valid&#39;</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">samples_cleaned</span></div>
+
+
+
+<div class="viewcode-block" id="modify_ComfStand">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ComfStand">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_ComfStand</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the ComfStand argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetInputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                     <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetInputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_1</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set ComfStand = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CustAST_ACSTaul">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSTaul">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CustAST_ACSTaul</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CustAST_ACSTaul argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetAppLimits</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                          <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetAppLimits&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetAppLimits</span><span class="o">.</span><span class="n">Program_Line_2</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set ACSTaul = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CustAST_ACSTall">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSTall">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CustAST_ACSTall</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CustAST_ACSTall argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetAppLimits</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                          <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetAppLimits&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetAppLimits</span><span class="o">.</span><span class="n">Program_Line_3</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set ACSTall = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CustAST_AHSTaul">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSTaul">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CustAST_AHSTaul</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CustAST_AHSTaul argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetAppLimits</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                          <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetAppLimits&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetAppLimits</span><span class="o">.</span><span class="n">Program_Line_4</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set AHSTaul = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CustAST_AHSTall">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSTall">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CustAST_AHSTall</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CustAST_AHSTall argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetAppLimits</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                          <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetAppLimits&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetAppLimits</span><span class="o">.</span><span class="n">Program_Line_5</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set AHSTall = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CustAST_ASTall">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASTall">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CustAST_ASTall</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CustAST_ACSTall and CustAST_AHSTall arguments to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetAppLimits</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                          <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetAppLimits&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetAppLimits</span><span class="o">.</span><span class="n">Program_Line_3</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set ACSTall = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="n">SetAppLimits</span><span class="o">.</span><span class="n">Program_Line_5</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set AHSTall = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CustAST_ASTaul">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASTaul">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CustAST_ASTaul</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CustAST_ACSTaul and CustAST_AHSTaul arguments to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetAppLimits</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                          <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetAppLimits&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetAppLimits</span><span class="o">.</span><span class="n">Program_Line_2</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set ACSTaul = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="n">SetAppLimits</span><span class="o">.</span><span class="n">Program_Line_4</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set AHSTaul = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CustAST_m">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_m">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CustAST_m</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CustAST_m argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetAST</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+               <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetAST&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetAST</span><span class="o">.</span><span class="n">Program_Line_2</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set m = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+
+<div class="viewcode-block" id="modify_CustAST_n">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_n">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CustAST_n</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CustAST_n argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetAST</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+               <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetAST&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetAST</span><span class="o">.</span><span class="n">Program_Line_3</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set n = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CustAST_ACSToffset">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSToffset">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CustAST_ACSToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the ACSToffset argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ApplyCAT</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                 <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;ApplyCAT&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">ApplyCAT</span><span class="o">.</span><span class="n">Program_Line_4</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set ACSToffset = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+
+<div class="viewcode-block" id="modify_CustAST_AHSToffset">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSToffset">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CustAST_AHSToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the AHSToffset argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ApplyCAT</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                 <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;ApplyCAT&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">ApplyCAT</span><span class="o">.</span><span class="n">Program_Line_5</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set AHSToffset = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CustAST_ASToffset">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASToffset">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CustAST_ASToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the ACSToffset and AHSToffset arguments symmetrically to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ApplyCAT</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                 <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;ApplyCAT&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">ApplyCAT</span><span class="o">.</span><span class="n">Program_Line_4</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set ACSToffset = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="n">ApplyCAT</span><span class="o">.</span><span class="n">Program_Line_5</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set AHSToffset = </span><span class="si">{</span><span class="o">-</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+
+<div class="viewcode-block" id="modify_CAT">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CAT">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CAT</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CAT argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetInputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                     <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetInputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_2</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set CAT = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CATcoolOffset">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CATcoolOffset">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CATcoolOffset</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CATcoolOffset argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ApplyCAT</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                 <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;ApplyCAT&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">ApplyCAT</span><span class="o">.</span><span class="n">Program_Line_1</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set CATcoolOffset = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CATheatOffset">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CATheatOffset">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CATheatOffset</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CATheatOffset argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ApplyCAT</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                 <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;ApplyCAT&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">ApplyCAT</span><span class="o">.</span><span class="n">Program_Line_2</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set CATheatOffset = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_ComfMod">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ComfMod">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_ComfMod</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the ComfMod argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetInputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                     <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetInputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_3</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set ComfMod = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_HVACmode">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_HVACmode">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_HVACmode</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the HVACmode argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetInputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                     <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetInputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_4</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set HVACmode = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_VentCtrl">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_VentCtrl">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_VentCtrl</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the VentCtrl argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetInputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                     <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetInputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_5</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set VentCtrl = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_VSToffset">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_VSToffset">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_VSToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the VSToffset argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetInputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                     <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetInputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_6</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set VSToffset = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_MinOToffset">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MinOToffset">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_MinOToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the MinOToffset argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetInputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                     <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetInputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_7</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set MinOToffset = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_MaxWindSpeed">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MaxWindSpeed">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_MaxWindSpeed</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the MaxWindSpeed argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetInputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                     <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetInputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_8</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set MaxWindSpeed = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_ASTtol">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ASTtol">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_ASTtol</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the ACSTtol and AHSTtol arguments symmetrically to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetInputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                     <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetInputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_9</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set ACSTtol = </span><span class="si">{</span><span class="o">-</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_10</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set AHSTtol = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CoolSeasonStart">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CoolSeasonStart">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CoolSeasonStart</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">any</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CoolSeasonStart argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument. Can be an integer representing the day of the year, or the</span>
+<span class="sd">        date in format dd/mm.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetInputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                     <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetInputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">accim.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">transform_ddmm_to_int</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">transform_ddmm_to_int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_11</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set CoolSeasonStart = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_CoolSeasonEnd">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CoolSeasonEnd">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_CoolSeasonEnd</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">any</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the CoolSeasonEnd argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument. Can be an integer representing the day of the year, or the</span>
+<span class="sd">        date in format dd/mm.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetInputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                     <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetInputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">accim.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">transform_ddmm_to_int</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">transform_ddmm_to_int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="n">SetInputData</span><span class="o">.</span><span class="n">Program_Line_12</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set CoolSeasonEnd = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_SetpointAcc">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_SetpointAcc">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_SetpointAcc</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the SetpointAcc argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetAST</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+               <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetAST&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetAST</span><span class="o">.</span><span class="n">Program_Line_1</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set SetpointAcc = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_MaxTempDiffVOF">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MaxTempDiffVOF">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_MaxTempDiffVOF</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the MaxTempDiffVOF argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetVOFinputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                        <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetVOFinputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetVOFinputData</span><span class="o">.</span><span class="n">Program_Line_1</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set MaxTempDiffVOF = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_MinTempDiffVOF">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MinTempDiffVOF">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_MinTempDiffVOF</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the MinTempDiffVOF argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetVOFinputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                        <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetVOFinputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetVOFinputData</span><span class="o">.</span><span class="n">Program_Line_2</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set MinTempDiffVOF = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="modify_MultiplierVOF">
+<a class="viewcode-back" href="../../../../accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MultiplierVOF">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_MultiplierVOF</span><span class="p">(</span><span class="n">idf</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the MultiplierVOF argument to match the entered value.</span>
+
+<span class="sd">    :param idf: The eppy or besos IDF class instance.</span>
+<span class="sd">    :param value: The value to be applied in the argument.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">SetVOFinputData</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span> <span class="k">for</span> <span class="n">program</span> <span class="ow">in</span> <span class="n">idf</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span>
+                        <span class="n">program</span><span class="o">.</span><span class="n">Name</span> <span class="o">==</span> <span class="s1">&#39;SetVOFinputData&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">SetVOFinputData</span><span class="o">.</span><span class="n">Program_Line_3</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set MultiplierVOF = </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">return</span></div>
+
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

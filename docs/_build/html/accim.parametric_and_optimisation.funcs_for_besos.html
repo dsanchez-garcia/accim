@@ -1,0 +1,754 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.parametric_and_optimisation.funcs_for_besos package &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="accim.run package" href="accim.run.html" />
+    <link rel="prev" title="accim.parametric_and_optimisation package" href="accim.parametric_and_optimisation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">accim</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="accim.html">accim package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="accim.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="accim.data.html">accim.data package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="accim.parametric_and_optimisation.html">accim.parametric_and_optimisation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.run.html">accim.run package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.sim.html">accim.sim package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#module-accim.utils">accim.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#module-accim">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">setup module</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">accim</a></li>
+          <li class="breadcrumb-item"><a href="accim.html">accim package</a></li>
+          <li class="breadcrumb-item"><a href="accim.parametric_and_optimisation.html">accim.parametric_and_optimisation package</a></li>
+      <li class="breadcrumb-item active">accim.parametric_and_optimisation.funcs_for_besos package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/accim.parametric_and_optimisation.funcs_for_besos.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="accim-parametric-and-optimisation-funcs-for-besos-package">
+<h1>accim.parametric_and_optimisation.funcs_for_besos package<a class="headerlink" href="#accim-parametric-and-optimisation-funcs-for-besos-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-accim.parametric_and_optimisation.funcs_for_besos.param_accis">
+<span id="accim-parametric-and-optimisation-funcs-for-besos-param-accis-module"></span><h2>accim.parametric_and_optimisation.funcs_for_besos.param_accis module<a class="headerlink" href="#module-accim.parametric_and_optimisation.funcs_for_besos.param_accis" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.drop_invalid_param_combinations">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">drop_invalid_param_combinations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">samples_df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#drop_invalid_param_combinations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.drop_invalid_param_combinations" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.get_valid_param_combinations">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">get_valid_param_combinations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#get_valid_param_combinations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.get_valid_param_combinations" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ASTtol">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_ASTtol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_ASTtol"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ASTtol" title="Link to this definition"></a></dt>
+<dd><p>Modifies the ACSTtol and AHSTtol arguments symmetrically to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CAT">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CAT</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CAT"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CAT" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CAT argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CATcoolOffset">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CATcoolOffset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CATcoolOffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CATcoolOffset" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CATcoolOffset argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CATheatOffset">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CATheatOffset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CATheatOffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CATheatOffset" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CATheatOffset argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ComfMod">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_ComfMod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_ComfMod"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ComfMod" title="Link to this definition"></a></dt>
+<dd><p>Modifies the ComfMod argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ComfStand">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_ComfStand</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_ComfStand"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ComfStand" title="Link to this definition"></a></dt>
+<dd><p>Modifies the ComfStand argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CoolSeasonEnd">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CoolSeasonEnd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CoolSeasonEnd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CoolSeasonEnd" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CoolSeasonEnd argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument. Can be an integer representing the day of the year, or the
+date in format dd/mm.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CoolSeasonStart">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CoolSeasonStart</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CoolSeasonStart"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CoolSeasonStart" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CoolSeasonStart argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument. Can be an integer representing the day of the year, or the
+date in format dd/mm.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSTall">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CustAST_ACSTall</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CustAST_ACSTall"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSTall" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CustAST_ACSTall argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSTaul">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CustAST_ACSTaul</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CustAST_ACSTaul"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSTaul" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CustAST_ACSTaul argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSToffset">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CustAST_ACSToffset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CustAST_ACSToffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSToffset" title="Link to this definition"></a></dt>
+<dd><p>Modifies the ACSToffset argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSTall">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CustAST_AHSTall</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CustAST_AHSTall"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSTall" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CustAST_AHSTall argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSTaul">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CustAST_AHSTaul</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CustAST_AHSTaul"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSTaul" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CustAST_AHSTaul argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSToffset">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CustAST_AHSToffset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CustAST_AHSToffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSToffset" title="Link to this definition"></a></dt>
+<dd><p>Modifies the AHSToffset argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASTall">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CustAST_ASTall</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CustAST_ASTall"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASTall" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CustAST_ACSTall and CustAST_AHSTall arguments to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASTaul">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CustAST_ASTaul</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CustAST_ASTaul"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASTaul" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CustAST_ACSTaul and CustAST_AHSTaul arguments to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASToffset">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CustAST_ASToffset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CustAST_ASToffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASToffset" title="Link to this definition"></a></dt>
+<dd><p>Modifies the ACSToffset and AHSToffset arguments symmetrically to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_m">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CustAST_m</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CustAST_m"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_m" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CustAST_m argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_n">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_CustAST_n</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_CustAST_n"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_n" title="Link to this definition"></a></dt>
+<dd><p>Modifies the CustAST_n argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_HVACmode">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_HVACmode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_HVACmode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_HVACmode" title="Link to this definition"></a></dt>
+<dd><p>Modifies the HVACmode argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MaxTempDiffVOF">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_MaxTempDiffVOF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_MaxTempDiffVOF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MaxTempDiffVOF" title="Link to this definition"></a></dt>
+<dd><p>Modifies the MaxTempDiffVOF argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MaxWindSpeed">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_MaxWindSpeed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_MaxWindSpeed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MaxWindSpeed" title="Link to this definition"></a></dt>
+<dd><p>Modifies the MaxWindSpeed argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MinOToffset">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_MinOToffset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_MinOToffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MinOToffset" title="Link to this definition"></a></dt>
+<dd><p>Modifies the MinOToffset argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MinTempDiffVOF">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_MinTempDiffVOF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_MinTempDiffVOF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MinTempDiffVOF" title="Link to this definition"></a></dt>
+<dd><p>Modifies the MinTempDiffVOF argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MultiplierVOF">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_MultiplierVOF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_MultiplierVOF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MultiplierVOF" title="Link to this definition"></a></dt>
+<dd><p>Modifies the MultiplierVOF argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_SetpointAcc">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_SetpointAcc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_SetpointAcc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_SetpointAcc" title="Link to this definition"></a></dt>
+<dd><p>Modifies the SetpointAcc argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_VSToffset">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_VSToffset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_VSToffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_VSToffset" title="Link to this definition"></a></dt>
+<dd><p>Modifies the VSToffset argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_VentCtrl">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_accis.</span></span><span class="sig-name descname"><span class="pre">modify_VentCtrl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_accis.html#modify_VentCtrl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_VentCtrl" title="Link to this definition"></a></dt>
+<dd><p>Modifies the VentCtrl argument to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.parametric_and_optimisation.funcs_for_besos.param_apmv">
+<span id="accim-parametric-and-optimisation-funcs-for-besos-param-apmv-module"></span><h2>accim.parametric_and_optimisation.funcs_for_besos.param_apmv module<a class="headerlink" href="#module-accim.parametric_and_optimisation.funcs_for_besos.param_apmv" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_adaptive_coeff_all_zones">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_apmv.</span></span><span class="sig-name descname"><span class="pre">change_adaptive_coeff_all_zones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_apmv.html#change_adaptive_coeff_all_zones"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_adaptive_coeff_all_zones" title="Link to this definition"></a></dt>
+<dd><p>Modifies the adap_coeff_cooling and adap_coeff_heating arguments for all zones to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_adaptive_coeff_cooling_all_zones">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_apmv.</span></span><span class="sig-name descname"><span class="pre">change_adaptive_coeff_cooling_all_zones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_apmv.html#change_adaptive_coeff_cooling_all_zones"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_adaptive_coeff_cooling_all_zones" title="Link to this definition"></a></dt>
+<dd><p>Modifies the adap_coeff_cooling argument for all zones to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_adaptive_coeff_heating_all_zones">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_apmv.</span></span><span class="sig-name descname"><span class="pre">change_adaptive_coeff_heating_all_zones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_apmv.html#change_adaptive_coeff_heating_all_zones"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_adaptive_coeff_heating_all_zones" title="Link to this definition"></a></dt>
+<dd><p>Modifies the adap_coeff_heating argument for all zones to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_pmv_cooling_setpoint_all_zones">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_apmv.</span></span><span class="sig-name descname"><span class="pre">change_pmv_cooling_setpoint_all_zones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_apmv.html#change_pmv_cooling_setpoint_all_zones"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_pmv_cooling_setpoint_all_zones" title="Link to this definition"></a></dt>
+<dd><p>Modifies the pmv_cooling_sp argument for all zones to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_pmv_heating_setpoint_all_zones">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_apmv.</span></span><span class="sig-name descname"><span class="pre">change_pmv_heating_setpoint_all_zones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_apmv.html#change_pmv_heating_setpoint_all_zones"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_pmv_heating_setpoint_all_zones" title="Link to this definition"></a></dt>
+<dd><p>Modifies the pmv_heating_sp argument for all zones to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_pmv_setpoint_all_zones">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.funcs_for_besos.param_apmv.</span></span><span class="sig-name descname"><span class="pre">change_pmv_setpoint_all_zones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value:</span> <span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/funcs_for_besos/param_apmv.html#change_pmv_setpoint_all_zones"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_pmv_setpoint_all_zones" title="Link to this definition"></a></dt>
+<dd><p>Modifies the pmv_cooling_sp and pmv_heating_sp arguments symmetrically
+for all zones to match the entered value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>idf</strong> – The eppy or besos IDF class instance.</p></li>
+<li><p><strong>value</strong> – The value to be applied in the argument.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.parametric_and_optimisation.funcs_for_besos">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-accim.parametric_and_optimisation.funcs_for_besos" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="accim.parametric_and_optimisation.html" class="btn btn-neutral float-left" title="accim.parametric_and_optimisation package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="accim.run.html" class="btn btn-neutral float-right" title="accim.run package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

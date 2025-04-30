@@ -1,0 +1,303 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.sim.chile_funcs &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">accim.sim.chile_funcs</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for accim.sim.chile_funcs</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; Functions for building energy modelling research in Chile&quot;&quot;&quot;</span>
+
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">besos</span><span class="w"> </span><span class="kn">import</span> <span class="n">IDF_class</span>
+<div class="viewcode-block" id="apply_heating_activation_time_sch">
+<a class="viewcode-back" href="../../../accim.sim.html#accim.sim.chile_funcs.apply_heating_activation_time_sch">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_heating_activation_time_sch</span><span class="p">(</span><span class="n">idf_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">apply_to_occupancy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Applies the heating activation time for Chile.</span>
+<span class="sd">    See reference: https://www.sciencedirect.com/science/article/pii/S0378778823003833</span>
+
+<span class="sd">    :param idf_path: The eppy or besos idf class instance.</span>
+<span class="sd">    :type idf_path: IDF_class</span>
+<span class="sd">    :param apply_to_occupancy: True to apply the same schedule to the occupancy.</span>
+<span class="sd">    :type apply_to_occupancy: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># idf_path =&#39;shoebox_sch.idf&#39;</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">besos.eppy_funcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_building</span>
+
+    <span class="n">building</span> <span class="o">=</span> <span class="n">get_building</span><span class="p">(</span><span class="n">idf_path</span><span class="p">)</span>
+
+    <span class="n">sch_comp</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;SCHEDULE:COMPACT&#39;</span><span class="p">]]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;Heating_activation_time_chile&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sch_comp</span><span class="p">:</span>
+        <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+            <span class="n">key</span><span class="o">=</span><span class="s1">&#39;SCHEDULE:COMPACT&#39;</span><span class="p">,</span>
+            <span class="n">Name</span><span class="o">=</span><span class="s1">&#39;Heating_activation_time_chile&#39;</span><span class="p">,</span>
+            <span class="n">Schedule_Type_Limits_Name</span><span class="o">=</span><span class="s1">&#39;Fraction&#39;</span><span class="p">,</span>
+            <span class="n">Field_1</span><span class="o">=</span><span class="s1">&#39;Through: 1/31&#39;</span><span class="p">,</span>
+            <span class="n">Field_2</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_3</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_4</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_5</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_6</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_7</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_8</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_9</span><span class="o">=</span><span class="s1">&#39;Until: 23:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_10</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_11</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_12</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_13</span><span class="o">=</span><span class="s1">&#39;Through: 2/28&#39;</span><span class="p">,</span>
+            <span class="n">Field_14</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_15</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_16</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_17</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_18</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_19</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_20</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_21</span><span class="o">=</span><span class="s1">&#39;Until: 23:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_22</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_23</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_24</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_25</span><span class="o">=</span><span class="s1">&#39;Through: 3/31&#39;</span><span class="p">,</span>
+            <span class="n">Field_26</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_27</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_28</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_29</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_30</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_31</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_32</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_33</span><span class="o">=</span><span class="s1">&#39;Until: 23:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_34</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_35</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_36</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_37</span><span class="o">=</span><span class="s1">&#39;Through: 4/30&#39;</span><span class="p">,</span>
+            <span class="n">Field_38</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_39</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_40</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_41</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_42</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_43</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_44</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_45</span><span class="o">=</span><span class="s1">&#39;Until: 23:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_46</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_47</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_48</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_49</span><span class="o">=</span><span class="s1">&#39;Through: 5/31&#39;</span><span class="p">,</span>
+            <span class="n">Field_50</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_51</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_52</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_53</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_54</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_55</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_56</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_57</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_58</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_59</span><span class="o">=</span><span class="s1">&#39;Through: 6/30&#39;</span><span class="p">,</span>
+            <span class="n">Field_60</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_61</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_62</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_63</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_64</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_65</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_66</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_67</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_68</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_69</span><span class="o">=</span><span class="s1">&#39;Through: 7/31&#39;</span><span class="p">,</span>
+            <span class="n">Field_70</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_71</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_72</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_73</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_74</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_75</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_76</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_77</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_78</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_79</span><span class="o">=</span><span class="s1">&#39;Through: 8/31&#39;</span><span class="p">,</span>
+            <span class="n">Field_80</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_81</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_82</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_83</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_84</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_85</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_86</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_87</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_88</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_89</span><span class="o">=</span><span class="s1">&#39;Through: 9/30&#39;</span><span class="p">,</span>
+            <span class="n">Field_90</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_91</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_92</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_93</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_94</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_95</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_96</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_97</span><span class="o">=</span><span class="s1">&#39;Until: 23:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_98</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_99</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_100</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_101</span><span class="o">=</span><span class="s1">&#39;Through: 10/31&#39;</span><span class="p">,</span>
+            <span class="n">Field_102</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_103</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_104</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_105</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_106</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_107</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_108</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_109</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_110</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_111</span><span class="o">=</span><span class="s1">&#39;Through: 11/30&#39;</span><span class="p">,</span>
+            <span class="n">Field_112</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_113</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_114</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_115</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_116</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_117</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_118</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_119</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_120</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_121</span><span class="o">=</span><span class="s1">&#39;Through: 12/31&#39;</span><span class="p">,</span>
+            <span class="n">Field_122</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_123</span><span class="o">=</span><span class="s1">&#39;Until: 6:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_124</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_125</span><span class="o">=</span><span class="s1">&#39;Until: 9:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_126</span><span class="o">=</span><span class="s1">&#39;1&#39;</span><span class="p">,</span>
+            <span class="n">Field_127</span><span class="o">=</span><span class="s1">&#39;Until: 17:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_128</span><span class="o">=</span><span class="s1">&#39;0&#39;</span><span class="p">,</span>
+            <span class="n">Field_129</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_130</span><span class="o">=</span><span class="s1">&#39;1&#39;</span>
+        <span class="p">)</span>
+        <span class="n">new_idf</span> <span class="o">=</span> <span class="n">idf_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.idf&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;_heat_act_time_added.idf&#39;</span>
+        <span class="n">building</span><span class="o">.</span><span class="n">savecopy</span><span class="p">(</span><span class="n">new_idf</span><span class="p">)</span>
+        <span class="n">sch_added</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Heating_activation_time_chile already was in the model.&#39;</span><span class="p">)</span>
+        <span class="n">sch_added</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="n">apply_to_occupancy</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">sch_added</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;people&#39;</span><span class="p">]]:</span>
+                <span class="n">people</span><span class="o">.</span><span class="n">Number_of_People_Schedule_Name</span> <span class="o">=</span> <span class="s1">&#39;Heating_activation_time_chile&#39;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Heating_activation_time_chile has been used in all occupancy schedules in the model.&#39;</span><span class="p">)</span>
+            <span class="n">building</span><span class="o">.</span><span class="n">savecopy</span><span class="p">(</span><span class="n">new_idf</span><span class="p">)</span></div>
+
+
+
+
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

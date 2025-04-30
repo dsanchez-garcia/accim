@@ -1,0 +1,298 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.data package &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="accim.data.postprocessing package" href="accim.data.postprocessing.html" />
+    <link rel="prev" title="accim package" href="accim.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">accim</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="accim.html">accim package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="accim.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">accim.data package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.parametric_and_optimisation.html">accim.parametric_and_optimisation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.run.html">accim.run package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.sim.html">accim.sim package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#module-accim.utils">accim.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#module-accim">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">setup module</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">accim</a></li>
+          <li class="breadcrumb-item"><a href="accim.html">accim package</a></li>
+      <li class="breadcrumb-item active">accim.data package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/accim.data.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="accim-data-package">
+<h1>accim.data package<a class="headerlink" href="#accim-data-package" title="Link to this heading"></a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="accim.data.postprocessing.html">accim.data.postprocessing package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="accim.data.postprocessing.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="accim.data.postprocessing.html#module-accim.data.postprocessing.main">accim.data.postprocessing.main module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.main.Table"><code class="docutils literal notranslate"><span class="pre">Table</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.main.Table.custom_order"><code class="docutils literal notranslate"><span class="pre">Table.custom_order()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.main.Table.enter_vars_to_gather"><code class="docutils literal notranslate"><span class="pre">Table.enter_vars_to_gather()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.main.Table.format_table"><code class="docutils literal notranslate"><span class="pre">Table.format_table()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.main.Table.gather_vars_query"><code class="docutils literal notranslate"><span class="pre">Table.gather_vars_query()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.main.Table.generate_fig_data"><code class="docutils literal notranslate"><span class="pre">Table.generate_fig_data()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.main.Table.scatter_plot"><code class="docutils literal notranslate"><span class="pre">Table.scatter_plot()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.main.Table.scatter_plot_with_baseline"><code class="docutils literal notranslate"><span class="pre">Table.scatter_plot_with_baseline()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.main.Table.time_plot"><code class="docutils literal notranslate"><span class="pre">Table.time_plot()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.main.Table.wrangled_table"><code class="docutils literal notranslate"><span class="pre">Table.wrangled_table()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="accim.data.postprocessing.html#module-accim.data.postprocessing.utils">accim.data.postprocessing.utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.utils.genCSVconcatenated"><code class="docutils literal notranslate"><span class="pre">genCSVconcatenated()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.data.postprocessing.html#accim.data.postprocessing.utils.preview_Table_cols"><code class="docutils literal notranslate"><span class="pre">preview_Table_cols()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="accim.data.postprocessing.html#module-accim.data.postprocessing">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-accim.data.data_preprocessing">
+<span id="accim-data-data-preprocessing-module"></span><h2>accim.data.data_preprocessing module<a class="headerlink" href="#module-accim.data.data_preprocessing" title="Link to this heading"></a></h2>
+<p>Submodule to perform data processing before simulation run.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.data.data_preprocessing.give_address">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.data.data_preprocessing.</span></span><span class="sig-name descname"><span class="pre">give_address</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">latitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">longitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/data/data_preprocessing.html#give_address"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.data.data_preprocessing.give_address" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Search address from coordinates using nominatim.openstreetmap.org.
+Version 3 to avoid ssl error.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>latitude</strong> (<em>float</em>) – The latitude from the EPW file.</p></li>
+<li><p><strong>longitude</strong> (<em>float</em>) – The longitude from the EPW file.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.data.data_preprocessing.give_address_openssl">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.data.data_preprocessing.</span></span><span class="sig-name descname"><span class="pre">give_address_openssl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">latitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">longitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/data/data_preprocessing.html#give_address_openssl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.data.data_preprocessing.give_address_openssl" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Search address from coordinates using nominatim.openstreetmap.org.
+Version 2 to avoid ssl error.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>latitude</strong> (<em>float</em>) – The latitude from the EPW file.</p></li>
+<li><p><strong>longitude</strong> (<em>float</em>) – The longitude from the EPW file.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.data.data_preprocessing.give_address_ssl">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.data.data_preprocessing.</span></span><span class="sig-name descname"><span class="pre">give_address_ssl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">latitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">longitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/data/data_preprocessing.html#give_address_ssl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.data.data_preprocessing.give_address_ssl" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Search address from coordinates using nominatim.openstreetmap.org.
+Version 1 to avoid ssl error.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>latitude</strong> (<em>float</em>) – The latitude from the EPW file.</p></li>
+<li><p><strong>longitude</strong> (<em>float</em>) – The longitude from the EPW file.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.data.data_preprocessing.rename_epw_files">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.data.data_preprocessing.</span></span><span class="sig-name descname"><span class="pre">rename_epw_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filelist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rename_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confirm_renaming</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confirm_deletion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/data/data_preprocessing.html#rename_epw_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.data.data_preprocessing.rename_epw_files" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Renames the EPW files following the name convention ‘Country_City_RCPscenario-Year’.
+The Country and City fields are computed based on the coordinates of the EPW,
+and the RCPscenario and Year are taken from the original name.
+If no reference is found, the sample_EPWs are considered to be  for Present scenario.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filelist</strong> (<em>list</em>) – A list of the EPW files.
+If omitted, it will rename all sample_EPWs in that folder.</p></li>
+<li><p><strong>rename_dict</strong> (<em>dict</em>) – A dict to set the city field for each EPW file.
+It must follow the pattern
+{‘city name to be search in epw file name’: ‘city name for the epw file if found`}</p></li>
+<li><p><strong>confirm_renaming</strong> (<em>bool</em>) – True or False,
+to skip renaming confirmation on prompt command or console</p></li>
+<li><p><strong>confirm_deletion</strong> (<em>bool</em>) – True or False,
+to skip deletion confirmation on prompt command or console</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.data.morphing">
+<span id="accim-data-morphing-module"></span><h2>accim.data.morphing module<a class="headerlink" href="#module-accim.data.morphing" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.data.morphing.morph_epws">
+<span class="sig-prename descclassname"><span class="pre">accim.data.morphing.</span></span><span class="sig-name descname"><span class="pre">morph_epws</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fwg_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epw_filepaths</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">any</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'all'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delete_morphing_files</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwg_options_gcms</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwg_options_ensemble</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwg_options_month_transition_hours</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">72</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwg_options_do_multithread_computation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwg_options_interpolation_method_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fwg_options_do_limit_variables</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/data/morphing.html#morph_epws"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.data.morphing.morph_epws" title="Link to this definition"></a></dt>
+<dd><p>This function is a wrapper for the use of the FutureWeatherGenerator tool (<a class="reference external" href="https://future-weather-generator.adai.pt/">https://future-weather-generator.adai.pt/</a>),
+developed by Eugènio Rodrigues et al., in command line.
+It will move the epws in the working directory to a folder with the same name,
+will morph them within their respective directories,
+then will rename them using the original epw filename with the suffix depending on the scenario
+(e.j. the future scenarios for Granada.epw will be Granada_ssp126_2050.epw, Granada_ssp126_2080.epw, etc.)
+and move them back to the parent directory.
+If requested, the files generated from the moprhing process will be deleted.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fwg_path</strong> – The path to the FutureWeatherGenerator tool.</p></li>
+<li><p><strong>epw_filepaths</strong> – A list of epw filenames to be morphed.</p></li>
+<li><p><strong>delete_morphing_files</strong> – True to delete all files resulting from the morphing process
+except .epw files.</p></li>
+<li><p><strong>verbose</strong> – True to print on screen the performed actions.</p></li>
+<li><p><strong>fwg_options_gcms</strong> – The GCMs separated by a comma (without white space).</p></li>
+<li><p><strong>fwg_options_ensemble</strong> – Option to create an ensemble from the selected models: 0 is no, 1 is yes.</p></li>
+<li><p><strong>fwg_options_month_transition_hours</strong> – the number of hours to smooth the transition between months: 0 to 336 hours.</p></li>
+<li><p><strong>fwg_options_do_multithread_computation</strong> – True to do the computations in multithread.</p></li>
+<li><p><strong>fwg_options_interpolation_method_id</strong> – Selects the grid method: 0 – bilinear interpolation, 1 – an average of the four nearest points; 2 – nearest point.</p></li>
+<li><p><strong>fwg_options_do_limit_variables</strong> – True to bound each generated variable to its physical limits</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.data">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-accim.data" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="accim.html" class="btn btn-neutral float-left" title="accim package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="accim.data.postprocessing.html" class="btn btn-neutral float-right" title="accim.data.postprocessing package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

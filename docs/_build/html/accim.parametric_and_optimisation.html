@@ -1,0 +1,920 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.parametric_and_optimisation package &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="accim.parametric_and_optimisation.funcs_for_besos package" href="accim.parametric_and_optimisation.funcs_for_besos.html" />
+    <link rel="prev" title="accim.data.postprocessing package" href="accim.data.postprocessing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">accim</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="accim.html">accim package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="accim.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="accim.data.html">accim.data package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">accim.parametric_and_optimisation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.run.html">accim.run package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.sim.html">accim.sim package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#module-accim.utils">accim.utils module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#module-accim">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">setup module</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">accim</a></li>
+          <li class="breadcrumb-item"><a href="accim.html">accim package</a></li>
+      <li class="breadcrumb-item active">accim.parametric_and_optimisation package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/accim.parametric_and_optimisation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="accim-parametric-and-optimisation-package">
+<h1>accim.parametric_and_optimisation package<a class="headerlink" href="#accim-parametric-and-optimisation-package" title="Link to this heading"></a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html">accim.parametric_and_optimisation.funcs_for_besos package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#module-accim.parametric_and_optimisation.funcs_for_besos.param_accis">accim.parametric_and_optimisation.funcs_for_besos.param_accis module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.drop_invalid_param_combinations"><code class="docutils literal notranslate"><span class="pre">drop_invalid_param_combinations()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.get_valid_param_combinations"><code class="docutils literal notranslate"><span class="pre">get_valid_param_combinations()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ASTtol"><code class="docutils literal notranslate"><span class="pre">modify_ASTtol()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CAT"><code class="docutils literal notranslate"><span class="pre">modify_CAT()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CATcoolOffset"><code class="docutils literal notranslate"><span class="pre">modify_CATcoolOffset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CATheatOffset"><code class="docutils literal notranslate"><span class="pre">modify_CATheatOffset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ComfMod"><code class="docutils literal notranslate"><span class="pre">modify_ComfMod()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_ComfStand"><code class="docutils literal notranslate"><span class="pre">modify_ComfStand()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CoolSeasonEnd"><code class="docutils literal notranslate"><span class="pre">modify_CoolSeasonEnd()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CoolSeasonStart"><code class="docutils literal notranslate"><span class="pre">modify_CoolSeasonStart()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSTall"><code class="docutils literal notranslate"><span class="pre">modify_CustAST_ACSTall()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSTaul"><code class="docutils literal notranslate"><span class="pre">modify_CustAST_ACSTaul()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ACSToffset"><code class="docutils literal notranslate"><span class="pre">modify_CustAST_ACSToffset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSTall"><code class="docutils literal notranslate"><span class="pre">modify_CustAST_AHSTall()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSTaul"><code class="docutils literal notranslate"><span class="pre">modify_CustAST_AHSTaul()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_AHSToffset"><code class="docutils literal notranslate"><span class="pre">modify_CustAST_AHSToffset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASTall"><code class="docutils literal notranslate"><span class="pre">modify_CustAST_ASTall()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASTaul"><code class="docutils literal notranslate"><span class="pre">modify_CustAST_ASTaul()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_ASToffset"><code class="docutils literal notranslate"><span class="pre">modify_CustAST_ASToffset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_m"><code class="docutils literal notranslate"><span class="pre">modify_CustAST_m()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_CustAST_n"><code class="docutils literal notranslate"><span class="pre">modify_CustAST_n()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_HVACmode"><code class="docutils literal notranslate"><span class="pre">modify_HVACmode()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MaxTempDiffVOF"><code class="docutils literal notranslate"><span class="pre">modify_MaxTempDiffVOF()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MaxWindSpeed"><code class="docutils literal notranslate"><span class="pre">modify_MaxWindSpeed()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MinOToffset"><code class="docutils literal notranslate"><span class="pre">modify_MinOToffset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MinTempDiffVOF"><code class="docutils literal notranslate"><span class="pre">modify_MinTempDiffVOF()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_MultiplierVOF"><code class="docutils literal notranslate"><span class="pre">modify_MultiplierVOF()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_SetpointAcc"><code class="docutils literal notranslate"><span class="pre">modify_SetpointAcc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_VSToffset"><code class="docutils literal notranslate"><span class="pre">modify_VSToffset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_accis.modify_VentCtrl"><code class="docutils literal notranslate"><span class="pre">modify_VentCtrl()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#module-accim.parametric_and_optimisation.funcs_for_besos.param_apmv">accim.parametric_and_optimisation.funcs_for_besos.param_apmv module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_adaptive_coeff_all_zones"><code class="docutils literal notranslate"><span class="pre">change_adaptive_coeff_all_zones()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_adaptive_coeff_cooling_all_zones"><code class="docutils literal notranslate"><span class="pre">change_adaptive_coeff_cooling_all_zones()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_adaptive_coeff_heating_all_zones"><code class="docutils literal notranslate"><span class="pre">change_adaptive_coeff_heating_all_zones()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_pmv_cooling_setpoint_all_zones"><code class="docutils literal notranslate"><span class="pre">change_pmv_cooling_setpoint_all_zones()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_pmv_heating_setpoint_all_zones"><code class="docutils literal notranslate"><span class="pre">change_pmv_heating_setpoint_all_zones()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#accim.parametric_and_optimisation.funcs_for_besos.param_apmv.change_pmv_setpoint_all_zones"><code class="docutils literal notranslate"><span class="pre">change_pmv_setpoint_all_zones()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#module-accim.parametric_and_optimisation.funcs_for_besos">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-accim.parametric_and_optimisation.main">
+<span id="accim-parametric-and-optimisation-main-module"></span><h2>accim.parametric_and_optimisation.main module<a class="headerlink" href="#module-accim.parametric_and_optimisation.main" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.AccimPredefModelsParamSim">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.main.</span></span><span class="sig-name descname"><span class="pre">AccimPredefModelsParamSim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">building:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;,</span> <span class="pre">output_type:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'standard',</span> <span class="pre">output_keep_existing:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">output_freqs:</span> <span class="pre">list</span> <span class="pre">=</span> <span class="pre">['hourly'],</span> <span class="pre">ScriptType:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'vrf_mm',</span> <span class="pre">SupplyAirTempInputMethod:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">'temperature</span> <span class="pre">difference',</span> <span class="pre">debugging:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#AccimPredefModelsParamSim"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.AccimPredefModelsParamSim" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#accim.parametric_and_optimisation.main.OptimParamSimulation" title="accim.parametric_and_optimisation.main.OptimParamSimulation"><code class="xref py py-class docutils literal notranslate"><span class="pre">OptimParamSimulation</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.main.</span></span><span class="sig-name descname"><span class="pre">OptimParamSimulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">building:</span> <span class="pre">&lt;module</span> <span class="pre">'besos.IDF_class'</span> <span class="pre">from</span> <span class="pre">'C:\\Users\\danie\\AppData\\Local\\Programs\\Python\\Python39\\lib\\site-packages\\besos\\IDF_class.py'&gt;,</span> <span class="pre">parameters_type:</span> <span class="pre">~typing.Literal['accim</span> <span class="pre">custom</span> <span class="pre">model',</span> <span class="pre">'accim</span> <span class="pre">predefined</span> <span class="pre">model',</span> <span class="pre">'apmv</span> <span class="pre">setpoints'],</span> <span class="pre">output_type:</span> <span class="pre">~typing.Literal['standard',</span> <span class="pre">'custom',</span> <span class="pre">'detailed',</span> <span class="pre">'simplified']</span> <span class="pre">=</span> <span class="pre">'standard',</span> <span class="pre">output_keep_existing:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">output_freqs:</span> <span class="pre">~typing.List[~typing.Literal['timestep',</span> <span class="pre">'hourly',</span> <span class="pre">'daily',</span> <span class="pre">'monthly',</span> <span class="pre">'runperiod']]</span> <span class="pre">=</span> <span class="pre">['hourly'],</span> <span class="pre">ScriptType:</span> <span class="pre">~typing.Literal['vrf_mm',</span> <span class="pre">'vrf_ac',</span> <span class="pre">'ex_ac']</span> <span class="pre">=</span> <span class="pre">'vrf_mm',</span> <span class="pre">SupplyAirTempInputMethod:</span> <span class="pre">~typing.Literal['temperature</span> <span class="pre">difference',</span> <span class="pre">'supply</span> <span class="pre">air</span> <span class="pre">temperature']</span> <span class="pre">=</span> <span class="pre">'temperature</span> <span class="pre">difference',</span> <span class="pre">make_averages:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">debugging:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">verbosemode:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">True</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.get_available_parameters">
+<span class="sig-name descname"><span class="pre">get_available_parameters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.get_available_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.get_available_parameters" title="Link to this definition"></a></dt>
+<dd><p>Returns a list containing the available parameters depending on the parameters_type argument previously input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a list containing the available parameters depending on the parameters_type argument previously input</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.get_hourly_df">
+<span class="sig-name descname"><span class="pre">get_hourly_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_date</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'2024-01-01</span> <span class="pre">01'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.get_hourly_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.get_hourly_df" title="Link to this definition"></a></dt>
+<dd><dl class="simple">
+<dt>Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame, saved in the</dt><dd><p>internal variable named outputs_param_simulation_hourly.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>start_date</strong> – the start date for the simulation results, in format ‘YYY-MM-DD HH’</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.get_hourly_df_columns">
+<span class="sig-name descname"><span class="pre">get_hourly_df_columns</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.get_hourly_df_columns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.get_hourly_df_columns" title="Link to this definition"></a></dt>
+<dd><p>Identifies the columns which contain hourly values, and save the names in a list, saved in the
+internal variable named outputs_hourly_columns</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.get_output_meter_df_from_idf">
+<span class="sig-name descname"><span class="pre">get_output_meter_df_from_idf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.get_output_meter_df_from_idf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.get_output_meter_df_from_idf" title="Link to this definition"></a></dt>
+<dd><p>Gets a pandas DataFrame which contains the Output:Meter objects from the idf.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a pandas DataFrame which contains the Output:Meter objects from the idf</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.get_output_var_df_from_idf">
+<span class="sig-name descname"><span class="pre">get_output_var_df_from_idf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.get_output_var_df_from_idf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.get_output_var_df_from_idf" title="Link to this definition"></a></dt>
+<dd><p>Gets a pandas DataFrame which contains the Output:Variable objects from the idf.
+Therefore, it may contain wildcards such as ‘*’, which means the variable is requested
+for all zones.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a pandas DataFrame which contains the Output:Variable objects from the idf</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.get_outputs_df_from_testsim">
+<span class="sig-name descname"><span class="pre">get_outputs_df_from_testsim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reduce_sim_time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.get_outputs_df_from_testsim"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.get_outputs_df_from_testsim" title="Link to this definition"></a></dt>
+<dd><p>Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.
+Therefore, it won’t contain wildcards such as ‘*’.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>reduce_sim_time</strong> – True to reduce the simulation runtime</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a tuple containing the DataFrames containing Output:Variable and Output:Meter</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.run_optimisation">
+<span class="sig-name descname"><span class="pre">run_optimisation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epws</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">evaluations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">population_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algorithm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'NSGAII'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.run_optimisation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.run_optimisation" title="Link to this definition"></a></dt>
+<dd><p>Runs the optimisation using</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>epws</strong> – The epw filename</p></li>
+<li><p><strong>out_dir</strong> – the directory name to save the outputs</p></li>
+<li><p><strong>evaluations</strong> – The algorithm will be stopped once it uses more than this many evaluations.
+For more information, refer to besos.optimizer.platypus_alg</p></li>
+<li><p><strong>population_size</strong> – The number of simulations to run</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a pandas DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.run_parametric_simulation">
+<span class="sig-name descname"><span class="pre">run_parametric_simulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epws</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">processes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_input</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keep_dirs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.run_parametric_simulation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.run_parametric_simulation" title="Link to this definition"></a></dt>
+<dd><p>Runs the parametric simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>epws</strong> – a list of .epw filenames</p></li>
+<li><p><strong>out_dir</strong> – the name of the directory to store the outputs</p></li>
+<li><p><strong>df</strong> – a pandas DataFrame which contains the values of the parameters to simulate</p></li>
+<li><p><strong>processes</strong> – the number of CPUs to be used in simulation</p></li>
+<li><p><strong>keep_input</strong> – True to keep the input DataFrame in the results</p></li>
+<li><p><strong>keep_dirs</strong> – True to keep the simulation results</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a pandas DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_full_factorial">
+<span class="sig-name descname"><span class="pre">sampling_full_factorial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.sampling_full_factorial"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_full_factorial" title="Link to this definition"></a></dt>
+<dd><p>Split the range of every parameter in the number of parts specified in argument level,
+and saves it into a pandas DataFrame, stored in an internal variable named parameters_values_df.
+For more information, see besos.sampling.dist_sampler and besos.sampling.full_factorial</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>level</strong> – an integer; represents the number of parts to split each parameter’s range</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_full_set">
+<span class="sig-name descname"><span class="pre">sampling_full_set</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.sampling_full_set"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_full_set" title="Link to this definition"></a></dt>
+<dd><p>Combines all values from all parameters and saves it into a pandas DataFrame, stored in an internal variable
+named parameters_values_df.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_lhs">
+<span class="sig-name descname"><span class="pre">sampling_lhs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.sampling_lhs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_lhs" title="Link to this definition"></a></dt>
+<dd><p>Uses Latin Hypercube Sampling to make samples, where the total number is specified in the num_samples argument,
+and saves it into a pandas DataFrame, stored in an internal variable named parameters_values_df.
+For more information, see besos.sampling.dist_sampler and besos.sampling.lhs</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>num_samples</strong> – an integer; represents the total number of samples</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.set_evaluator">
+<span class="sig-name descname"><span class="pre">set_evaluator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">EvaluatorEP</span></span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.set_evaluator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.set_evaluator" title="Link to this definition"></a></dt>
+<dd><p>Used internally for setting the evaluator in run_parametric_simulation and run_optimisation methods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>epw</strong> – The epw file name</p></li>
+<li><p><strong>out_dir</strong> – The name of the output directory to save the results.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the besos.evaluator.EvaluatorEP class instance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.set_output_met_objects_to_idf">
+<span class="sig-name descname"><span class="pre">set_output_met_objects_to_idf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_meters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.set_output_met_objects_to_idf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.set_output_met_objects_to_idf" title="Link to this definition"></a></dt>
+<dd><p>Adds the Output:Meter objects from the output_meters argument.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>output_meters</strong> (<em>list</em>) – a list containing Output:Meter objects to be added</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.set_output_var_df_to_idf">
+<span class="sig-name descname"><span class="pre">set_output_var_df_to_idf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">outputs_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.set_output_var_df_to_idf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.set_output_var_df_to_idf" title="Link to this definition"></a></dt>
+<dd><p>Keeps the Output:Variable objects contained in the input pandas DataFrame and removes
+all others. This is important to save space if thousands of simulations with heavy outputs
+are run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>outputs_df</strong> (<em>pd.DataFrame</em>) – the DataFrame containing Output:Variable objects to be kept</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.set_outputs_for_simulation">
+<span class="sig-name descname"><span class="pre">set_outputs_for_simulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_output_variable</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df_output_meter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.set_outputs_for_simulation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.set_outputs_for_simulation" title="Link to this definition"></a></dt>
+<dd><p>Sets the outputs for the parametric analysis or optimisation based on the input pandas DataFrames
+for Output:Variable and/or Output:Meter objects. These DataFrames can include columns for the output name
+and the aggregation function (see the ‘func’ argument of MeterReader and VariableReader classes in besos),
+respectively named ‘name’ and ‘func’. If no ‘name’ and/or ‘func’ columns are provided,
+the names will be the variable and meter names, and the hourly values will be summed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df_output_variable</strong> – a pandas DataFrame containing the Output:Variable objects, similar to that one
+returned from method get_outputs_df_from_testsim()</p></li>
+<li><p><strong>df_output_meter</strong> – a pandas DataFrame containing the Output:Meter objects, similar to that one
+returned from method get_outputs_df_from_testsim()</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.set_parameters">
+<span class="sig-name descname"><span class="pre">set_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">accis_params_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">additional_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_dflt_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.set_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.set_parameters" title="Link to this definition"></a></dt>
+<dd><p>Sets the parameters for the parametric analysis or optimisation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>accis_params_dict</strong> – a dictionary containing the parameters names in the keys,
+and in the values, the options or range of values using respectively
+a list or tuple with min and max values.</p></li>
+<li><p><strong>additional_params</strong> – any other additional parameter, as it would be added in besos</p></li>
+<li><p><strong>HVACmode</strong> – only used in accim predefined and custom models; sets the HVACmode argument;
+for more information, refer to addAccis</p></li>
+<li><p><strong>VentCtrl</strong> – only used in accim predefined and custom models; sets the VentCtrl argument;
+for more information, refer to addAccis</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.OptimParamSimulation.set_problem">
+<span class="sig-name descname"><span class="pre">set_problem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">minimize_outputs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constraints</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constraint_bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#OptimParamSimulation.set_problem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.OptimParamSimulation.set_problem" title="Link to this definition"></a></dt>
+<dd><p>Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters
+method, and for outputs, those set using the set_outputs_for_simulation method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>minimize_outputs</strong> – only used in optimisation; a list containing booleans to specify if the outputs must
+be minimized (True), maximized (False), or just show the output (None).</p></li>
+<li><p><strong>constraints</strong> – only used in optimisation;
+a list containing the Output:Meter key names to be considered as constraints</p></li>
+<li><p><strong>constraint_bounds</strong> – only used in optimisation;
+a list containing the logical expressions for the constraints</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.get_mdd_file_as_df">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.main.</span></span><span class="sig-name descname"><span class="pre">get_mdd_file_as_df</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#get_mdd_file_as_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.get_mdd_file_as_df" title="Link to this definition"></a></dt>
+<dd><p>Returns the .mdd file from the test simulation as a pandas DataFrame</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a pandas DataFrame containing the .mdd file from the test simulation</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.get_rdd_file_as_df">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.main.</span></span><span class="sig-name descname"><span class="pre">get_rdd_file_as_df</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#get_rdd_file_as_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.get_rdd_file_as_df" title="Link to this definition"></a></dt>
+<dd><p>Returns the .rdd file from the test simulation as a pandas DataFrame</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a pandas DataFrame containing the .rdd file from the test simulation</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.main.parse_mtd_file">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.main.</span></span><span class="sig-name descname"><span class="pre">parse_mtd_file</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/main.html#parse_mtd_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.main.parse_mtd_file" title="Link to this definition"></a></dt>
+<dd><p>Returns a list of the objects in the .mtd file from the test simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>a list of the objects in the .mtd file from the test simulation</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.parametric_and_optimisation.objectives">
+<span id="accim-parametric-and-optimisation-objectives-module"></span><h2>accim.parametric_and_optimisation.objectives module<a class="headerlink" href="#module-accim.parametric_and_optimisation.objectives" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.objectives.average_results">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.objectives.</span></span><span class="sig-name descname"><span class="pre">average_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/objectives.html#average_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.objectives.average_results" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.objectives.return_time_series">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.objectives.</span></span><span class="sig-name descname"><span class="pre">return_time_series</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/objectives.html#return_time_series"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.objectives.return_time_series" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.objectives.sum_results">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.objectives.</span></span><span class="sig-name descname"><span class="pre">sum_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">result</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/objectives.html#sum_results"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.objectives.sum_results" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-accim.parametric_and_optimisation.parameters">
+<span id="accim-parametric-and-optimisation-parameters-module"></span><h2>accim.parametric_and_optimisation.parameters module<a class="headerlink" href="#module-accim.parametric_and_optimisation.parameters" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.ASTtol">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">ASTtol</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#ASTtol"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.ASTtol" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.ASTtol.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#ASTtol.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.ASTtol.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CAT">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CAT</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CAT"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CAT" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CAT.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CAT.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CAT.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CATcoolOffset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CATcoolOffset</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CATcoolOffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CATcoolOffset" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CATcoolOffset.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CATcoolOffset.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CATcoolOffset.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CATheatOffset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CATheatOffset</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CATheatOffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CATheatOffset" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CATheatOffset.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CATheatOffset.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CATheatOffset.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.ComfMod">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">ComfMod</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#ComfMod"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.ComfMod" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.ComfMod.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#ComfMod.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.ComfMod.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.ComfStand">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">ComfStand</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#ComfStand"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.ComfStand" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.ComfStand.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#ComfStand.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.ComfStand.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CoolSeasonEnd">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CoolSeasonEnd</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CoolSeasonEnd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CoolSeasonEnd" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CoolSeasonEnd.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CoolSeasonEnd.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CoolSeasonEnd.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CoolSeasonStart">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CoolSeasonStart</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CoolSeasonStart"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CoolSeasonStart" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CoolSeasonStart.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CoolSeasonStart.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CoolSeasonStart.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ACSTall">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CustAST_ACSTall</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ACSTall"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ACSTall" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ACSTall.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ACSTall.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ACSTall.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ACSTaul">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CustAST_ACSTaul</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ACSTaul"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ACSTaul" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ACSTaul.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ACSTaul.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ACSTaul.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ACSToffset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CustAST_ACSToffset</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ACSToffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ACSToffset" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ACSToffset.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ACSToffset.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ACSToffset.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_AHSTall">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CustAST_AHSTall</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_AHSTall"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_AHSTall" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_AHSTall.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_AHSTall.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_AHSTall.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_AHSTaul">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CustAST_AHSTaul</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_AHSTaul"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_AHSTaul" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_AHSTaul.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_AHSTaul.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_AHSTaul.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_AHSToffset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CustAST_AHSToffset</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_AHSToffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_AHSToffset" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_AHSToffset.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_AHSToffset.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_AHSToffset.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ASTall">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CustAST_ASTall</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ASTall"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ASTall" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ASTall.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ASTall.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ASTall.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ASTaul">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CustAST_ASTaul</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ASTaul"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ASTaul" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ASTaul.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ASTaul.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ASTaul.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ASToffset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CustAST_ASToffset</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ASToffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ASToffset" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_ASToffset.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_ASToffset.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_ASToffset.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_m">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CustAST_m</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_m"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_m" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_m.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_m.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_m.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_n">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">CustAST_n</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_n"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_n" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.CustAST_n.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#CustAST_n.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.CustAST_n.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.HVACmode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">HVACmode</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#HVACmode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.HVACmode" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.HVACmode.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#HVACmode.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.HVACmode.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.MaxTempDiffVOF">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">MaxTempDiffVOF</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#MaxTempDiffVOF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.MaxTempDiffVOF" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.MaxTempDiffVOF.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#MaxTempDiffVOF.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.MaxTempDiffVOF.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.MaxWindSpeed">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">MaxWindSpeed</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#MaxWindSpeed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.MaxWindSpeed" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.MaxWindSpeed.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#MaxWindSpeed.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.MaxWindSpeed.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.MinOToffset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">MinOToffset</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#MinOToffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.MinOToffset" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.MinOToffset.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#MinOToffset.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.MinOToffset.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.MinTempDiffVOF">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">MinTempDiffVOF</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#MinTempDiffVOF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.MinTempDiffVOF" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.MinTempDiffVOF.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#MinTempDiffVOF.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.MinTempDiffVOF.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.MultiplierVOF">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">MultiplierVOF</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#MultiplierVOF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.MultiplierVOF" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.MultiplierVOF.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#MultiplierVOF.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.MultiplierVOF.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.Parameter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">Parameter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parameter</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#Parameter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.Parameter" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.Parameter.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#Parameter.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.Parameter.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.SetpointAcc">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">SetpointAcc</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#SetpointAcc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.SetpointAcc" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.SetpointAcc.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#SetpointAcc.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.SetpointAcc.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.VSToffset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">VSToffset</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#VSToffset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.VSToffset" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.VSToffset.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#VSToffset.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.VSToffset.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.VentCtrl">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">VentCtrl</span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#VentCtrl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.VentCtrl" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.VentCtrl.modify">
+<span class="sig-name descname"><span class="pre">modify</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#VentCtrl.modify"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.VentCtrl.modify" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.accis_parameter">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">accis_parameter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parameter_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#accis_parameter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.accis_parameter" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.get_available_params_accim_custom_models">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">get_available_params_accim_custom_models</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#get_available_params_accim_custom_models"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.get_available_params_accim_custom_models" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.get_available_params_accim_predef_models">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">get_available_params_accim_predef_models</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#get_available_params_accim_predef_models"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.get_available_params_accim_predef_models" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.parameters.get_available_params_apmv_setpoints">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.parameters.</span></span><span class="sig-name descname"><span class="pre">get_available_params_apmv_setpoints</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/parameters.html#get_available_params_apmv_setpoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.parameters.get_available_params_apmv_setpoints" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-accim.parametric_and_optimisation.params_dicts">
+<span id="accim-parametric-and-optimisation-params-dicts-module"></span><h2>accim.parametric_and_optimisation.params_dicts module<a class="headerlink" href="#module-accim.parametric_and_optimisation.params_dicts" title="Link to this heading"></a></h2>
+</section>
+<section id="module-accim.parametric_and_optimisation.utils">
+<span id="accim-parametric-and-optimisation-utils-module"></span><h2>accim.parametric_and_optimisation.utils module<a class="headerlink" href="#module-accim.parametric_and_optimisation.utils" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.utils.descriptor_has_options">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.utils.</span></span><span class="sig-name descname"><span class="pre">descriptor_has_options</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/utils.html#descriptor_has_options"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.utils.descriptor_has_options" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.utils.expand_to_hourly_dataframe">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.utils.</span></span><span class="sig-name descname"><span class="pre">expand_to_hourly_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameter_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_date</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'2024-01-01</span> <span class="pre">01'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hourly_columns</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/utils.html#expand_to_hourly_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.utils.expand_to_hourly_dataframe" title="Link to this definition"></a></dt>
+<dd><p>Expands a dataframe with hourly data columns into an hourly dataframe.</p>
+<p>Parameters:
+df (pd.DataFrame): The input dataframe containing parameters and hourly data columns.
+parameter_columns (list): The list of column names that contain input parameters.
+start_date (str): The start date and time in the format ‘YYYY-MM-DD HH’.</p>
+<p>Returns:
+pd.DataFrame: The expanded dataframe with an additional datetime column.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.utils.identify_hourly_columns">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.utils.</span></span><span class="sig-name descname"><span class="pre">identify_hourly_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/utils.html#identify_hourly_columns"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.utils.identify_hourly_columns" title="Link to this definition"></a></dt>
+<dd><p>Identifies the columns which contains strings representing lists.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>df</strong> – the pandas DataFrame</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the list of column names</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="accim.parametric_and_optimisation.utils.make_all_combinations">
+<span class="sig-prename descclassname"><span class="pre">accim.parametric_and_optimisation.utils.</span></span><span class="sig-name descname"><span class="pre">make_all_combinations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parameters_values_dict</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/accim/parametric_and_optimisation/utils.html#make_all_combinations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#accim.parametric_and_optimisation.utils.make_all_combinations" title="Link to this definition"></a></dt>
+<dd><p>Takes all values from all the parameters and return a pandas DataFrame with all possible combinations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>parameters_values_dict</strong> – a dictionary in the format {‘parameter name’: list_of_values}</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a pandas DataFrame with all possible combinations</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-accim.parametric_and_optimisation">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-accim.parametric_and_optimisation" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="accim.data.postprocessing.html" class="btn btn-neutral float-left" title="accim.data.postprocessing package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="accim.parametric_and_optimisation.funcs_for_besos.html" class="btn btn-neutral float-right" title="accim.parametric_and_optimisation.funcs_for_besos package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

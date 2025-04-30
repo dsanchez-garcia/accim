@@ -1,0 +1,668 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.parametric_and_optimisation.parameters &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">accim.parametric_and_optimisation.parameters</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for accim.parametric_and_optimisation.parameters</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">accim.parametric_and_optimisation.funcs_for_besos</span><span class="w"> </span><span class="kn">import</span> <span class="n">param_accis</span><span class="p">,</span> <span class="n">param_apmv</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">accim.parametric_and_optimisation.params_dicts</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">params_dicts</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">accim.parametric_and_optimisation.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">descriptor_has_options</span>
+
+<div class="viewcode-block" id="accis_parameter">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.accis_parameter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">accis_parameter</span><span class="p">(</span><span class="n">parameter_name</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="n">desc_has_options</span> <span class="o">=</span> <span class="n">descriptor_has_options</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="c1"># all_params = {</span>
+    <span class="c1">#     # accim predefined models parameters</span>
+    <span class="c1">#     &#39;ComfStand&#39;: param_accis.modify_ComfStand,</span>
+    <span class="c1">#     &#39;CAT&#39;: param_accis.modify_CAT,</span>
+    <span class="c1">#     &#39;CATcoolOffset&#39;: param_accis.modify_CATcoolOffset,</span>
+    <span class="c1">#     &#39;CATheatOffset&#39;: param_accis.modify_CATheatOffset,</span>
+    <span class="c1">#     &#39;ComfMod&#39;: param_accis.modify_ComfMod,</span>
+    <span class="c1">#     &#39;SetpointAcc&#39;: param_accis.modify_SetpointAcc,</span>
+    <span class="c1">#     &#39;CoolSeasonStart&#39;: param_accis.modify_CoolSeasonStart,</span>
+    <span class="c1">#     &#39;CoolSeasonEnd&#39;: param_accis.modify_CoolSeasonEnd,</span>
+    <span class="c1">#     &#39;HVACmode&#39;: param_accis.modify_HVACmode,</span>
+    <span class="c1">#     &#39;VentCtrl&#39;: param_accis.modify_VentCtrl,</span>
+    <span class="c1">#     &#39;MaxTempDiffVOF&#39;: param_accis.modify_MaxTempDiffVOF,</span>
+    <span class="c1">#     &#39;MinTempDiffVOF&#39;: param_accis.modify_MinTempDiffVOF,</span>
+    <span class="c1">#     &#39;MultiplierVOF&#39;: param_accis.modify_MultiplierVOF,</span>
+    <span class="c1">#     &#39;VSToffset&#39;: param_accis.modify_VSToffset,</span>
+    <span class="c1">#     &#39;MinOToffset&#39;: param_accis.modify_MinOToffset,</span>
+    <span class="c1">#     &#39;MaxWindSpeed&#39;: param_accis.modify_MaxWindSpeed,</span>
+    <span class="c1">#     &#39;ASTtol&#39;: param_accis.modify_ASTtol,</span>
+    <span class="c1">#     # accim custom models parameters</span>
+    <span class="c1">#     &#39;CustAST_ACSTaul&#39;: param_accis.modify_CustAST_ACSTaul,</span>
+    <span class="c1">#     &#39;CustAST_ACSTall&#39;: param_accis.modify_CustAST_ACSTall,</span>
+    <span class="c1">#     &#39;CustAST_AHSTaul&#39;: param_accis.modify_CustAST_AHSTaul,</span>
+    <span class="c1">#     &#39;CustAST_AHSTall&#39;: param_accis.modify_CustAST_AHSTall,</span>
+    <span class="c1">#     &#39;CustAST_ASTaul&#39;: param_accis.modify_CustAST_ASTaul,</span>
+    <span class="c1">#     &#39;CustAST_ASTall&#39;: param_accis.modify_CustAST_ASTall,</span>
+    <span class="c1">#     &#39;CustAST_m&#39;: param_accis.modify_CustAST_m,</span>
+    <span class="c1">#     &#39;CustAST_n&#39;: param_accis.modify_CustAST_n,</span>
+    <span class="c1">#     &#39;CustAST_ACSToffset&#39;: param_accis.modify_CustAST_ACSToffset,</span>
+    <span class="c1">#     &#39;CustAST_AHSToffset&#39;: param_accis.modify_CustAST_AHSToffset,</span>
+    <span class="c1">#     &#39;CustAST_ASToffset&#39;: param_accis.modify_CustAST_ASToffset,</span>
+    <span class="c1">#     #apmv setpoints parameters</span>
+    <span class="c1">#     &#39;Adaptive coefficient&#39;: param_apmv.change_adaptive_coeff_all_zones,</span>
+    <span class="c1">#     &#39;Adaptive cooling coefficient&#39;: param_apmv.change_adaptive_coeff_cooling_all_zones,</span>
+    <span class="c1">#     &#39;Adaptive heating coefficient&#39;: param_apmv.change_adaptive_coeff_heating_all_zones,</span>
+    <span class="c1">#     &#39;PMV setpoint&#39;: param_apmv.change_pmv_setpoint_all_zones,</span>
+    <span class="c1">#     &#39;PMV cooling setpoint&#39;: param_apmv.change_pmv_cooling_setpoint_all_zones,</span>
+    <span class="c1">#     &#39;PMV heating setpoint&#39;: param_apmv.change_pmv_heating_setpoint_all_zones,</span>
+    <span class="c1"># }</span>
+
+
+    <span class="k">if</span> <span class="n">parameter_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">params_dicts</span><span class="o">.</span><span class="n">all_params</span><span class="o">.</span><span class="n">keys</span><span class="p">()]:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Parameter do not exist.&#39;</span>
+                       <span class="sa">f</span><span class="s1">&#39;You need to chose one of the following list: </span><span class="si">{</span><span class="n">params_dicts</span><span class="o">.</span><span class="n">all_params</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">params_dicts</span><span class="o">.</span><span class="n">all_params</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">parameter_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()][</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">besos.parameters</span><span class="w"> </span><span class="kn">import</span> <span class="n">Parameter</span><span class="p">,</span> <span class="n">GenericSelector</span><span class="p">,</span> <span class="n">CategoryParameter</span><span class="p">,</span> <span class="n">RangeParameter</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">accim.parametric_and_optimisation.funcs_for_besos.param_accis</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">bf</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+    <span class="k">if</span> <span class="n">desc_has_options</span><span class="p">:</span>
+        <span class="n">parameter</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="c1"># selector=GenericSelector(set=change_adaptive_coeff),</span>
+            <span class="n">selector</span><span class="o">=</span><span class="n">GenericSelector</span><span class="p">(</span><span class="nb">set</span><span class="o">=</span><span class="n">params_dicts</span><span class="o">.</span><span class="n">all_params</span><span class="p">[</span><span class="n">name</span><span class="p">]),</span>
+            <span class="c1"># value_descriptors=RangeParameter(name=&#39;CustAST_m&#39;, min_val=0, max_val=0.7),</span>
+            <span class="n">value_descriptors</span><span class="o">=</span><span class="n">CategoryParameter</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">options</span><span class="o">=</span><span class="n">values</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">parameter</span> <span class="o">=</span> <span class="n">Parameter</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="c1"># selector=GenericSelector(set=change_adaptive_coeff),</span>
+            <span class="n">selector</span><span class="o">=</span><span class="n">GenericSelector</span><span class="p">(</span><span class="nb">set</span><span class="o">=</span><span class="n">params_dicts</span><span class="o">.</span><span class="n">all_params</span><span class="p">[</span><span class="n">name</span><span class="p">]),</span>
+            <span class="c1"># value_descriptors=RangeParameter(name=&#39;CustAST_m&#39;, min_val=0, max_val=0.7),</span>
+            <span class="n">value_descriptors</span><span class="o">=</span><span class="n">RangeParameter</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">min_val</span><span class="o">=</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">max_val</span><span class="o">=</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+
+    <span class="k">return</span> <span class="n">parameter</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="get_available_params_accim_predef_models">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.get_available_params_accim_predef_models">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_available_params_accim_predef_models</span><span class="p">():</span>
+    <span class="n">param_dict</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">params_dicts</span><span class="o">.</span><span class="n">accim_predef_model_params</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+    <span class="k">return</span> <span class="n">param_dict</span></div>
+
+<div class="viewcode-block" id="get_available_params_accim_custom_models">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.get_available_params_accim_custom_models">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_available_params_accim_custom_models</span><span class="p">():</span>
+    <span class="n">param_dict</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">params_dicts</span><span class="o">.</span><span class="n">accim_custom_model_params</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+    <span class="k">return</span> <span class="n">param_dict</span></div>
+
+<div class="viewcode-block" id="get_available_params_apmv_setpoints">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.get_available_params_apmv_setpoints">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_available_params_apmv_setpoints</span><span class="p">():</span>
+    <span class="n">param_dict</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">params_dicts</span><span class="o">.</span><span class="n">apmv_setpoints_params</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+    <span class="k">return</span> <span class="n">param_dict</span></div>
+
+
+<div class="viewcode-block" id="Parameter">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.Parameter">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Parameter</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter</span><span class="p">):</span>
+        <span class="n">parameters_accis</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;ComfStand&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_ComfStand</span><span class="p">,</span>
+            <span class="s1">&#39;CAT&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CAT</span><span class="p">,</span>
+            <span class="s1">&#39;CATcoolOffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CATcoolOffset</span><span class="p">,</span>
+            <span class="s1">&#39;CATheatOffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CATheatOffset</span><span class="p">,</span>
+            <span class="s1">&#39;ComfMod&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_ComfMod</span><span class="p">,</span>
+            <span class="s1">&#39;SetpointAcc&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_SetpointAcc</span><span class="p">,</span>
+            <span class="s1">&#39;CustAST_ACSTaul&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ACSTaul</span><span class="p">,</span>
+            <span class="s1">&#39;CustAST_ACSTall&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ACSTall</span><span class="p">,</span>
+            <span class="s1">&#39;CustAST_AHSTaul&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_AHSTaul</span><span class="p">,</span>
+            <span class="s1">&#39;CustAST_AHSTall&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_AHSTall</span><span class="p">,</span>
+            <span class="s1">&#39;CustAST_m&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_m</span><span class="p">,</span>
+            <span class="s1">&#39;CustAST_n&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_n</span><span class="p">,</span>
+            <span class="s1">&#39;CustAST_ACSToffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ACSToffset</span><span class="p">,</span>
+            <span class="s1">&#39;CustAST_AHSToffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_AHSToffset</span><span class="p">,</span>
+            <span class="s1">&#39;CoolSeasonStart&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CoolSeasonStart</span><span class="p">,</span>
+            <span class="s1">&#39;CoolSeasonEnd&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CoolSeasonEnd</span><span class="p">,</span>
+            <span class="s1">&#39;HVACmode&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_HVACmode</span><span class="p">,</span>
+            <span class="s1">&#39;VentCtrl&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_VentCtrl</span><span class="p">,</span>
+            <span class="s1">&#39;MaxTempDiffVOF&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MaxTempDiffVOF</span><span class="p">,</span>
+            <span class="s1">&#39;MinTempDiffVOF&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MinTempDiffVOF</span><span class="p">,</span>
+            <span class="s1">&#39;MultiplierVOF&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MultiplierVOF</span><span class="p">,</span>
+            <span class="s1">&#39;VSToffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_VSToffset</span><span class="p">,</span>
+            <span class="s1">&#39;MinOToffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MinOToffset</span><span class="p">,</span>
+            <span class="s1">&#39;MaxWindSpeed&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MaxWindSpeed</span><span class="p">,</span>
+            <span class="s1">&#39;ASTtol&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_ASTtol</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="n">parameter</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">parameters_accis</span><span class="o">.</span><span class="n">keys</span><span class="p">()]:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Parameter do not exist.&#39;</span>
+                           <span class="sa">f</span><span class="s1">&#39;You need to chose one of the following list: </span><span class="si">{</span><span class="n">parameters_accis</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">parameters_accis</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">parameter</span><span class="o">.</span><span class="n">lower</span><span class="p">()][</span><span class="mi">0</span><span class="p">]</span>
+
+<div class="viewcode-block" id="Parameter.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.Parameter.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">parameters_accis</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;ComfStand&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_ComfStand</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CAT&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CAT</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CATcoolOffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CATcoolOffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CATheatOffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CATheatOffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;ComfMod&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_ComfMod</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;SetpointAcc&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_SetpointAcc</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CustAST_ACSTaul&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ACSTaul</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CustAST_ACSTall&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ACSTall</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CustAST_AHSTaul&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_AHSTaul</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CustAST_AHSTall&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_AHSTall</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CustAST_m&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_m</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CustAST_n&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_n</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CustAST_ACSToffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ACSToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CustAST_AHSToffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_AHSToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CoolSeasonStart&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CoolSeasonStart</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;CoolSeasonEnd&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CoolSeasonEnd</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;HVACmode&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_HVACmode</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;VentCtrl&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_VentCtrl</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;MaxTempDiffVOF&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MaxTempDiffVOF</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;MinTempDiffVOF&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MinTempDiffVOF</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;MultiplierVOF&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MultiplierVOF</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;VSToffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_VSToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;MinOToffset&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MinOToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;MaxWindSpeed&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MaxWindSpeed</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+            <span class="s1">&#39;ASTtol&#39;</span><span class="p">:</span> <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_ASTtol</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span>
+        <span class="p">}</span>
+
+        <span class="n">parameters_accis</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">]</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="ComfStand">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ComfStand">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ComfStand</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;ComfStand&#39;</span>
+
+<div class="viewcode-block" id="ComfStand.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ComfStand.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_ComfStand</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CustAST_ACSTaul">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSTaul">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustAST_ACSTaul</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CustAST_ACSTaul&#39;</span>
+
+<div class="viewcode-block" id="CustAST_ACSTaul.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSTaul.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ACSTaul</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CustAST_ACSTall">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSTall">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustAST_ACSTall</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CustAST_ACSTall&#39;</span>
+
+<div class="viewcode-block" id="CustAST_ACSTall.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSTall.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ACSTall</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CustAST_AHSTaul">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSTaul">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustAST_AHSTaul</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CustAST_AHSTaul&#39;</span>
+
+<div class="viewcode-block" id="CustAST_AHSTaul.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSTaul.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_AHSTaul</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CustAST_AHSTall">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSTall">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustAST_AHSTall</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CustAST_AHSTall&#39;</span>
+
+<div class="viewcode-block" id="CustAST_AHSTall.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSTall.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_AHSTall</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CustAST_ASTaul">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASTaul">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustAST_ASTaul</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CustAST_ASTaul&#39;</span>
+
+<div class="viewcode-block" id="CustAST_ASTaul.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASTaul.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ASTaul</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CustAST_ASTall">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASTall">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustAST_ASTall</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CustAST_ASTall&#39;</span>
+
+<div class="viewcode-block" id="CustAST_ASTall.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASTall.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ASTall</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CustAST_m">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_m">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustAST_m</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CustAST_m&#39;</span>
+
+<div class="viewcode-block" id="CustAST_m.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_m.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_m</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CustAST_n">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_n">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustAST_n</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CustAST_n&#39;</span>
+
+<div class="viewcode-block" id="CustAST_n.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_n.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_n</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CustAST_ACSToffset">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSToffset">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustAST_ACSToffset</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CustAST_ACSToffset&#39;</span>
+
+<div class="viewcode-block" id="CustAST_ACSToffset.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSToffset.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ACSToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CustAST_AHSToffset">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSToffset">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustAST_AHSToffset</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CustAST_AHSToffset&#39;</span>
+
+<div class="viewcode-block" id="CustAST_AHSToffset.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSToffset.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_AHSToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CustAST_ASToffset">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASToffset">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustAST_ASToffset</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CustAST_ASToffset&#39;</span>
+
+<div class="viewcode-block" id="CustAST_ASToffset.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASToffset.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CustAST_ASToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CAT">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CAT">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CAT</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CAT&#39;</span>
+
+<div class="viewcode-block" id="CAT.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CAT.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CAT</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CATcoolOffset">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CATcoolOffset">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CATcoolOffset</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CATcoolOffset&#39;</span>
+
+<div class="viewcode-block" id="CATcoolOffset.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CATcoolOffset.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CATcoolOffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CATheatOffset">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CATheatOffset">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CATheatOffset</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CATheatOffset&#39;</span>
+
+<div class="viewcode-block" id="CATheatOffset.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CATheatOffset.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CATheatOffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="ComfMod">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ComfMod">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ComfMod</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;ComfMod&#39;</span>
+
+<div class="viewcode-block" id="ComfMod.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ComfMod.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_ComfMod</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="HVACmode">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.HVACmode">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">HVACmode</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;HVACmode&#39;</span>
+
+<div class="viewcode-block" id="HVACmode.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.HVACmode.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_HVACmode</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="VentCtrl">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.VentCtrl">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">VentCtrl</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;VentCtrl&#39;</span>
+
+<div class="viewcode-block" id="VentCtrl.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.VentCtrl.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_VentCtrl</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="VSToffset">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.VSToffset">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">VSToffset</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;VSToffset&#39;</span>
+
+<div class="viewcode-block" id="VSToffset.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.VSToffset.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_VSToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="MinOToffset">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MinOToffset">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MinOToffset</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;MinOToffset&#39;</span>
+
+<div class="viewcode-block" id="MinOToffset.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MinOToffset.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MinOToffset</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="MaxWindSpeed">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MaxWindSpeed">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MaxWindSpeed</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;MaxWindSpeed&#39;</span>
+
+<div class="viewcode-block" id="MaxWindSpeed.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MaxWindSpeed.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MaxWindSpeed</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="ASTtol">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ASTtol">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ASTtol</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;ASTtol&#39;</span>
+
+<div class="viewcode-block" id="ASTtol.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ASTtol.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_ASTtol</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CoolSeasonStart">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CoolSeasonStart">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CoolSeasonStart</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CoolSeasonStart&#39;</span>
+
+<div class="viewcode-block" id="CoolSeasonStart.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CoolSeasonStart.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CoolSeasonStart</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="CoolSeasonEnd">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CoolSeasonEnd">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CoolSeasonEnd</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;CoolSeasonEnd&#39;</span>
+
+<div class="viewcode-block" id="CoolSeasonEnd.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CoolSeasonEnd.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_CoolSeasonEnd</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="SetpointAcc">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.SetpointAcc">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SetpointAcc</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;SetpointAcc&#39;</span>
+
+<div class="viewcode-block" id="SetpointAcc.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.SetpointAcc.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_SetpointAcc</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="MaxTempDiffVOF">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MaxTempDiffVOF">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MaxTempDiffVOF</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;MaxTempDiffVOF&#39;</span>
+
+<div class="viewcode-block" id="MaxTempDiffVOF.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MaxTempDiffVOF.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MaxTempDiffVOF</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="MinTempDiffVOF">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MinTempDiffVOF">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MinTempDiffVOF</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;MinTempDiffVOF&#39;</span>
+
+<div class="viewcode-block" id="MinTempDiffVOF.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MinTempDiffVOF.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MinTempDiffVOF</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="MultiplierVOF">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MultiplierVOF">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MultiplierVOF</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;MultiplierVOF&#39;</span>
+
+<div class="viewcode-block" id="MultiplierVOF.modify">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MultiplierVOF.modify">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">param_accis</span><span class="o">.</span><span class="n">modify_MultiplierVOF</span><span class="p">(</span><span class="n">idf</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

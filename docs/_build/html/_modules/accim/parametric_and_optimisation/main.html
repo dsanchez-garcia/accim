@@ -1,0 +1,1141 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.parametric_and_optimisation.main &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">accim.parametric_and_optimisation.main</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for accim.parametric_and_optimisation.main</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">accim</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">besos</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">besos</span><span class="w"> </span><span class="kn">import</span> <span class="n">sampling</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">besos.evaluator</span><span class="w"> </span><span class="kn">import</span> <span class="n">EvaluatorEP</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">besos.optimizer</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">optimizer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">besos.parameters</span><span class="w"> </span><span class="kn">import</span> <span class="n">RangeParameter</span><span class="p">,</span> <span class="n">CategoryParameter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">besos.problem</span><span class="w"> </span><span class="kn">import</span> <span class="n">EPProblem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">besos.objectives</span><span class="w"> </span><span class="kn">import</span> <span class="n">VariableReader</span><span class="p">,</span> <span class="n">MeterReader</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">besos</span><span class="w"> </span><span class="kn">import</span> <span class="n">IDF_class</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">accim.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_available_outputs_mod</span><span class="p">,</span> <span class="n">modify_timesteps</span><span class="p">,</span> <span class="n">set_occupancy_to_always</span><span class="p">,</span> <span class="n">remove_accents_in_idf</span><span class="p">,</span> \
+    <span class="n">reduce_runtime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">accim.parametric_and_optimisation.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">expand_to_hourly_dataframe</span><span class="p">,</span> <span class="n">identify_hourly_columns</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">accim.sim.accis_single_idf_funcs</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">accis</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">accim.sim.apmv_setpoints</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">apmv</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">accim.parametric_and_optimisation.funcs_for_besos.param_accis</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">bf_accim</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">accim.parametric_and_optimisation.funcs_for_besos.param_apmv</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">bf_apmv</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">accim.parametric_and_optimisation.parameters</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">params</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">accim.parametric_and_optimisation.params_dicts</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">params_dicts</span>
+
+
+<span class="n">allowed_output_freqs</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;timestep&#39;</span><span class="p">,</span> <span class="s1">&#39;hourly&#39;</span><span class="p">,</span> <span class="s1">&#39;daily&#39;</span><span class="p">,</span> <span class="s1">&#39;monthly&#39;</span><span class="p">,</span> <span class="s1">&#39;runperiod&#39;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="get_rdd_file_as_df">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.get_rdd_file_as_df">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_rdd_file_as_df</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the .rdd file from the test simulation as a pandas DataFrame</span>
+
+<span class="sd">    :return: a pandas DataFrame containing the .rdd file from the test simulation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rdd_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+        <span class="n">filepath_or_buffer</span><span class="o">=</span><span class="s1">&#39;available_outputs/eplusout.rdd&#39;</span><span class="p">,</span>
+        <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;,|;&#39;</span><span class="p">,</span>
+        <span class="n">skiprows</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;object&#39;</span><span class="p">,</span> <span class="s1">&#39;key_value&#39;</span><span class="p">,</span> <span class="s1">&#39;variable_name&#39;</span><span class="p">,</span> <span class="s1">&#39;frequency&#39;</span><span class="p">,</span> <span class="s1">&#39;units&#39;</span><span class="p">],</span>
+        <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;python&#39;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">rdd_df</span></div>
+
+
+
+<div class="viewcode-block" id="parse_mtd_file">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.parse_mtd_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_mtd_file</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a list of the objects in the .mtd file from the test simulation.</span>
+
+<span class="sd">    :return: a list of the objects in the .mtd file from the test simulation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">meter_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;available_outputs/eplusout.mtd&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+
+    <span class="n">meter_id</span><span class="p">,</span> <span class="n">description</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="n">on_meters</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Meters for&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">meter_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">meter_list</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s1">&#39;meter_id&#39;</span><span class="p">:</span> <span class="n">meter_id</span><span class="p">,</span>
+                    <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+                    <span class="s1">&#39;on_meters&#39;</span><span class="p">:</span> <span class="n">on_meters</span>
+                <span class="p">})</span>
+            <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;Meters for (\d+),(.+)&#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+                <span class="n">meter_id</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">description</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+                <span class="n">on_meters</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;OnMeter&#39;</span><span class="p">):</span>
+            <span class="n">on_meters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+
+    <span class="c1"># Add the last meter</span>
+    <span class="k">if</span> <span class="n">meter_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">meter_list</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+            <span class="s1">&#39;meter_id&#39;</span><span class="p">:</span> <span class="n">meter_id</span><span class="p">,</span>
+            <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="n">description</span><span class="p">,</span>
+            <span class="s1">&#39;on_meters&#39;</span><span class="p">:</span> <span class="n">on_meters</span>
+        <span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">meter_list</span></div>
+
+
+
+<div class="viewcode-block" id="get_mdd_file_as_df">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.get_mdd_file_as_df">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_mdd_file_as_df</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the .mdd file from the test simulation as a pandas DataFrame</span>
+
+<span class="sd">    :return: a pandas DataFrame containing the .mdd file from the test simulation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mdd_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+        <span class="n">filepath_or_buffer</span><span class="o">=</span><span class="s1">&#39;available_outputs/eplusout.mdd&#39;</span><span class="p">,</span>
+        <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;,|;&#39;</span><span class="p">,</span>
+        <span class="n">skiprows</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;object&#39;</span><span class="p">,</span> <span class="s1">&#39;meter_name&#39;</span><span class="p">,</span> <span class="s1">&#39;frequency&#39;</span><span class="p">,</span> <span class="s1">&#39;units&#39;</span><span class="p">],</span>
+        <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;python&#39;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">mdd_df</span></div>
+
+
+
+<div class="viewcode-block" id="OptimParamSimulation">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">OptimParamSimulation</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">building</span><span class="p">:</span> <span class="n">IDF_class</span><span class="p">,</span>
+            <span class="n">parameters_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;accim custom model&#39;</span><span class="p">,</span> <span class="s1">&#39;accim predefined model&#39;</span><span class="p">,</span> <span class="s1">&#39;apmv setpoints&#39;</span><span class="p">],</span>
+            <span class="n">output_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;standard&#39;</span><span class="p">,</span> <span class="s1">&#39;custom&#39;</span><span class="p">,</span> <span class="s1">&#39;detailed&#39;</span><span class="p">,</span> <span class="s1">&#39;simplified&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;standard&#39;</span><span class="p">,</span>
+            <span class="n">output_keep_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">output_freqs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">allowed_output_freqs</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;hourly&#39;</span><span class="p">],</span>
+            <span class="n">ScriptType</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;vrf_mm&#39;</span><span class="p">,</span> <span class="s1">&#39;vrf_ac&#39;</span><span class="p">,</span> <span class="s1">&#39;ex_ac&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;vrf_mm&#39;</span><span class="p">,</span>
+            <span class="n">SupplyAirTempInputMethod</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;temperature difference&#39;</span><span class="p">,</span> <span class="s1">&#39;supply air temperature&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;temperature difference&#39;</span><span class="p">,</span>
+            <span class="n">make_averages</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">debugging</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">verbosemode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a class instance to run parametric simulations and optimisation.</span>
+
+<span class="sd">        :param building: the besos.IDF_class returned from method get_building(idfpath)</span>
+<span class="sd">        :param parameters_type: to specify the type of parameters that should be used:</span>
+<span class="sd">            can be &#39;accim custom model&#39;, &#39;accim predefined model&#39;, or &#39;apmv setpoints&#39;</span>
+<span class="sd">        :param output_type: to specify the outputs that are going to be requested;</span>
+<span class="sd">            only used in accim predefined and custom models</span>
+<span class="sd">        :param output_keep_existing: to keep or remove existing outputs;</span>
+<span class="sd">            only used in accim predefined and custom models</span>
+<span class="sd">        :param output_freqs: to specify the frequency or frequencies for the outputs; must be a list containing any of</span>
+<span class="sd">            the following strings: &#39;timestep&#39;, &#39;hourly&#39;, &#39;daily&#39;, &#39;monthly&#39;, &#39;runperiod&#39;</span>
+<span class="sd">        :param ScriptType: to specify the ScriptType; must one of the following strings: &#39;vrf_mm&#39;, &#39;vrf_ac&#39;, &#39;ex_ac&#39;;</span>
+<span class="sd">            for more information, please refer to addAccis()</span>
+<span class="sd">        :param SupplyAirTempInputMethod: in case &#39;vrf_mm&#39; or &#39;vrf_ac&#39; ScriptTypes are used, specifies the supply air</span>
+<span class="sd">            temperature input method for the VRF systems</span>
+<span class="sd">        :param make_averages: to make average outputs of hour-counting and operative temperature related outputs</span>
+<span class="sd">        :param debugging: True to generate the .EDD file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">is_accim_predef_model</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">is_accim_custom_model</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">is_apmv_setpoints</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="k">if</span> <span class="n">parameters_type</span> <span class="o">==</span> <span class="s1">&#39;accim custom model&#39;</span><span class="p">:</span>
+            <span class="n">temp_ctrl</span> <span class="o">=</span> <span class="s1">&#39;temperature&#39;</span>
+            <span class="n">is_accim_custom_model</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">parameters_type</span> <span class="o">==</span> <span class="s1">&#39;accim predefined model&#39;</span><span class="p">:</span>
+            <span class="n">temp_ctrl</span> <span class="o">=</span> <span class="s1">&#39;temperature&#39;</span>
+            <span class="n">is_accim_predef_model</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">parameters_type</span> <span class="o">==</span> <span class="s1">&#39;apmv setpoints&#39;</span><span class="p">:</span>
+            <span class="n">temp_ctrl</span> <span class="o">=</span> <span class="s1">&#39;PMV&#39;</span>
+            <span class="n">is_apmv_setpoints</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;String </span><span class="si">{</span><span class="n">parameters_type</span><span class="si">}</span><span class="s1"> entered in argument parametric_simulation_type &#39;</span>
+                           <span class="sa">f</span><span class="s1">&#39;is not supported. Valid strings are: &#39;</span>
+                           <span class="sa">f</span><span class="s1">&#39;&quot;accim custom model&quot;, &quot;accim predefined model&quot; or &quot;apmv setpoints&quot;.&#39;</span><span class="p">)</span>
+
+        <span class="c1">#todo not working</span>
+        <span class="c1"># if not all(freq in allowed_output_freqs for freq in output_freqs):</span>
+        <span class="c1">#     raise ValueError(f&quot;Invalid output frequencies: {output_freqs}. Allowed values are: {allowed_output_freqs}&quot;)</span>
+        
+        <span class="n">allowed_ScriptType</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;vrf_mm&#39;</span><span class="p">,</span> <span class="s1">&#39;vrf_ac&#39;</span><span class="p">,</span> <span class="s1">&#39;ex_ac&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">ScriptType</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">allowed_ScriptType</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid ScriptType: </span><span class="si">{</span><span class="n">ScriptType</span><span class="si">}</span><span class="s2">. Allowed values are: </span><span class="si">{</span><span class="n">allowed_ScriptType</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">allowed_SupplyAirTempInputMethod</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;temperature difference&#39;</span><span class="p">,</span> <span class="s1">&#39;supply air temperature&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">SupplyAirTempInputMethod</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">allowed_SupplyAirTempInputMethod</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid ScriptType: </span><span class="si">{</span><span class="n">SupplyAirTempInputMethod</span><span class="si">}</span><span class="s2">. Allowed values are: </span><span class="si">{</span><span class="n">allowed_SupplyAirTempInputMethod</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="n">allowed_output_type</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;standard&#39;</span><span class="p">,</span> <span class="s1">&#39;custom&#39;</span><span class="p">,</span> <span class="s1">&#39;detailed&#39;</span><span class="p">,</span> <span class="s1">&#39;simplified&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">output_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">allowed_output_type</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid output_type: </span><span class="si">{</span><span class="n">output_type</span><span class="si">}</span><span class="s2">. Allowed values are: </span><span class="si">{</span><span class="n">allowed_output_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">is_accim_custom_model</span> <span class="ow">or</span> <span class="n">is_accim_predef_model</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ScriptType</span> <span class="o">=</span> <span class="n">ScriptType</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">temp_ctrl</span> <span class="o">=</span> <span class="n">temp_ctrl</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">SupplyAirTempInputMethod</span> <span class="o">=</span> <span class="n">SupplyAirTempInputMethod</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_keep_existing</span> <span class="o">=</span> <span class="n">output_keep_existing</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_type</span> <span class="o">=</span> <span class="n">output_type</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">make_averages</span> <span class="o">=</span> <span class="n">make_averages</span>
+
+            <span class="n">accis</span><span class="o">.</span><span class="n">addAccis</span><span class="p">(</span>
+                <span class="n">idf</span><span class="o">=</span><span class="n">building</span><span class="p">,</span>
+                <span class="n">ScriptType</span><span class="o">=</span><span class="n">ScriptType</span><span class="p">,</span>
+                <span class="n">SupplyAirTempInputMethod</span><span class="o">=</span><span class="n">SupplyAirTempInputMethod</span><span class="p">,</span>
+                <span class="n">Output_keep_existing</span><span class="o">=</span><span class="n">output_keep_existing</span><span class="p">,</span>
+                <span class="n">Output_type</span><span class="o">=</span><span class="n">output_type</span><span class="p">,</span>
+                <span class="c1"># Output_take_dataframe=set_outputs_df,</span>
+                <span class="n">Output_freqs</span><span class="o">=</span><span class="n">output_freqs</span><span class="p">,</span>
+    
+                <span class="c1"># EnergyPlus_version=&#39;9.4&#39;,</span>
+                <span class="n">TempCtrl</span><span class="o">=</span><span class="n">temp_ctrl</span><span class="p">,</span>
+                <span class="c1"># Output_gen_dataframe=True,</span>
+                <span class="n">make_averages</span><span class="o">=</span><span class="n">make_averages</span><span class="p">,</span>
+                <span class="n">debugging</span><span class="o">=</span><span class="n">debugging</span><span class="p">,</span>
+                <span class="n">verboseMode</span><span class="o">=</span><span class="n">verbosemode</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">is_apmv_setpoints</span><span class="p">:</span>
+            <span class="c1"># apmv.add_vrf_system(building=building)</span>
+            <span class="n">apmv</span><span class="o">.</span><span class="n">apply_apmv_setpoints</span><span class="p">(</span><span class="n">building</span><span class="o">=</span><span class="n">building</span><span class="p">,</span> <span class="n">outputs_freq</span><span class="o">=</span><span class="n">output_freqs</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Arguments output_type, output_keep_existing, ScriptType, and SupplyAirTempInputMethod &#39;</span>
+                  <span class="s1">&#39;are only used in accim predefined and custom models, &#39;</span>
+                  <span class="s1">&#39;therefore these will not have any effect in this case.&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">building</span> <span class="o">=</span> <span class="n">building</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_freqs</span> <span class="o">=</span> <span class="n">output_freqs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters_type</span> <span class="o">=</span> <span class="n">parameters_type</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_accim_custom_model</span> <span class="o">=</span> <span class="n">is_accim_custom_model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_accim_predef_model</span> <span class="o">=</span> <span class="n">is_accim_predef_model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_apmv_setpoints</span> <span class="o">=</span> <span class="n">is_apmv_setpoints</span>
+
+<div class="viewcode-block" id="OptimParamSimulation.get_output_var_df_from_idf">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_output_var_df_from_idf">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_output_var_df_from_idf</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets a pandas DataFrame which contains the Output:Variable objects from the idf.</span>
+<span class="sd">        Therefore, it may contain wildcards such as &#39;*&#39;, which means the variable is requested</span>
+<span class="sd">        for all zones.</span>
+
+<span class="sd">        :return: a pandas DataFrame which contains the Output:Variable objects from the idf</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_accim_custom_model</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_accim_predef_model</span><span class="p">:</span>
+            <span class="n">output_variable_df</span> <span class="o">=</span> <span class="n">accis</span><span class="o">.</span><span class="n">gen_outputs_df</span><span class="p">(</span>
+                <span class="n">idf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span>
+                <span class="n">ScriptType</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ScriptType</span><span class="p">,</span>
+                <span class="n">Output_keep_existing</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">output_keep_existing</span><span class="p">,</span>
+                <span class="n">Output_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">output_type</span><span class="p">,</span>
+                <span class="n">Output_freqs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">output_freqs</span><span class="p">,</span>
+                <span class="n">TempCtrl</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_ctrl</span><span class="p">,</span>
+                <span class="n">verboseMode</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">output_var_dict</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;key_value&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Key_Value</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Output:Variable&#39;</span><span class="p">]],</span>
+                <span class="s1">&#39;variable_name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Variable_Name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Output:Variable&#39;</span><span class="p">]],</span>
+                <span class="s1">&#39;frequency&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Reporting_Frequency</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Output:Variable&#39;</span><span class="p">]],</span>
+                <span class="s1">&#39;schedule_name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Schedule_Name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Output:Variable&#39;</span><span class="p">]],</span>
+            <span class="p">}</span>
+            <span class="n">output_variable_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">output_var_dict</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output_variable_df</span></div>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.get_output_meter_df_from_idf">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_output_meter_df_from_idf">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_output_meter_df_from_idf</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets a pandas DataFrame which contains the Output:Meter objects from the idf.</span>
+
+<span class="sd">        :return: a pandas DataFrame which contains the Output:Meter objects from the idf</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">output_meter_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;key_name&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Key_Name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Output:Meter&#39;</span><span class="p">]],</span>
+            <span class="s1">&#39;frequency&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Reporting_Frequency</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Output:Meter&#39;</span><span class="p">]],</span>
+        <span class="p">}</span>
+        <span class="n">output_meter_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">output_meter_dict</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output_meter_df</span></div>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.set_output_var_df_to_idf">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_output_var_df_to_idf">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_output_var_df_to_idf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outputs_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Keeps the Output:Variable objects contained in the input pandas DataFrame and removes</span>
+<span class="sd">        all others. This is important to save space if thousands of simulations with heavy outputs</span>
+<span class="sd">        are run.</span>
+
+<span class="sd">        :type outputs_df: pd.DataFrame</span>
+<span class="sd">        :param outputs_df: the DataFrame containing Output:Variable objects to be kept</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_accim_custom_model</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_accim_predef_model</span><span class="p">:</span>
+            <span class="n">accis</span><span class="o">.</span><span class="n">addAccis</span><span class="p">(</span>
+                <span class="n">idf</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span>
+                <span class="n">ScriptType</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ScriptType</span><span class="p">,</span>
+                <span class="n">SupplyAirTempInputMethod</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">SupplyAirTempInputMethod</span><span class="p">,</span>
+                <span class="n">Output_keep_existing</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">output_keep_existing</span><span class="p">,</span>
+                <span class="n">Output_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">output_type</span><span class="p">,</span>
+                <span class="n">Output_take_dataframe</span><span class="o">=</span><span class="n">outputs_df</span><span class="p">,</span>
+                <span class="n">Output_freqs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">output_freqs</span><span class="p">,</span>
+
+                <span class="c1"># EnergyPlus_version=&#39;9.4&#39;,</span>
+                <span class="n">TempCtrl</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_ctrl</span><span class="p">,</span>
+                <span class="c1"># Output_gen_dataframe=True,</span>
+                <span class="n">make_averages</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">make_averages</span><span class="p">,</span>
+                <span class="c1"># debugging=True,</span>
+                <span class="n">verboseMode</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">alloutputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">output</span> <span class="k">for</span> <span class="n">output</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Output:Variable&#39;</span><span class="p">]]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">alloutputs</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="o">.</span><span class="n">removeidfobject</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">outputs_df</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                    <span class="s1">&#39;Output:Variable&#39;</span><span class="p">,</span>
+                    <span class="n">Key_Value</span><span class="o">=</span><span class="n">outputs_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;key_value&#39;</span><span class="p">],</span>
+                    <span class="n">Variable_Name</span><span class="o">=</span><span class="n">outputs_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;variable_name&#39;</span><span class="p">],</span>
+                    <span class="n">Reporting_Frequency</span><span class="o">=</span><span class="n">outputs_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;frequency&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">capitalize</span><span class="p">(),</span>
+                    <span class="n">Schedule_Name</span><span class="o">=</span><span class="n">outputs_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;schedule_name&#39;</span><span class="p">]</span>
+                <span class="p">)</span></div>
+
+
+            <span class="c1"># raise KeyError(&#39;get_output_var_df_from_idf method is only available for &quot;accim custom model&quot; or &#39;</span>
+            <span class="c1">#                &#39;&quot;accim predefined model&quot; types.&#39;)</span>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.set_output_met_objects_to_idf">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_output_met_objects_to_idf">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_output_met_objects_to_idf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_meters</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Adds the Output:Meter objects from the output_meters argument.</span>
+
+<span class="sd">        :type output_meters: list</span>
+<span class="sd">        :param output_meters: a list containing Output:Meter objects to be added</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">meter</span> <span class="ow">in</span> <span class="n">output_meters</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">freq</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_freqs</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                    <span class="n">key</span><span class="o">=</span><span class="s1">&#39;OUTPUT:METER&#39;</span><span class="p">,</span>
+                    <span class="n">Key_Name</span><span class="o">=</span><span class="n">meter</span><span class="p">,</span>
+                    <span class="n">Reporting_Frequency</span><span class="o">=</span><span class="n">freq</span>
+                <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.get_outputs_df_from_testsim">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_outputs_df_from_testsim">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_outputs_df_from_testsim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reduce_sim_time</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.</span>
+<span class="sd">        Therefore, it won&#39;t contain wildcards such as &#39;*&#39;.</span>
+
+<span class="sd">        :param reduce_sim_time: True to reduce the simulation runtime</span>
+
+<span class="sd">        :return: a tuple containing the DataFrames containing Output:Variable and Output:Meter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">building_for_testsim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">building</span>
+
+        <span class="k">if</span> <span class="n">reduce_sim_time</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">besos.eppy_funcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_building</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="o">.</span><span class="n">savecopy</span><span class="p">(</span><span class="s1">&#39;temp_reduced_runtime.idf&#39;</span><span class="p">)</span>
+            <span class="n">building_for_testsim</span> <span class="o">=</span> <span class="n">get_building</span><span class="p">(</span><span class="s1">&#39;temp_reduced_runtime.idf&#39;</span><span class="p">)</span>
+            <span class="n">reduce_runtime</span><span class="p">(</span><span class="n">idf_object</span><span class="o">=</span><span class="n">building_for_testsim</span><span class="p">,</span> <span class="n">maximum_figures_in_shadow_overlap_calculations</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">timesteps</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">available_outputs</span> <span class="o">=</span> <span class="n">print_available_outputs_mod</span><span class="p">(</span><span class="n">building_for_testsim</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">reduce_sim_time</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">os</span><span class="w"> </span><span class="kn">import</span> <span class="n">remove</span>
+            <span class="n">remove</span><span class="p">(</span><span class="s1">&#39;temp_reduced_runtime.idf&#39;</span><span class="p">)</span>
+
+        <span class="n">df_outputmeters</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">available_outputs</span><span class="o">.</span><span class="n">meterreaderlist</span><span class="p">,</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;key_name&#39;</span><span class="p">,</span> <span class="s1">&#39;frequency&#39;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">df_outputvariables</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">available_outputs</span><span class="o">.</span><span class="n">variablereaderlist</span><span class="p">,</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;key_value&#39;</span><span class="p">,</span> <span class="s1">&#39;variable_name&#39;</span><span class="p">,</span> <span class="s1">&#39;frequency&#39;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">df_outputmeters</span><span class="p">,</span> <span class="n">df_outputvariables</span></div>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.set_outputs_for_simulation">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_outputs_for_simulation">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_outputs_for_simulation</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">df_output_variable</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">df_output_meter</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the outputs for the parametric analysis or optimisation based on the input pandas DataFrames</span>
+<span class="sd">        for Output:Variable and/or Output:Meter objects. These DataFrames can include columns for the output name</span>
+<span class="sd">        and the aggregation function (see the &#39;func&#39; argument of MeterReader and VariableReader classes in besos),</span>
+<span class="sd">        respectively named &#39;name&#39; and &#39;func&#39;. If no &#39;name&#39; and/or &#39;func&#39; columns are provided,</span>
+<span class="sd">        the names will be the variable and meter names, and the hourly values will be summed.</span>
+
+<span class="sd">        :param df_output_variable: a pandas DataFrame containing the Output:Variable objects, similar to that one</span>
+<span class="sd">            returned from method get_outputs_df_from_testsim()</span>
+<span class="sd">        :param df_output_meter: a pandas DataFrame containing the Output:Meter objects, similar to that one</span>
+<span class="sd">            returned from method get_outputs_df_from_testsim()</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">df_output_variable</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">df_output_variable</span><span class="p">[</span><span class="s1">&#39;output_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;temp&#39;</span>
+            <span class="k">if</span> <span class="s1">&#39;name&#39;</span> <span class="ow">in</span> <span class="n">df_output_variable</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">df_output_variable</span><span class="p">[</span><span class="s1">&#39;output_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_output_variable</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">df_output_variable</span><span class="p">[</span><span class="s1">&#39;output_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_output_variable</span><span class="p">[</span><span class="s1">&#39;variable_name&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">df_output_meter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">df_output_meter</span><span class="p">[</span><span class="s1">&#39;output_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;temp&#39;</span>
+            <span class="k">if</span> <span class="s1">&#39;name&#39;</span> <span class="ow">in</span> <span class="n">df_output_meter</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">df_output_meter</span><span class="p">[</span><span class="s1">&#39;output_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_output_meter</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">df_output_meter</span><span class="p">[</span><span class="s1">&#39;output_name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_output_meter</span><span class="p">[</span><span class="s1">&#39;key_name&#39;</span><span class="p">]</span>
+
+        <span class="n">objs_meters</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">df_output_meter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">df_output_meter</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;func&#39;</span> <span class="ow">in</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df_output_meter</span><span class="o">.</span><span class="n">columns</span><span class="p">]:</span>
+                    <span class="n">objs_meters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="n">MeterReader</span><span class="p">(</span>
+                                <span class="n">key_name</span><span class="o">=</span><span class="n">df_output_meter</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;key_name&#39;</span><span class="p">],</span>
+                                <span class="n">frequency</span><span class="o">=</span><span class="n">df_output_meter</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;frequency&#39;</span><span class="p">],</span>
+                                <span class="n">name</span><span class="o">=</span><span class="n">df_output_meter</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;output_name&#39;</span><span class="p">],</span>
+                                <span class="n">func</span><span class="o">=</span><span class="n">df_output_meter</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;func&#39;</span><span class="p">],</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">objs_meters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="n">MeterReader</span><span class="p">(</span>
+                            <span class="n">key_name</span><span class="o">=</span><span class="n">df_output_meter</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;key_name&#39;</span><span class="p">],</span>
+                            <span class="n">frequency</span><span class="o">=</span><span class="n">df_output_meter</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;frequency&#39;</span><span class="p">],</span>
+                            <span class="n">name</span><span class="o">=</span><span class="n">df_output_meter</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;output_name&#39;</span><span class="p">],</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+        <span class="n">objs_variables</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">df_output_variable</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">df_output_variable</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s1">&#39;func&#39;</span> <span class="ow">in</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df_output_variable</span><span class="o">.</span><span class="n">columns</span><span class="p">]:</span>
+                    <span class="n">objs_variables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="n">VariableReader</span><span class="p">(</span>
+                                <span class="n">key_value</span><span class="o">=</span><span class="n">df_output_variable</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;key_value&#39;</span><span class="p">],</span>
+                                <span class="n">variable_name</span><span class="o">=</span><span class="n">df_output_variable</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;variable_name&#39;</span><span class="p">],</span>
+                                <span class="n">frequency</span><span class="o">=</span><span class="n">df_output_variable</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;frequency&#39;</span><span class="p">],</span>
+                                <span class="n">name</span><span class="o">=</span><span class="n">df_output_variable</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;output_name&#39;</span><span class="p">],</span>
+                                <span class="n">func</span><span class="o">=</span><span class="n">df_output_variable</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;func&#39;</span><span class="p">],</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">objs_variables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                            <span class="n">VariableReader</span><span class="p">(</span>
+                                <span class="n">key_value</span><span class="o">=</span><span class="n">df_output_variable</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;key_value&#39;</span><span class="p">],</span>
+                                <span class="n">variable_name</span><span class="o">=</span><span class="n">df_output_variable</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;variable_name&#39;</span><span class="p">],</span>
+                                <span class="n">frequency</span><span class="o">=</span><span class="n">df_output_variable</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;frequency&#39;</span><span class="p">],</span>
+                                <span class="n">name</span><span class="o">=</span><span class="n">df_output_variable</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;output_name&#39;</span><span class="p">],</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_outputs</span> <span class="o">=</span> <span class="n">objs_meters</span> <span class="o">+</span> <span class="n">objs_variables</span></div>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.get_available_parameters">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_available_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_available_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a list containing the available parameters depending on the parameters_type argument previously input.</span>
+
+<span class="sd">        :return: a list containing the available parameters depending on the parameters_type argument previously input</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_accim_predef_model</span><span class="p">:</span>
+            <span class="n">available_params</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">params_dicts</span><span class="o">.</span><span class="n">accim_predef_model_params</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_accim_custom_model</span><span class="p">:</span>
+            <span class="n">available_params</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">params_dicts</span><span class="o">.</span><span class="n">accim_custom_model_params</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_apmv_setpoints</span><span class="p">:</span>
+            <span class="n">available_params</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">params_dicts</span><span class="o">.</span><span class="n">apmv_setpoints_params</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="k">return</span> <span class="n">available_params</span></div>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.set_parameters">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_parameters</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">accis_params_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+            <span class="n">additional_params</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">use_dflt_values</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="c1"># HVACmode: Literal[0, 1, 2] = 2,</span>
+            <span class="c1"># VentCtrl: Literal[0, 1, 2, 3] = 0,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the parameters for the parametric analysis or optimisation.</span>
+
+<span class="sd">        :param accis_params_dict: a dictionary containing the parameters names in the keys,</span>
+<span class="sd">            and in the values, the options or range of values using respectively</span>
+<span class="sd">            a list or tuple with min and max values.</span>
+<span class="sd">        :param additional_params: any other additional parameter, as it would be added in besos</span>
+<span class="sd">        :param HVACmode: only used in accim predefined and custom models; sets the HVACmode argument;</span>
+<span class="sd">            for more information, refer to addAccis</span>
+<span class="sd">        :param VentCtrl: only used in accim predefined and custom models; sets the VentCtrl argument;</span>
+<span class="sd">            for more information, refer to addAccis</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">accis_descriptors_has_options</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">add_descriptors_has_options</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">descriptors_has_options</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">([</span><span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">accis_params_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()]):</span>
+            <span class="n">accis_descriptors_has_options</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">additional_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">all</span><span class="p">([</span><span class="nb">type</span><span class="p">(</span><span class="n">additional_params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">value_descriptor</span><span class="p">)</span> <span class="o">==</span> <span class="n">CategoryParameter</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">additional_params</span><span class="p">))]):</span>
+                <span class="n">add_descriptors_has_options</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">accis_descriptors_has_options</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">additional_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">add_descriptors_has_options</span><span class="p">:</span>
+                    <span class="n">descriptors_has_options</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">descriptors_has_options</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="n">descriptors_has_options</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">accis_params_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">accis_params_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">v</span><span class="p">]</span>
+
+
+        <span class="n">accis_descriptors_has_range</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">add_descriptors_has_range</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">descriptors_has_range</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">([</span><span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">==</span> <span class="nb">tuple</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">accis_params_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()]):</span>
+            <span class="n">accis_descriptors_has_range</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">additional_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">all</span><span class="p">([</span><span class="nb">type</span><span class="p">(</span><span class="n">additional_params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">value_descriptor</span><span class="p">)</span> <span class="o">==</span> <span class="n">RangeParameter</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">additional_params</span><span class="p">))]):</span>
+                <span class="n">add_descriptors_has_range</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">accis_descriptors_has_range</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">additional_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">add_descriptors_has_range</span><span class="p">:</span>
+                    <span class="n">descriptors_has_range</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">descriptors_has_range</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="n">descriptors_has_options</span> <span class="ow">is</span> <span class="kc">False</span> <span class="ow">and</span> <span class="n">descriptors_has_range</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;All Descriptors are not CategoryParameters or RangeParameters.&#39;</span><span class="p">)</span>
+
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">accis_params_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="n">available_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_available_parameters</span><span class="p">()</span>
+
+        <span class="n">not_allowed_parameters</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available_parameters</span><span class="p">:</span>
+                <span class="n">not_allowed_parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">not_allowed_parameters</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The following parameters are not allowed in &#39;</span>
+                             <span class="sa">f</span><span class="s1">&#39;parameters_type </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters_type</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">not_allowed_parameters</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_accim_custom_model</span><span class="p">:</span>
+            <span class="c1"># accis.modifyAccis(</span>
+            <span class="c1">#     idf=self.building,</span>
+            <span class="c1">#     ComfStand=99,</span>
+            <span class="c1">#     ComfMod=3,</span>
+            <span class="c1">#     CAT=80,</span>
+            <span class="c1">#     # HVACmode=HVACmode,</span>
+            <span class="c1">#     # VentCtrl=VentCtrl,</span>
+            <span class="c1"># )</span>
+            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_ComfStand</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="mi">99</span><span class="p">)</span>
+            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_ComfMod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CAT</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="mi">80</span><span class="p">)</span>
+
+            <span class="c1"># Checking parameters are defined:</span>
+            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_m</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_n</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_ASToffset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_ASTaul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_ASTall</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+            <span class="n">args</span> <span class="o">=</span> <span class="n">accim</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">get_accim_args</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">)</span>
+            <span class="n">parameters_to_check</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;CustAST&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="s1">&#39;CustAST_&#39;</span> <span class="o">+</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">parameters</span> <span class="ow">and</span> <span class="n">v</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s1">&#39;CustAST_ASToffset&#39;</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">parameters_to_check</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;AHSToffset&#39;</span><span class="p">)</span>
+                    <span class="n">parameters_to_check</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;ACSToffset&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="k">if</span> <span class="s1">&#39;CustAST_ASTall&#39;</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">parameters_to_check</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;AHSTall&#39;</span><span class="p">)</span>
+                    <span class="n">parameters_to_check</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;ACSTall&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="k">if</span> <span class="s1">&#39;CustAST_ASTaul&#39;</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">parameters_to_check</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;AHSTaul&#39;</span><span class="p">)</span>
+                    <span class="n">parameters_to_check</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;ACSTaul&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+
+            <span class="n">parameters_to_be_defined</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters_to_check</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;CustAST&#39;</span><span class="p">][</span><span class="n">p</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">parameters_to_be_defined</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parameters_to_be_defined</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The following parameters are not included in the parameters to be set, &#39;</span>
+                                 <span class="sa">f</span><span class="s1">&#39;and have not been defined yet (i.e. the value is 0): &#39;</span>
+                                 <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">parameters_to_be_defined</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">dflt_values</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;m&#39;</span><span class="p">:</span> <span class="mf">0.31</span><span class="p">,</span>
+                    <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="mf">17.8</span><span class="p">,</span>
+                    <span class="s1">&#39;ACSToffset&#39;</span><span class="p">:</span> <span class="mf">3.5</span><span class="p">,</span>
+                    <span class="s1">&#39;AHSToffset&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">3.5</span><span class="p">,</span>
+                    <span class="s1">&#39;ACSTaul&#39;</span><span class="p">:</span> <span class="mf">33.5</span><span class="p">,</span>
+                    <span class="s1">&#39;ACSTall&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+                    <span class="s1">&#39;AHSTaul&#39;</span><span class="p">:</span> <span class="mf">33.5</span><span class="p">,</span>
+                    <span class="s1">&#39;AHSTall&#39;</span><span class="p">:</span> <span class="mi">10</span>
+                <span class="p">}</span>
+                <span class="k">if</span> <span class="n">use_dflt_values</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Default values will be set for these parameters. The default values are:&#39;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">dflt_values</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;If you want, default values can be set for these parameters. The default values are:&#39;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">dflt_values</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="n">user_decision</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s1">&#39;Do you want to continue with default values? [y/n]: &#39;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">user_decision</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;y&#39;</span> <span class="ow">or</span> <span class="n">user_decision</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="s1">&#39;m&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_m</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">dflt_values</span><span class="p">[</span><span class="s1">&#39;m&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;n&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_n</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">dflt_values</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;ACSToffset&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_ACSToffset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">dflt_values</span><span class="p">[</span><span class="s1">&#39;ACSToffset&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;AHSToffset&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_AHSToffset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">dflt_values</span><span class="p">[</span><span class="s1">&#39;AHSToffset&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;ACSTaul&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_ACSTaul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">dflt_values</span><span class="p">[</span><span class="s1">&#39;ACSTaul&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;ACSTall&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_ACSTall</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">dflt_values</span><span class="p">[</span><span class="s1">&#39;ACSTall&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;AHSTaul&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_AHSTaul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">dflt_values</span><span class="p">[</span><span class="s1">&#39;AHSTaul&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;AHSTall&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_AHSTall</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">dflt_values</span><span class="p">[</span><span class="s1">&#39;AHSTall&#39;</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">user_values</span> <span class="o">=</span> <span class="p">{}</span>
+                        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">input</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Enter the value for argument </span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s1">: &#39;</span><span class="p">))</span>
+                            <span class="n">user_values</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">p</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+                        <span class="k">if</span> <span class="s1">&#39;m&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_m</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">user_values</span><span class="p">[</span><span class="s1">&#39;m&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;n&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_n</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">user_values</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;ACSToffset&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_ACSToffset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">user_values</span><span class="p">[</span><span class="s1">&#39;ACSToffset&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;AHSToffset&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_AHSToffset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">user_values</span><span class="p">[</span><span class="s1">&#39;AHSToffset&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;ACSTaul&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_ACSTaul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">user_values</span><span class="p">[</span><span class="s1">&#39;ACSTaul&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;ACSTall&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_ACSTall</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">user_values</span><span class="p">[</span><span class="s1">&#39;ACSTall&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;AHSTaul&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_AHSTaul</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">user_values</span><span class="p">[</span><span class="s1">&#39;AHSTaul&#39;</span><span class="p">])</span>
+                        <span class="k">if</span> <span class="s1">&#39;AHSTall&#39;</span> <span class="ow">in</span> <span class="n">parameters_to_be_defined</span><span class="p">:</span>
+                            <span class="n">bf_accim</span><span class="o">.</span><span class="n">modify_CustAST_AHSTall</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span> <span class="n">user_values</span><span class="p">[</span><span class="s1">&#39;AHSTall&#39;</span><span class="p">])</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_accim_predef_model</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">descriptors_has_range</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s1">&#39;Accim predefined models approach is only valid with options descriptors.&#39;</span><span class="p">)</span>
+
+
+        <span class="n">parameters_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">params</span><span class="o">.</span><span class="n">accis_parameter</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">accis_params_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+        <span class="k">if</span> <span class="n">additional_params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">parameters_list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">additional_params</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters_list</span> <span class="o">=</span> <span class="n">parameters_list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">descriptors_has_options</span> <span class="o">=</span> <span class="n">descriptors_has_options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">descriptors_has_range</span> <span class="o">=</span> <span class="n">descriptors_has_range</span></div>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.set_problem">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_problem">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_problem</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">minimize_outputs</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">constraints</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">constraint_bounds</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters</span>
+<span class="sd">        method, and for outputs, those set using the set_outputs_for_simulation method.</span>
+
+<span class="sd">        :param minimize_outputs: only used in optimisation; a list containing booleans to specify if the outputs must</span>
+<span class="sd">            be minimized (True), maximized (False), or just show the output (None).</span>
+<span class="sd">        :param constraints: only used in optimisation;</span>
+<span class="sd">            a list containing the Output:Meter key names to be considered as constraints</span>
+<span class="sd">        :param constraint_bounds: only used in optimisation;</span>
+<span class="sd">            a list containing the logical expressions for the constraints</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># if type == &#39;parametric_and_optimisation simulation&#39;:</span>
+        <span class="c1">#     problem = EPProblem(</span>
+        <span class="c1">#         inputs=self.parameters_list,</span>
+        <span class="c1">#         outputs=self.sim_outputs</span>
+        <span class="c1">#     )</span>
+        <span class="c1"># elif type == &#39;optimisation&#39;:</span>
+        <span class="n">problem</span> <span class="o">=</span> <span class="n">EPProblem</span><span class="p">(</span>
+            <span class="n">inputs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameters_list</span><span class="p">,</span>
+            <span class="n">outputs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_outputs</span><span class="p">,</span>
+            <span class="n">minimize_outputs</span><span class="o">=</span><span class="n">minimize_outputs</span><span class="p">,</span>
+            <span class="n">constraints</span><span class="o">=</span><span class="n">constraints</span><span class="p">,</span>
+            <span class="n">constraint_bounds</span><span class="o">=</span><span class="n">constraint_bounds</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">problem</span> <span class="o">=</span> <span class="n">problem</span></div>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.sampling_full_set">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_full_set">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sampling_full_set</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Combines all values from all parameters and saves it into a pandas DataFrame, stored in an internal variable</span>
+<span class="sd">        named parameters_values_df.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">accim.parametric_and_optimisation.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_all_combinations</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">descriptors_has_options</span><span class="p">:</span>
+            <span class="n">num_samples</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">parameters_values</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters_list</span><span class="p">:</span>
+                <span class="n">num_samples</span> <span class="o">=</span> <span class="n">num_samples</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">value_descriptors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">options</span><span class="p">)</span>
+                <span class="n">parameters_values</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">p</span><span class="o">.</span><span class="n">value_descriptors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">value_descriptors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">options</span><span class="p">})</span>
+            <span class="c1"># from itertools import product</span>
+            <span class="c1"># combinations = list(product(*parameters_values.values()))</span>
+            <span class="c1"># parameters_values_df = pd.DataFrame(combinations, columns=parameters_values.keys())</span>
+            <span class="n">parameters_values_df</span> <span class="o">=</span> <span class="n">make_all_combinations</span><span class="p">(</span><span class="n">parameters_values</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s1">&#39;sampling_full_set method can only be used with option (i.e. category) descriptors.&#39;</span><span class="p">)</span>
+
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_accim_predef_model</span><span class="p">:</span>
+            <span class="n">parameters_values_df</span> <span class="o">=</span> <span class="n">bf_accim</span><span class="o">.</span><span class="n">drop_invalid_param_combinations</span><span class="p">(</span><span class="n">parameters_values_df</span><span class="p">)</span>
+
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters_values_df</span> <span class="o">=</span> <span class="n">parameters_values_df</span></div>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.sampling_full_factorial">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_full_factorial">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sampling_full_factorial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Split the range of every parameter in the number of parts specified in argument level,</span>
+<span class="sd">        and saves it into a pandas DataFrame, stored in an internal variable named parameters_values_df.</span>
+<span class="sd">        For more information, see besos.sampling.dist_sampler and besos.sampling.full_factorial</span>
+
+<span class="sd">        :param level: an integer; represents the number of parts to split each parameter&#39;s range</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">descriptors_has_range</span><span class="p">:</span>
+            <span class="n">parameters_values_df</span> <span class="o">=</span> <span class="n">sampling</span><span class="o">.</span><span class="n">dist_sampler</span><span class="p">(</span>
+                <span class="n">sampling</span><span class="o">.</span><span class="n">full_factorial</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">problem</span><span class="p">,</span>
+                <span class="n">num_samples</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                <span class="n">level</span><span class="o">=</span><span class="n">level</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s1">&#39;sampling_full_factorial method can only be used with range descriptors.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters_values_df</span> <span class="o">=</span> <span class="n">parameters_values_df</span></div>
+
+
+
+<div class="viewcode-block" id="OptimParamSimulation.sampling_lhs">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_lhs">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sampling_lhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_samples</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Uses Latin Hypercube Sampling to make samples, where the total number is specified in the num_samples argument,</span>
+<span class="sd">        and saves it into a pandas DataFrame, stored in an internal variable named parameters_values_df.</span>
+<span class="sd">        For more information, see besos.sampling.dist_sampler and besos.sampling.lhs</span>
+
+<span class="sd">        :param num_samples: an integer; represents the total number of samples</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">descriptors_has_range</span><span class="p">:</span>
+            <span class="n">parameters_values_df</span> <span class="o">=</span> <span class="n">sampling</span><span class="o">.</span><span class="n">dist_sampler</span><span class="p">(</span>
+                <span class="n">sampling</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">problem</span><span class="p">,</span>
+                <span class="n">num_samples</span><span class="o">=</span><span class="n">num_samples</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s1">&#39;sampling_lhs method can only be used with range descriptors.&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameters_values_df</span> <span class="o">=</span> <span class="n">parameters_values_df</span></div>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.set_evaluator">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_evaluator">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_evaluator</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">epw</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">besos</span><span class="o">.</span><span class="n">evaluator</span><span class="o">.</span><span class="n">EvaluatorEP</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Used internally for setting the evaluator in run_parametric_simulation and run_optimisation methods.</span>
+
+<span class="sd">        :param epw: The epw file name</span>
+<span class="sd">        :param out_dir: The name of the output directory to save the results.</span>
+<span class="sd">        :return: the besos.evaluator.EvaluatorEP class instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">evaluator</span> <span class="o">=</span> <span class="n">EvaluatorEP</span><span class="p">(</span>
+            <span class="n">problem</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">problem</span><span class="p">,</span>
+            <span class="n">building</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">building</span><span class="p">,</span>
+            <span class="n">epw</span><span class="o">=</span><span class="n">epw</span><span class="p">,</span>
+            <span class="n">out_dir</span><span class="o">=</span><span class="n">out_dir</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">evaluator</span></div>
+
+
+
+<div class="viewcode-block" id="OptimParamSimulation.run_parametric_simulation">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.run_parametric_simulation">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_parametric_simulation</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">epws</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+            <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+            <span class="n">processes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+            <span class="n">keep_input</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="n">keep_dirs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Runs the parametric simulation.</span>
+
+<span class="sd">        :param epws: a list of .epw filenames</span>
+<span class="sd">        :param out_dir: the name of the directory to store the outputs</span>
+<span class="sd">        :param df: a pandas DataFrame which contains the values of the parameters to simulate</span>
+<span class="sd">        :param processes: the number of CPUs to be used in simulation</span>
+<span class="sd">        :param keep_input: True to keep the input DataFrame in the results</span>
+<span class="sd">        :param keep_dirs: True to keep the simulation results</span>
+<span class="sd">        :return: a pandas DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">outputs_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">evaluators</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">epw</span> <span class="ow">in</span> <span class="n">epws</span><span class="p">:</span>
+            <span class="n">epwname</span> <span class="o">=</span> <span class="n">epw</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.epw&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># evaluator = EvaluatorEP(</span>
+            <span class="c1">#     problem=self.problem,</span>
+            <span class="c1">#     building=self.building,</span>
+            <span class="c1">#     epw=epw,</span>
+            <span class="c1">#     out_dir=out_dir</span>
+            <span class="c1"># )</span>
+            <span class="n">evaluator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_evaluator</span><span class="p">(</span>
+                <span class="n">epw</span><span class="o">=</span><span class="n">epw</span><span class="p">,</span>
+                <span class="n">out_dir</span><span class="o">=</span><span class="n">out_dir</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">outputs</span> <span class="o">=</span> <span class="n">evaluator</span><span class="o">.</span><span class="n">df_apply</span><span class="p">(</span>
+                <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+                <span class="n">keep_input</span><span class="o">=</span><span class="n">keep_input</span><span class="p">,</span>
+                <span class="n">keep_dirs</span><span class="o">=</span><span class="n">keep_dirs</span><span class="p">,</span>
+                <span class="n">processes</span><span class="o">=</span><span class="n">processes</span>
+            <span class="p">)</span>
+            <span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;epw&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">epwname</span>
+            <span class="n">outputs_dict</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">epwname</span><span class="p">:</span> <span class="n">outputs</span><span class="p">})</span>
+            <span class="n">evaluators</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">epwname</span><span class="p">:</span> <span class="n">evaluator</span><span class="p">})</span>
+
+        <span class="n">outputs_param_simulation</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span> <span class="k">for</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">outputs_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">epws</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">outputs_param_simulation</span> <span class="o">=</span> <span class="n">outputs_param_simulation</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs_param_simulation</span> <span class="o">=</span> <span class="n">outputs_param_simulation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">evaluators</span> <span class="o">=</span> <span class="n">evaluators</span></div>
+
+        <span class="c1"># return outputs_param_simulation</span>
+
+<div class="viewcode-block" id="OptimParamSimulation.run_optimisation">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.run_optimisation">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_optimisation</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">epws</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+            <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">evaluations</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+            <span class="n">population_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+            <span class="n">algorithm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;NSGAII&#39;</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Runs the optimisation using</span>
+
+<span class="sd">        :param epws: The epw filename</span>
+<span class="sd">        :param out_dir: the directory name to save the outputs</span>
+<span class="sd">        :param evaluations: The algorithm will be stopped once it uses more than this many evaluations.</span>
+<span class="sd">            For more information, refer to besos.optimizer.platypus_alg</span>
+<span class="sd">        :param population_size: The number of simulations to run</span>
+<span class="sd">        </span>
+<span class="sd">        :return: a pandas DataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">available_algorithms</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">&#39;GeneticAlgorithm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;EvolutionaryStrategy&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;NSGAII&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;EpsMOEA&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;GDE3&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;SPEA2&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;MOEAD&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;NSGAIII&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ParticleSwarm&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;OMOPSO&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;SMPSO&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;CMAES&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;IBEA&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;PAES&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;PESA2&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;EpsNSGAII&#39;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">outputs_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">evaluators</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">epw</span> <span class="ow">in</span> <span class="n">epws</span><span class="p">:</span>
+            <span class="n">evaluator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_evaluator</span><span class="p">(</span>
+                <span class="n">epw</span><span class="o">=</span><span class="n">epw</span><span class="p">,</span>
+                <span class="n">out_dir</span><span class="o">=</span><span class="n">out_dir</span>
+            <span class="p">)</span>
+            <span class="c1"># outputs_optimisation = NSGAII(evaluator, evaluations=evaluations, population_size=population_size)</span>
+            <span class="k">if</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;GeneticAlgorithm&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">GeneticAlgorithm</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;EvolutionaryStrategy&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">EvolutionaryStrategy</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;NSGAII&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">NSGAII</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;EpsMOEA&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">EpsMOEA</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;GDE3&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">GDE3</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;SPEA2&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">SPEA2</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;MOEAD&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">MOEAD</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;NSGAIII&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">NSGAIII</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;ParticleSwarm&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">ParticleSwarm</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;OMOPSO&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">OMOPSO</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;SMPSO&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">SMPSO</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;CMAES&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">CMAES</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;IBEA&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">IBEA</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;PAES&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">PAES</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;PESA2&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">PESA2</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;EpsNSGAII&#39;</span><span class="p">:</span>
+                <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">EpsNSGAII</span><span class="p">(</span><span class="n">evaluator</span><span class="p">,</span> <span class="n">evaluations</span><span class="o">=</span><span class="n">evaluations</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Input algorithm </span><span class="si">{</span><span class="n">algorithm</span><span class="si">}</span><span class="s1"> not found. Available algorithms are: </span><span class="si">{</span><span class="n">available_algorithms</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="n">epwname</span> <span class="o">=</span> <span class="n">epw</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.epw&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">outputs_optimisation</span><span class="p">[</span><span class="s1">&#39;epw&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">epwname</span>
+            <span class="n">outputs_dict</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">epwname</span><span class="p">:</span> <span class="n">outputs_optimisation</span><span class="p">})</span>
+            <span class="n">evaluators</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">epwname</span><span class="p">:</span> <span class="n">evaluator</span><span class="p">})</span>
+
+        <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span> <span class="k">for</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">outputs_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">epws</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">outputs_optimisation</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs_optimisation</span> <span class="o">=</span> <span class="n">outputs_optimisation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">evaluators</span> <span class="o">=</span> <span class="n">evaluators</span></div>
+
+
+        <span class="c1"># return outputs_optimisation</span>
+
+<div class="viewcode-block" id="OptimParamSimulation.get_hourly_df">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_hourly_df">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_hourly_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_date</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;2024-01-01 01&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame, saved in the</span>
+<span class="sd">         internal variable named outputs_param_simulation_hourly.</span>
+
+<span class="sd">        :param start_date: the start date for the simulation results, in format &#39;YYY-MM-DD HH&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parameter_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters_list</span><span class="p">]</span>
+        <span class="n">parameter_columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;epw&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs_param_simulation_hourly</span> <span class="o">=</span> <span class="n">expand_to_hourly_dataframe</span><span class="p">(</span>
+            <span class="n">df</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">outputs_param_simulation</span><span class="p">,</span>
+            <span class="n">parameter_columns</span><span class="o">=</span><span class="n">parameter_columns</span><span class="p">,</span>
+            <span class="n">start_date</span><span class="o">=</span><span class="n">start_date</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OptimParamSimulation.get_hourly_df_columns">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_hourly_df_columns">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_hourly_df_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Identifies the columns which contain hourly values, and save the names in a list, saved in the</span>
+<span class="sd">        internal variable named outputs_hourly_columns</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputs_hourly_columns</span> <span class="o">=</span> <span class="n">identify_hourly_columns</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outputs_param_simulation</span><span class="p">)</span></div>
+</div>
+
+
+<div class="viewcode-block" id="AccimPredefModelsParamSim">
+<a class="viewcode-back" href="../../../accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.AccimPredefModelsParamSim">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AccimPredefModelsParamSim</span><span class="p">(</span><span class="n">OptimParamSimulation</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">building</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span>
+            <span class="n">output_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;standard&#39;</span><span class="p">,</span>
+            <span class="n">output_keep_existing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="n">output_freqs</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;hourly&#39;</span><span class="p">],</span>
+            <span class="n">ScriptType</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;vrf_mm&#39;</span><span class="p">,</span>
+            <span class="n">SupplyAirTempInputMethod</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;temperature difference&#39;</span><span class="p">,</span>
+            <span class="n">debugging</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">building</span><span class="p">,</span>
+            <span class="n">output_type</span><span class="p">,</span>
+            <span class="n">output_keep_existing</span><span class="p">,</span>
+            <span class="n">output_freqs</span><span class="p">,</span>
+            <span class="n">ScriptType</span><span class="p">,</span>
+            <span class="n">SupplyAirTempInputMethod</span><span class="p">,</span>
+            <span class="n">debugging</span>
+        <span class="p">)</span>
+
+        <span class="n">accis</span><span class="o">.</span><span class="n">modifyAccis</span><span class="p">(</span>
+            <span class="n">idf</span><span class="o">=</span><span class="n">building</span><span class="p">,</span>
+            <span class="n">ComfStand</span><span class="o">=</span><span class="mi">99</span><span class="p">,</span>
+            <span class="n">ComfMod</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+            <span class="n">CAT</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span>
+            <span class="n">HVACmode</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="n">VentCtrl</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

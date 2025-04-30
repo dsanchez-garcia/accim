@@ -771,7 +771,7 @@ z.scatter_plot(
 
 ## Section 3
 
-from accim.data.datawrangling import Table
+from accim.data.postprocessing.main import Table
 z_cc = Table(
     source_concatenated_csv_filepath='Brazil_ACCIM[freq-runperiod[sum_or_mean-sum[standard_outputs-True[CSVconcatenated.csv',
     level=['building'],

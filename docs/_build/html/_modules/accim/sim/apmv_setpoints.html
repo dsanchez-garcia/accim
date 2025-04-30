@@ -1,0 +1,1314 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.sim.apmv_setpoints &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">accim.sim.apmv_setpoints</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for accim.sim.apmv_setpoints</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Contains the functions to apply setpoints based on the Adaptive Predicted Mean Vote (aPMV) index</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">besos.IDF_class</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">List</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span>
+<span class="c1"># from eppy.bunch_subclass import BadEPFieldError</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">eppy</span>
+
+<div class="viewcode-block" id="apply_apmv_setpoints">
+<a class="viewcode-back" href="../../../accim.sim.html#accim.sim.apmv_setpoints.apply_apmv_setpoints">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_apmv_setpoints</span><span class="p">(</span>
+        <span class="n">building</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span>
+        <span class="n">outputs_freq</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;hourly&#39;</span><span class="p">],</span>
+        <span class="n">other_PMV_related_outputs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">adap_coeff_cooling</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.293</span><span class="p">,</span>
+        <span class="n">adap_coeff_heating</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.293</span><span class="p">,</span>
+        <span class="n">pmv_cooling_sp</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">pmv_heating_sp</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">tolerance_cooling_sp_cooling_season</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">tolerance_cooling_sp_heating_season</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">tolerance_heating_sp_cooling_season</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">tolerance_heating_sp_heating_season</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">cooling_season_start</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">120</span><span class="p">,</span>
+        <span class="n">cooling_season_end</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">210</span><span class="p">,</span>
+        <span class="n">dflt_for_adap_coeff_cooling</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span>
+        <span class="n">dflt_for_adap_coeff_heating</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.4</span><span class="p">,</span>
+        <span class="n">dflt_for_pmv_cooling_sp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">dflt_for_pmv_heating_sp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_cooling_sp_cooling_season</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_cooling_sp_heating_season</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_heating_sp_cooling_season</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_heating_sp_heating_season</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">verboseMode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Applies setpoints based on the Adaptive Predicted Mean Vote (aPMV) index.</span>
+
+<span class="sd">    :param building: The besos.IDF_class. You can make it by using besos.eppy_funcs.get_building</span>
+<span class="sd">    :param adap_coeff_cooling: A dictionary containing all the zone names in the key field,</span>
+<span class="sd">        and the value for the adaptive coefficient (Lambda, λ) at the cooling season, for example:</span>
+<span class="sd">        {&#39;zonename1&#39;: 0.1, &#39;zonename2&#39;: 0.5}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param adap_coeff_heating: A dictionary containing all the zone names in the key field,</span>
+<span class="sd">        and the value for the adaptive coefficient (Lambda, λ) at the heating season, for example:</span>
+<span class="sd">        {&#39;zonename1&#39;: -0.1, &#39;zonename2&#39;: -0.5}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param pmv_cooling_sp: A dictionary containing all the zone names in the key field,</span>
+<span class="sd">        and the value for the cooling PMV setpoint, for example:</span>
+<span class="sd">        {&#39;zonename1&#39;: 0.5, &#39;zonename2&#39;: 0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param pmv_heating_sp: A dictionary containing all the zone names in the key field,</span>
+<span class="sd">        and the value for the heating PMV setpoint, for example:</span>
+<span class="sd">        {&#39;zonename1&#39;: -0.5, &#39;zonename2&#39;: -0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param tolerance_cooling_sp_cooling_season: A dictionary containing all the zone names</span>
+<span class="sd">        in the key field, and the value for the cooling PMV setpoint tolerance in cooling season;</span>
+<span class="sd">        this value will be summed to the resulting aPMV setpoint, therefore, in this case should be</span>
+<span class="sd">        a negative number, for example: {&#39;zonename1&#39;: -0.1, &#39;zonename2&#39;: -0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param tolerance_cooling_sp_heating_season: A dictionary containing all the zone names</span>
+<span class="sd">        in the key field, and the value for the cooling PMV setpoint tolerance in heating season;</span>
+<span class="sd">        this value will be summed to the resulting aPMV setpoint, therefore, in this case should be</span>
+<span class="sd">        a negative number, for example: {&#39;zonename1&#39;: -0.1, &#39;zonename2&#39;: -0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param tolerance_heating_sp_cooling_season: A dictionary containing all the zone names</span>
+<span class="sd">        in the key field, and the value for the heating PMV setpoint tolerance in cooling season;</span>
+<span class="sd">        this value will be summed to the resulting aPMV setpoint, therefore, in this case should be</span>
+<span class="sd">        a positive number, for example: {&#39;zonename1&#39;: 0.1, &#39;zonename2&#39;: 0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param tolerance_heating_sp_heating_season: A dictionary containing all the zone names</span>
+<span class="sd">        in the key field, and the value for the heating PMV setpoint tolerance in heating season;</span>
+<span class="sd">        this value will be summed to the resulting aPMV setpoint, therefore, in this case should be</span>
+<span class="sd">        a positive number, for example: {&#39;zonename1&#39;: 0.1, &#39;zonename2&#39;: 0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param dflt_for_adap_coeff_cooling: Float default value applied to the</span>
+<span class="sd">        adap_coeff_cooling argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_adap_coeff_heating: Float default value applied to the</span>
+<span class="sd">        adap_coeff_heating argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_pmv_cooling_sp: Float default value applied to the pmv_cooling_sp argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_pmv_heating_sp: Float default value applied to the pmv_heating_sp argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_tolerance_cooling_sp_cooling_season: Float default value applied to the</span>
+<span class="sd">        tolerance_cooling_sp_cooling_season argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_tolerance_cooling_sp_heating_season: Float default value applied to the</span>
+<span class="sd">        tolerance_cooling_sp_heating_season argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_tolerance_heating_sp_cooling_season: Float default value applied to the</span>
+<span class="sd">        tolerance_heating_sp_cooling_season argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_tolerance_heating_sp_heating_season: Float default value applied to the</span>
+<span class="sd">        tolerance_heating_sp_heating_season argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param outputs_freq: A list containing some of the following strings:</span>
+<span class="sd">         [&#39;timestep&#39;, &#39;hourly&#39;, &#39;daily&#39;, &#39;monthly&#39;, &#39;runperiod&#39;].</span>
+<span class="sd">         Default value is set to [&#39;hourly&#39;].</span>
+<span class="sd">         Used to define the frequency of the Output:Variable objects.</span>
+<span class="sd">    :param other_PMV_related_outputs: True to print other PMV related outputs.</span>
+<span class="sd">    :param cooling_season_start: The day of the year or a date in the format &#39;dd/mm&#39;.</span>
+<span class="sd">        Used to define the start of the cooling season.</span>
+<span class="sd">    :param cooling_season_end: The day of the year or a date in the format &#39;dd/mm&#39;.</span>
+<span class="sd">        Used to define the end of the cooling season.</span>
+<span class="sd">    :param verboseMode: True to print on screen all actions performed.</span>
+<span class="sd">    :return:</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Mapping occupied zones (i.e. zones that have a related people object)</span>
+
+    <span class="c1">#todo testing from here</span>
+
+    <span class="c1"># # Scanning occupied zones</span>
+    <span class="c1"># occupiedZones_orig = []</span>
+    <span class="c1">#</span>
+    <span class="c1"># # Check if model comes from OpenStudio</span>
+    <span class="c1">#</span>
+    <span class="c1"># # Check if ZoneList or SpaceList are used</span>
+    <span class="c1"># occupiedZones_orig_osm = []</span>
+    <span class="c1">#</span>
+    <span class="c1"># spacelist_use = False</span>
+    <span class="c1"># try:</span>
+    <span class="c1">#     if len(building.idfobjects[&#39;SPACELIST&#39;]) &gt; 0:</span>
+    <span class="c1">#         spacelist_use = True</span>
+    <span class="c1">#         spacenames_for_ems_uniquekey = []</span>
+    <span class="c1">#         spacenames_for_ems_name = []</span>
+    <span class="c1">#         spacenames_for_ems_uniquekey_people = []</span>
+    <span class="c1">#         zonenames_for_ems_with_sl = []</span>
+    <span class="c1">#         for people in building.idfobjects[&#39;PEOPLE&#39;]:</span>
+    <span class="c1">#             for spacelist in [i for i in building.idfobjects[&#39;SPACELIST&#39;] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:</span>
+    <span class="c1">#                 for space in [i for i in building.idfobjects[&#39;SPACE&#39;] if i.Space_Type == spacelist.Name]:</span>
+    <span class="c1">#                     spacenames_for_ems_uniquekey.append(f&#39;{space.Name} {spacelist.Name}&#39;)</span>
+    <span class="c1">#                     spacenames_for_ems_name.append(space.Name)</span>
+    <span class="c1">#                     spacenames_for_ems_uniquekey_people.append(f&#39;{space.Name} {people.Name}&#39;)</span>
+    <span class="c1">#                     occupiedZones_orig_osm.append(space.Zone_Name)</span>
+    <span class="c1">#                     for zone in [i for i in building.idfobjects[&#39;ZONE&#39;] if space.Zone_Name == i.Name]:</span>
+    <span class="c1">#                         zonenames_for_ems_with_sl.append(zone.Name)</span>
+    <span class="c1"># except KeyError:</span>
+    <span class="c1">#     idd = &#39;-&#39;.join([str(i) for i in building.idd_version])</span>
+    <span class="c1">#     print(&#39;Searching Spacelist objects returned KeyError. &#39;</span>
+    <span class="c1">#           f&#39;That means these are not supported in the EnergyPlus version {idd}&#39;)</span>
+    <span class="c1">#</span>
+    <span class="c1"># occupiedZones_orig_dsb = []</span>
+    <span class="c1"># for i in building.idfobjects[&#39;ZONE&#39;]:</span>
+    <span class="c1">#     for k in building.idfobjects[&#39;PEOPLE&#39;]:</span>
+    <span class="c1">#         try:</span>
+    <span class="c1">#             if i.Name == k.Zone_or_ZoneList_or_Space_or_SpaceList_Name:</span>
+    <span class="c1">#                 occupiedZones_orig_dsb.append(i.Name.upper())</span>
+    <span class="c1">#         except eppy.bunch_subclass.BadEPFieldError:</span>
+    <span class="c1">#             if i.Name == k.Zone_or_ZoneList_Name:</span>
+    <span class="c1">#                 occupiedZones_orig_dsb.append(i.Name.upper())</span>
+    <span class="c1">#</span>
+    <span class="c1"># if spacelist_use:</span>
+    <span class="c1">#     occupiedZones_orig = occupiedZones_orig_osm</span>
+    <span class="c1">#     occupiedZones = [i.replace(&#39; &#39;, &#39;_&#39;) for i in occupiedZones_orig]</span>
+    <span class="c1">#     origin_dsb = False</span>
+    <span class="c1">#     ems_objs_name = spacenames_for_ems_name</span>
+    <span class="c1">#     ems_objs_key = spacenames_for_ems_uniquekey</span>
+    <span class="c1">#     ems_zonenames = zonenames_for_ems_with_sl</span>
+    <span class="c1">#     ems_zonenames_underscore = [i.replace(&#39; &#39;, &#39;_&#39;) for i in ems_zonenames]</span>
+    <span class="c1"># else:</span>
+    <span class="c1">#     occupiedZones_orig = occupiedZones_orig_dsb</span>
+    <span class="c1">#     occupiedZones = [i.replace(&#39;:&#39;, &#39;_&#39;) for i in occupiedZones_orig]</span>
+    <span class="c1">#     origin_dsb = True</span>
+    <span class="c1">#     ems_objs_name = occupiedZones</span>
+    <span class="c1">#     ems_objs_key = occupiedZones_orig</span>
+    <span class="c1">#     ems_zonenames = occupiedZones_orig</span>
+    <span class="c1">#     ems_zonenames_underscore = occupiedZones_orig</span>
+
+    <span class="c1">#todo testing until here</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">ppl_temp</span> <span class="o">=</span> <span class="p">[[</span><span class="n">people</span><span class="o">.</span><span class="n">Zone_or_ZoneList_Name</span><span class="p">,</span> <span class="n">people</span><span class="o">.</span><span class="n">Name</span><span class="p">]</span> <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;People&#39;</span><span class="p">]]</span>
+    <span class="k">except</span> <span class="n">eppy</span><span class="o">.</span><span class="n">bunch_subclass</span><span class="o">.</span><span class="n">BadEPFieldError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Zone_or_ZoneList_Name field not found in People object.&#39;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ppl_temp</span> <span class="o">=</span> <span class="p">[[</span><span class="n">people</span><span class="o">.</span><span class="n">Zone_or_ZoneList_or_Space_or_SpaceList_Name</span><span class="p">,</span> <span class="n">people</span><span class="o">.</span><span class="n">Name</span><span class="p">]</span> <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;People&#39;</span><span class="p">]]</span>
+        <span class="k">except</span> <span class="n">eppy</span><span class="o">.</span><span class="n">bunch_subclass</span><span class="o">.</span><span class="n">BadEPFieldError</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Zone_or_ZoneList_or_Space_or_SpaceList_Name field not found in People object.&#39;</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">ppl_temp</span> <span class="o">=</span> <span class="p">[[</span><span class="n">people</span><span class="o">.</span><span class="n">Zone_Name</span><span class="p">,</span> <span class="n">people</span><span class="o">.</span><span class="n">Name</span><span class="p">]</span> <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;People&#39;</span><span class="p">]]</span>
+            <span class="k">except</span> <span class="n">eppy</span><span class="o">.</span><span class="n">bunch_subclass</span><span class="o">.</span><span class="n">BadEPFieldError</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Zone_Name field not found in People object.&#39;</span><span class="p">)</span>
+
+    <span class="n">zones_with_ppl_colon</span> <span class="o">=</span> <span class="p">[</span><span class="n">ppl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">ppl</span> <span class="ow">in</span> <span class="n">ppl_temp</span><span class="p">]</span>
+    <span class="n">ppl_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">ppl</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">ppl</span> <span class="ow">in</span> <span class="n">ppl_temp</span><span class="p">]</span>
+    <span class="n">zones_with_ppl_underscore</span> <span class="o">=</span> <span class="p">[</span><span class="n">z</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="n">zones_with_ppl_colon</span><span class="p">]</span>
+
+    <span class="c1"># Managing cooling season start user input: transform dd/mm date into number if needed</span>
+
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">cooling_season_start</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">accim.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">transform_ddmm_to_int</span>
+        <span class="n">cooling_season_start</span> <span class="o">=</span> <span class="n">transform_ddmm_to_int</span><span class="p">(</span><span class="n">cooling_season_start</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">cooling_season_end</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">accim.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">transform_ddmm_to_int</span>
+        <span class="n">cooling_season_end</span> <span class="o">=</span> <span class="n">transform_ddmm_to_int</span><span class="p">(</span><span class="n">cooling_season_end</span><span class="p">)</span>
+
+    <span class="c1"># Gathering adap_coeff_cooling, adap_coeff_heating, pmv_cooling_sp, pmv_heating_sp arguments into df</span>
+
+    <span class="n">df_arguments</span> <span class="o">=</span> <span class="n">generate_df_from_args</span><span class="p">(</span>
+        <span class="n">building</span><span class="o">=</span><span class="n">building</span><span class="p">,</span>
+        <span class="n">adap_coeff_heating</span><span class="o">=</span><span class="n">adap_coeff_heating</span><span class="p">,</span>
+        <span class="n">adap_coeff_cooling</span><span class="o">=</span><span class="n">adap_coeff_cooling</span><span class="p">,</span>
+        <span class="n">pmv_heating_sp</span><span class="o">=</span><span class="n">pmv_heating_sp</span><span class="p">,</span>
+        <span class="n">pmv_cooling_sp</span><span class="o">=</span><span class="n">pmv_cooling_sp</span><span class="p">,</span>
+        <span class="n">tolerance_cooling_sp_cooling_season</span><span class="o">=</span><span class="n">tolerance_cooling_sp_cooling_season</span><span class="p">,</span>
+        <span class="n">tolerance_cooling_sp_heating_season</span><span class="o">=</span><span class="n">tolerance_cooling_sp_heating_season</span><span class="p">,</span>
+        <span class="n">tolerance_heating_sp_cooling_season</span><span class="o">=</span><span class="n">tolerance_heating_sp_cooling_season</span><span class="p">,</span>
+        <span class="n">tolerance_heating_sp_heating_season</span><span class="o">=</span><span class="n">tolerance_heating_sp_heating_season</span><span class="p">,</span>
+        <span class="n">dflt_for_adap_coeff_cooling</span><span class="o">=</span><span class="n">dflt_for_adap_coeff_cooling</span><span class="p">,</span>
+        <span class="n">dflt_for_adap_coeff_heating</span><span class="o">=</span><span class="n">dflt_for_adap_coeff_heating</span><span class="p">,</span>
+        <span class="n">dflt_for_pmv_cooling_sp</span><span class="o">=</span><span class="n">dflt_for_pmv_cooling_sp</span><span class="p">,</span>
+        <span class="n">dflt_for_pmv_heating_sp</span><span class="o">=</span><span class="n">dflt_for_pmv_heating_sp</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_cooling_sp_cooling_season</span><span class="o">=</span><span class="n">dflt_for_tolerance_cooling_sp_cooling_season</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_cooling_sp_heating_season</span><span class="o">=</span><span class="n">dflt_for_tolerance_cooling_sp_heating_season</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_heating_sp_cooling_season</span><span class="o">=</span><span class="n">dflt_for_tolerance_heating_sp_cooling_season</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_heating_sp_heating_season</span><span class="o">=</span><span class="n">dflt_for_tolerance_heating_sp_heating_season</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Adding Schedule:Compact objects for PMV setpoints</span>
+
+    <span class="n">sch_comp_objs</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Schedule:Compact&#39;</span><span class="p">]]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;PMV_H_SP&#39;</span><span class="p">,</span> <span class="s1">&#39;PMV_C_SP&#39;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">zone</span> <span class="ow">in</span> <span class="n">zones_with_ppl_underscore</span><span class="p">:</span>
+            <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">zone</span><span class="si">}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">sch_comp_objs</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">zone</span><span class="si">}</span><span class="s2"> Schedule already was in the model&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                    <span class="s1">&#39;Schedule:Compact&#39;</span><span class="p">,</span>
+                    <span class="n">Name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">zone</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                    <span class="n">Schedule_Type_Limits_Name</span><span class="o">=</span><span class="s2">&quot;Any Number&quot;</span><span class="p">,</span>
+                    <span class="n">Field_1</span><span class="o">=</span><span class="s1">&#39;Through: 12/31&#39;</span><span class="p">,</span>
+                    <span class="n">Field_2</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+                    <span class="n">Field_3</span><span class="o">=</span><span class="s1">&#39;Until: 24:00,1&#39;</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">zone</span><span class="si">}</span><span class="s2"> Schedule has been added&quot;</span><span class="p">)</span>
+
+    <span class="n">comf_fanger_dualsps</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint&#39;</span><span class="p">]]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">comf_fanger_dualsps</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">zones_with_ppl_colon</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">zones_with_ppl_colon</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="ow">in</span> <span class="n">i</span><span class="o">.</span><span class="n">Name</span><span class="p">:</span>
+                <span class="n">i</span><span class="o">.</span><span class="n">Fanger_Thermal_Comfort_Heating_Schedule_Name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;PMV_H_SP_</span><span class="si">{</span><span class="n">zones_with_ppl_underscore</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">i</span><span class="o">.</span><span class="n">Fanger_Thermal_Comfort_Cooling_Schedule_Name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;PMV_C_SP_</span><span class="si">{</span><span class="n">zones_with_ppl_underscore</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="c1"># EMS</span>
+
+    <span class="c1"># Adding sensors</span>
+    <span class="n">sensornamelist</span> <span class="o">=</span> <span class="p">([</span><span class="n">sensor</span><span class="o">.</span><span class="n">Name</span> <span class="k">for</span> <span class="n">sensor</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Sensor&#39;</span><span class="p">]])</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">zones_with_ppl_underscore</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;PMV_</span><span class="si">{</span><span class="n">zones_with_ppl_underscore</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">sensornamelist</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Not added - PMV_</span><span class="si">{</span><span class="n">zones_with_ppl_underscore</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1"> Sensor&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                <span class="s1">&#39;EnergyManagementSystem:Sensor&#39;</span><span class="p">,</span>
+                <span class="n">Name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;PMV_</span><span class="si">{</span><span class="n">zones_with_ppl_underscore</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="n">OutputVariable_or_OutputMeter_Index_Key_Name</span><span class="o">=</span><span class="n">ppl_names</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                <span class="n">OutputVariable_or_OutputMeter_Name</span><span class="o">=</span><span class="s1">&#39;Zone Thermal Comfort Fanger Model PMV&#39;</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Added - PMV_</span><span class="si">{</span><span class="n">zones_with_ppl_underscore</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1"> Sensor&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;People_Occupant_Count_</span><span class="si">{</span><span class="n">zones_with_ppl_underscore</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">sensornamelist</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Not added - People_Occupant_Count_</span><span class="si">{</span><span class="n">zones_with_ppl_underscore</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1"> Sensor&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                <span class="s1">&#39;EnergyManagementSystem:Sensor&#39;</span><span class="p">,</span>
+                <span class="n">Name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;People_Occupant_Count_</span><span class="si">{</span><span class="n">zones_with_ppl_underscore</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="n">OutputVariable_or_OutputMeter_Index_Key_Name</span><span class="o">=</span><span class="n">ppl_names</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                <span class="n">OutputVariable_or_OutputMeter_Name</span><span class="o">=</span><span class="s1">&#39;People Occupant Count&#39;</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Added - People_Occupant_Count_</span><span class="si">{</span><span class="n">zones_with_ppl_underscore</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1"> Sensor&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Adding actuators</span>
+    <span class="n">actuatornamelist</span> <span class="o">=</span> <span class="p">[</span><span class="n">actuator</span><span class="o">.</span><span class="n">Name</span> <span class="k">for</span> <span class="n">actuator</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Actuator&#39;</span><span class="p">]]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;PMV_H_SP&#39;</span><span class="p">,</span> <span class="s1">&#39;PMV_C_SP&#39;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">zone</span> <span class="ow">in</span> <span class="n">zones_with_ppl_underscore</span><span class="p">:</span>
+            <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">_act_</span><span class="si">{</span><span class="n">zone</span><span class="si">}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">actuatornamelist</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Not added - </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">_act_</span><span class="si">{</span><span class="n">zone</span><span class="si">}</span><span class="s1"> Actuator&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                    <span class="s1">&#39;EnergyManagementSystem:Actuator&#39;</span><span class="p">,</span>
+                    <span class="n">Name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">_act_</span><span class="si">{</span><span class="n">zone</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                    <span class="n">Actuated_Component_Unique_Name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">zone</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                    <span class="n">Actuated_Component_Type</span><span class="o">=</span><span class="s1">&#39;Schedule:Compact&#39;</span><span class="p">,</span>
+                    <span class="n">Actuated_Component_Control_Type</span><span class="o">=</span><span class="s1">&#39;Schedule Value&#39;</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Added - </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">_act_</span><span class="si">{</span><span class="n">zone</span><span class="si">}</span><span class="s1"> Actuator&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Adding GlobalVariables</span>
+
+    <span class="n">globalvariablenames</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;CoolingSeason&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CoolSeasonEnd&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;CoolSeasonStart&#39;</span>
+    <span class="p">]</span>
+
+    <span class="n">globalvariablezonenames</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span>
+        <span class="s1">&#39;tolerance_cooling_sp&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;tolerance_cooling_sp_cooling_season&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;tolerance_cooling_sp_heating_season&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;tolerance_heating_sp&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;tolerance_heating_sp_cooling_season&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;tolerance_heating_sp_heating_season&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;adap_coeff&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;adap_coeff_heating&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;adap_coeff_cooling&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;pmv_heating_sp&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;pmv_cooling_sp&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;aPMV&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;comfhour&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;discomfhour&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;discomfhour_heat&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;discomfhour_cold&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;occupied_hour&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;aPMV_H_SP&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;aPMV_C_SP&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;aPMV_H_SP_noTol&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;aPMV_C_SP_noTol&#39;</span><span class="p">,</span>
+    <span class="p">]:</span>
+        <span class="k">for</span> <span class="n">zone</span> <span class="ow">in</span> <span class="n">zones_with_ppl_underscore</span><span class="p">:</span>
+            <span class="n">globalvariablezonenames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">zone</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="n">allgvs</span> <span class="o">=</span> <span class="n">globalvariablenames</span> <span class="o">+</span> <span class="n">globalvariablezonenames</span>
+
+    <span class="k">for</span> <span class="n">gv</span> <span class="ow">in</span> <span class="n">allgvs</span><span class="p">:</span>
+        <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+            <span class="s1">&#39;EnergyManagementSystem:GlobalVariable&#39;</span><span class="p">,</span>
+            <span class="n">Erl_Variable_1_Name</span><span class="o">=</span><span class="n">gv</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Added - </span><span class="si">{</span><span class="n">gv</span><span class="si">}</span><span class="s1"> GlobalVariable object&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Programs</span>
+    <span class="n">programlist</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">program</span><span class="o">.</span><span class="n">Name</span>
+        <span class="k">for</span> <span class="n">program</span>
+        <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span>
+    <span class="p">]</span>
+
+    <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;set_cooling_season_input_data&#39;</span> <span class="ow">in</span> <span class="n">programlist</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Not added - set_cooling_season_input_data Program&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+            <span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">,</span>
+            <span class="n">Name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set_cooling_season_input_data&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_1</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set CoolSeasonStart = </span><span class="si">{</span><span class="n">cooling_season_start</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_2</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set CoolSeasonEnd = </span><span class="si">{</span><span class="n">cooling_season_end</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Added - set_cooling_season_input_data Program&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;set_cooling_season&#39;</span> <span class="ow">in</span> <span class="n">programlist</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Not added - set_cooling_season Program&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+            <span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">,</span>
+            <span class="n">Name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set_cooling_season&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_1</span><span class="o">=</span><span class="s1">&#39;if CoolSeasonEnd &gt; CoolSeasonStart&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_2</span><span class="o">=</span><span class="s1">&#39;if (DayOfYear &gt;= CoolSeasonStart) &amp;&amp; (DayOfYear &lt; CoolSeasonEnd)&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_3</span><span class="o">=</span><span class="s1">&#39;set CoolingSeason = 1&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_4</span><span class="o">=</span><span class="s1">&#39;else&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_5</span><span class="o">=</span><span class="s1">&#39;set CoolingSeason = 0&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_6</span><span class="o">=</span><span class="s1">&#39;endif&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_7</span><span class="o">=</span><span class="s1">&#39;elseif CoolSeasonStart &gt; CoolSeasonEnd&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_8</span><span class="o">=</span><span class="s1">&#39;if (DayOfYear &gt;= CoolSeasonStart) || (DayOfYear &lt; CoolSeasonEnd)&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_9</span><span class="o">=</span><span class="s1">&#39;set CoolingSeason = 1&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_10</span><span class="o">=</span><span class="s1">&#39;else&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_11</span><span class="o">=</span><span class="s1">&#39;set CoolingSeason = 0&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_12</span><span class="o">=</span><span class="s1">&#39;endif&#39;</span><span class="p">,</span>
+            <span class="n">Program_Line_13</span><span class="o">=</span><span class="s1">&#39;endif&#39;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Added - set_cooling_season Program&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">zones_with_ppl_colon</span><span class="p">:</span>
+        <span class="n">zonename</span> <span class="o">=</span> <span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;underscore_zonename&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;set_zone_input_data_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">programlist</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Not added - set_zone_input_data_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> Program&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                <span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">,</span>
+                <span class="n">Name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set_zone_input_data_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_1</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set adap_coeff_cooling_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;adap_coeff_cooling&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_2</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set adap_coeff_heating_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;adap_coeff_heating&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_3</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set pmv_cooling_sp_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;pmv_cooling_sp&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_4</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set pmv_heating_sp_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;pmv_heating_sp&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_5</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set tolerance_cooling_sp_cooling_season_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;tolerance_cooling_sp_cooling_season&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_6</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set tolerance_cooling_sp_heating_season_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;tolerance_cooling_sp_heating_season&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_7</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set tolerance_heating_sp_cooling_season_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;tolerance_heating_sp_cooling_season&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_8</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;set tolerance_heating_sp_heating_season_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;tolerance_heating_sp_heating_season&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Added - set_zone_input_data_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> Program&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;apply_aPMV_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">programlist</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Not added - apply_aPMV_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> Program&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                <span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">,</span>
+                <span class="n">Name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;apply_aPMV_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_1</span><span class="o">=</span><span class="s1">&#39;if CoolingSeason == 1&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_2</span><span class="o">=</span><span class="s1">&#39;set adap_coeff_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = adap_coeff_cooling_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_3</span><span class="o">=</span><span class="s1">&#39;set tolerance_cooling_sp_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = tolerance_cooling_sp_cooling_season_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_4</span><span class="o">=</span><span class="s1">&#39;set tolerance_heating_sp_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = tolerance_heating_sp_cooling_season_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_5</span><span class="o">=</span><span class="s1">&#39;elseif CoolingSeason == 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_6</span><span class="o">=</span><span class="s1">&#39;set adap_coeff_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = adap_coeff_heating_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_7</span><span class="o">=</span><span class="s1">&#39;set tolerance_cooling_sp_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = tolerance_cooling_sp_heating_season_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_8</span><span class="o">=</span><span class="s1">&#39;set tolerance_heating_sp_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = tolerance_heating_sp_heating_season_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_9</span><span class="o">=</span><span class="s1">&#39;endif&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_10</span><span class="o">=</span><span class="s1">&#39;set aPMV_H_SP_noTol_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = pmv_heating_sp_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;/(1+adap_coeff_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;*pmv_heating_sp_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_11</span><span class="o">=</span><span class="s1">&#39;set aPMV_C_SP_noTol_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = pmv_cooling_sp_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;/(1+adap_coeff_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;*pmv_cooling_sp_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_12</span><span class="o">=</span><span class="s1">&#39;set aPMV_H_SP_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = aPMV_H_SP_noTol_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;+tolerance_heating_sp_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_13</span><span class="o">=</span><span class="s1">&#39;set aPMV_C_SP_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = aPMV_C_SP_noTol_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;+tolerance_cooling_sp_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_14</span><span class="o">=</span><span class="s1">&#39;if People_Occupant_Count_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; &gt; 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_15</span><span class="o">=</span><span class="s1">&#39;if aPMV_H_SP_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; &lt; 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_16</span><span class="o">=</span><span class="s1">&#39;set PMV_H_SP_act_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = aPMV_H_SP_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_17</span><span class="o">=</span><span class="s1">&#39;else&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_18</span><span class="o">=</span><span class="s1">&#39;set PMV_H_SP_act_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_19</span><span class="o">=</span><span class="s1">&#39;endif&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_20</span><span class="o">=</span><span class="s1">&#39;if aPMV_C_SP_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; &gt; 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_21</span><span class="o">=</span><span class="s1">&#39;set PMV_C_SP_act_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = aPMV_C_SP_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_22</span><span class="o">=</span><span class="s1">&#39;else&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_23</span><span class="o">=</span><span class="s1">&#39;set PMV_C_SP_act_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_24</span><span class="o">=</span><span class="s1">&#39;endif&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_25</span><span class="o">=</span><span class="s1">&#39;else&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_26</span><span class="o">=</span><span class="s1">&#39;set PMV_H_SP_act_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = -100&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_27</span><span class="o">=</span><span class="s1">&#39;set PMV_C_SP_act_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 100&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_28</span><span class="o">=</span><span class="s1">&#39;endif&#39;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Added - apply_aPMV_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> Program&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">zonename</span> <span class="ow">in</span> <span class="n">zones_with_ppl_underscore</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s1">&#39;monitor_aPMV_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="ow">in</span> <span class="n">programlist</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Not added - monitor_aPMV_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; Program&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                <span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">,</span>
+                <span class="n">Name</span><span class="o">=</span><span class="s1">&#39;monitor_aPMV_&#39;</span> <span class="o">+</span> <span class="n">zonename</span><span class="p">,</span>
+                <span class="n">Program_Line_1</span><span class="o">=</span><span class="s1">&#39;set aPMV_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = PMV_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;/(1+adap_coeff_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;*PMV_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;)&#39;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Added - monitor_aPMV_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; Program&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s1">&#39;count_aPMV_comfort_hours_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="ow">in</span> <span class="n">programlist</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Not added - count_aPMV_comfort_hours_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; Program&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                <span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">,</span>
+                <span class="n">Name</span><span class="o">=</span><span class="s1">&#39;count_aPMV_comfort_hours_&#39;</span> <span class="o">+</span> <span class="n">zonename</span><span class="p">,</span>
+                <span class="n">Program_Line_1</span><span class="o">=</span><span class="s1">&#39;if aPMV_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; &lt; aPMV_H_SP_noTol_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_2</span><span class="o">=</span><span class="s1">&#39;set comfhour_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_3</span><span class="o">=</span><span class="s1">&#39;set discomfhour_cold_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 1*ZoneTimeStep&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_4</span><span class="o">=</span><span class="s1">&#39;set discomfhour_heat_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_5</span><span class="o">=</span><span class="s1">&#39;elseif aPMV_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; &gt; aPMV_C_SP_noTol_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_6</span><span class="o">=</span><span class="s1">&#39;set comfhour_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_7</span><span class="o">=</span><span class="s1">&#39;set discomfhour_cold_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_8</span><span class="o">=</span><span class="s1">&#39;set discomfhour_heat_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 1*ZoneTimeStep&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_9</span><span class="o">=</span><span class="s1">&#39;else&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_10</span><span class="o">=</span><span class="s1">&#39;set comfhour_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 1*ZoneTimeStep&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_11</span><span class="o">=</span><span class="s1">&#39;set discomfhour_cold_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_12</span><span class="o">=</span><span class="s1">&#39;set discomfhour_heat_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_13</span><span class="o">=</span><span class="s1">&#39;endif&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_14</span><span class="o">=</span><span class="s1">&#39;if People_Occupant_Count_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; &gt; 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_15</span><span class="o">=</span><span class="s1">&#39;set occupied_hour_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 1*ZoneTimeStep&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_16</span><span class="o">=</span><span class="s1">&#39;else&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_17</span><span class="o">=</span><span class="s1">&#39;set occupied_hour_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = 0&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_18</span><span class="o">=</span><span class="s1">&#39;endif&#39;</span><span class="p">,</span>
+                <span class="n">Program_Line_19</span><span class="o">=</span><span class="s1">&#39;set discomfhour_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; = discomfhour_cold_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; + discomfhour_heat_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Added - count_aPMV_comfort_hours_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; Program&#39;</span><span class="p">)</span>
+
+    <span class="n">programlist</span> <span class="o">=</span> <span class="p">([</span><span class="n">program</span><span class="o">.</span><span class="n">Name</span>
+                    <span class="k">for</span> <span class="n">program</span>
+                    <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]])</span>
+    <span class="n">pcmlist</span> <span class="o">=</span> <span class="p">([</span><span class="n">pcm</span><span class="o">.</span><span class="n">Name</span>
+                <span class="k">for</span> <span class="n">pcm</span>
+                <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:ProgramCallingManager&#39;</span><span class="p">]])</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">programlist</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">pcmlist</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Not added - &#39;</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s1">&#39; Program Calling Manager&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                <span class="s1">&#39;EnergyManagementSystem:ProgramCallingManager&#39;</span><span class="p">,</span>
+                <span class="n">Name</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+                <span class="n">EnergyPlus_Model_Calling_Point</span><span class="o">=</span><span class="s2">&quot;BeginTimestepBeforePredictor&quot;</span><span class="p">,</span>
+                <span class="n">Program_Name_1</span><span class="o">=</span><span class="n">i</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Added - &#39;</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s1">&#39; Program Calling Manager&#39;</span><span class="p">)</span>
+
+    <span class="c1"># EMS:OutputVariable</span>
+
+    <span class="n">outputvariablelist</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">outvar</span><span class="o">.</span><span class="n">Name</span>
+        <span class="k">for</span> <span class="n">outvar</span>
+        <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:OutputVariable&#39;</span><span class="p">]</span>
+    <span class="p">]</span>
+
+    <span class="n">EMSOutputVariableZone_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="c1"># &#39;Adaptive Predicted Mean Vote&#39;: [&#39;aPMV&#39;, &#39;&#39;, &#39;Averaged&#39;],</span>
+        <span class="c1"># &#39;Adaptive Predicted Mean Vote Heating Setpoint&#39;: [&#39;aPMV_H_SP&#39;, &#39;&#39;, &#39;Averaged&#39;],</span>
+        <span class="c1"># &#39;Adaptive Predicted Mean Vote Cooling Setpoint&#39;: [&#39;aPMV_C_SP&#39;, &#39;&#39;, &#39;Averaged&#39;],</span>
+        <span class="c1"># &#39;Adaptive Predicted Mean Vote Heating Setpoint No Tolerance&#39;: [&#39;aPMV_H_SP_noTol&#39;, &#39;&#39;, &#39;Averaged&#39;],</span>
+        <span class="c1"># &#39;Adaptive Predicted Mean Vote Cooling Setpoint No Tolerance&#39;: [&#39;aPMV_C_SP_noTol&#39;, &#39;&#39;, &#39;Averaged&#39;],</span>
+
+        <span class="s1">&#39;Adaptive Coefficient&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;adap_coeff&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;Averaged&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;aPMV&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;aPMV&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;Averaged&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;aPMV Heating Setpoint&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;aPMV_H_SP&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;Averaged&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;aPMV Cooling Setpoint&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;aPMV_C_SP&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;Averaged&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;aPMV Heating Setpoint No Tolerance&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;aPMV_H_SP_noTol&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;Averaged&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;aPMV Cooling Setpoint No Tolerance&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;aPMV_C_SP_noTol&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;Averaged&#39;</span><span class="p">],</span>
+
+        <span class="s1">&#39;Comfortable Hours&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;comfhour&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="s1">&#39;Summed&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;Discomfortable Hot Hours&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;discomfhour_heat&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="s1">&#39;Summed&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;Discomfortable Cold Hours&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;discomfhour_cold&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="s1">&#39;Summed&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;Discomfortable Total Hours&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;discomfhour&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="s1">&#39;Summed&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;Occupied hours&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;occupied_hour&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="s1">&#39;Summed&#39;</span><span class="p">],</span>
+        <span class="c1"># &#39;Zone Floor Area&#39;: [&#39;ZoneFloorArea&#39;, &#39;m2&#39;, &#39;Averaged&#39;],</span>
+        <span class="c1"># &#39;Zone Air Volume&#39;: [&#39;ZoneAirVolume&#39;, &#39;m3&#39;, &#39;Averaged&#39;],</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">EMSOutputVariableZone_dict</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">zonename</span> <span class="ow">in</span> <span class="n">zones_with_ppl_underscore</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="n">zonename</span> <span class="ow">in</span> <span class="n">outputvariablelist</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Not added - &#39;</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+                          <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; Output Variable&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                    <span class="s1">&#39;EnergyManagementSystem:OutputVariable&#39;</span><span class="p">,</span>
+                    <span class="n">Name</span><span class="o">=</span><span class="n">i</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="n">zonename</span><span class="p">,</span>
+                    <span class="n">EMS_Variable_Name</span><span class="o">=</span><span class="n">EMSOutputVariableZone_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+                                      <span class="o">+</span> <span class="n">zonename</span><span class="p">,</span>
+                    <span class="n">Type_of_Data_in_Variable</span><span class="o">=</span><span class="n">EMSOutputVariableZone_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span>
+                    <span class="n">Update_Frequency</span><span class="o">=</span><span class="s1">&#39;ZoneTimestep&#39;</span><span class="p">,</span>
+                    <span class="n">EMS_Program_or_Subroutine_Name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+                    <span class="n">Units</span><span class="o">=</span><span class="n">EMSOutputVariableZone_dict</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Added - &#39;</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span>
+                          <span class="o">+</span> <span class="n">zonename</span> <span class="o">+</span> <span class="s1">&#39; Output Variable&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Output:Variable</span>
+
+    <span class="n">EMSoutputvariablenamelist</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">outputvariable</span><span class="o">.</span><span class="n">Name</span>
+        <span class="k">for</span> <span class="n">outputvariable</span>
+        <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:OutputVariable&#39;</span><span class="p">]</span>
+    <span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">freq</span> <span class="ow">in</span> <span class="n">outputs_freq</span><span class="p">:</span>
+        <span class="n">outputnamelist</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">Variable_Name</span>
+                <span class="k">for</span> <span class="n">output</span>
+                <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Output:Variable&#39;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">output</span><span class="o">.</span><span class="n">Reporting_Frequency</span> <span class="o">==</span> <span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">outputvariable</span> <span class="ow">in</span> <span class="n">EMSoutputvariablenamelist</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">outputvariable</span> <span class="ow">in</span> <span class="n">outputnamelist</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Not added - &#39;</span> <span class="o">+</span> <span class="n">outputvariable</span> <span class="o">+</span> <span class="s1">&#39; Reporting Frequency &#39;</span> <span class="o">+</span> <span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39; Output:Variable data&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">outputvariable</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;WIP&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Not added - &#39;</span> <span class="o">+</span> <span class="n">outputvariable</span> <span class="o">+</span> <span class="s1">&#39; Output:Variable data because its WIP&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                    <span class="s1">&#39;Output:Variable&#39;</span><span class="p">,</span>
+                    <span class="n">Key_Value</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
+                    <span class="n">Variable_Name</span><span class="o">=</span><span class="n">outputvariable</span><span class="p">,</span>
+                    <span class="n">Reporting_Frequency</span><span class="o">=</span><span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">(),</span>
+                    <span class="n">Schedule_Name</span><span class="o">=</span><span class="s1">&#39;&#39;</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Added - &#39;</span> <span class="o">+</span> <span class="n">outputvariable</span> <span class="o">+</span> <span class="s1">&#39; Reporting Frequency &#39;</span> <span class="o">+</span> <span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39; Output:Variable data&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">other_PMV_related_outputs</span><span class="p">:</span>
+        <span class="n">addittionaloutputs</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="c1"># &#39;Zone Thermostat Operative Temperature&#39;,</span>
+            <span class="s1">&#39;Zone Operative Temperature&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Zone Thermal Comfort Clothing Surface Temperature&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Zone Thermal Comfort Clothing Value&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Zone Thermal Comfort Control Fanger High Setpoint PMV&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Zone Thermal Comfort Control Fanger Low Setpoint PMV&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Zone Thermal Comfort Fanger Model PMV&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Zone Thermal Comfort Fanger Model PPD&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Zone Thermal Comfort Mean Radiant Temperature&#39;</span><span class="p">,</span>
+            <span class="c1"># &#39;Zone Mean Air Humidity Ratio&#39;,</span>
+            <span class="s1">&#39;Zone Air Relative Humidity&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Zone Mean Air Temperature&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Heating Coil Heating Rate&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Facility Total HVAC Electric Demand Power&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;Facility Total HVAC Electricity Demand Rate&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;AFN Surface Venting Window or Door Opening Factor&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;AFN Zone Infiltration Air Change Rate&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;AFN Zone Infiltration Volume&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;AFN Zone Ventilation Air Change Rate&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;AFN Zone Ventilation Volume&#39;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">addittionaloutput</span> <span class="ow">in</span> <span class="n">addittionaloutputs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">addittionaloutput</span> <span class="ow">in</span> <span class="n">outputnamelist</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Not added - &#39;</span> <span class="o">+</span> <span class="n">addittionaloutput</span> <span class="o">+</span> <span class="s1">&#39; Reporting Frequency &#39;</span> <span class="o">+</span> <span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39; Output:Variable data&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                    <span class="s1">&#39;Output:Variable&#39;</span><span class="p">,</span>
+                    <span class="n">Key_Value</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
+                    <span class="n">Variable_Name</span><span class="o">=</span><span class="n">addittionaloutput</span><span class="p">,</span>
+                    <span class="n">Reporting_Frequency</span><span class="o">=</span><span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">(),</span>
+                    <span class="n">Schedule_Name</span><span class="o">=</span><span class="s1">&#39;&#39;</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Added - &#39;</span> <span class="o">+</span> <span class="n">addittionaloutput</span> <span class="o">+</span> <span class="s1">&#39; Reporting Frequency &#39;</span> <span class="o">+</span> <span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39; Output:Variable data&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;PMV_H_SP&#39;</span><span class="p">,</span> <span class="s1">&#39;PMV_C_SP&#39;</span><span class="p">]:</span>
+            <span class="k">for</span> <span class="n">zone</span> <span class="ow">in</span> <span class="n">zones_with_ppl_underscore</span><span class="p">:</span>
+                <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                    <span class="s1">&#39;Output:Variable&#39;</span><span class="p">,</span>
+                    <span class="n">Key_Value</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">_</span><span class="si">{</span><span class="n">zone</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                    <span class="n">Variable_Name</span><span class="o">=</span><span class="s1">&#39;Schedule Value&#39;</span><span class="p">,</span>
+                    <span class="n">Reporting_Frequency</span><span class="o">=</span><span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">(),</span>
+                    <span class="n">Schedule_Name</span><span class="o">=</span><span class="s1">&#39;&#39;</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Added - </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">_&#39;</span> <span class="o">+</span> <span class="n">zone</span> <span class="o">+</span> <span class="s1">&#39; Reporting Frequency &#39;</span> <span class="o">+</span> <span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39; Output:Variable data&#39;</span><span class="p">)</span>
+
+        <span class="n">air_velocity_schs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">i</span><span class="o">.</span><span class="n">Air_Velocity_Schedule_Name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;people&#39;</span><span class="p">]]))</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">air_velocity_schs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">outputnamelist</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Not added - &#39;</span> <span class="o">+</span> <span class="n">i</span> <span class="o">+</span> <span class="s1">&#39; Reporting Frequency &#39;</span> <span class="o">+</span> <span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39; Output:Variable data&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+                    <span class="s1">&#39;Output:Variable&#39;</span><span class="p">,</span>
+                    <span class="n">Key_Value</span><span class="o">=</span><span class="n">i</span><span class="p">,</span>
+                    <span class="n">Variable_Name</span><span class="o">=</span><span class="s1">&#39;Schedule Value&#39;</span><span class="p">,</span>
+                    <span class="n">Reporting_Frequency</span><span class="o">=</span><span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">(),</span>
+                    <span class="n">Schedule_Name</span><span class="o">=</span><span class="s1">&#39;&#39;</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Added - </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="s1">&#39; Reporting Frequency &#39;</span> <span class="o">+</span> <span class="n">freq</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39; Output:Variable data&#39;</span><span class="p">)</span>
+
+    <span class="n">outputcontrolfiles</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;OutputControl:Files&#39;</span><span class="p">]]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">outputcontrolfiles</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+            <span class="s1">&#39;OutputControl:Files&#39;</span><span class="p">,</span>
+            <span class="n">Output_CSV</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span><span class="p">,</span>
+            <span class="n">Output_MTR</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span><span class="p">,</span>
+            <span class="n">Output_ESO</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Added - OutputControl:Files object&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">outputcontrolfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">Output_CSV</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span>
+        <span class="n">outputcontrolfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">Output_MTR</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span>
+        <span class="n">outputcontrolfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">Output_ESO</span><span class="o">=</span><span class="s1">&#39;Yes&#39;</span>
+        <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Not added - OutputControl:Files object - Output CSV, MTR and ESO fields set to Yes&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">building</span></div>
+
+
+
+<div class="viewcode-block" id="set_zones_always_occupied">
+<a class="viewcode-back" href="../../../accim.sim.html#accim.sim.apmv_setpoints.set_zones_always_occupied">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_zones_always_occupied</span><span class="p">(</span>
+        <span class="n">building</span><span class="p">,</span>
+        <span class="n">verboseMode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function sets the schedule for zones to always be occupied.</span>
+<span class="sd">    It checks if an &quot;On&quot; schedule is already present in the model; if not, it adds one.</span>
+
+<span class="sd">    :param building: the building eppy.modeleditor.IDF class instance</span>
+<span class="sd">    :param verboseMode: True to print on screen the actions carried out</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sch_comp_objs</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;schedule:compact&#39;</span><span class="p">]]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;On&#39;</span> <span class="ow">in</span> <span class="n">sch_comp_objs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;On Schedule already was in the model&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">building</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+            <span class="s1">&#39;Schedule:Compact&#39;</span><span class="p">,</span>
+            <span class="n">Name</span><span class="o">=</span><span class="s1">&#39;On&#39;</span><span class="p">,</span>
+            <span class="n">Schedule_Type_Limits_Name</span><span class="o">=</span><span class="s2">&quot;Any Number&quot;</span><span class="p">,</span>
+            <span class="n">Field_1</span><span class="o">=</span><span class="s1">&#39;Through: 12/31&#39;</span><span class="p">,</span>
+            <span class="n">Field_2</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_3</span><span class="o">=</span><span class="s1">&#39;Until: 24:00,1&#39;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;On Schedule has been added&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="n">j</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;people&#39;</span><span class="p">]]:</span>
+        <span class="n">i</span><span class="o">.</span><span class="n">Number_of_People_Schedule_Name</span> <span class="o">=</span> <span class="s1">&#39;On&#39;</span>
+
+    <span class="k">return</span></div>
+
+
+
+
+
+<div class="viewcode-block" id="generate_df_from_args">
+<a class="viewcode-back" href="../../../accim.sim.html#accim.sim.apmv_setpoints.generate_df_from_args">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_df_from_args</span><span class="p">(</span>
+        <span class="n">building</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">,</span>
+        <span class="n">adap_coeff_cooling</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.293</span><span class="p">,</span>
+        <span class="n">adap_coeff_heating</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.293</span><span class="p">,</span>
+        <span class="n">pmv_cooling_sp</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">pmv_heating_sp</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">tolerance_cooling_sp_cooling_season</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">tolerance_cooling_sp_heating_season</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">tolerance_heating_sp_cooling_season</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">tolerance_heating_sp_heating_season</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">dflt_for_adap_coeff_cooling</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span>
+        <span class="n">dflt_for_adap_coeff_heating</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.4</span><span class="p">,</span>
+        <span class="n">dflt_for_pmv_cooling_sp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">dflt_for_pmv_heating_sp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_cooling_sp_cooling_season</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_cooling_sp_heating_season</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_heating_sp_cooling_season</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">dflt_for_tolerance_heating_sp_heating_season</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Maps the arguments input by the user in a pandas.DataFrame instance.</span>
+<span class="sd">    If some occupied zones are not defined in the arguments, default values will be applied</span>
+<span class="sd">    to them. In case some zone entered is not among occupied zones in the idf,</span>
+<span class="sd">    it will be omitted.</span>
+
+<span class="sd">    :param building: The besos.IDF_class. You can make it by using besos.eppy_funcs.get_building</span>
+<span class="sd">    :param adap_coeff_cooling: A dictionary containing all the zone names in the key field,</span>
+<span class="sd">        and the value for the adaptive coefficient (Lambda, λ) at the cooling season, for example:</span>
+<span class="sd">        {&#39;zonename1&#39;: 0.1, &#39;zonename2&#39;: 0.5}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param adap_coeff_heating: A dictionary containing all the zone names in the key field,</span>
+<span class="sd">        and the value for the adaptive coefficient (Lambda, λ) at the heating season, for example:</span>
+<span class="sd">        {&#39;zonename1&#39;: -0.1, &#39;zonename2&#39;: -0.5}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param pmv_cooling_sp: A dictionary containing all the zone names in the key field,</span>
+<span class="sd">        and the value for the cooling PMV setpoint, for example:</span>
+<span class="sd">        {&#39;zonename1&#39;: 0.5, &#39;zonename2&#39;: 0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param pmv_heating_sp: A dictionary containing all the zone names in the key field,</span>
+<span class="sd">        and the value for the heating PMV setpoint, for example:</span>
+<span class="sd">        {&#39;zonename1&#39;: -0.5, &#39;zonename2&#39;: -0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param tolerance_cooling_sp_cooling_season: A dictionary containing all the zone names</span>
+<span class="sd">        in the key field, and the value for the cooling PMV setpoint tolerance in cooling season;</span>
+<span class="sd">        this value will be summed to the resulting aPMV setpoint, therefore, in this case should be</span>
+<span class="sd">        a negative number, for example: {&#39;zonename1&#39;: -0.1, &#39;zonename2&#39;: -0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param tolerance_cooling_sp_heating_season: A dictionary containing all the zone names</span>
+<span class="sd">        in the key field, and the value for the cooling PMV setpoint tolerance in heating season;</span>
+<span class="sd">        this value will be summed to the resulting aPMV setpoint, therefore, in this case should be</span>
+<span class="sd">        a negative number, for example: {&#39;zonename1&#39;: -0.1, &#39;zonename2&#39;: -0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param tolerance_heating_sp_cooling_season: A dictionary containing all the zone names</span>
+<span class="sd">        in the key field, and the value for the heating PMV setpoint tolerance in cooling season;</span>
+<span class="sd">        this value will be summed to the resulting aPMV setpoint, therefore, in this case should be</span>
+<span class="sd">        a positive number, for example: {&#39;zonename1&#39;: 0.1, &#39;zonename2&#39;: 0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param tolerance_heating_sp_heating_season: A dictionary containing all the zone names</span>
+<span class="sd">        in the key field, and the value for the heating PMV setpoint tolerance in heating season;</span>
+<span class="sd">        this value will be summed to the resulting aPMV setpoint, therefore, in this case should be</span>
+<span class="sd">        a positive number, for example: {&#39;zonename1&#39;: 0.1, &#39;zonename2&#39;: 0.2}.</span>
+<span class="sd">        Float types are also accepted, but these will be applied to all occupied zones in the idf.</span>
+<span class="sd">    :param dflt_for_adap_coeff_cooling: Float default value applied to the</span>
+<span class="sd">        adap_coeff_cooling argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_adap_coeff_heating: Float default value applied to the</span>
+<span class="sd">        adap_coeff_heating argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_pmv_cooling_sp: Float default value applied to the pmv_cooling_sp argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_pmv_heating_sp: Float default value applied to the pmv_heating_sp argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_tolerance_cooling_sp_cooling_season: Float default value applied to the</span>
+<span class="sd">        tolerance_cooling_sp_cooling_season argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_tolerance_cooling_sp_heating_season: Float default value applied to the</span>
+<span class="sd">        tolerance_cooling_sp_heating_season argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_tolerance_heating_sp_cooling_season: Float default value applied to the</span>
+<span class="sd">        tolerance_heating_sp_cooling_season argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :param dflt_for_tolerance_heating_sp_heating_season: Float default value applied to the</span>
+<span class="sd">        tolerance_heating_sp_heating_season argument,</span>
+<span class="sd">        for those occupied zones not specified in the dictionary keys.</span>
+<span class="sd">    :return: pandas.DataFrame</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">ppl_temp</span> <span class="o">=</span> <span class="p">[[</span><span class="n">people</span><span class="o">.</span><span class="n">Zone_or_ZoneList_Name</span><span class="p">,</span> <span class="n">people</span><span class="o">.</span><span class="n">Name</span><span class="p">]</span> <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;People&#39;</span><span class="p">]]</span>
+    <span class="k">except</span> <span class="n">eppy</span><span class="o">.</span><span class="n">bunch_subclass</span><span class="o">.</span><span class="n">BadEPFieldError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Zone_or_ZoneList_Name field not found in People object.&#39;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ppl_temp</span> <span class="o">=</span> <span class="p">[[</span><span class="n">people</span><span class="o">.</span><span class="n">Zone_or_ZoneList_or_Space_or_SpaceList_Name</span><span class="p">,</span> <span class="n">people</span><span class="o">.</span><span class="n">Name</span><span class="p">]</span> <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;People&#39;</span><span class="p">]]</span>
+        <span class="k">except</span> <span class="n">eppy</span><span class="o">.</span><span class="n">bunch_subclass</span><span class="o">.</span><span class="n">BadEPFieldError</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Zone_or_ZoneList_or_Space_or_SpaceList_Name field not found in People object.&#39;</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">ppl_temp</span> <span class="o">=</span> <span class="p">[[</span><span class="n">people</span><span class="o">.</span><span class="n">Zone_Name</span><span class="p">,</span> <span class="n">people</span><span class="o">.</span><span class="n">Name</span><span class="p">]</span> <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;People&#39;</span><span class="p">]]</span>
+            <span class="k">except</span> <span class="n">eppy</span><span class="o">.</span><span class="n">bunch_subclass</span><span class="o">.</span><span class="n">BadEPFieldError</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Zone_Name field not found in People object.&#39;</span><span class="p">)</span>
+    <span class="n">zones_with_ppl_colon</span> <span class="o">=</span> <span class="p">[</span><span class="n">ppl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">ppl</span> <span class="ow">in</span> <span class="n">ppl_temp</span><span class="p">]</span>
+
+    <span class="n">data_adap_coeff_cooling</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">data_adap_coeff_heating</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">data_pmv_cooling_sp</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">data_pmv_heating_sp</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">data_tolerance_cooling_sp_cooling_season</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">data_tolerance_cooling_sp_heating_season</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">data_tolerance_heating_sp_cooling_season</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">data_tolerance_heating_sp_heating_season</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">l</span> <span class="ow">in</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">adap_coeff_cooling</span><span class="p">,</span> <span class="n">data_adap_coeff_cooling</span><span class="p">,</span> <span class="s1">&#39;adap_coeff_cooling&#39;</span><span class="p">,</span> <span class="n">dflt_for_adap_coeff_cooling</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">adap_coeff_heating</span><span class="p">,</span> <span class="n">data_adap_coeff_heating</span><span class="p">,</span> <span class="s1">&#39;adap_coeff_heating&#39;</span><span class="p">,</span> <span class="n">dflt_for_adap_coeff_heating</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">pmv_cooling_sp</span><span class="p">,</span> <span class="n">data_pmv_cooling_sp</span><span class="p">,</span> <span class="s1">&#39;pmv_cooling_sp&#39;</span><span class="p">,</span> <span class="n">dflt_for_pmv_cooling_sp</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">pmv_heating_sp</span><span class="p">,</span> <span class="n">data_pmv_heating_sp</span><span class="p">,</span> <span class="s1">&#39;pmv_heating_sp&#39;</span><span class="p">,</span> <span class="n">dflt_for_pmv_heating_sp</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">tolerance_cooling_sp_cooling_season</span><span class="p">,</span> <span class="n">data_tolerance_cooling_sp_cooling_season</span><span class="p">,</span> <span class="s1">&#39;tolerance_cooling_sp_cooling_season&#39;</span><span class="p">,</span> <span class="n">dflt_for_tolerance_cooling_sp_cooling_season</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">tolerance_cooling_sp_heating_season</span><span class="p">,</span> <span class="n">data_tolerance_cooling_sp_heating_season</span><span class="p">,</span> <span class="s1">&#39;tolerance_cooling_sp_heating_season&#39;</span><span class="p">,</span> <span class="n">dflt_for_tolerance_cooling_sp_heating_season</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">tolerance_heating_sp_cooling_season</span><span class="p">,</span> <span class="n">data_tolerance_heating_sp_cooling_season</span><span class="p">,</span> <span class="s1">&#39;tolerance_heating_sp_cooling_season&#39;</span><span class="p">,</span> <span class="n">dflt_for_tolerance_heating_sp_cooling_season</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">tolerance_heating_sp_heating_season</span><span class="p">,</span> <span class="n">data_tolerance_heating_sp_heating_season</span><span class="p">,</span> <span class="s1">&#39;tolerance_heating_sp_heating_season&#39;</span><span class="p">,</span> <span class="n">dflt_for_tolerance_heating_sp_heating_season</span><span class="p">),</span>
+    <span class="p">]:</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span>
+            <span class="c1"># setting default value in case the zone is missing</span>
+            <span class="c1"># 1 making lists of the zones entered by the user in the dictionary keys</span>
+            <span class="n">j</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;zone list&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">i</span><span class="p">]})</span>
+            <span class="c1"># 2 making lists for the zones that do not match the existing occupied zones in the idf</span>
+            <span class="n">j</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;dropped keys&#39;</span><span class="p">:</span> <span class="p">[]})</span>
+            <span class="c1"># 3 iterating through the zones to drop the dictionary entry</span>
+            <span class="c1"># if the zone is not found among idf&#39;s occupied zones</span>
+            <span class="k">for</span> <span class="n">zone</span> <span class="ow">in</span> <span class="n">j</span><span class="p">[</span><span class="s1">&#39;zone list&#39;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">zone</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">zones_with_ppl_colon</span><span class="p">:</span>
+                    <span class="n">i</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">zone</span><span class="p">)</span>
+                    <span class="n">j</span><span class="p">[</span><span class="s1">&#39;dropped keys&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">zone</span><span class="p">)</span>
+            <span class="c1"># 1.4 warning the user in case some dictionary entry has been dropped</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s1">&#39;dropped keys&#39;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;the following zones you entered at the </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1"> argument were not found, &#39;</span>
+                    <span class="sa">f</span><span class="s1">&#39;and therefore have been removed: </span><span class="si">{</span><span class="n">j</span><span class="p">[</span><span class="s2">&quot;dropped keys&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="p">)</span>
+            <span class="c1"># 4 making dictionaries to store the zones in which default values have been set</span>
+            <span class="n">j</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;default values&#39;</span><span class="p">:</span> <span class="p">{}})</span>
+            <span class="c1"># 5 iterating through occupied zones in the idf which were missing in the dictionary entries</span>
+            <span class="c1"># specified by the user in the arguments</span>
+            <span class="k">for</span> <span class="n">zone</span> <span class="ow">in</span> <span class="n">zones_with_ppl_colon</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">zone</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">j</span><span class="p">[</span><span class="s1">&#39;zone list&#39;</span><span class="p">]:</span>
+                    <span class="n">i</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">zone</span><span class="p">:</span> <span class="n">l</span><span class="p">})</span>
+                    <span class="n">j</span><span class="p">[</span><span class="s1">&#39;default values&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">zone</span><span class="p">:</span> <span class="n">l</span><span class="p">})</span>
+            <span class="c1"># 6 warning the user in case some default value has been set</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">j</span><span class="p">[</span><span class="s1">&#39;default values&#39;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;the following zones you entered at the </span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s1"> argument were not found, &#39;</span>
+                    <span class="sa">f</span><span class="s1">&#39;and therefore, considering these are occupied, default values have been set: &#39;</span>
+                    <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">j</span><span class="p">[</span><span class="s2">&quot;default values&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="p">)</span>
+            <span class="c1"># 7 individual pd.Series for each argument</span>
+            <span class="n">j</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;series&#39;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">k</span><span class="p">)})</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">float</span> <span class="ow">or</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="n">j</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;series&#39;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">zones_with_ppl_colon</span><span class="p">)})</span>
+
+    <span class="c1"># concatenating series into dataframe</span>
+
+    <span class="n">df_arguments</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">data_adap_coeff_cooling</span><span class="p">[</span><span class="s1">&#39;series&#39;</span><span class="p">],</span>
+            <span class="n">data_adap_coeff_heating</span><span class="p">[</span><span class="s1">&#39;series&#39;</span><span class="p">],</span>
+            <span class="n">data_pmv_cooling_sp</span><span class="p">[</span><span class="s1">&#39;series&#39;</span><span class="p">],</span>
+            <span class="n">data_pmv_heating_sp</span><span class="p">[</span><span class="s1">&#39;series&#39;</span><span class="p">],</span>
+            <span class="n">data_tolerance_cooling_sp_cooling_season</span><span class="p">[</span><span class="s1">&#39;series&#39;</span><span class="p">],</span>
+            <span class="n">data_tolerance_cooling_sp_heating_season</span><span class="p">[</span><span class="s1">&#39;series&#39;</span><span class="p">],</span>
+            <span class="n">data_tolerance_heating_sp_cooling_season</span><span class="p">[</span><span class="s1">&#39;series&#39;</span><span class="p">],</span>
+            <span class="n">data_tolerance_heating_sp_heating_season</span><span class="p">[</span><span class="s1">&#39;series&#39;</span><span class="p">],</span>
+        <span class="p">],</span>
+        <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
+    <span class="p">)</span>
+    <span class="n">df_arguments</span><span class="p">[</span><span class="s1">&#39;underscore_zonename&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">df_arguments</span><span class="o">.</span><span class="n">index</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">df_arguments</span></div>
+
+
+
+<div class="viewcode-block" id="change_adaptive_coeff">
+<a class="viewcode-back" href="../../../accim.sim.html#accim.sim.apmv_setpoints.change_adaptive_coeff">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">change_adaptive_coeff</span><span class="p">(</span><span class="n">building</span><span class="p">,</span> <span class="n">df_arguments</span><span class="p">):</span>
+    <span class="n">ppl_temp</span> <span class="o">=</span> <span class="p">[[</span><span class="n">people</span><span class="o">.</span><span class="n">Zone_or_ZoneList_Name</span><span class="p">,</span> <span class="n">people</span><span class="o">.</span><span class="n">Name</span><span class="p">]</span> <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;People&#39;</span><span class="p">]]</span>
+    <span class="n">zones_with_ppl_colon</span> <span class="o">=</span> <span class="p">[</span><span class="n">ppl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">ppl</span> <span class="ow">in</span> <span class="n">ppl_temp</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">zones_with_ppl_colon</span><span class="p">:</span>
+        <span class="n">zonename</span> <span class="o">=</span> <span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;underscore_zonename&#39;</span><span class="p">]</span>
+        <span class="n">program</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span>
+                   <span class="k">for</span> <span class="n">p</span>
+                   <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span>
+                   <span class="k">if</span> <span class="s1">&#39;set_zone_input_data&#39;</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">Name</span>
+                   <span class="ow">and</span> <span class="n">zonename</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                   <span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">program</span><span class="o">.</span><span class="n">Program_Line_1</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set adap_coeff_cooling_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;adap_coeff_cooling&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+        <span class="n">program</span><span class="o">.</span><span class="n">Program_Line_2</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set adap_coeff_heating_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;adap_coeff_heating&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+        <span class="c1"># program.Program_Line_3 = f&#39;set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, &quot;pmv_cooling_sp&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_4 = f&#39;set pmv_heating_sp_{zonename} = {df_arguments.loc[i, &quot;pmv_heating_sp&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_5 = f&#39;set tolerance_cooling_sp_cooling_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_cooling_sp_cooling_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_6 = f&#39;set tolerance_cooling_sp_heating_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_cooling_sp_heating_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_7 = f&#39;set tolerance_heating_sp_cooling_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_heating_sp_cooling_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_8 = f&#39;set tolerance_heating_sp_heating_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_heating_sp_heating_season&quot;]}&#39;,</span>
+    <span class="k">return</span></div>
+
+
+
+<div class="viewcode-block" id="change_pmv_setpoints">
+<a class="viewcode-back" href="../../../accim.sim.html#accim.sim.apmv_setpoints.change_pmv_setpoints">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">change_pmv_setpoints</span><span class="p">(</span><span class="n">building</span><span class="p">,</span> <span class="n">df_arguments</span><span class="p">):</span>
+    <span class="n">ppl_temp</span> <span class="o">=</span> <span class="p">[[</span><span class="n">people</span><span class="o">.</span><span class="n">Zone_or_ZoneList_Name</span><span class="p">,</span> <span class="n">people</span><span class="o">.</span><span class="n">Name</span><span class="p">]</span> <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;People&#39;</span><span class="p">]]</span>
+    <span class="n">zones_with_ppl_colon</span> <span class="o">=</span> <span class="p">[</span><span class="n">ppl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">ppl</span> <span class="ow">in</span> <span class="n">ppl_temp</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">zones_with_ppl_colon</span><span class="p">:</span>
+        <span class="n">zonename</span> <span class="o">=</span> <span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;underscore_zonename&#39;</span><span class="p">]</span>
+        <span class="n">program</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span>
+                   <span class="k">for</span> <span class="n">p</span>
+                   <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span>
+                   <span class="k">if</span> <span class="s1">&#39;set_zone_input_data&#39;</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">Name</span>
+                   <span class="ow">and</span> <span class="n">zonename</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                   <span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># program.Program_Line_1 = f&#39;set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, &quot;adap_coeff_cooling&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_2 = f&#39;set adap_coeff_heating_{zonename} = {df_arguments.loc[i, &quot;adap_coeff_heating&quot;]}&#39;,</span>
+        <span class="n">program</span><span class="o">.</span><span class="n">Program_Line_3</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set pmv_cooling_sp_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;pmv_cooling_sp&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+        <span class="n">program</span><span class="o">.</span><span class="n">Program_Line_4</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set pmv_heating_sp_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;pmv_heating_sp&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+        <span class="c1"># program.Program_Line_5 = f&#39;set tolerance_cooling_sp_cooling_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_cooling_sp_cooling_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_6 = f&#39;set tolerance_cooling_sp_heating_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_cooling_sp_heating_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_7 = f&#39;set tolerance_heating_sp_cooling_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_heating_sp_cooling_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_8 = f&#39;set tolerance_heating_sp_heating_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_heating_sp_heating_season&quot;]}&#39;,</span>
+    <span class="k">return</span></div>
+
+
+
+<div class="viewcode-block" id="change_pmv_heating_setpoint">
+<a class="viewcode-back" href="../../../accim.sim.html#accim.sim.apmv_setpoints.change_pmv_heating_setpoint">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">change_pmv_heating_setpoint</span><span class="p">(</span><span class="n">building</span><span class="p">,</span> <span class="n">df_arguments</span><span class="p">):</span>
+    <span class="n">ppl_temp</span> <span class="o">=</span> <span class="p">[[</span><span class="n">people</span><span class="o">.</span><span class="n">Zone_or_ZoneList_Name</span><span class="p">,</span> <span class="n">people</span><span class="o">.</span><span class="n">Name</span><span class="p">]</span> <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;People&#39;</span><span class="p">]]</span>
+    <span class="n">zones_with_ppl_colon</span> <span class="o">=</span> <span class="p">[</span><span class="n">ppl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">ppl</span> <span class="ow">in</span> <span class="n">ppl_temp</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">zones_with_ppl_colon</span><span class="p">:</span>
+        <span class="n">zonename</span> <span class="o">=</span> <span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;underscore_zonename&#39;</span><span class="p">]</span>
+        <span class="n">program</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span>
+                   <span class="k">for</span> <span class="n">p</span>
+                   <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span>
+                   <span class="k">if</span> <span class="s1">&#39;set_zone_input_data&#39;</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">Name</span>
+                   <span class="ow">and</span> <span class="n">zonename</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                   <span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># program.Program_Line_1 = f&#39;set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, &quot;adap_coeff_cooling&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_2 = f&#39;set adap_coeff_heating_{zonename} = {df_arguments.loc[i, &quot;adap_coeff_heating&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_3 = f&#39;set pmv_cooling_sp_{zonename} = {df_arguments.loc[i, &quot;pmv_cooling_sp&quot;]}&#39;,</span>
+        <span class="n">program</span><span class="o">.</span><span class="n">Program_Line_4</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set pmv_heating_sp_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;pmv_heating_sp&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+        <span class="c1"># program.Program_Line_5 = f&#39;set tolerance_cooling_sp_cooling_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_cooling_sp_cooling_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_6 = f&#39;set tolerance_cooling_sp_heating_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_cooling_sp_heating_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_7 = f&#39;set tolerance_heating_sp_cooling_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_heating_sp_cooling_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_8 = f&#39;set tolerance_heating_sp_heating_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_heating_sp_heating_season&quot;]}&#39;,</span>
+    <span class="k">return</span></div>
+
+
+
+<div class="viewcode-block" id="change_pmv_cooling_setpoint">
+<a class="viewcode-back" href="../../../accim.sim.html#accim.sim.apmv_setpoints.change_pmv_cooling_setpoint">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">change_pmv_cooling_setpoint</span><span class="p">(</span><span class="n">building</span><span class="p">,</span> <span class="n">df_arguments</span><span class="p">):</span>
+    <span class="n">ppl_temp</span> <span class="o">=</span> <span class="p">[[</span><span class="n">people</span><span class="o">.</span><span class="n">Zone_or_ZoneList_Name</span><span class="p">,</span> <span class="n">people</span><span class="o">.</span><span class="n">Name</span><span class="p">]</span> <span class="k">for</span> <span class="n">people</span> <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;People&#39;</span><span class="p">]]</span>
+    <span class="n">zones_with_ppl_colon</span> <span class="o">=</span> <span class="p">[</span><span class="n">ppl</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">ppl</span> <span class="ow">in</span> <span class="n">ppl_temp</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">zones_with_ppl_colon</span><span class="p">:</span>
+        <span class="n">zonename</span> <span class="o">=</span> <span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s1">&#39;underscore_zonename&#39;</span><span class="p">]</span>
+        <span class="n">program</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span>
+                   <span class="k">for</span> <span class="n">p</span>
+                   <span class="ow">in</span> <span class="n">building</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span>
+                   <span class="k">if</span> <span class="s1">&#39;set_zone_input_data&#39;</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">Name</span>
+                   <span class="ow">and</span> <span class="n">zonename</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                   <span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># program.Program_Line_1 = f&#39;set adap_coeff_cooling_{zonename} = {df_arguments.loc[i, &quot;adap_coeff_cooling&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_2 = f&#39;set adap_coeff_heating_{zonename} = {df_arguments.loc[i, &quot;adap_coeff_heating&quot;]}&#39;,</span>
+        <span class="n">program</span><span class="o">.</span><span class="n">Program_Line_3</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;set pmv_cooling_sp_</span><span class="si">{</span><span class="n">zonename</span><span class="si">}</span><span class="s1"> = </span><span class="si">{</span><span class="n">df_arguments</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;pmv_cooling_sp&quot;</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+        <span class="c1"># program.Program_Line_4 = f&#39;set pmv_heating_sp_{zonename} = {df_arguments.loc[i, &quot;pmv_heating_sp&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_5 = f&#39;set tolerance_cooling_sp_cooling_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_cooling_sp_cooling_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_6 = f&#39;set tolerance_cooling_sp_heating_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_cooling_sp_heating_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_7 = f&#39;set tolerance_heating_sp_cooling_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_heating_sp_cooling_season&quot;]}&#39;,</span>
+        <span class="c1"># program.Program_Line_8 = f&#39;set tolerance_heating_sp_heating_season_{zonename} = {df_arguments.loc[i, &quot;tolerance_heating_sp_heating_season&quot;]}&#39;,</span>
+    <span class="k">return</span></div>
+
+
+
+<span class="c1"># class map_idf_objects:</span>
+<span class="c1">#     def __init__(self, building):</span>
+<span class="c1">#         self.peoplelist = ([zone.Name for zone in building.idfobjects[&#39;Zone&#39;]])</span>
+<span class="c1">#         self.zonelist = ([zone.Name for zone in building.idfobjects[&#39;Zone&#39;]])</span>
+<span class="c1">#         self.sensorlist = ([sensor.Name for sensor in building.idfobjects[&#39;EnergyManagementSystem:Sensor&#39;]])</span>
+<span class="c1">#</span>
+
+<span class="c1"># def apply_aPMV_setpoints(</span>
+<span class="c1">#         building,</span>
+<span class="c1">#         outputs_freq: list = [&#39;hourly&#39;],</span>
+<span class="c1">#         other_PMV_related_outputs: bool = True,</span>
+<span class="c1">#         adap_coeff_cooling: float = 0.293,</span>
+<span class="c1">#         adap_coeff_heating: float = -0.293,</span>
+<span class="c1">#         pmv_cooling_sp: float = -0.5,</span>
+<span class="c1">#         pmv_heating_sp: float = 0.5,</span>
+<span class="c1">#         cooling_season_start: any = 120,</span>
+<span class="c1">#         cooling_season_end: any = 210,</span>
+<span class="c1">#         tolerance_heating_sp: float = 0.1,</span>
+<span class="c1">#         tolerance_cooling_sp: float = 0.1,</span>
+<span class="c1">#         dflt_for_adap_coeff_cooling: float = 0.4,</span>
+<span class="c1">#         dflt_for_adap_coeff_heating: float = -0.4,</span>
+<span class="c1">#         dflt_for_pmv_cooling_sp: float = 0.5,</span>
+<span class="c1">#         dflt_for_pmv_heating_sp: float = -0.5,</span>
+<span class="c1">#         dflt_for_tolerance_cooling_sp: float = -0.1,</span>
+<span class="c1">#         dflt_for_tolerance_heating_sp: float = 0.1,</span>
+<span class="c1">#         verboseMode: bool = True,</span>
+<span class="c1"># ):</span>
+<span class="c1">#     from besos import eppy_funcs as ef</span>
+<span class="c1">#</span>
+<span class="c1">#     building = ef.get_building(building=building)</span>
+<span class="c1">#</span>
+<span class="c1">#     add_apmv_ems_code(</span>
+<span class="c1">#         building=building,</span>
+<span class="c1">#         outputs_freq=outputs_freq,</span>
+<span class="c1">#         other_PMV_related_outputs=other_PMV_related_outputs,</span>
+<span class="c1">#         adap_coeff_cooling=adap_coeff_cooling,</span>
+<span class="c1">#         adap_coeff_heating=adap_coeff_heating,</span>
+<span class="c1">#         pmv_cooling_sp=pmv_cooling_sp,</span>
+<span class="c1">#         pmv_heating_sp=pmv_heating_sp,</span>
+<span class="c1">#         tolerance_cooling_sp=tolerance_cooling_sp,</span>
+<span class="c1">#         tolerance_heating_sp=tolerance_heating_sp,</span>
+<span class="c1">#         cooling_season_start=cooling_season_start,</span>
+<span class="c1">#         cooling_season_end=cooling_season_end,</span>
+<span class="c1">#         dflt_for_adap_coeff_cooling=dflt_for_adap_coeff_cooling,</span>
+<span class="c1">#         dflt_for_adap_coeff_heating=dflt_for_adap_coeff_heating,</span>
+<span class="c1">#         dflt_for_pmv_cooling_sp=dflt_for_pmv_cooling_sp,</span>
+<span class="c1">#         dflt_for_pmv_heating_sp=dflt_for_pmv_heating_sp,</span>
+<span class="c1">#         dflt_for_tolerance_cooling_sp=dflt_for_tolerance_cooling_sp,</span>
+<span class="c1">#         dflt_for_tolerance_heating_sp=dflt_for_tolerance_heating_sp,</span>
+<span class="c1">#         verboseMode=verboseMode</span>
+<span class="c1">#     )</span>
+<span class="c1">#     return building</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1"># class apply_aPMV_setpoints:</span>
+<span class="c1">#     def __init__(</span>
+<span class="c1">#             self,</span>
+<span class="c1">#             idf,</span>
+<span class="c1">#             building,</span>
+<span class="c1">#             outputs_freq: list = [&#39;hourly&#39;],</span>
+<span class="c1">#             other_PMV_related_outputs: bool = True,</span>
+<span class="c1">#             adap_coeff_cooling: float = 0.293,</span>
+<span class="c1">#             adap_coeff_heating: float = -0.293,</span>
+<span class="c1">#             pmv_cooling_sp: float = -0.5,</span>
+<span class="c1">#             pmv_heating_sp: float = 0.5,</span>
+<span class="c1">#             cooling_season_start: any = 120,</span>
+<span class="c1">#             cooling_season_end: any = 210,</span>
+<span class="c1">#             tolerance: float = 0.1,</span>
+<span class="c1">#             dflt_for_adap_coeff_cooling: float = 0.4,</span>
+<span class="c1">#             dflt_for_adap_coeff_heating: float = -0.4,</span>
+<span class="c1">#             dflt_for_pmv_cooling_sp: float = 0.5,</span>
+<span class="c1">#             dflt_for_pmv_heating_sp: float = -0.5,</span>
+<span class="c1">#             verboseMode: bool = True,</span>
+<span class="c1">#</span>
+<span class="c1">#     ):</span>
+<span class="c1">#         from besos import eppy_funcs as ef</span>
+<span class="c1">#</span>
+<span class="c1">#         self.building = ef.get_building(building=idf)</span>
+<span class="c1">#</span>
+<span class="c1">#         add_apmv_ems_code(</span>
+<span class="c1">#             building=building,</span>
+<span class="c1">#             outputs_freq=outputs_freq,</span>
+<span class="c1">#             other_PMV_related_outputs=other_PMV_related_outputs,</span>
+<span class="c1">#             adap_coeff_cooling=adap_coeff_cooling,</span>
+<span class="c1">#             adap_coeff_heating=adap_coeff_heating,</span>
+<span class="c1">#             pmv_cooling_sp=pmv_cooling_sp,</span>
+<span class="c1">#             pmv_heating_sp=pmv_heating_sp,</span>
+<span class="c1">#             cooling_season_start=cooling_season_start,</span>
+<span class="c1">#             cooling_season_end=cooling_season_end,</span>
+<span class="c1">#             tolerance=tolerance,</span>
+<span class="c1">#             dflt_for_adap_coeff_cooling=dflt_for_adap_coeff_cooling,</span>
+<span class="c1">#             dflt_for_adap_coeff_heating=dflt_for_adap_coeff_heating,</span>
+<span class="c1">#             dflt_for_pmv_cooling_sp=dflt_for_pmv_cooling_sp,</span>
+<span class="c1">#             dflt_for_pmv_heating_sp=dflt_for_pmv_heating_sp,</span>
+<span class="c1">#             verboseMode=verboseMode</span>
+<span class="c1">#         )</span>
+<span class="c1">#</span>
+<span class="c1">#         def add_apmv_ems_code(</span>
+<span class="c1">#                 building,</span>
+<span class="c1">#                 outputs_freq: list = [&#39;hourly&#39;],</span>
+<span class="c1">#                 other_PMV_related_outputs: bool = True,</span>
+<span class="c1">#                 adap_coeff_cooling: float = 0.293,</span>
+<span class="c1">#                 adap_coeff_heating: float = -0.293,</span>
+<span class="c1">#                 pmv_cooling_sp: float = -0.5,</span>
+<span class="c1">#                 pmv_heating_sp: float = 0.5,</span>
+<span class="c1">#                 cooling_season_start: any = 120,</span>
+<span class="c1">#                 cooling_season_end: any = 210,</span>
+<span class="c1">#                 tolerance: float = 0.1,</span>
+<span class="c1">#                 dflt_for_adap_coeff_cooling: float = 0.4,</span>
+<span class="c1">#                 dflt_for_adap_coeff_heating: float = -0.4,</span>
+<span class="c1">#                 dflt_for_pmv_cooling_sp: float = 0.5,</span>
+<span class="c1">#                 dflt_for_pmv_heating_sp: float = -0.5,</span>
+<span class="c1">#                 verboseMode: bool = True,</span>
+<span class="c1">#         ):</span>
+<span class="c1">#             add_apmv_ems_code(</span>
+<span class="c1">#                 building=building,</span>
+<span class="c1">#                 outputs_freq=outputs_freq,</span>
+<span class="c1">#                 other_PMV_related_outputs=other_PMV_related_outputs,</span>
+<span class="c1">#                 adap_coeff_cooling=adap_coeff_cooling,</span>
+<span class="c1">#                 adap_coeff_heating=adap_coeff_heating,</span>
+<span class="c1">#                 pmv_cooling_sp=pmv_cooling_sp,</span>
+<span class="c1">#                 pmv_heating_sp=pmv_heating_sp,</span>
+<span class="c1">#                 cooling_season_start=cooling_season_start,</span>
+<span class="c1">#                 cooling_season_end=cooling_season_end,</span>
+<span class="c1">#                 tolerance=tolerance,</span>
+<span class="c1">#                 dflt_for_adap_coeff_cooling=dflt_for_adap_coeff_cooling,</span>
+<span class="c1">#                 dflt_for_adap_coeff_heating=dflt_for_adap_coeff_heating,</span>
+<span class="c1">#                 dflt_for_pmv_cooling_sp=dflt_for_pmv_cooling_sp,</span>
+<span class="c1">#                 dflt_for_pmv_heating_sp=dflt_for_pmv_heating_sp,</span>
+<span class="c1">#                 verboseMode=verboseMode</span>
+<span class="c1">#             )</span>
+
+<div class="viewcode-block" id="add_vrf_system">
+<a class="viewcode-back" href="../../../accim.sim.html#accim.sim.apmv_setpoints.add_vrf_system">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">add_vrf_system</span><span class="p">(</span>
+        <span class="n">building</span><span class="p">,</span>
+        <span class="n">SupplyAirTempInputMethod</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;supply air temperature&#39;</span><span class="p">,</span>
+        <span class="n">eer</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">cop</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.1</span><span class="p">,</span>
+        <span class="n">VRFschedule</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;On 24/7&#39;</span><span class="p">,</span>
+        <span class="n">verboseMode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">accim.sim.accim_Main_single_idf</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">accim_Main</span>
+
+    <span class="n">EnergyPlus_version</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">building</span><span class="o">.</span><span class="n">idd_version</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">.</span><span class="si">{</span><span class="n">building</span><span class="o">.</span><span class="n">idd_version</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="n">z</span> <span class="o">=</span> <span class="n">accim_Main</span><span class="o">.</span><span class="n">accimJob</span><span class="p">(</span>
+        <span class="n">idf_class_instance</span><span class="o">=</span><span class="n">building</span><span class="p">,</span>
+        <span class="n">ScriptType</span><span class="o">=</span><span class="s1">&#39;vrf_ac&#39;</span><span class="p">,</span>
+        <span class="n">EnergyPlus_version</span><span class="o">=</span><span class="n">EnergyPlus_version</span><span class="p">,</span>
+        <span class="n">TempCtrl</span><span class="o">=</span><span class="s1">&#39;pmv&#39;</span><span class="p">,</span>
+        <span class="n">verboseMode</span><span class="o">=</span><span class="n">verboseMode</span>
+    <span class="p">)</span>
+
+    <span class="n">z</span><span class="o">.</span><span class="n">setComfFieldsPeople</span><span class="p">(</span><span class="n">EnergyPlus_version</span><span class="o">=</span><span class="n">EnergyPlus_version</span><span class="p">,</span> <span class="n">TempCtrl</span><span class="o">=</span><span class="s1">&#39;pmv&#39;</span><span class="p">,</span> <span class="n">verboseMode</span><span class="o">=</span><span class="n">verboseMode</span><span class="p">)</span>
+
+    <span class="n">z</span><span class="o">.</span><span class="n">setPMVsetpoint</span><span class="p">(</span><span class="n">verboseMode</span><span class="o">=</span><span class="n">verboseMode</span><span class="p">)</span>
+    <span class="n">z</span><span class="o">.</span><span class="n">addBaseSchedules</span><span class="p">(</span><span class="n">verboseMode</span><span class="o">=</span><span class="n">verboseMode</span><span class="p">)</span>
+    <span class="n">z</span><span class="o">.</span><span class="n">setAvailSchOn</span><span class="p">(</span><span class="n">verboseMode</span><span class="o">=</span><span class="n">verboseMode</span><span class="p">)</span>
+    <span class="n">z</span><span class="o">.</span><span class="n">addVRFsystemSch</span><span class="p">(</span><span class="n">verboseMode</span><span class="o">=</span><span class="n">verboseMode</span><span class="p">)</span>
+    <span class="n">z</span><span class="o">.</span><span class="n">addCurveObj</span><span class="p">(</span><span class="n">verboseMode</span><span class="o">=</span><span class="n">verboseMode</span><span class="p">)</span>
+    <span class="n">z</span><span class="o">.</span><span class="n">addDetHVACobj</span><span class="p">(</span>
+        <span class="n">EnergyPlus_version</span><span class="o">=</span><span class="n">EnergyPlus_version</span><span class="p">,</span>
+        <span class="n">verboseMode</span><span class="o">=</span><span class="n">verboseMode</span><span class="p">,</span>
+        <span class="n">SupplyAirTempInputMethod</span><span class="o">=</span><span class="n">SupplyAirTempInputMethod</span><span class="p">,</span>
+        <span class="n">eer</span><span class="o">=</span><span class="n">eer</span><span class="p">,</span>
+        <span class="n">cop</span><span class="o">=</span><span class="n">cop</span><span class="p">,</span>
+        <span class="n">VRFschedule</span><span class="o">=</span><span class="n">VRFschedule</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="c1"># todo calculate number of occupied hours from occupancy schedules</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

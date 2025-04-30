@@ -1,0 +1,545 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.utils &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">accim.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for accim.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tempfile</span><span class="w"> </span><span class="kn">import</span> <span class="n">mkstemp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shutil</span><span class="w"> </span><span class="kn">import</span> <span class="n">move</span><span class="p">,</span> <span class="n">copymode</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">os</span><span class="w"> </span><span class="kn">import</span> <span class="n">fdopen</span><span class="p">,</span> <span class="n">remove</span><span class="p">,</span> <span class="n">rename</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">besos.IDF_class</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">besos.IDF_class</span><span class="w"> </span><span class="kn">import</span> <span class="n">IDF</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">besos</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">os</span><span class="w"> </span><span class="kn">import</span> <span class="n">PathLike</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">unidecode</span><span class="w"> </span><span class="kn">import</span> <span class="n">unidecode</span>
+
+
+<div class="viewcode-block" id="modify_timesteps">
+<a class="viewcode-back" href="../../accim.html#accim.utils.modify_timesteps">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_timesteps</span><span class="p">(</span><span class="n">idf_object</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="o">.</span><span class="n">IDF</span><span class="p">,</span> <span class="n">timesteps</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="o">.</span><span class="n">IDF</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the timesteps of the idf object.</span>
+
+<span class="sd">    :param idf_object: the IDF class from besos or eppy</span>
+<span class="sd">    :type idf_object: IDF</span>
+<span class="sd">    :param timesteps: The number of timesteps.</span>
+<span class="sd">        Allowable values include 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, and 60</span>
+<span class="sd">    :type timesteps: int</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">timesteps</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">60</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">timesteps</span><span class="si">}</span><span class="s1"> not in allowable values: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, and 60&#39;</span><span class="p">)</span>
+    <span class="n">obj_timestep</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Timestep&#39;</span><span class="p">]][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">timestep_prev</span> <span class="o">=</span> <span class="n">obj_timestep</span><span class="o">.</span><span class="n">Number_of_Timesteps_per_Hour</span>
+    <span class="n">obj_timestep</span><span class="o">.</span><span class="n">Number_of_Timesteps_per_Hour</span> <span class="o">=</span> <span class="n">timesteps</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Number of Timesteps per Hour was previously set to &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">timestep_prev</span><span class="si">}</span><span class="s1"> days, and it has been modified to </span><span class="si">{</span><span class="n">timesteps</span><span class="si">}</span><span class="s1"> days.&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="modify_timesteps_path">
+<a class="viewcode-back" href="../../accim.html#accim.utils.modify_timesteps_path">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">modify_timesteps_path</span><span class="p">(</span><span class="n">idfpath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">timesteps</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the timesteps of the idf.</span>
+
+<span class="sd">    :param idfpath: the path to the idf</span>
+<span class="sd">    :type idfpath: str</span>
+<span class="sd">    :param timesteps: The number of timesteps.</span>
+<span class="sd">        Allowable values include 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, and 60</span>
+<span class="sd">    :type timesteps: int</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">besos.eppy_funcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_building</span>
+    <span class="n">building</span> <span class="o">=</span> <span class="n">get_building</span><span class="p">(</span><span class="n">idfpath</span><span class="p">)</span>
+    <span class="n">modify_timesteps</span><span class="p">(</span><span class="n">idf_object</span><span class="o">=</span><span class="n">building</span><span class="p">,</span> <span class="n">timesteps</span><span class="o">=</span><span class="n">timesteps</span><span class="p">)</span>
+    <span class="n">building</span><span class="o">.</span><span class="n">save</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="set_occupancy_to_always">
+<a class="viewcode-back" href="../../accim.html#accim.utils.set_occupancy_to_always">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_occupancy_to_always</span><span class="p">(</span><span class="n">idf_object</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="o">.</span><span class="n">IDF</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="o">.</span><span class="n">IDF</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sets the occupancy to always occupied for all zones with people object.</span>
+
+<span class="sd">    :param idf_object: the IDF class from besos or eppy</span>
+<span class="sd">    :type idf_object: IDF</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="s1">&#39;On 24/7&#39;</span> <span class="ow">in</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Schedule:Compact&#39;</span><span class="p">]]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;On 24/7 Schedule:Compact object was already in the model.&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">idf_object</span><span class="o">.</span><span class="n">newidfobject</span><span class="p">(</span>
+            <span class="n">key</span><span class="o">=</span><span class="s1">&#39;Schedule:Compact&#39;</span><span class="p">,</span>
+            <span class="n">Schedule_Type_Limits_Name</span><span class="o">=</span><span class="s1">&#39;Any Number&#39;</span><span class="p">,</span>
+            <span class="n">Field_1</span><span class="o">=</span><span class="s1">&#39;Through: 12/31&#39;</span><span class="p">,</span>
+            <span class="n">Field_2</span><span class="o">=</span><span class="s1">&#39;For: AllDays&#39;</span><span class="p">,</span>
+            <span class="n">Field_3</span><span class="o">=</span><span class="s1">&#39;Until: 24:00&#39;</span><span class="p">,</span>
+            <span class="n">Field_4</span><span class="o">=</span><span class="s1">&#39;1&#39;</span>
+        <span class="p">)</span>
+
+    <span class="n">obj_ppl</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;people&#39;</span><span class="p">]]</span>
+    <span class="k">for</span> <span class="n">ppl</span> <span class="ow">in</span> <span class="n">obj_ppl</span><span class="p">:</span>
+        <span class="n">ppl</span><span class="o">.</span><span class="n">Number_of_People_Schedule_Name</span> <span class="o">=</span> <span class="s1">&#39;On 24/7&#39;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">ppl</span><span class="o">.</span><span class="n">Name</span><span class="si">}</span><span class="s1"> Number of People Schedule Name has been set to always occupied.&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="set_occupancy_to_always_path">
+<a class="viewcode-back" href="../../accim.html#accim.utils.set_occupancy_to_always_path">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">set_occupancy_to_always_path</span><span class="p">(</span><span class="n">idfpath</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Sets the occupancy to always occupied for all zones with people object.</span>
+
+<span class="sd">    :param idfpath: the path to the idf</span>
+<span class="sd">    :type idfpath: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">besos.eppy_funcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_building</span>
+    <span class="n">building</span> <span class="o">=</span> <span class="n">get_building</span><span class="p">(</span><span class="n">idfpath</span><span class="p">)</span>
+    <span class="n">set_occupancy_to_always</span><span class="p">(</span><span class="n">idf_object</span><span class="o">=</span><span class="n">building</span><span class="p">)</span>
+    <span class="n">building</span><span class="o">.</span><span class="n">save</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="reduce_runtime">
+<a class="viewcode-back" href="../../accim.html#accim.utils.reduce_runtime">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">reduce_runtime</span><span class="p">(</span>
+        <span class="n">idf_object</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="o">.</span><span class="n">IDF</span><span class="p">,</span>
+        <span class="n">minimal_shadowing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">shading_calculation_update_frequency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+        <span class="n">maximum_figures_in_shadow_overlap_calculations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200</span><span class="p">,</span>
+        <span class="n">timesteps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
+        <span class="n">runperiod_begin_month</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">runperiod_begin_day_of_month</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">runperiod_end_month</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">runperiod_end_day_of_month</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="o">.</span><span class="n">IDF</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modifies the idf to reduce the simulation runtime.</span>
+
+<span class="sd">    :param idf_object:</span>
+<span class="sd">    :param minimal_shadowing: True or False. If True, applies minimal shadowing setting.</span>
+<span class="sd">    :param shading_calculation_update_frequency: An integer. Sets the intervals for the shading calculation update</span>
+<span class="sd">    :param maximum_figures_in_shadow_overlap_calculations: An integer.</span>
+<span class="sd">        Applies the number to the maximum figures in shadow overlap calculations.</span>
+<span class="sd">    :param timesteps: An integer. Sets the number of timesteps.</span>
+<span class="sd">    :param runperiod_begin_day_of_month: the day of the month to start the simulation</span>
+<span class="sd">    :param runperiod_begin_month: the month to start the simulation</span>
+<span class="sd">    :param runperiod_end_day_of_month: the day of the month to end the simulation</span>
+<span class="sd">    :param runperiod_end_month: the month to end the simulation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">shading_calculation_update_frequency</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">shading_calculation_update_frequency</span> <span class="o">&gt;</span> <span class="mi">365</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;shading_calculation_update_frequency cannot be smaller than 1 or larger than 365&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">timesteps</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">timesteps</span> <span class="o">&gt;</span> <span class="mi">60</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;timesteps cannot be smaller than 2 or larger than 60&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">minimal_shadowing</span><span class="p">:</span>
+        <span class="n">obj_building</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Building&#39;</span><span class="p">]][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">obj_building</span><span class="o">.</span><span class="n">Solar_Distribution</span> <span class="o">==</span> <span class="s1">&#39;MinimalShadowing&#39;</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Solar distribution is already set to MinimalShadowing, therefore no action has been performed.&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">obj_building</span><span class="o">.</span><span class="n">Solar_Distribution</span> <span class="o">=</span> <span class="s1">&#39;MinimalShadowing&#39;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Solar distribution has been set to MinimalShadowing.&#39;</span><span class="p">)</span>
+
+    <span class="n">runperiod_obj</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Runperiod&#39;</span><span class="p">]][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">runperiod_obj</span><span class="o">.</span><span class="n">Begin_Month</span> <span class="o">=</span> <span class="n">runperiod_begin_month</span>
+    <span class="n">runperiod_obj</span><span class="o">.</span><span class="n">Begin_Day_of_Month</span> <span class="o">=</span> <span class="n">runperiod_begin_day_of_month</span>
+    <span class="n">runperiod_obj</span><span class="o">.</span><span class="n">End_Month</span> <span class="o">=</span> <span class="n">runperiod_end_month</span>
+    <span class="n">runperiod_obj</span><span class="o">.</span><span class="n">End_Day_of_Month</span> <span class="o">=</span> <span class="n">runperiod_end_day_of_month</span>
+
+    <span class="n">obj_shadowcalc</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;ShadowCalculation&#39;</span><span class="p">]][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">shadowcalc_freq_prev</span> <span class="o">=</span> <span class="n">obj_shadowcalc</span><span class="o">.</span><span class="n">Shading_Calculation_Update_Frequency</span>
+    <span class="n">obj_shadowcalc</span><span class="o">.</span><span class="n">Shading_Calculation_Update_Frequency</span> <span class="o">=</span> <span class="n">shading_calculation_update_frequency</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Shading Calculation Update Frequency was previously set to &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">shadowcalc_freq_prev</span><span class="si">}</span><span class="s1"> days, and it has been modified to </span><span class="si">{</span><span class="n">shading_calculation_update_frequency</span><span class="si">}</span><span class="s1"> days.&#39;</span><span class="p">)</span>
+    <span class="n">shadowcalc_maxfigs_prev</span> <span class="o">=</span> <span class="n">obj_shadowcalc</span><span class="o">.</span><span class="n">Maximum_Figures_in_Shadow_Overlap_Calculations</span>
+    <span class="n">obj_shadowcalc</span><span class="o">.</span><span class="n">Maximum_Figures_in_Shadow_Overlap_Calculations</span> <span class="o">=</span> <span class="n">maximum_figures_in_shadow_overlap_calculations</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Maximum Figures in Shadow Overlap Calculations was previously set to &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">shadowcalc_maxfigs_prev</span><span class="si">}</span><span class="s1"> days, and it has been modified to </span><span class="si">{</span><span class="n">maximum_figures_in_shadow_overlap_calculations</span><span class="si">}</span><span class="s1"> days.&#39;</span><span class="p">)</span>
+
+    <span class="n">obj_timestep</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;Timestep&#39;</span><span class="p">]][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">timestep_prev</span> <span class="o">=</span> <span class="n">obj_timestep</span><span class="o">.</span><span class="n">Number_of_Timesteps_per_Hour</span>
+    <span class="n">obj_timestep</span><span class="o">.</span><span class="n">Number_of_Timesteps_per_Hour</span> <span class="o">=</span> <span class="n">timesteps</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Number of Timesteps per Hour was previously set to &#39;</span>
+          <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">timestep_prev</span><span class="si">}</span><span class="s1"> days, and it has been modified to </span><span class="si">{</span><span class="n">timesteps</span><span class="si">}</span><span class="s1"> days.&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="amend_idf_version_from_dsb">
+<a class="viewcode-back" href="../../accim.html#accim.utils.amend_idf_version_from_dsb">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">amend_idf_version_from_dsb</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Amends the idf version of the Designbuilder-sourced idf file, for Designbuilder v7.X.</span>
+<span class="sd">    Replaces the string &#39;Version, 9.4.0.002&#39; with &#39;Version, 9.4&#39;.</span>
+
+<span class="sd">    :param idf_path: the path to the idf</span>
+<span class="sd">    :type idf_path: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pattern</span> <span class="o">=</span> <span class="s1">&#39;Version, 9.4.0.002&#39;</span>
+    <span class="n">subst</span> <span class="o">=</span> <span class="s1">&#39;Version, 9.4&#39;</span>
+
+    <span class="c1"># Create temp file</span>
+    <span class="n">fh</span><span class="p">,</span> <span class="n">abs_path</span> <span class="o">=</span> <span class="n">mkstemp</span><span class="p">()</span>
+    <span class="k">with</span> <span class="n">fdopen</span><span class="p">(</span><span class="n">fh</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">new_file</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">old_file</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">old_file</span><span class="p">:</span>
+                <span class="n">new_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">subst</span><span class="p">))</span>
+    <span class="c1"># Copy the file permissions from the old file to the new file</span>
+    <span class="n">copymode</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">abs_path</span><span class="p">)</span>
+    <span class="c1"># Remove original file</span>
+    <span class="n">remove</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="c1"># Move new file</span>
+    <span class="n">move</span><span class="p">(</span><span class="n">abs_path</span><span class="p">,</span> <span class="n">file_path</span><span class="p">)</span></div>
+
+
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">besos</span><span class="w"> </span><span class="kn">import</span> <span class="n">eppy_funcs</span> <span class="k">as</span> <span class="n">ef</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">besos.eplus_funcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_idf_version</span><span class="p">,</span> <span class="n">run_building</span>
+
+
+<div class="viewcode-block" id="print_available_outputs_mod">
+<a class="viewcode-back" href="../../accim.html#accim.utils.print_available_outputs_mod">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">print_available_outputs_mod</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">building</span><span class="p">,</span>
+            <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">frequency</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A modified version of besos&#39; print_available_outputs function.</span>
+
+<span class="sd">        :param building: The besos or eppy idf class instance.</span>
+<span class="sd">        :param version: Deprecated.</span>
+<span class="sd">        :param name:</span>
+<span class="sd">        :param frequency:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># backwards compatibility</span>
+        <span class="k">if</span> <span class="n">version</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;the version argument is deprecated for print_available_outputs,&quot;</span>
+                <span class="s2">&quot; and will be removed in the future&quot;</span><span class="p">,</span>
+                <span class="ne">FutureWarning</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">assert</span> <span class="n">version</span> <span class="o">==</span> <span class="n">get_idf_version</span><span class="p">(</span><span class="n">building</span><span class="p">),</span> <span class="s2">&quot;Incorrect version&quot;</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">frequency</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">frequency</span> <span class="o">=</span> <span class="n">frequency</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">run_building</span><span class="p">(</span><span class="n">building</span><span class="p">,</span> <span class="n">stdout_mode</span><span class="o">=</span><span class="s2">&quot;Verbose&quot;</span><span class="p">,</span> <span class="n">out_dir</span><span class="o">=</span><span class="s1">&#39;available_outputs&#39;</span><span class="p">)</span>
+        <span class="n">outputlist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">frequency</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="n">frequency</span><span class="p">:</span>
+                    <span class="k">continue</span>
+            <span class="k">elif</span> <span class="n">frequency</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="n">frequency</span><span class="p">:</span>
+                    <span class="k">continue</span>
+            <span class="c1"># print(list(key))</span>
+            <span class="n">outputlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">variablereaderlist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meterreaderlist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">outputlist</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="s1">&#39;,&#39;</span> <span class="ow">in</span> <span class="n">outputlist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">outputlist</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">outputlist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="n">outputlist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="n">outputlist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+                <span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">variablereaderlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">outputlist</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">meterreaderlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">outputlist</span><span class="p">[</span><span class="n">i</span><span class="p">])</span></div>
+
+        <span class="c1"># return outputlist, self.meterreaderlist, self.variablereaderlist</span>
+
+
+<span class="c1"># available_outputs = print_available_outputs_mod(building)</span>
+
+<span class="c1"># for i in range(len(available_outputs)):</span>
+<span class="c1">#     if &#39;,&#39; in available_outputs[i][0]:</span>
+<span class="c1">#         available_outputs[i] = [</span>
+<span class="c1">#             available_outputs[i][0].split(&#39;,&#39;)[0],</span>
+<span class="c1">#             available_outputs[i][0].split(&#39;,&#39;)[1],</span>
+<span class="c1">#             available_outputs[i][1]</span>
+<span class="c1">#         ]</span>
+
+<div class="viewcode-block" id="transform_ddmm_to_int">
+<a class="viewcode-back" href="../../accim.html#accim.utils.transform_ddmm_to_int">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">transform_ddmm_to_int</span><span class="p">(</span><span class="n">string_date</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function converts a date string in the format &quot;dd/mm&quot; to the day of the year as an integer.</span>
+
+<span class="sd">    :param string_date: A string representing the date in format &quot;dd/mm&quot;</span>
+<span class="sd">    :return: The day of the year as an integer</span>
+<span class="sd">    :rtype: int</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">num_date</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">num</span><span class="p">)</span> <span class="k">for</span> <span class="n">num</span> <span class="ow">in</span> <span class="n">string_date</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">))</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">date</span>
+    <span class="n">day_of_year</span> <span class="o">=</span> <span class="n">date</span><span class="p">(</span><span class="mi">2007</span><span class="p">,</span> <span class="n">num_date</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">num_date</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">timetuple</span><span class="p">()</span><span class="o">.</span><span class="n">tm_yday</span>
+    <span class="k">return</span> <span class="n">day_of_year</span></div>
+
+
+
+<div class="viewcode-block" id="remove_accents">
+<a class="viewcode-back" href="../../accim.html#accim.utils.remove_accents">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">remove_accents</span><span class="p">(</span><span class="n">input_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">unidecode</span><span class="p">(</span><span class="n">input_str</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="remove_accents_in_idf">
+<a class="viewcode-back" href="../../accim.html#accim.utils.remove_accents_in_idf">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">remove_accents_in_idf</span><span class="p">(</span><span class="n">idf_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Replaces all letters with accent with the same letter without accent.</span>
+
+<span class="sd">    :type idf_path: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">idf_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">content</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+    <span class="n">content_without_accents</span> <span class="o">=</span> <span class="n">remove_accents</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">idf_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">content_without_accents</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_accim_args">
+<a class="viewcode-back" href="../../accim.html#accim.utils.get_accim_args">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_accim_args</span><span class="p">(</span><span class="n">idf_object</span><span class="p">:</span> <span class="n">besos</span><span class="o">.</span><span class="n">IDF_class</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Collects all the EnergyManagementSystem:Program Program lines used to</span>
+<span class="sd">    set the values for the arguments of ACCIS, and saves them in a dictionary.</span>
+
+<span class="sd">    :param idf_object: the besos.IDF_class instance</span>
+<span class="sd">    :return: a dictionary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># set_input_data = [i for i in idf_object.idfobjects[&#39;EnergyManagementSystem:Program&#39;] if i.Name.lower() == &#39;setinputdata&#39;][0]</span>
+    <span class="c1"># set_vof_input_data = [i for i in idf_object.idfobjects[&#39;EnergyManagementSystem:Program&#39;] if i.Name.lower() == &#39;setvofinputdata&#39;][0]</span>
+    <span class="c1"># applycat = [i for i in idf_object.idfobjects[&#39;EnergyManagementSystem:Program&#39;] if i.Name.lower() == &#39;applycat&#39;][0]</span>
+    <span class="c1"># setast = [i for i in idf_object.idfobjects[&#39;EnergyManagementSystem:Program&#39;] if i.Name.lower() == &#39;setast&#39;][0]</span>
+    <span class="c1"># setapplimits = [i for i in idf_object.idfobjects[&#39;EnergyManagementSystem:Program&#39;] if i.Name.lower() == &#39;setapplimits&#39;][0]</span>
+    <span class="c1"># other_args = {&#39;SetpointAcc&#39;: setast.Program_Line_1}</span>
+    <span class="c1"># cust_ast_args = {</span>
+    <span class="c1">#     &#39;ACSToffset&#39;: applycat.Program_Line_4,</span>
+    <span class="c1">#     &#39;AHSToffset&#39;: applycat.Program_Line_5,</span>
+    <span class="c1">#     &#39;m&#39;: setast.Program_Line_2,</span>
+    <span class="c1">#     &#39;n&#39;: setast.Program_Line_3,</span>
+    <span class="c1">#     &#39;ACSTaul&#39;: setapplimits.Program_Line_2,</span>
+    <span class="c1">#     &#39;ACSTall&#39;: setapplimits.Program_Line_3,</span>
+    <span class="c1">#     &#39;AHSTaul&#39;: setapplimits.Program_Line_4,</span>
+    <span class="c1">#     &#39;AHSTall&#39;: setapplimits.Program_Line_5,</span>
+    <span class="c1"># }</span>
+    <span class="c1"># accim_args = {</span>
+    <span class="c1">#     &#39;SetInputData&#39;: set_input_data,</span>
+    <span class="c1">#     &#39;SetVOFinputData&#39;: set_vof_input_data,</span>
+    <span class="c1">#     &#39;CustAST&#39;: cust_ast_args,</span>
+    <span class="c1">#     &#39;other&#39;: other_args</span>
+    <span class="c1"># }</span>
+    <span class="c1"># return accim_args</span>
+
+    <span class="c1"># Remove the first two lines and the last line with an empty string</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">program_to_dict</span><span class="p">(</span><span class="n">program</span><span class="p">):</span>
+        <span class="n">program</span> <span class="o">=</span> <span class="n">program</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+
+        <span class="c1"># Initialize an empty dictionary</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># Iterate over each line and extract the parameter name and value</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">program</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;set&quot;</span><span class="p">):</span>
+                <span class="n">parts</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Split only at the first occurrence of &quot;=&quot;</span>
+                <span class="c1"># key = parts[0].replace(&quot;set&quot;, &quot;&quot;).strip()</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">4</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c1"># Evaluate the expression to get the actual value</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">pass</span>
+                <span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+        <span class="k">return</span> <span class="n">parameters</span>
+
+    <span class="n">programs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;SetInputData&#39;</span><span class="p">,</span> <span class="s1">&#39;SetVOFinputData&#39;</span><span class="p">]:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">p</span><span class="o">.</span><span class="n">lower</span><span class="p">()][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">obj</span>
+            <span class="n">programs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">p</span><span class="p">:</span> <span class="n">program_to_dict</span><span class="p">(</span><span class="n">data</span><span class="p">)})</span>
+
+        <span class="n">setast</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;setast&#39;</span><span class="o">.</span><span class="n">lower</span><span class="p">()][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">obj</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span>
+        <span class="n">programs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;SetAST&#39;</span><span class="p">:</span> <span class="n">program_to_dict</span><span class="p">(</span><span class="n">setast</span><span class="p">)})</span>
+
+        <span class="n">applycat</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;applycat&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">setast</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;setast&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">setapplimits</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;setapplimits&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">cust_ast_args</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">&#39;x&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;x&#39;</span><span class="p">,</span>
+            <span class="n">applycat</span><span class="o">.</span><span class="n">Program_Line_4</span><span class="p">,</span>
+            <span class="n">applycat</span><span class="o">.</span><span class="n">Program_Line_5</span><span class="p">,</span>
+            <span class="n">setast</span><span class="o">.</span><span class="n">Program_Line_2</span><span class="p">,</span>
+            <span class="n">setast</span><span class="o">.</span><span class="n">Program_Line_3</span><span class="p">,</span>
+            <span class="n">setapplimits</span><span class="o">.</span><span class="n">Program_Line_2</span><span class="p">,</span>
+            <span class="n">setapplimits</span><span class="o">.</span><span class="n">Program_Line_3</span><span class="p">,</span>
+            <span class="n">setapplimits</span><span class="o">.</span><span class="n">Program_Line_4</span><span class="p">,</span>
+            <span class="n">setapplimits</span><span class="o">.</span><span class="n">Program_Line_5</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">programs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;CustAST&#39;</span><span class="p">:</span> <span class="n">program_to_dict</span><span class="p">(</span><span class="n">cust_ast_args</span><span class="p">)})</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="n">ems_programs</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">idf_object</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;EnergyManagementSystem:Program&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;set_zone_input_data&#39;</span> <span class="ow">in</span> <span class="n">i</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">ems_programs</span><span class="p">:</span>
+            <span class="n">programs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">p</span><span class="o">.</span><span class="n">Name</span><span class="p">:</span> <span class="n">program_to_dict</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">obj</span><span class="p">)})</span>
+
+    <span class="k">return</span> <span class="n">programs</span></div>
+
+
+<div class="viewcode-block" id="get_accim_args_flattened">
+<a class="viewcode-back" href="../../accim.html#accim.utils.get_accim_args_flattened">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_accim_args_flattened</span><span class="p">(</span><span class="n">idf_object</span><span class="p">):</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">accim.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_accim_args</span>
+    <span class="n">accim_args</span> <span class="o">=</span> <span class="n">get_accim_args</span><span class="p">(</span><span class="n">idf_object</span><span class="o">=</span><span class="n">idf_object</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">flatten_dict</span><span class="p">(</span><span class="n">d</span><span class="p">):</span>
+        <span class="n">flat_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_flatten</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">parent_key</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="n">_flatten</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">flat_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+        <span class="n">_flatten</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">flat_dict</span>
+
+    <span class="n">flattened_dict</span> <span class="o">=</span> <span class="n">flatten_dict</span><span class="p">(</span><span class="n">accim_args</span><span class="p">)</span>
+    <span class="c1"># print(flattened_dict)</span>
+    <span class="k">return</span> <span class="n">flattened_dict</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,664 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to accim 0.7.5.2’s documentation! &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9a2dae69"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="1. Requirements" href="1_requirements.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Welcome to accim 0.7.5.2’s documentation!</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="welcome-to-accim-version-s-documentation">
+<h1>Welcome to accim 0.7.5.2’s documentation!<a class="headerlink" href="#welcome-to-accim-version-s-documentation" title="Link to this heading"></a></h1>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="3_quick%20tutorial.html">3. Quick tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="3_quick%20tutorial.html#implementing-adaptive-setpoint-temperatures">3.1 Implementing adaptive setpoint temperatures</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="3_quick%20tutorial.html#short-version">3.1.1 Short version</a></li>
+<li class="toctree-l3"><a class="reference internal" href="3_quick%20tutorial.html#long-version">3.1.2 Long version</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="3_quick%20tutorial.html#other-uses">3.2 Other uses</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="4_detailed%20use.html">4. Detailed use and explanation of arguments</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="4_detailed%20use.html#first-steps">4.1 First steps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="4_detailed%20use.html#setting-up-the-target-idfs">4.2 Setting up the target IDFs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="4_detailed%20use.html#full-list-of-setpoint-temperatures">4.3 Full list of setpoint temperatures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="4_detailed%20use.html#putting-it-into-practice-adaptive-setpoint-temperatures-step-by-step">4.4 Putting it into practice: Adaptive setpoint temperatures step by step</a></li>
+<li class="toctree-l2"><a class="reference internal" href="4_detailed%20use.html#renaming-epw-files-for-later-data-analysis">4.5 Renaming epw files for later data analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="4_detailed%20use.html#running-simulations">4.6 Running simulations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="4_detailed%20use.html#functions-and-methods-for-data-analysis-making-figures-and-tables">4.7 Functions and methods for data analysis; making figures and tables</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="5_troubleshooting.html">5. Troubleshooting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="5_troubleshooting.html#errors-you-might-get">5.1 Errors you might get</a></li>
+<li class="toctree-l2"><a class="reference internal" href="5_troubleshooting.html#general-recommendations">5.2 General recommendations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="7_credits.html">7. Credits</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html#1.-General-use">1. General use</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html#1.1-Short-version">1.1 Short version</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html#1.2-Longer-version">1.2 Longer version</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html#2.-Other-uses">2. Other uses</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html#2.1-Storing-the-addAccis()-class-and-inspecting-the-output-IDFs">2.1 Storing the <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> class and inspecting the output IDFs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html#2.2-Specifying-the-outputs-in-the-IDF">2.2 Specifying the outputs in the IDF</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html#2.2.1-Using-Output_type='custom'">2.2.1 Using <code class="docutils literal notranslate"><span class="pre">Output_type='custom'</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="jupyter_notebooks/addAccis/using_addAccis.html#2.2.2-Using-Output_gen_dataframe-and-Output_take_dataframe">2.2.2 Using <code class="docutils literal notranslate"><span class="pre">Output_gen_dataframe</span></code> and <code class="docutils literal notranslate"><span class="pre">Output_take_dataframe</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html#1.-Data-pre-processing">1. Data pre-processing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html#1.1.-Implementing-ACCIS-(using-addAccis())">1.1. Implementing ACCIS (using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html#1.2.-Preparing-EPW-files-(using-rename_epw_files())">1.2. Preparing EPW files (using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code>)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html#2.-Running-the-simulation-(using-runEp())">2. Running the simulation (using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html#3.-Data-post-processing">3. Data post-processing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html#3.1-Visualizing-the-data">3.1 Visualizing the data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html#3.2-Analysing-the-data">3.2 Analysing the data</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html#1.-Getting-the-full-dataset-of-simulation-results">1. Getting the full dataset of simulation results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html#2.-Filtering-results">2. Filtering results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html#3.-Making-graphs">3. Making graphs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html#3.1-Scatter-plot:">3.1 Scatter plot:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html#3.2-Adaptive-vs-Static-data-scatter-plot:">3.2 Adaptive vs Static data scatter plot:</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="jupyter_notebooks/Table/using_Table.html#4.-Making-tables">4. Making tables</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">accim</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="accim.html">accim package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="accim.data.html">accim.data package</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="accim.data.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.data.postprocessing.html">accim.data.postprocessing package</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.data.postprocessing.html#submodules">Submodules</a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.data.postprocessing.html#module-accim.data.postprocessing.main">accim.data.postprocessing.main module</a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.data.postprocessing.html#module-accim.data.postprocessing.utils">accim.data.postprocessing.utils module</a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.data.postprocessing.html#module-accim.data.postprocessing">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.data.html#submodules">Submodules</a></li>
+<li class="toctree-l5"><a class="reference internal" href="accim.data.html#module-accim.data.data_preprocessing">accim.data.data_preprocessing module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.data.html#accim.data.data_preprocessing.give_address"><code class="docutils literal notranslate"><span class="pre">give_address</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.data.html#accim.data.data_preprocessing.give_address_openssl"><code class="docutils literal notranslate"><span class="pre">give_address_openssl</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.data.html#accim.data.data_preprocessing.give_address_ssl"><code class="docutils literal notranslate"><span class="pre">give_address_ssl</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.data.html#accim.data.data_preprocessing.rename_epw_files"><code class="docutils literal notranslate"><span class="pre">rename_epw_files</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.data.html#module-accim.data.morphing">accim.data.morphing module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.data.html#accim.data.morphing.morph_epws"><code class="docutils literal notranslate"><span class="pre">morph_epws()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.data.html#module-accim.data">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="accim.parametric_and_optimisation.html">accim.parametric_and_optimisation package</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="accim.parametric_and_optimisation.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html">accim.parametric_and_optimisation.funcs_for_besos package</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#submodules">Submodules</a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#module-accim.parametric_and_optimisation.funcs_for_besos.param_accis">accim.parametric_and_optimisation.funcs_for_besos.param_accis module</a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#module-accim.parametric_and_optimisation.funcs_for_besos.param_apmv">accim.parametric_and_optimisation.funcs_for_besos.param_apmv module</a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.funcs_for_besos.html#module-accim.parametric_and_optimisation.funcs_for_besos">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.parametric_and_optimisation.html#submodules">Submodules</a></li>
+<li class="toctree-l5"><a class="reference internal" href="accim.parametric_and_optimisation.html#module-accim.parametric_and_optimisation.main">accim.parametric_and_optimisation.main module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.AccimPredefModelsParamSim"><code class="docutils literal notranslate"><span class="pre">AccimPredefModelsParamSim</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_available_parameters"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.get_available_parameters()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_hourly_df"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.get_hourly_df()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_hourly_df_columns"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.get_hourly_df_columns()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_output_meter_df_from_idf"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.get_output_meter_df_from_idf()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_output_var_df_from_idf"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.get_output_var_df_from_idf()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.get_outputs_df_from_testsim"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.get_outputs_df_from_testsim()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.run_optimisation"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.run_optimisation()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.run_parametric_simulation"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.run_parametric_simulation()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_full_factorial"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.sampling_full_factorial()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_full_set"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.sampling_full_set()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.sampling_lhs"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.sampling_lhs()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_evaluator"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.set_evaluator()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_output_met_objects_to_idf"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.set_output_met_objects_to_idf()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_output_var_df_to_idf"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.set_output_var_df_to_idf()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_outputs_for_simulation"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.set_outputs_for_simulation()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_parameters"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.set_parameters()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.OptimParamSimulation.set_problem"><code class="docutils literal notranslate"><span class="pre">OptimParamSimulation.set_problem()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.get_mdd_file_as_df"><code class="docutils literal notranslate"><span class="pre">get_mdd_file_as_df()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.get_rdd_file_as_df"><code class="docutils literal notranslate"><span class="pre">get_rdd_file_as_df()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.main.parse_mtd_file"><code class="docutils literal notranslate"><span class="pre">parse_mtd_file()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.parametric_and_optimisation.html#module-accim.parametric_and_optimisation.objectives">accim.parametric_and_optimisation.objectives module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.objectives.average_results"><code class="docutils literal notranslate"><span class="pre">average_results()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.objectives.return_time_series"><code class="docutils literal notranslate"><span class="pre">return_time_series()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.objectives.sum_results"><code class="docutils literal notranslate"><span class="pre">sum_results()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.parametric_and_optimisation.html#module-accim.parametric_and_optimisation.parameters">accim.parametric_and_optimisation.parameters module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ASTtol"><code class="docutils literal notranslate"><span class="pre">ASTtol</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ASTtol.modify"><code class="docutils literal notranslate"><span class="pre">ASTtol.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CAT"><code class="docutils literal notranslate"><span class="pre">CAT</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CAT.modify"><code class="docutils literal notranslate"><span class="pre">CAT.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CATcoolOffset"><code class="docutils literal notranslate"><span class="pre">CATcoolOffset</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CATcoolOffset.modify"><code class="docutils literal notranslate"><span class="pre">CATcoolOffset.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CATheatOffset"><code class="docutils literal notranslate"><span class="pre">CATheatOffset</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CATheatOffset.modify"><code class="docutils literal notranslate"><span class="pre">CATheatOffset.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ComfMod"><code class="docutils literal notranslate"><span class="pre">ComfMod</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ComfMod.modify"><code class="docutils literal notranslate"><span class="pre">ComfMod.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ComfStand"><code class="docutils literal notranslate"><span class="pre">ComfStand</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.ComfStand.modify"><code class="docutils literal notranslate"><span class="pre">ComfStand.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CoolSeasonEnd"><code class="docutils literal notranslate"><span class="pre">CoolSeasonEnd</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CoolSeasonEnd.modify"><code class="docutils literal notranslate"><span class="pre">CoolSeasonEnd.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CoolSeasonStart"><code class="docutils literal notranslate"><span class="pre">CoolSeasonStart</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CoolSeasonStart.modify"><code class="docutils literal notranslate"><span class="pre">CoolSeasonStart.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSTall"><code class="docutils literal notranslate"><span class="pre">CustAST_ACSTall</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSTall.modify"><code class="docutils literal notranslate"><span class="pre">CustAST_ACSTall.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSTaul"><code class="docutils literal notranslate"><span class="pre">CustAST_ACSTaul</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSTaul.modify"><code class="docutils literal notranslate"><span class="pre">CustAST_ACSTaul.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSToffset"><code class="docutils literal notranslate"><span class="pre">CustAST_ACSToffset</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ACSToffset.modify"><code class="docutils literal notranslate"><span class="pre">CustAST_ACSToffset.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSTall"><code class="docutils literal notranslate"><span class="pre">CustAST_AHSTall</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSTall.modify"><code class="docutils literal notranslate"><span class="pre">CustAST_AHSTall.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSTaul"><code class="docutils literal notranslate"><span class="pre">CustAST_AHSTaul</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSTaul.modify"><code class="docutils literal notranslate"><span class="pre">CustAST_AHSTaul.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSToffset"><code class="docutils literal notranslate"><span class="pre">CustAST_AHSToffset</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_AHSToffset.modify"><code class="docutils literal notranslate"><span class="pre">CustAST_AHSToffset.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASTall"><code class="docutils literal notranslate"><span class="pre">CustAST_ASTall</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASTall.modify"><code class="docutils literal notranslate"><span class="pre">CustAST_ASTall.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASTaul"><code class="docutils literal notranslate"><span class="pre">CustAST_ASTaul</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASTaul.modify"><code class="docutils literal notranslate"><span class="pre">CustAST_ASTaul.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASToffset"><code class="docutils literal notranslate"><span class="pre">CustAST_ASToffset</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_ASToffset.modify"><code class="docutils literal notranslate"><span class="pre">CustAST_ASToffset.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_m"><code class="docutils literal notranslate"><span class="pre">CustAST_m</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_m.modify"><code class="docutils literal notranslate"><span class="pre">CustAST_m.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_n"><code class="docutils literal notranslate"><span class="pre">CustAST_n</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.CustAST_n.modify"><code class="docutils literal notranslate"><span class="pre">CustAST_n.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.HVACmode"><code class="docutils literal notranslate"><span class="pre">HVACmode</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.HVACmode.modify"><code class="docutils literal notranslate"><span class="pre">HVACmode.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MaxTempDiffVOF"><code class="docutils literal notranslate"><span class="pre">MaxTempDiffVOF</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MaxTempDiffVOF.modify"><code class="docutils literal notranslate"><span class="pre">MaxTempDiffVOF.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MaxWindSpeed"><code class="docutils literal notranslate"><span class="pre">MaxWindSpeed</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MaxWindSpeed.modify"><code class="docutils literal notranslate"><span class="pre">MaxWindSpeed.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MinOToffset"><code class="docutils literal notranslate"><span class="pre">MinOToffset</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MinOToffset.modify"><code class="docutils literal notranslate"><span class="pre">MinOToffset.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MinTempDiffVOF"><code class="docutils literal notranslate"><span class="pre">MinTempDiffVOF</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MinTempDiffVOF.modify"><code class="docutils literal notranslate"><span class="pre">MinTempDiffVOF.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MultiplierVOF"><code class="docutils literal notranslate"><span class="pre">MultiplierVOF</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.MultiplierVOF.modify"><code class="docutils literal notranslate"><span class="pre">MultiplierVOF.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.Parameter"><code class="docutils literal notranslate"><span class="pre">Parameter</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.Parameter.modify"><code class="docutils literal notranslate"><span class="pre">Parameter.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.SetpointAcc"><code class="docutils literal notranslate"><span class="pre">SetpointAcc</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.SetpointAcc.modify"><code class="docutils literal notranslate"><span class="pre">SetpointAcc.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.VSToffset"><code class="docutils literal notranslate"><span class="pre">VSToffset</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.VSToffset.modify"><code class="docutils literal notranslate"><span class="pre">VSToffset.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.VentCtrl"><code class="docutils literal notranslate"><span class="pre">VentCtrl</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.VentCtrl.modify"><code class="docutils literal notranslate"><span class="pre">VentCtrl.modify()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.accis_parameter"><code class="docutils literal notranslate"><span class="pre">accis_parameter()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.get_available_params_accim_custom_models"><code class="docutils literal notranslate"><span class="pre">get_available_params_accim_custom_models()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.get_available_params_accim_predef_models"><code class="docutils literal notranslate"><span class="pre">get_available_params_accim_predef_models()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.parameters.get_available_params_apmv_setpoints"><code class="docutils literal notranslate"><span class="pre">get_available_params_apmv_setpoints()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.parametric_and_optimisation.html#module-accim.parametric_and_optimisation.params_dicts">accim.parametric_and_optimisation.params_dicts module</a></li>
+<li class="toctree-l5"><a class="reference internal" href="accim.parametric_and_optimisation.html#module-accim.parametric_and_optimisation.utils">accim.parametric_and_optimisation.utils module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.utils.descriptor_has_options"><code class="docutils literal notranslate"><span class="pre">descriptor_has_options()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.utils.expand_to_hourly_dataframe"><code class="docutils literal notranslate"><span class="pre">expand_to_hourly_dataframe()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.utils.identify_hourly_columns"><code class="docutils literal notranslate"><span class="pre">identify_hourly_columns()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.parametric_and_optimisation.html#accim.parametric_and_optimisation.utils.make_all_combinations"><code class="docutils literal notranslate"><span class="pre">make_all_combinations()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.parametric_and_optimisation.html#module-accim.parametric_and_optimisation">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="accim.run.html">accim.run package</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="accim.run.html#submodules">Submodules</a></li>
+<li class="toctree-l5"><a class="reference internal" href="accim.run.html#module-accim.run.run">accim.run.run module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.run.html#accim.run.run.make_eplaunch_options"><code class="docutils literal notranslate"><span class="pre">make_eplaunch_options()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.run.html#accim.run.run.removefiles"><code class="docutils literal notranslate"><span class="pre">removefiles()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.run.html#accim.run.run.runEp"><code class="docutils literal notranslate"><span class="pre">runEp()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.run.html#module-accim.run">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="accim.sim.html">accim.sim package</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#submodules">Submodules</a></li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accim_Base">accim.sim.accim_Base module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base.addControlFilesObjects"><code class="docutils literal notranslate"><span class="pre">addControlFilesObjects()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base.addOutputEnergyManagementSystem"><code class="docutils literal notranslate"><span class="pre">addOutputEnergyManagementSystem()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base.addOutputVariableDictionaryObject"><code class="docutils literal notranslate"><span class="pre">addOutputVariableDictionaryObject()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base.saveaccim"><code class="docutils literal notranslate"><span class="pre">saveaccim()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base.setComfFieldsPeople"><code class="docutils literal notranslate"><span class="pre">setComfFieldsPeople()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base.setPMVsetpoint"><code class="docutils literal notranslate"><span class="pre">setPMVsetpoint()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accim_Base_EMS">accim.sim.accim_Base_EMS module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.addEMSActuatorsBase"><code class="docutils literal notranslate"><span class="pre">addEMSActuatorsBase()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.addEMSOutputVariableBase"><code class="docutils literal notranslate"><span class="pre">addEMSOutputVariableBase()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.addEMSPCMBase"><code class="docutils literal notranslate"><span class="pre">addEMSPCMBase()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.addEMSProgramsBase"><code class="docutils literal notranslate"><span class="pre">addEMSProgramsBase()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.addEMSSensorsBase"><code class="docutils literal notranslate"><span class="pre">addEMSSensorsBase()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.addGlobVarList"><code class="docutils literal notranslate"><span class="pre">addGlobVarList()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.addIntVarList"><code class="docutils literal notranslate"><span class="pre">addIntVarList()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.addOutputVariablesDetailed"><code class="docutils literal notranslate"><span class="pre">addOutputVariablesDetailed()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.addOutputVariablesSimplified"><code class="docutils literal notranslate"><span class="pre">addOutputVariablesSimplified()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.addOutputVariablesStandard"><code class="docutils literal notranslate"><span class="pre">addOutputVariablesStandard()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.genOutputDataframe"><code class="docutils literal notranslate"><span class="pre">genOutputDataframe()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.makeAverages"><code class="docutils literal notranslate"><span class="pre">makeAverages()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.outputsSpecified"><code class="docutils literal notranslate"><span class="pre">outputsSpecified()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.removeDuplicatedOutputVariables"><code class="docutils literal notranslate"><span class="pre">removeDuplicatedOutputVariables()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.removeExistingOutputVariables"><code class="docutils literal notranslate"><span class="pre">removeExistingOutputVariables()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Base_EMS.takeOutputDataFrame"><code class="docutils literal notranslate"><span class="pre">takeOutputDataFrame()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accim_ExistingHVAC">accim.sim.accim_ExistingHVAC module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_ExistingHVAC.addForscriptSchExistHVAC"><code class="docutils literal notranslate"><span class="pre">addForscriptSchExistHVAC()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accim_ExistingHVAC_EMS">accim.sim.accim_ExistingHVAC_EMS module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_ExistingHVAC_EMS.addEMSSensorsExisHVAC"><code class="docutils literal notranslate"><span class="pre">addEMSSensorsExisHVAC()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accim_IDFgeneration">accim.sim.accim_IDFgeneration module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_IDFgeneration.genIDF"><code class="docutils literal notranslate"><span class="pre">genIDF()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_IDFgeneration.inputData"><code class="docutils literal notranslate"><span class="pre">inputData()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accim_Main">accim.sim.accim_Main module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob"><code class="docutils literal notranslate"><span class="pre">accimJob</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addBaseSchedules"><code class="docutils literal notranslate"><span class="pre">accimJob.addBaseSchedules()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addControlFilesObjects"><code class="docutils literal notranslate"><span class="pre">accimJob.addControlFilesObjects()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addCurveObj"><code class="docutils literal notranslate"><span class="pre">accimJob.addCurveObj()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addDetHVACobj"><code class="docutils literal notranslate"><span class="pre">accimJob.addDetHVACobj()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addEMSActuatorsBase"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSActuatorsBase()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addEMSOutputVariableBase"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSOutputVariableBase()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addEMSPCMBase"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSPCMBase()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addEMSProgramsBase"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSProgramsBase()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addEMSSensorsBase"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSSensorsBase()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addEMSSensorsExisHVAC"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSSensorsExisHVAC()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addEMSSensorsVRFsystem"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSSensorsVRFsystem()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addForscriptSchExistHVAC"><code class="docutils literal notranslate"><span class="pre">accimJob.addForscriptSchExistHVAC()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addForscriptSchVRFsystem"><code class="docutils literal notranslate"><span class="pre">accimJob.addForscriptSchVRFsystem()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addGlobVarList"><code class="docutils literal notranslate"><span class="pre">accimJob.addGlobVarList()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addIntVarList"><code class="docutils literal notranslate"><span class="pre">accimJob.addIntVarList()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addOpTempTherm"><code class="docutils literal notranslate"><span class="pre">accimJob.addOpTempTherm()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addOutputEnergyManagementSystem"><code class="docutils literal notranslate"><span class="pre">accimJob.addOutputEnergyManagementSystem()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addOutputVariableDictionaryObject"><code class="docutils literal notranslate"><span class="pre">accimJob.addOutputVariableDictionaryObject()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addOutputVariablesDetailed"><code class="docutils literal notranslate"><span class="pre">accimJob.addOutputVariablesDetailed()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addOutputVariablesSimplified"><code class="docutils literal notranslate"><span class="pre">accimJob.addOutputVariablesSimplified()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addOutputVariablesStandard"><code class="docutils literal notranslate"><span class="pre">accimJob.addOutputVariablesStandard()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.addVRFsystemSch"><code class="docutils literal notranslate"><span class="pre">accimJob.addVRFsystemSch()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.amend_idf_version_from_dsb"><code class="docutils literal notranslate"><span class="pre">accimJob.amend_idf_version_from_dsb()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.checkVentIsOn"><code class="docutils literal notranslate"><span class="pre">accimJob.checkVentIsOn()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.genIDF"><code class="docutils literal notranslate"><span class="pre">accimJob.genIDF()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.genOutputDataframe"><code class="docutils literal notranslate"><span class="pre">accimJob.genOutputDataframe()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.inputData"><code class="docutils literal notranslate"><span class="pre">accimJob.inputData()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.listdir"><code class="docutils literal notranslate"><span class="pre">accimJob.listdir()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.makeAverages"><code class="docutils literal notranslate"><span class="pre">accimJob.makeAverages()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.numpy"><code class="docutils literal notranslate"><span class="pre">accimJob.numpy</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.outputsSpecified"><code class="docutils literal notranslate"><span class="pre">accimJob.outputsSpecified()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.removeDuplicatedOutputVariables"><code class="docutils literal notranslate"><span class="pre">accimJob.removeDuplicatedOutputVariables()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.removeExistingOutputVariables"><code class="docutils literal notranslate"><span class="pre">accimJob.removeExistingOutputVariables()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.saveaccim"><code class="docutils literal notranslate"><span class="pre">accimJob.saveaccim()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.scan_zones"><code class="docutils literal notranslate"><span class="pre">accimJob.scan_zones()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.setAvailSchOn"><code class="docutils literal notranslate"><span class="pre">accimJob.setAvailSchOn()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.setComfFieldsPeople"><code class="docutils literal notranslate"><span class="pre">accimJob.setComfFieldsPeople()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.setPMVsetpoint"><code class="docutils literal notranslate"><span class="pre">accimJob.setPMVsetpoint()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main.accimJob.takeOutputDataFrame"><code class="docutils literal notranslate"><span class="pre">accimJob.takeOutputDataFrame()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accim_Main_single_idf">accim.sim.accim_Main_single_idf module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob"><code class="docutils literal notranslate"><span class="pre">accimJob</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addBaseSchedules"><code class="docutils literal notranslate"><span class="pre">accimJob.addBaseSchedules()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addControlFilesObjects"><code class="docutils literal notranslate"><span class="pre">accimJob.addControlFilesObjects()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addCurveObj"><code class="docutils literal notranslate"><span class="pre">accimJob.addCurveObj()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addDetHVACobj"><code class="docutils literal notranslate"><span class="pre">accimJob.addDetHVACobj()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addEMSActuatorsBase"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSActuatorsBase()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addEMSOutputVariableBase"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSOutputVariableBase()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addEMSPCMBase"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSPCMBase()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addEMSProgramsBase"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSProgramsBase()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addEMSSensorsBase"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSSensorsBase()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addEMSSensorsExisHVAC"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSSensorsExisHVAC()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addEMSSensorsVRFsystem"><code class="docutils literal notranslate"><span class="pre">accimJob.addEMSSensorsVRFsystem()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addForscriptSchExistHVAC"><code class="docutils literal notranslate"><span class="pre">accimJob.addForscriptSchExistHVAC()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addForscriptSchVRFsystem"><code class="docutils literal notranslate"><span class="pre">accimJob.addForscriptSchVRFsystem()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addGlobVarList"><code class="docutils literal notranslate"><span class="pre">accimJob.addGlobVarList()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addIntVarList"><code class="docutils literal notranslate"><span class="pre">accimJob.addIntVarList()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addOpTempTherm"><code class="docutils literal notranslate"><span class="pre">accimJob.addOpTempTherm()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addOutputEnergyManagementSystem"><code class="docutils literal notranslate"><span class="pre">accimJob.addOutputEnergyManagementSystem()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addOutputVariableDictionaryObject"><code class="docutils literal notranslate"><span class="pre">accimJob.addOutputVariableDictionaryObject()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addOutputVariablesDetailed"><code class="docutils literal notranslate"><span class="pre">accimJob.addOutputVariablesDetailed()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addOutputVariablesSimplified"><code class="docutils literal notranslate"><span class="pre">accimJob.addOutputVariablesSimplified()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addOutputVariablesStandard"><code class="docutils literal notranslate"><span class="pre">accimJob.addOutputVariablesStandard()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.addVRFsystemSch"><code class="docutils literal notranslate"><span class="pre">accimJob.addVRFsystemSch()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.checkVentIsOn"><code class="docutils literal notranslate"><span class="pre">accimJob.checkVentIsOn()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.genOutputDataframe"><code class="docutils literal notranslate"><span class="pre">accimJob.genOutputDataframe()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.listdir"><code class="docutils literal notranslate"><span class="pre">accimJob.listdir()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.makeAverages"><code class="docutils literal notranslate"><span class="pre">accimJob.makeAverages()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.numpy"><code class="docutils literal notranslate"><span class="pre">accimJob.numpy</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.outputsSpecified"><code class="docutils literal notranslate"><span class="pre">accimJob.outputsSpecified()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.removeDuplicatedOutputVariables"><code class="docutils literal notranslate"><span class="pre">accimJob.removeDuplicatedOutputVariables()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.removeExistingOutputVariables"><code class="docutils literal notranslate"><span class="pre">accimJob.removeExistingOutputVariables()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.saveaccim"><code class="docutils literal notranslate"><span class="pre">accimJob.saveaccim()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.scan_zones"><code class="docutils literal notranslate"><span class="pre">accimJob.scan_zones()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.setAvailSchOn"><code class="docutils literal notranslate"><span class="pre">accimJob.setAvailSchOn()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.setComfFieldsPeople"><code class="docutils literal notranslate"><span class="pre">accimJob.setComfFieldsPeople()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.setPMVsetpoint"><code class="docutils literal notranslate"><span class="pre">accimJob.setPMVsetpoint()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accim_Main_single_idf.accimJob.takeOutputDataFrame"><code class="docutils literal notranslate"><span class="pre">accimJob.takeOutputDataFrame()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accim_VRFsystem">accim.sim.accim_VRFsystem module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_VRFsystem.addBaseSchedules"><code class="docutils literal notranslate"><span class="pre">addBaseSchedules()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_VRFsystem.addCurveObj"><code class="docutils literal notranslate"><span class="pre">addCurveObj()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_VRFsystem.addDetHVACobj"><code class="docutils literal notranslate"><span class="pre">addDetHVACobj()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_VRFsystem.addForscriptSchVRFsystem"><code class="docutils literal notranslate"><span class="pre">addForscriptSchVRFsystem()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_VRFsystem.addOpTempTherm"><code class="docutils literal notranslate"><span class="pre">addOpTempTherm()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_VRFsystem.addVRFsystemSch"><code class="docutils literal notranslate"><span class="pre">addVRFsystemSch()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_VRFsystem.checkVentIsOn"><code class="docutils literal notranslate"><span class="pre">checkVentIsOn()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_VRFsystem.setAvailSchOn"><code class="docutils literal notranslate"><span class="pre">setAvailSchOn()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accim_VRFsystem_EMS">accim.sim.accim_VRFsystem_EMS module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accim_VRFsystem_EMS.addEMSSensorsVRFsystem"><code class="docutils literal notranslate"><span class="pre">addEMSSensorsVRFsystem()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accis">accim.sim.accis module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accis.addAccis"><code class="docutils literal notranslate"><span class="pre">addAccis</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accis_single_idf">accim.sim.accis_single_idf module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accis_single_idf.addAccis"><code class="docutils literal notranslate"><span class="pre">addAccis</span></code></a><ul>
+<li class="toctree-l7"><a class="reference internal" href="accim.sim.html#accim.sim.accis_single_idf.addAccis.modifyAccis"><code class="docutils literal notranslate"><span class="pre">addAccis.modifyAccis()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.accis_single_idf_funcs">accim.sim.accis_single_idf_funcs module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accis_single_idf_funcs.addAccis"><code class="docutils literal notranslate"><span class="pre">addAccis()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accis_single_idf_funcs.gen_outputs_df"><code class="docutils literal notranslate"><span class="pre">gen_outputs_df()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accis_single_idf_funcs.modifyAccis"><code class="docutils literal notranslate"><span class="pre">modifyAccis()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.accis_single_idf_funcs.modify_param"><code class="docutils literal notranslate"><span class="pre">modify_param()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.apmv_setpoints">accim.sim.apmv_setpoints module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.apmv_setpoints.add_vrf_system"><code class="docutils literal notranslate"><span class="pre">add_vrf_system()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.apmv_setpoints.apply_apmv_setpoints"><code class="docutils literal notranslate"><span class="pre">apply_apmv_setpoints()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.apmv_setpoints.change_adaptive_coeff"><code class="docutils literal notranslate"><span class="pre">change_adaptive_coeff()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.apmv_setpoints.change_pmv_cooling_setpoint"><code class="docutils literal notranslate"><span class="pre">change_pmv_cooling_setpoint()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.apmv_setpoints.change_pmv_heating_setpoint"><code class="docutils literal notranslate"><span class="pre">change_pmv_heating_setpoint()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.apmv_setpoints.change_pmv_setpoints"><code class="docutils literal notranslate"><span class="pre">change_pmv_setpoints()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.apmv_setpoints.generate_df_from_args"><code class="docutils literal notranslate"><span class="pre">generate_df_from_args()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.apmv_setpoints.set_zones_always_occupied"><code class="docutils literal notranslate"><span class="pre">set_zones_always_occupied()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.chile_funcs">accim.sim.chile_funcs module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.chile_funcs.apply_heating_activation_time_sch"><code class="docutils literal notranslate"><span class="pre">apply_heating_activation_time_sch()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.dicts">accim.sim.dicts module</a></li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#accim-sim-lists-module">accim.sim.lists module</a></li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim.utils">accim.sim.utils module</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.utils.add_vrf_system"><code class="docutils literal notranslate"><span class="pre">add_vrf_system()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="accim.sim.html#accim.sim.utils.scan_zones"><code class="docutils literal notranslate"><span class="pre">scan_zones()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="accim.sim.html#module-accim.sim">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#module-accim.utils">accim.utils module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.amend_idf_version_from_dsb"><code class="docutils literal notranslate"><span class="pre">amend_idf_version_from_dsb()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.get_accim_args"><code class="docutils literal notranslate"><span class="pre">get_accim_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.get_accim_args_flattened"><code class="docutils literal notranslate"><span class="pre">get_accim_args_flattened()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.modify_timesteps"><code class="docutils literal notranslate"><span class="pre">modify_timesteps()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.modify_timesteps_path"><code class="docutils literal notranslate"><span class="pre">modify_timesteps_path()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.print_available_outputs_mod"><code class="docutils literal notranslate"><span class="pre">print_available_outputs_mod</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.reduce_runtime"><code class="docutils literal notranslate"><span class="pre">reduce_runtime()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.remove_accents"><code class="docutils literal notranslate"><span class="pre">remove_accents()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.remove_accents_in_idf"><code class="docutils literal notranslate"><span class="pre">remove_accents_in_idf()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.set_occupancy_to_always"><code class="docutils literal notranslate"><span class="pre">set_occupancy_to_always()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.set_occupancy_to_always_path"><code class="docutils literal notranslate"><span class="pre">set_occupancy_to_always_path()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="accim.html#accim.utils.transform_ddmm_to_int"><code class="docutils literal notranslate"><span class="pre">transform_ddmm_to_int()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="accim.html#module-accim">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">setup module</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+</div>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="1_requirements.html" class="btn btn-neutral float-right" title="1. Requirements" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

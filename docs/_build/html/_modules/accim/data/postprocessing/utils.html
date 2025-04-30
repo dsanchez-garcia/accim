@@ -1,0 +1,280 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.data.postprocessing.utils &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">accim.data.postprocessing.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for accim.data.postprocessing.utils</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Classes and functions to perform data analytics after simulation runs.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="preview_Table_cols">
+<a class="viewcode-back" href="../../../../accim.data.postprocessing.html#accim.data.postprocessing.utils.preview_Table_cols">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">preview_Table_cols</span><span class="p">(</span><span class="n">datasets</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to return the list of EnergyPlus Output:Variable outputs columns</span>
+<span class="sd">    from the first CSV file in the path, suitable to be computed in the class Table,</span>
+<span class="sd">    or the datasets, if entered. It is useful to know the full list of columns in the CSV files from simulation,</span>
+<span class="sd">    so that columns can be filtered using the argument output_cols_to_keep in the class Table.</span>
+
+<span class="sd">    :param datasets: The list of CSV files to be concatenated.</span>
+<span class="sd">    :type datasets: list</span>
+<span class="sd">    :return: The list of columns within the CSV files.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">glob</span>
+    <span class="c1"># Step: generating list of output columns</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">source_files</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">datasets</span> <span class="k">if</span>
+            <span class="s1">&#39;Table.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span>
+            <span class="s1">&#39;Meter.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span>
+            <span class="s1">&#39;Zsz.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span>
+            <span class="s1">&#39;[CSVconcatenated.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span>
+            <span class="s1">&#39;[Rows_not_corr_agg.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span>
+            <span class="s1">&#39;[Rows_with_NaNs.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span>
+        <span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">allfiles</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;*.csv&#39;</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># if path is None:</span>
+        <span class="c1">#     allfiles = [i for i in os.listdir() if i.endswith(&#39;.csv&#39;)]</span>
+        <span class="c1"># else:</span>
+        <span class="c1">#     allfiles = [i for i in os.listdir(path) if i.endswith(&#39;.csv&#39;)]</span>
+        <span class="n">source_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">allfiles</span> <span class="k">if</span>
+                        <span class="s1">&#39;Table.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span>
+                        <span class="s1">&#39;Meter.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span>
+                        <span class="s1">&#39;Zsz.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span>
+                        <span class="s1">&#39;[CSVconcatenated.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span>
+                        <span class="s1">&#39;[Rows_not_corr_agg.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span> <span class="ow">and</span>
+                        <span class="s1">&#39;[Rows_with_NaNs.csv&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">f</span>
+                        <span class="p">]</span>
+    <span class="n">sample_output_cols_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">source_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="n">sample_output_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">sample_output_cols_df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">sample_output_cols</span></div>
+
+
+<div class="viewcode-block" id="genCSVconcatenated">
+<a class="viewcode-back" href="../../../../accim.data.postprocessing.html#accim.data.postprocessing.utils.genCSVconcatenated">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">genCSVconcatenated</span><span class="p">(</span>
+        <span class="n">datasets</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">source_frequency</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">frequency</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_cols_to_keep</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">datasets_per_chunk</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="n">concatenated_csv_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">drop_nan</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to generate concatenated CSV files from a large number of CSV files</span>
+<span class="sd">    resulting from simulation runs.</span>
+<span class="sd">    Useful in cases there are many CSVs, which could cause memory errors.</span>
+
+<span class="sd">    :param list datasets: List of strings containing the names of the</span>
+<span class="sd">        CSV files to be concatenated. If omitted, all CSV files are concatenated.</span>
+<span class="sd">    :type datasets: list</span>
+<span class="sd">    :param source_frequency: Used to inform accim about the frequency of the input CSVs.</span>
+<span class="sd">        Strings can be &#39;timestep&#39;, &#39;hourly&#39;, &#39;daily&#39;, &#39;monthly&#39; or &#39;runperiod&#39;.</span>
+<span class="sd">    :type source_frequency: str</span>
+<span class="sd">    :param frequency: Rows will be aggregated based on this frequency.</span>
+<span class="sd">        Strings can be &#39;timestep&#39;, &#39;hourly&#39;, &#39;daily&#39;, &#39;monthly&#39; or &#39;runperiod&#39;.</span>
+<span class="sd">    :type frequency: str</span>
+<span class="sd">    :param datasets_per_chunk: The number of CSV files for chuck to be concatenated.</span>
+<span class="sd">    :type datasets_per_chunk: int</span>
+<span class="sd">    :param concatenated_csv_name: A string used as the name for the concatenated csv file.</span>
+<span class="sd">    :type concatenated_csv_name: str</span>
+<span class="sd">    :param drop_nan: True to drop nan values.</span>
+<span class="sd">    :type drop_nan: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">accim.data.postprocessing.main</span><span class="w"> </span><span class="kn">import</span> <span class="n">Table</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">time</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">gc</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+
+    <span class="c1"># freq = &#39;runperiod&#39;</span>
+    <span class="k">if</span> <span class="n">datasets</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">datasets</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span> <span class="k">if</span>
+            <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="s1">&#39;CSVconcatenated&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">i</span>
+            <span class="ow">and</span> <span class="s1">&#39;[Rows_with_NaNs&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">i</span>
+            <span class="ow">and</span> <span class="s1">&#39;[Rows_not_corr_agg&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">i</span>
+        <span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">datasets</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">datasets</span> <span class="k">if</span>
+            <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="s1">&#39;CSVconcatenated&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">i</span>
+            <span class="ow">and</span> <span class="s1">&#39;[Rows_with_NaNs&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">i</span>
+            <span class="ow">and</span> <span class="s1">&#39;[Rows_not_corr_agg&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">i</span>
+        <span class="p">]</span>
+
+    <span class="n">chunklist</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># datasets_per_chunk = 50</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">datasets</span><span class="p">),</span> <span class="n">datasets_per_chunk</span><span class="p">):</span>
+        <span class="n">templist</span> <span class="o">=</span> <span class="n">datasets</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">datasets_per_chunk</span><span class="p">]</span>
+        <span class="n">chunklist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">templist</span><span class="p">)</span>
+
+    <span class="c1"># len(chunklist[-2])</span>
+    <span class="nb">len</span><span class="p">(</span><span class="n">chunklist</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chunklist</span><span class="p">)):</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span>
+            <span class="n">datasets</span><span class="o">=</span><span class="n">chunklist</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+            <span class="n">output_cols_to_keep</span><span class="o">=</span><span class="n">output_cols_to_keep</span><span class="p">,</span>
+            <span class="n">source_frequency</span><span class="o">=</span><span class="n">source_frequency</span><span class="p">,</span>
+            <span class="n">frequency</span><span class="o">=</span><span class="n">frequency</span><span class="p">,</span>
+            <span class="n">frequency_agg_func</span><span class="o">=</span><span class="s1">&#39;sum&#39;</span><span class="p">,</span>
+            <span class="n">standard_outputs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">concatenated_csv_name</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">concatenated_csv_name</span><span class="si">}</span><span class="s1">_Part</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+            <span class="n">drop_nan</span><span class="o">=</span><span class="n">drop_nan</span>
+        <span class="p">)</span>
+        <span class="k">del</span> <span class="n">z</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+    <span class="n">datasetlist_to_merge</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span> <span class="k">if</span>
+        <span class="n">i</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.csv&#39;</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">concatenated_csv_name</span><span class="si">}</span><span class="s1">_Part&#39;</span> <span class="ow">in</span> <span class="n">i</span>
+        <span class="ow">and</span> <span class="s1">&#39;[Rows_with_NaNs&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">i</span>
+        <span class="ow">and</span> <span class="s1">&#39;[Rows_not_corr_agg&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">i</span>
+        <span class="ow">and</span> <span class="n">frequency</span> <span class="ow">in</span> <span class="n">i</span>
+    <span class="p">]</span>
+
+    <span class="n">merged_datasets</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">datasetlist_to_merge</span><span class="p">:</span>
+        <span class="n">tempdf</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">merged_datasets</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tempdf</span><span class="p">)</span>
+
+    <span class="n">concatenated_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">merged_datasets</span><span class="p">)</span>
+    <span class="n">concatenated_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">concatenated_csv_name</span><span class="si">}</span><span class="s1">[srcfreq-</span><span class="si">{</span><span class="n">source_frequency</span><span class="si">}</span><span class="s1">[freq-</span><span class="si">{</span><span class="n">frequency</span><span class="si">}</span><span class="s1">[frequency_agg_func-sum[standard_outputs-True[CSVconcatenated.csv&#39;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">datasetlist_to_merge</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+    <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Time taken in seconds:&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span></div>
+
+
+    <span class="c1"># todo pop up when process ends; by default True</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,512 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>accim.sim.accim_Main_single_idf &mdash; accim  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            accim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../1_requirements.html">1. Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../2_installation.html">2. Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../3_quick%20tutorial.html">3. Quick tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../4_detailed%20use.html">4. Detailed use and explanation of arguments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../5_troubleshooting.html">5. Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../6_citation.html">6. Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../7_credits.html">7. Credits</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">How-to Guides:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/addAccis/using_addAccis.html">Using <code class="docutils literal notranslate"><span class="pre">addAccis()</span></code> to apply adaptive setpoint temperatures</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html">Full example of adaptive setpoint temperature simulation: IBPSA webinar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/rename_epw_files/using_rename_epw_files.html">Using <code class="docutils literal notranslate"><span class="pre">rename_epw_files()</span></code> to rename the EPWs for proper data analysis after simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/runEp/using_runEp.html">Using <code class="docutils literal notranslate"><span class="pre">runEp()</span></code> to directly run simulations with EnergyPlus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../jupyter_notebooks/Table/using_Table.html">Using the class <code class="docutils literal notranslate"><span class="pre">Table()</span></code> for data analysis</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Further information:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">accim</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Documentation for previous versions:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../8_pdfs_for_prev_versions.html">Documentation for previous versions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">accim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">accim.sim.accim_Main_single_idf</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for accim.sim.accim_Main_single_idf</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Class for accim.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="accimJob">
+<a class="viewcode-back" href="../../../accim.sim.html#accim.sim.accim_Main_single_idf.accimJob">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">accimJob</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class to start the process to add the class ``accim.sim.accis.addAccis``.</span>
+
+<span class="sd">    :param idf_class_instance: the filename of the idf</span>
+<span class="sd">    :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param EnergyPlus_version: Inherited from class ``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param TempCtrl: Inherited from class ``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``</span>
+<span class="sd">    :param accimNotWorking: True if problems detected in class ``accim.sim.accis.addAccis``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">os</span><span class="w"> </span><span class="kn">import</span> <span class="n">listdir</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span>
+
+    <span class="c1"># from accim.sim.accim_IDFgeneration import \</span>
+    <span class="c1">#     inputData,\</span>
+    <span class="c1">#     genIDF</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">accim.sim.accim_Base</span><span class="w"> </span><span class="kn">import</span> \
+        <span class="n">setComfFieldsPeople</span><span class="p">,</span> \
+        <span class="n">saveaccim</span><span class="p">,</span> \
+        <span class="n">setPMVsetpoint</span><span class="p">,</span> \
+        <span class="n">addControlFilesObjects</span><span class="p">,</span> \
+        <span class="n">addOutputVariableDictionaryObject</span><span class="p">,</span> \
+        <span class="n">addOutputEnergyManagementSystem</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">accim.sim.accim_Base_EMS</span><span class="w"> </span><span class="kn">import</span> \
+        <span class="n">addEMSActuatorsBase</span><span class="p">,</span> \
+        <span class="n">addEMSOutputVariableBase</span><span class="p">,</span> \
+        <span class="n">addEMSPCMBase</span><span class="p">,</span> \
+        <span class="n">addEMSProgramsBase</span><span class="p">,</span> \
+        <span class="n">addEMSSensorsBase</span><span class="p">,</span> \
+        <span class="n">addGlobVarList</span><span class="p">,</span> \
+        <span class="n">addIntVarList</span><span class="p">,</span> \
+        <span class="n">addOutputVariablesStandard</span><span class="p">,</span> \
+        <span class="n">addOutputVariablesSimplified</span><span class="p">,</span> \
+        <span class="n">addOutputVariablesDetailed</span><span class="p">,</span> \
+        <span class="n">removeExistingOutputVariables</span><span class="p">,</span> \
+        <span class="n">removeDuplicatedOutputVariables</span><span class="p">,</span> \
+        <span class="n">outputsSpecified</span><span class="p">,</span> \
+        <span class="n">genOutputDataframe</span><span class="p">,</span> \
+        <span class="n">takeOutputDataFrame</span><span class="p">,</span> \
+        <span class="n">makeAverages</span>
+
+    <span class="kn">from</span><span class="w"> </span><span class="nn">accim.sim.accim_ExistingHVAC</span><span class="w"> </span><span class="kn">import</span> \
+        <span class="n">addForscriptSchExistHVAC</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">accim.sim.accim_ExistingHVAC_EMS</span><span class="w"> </span><span class="kn">import</span> \
+        <span class="n">addEMSSensorsExisHVAC</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">accim.sim.accim_VRFsystem</span><span class="w"> </span><span class="kn">import</span> \
+        <span class="n">addBaseSchedules</span><span class="p">,</span> \
+        <span class="n">addCurveObj</span><span class="p">,</span> \
+        <span class="n">addDetHVACobj</span><span class="p">,</span> \
+        <span class="n">addForscriptSchVRFsystem</span><span class="p">,</span> \
+        <span class="n">addOpTempTherm</span><span class="p">,</span> \
+        <span class="n">addVRFsystemSch</span><span class="p">,</span> \
+        <span class="n">checkVentIsOn</span><span class="p">,</span> \
+        <span class="n">setAvailSchOn</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">accim.sim.accim_VRFsystem_EMS</span><span class="w"> </span><span class="kn">import</span> \
+        <span class="n">addEMSSensorsVRFsystem</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">accim.sim.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">scan_zones</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">idf_class_instance</span><span class="p">,</span>
+                 <span class="n">ScriptType</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">EnergyPlus_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">TempCtrl</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">verboseMode</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                 <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">eppy</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">eppy</span><span class="w"> </span><span class="kn">import</span> <span class="n">modeleditor</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">eppy.modeleditor</span><span class="w"> </span><span class="kn">import</span> <span class="n">IDF</span>
+
+        <span class="c1"># IDF.setiddname(api_environment.EnergyPlusInputIddPath)</span>
+        <span class="c1"># idf1 = IDF(api_environment.EnergyPlusInputIdfPath)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span> <span class="o">=</span> <span class="n">idf_class_instance</span>
+
+        <span class="c1"># Scanning occupied zones using func</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scan_zones</span><span class="p">()</span>
+        <span class="c1"># # Scanning occupied zones</span>
+        <span class="c1"># self.occupiedZones_orig = []</span>
+        <span class="c1">#</span>
+        <span class="c1"># # Check if model comes from OpenStudio</span>
+        <span class="c1">#</span>
+        <span class="c1"># # Check if ZoneList or SpaceList are used</span>
+        <span class="c1"># occupiedZones_orig_osm = []</span>
+        <span class="c1">#</span>
+        <span class="c1"># self.spacelist_use = False</span>
+        <span class="c1"># try:</span>
+        <span class="c1">#     if len(self.idf1.idfobjects[&#39;SPACELIST&#39;]) &gt; 0:</span>
+        <span class="c1">#         self.spacelist_use = True</span>
+        <span class="c1">#         self.spacenames_for_ems_uniquekey = []</span>
+        <span class="c1">#         self.spacenames_for_ems_name = []</span>
+        <span class="c1">#         self.spacenames_for_ems_uniquekey_people = []</span>
+        <span class="c1">#         self.zonenames_for_ems_with_sl = []</span>
+        <span class="c1">#         for people in self.idf1.idfobjects[&#39;PEOPLE&#39;]:</span>
+        <span class="c1">#             for spacelist in [i for i in self.idf1.idfobjects[&#39;SPACELIST&#39;] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:</span>
+        <span class="c1">#                 for space in [i for i in self.idf1.idfobjects[&#39;SPACE&#39;] if i.Space_Type == spacelist.Name]:</span>
+        <span class="c1">#                     self.spacenames_for_ems_uniquekey.append(f&#39;{space.Name} {spacelist.Name}&#39;)</span>
+        <span class="c1">#                     self.spacenames_for_ems_name.append(space.Name)</span>
+        <span class="c1">#                     self.spacenames_for_ems_uniquekey_people.append(f&#39;{space.Name} {people.Name}&#39;)</span>
+        <span class="c1">#                     occupiedZones_orig_osm.append(space.Zone_Name)</span>
+        <span class="c1">#                     for zone in [i for i in self.idf1.idfobjects[&#39;ZONE&#39;] if space.Zone_Name == i.Name]:</span>
+        <span class="c1">#                         self.zonenames_for_ems_with_sl.append(zone.Name)</span>
+        <span class="c1"># except KeyError:</span>
+        <span class="c1">#     idd = &#39;-&#39;.join([str(i) for i in self.idf1.idd_version])</span>
+        <span class="c1">#     print(&#39;Searching Spacelist objects returned KeyError. &#39;</span>
+        <span class="c1">#           f&#39;That means these are not supported in the EnergyPlus version {idd}&#39;)</span>
+        <span class="c1">#</span>
+        <span class="c1"># # occupiedZones_orig_osm = []</span>
+        <span class="c1"># # if len([h for h in self.idf1.idfobjects[&#39;zonelist&#39;]]) &gt; 0:</span>
+        <span class="c1"># #     if len(self.idf1.idfobjects[&#39;zone&#39;]) == 1:</span>
+        <span class="c1"># #         no_of_zones = range(1, 2)</span>
+        <span class="c1"># #     else:</span>
+        <span class="c1"># #         no_of_zones = range(1, len(self.idf1.idfobjects[&#39;zone&#39;]))</span>
+        <span class="c1"># #</span>
+        <span class="c1"># #     for i in no_of_zones:</span>
+        <span class="c1"># #         for j in self.idf1.idfobjects[&#39;zonelist&#39;]:</span>
+        <span class="c1"># #             for k in self.idf1.idfobjects[&#39;zone&#39;]:</span>
+        <span class="c1"># #                 if k.Name in j[f&#39;Zone_{i}_Name&#39;]:</span>
+        <span class="c1"># #                     occupiedZones_orig_osm.append(k.Name)</span>
+        <span class="c1"># #</span>
+        <span class="c1"># #     # for i in self.idf1.idfobjects[&#39;zone&#39;]:</span>
+        <span class="c1"># #     #     if all(i.Name not in [j for j in occupiedZones_orig_osm]):</span>
+        <span class="c1"># #     #         occupiedZones_orig_osm.append(i.Name)</span>
+        <span class="c1">#</span>
+        <span class="c1"># occupiedZones_orig_dsb = []</span>
+        <span class="c1"># for i in self.idf1.idfobjects[&#39;ZONE&#39;]:</span>
+        <span class="c1">#     for k in self.idf1.idfobjects[&#39;PEOPLE&#39;]:</span>
+        <span class="c1">#         try:</span>
+        <span class="c1">#             if i.Name == k.Zone_or_ZoneList_or_Space_or_SpaceList_Name:</span>
+        <span class="c1">#                 occupiedZones_orig_dsb.append(i.Name.upper())</span>
+        <span class="c1">#         except eppy.bunch_subclass.BadEPFieldError:</span>
+        <span class="c1">#             if i.Name == k.Zone_or_ZoneList_Name:</span>
+        <span class="c1">#                 occupiedZones_orig_dsb.append(i.Name.upper())</span>
+        <span class="c1">#</span>
+        <span class="c1"># if self.spacelist_use:</span>
+        <span class="c1">#     self.occupiedZones_orig = occupiedZones_orig_osm</span>
+        <span class="c1">#     self.occupiedZones = [i.replace(&#39; &#39;, &#39;_&#39;) for i in self.occupiedZones_orig]</span>
+        <span class="c1">#     self.origin_dsb = False</span>
+        <span class="c1">#     self.ems_objs_name = self.spacenames_for_ems_name</span>
+        <span class="c1">#     self.ems_objs_key = self.spacenames_for_ems_uniquekey</span>
+        <span class="c1">#     self.ems_zonenames = self.zonenames_for_ems_with_sl</span>
+        <span class="c1">#     self.ems_zonenames_underscore = [i.replace(&#39; &#39;, &#39;_&#39;) for i in self.ems_zonenames]</span>
+        <span class="c1"># else:</span>
+        <span class="c1">#     self.occupiedZones_orig = occupiedZones_orig_dsb</span>
+        <span class="c1">#     self.occupiedZones = [i.replace(&#39;:&#39;, &#39;_&#39;) for i in self.occupiedZones_orig]</span>
+        <span class="c1">#     self.origin_dsb = True</span>
+        <span class="c1">#     self.ems_objs_name = self.occupiedZones</span>
+        <span class="c1">#     self.ems_objs_key = self.occupiedZones_orig</span>
+        <span class="c1">#     self.ems_zonenames = self.occupiedZones_orig</span>
+        <span class="c1">#     self.ems_zonenames_underscore = self.occupiedZones_orig</span>
+
+
+        <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The occupied zones in the model </span><span class="si">{</span><span class="n">idf_class_instance</span><span class="si">}</span><span class="s1"> are:&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">occupiedZones_orig</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ismixedmode</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">ScriptType</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;vrfsystem_mm&#39;</span> <span class="ow">or</span>
+            <span class="n">ScriptType</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;vrf_mm&#39;</span> <span class="ow">or</span>
+            <span class="n">ScriptType</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;existinghvac_mm&#39;</span> <span class="ow">or</span>
+            <span class="n">ScriptType</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;ex_mm&#39;</span>
+        <span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ismixedmode</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">windownamelist_orig</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="n">window</span><span class="o">.</span><span class="n">Name</span> <span class="k">for</span> <span class="n">window</span> <span class="ow">in</span>
+                      <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span>
+                      <span class="p">[</span><span class="s1">&#39;AirflowNetwork:MultiZone:Component:DetailedOpening&#39;</span><span class="p">]</span>
+                      <span class="k">if</span> <span class="n">window</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_Win&#39;</span><span class="p">)</span>
+                      <span class="ow">or</span> <span class="n">window</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_Door&#39;</span><span class="p">)</span>
+                      <span class="p">]:</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">occupiedZones_orig</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">windownamelist_orig</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">windownamelist</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">windownamelist_orig</span><span class="p">]</span>
+
+            <span class="c1"># print(self.windownamelist_orig)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">windownamelist_orig_split</span> <span class="o">=</span> <span class="p">([</span><span class="n">i</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">windownamelist_orig</span><span class="p">])</span>
+            <span class="c1"># print(self.windownamelist_orig_split)</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The windows and doors in the model </span><span class="si">{</span><span class="n">idf_class_instance</span><span class="si">}</span><span class="s1"> are:&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">windownamelist</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s1">&#39;vrf&#39;</span> <span class="ow">in</span> <span class="n">ScriptType</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zonenames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">occupiedZones</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">zonenames_orig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">occupiedZones_orig</span>
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The zones in the model </span><span class="si">{</span><span class="n">idf_class_instance</span><span class="si">}</span><span class="s1"> are:&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">zonenames</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="s1">&#39;ex&#39;</span> <span class="ow">in</span> <span class="n">ScriptType</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="n">TSPtypes</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s1">&#39;ThermostatSetpoint:SingleHeating&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;ThermostatSetpoint:SingleCooling&#39;</span><span class="p">,</span>
+                <span class="c1"># ThermostatSetpoint:SingleHeatingOrCooling objects are not supported</span>
+                <span class="c1"># &#39;ThermostatSetpoint:SingleHeatingOrCooling&#39;,</span>
+                <span class="s1">&#39;ThermostatSetpoint:DualSetpoint&#39;</span>
+            <span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ZCTlist</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;ZONECONTROL:THERMOSTAT&#39;</span><span class="p">]]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">TSPtypes</span><span class="p">)):</span>
+                <span class="n">temp1</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">temp2</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">temp3</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="n">TSPtypes</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ZCTlist</span><span class="p">)):</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ZCTlist</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">Control_1_Object_Type</span> <span class="ow">in</span> <span class="n">TSPtypes</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                            <span class="n">temp1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ZCTlist</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">Zone_or_ZoneList_Name</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span>
+                            <span class="k">if</span> <span class="s1">&#39;:&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ZCTlist</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">Zone_or_ZoneList_Name</span><span class="p">:</span>
+                                <span class="n">temp2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ZCTlist</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">Zone_or_ZoneList_Name</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">))</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">temp2</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">i</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="s1">&#39;SPACE&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">Zone_Name</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">ZCTlist</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">Zone_or_ZoneList_Name</span><span class="o">.</span><span class="n">upper</span><span class="p">()][</span><span class="mi">0</span><span class="p">])</span>
+                            <span class="n">temp3</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ZCTlist</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">Control_1_Name</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">TSPtypes</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">temp1</span><span class="p">,</span> <span class="n">temp2</span><span class="p">,</span> <span class="n">temp3</span><span class="p">])</span>
+            <span class="k">del</span> <span class="n">temp1</span><span class="p">,</span> <span class="n">temp2</span><span class="p">,</span> <span class="n">temp3</span>
+
+            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">)):</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">3</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;There are no </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> objects in the model&#39;</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Regarding </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> objects:&#39;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The zones with </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> are:&#39;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;And the existing ThermostatSetpoint objects related to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> are:&#39;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">3</span><span class="p">],</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">zonenames_orig</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="c1"># todo currently all zones regardless the single or dual thermostat object are merged in zonenames_orig;</span>
+            <span class="c1">#  this would be desirable to be amended</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">)):</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])):</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">zonenames_orig</span><span class="p">:</span>
+                        <span class="k">continue</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">zonenames_orig</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACzonelist</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="n">k</span><span class="p">])</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">origin_dsb</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">zonenames</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">zonenames_orig</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">zonenames</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">zonenames_orig</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">ScriptType</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;existinghvac_mm&#39;</span> <span class="ow">or</span> <span class="n">ScriptType</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;ex_mm&#39;</span><span class="p">:</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">HVACdict</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="c1"># todo if there is a Coil:Heating:Whatever and another Coil:Heating:DifferentWhatever</span>
+                    <span class="c1">#  coils and windows sensors will be duplicated and simulation will crash; it needs to be solved.</span>
+
+                    <span class="c1"># Group Heating and Cooling Coils</span>
+                    <span class="s1">&#39;Coil:Cooling:Water&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:Water:DetailedGeometry&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="c1"># not supported</span>
+                    <span class="c1"># &#39;CoilSystem:Cooling:Water:HeatExchangerAssisted&#39;:&#39;&#39;,</span>
+                    <span class="s1">&#39;CoilSystem:Cooling:Water&#39;</span><span class="p">:</span> <span class="s1">&#39;Coil System Water Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:Water&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:Steam&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:Electric&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:Electric:MultiStage&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:Desuperheater&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX:VariableRefrigerantFlow&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:DX:VariableRefrigerantFlow&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX:VariableRefrigerantFlow:FluidTemperatureControl&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:DX:VariableRefrigerantFlow:FluidTemperatureControl&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:Fuel&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:Gas:MultiStage&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX:SingleSpeed&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX:TwoSpeed&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX:TwoStageWithHumidityControlMode&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX:MultiSpeed&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX:VariableSpeed&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="c1"># not supported</span>
+                    <span class="c1"># &#39;CoilPerformance:DX:Cooling&#39;: &#39;&#39;,</span>
+                    <span class="s1">&#39;Coil:Heating:DX:SingleSpeed&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:DX:MultiSpeed&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:DX:VariableSpeed&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:WaterHeating:Desuperheater&#39;</span><span class="p">:</span> <span class="s1">&#39;Water Heater Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="c1"># not supported</span>
+                    <span class="c1"># &#39;CoilSystem:Cooling:DX&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;CoilSystem:Heating:DX&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;CoilSystem:Cooling:DX:HeatExchangerAssisted&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;CoilSystem:IntegratedHeatPump:AirSource&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;Coil:WaterHeating:AirToWaterHeatPump:Pumped&#39;: &#39;Heating Coil Heating Energy&#39;,</span>
+                    <span class="c1"># &#39;Coil:WaterHeating:AirToWaterHeatPump:Wrapped&#39;: &#39;Heating Coil Heating Energy&#39;,</span>
+                    <span class="c1"># &#39;Coil:WaterHeating:AirToWaterHeatPump:VariableSpeed&#39;: &#39;Cooling Coil Electricity Energy&#39;,</span>
+                    <span class="s1">&#39;Coil:Cooling:WaterToAirHeatPump:ParameterEstimation&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:WaterToAirHeatPump:EquationFit&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:WaterToAirHeatPump:VariableSpeedEquationFit&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:WaterToAirHeatPump:ParameterEstimation&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:WaterToAirHeatPump:EquationFit&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Heating:WaterToAirHeatPump:VariableSpeedEquationFit&#39;</span><span class="p">:</span> <span class="s1">&#39;Heating Coil Heating Energy&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX:SingleSpeed:ThermalStorage&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="c1"># not supported</span>
+                    <span class="c1"># &#39;Secondary Coils of DX System and Heat Pump&#39;:&#39;&#39;,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX:CurveFit:Performance&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX:CurveFit:OperatingMode&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;Coil:Cooling:DX:CurveFit:Speed&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Coil Total Cooling Rate&#39;</span><span class="p">,</span>
+
+                    <span class="c1"># Group – Radiative / Convective Units</span>
+                    <span class="c1"># todo many objects have heating or cooling outputs for the same field</span>
+                    <span class="s1">&#39;ZoneHVAC:Baseboard:RadiantConvective:Water&#39;</span><span class="p">:</span> <span class="s1">&#39;Baseboard Total Heating Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;ZoneHVAC:Baseboard:RadiantConvective:Steam&#39;</span><span class="p">:</span> <span class="s1">&#39;Baseboard Total Heating Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;ZoneHVAC:Baseboard:RadiantConvective:Electric&#39;</span><span class="p">:</span> <span class="s1">&#39;Baseboard Total Heating Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;ZoneHVAC:CoolingPanel:RadiantConvective:Water&#39;</span><span class="p">:</span> <span class="s1">&#39;Cooling Panel Total Cooling Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;ZoneHVAC:Baseboard:Convective:Water&#39;</span><span class="p">:</span> <span class="s1">&#39;Baseboard Total Heating Rate&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;ZoneHVAC:Baseboard:Convective:Electric&#39;</span><span class="p">:</span> <span class="s1">&#39;Baseboard Total Heating Rate&#39;</span><span class="p">,</span>
+                    <span class="c1"># not supported</span>
+                    <span class="c1"># ZoneHVAC:LowTemperatureRadiant:VariableFlow can be a chilled ceiling: Zone Radiant HVAC Cooling Rate</span>
+                    <span class="c1"># also it can be a heated floor: Zone Radiant HVAC Heating Rate</span>
+                    <span class="c1"># &#39;ZoneHVAC:LowTemperatureRadiant:VariableFlow&#39;: &#39;Zone Radiant HVAC Heating Energy&#39;,</span>
+                    <span class="c1"># &#39;ZoneHVAC:LowTemperatureRadiant:ConstantFlow&#39;: &#39;Zone Radiant HVAC Heating Energy&#39;,</span>
+                    <span class="c1"># &#39;ZoneHVAC:LowTemperatureRadiant:Electric&#39;: &#39;Zone Radiant HVAC Heating Energy&#39;,</span>
+                    <span class="c1"># &#39;ZoneHVAC:LowTemperatureRadiant:SurfaceGroup&#39;: &#39;Zone Radiant HVAC Heating Energy&#39;,</span>
+                    <span class="c1"># &#39;ZoneHVAC:HighTemperatureRadiant&#39;: &#39;Zone Radiant HVAC Heating Energy&#39;,</span>
+                    <span class="c1"># &#39;ZoneHVAC:VentilatedSlab&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;ZoneHVAC:VentilatedSlab:SlabGroup&#39;: &#39;&#39;,</span>
+
+                    <span class="c1"># Group – Zone HVAC Air Loop Terminal Units</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:ConstantVolume:Reheat&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:ConstantVolume:NoReheat&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:VAV:Reheat&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:VAV:Reheat:VariableSpeedFan&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:VAV:HeatAndCool:Reheat&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:VAV:NoReheat&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:VAV:HeatAndCool:NoReheat&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:SeriesPIU:Reheat&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:ParallelPIU:Reheat&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:ConstantVolume:FourPipeInduction&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:ConstantVolume:FourPipeBeam&#39;: &#39;&#39;,</span>
+                    <span class="s1">&#39;AirTerminal:SingleDuct:ConstantVolume:CooledBeam&#39;</span><span class="p">:</span> <span class="s1">&#39;Zone Air Terminal Beam Chilled Water Energy&#39;</span><span class="p">,</span>
+                    <span class="c1"># &#39;AirTerminal:SingleDuct:Mixer&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:DualDuct:ConstantVolume&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:DualDuct:VAV&#39;: &#39;&#39;,</span>
+                    <span class="c1"># &#39;AirTerminal:DualDuct:VAV:OutdoorAir&#39;: &#39;&#39;</span>
+                <span class="p">}</span>
+
+                <span class="n">HVACkeylist</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">HVACdict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span> <span class="o">=</span> <span class="p">[]</span>
+
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">HVACkeylist</span><span class="p">)):</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">temp</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Name</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="n">HVACkeylist</span><span class="p">[</span><span class="n">i</span><span class="p">]]]</span>
+                        <span class="n">temp_zone_orig</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="n">HVACkeylist</span><span class="p">[</span><span class="n">i</span><span class="p">]]]</span>
+                        <span class="n">temp_zone</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="o">.</span><span class="n">Name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">idf1</span><span class="o">.</span><span class="n">idfobjects</span><span class="p">[</span><span class="n">HVACkeylist</span><span class="p">[</span><span class="n">i</span><span class="p">]]]</span>
+                        <span class="n">temp_win</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">temp_zone</span><span class="p">:</span>
+                            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">windownamelist</span><span class="p">:</span>
+                                <span class="k">if</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">k</span><span class="p">:</span>
+                                    <span class="n">temp_win</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+                        <span class="c1"># hasta aqui</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="k">continue</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">HVACkeylist</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">temp</span><span class="p">,</span> <span class="n">temp_zone_orig</span><span class="p">,</span> <span class="n">temp_zone</span><span class="p">,</span> <span class="n">temp_win</span><span class="p">])</span>
+                    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">HVACkeylist</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1"> HVAC SYSTEM IS NOT SUPPORTED&#39;</span><span class="p">)</span>
+                        <span class="k">continue</span>
+
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">)):</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">])):</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">zonenames_orig</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot; is not a valid room. </span><span class="se">\n</span><span class="s1">&#39;</span>
+                                      <span class="sa">f</span><span class="s1">&#39;That means &quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot; is not named following [HVAC Zone] [HVAC Element] pattern or HVAC element is shared&#39;</span><span class="p">)</span>
+                            <span class="c1"># raise ValueError</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">accimNotWorking</span> <span class="o">=</span> <span class="kc">True</span>
+                
+                <span class="k">if</span> <span class="n">verboseMode</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">)):</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The names of the existing </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> objects are:&#39;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;The zones related to these </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> objects are&#39;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;And the windows related to these </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> objects are:&#39;</span><span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">ExisHVAC</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">4</span><span class="p">],</span> <span class="n">sep</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Daniel Sánchez-García.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
