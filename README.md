@@ -13,7 +13,7 @@ In terms of code, this is a python package that transforms fixed setpoint temper
 
 The figure below clearly explains the aim of adaptive setpoint temperatures: introducing hourly temperature values into the adaptive comfort zone. On the left column, you can see the simulation results of a naturally ventilated building, while on the right column, the same building in mixed-mode operation with adaptive setpoint temperatures.
 
-![Use of adaptive setpoint](https://raw.githubusercontent.com/dsanchez-garcia/accim/master/accim/docs/images/NV_vs_MM.png)
+![Use of adaptive setpoint](https://github.com/dsanchez-garcia/accim/blob/master/docs/source/images/NV_vs_MM.png?raw=true)
 
 # 1. Citation
 
