@@ -23,6 +23,7 @@ by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 """
 import pandas as pd
 from accim import __version__
+from accim import lists
 
 
 class addAccis:
@@ -60,7 +61,7 @@ class addAccis:
         related to the Output:Variable objects that need to be kept in the model.
     :type Output_take_dataframe: bool
     :param EnergyPlus_version: The default is 'auto'.
-        Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2' or 'auto'.
+        Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1' or 'auto'.
     :type EnergyPlus_version: str
     :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
     :type TempCtrl: str
@@ -323,23 +324,6 @@ class addAccis:
             'runperiod'
         ]
 
-        fullEPversionsList = [
-            '9.1',
-            '9.2',
-            '9.3',
-            '9.4',
-            '9.5',
-            '9.6',
-            '22.1',
-            '22.2',
-            '23.1',
-            '23.2',
-            '24.1',
-            '24.2',
-            '25.1',
-            'auto',
-        ]
-
         fullTempCtrllist = [
             'temperature',
             'temp',
@@ -428,10 +412,10 @@ class addAccis:
                 Output_gen_dataframe = True
             elif Output_gen_dataframe.lower() == 'false':
                 Output_gen_dataframe = False
-            EnergyPlus_version = input("\nEnter the EnergyPlus version (9.1 to 23.2, or auto): ")
-            while EnergyPlus_version not in fullEPversionsList:
+            EnergyPlus_version = input("\nEnter the EnergyPlus version (9.1 to 25.1, or auto): ")
+            while EnergyPlus_version not in lists.fullEPversionsList:
                 EnergyPlus_version = input("    EnergyPlus version was not correct. "
-                                           "Please, enter the EnergyPlus version (9.1 to 23.2, or auto): ")
+                                           "Please, enter the EnergyPlus version (9.1 to 25.1, or auto): ")
             TempCtrl = input('\nEnter the Temperature Control method (temperature or pmv): ')
             while TempCtrl not in fullTempCtrllist:
                 TempCtrl = input("  Temperature Control method was not correct. "
@@ -472,9 +456,9 @@ class addAccis:
         if EnergyPlus_version.lower() != 'auto':
             if verboseMode:
                 print('EnergyPlus version is: '+EnergyPlus_version)
-            if EnergyPlus_version not in fullEPversionsList:
+            if EnergyPlus_version not in lists.fullEPversionsList:
                 print('Valid EnergyPlus_version: ')
-                print(fullEPversionsList)
+                print(lists.fullEPversionsList)
                 raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
                                                       "You must choose a EnergyPlus_version"
                                                       "from the list above.")
