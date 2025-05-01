@@ -14,7 +14,7 @@ from besos.errors import InstallationError
 # idf = IDF(fname)
 
 # Using besos
-fname = 'TestModel_V2320.idf'
+fname = 'TestModel.idf'
 
 try:
     idf = ef.get_building(fname)

@@ -10,10 +10,19 @@ Subpackages
    accim.data
    accim.parametric_and_optimisation
    accim.run
+   accim.sample_files
    accim.sim
 
 Submodules
 ----------
+
+accim.lists module
+------------------
+
+.. automodule:: accim.lists
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 accim.utils module
 ------------------
