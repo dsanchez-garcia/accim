@@ -2397,7 +2397,7 @@ class Table:
                         [i, j],
                         f'{rows[i]}_{cols[j]}',
                         [
-                            df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and baseline in x and dataset in x]]
+                            df_for_graph[[x for x in df_for_graph.columns if rows[i].lower() in x.lower() and baseline.lower() in x.lower() and dataset.lower() in x.lower()]]
                             for dataset in data_on_y_axis_baseline_plot
                         ]
                     ]
@@ -2405,7 +2405,7 @@ class Table:
                     temp = [
                         [i, j],
                         f'{rows[i]}_{cols[j]}',
-                        df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and cols[j] in x and data_on_x_axis in x]]
+                        df_for_graph[[x for x in df_for_graph.columns if rows[i].lower() in x.lower() and cols[j].lower() in x.lower() and data_on_x_axis.lower() in x.lower()]]
                     ]
                 temp_row.append(temp)
             self.x_list.append(temp_row)
@@ -2419,7 +2419,7 @@ class Table:
                         [i, j],
                         f'{rows[i]}_{cols[j]}',
                         [
-                            df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
+                            df_for_graph[[x for x in df_for_graph.columns if rows[i].lower() in x.lower() and cols[j].lower() in x.lower() and dataset.lower() in x.lower()]]
                             for dataset in data_on_y_axis_baseline_plot
                         ],
                         [dataset for dataset in data_on_y_axis_baseline_plot],
@@ -2437,7 +2437,7 @@ class Table:
                             'title': f'{rows[i]}_{cols[j]}',
                             'dataframe': [
                                 df_for_graph[[x for x in df_for_graph.columns if
-                                              rows[i] in x and cols[j] in x and dataset in x]]
+                                              rows[i].lower() in x.lower() and cols[j].lower() in x.lower() and dataset.lower() in x.lower()]]
                                 for dataset in self.data_on_y_main_axis[k][1]
                             ],
                             'label': [dataset for dataset in self.data_on_y_main_axis[k][1]],
@@ -2470,7 +2470,7 @@ class Table:
                         'axis': [i, j],
                         'title': f'{rows[i]}_{cols[j]}',
                         'dataframe': [
-                            df_for_graph[[x for x in df_for_graph.columns if rows[i] in x and cols[j] in x and dataset in x]]
+                            df_for_graph[[x for x in df_for_graph.columns if rows[i].lower() in x.lower() and cols[j].lower() in x.lower() and dataset.lower() in x.lower()]]
                             for dataset in data_on_y_sec_axis[k][1]
                         ],
                         'label': [dataset for dataset in data_on_y_sec_axis[k][1]],
