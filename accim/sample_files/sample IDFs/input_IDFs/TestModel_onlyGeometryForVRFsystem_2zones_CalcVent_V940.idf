@@ -7,7 +7,7 @@
 ! Zone floor area calculation method : 1-Inner
 ! Window to wall ratio method : 1-Inner
 
-Version, 9.4.0.002;                               !- Version Identifier
+Version, 9.4;                               !- Version Identifier
 
 RunPeriod,                                        !- Annual simulation
    Untitled (01-01:31-12),                        !- Location

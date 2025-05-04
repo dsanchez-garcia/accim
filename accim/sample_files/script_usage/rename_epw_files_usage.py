@@ -1,4 +1,4 @@
-from accim.data.data_preprocessing import rename_epw_files
+from accim.data.preprocessing import rename_epw_files
 z = rename_epw_files(
     rename_dict={
         'Brasov': 'Brasov',
