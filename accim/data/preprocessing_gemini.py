@@ -17,8 +17,13 @@
 """
 Submodule to perform data processing before simulation run.
 """
+import requests
+import json
+import time
 from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderServiceError, GeocoderUnavailable
+from geopy.exc import GeocoderServiceError
+import pycountry
+from unidecode import unidecode
 
 class give_address_ssl:
     """
@@ -120,17 +125,42 @@ class give_address:
     ):
         import requests
 
-        # Make request to OpenStreetMap API
+        self.address = {}
+        self.full_address = None
+        headers = {'User-Agent': 'accim_geolocator/1.0 (https://github.com/tu_usuario/accim)'} # Reemplaza con la URL de tu repositorio
+
+        # Intentar obtener la dirección con requests directamente
         url = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={latitude}&lon={longitude}"
         try:
-            response = requests.get(url).json()
-            # Extract address information from response
-            self.address = response['address']
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            self.address_data = response.json().get('address', {})
+            if self.address_data:
+                self.address = self.address_data
+                self.full_address = self._construct_full_address(self.address)
+                return  # Si la solicitud con requests fue exitosa, no es necesario probar geopy
+        except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
+            print(f"Error con la API de OpenStreetMap (requests): {e}")
+            print("Intentando obtener la dirección con geopy...")
+            try:
+                nominatim_geolocator = Nominatim(user_agent="accim_geolocator/1.0 (https://github.com/tu_usuario/accim)", timeout=10)
+                location = nominatim_geolocator.reverse(f"{latitude}, {longitude}", exactly_one=True, language='en')
+                if location:
+                    self.address_geopy = location.raw.get('address', {})
+                    if self.address_geopy:
+                        self.address = self.address_geopy
+                        self.full_address = location.address
+            except GeocoderServiceError as e_geopy:
+                print(f"Error con geopy Nominatim: {e_geopy}")
+            except Exception as e_general_geopy:
+                print(f"Error general con geopy: {e_general_geopy}")
 
-            # Print the full address
-            self.full_address = ", ".join([v for k,v in self.address.items() if v and k != 'country_code'])
-        except requests.exceptions.JSONDecodeError:
-            pass
+    def _construct_full_address(self, address_data):
+        components = []
+        for key in ['road', 'neighbourhood', 'suburb', 'village', 'town', 'city', 'county', 'state', 'country']:
+            if key in address_data:
+                components.append(address_data[key])
+        return ', '.join(components)
 
 
 class rename_epw_files:
@@ -383,23 +413,11 @@ class rename_epw_files:
                                 except KeyError:
                                     pass
                     except AttributeError:
-                        try:
-                            geolocator = Nominatim(user_agent="geoapiExercises")
-                            location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
-                            address = location.raw['address']
-                            city = address.get('city', '')
-                            state = address.get('state', '')
-                            country = address.get('country', '')
-                            code = address.get('country_code')
-                            zipcode = address.get('postcode')
-                        except GeocoderServiceError as e:
-                            print("Error: ", e)
-
-                        # epw_df.loc[i, 'EPW_country_code'] = 'UNKNOWN'
-                        # epw_df.loc[i, 'EPW_country'] = 'UNKNOWN'
-                        # epw_df.loc[i, 'location_address'] = 'UNKNOWN'
-                        # epw_df.loc[i, 'EPW_city_or_subcountry'] = 'UNKNOWN'
-                        # print(f"For some reason, accim cannot connect to OpenStreetMap to get the address of file {epw_df.loc[i, 'EPW_names']}. It gets an SSL error.")
+                        epw_df.loc[i, 'EPW_country_code'] = 'UNKNOWN'
+                        epw_df.loc[i, 'EPW_country'] = 'UNKNOWN'
+                        epw_df.loc[i, 'location_address'] = 'UNKNOWN'
+                        epw_df.loc[i, 'EPW_city_or_subcountry'] = 'UNKNOWN'
+                        print(f"For some reason, accim cannot connect to OpenStreetMap to get the address of file {epw_df.loc[i, 'EPW_names']}. It gets an SSL error.")
 
         checkpoint +=1
 
