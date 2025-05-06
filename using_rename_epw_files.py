@@ -42,6 +42,15 @@ print(old_epws)
 from accim.data.preprocessing import rename_epw_files
 rename_epw_files(
     confirm_deletion=False,
+    rename_city_dict={
+        'Aberdeen': 'Aberdeen city',
+        'London': 'London city',
+        'Ponta_Grossa': 'Ponta Grossa city'
+    },
+    country_to_city_dict={
+        'United kingdom': ['Aberdeen city', 'London city'],
+        'Brazil': ['Ponta Grossa city']
+    }
 )
 
 
@@ -73,3 +82,7 @@ new_files = [i for i in os.listdir() if i not in previous_files]
 # for i in new_epws:
 #     os.remove(i)
 
+##
+
+from accim.data.preprocessing import rename_epw_files
+help(rename_epw_files)
