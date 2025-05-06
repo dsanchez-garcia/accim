@@ -402,7 +402,7 @@ def inputData(self, ScriptType: str = None):
         '21 = CHL Perez-Fargallo;\n'
         '22 = INT ISO7730;\n'
         '99 = CUSTOM;\n'
-        'Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html\n'
+        'Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/docs/source/html_files/full_setpoint_table.html\n'
         '): '
     ).split())
     while len(self.ComfStand_List) == 0 or not all(elem in fullComfStandList for elem in self.ComfStand_List):
