@@ -494,7 +494,7 @@ def inputData(self, ScriptType: str = None):
         print("85 = 85% ACCEPT;")
     if 90 in availableCATlist:
         print("90 = 90% ACCEPT;")
-    print("Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html")
+    print("Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/docs/source/html_files/full_setpoint_table.html")
     self.CAT_List = list(int(num) for num in input('):').split())
     while len(self.CAT_List) == 0 or not all(elem in fullCATlist for elem in self.CAT_List):
         print('          Category numbers are not correct. Please enter the numbers again.')
@@ -515,7 +515,7 @@ def inputData(self, ScriptType: str = None):
         "Enter the Comfort Mode numbers separated by space (\n"
         "0 or 0.X = Static;\n"
         "1, 1.X, 2, 3 = Adaptive;\n"
-        "Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/accim/docs/html_files/full_setpoint_table.html\n"
+        "Please refer to the full list of setpoint temperatures at https://htmlpreview.github.io/?https://github.com/dsanchez-garcia/accim/blob/master/docs/source/html_files/full_setpoint_table.html\n"
         "): ").split())
     while len(self.ComfMod_List) == 0 or not all(elem in fullComfModList for elem in self.ComfMod_List):
         print('          Comfort Mode numbers are not correct. Please enter the numbers again.')
@@ -528,33 +528,58 @@ def inputData(self, ScriptType: str = None):
             print('          Comfort Mode numbers are not correct. Please enter the numbers again.')
             self.ComfMod_List = list(
                 float(num) for num in input("     Enter the Comfort Mode numbers separated by space: ").split())
-
-    self.SetpointAcc = float(input('\nEnter the setpoint accuracy number (any number greater than 0): '))
+    try:
+        self.SetpointAcc = float(input('\nEnter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
+    except ValueError:
+        self.SetpointAcc = 100
     while self.SetpointAcc < 0:
         print('          The setpoint accuracy number is not correct. It must be a number greater than 0. Please enter the number again.')
-        self.SetpointAcc = float(input('         Enter the setpoint accuracy number (any number greater than 0): '))
+        self.SetpointAcc = float(input('         Enter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
     while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-        self.SetpointAcc = float(input('      Enter the setpoint accuracy number (any number greater than 0): '))
+        try:
+            self.SetpointAcc = float(input('      Enter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
+        except ValueError:
+            self.SetpointAcc = 100
         while self.SetpointAcc < 0:
             print('          The setpoint accuracy number is not correct. It must be a number greater than 0. Please enter the number again.')
-            self.SetpointAcc = float(input('         Enter the setpoint accuracy number (any number greater than 0): '))
-
-    self.CATcoolOffset = float(input('\nEnter the number for the CAT cooling offset modifier (value will be summed to the ACST): '))
+            try:
+                self.SetpointAcc = float(input('      Enter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
+            except ValueError:
+                self.SetpointAcc = 100
+    try:
+        self.CATcoolOffset = float(input('\nEnter the number for the CAT cooling offset modifier (value will be summed to the ACST, if omitted will be 0): '))
+    except ValueError:
+        self.CATcoolOffset = 0.0
     while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-        self.CATcoolOffset = float(input('      Enter the number for the CAT cooling offset modifier (value will be summed to the ACST): '))
+        try:
+            self.CATcoolOffset = float(input('\n        Enter the number for the CAT cooling offset modifier (value will be summed to the ACST, if omitted will be 0): '))
+        except ValueError:
+            self.CATcoolOffset = 0.0
 
-    self.CATheatOffset = float(input('\nEnter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
+    try:
+        self.CATheatOffset = float(input('\nEnter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
+    except ValueError:
+        self.CATheatOffset = 0.0
     while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-        self.CATheatOffset = float(input('      Enter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
+        try:
+            self.CATheatOffset = float(input('\n        Enter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
+        except ValueError:
+            self.CATheatOffset = 0.0
     while self.CATheatOffset > self.CATcoolOffset:
         print(f'          You have entered a CATheatOffset ({self.CATheatOffset}) larger than the CATcoolOffset ({self.CATcoolOffset}), '
               f'which will probably lead to an error in the EnergyPlus simulation.')
-        self.CATcoolOffset = float(input('\nEnter the number for the CAT cooling offset modifier (value will be summed to the ACST): '))
+        try:
+            self.CATheatOffset = float(input('\n        Enter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
+        except ValueError:
+            self.CATheatOffset = 0.0
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CATcoolOffset = float(input('      Enter the number for the CAT cooling offset modifier (value will be summed to the ACST): '))
-        self.CATheatOffset = float(input('\nEnter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
-        while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CATheatOffset = float(input('      Enter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
+            try:
+                self.CATheatOffset = float(input('\n        Enter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
+            except ValueError:
+                self.CATheatOffset = 0.0
+        # self.CATheatOffset = float(input('\nEnter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
+        # while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
+        #     self.CATheatOffset = float(input('      Enter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
 
     if (any(i in [1, 2] for i in self.ComfStand_List) and 0 in self.ComfMod_List) or 22 in self.ComfStand_List:
         self.CoolSeasonStart = list(
