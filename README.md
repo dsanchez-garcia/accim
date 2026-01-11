@@ -190,12 +190,7 @@ The path should be something like this, with your username instead of YOUR_USERN
 
 Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
 
-#### 2.2.6.1 Short version
-
-    from accim.sim import apmv_setpoints
-    apmv_setpoints.apply_apmv_setpoints(building=IDF_object)
-
-#### 2.2.6.2 Longer version
+You can apply aPMV setpoints to a building using the following function:
 
     from accim.sim import apmv_setpoints
     apmv_setpoints.apply_apmv_setpoints(
