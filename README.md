@@ -173,6 +173,56 @@ The path should be something like this, with your username instead of YOUR_USERN
 
 Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
 
+
+### 2.2.6 Using apmv_setpoints
+
+You can see a Jupyter Notebook in the link below:  
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints.ipynb
+
+You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+within your site_packages path, in
+
+accim/sample_files/jupyter_notebooks/example_apmv_setpoints_paper
+
+The path should be something like this, with your username instead of YOUR_USERNAME:
+
+*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\example_apmv_setpoints_paper*
+
+Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+
+#### 2.2.6.1 Short version
+
+    from accim.sim import apmv_setpoints
+    apmv_setpoints.apply_apmv_setpoints(building=IDF_object)
+
+#### 2.2.6.2 Longer version
+
+    from accim.sim import apmv_setpoints
+    apmv_setpoints.apply_apmv_setpoints(
+        building=IDF_object, # building: the comprehensive eppy or besos IDF object
+        outputs_freq=list, # outputs_freq: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: Output_freqs=['hourly', 'runperiod'],
+        other_PMV_related_outputs=bool, # other_PMV_related_outputs: True to include other PMV related outputs (e.g. Fanger PMV, PPD, etc). Default is True.
+        adap_coeff_cooling=float or dict, # adap_coeff_cooling: Adaptive coefficient (lambda) for cooling. Can be a single float (applied globally) or a dict {TargetName: Value}. Default is 0.293.
+        adap_coeff_heating=float or dict, # adap_coeff_heating: Adaptive coefficient (lambda) for heating. Float or Dict {TargetName: Value}. Default is -0.293.
+        pmv_cooling_sp=float or dict, # pmv_cooling_sp: Target PMV setpoint for cooling (e.g., 0.5). Float or Dict. Default is 0.5.
+        pmv_heating_sp=float or dict, # pmv_heating_sp: Target PMV setpoint for heating (e.g., -0.5). Float or Dict. Default is -0.5.
+        tolerance_cooling_sp_cooling_season=float or dict, # tolerance_cooling_sp_cooling_season: Tolerance to widen the cooling setpoint band during cooling season. Float or Dict. Default is -0.1.
+        tolerance_cooling_sp_heating_season=float or dict, # tolerance_cooling_sp_heating_season: Tolerance to widen the cooling setpoint band during heating season. Float or Dict. Default is -0.1.
+        tolerance_heating_sp_cooling_season=float or dict, # tolerance_heating_sp_cooling_season: Tolerance to widen the heating setpoint band during cooling season. Float or Dict. Default is 0.1.
+        tolerance_heating_sp_heating_season=float or dict, # tolerance_heating_sp_heating_season: Tolerance to widen the heating setpoint band during heating season. Float or Dict. Default is 0.1.
+        cooling_season_start=int or str, # cooling_season_start: Start day of the cooling season. Can be an integer (Day of Year) or string ('dd/mm'). Default is 120 (May 1st approx).
+        cooling_season_end=int or str, # cooling_season_end: End day of the cooling season. Can be an integer (Day of Year) or string ('dd/mm'). Default is 210 (July 29th approx).
+        dflt_for_adap_coeff_cooling=float, # dflt_for_adap_coeff_cooling: Default value for cooling adaptive coefficient if key is missing in dict input. Default is 0.4.
+        dflt_for_adap_coeff_heating=float, # dflt_for_adap_coeff_heating: Default value for heating adaptive coefficient if key is missing in dict input. Default is -0.4.
+        dflt_for_pmv_cooling_sp=float, # dflt_for_pmv_cooling_sp: Default value for cooling PMV setpoint if key is missing in dict input. Default is 0.5.
+        dflt_for_pmv_heating_sp=float, # dflt_for_pmv_heating_sp: Default value for heating PMV setpoint if key is missing in dict input. Default is -0.5.
+        dflt_for_tolerance_cooling_sp_cooling_season=float, # dflt_for_tolerance_cooling_sp_cooling_season: Default tolerance value if key is missing. Default is -0.1.
+        dflt_for_tolerance_cooling_sp_heating_season=float, # dflt_for_tolerance_cooling_sp_heating_season: Default tolerance value if key is missing. Default is -0.1.
+        dflt_for_tolerance_heating_sp_cooling_season=float, # dflt_for_tolerance_heating_sp_cooling_season: Default tolerance value if key is missing. Default is 0.1.
+        dflt_for_tolerance_heating_sp_heating_season=float, # dflt_for_tolerance_heating_sp_heating_season: Default tolerance value if key is missing. Default is 0.1.
+        verbose_mode=bool # verbose_mode: True to print detailed progress messages (added objects) and warnings to the console. Default is True.
+    )
+
 # 3. Documentation
 
 Detailed documentation, including the explanation of the different arguments, is at: https://accim.readthedocs.io/en/master/
