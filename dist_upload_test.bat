@@ -13,7 +13,7 @@ IF NOT EXIST dist (
 
 ECHO.
 ECHO --- [Paso 2 de 2] Subiendo distribuciones a TestPyPI...
-twine upload --repository testpypi dist/*
+twine upload --repository testpypi dist/* --verbose
 
 ECHO.
 ECHO --- Proceso completado ---
