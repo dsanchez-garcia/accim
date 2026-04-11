@@ -1108,12 +1108,12 @@ def genIDF(self,
                                         + ComfStand_dict[ComfStand_value]
                                         + '[CA_X'
                                         + '[CM_X'
-                                        + '[HM_' + repr(HVACmode_value)
+                                        + '[HM_' + str(HVACmode_value)
                                         + '[VC_X'
                                         + '[VO_X'
                                         + '[MT_X'
                                         + '[MW_X'
-                                        + '[AT_' + repr(round(ASTtol_value, 2))
+                                        + '[AT_' + str(round(ASTtol_value, 2))
                                         + suffix
                                         + '.idf'
                                 )
@@ -1136,12 +1136,12 @@ def genIDF(self,
                                                             + ComfStand_dict[ComfStand_value]
                                                             + '[CA_X'
                                                             + '[CM_X'
-                                                            + '[HM_' + repr(HVACmode_value)
-                                                            + '[VC_' + repr(VentCtrl_value)
-                                                            + '[VO_' + repr(VSToffset_value)
-                                                            + '[MT_' + repr(MinOToffset_value)
-                                                            + '[MW_' + repr(MaxWindSpeed_value)
-                                                            + '[AT_' + repr(round(ASTtol_value, 2))
+                                                            + '[HM_' + str(HVACmode_value)
+                                                            + '[VC_' + str(VentCtrl_value)
+                                                            + '[VO_' + str(VSToffset_value)
+                                                            + '[MT_' + str(MinOToffset_value)
+                                                            + '[MW_' + str(MaxWindSpeed_value)
+                                                            + '[AT_' + str(round(ASTtol_value, 2))
                                                             + suffix
                                                             + '.idf'
                                                     )
@@ -1166,14 +1166,14 @@ def genIDF(self,
                                                 outputname = (
                                                         filename
                                                         + ComfStand_dict[ComfStand_value]
-                                                        + '[CA_' + repr(CAT_value)
-                                                        + '[CM_' + repr(ComfMod_value)
-                                                        + '[HM_' + repr(HVACmode_value)
+                                                        + '[CA_' + str(CAT_value)
+                                                        + '[CM_' + str(ComfMod_value)
+                                                        + '[HM_' + str(HVACmode_value)
                                                         + '[VC_X'
                                                         + '[VO_X'
                                                         + '[MT_X'
                                                         + '[MW_X'
-                                                        + '[AT_' + repr(round(ASTtol_value, 2))
+                                                        + '[AT_' + str(round(ASTtol_value, 2))
                                                         + suffix
                                                         + '.idf'
                                                 )
@@ -1194,14 +1194,14 @@ def genIDF(self,
                                                                     outputname = (
                                                                             filename
                                                                             + ComfStand_dict[ComfStand_value]
-                                                                            + '[CA_' + repr(CAT_value)
-                                                                            + '[CM_' + repr(ComfMod_value)
-                                                                            + '[HM_' + repr(HVACmode_value)
-                                                                            + '[VC_' + repr(VentCtrl_value)
-                                                                            + '[VO_' + repr(VSToffset_value)
-                                                                            + '[MT_' + repr(MinOToffset_value)
-                                                                            + '[MW_' + repr(MaxWindSpeed_value)
-                                                                            + '[AT_' + repr(round(ASTtol_value, 2))
+                                                                            + '[CA_' + str(CAT_value)
+                                                                            + '[CM_' + str(ComfMod_value)
+                                                                            + '[HM_' + str(HVACmode_value)
+                                                                            + '[VC_' + str(VentCtrl_value)
+                                                                            + '[VO_' + str(VSToffset_value)
+                                                                            + '[MT_' + str(MinOToffset_value)
+                                                                            + '[MW_' + str(MaxWindSpeed_value)
+                                                                            + '[AT_' + str(round(ASTtol_value, 2))
                                                                             + suffix
                                                                             + '.idf'
                                                                     )
@@ -1229,14 +1229,14 @@ def genIDF(self,
                                                 outputname = (
                                                         filename
                                                         + ComfStand_dict[ComfStand_value]
-                                                        + '[CA_' + repr(CAT_value)
-                                                        + '[CM_' + repr(ComfMod_value)
-                                                        + '[HM_' + repr(HVACmode_value)
+                                                        + '[CA_' + str(CAT_value)
+                                                        + '[CM_' + str(ComfMod_value)
+                                                        + '[HM_' + str(HVACmode_value)
                                                         + '[VC_X'
                                                         + '[VO_X'
                                                         + '[MT_X'
                                                         + '[MW_X'
-                                                        + '[AT_' + repr(round(ASTtol_value, 2))
+                                                        + '[AT_' + str(round(ASTtol_value, 2))
                                                         + suffix
                                                         + '.idf'
                                                 )
@@ -1257,14 +1257,14 @@ def genIDF(self,
                                                                     outputname = (
                                                                             filename
                                                                             + ComfStand_dict[ComfStand_value]
-                                                                            + '[CA_' + repr(CAT_value)
-                                                                            + '[CM_' + repr(ComfMod_value)
-                                                                            + '[HM_' + repr(HVACmode_value)
-                                                                            + '[VC_' + repr(VentCtrl_value)
-                                                                            + '[VO_' + repr(VSToffset_value)
-                                                                            + '[MT_' + repr(MinOToffset_value)
-                                                                            + '[MW_' + repr(MaxWindSpeed_value)
-                                                                            + '[AT_' + repr(round(ASTtol_value, 2))
+                                                                            + '[CA_' + str(CAT_value)
+                                                                            + '[CM_' + str(ComfMod_value)
+                                                                            + '[HM_' + str(HVACmode_value)
+                                                                            + '[VC_' + str(VentCtrl_value)
+                                                                            + '[VO_' + str(VSToffset_value)
+                                                                            + '[MT_' + str(MinOToffset_value)
+                                                                            + '[MW_' + str(MaxWindSpeed_value)
+                                                                            + '[AT_' + str(round(ASTtol_value, 2))
                                                                             + suffix
                                                                             + '.idf'
                                                                     )
@@ -1330,33 +1330,33 @@ def genIDF(self,
                        program.Name == 'SetAppLimits'])
             if TempCtrl.lower() == 'temp' or TempCtrl.lower() == 'temperature':
                 for ComfStand_value in self.ComfStand_List:
-                    SetInputData[0].Program_Line_1 = 'set ComfStand = ' + repr(ComfStand_value)
+                    SetInputData[0].Program_Line_1 = 'set ComfStand = ' + str(ComfStand_value)
                     if ComfStand_value == 0:
                         SetInputData[0].Program_Line_2 = 'set CAT = 1'
                         SetInputData[0].Program_Line_3 = 'set ComfMod = 0'
                         for HVACmode_value in self.HVACmode_List:
-                            SetInputData[0].Program_Line_4 = 'set HVACmode = ' + repr(HVACmode_value)
+                            SetInputData[0].Program_Line_4 = 'set HVACmode = ' + str(HVACmode_value)
                             if HVACmode_value == 0:
                                 for ASTtol_value in numpy.arange(self.ASTtol_value_from, self.ASTtol_value_to,
                                                                  self.ASTtol_value_steps):
-                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
-                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
-                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
-                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
-                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
-                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
+                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
+                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
+                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
+                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
+                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
+                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
+                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
                                     outputname = (
                                             filename
                                             + ComfStand_dict[ComfStand_value]
                                             + '[CA_X'
                                             + '[CM_X'
-                                            + '[HM_' + repr(HVACmode_value)
+                                            + '[HM_' + str(HVACmode_value)
                                             + '[VC_X'
                                             + '[VO_X'
                                             + '[MT_X'
                                             + '[MW_X'
-                                            + '[AT_' + repr(round(ASTtol_value, 2))
+                                            + '[AT_' + str(round(ASTtol_value, 2))
                                             + suffix
                                             + '.idf'
                                     )
@@ -1368,41 +1368,41 @@ def genIDF(self,
                                     self.output_idf_dict.update({outputname: idf1})
                             else:
                                 for VentCtrl_value in self.VentCtrl_List:
-                                    SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
+                                    SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + str(VentCtrl_value)
                                     if HVACmode_value == 2:
                                         if VentCtrl_value == 2 or VentCtrl_value == 3:
-                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
-                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
-                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
+                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + str(self.MaxTempDiffVOF)
+                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + str(self.MinTempDiffVOF)
+                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + str(self.MultiplierVOF)
                                     for VSToffset_value in self.VSToffset_List:
-                                        SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(VSToffset_value)
+                                        SetInputData[0].Program_Line_6 = 'set VSToffset = ' + str(VSToffset_value)
                                         for MinOToffset_value in self.MinOToffset_List:
-                                            SetInputData[0].Program_Line_7 = 'set MinOToffset = ' + repr(
+                                            SetInputData[0].Program_Line_7 = 'set MinOToffset = ' + str(
                                                 MinOToffset_value)
                                             for MaxWindSpeed_value in self.MaxWindSpeed_List:
-                                                SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = ' + repr(
+                                                SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = ' + str(
                                                     MaxWindSpeed_value)
                                                 for ASTtol_value in numpy.arange(self.ASTtol_value_from,
                                                                                  self.ASTtol_value_to,
                                                                                  self.ASTtol_value_steps):
-                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
-                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
-                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
-                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
-                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
-                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
+                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
+                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
+                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
+                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
+                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
+                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
                                                             + '[CA_X'
                                                             + '[CM_X'
-                                                            + '[HM_' + repr(HVACmode_value)
-                                                            + '[VC_' + repr(VentCtrl_value)
-                                                            + '[VO_' + repr(VSToffset_value)
-                                                            + '[MT_' + repr(MinOToffset_value)
-                                                            + '[MW_' + repr(MaxWindSpeed_value)
-                                                            + '[AT_' + repr(round(ASTtol_value, 2))
+                                                            + '[HM_' + str(HVACmode_value)
+                                                            + '[VC_' + str(VentCtrl_value)
+                                                            + '[VO_' + str(VSToffset_value)
+                                                            + '[MT_' + str(MinOToffset_value)
+                                                            + '[MW_' + str(MaxWindSpeed_value)
+                                                            + '[AT_' + str(round(ASTtol_value, 2))
                                                             + suffix
                                                             + '.idf'
                                                     )
@@ -1419,38 +1419,38 @@ def genIDF(self,
                             elif ComfStand_value in [4, 5] and CAT_value not in [1, 2]:
                                 continue
                             else:
-                                SetInputData[0].Program_Line_2 = 'set CAT = ' + repr(CAT_value)
+                                SetInputData[0].Program_Line_2 = 'set CAT = ' + str(CAT_value)
                                 for ComfMod_value in self.ComfMod_List:
                                     if ComfStand_value not in [13, 14] and ComfMod_value in [0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5]:
                                         continue
                                     elif ComfStand_value == 22 and ComfMod_value != 0:
                                         continue
                                     else:
-                                        SetInputData[0].Program_Line_3 = 'set ComfMod = ' + repr(ComfMod_value)
+                                        SetInputData[0].Program_Line_3 = 'set ComfMod = ' + str(ComfMod_value)
                                         for HVACmode_value in self.HVACmode_List:
-                                            SetInputData[0].Program_Line_4 = 'set HVACmode = ' + repr(HVACmode_value)
+                                            SetInputData[0].Program_Line_4 = 'set HVACmode = ' + str(HVACmode_value)
                                             if HVACmode_value == 0:
                                                 for ASTtol_value in numpy.arange(self.ASTtol_value_from,
                                                                                  self.ASTtol_value_to,
                                                                                  self.ASTtol_value_steps):
-                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
-                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
-                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
-                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
-                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
-                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
+                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
+                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
+                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
+                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
+                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
+                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
-                                                            + '[CA_' + repr(CAT_value)
-                                                            + '[CM_' + repr(ComfMod_value)
-                                                            + '[HM_' + repr(HVACmode_value)
+                                                            + '[CA_' + str(CAT_value)
+                                                            + '[CM_' + str(ComfMod_value)
+                                                            + '[HM_' + str(HVACmode_value)
                                                             + '[VC_X'
                                                             + '[VO_X'
                                                             + '[MT_X'
                                                             + '[MW_X'
-                                                            + '[AT_' + repr(round(ASTtol_value, 2))
+                                                            + '[AT_' + str(round(ASTtol_value, 2))
                                                             + suffix
                                                             + '.idf'
                                                     )
@@ -1462,44 +1462,44 @@ def genIDF(self,
                                                     self.output_idf_dict.update({outputname: idf1})
                                             else:
                                                 for VentCtrl_value in self.VentCtrl_List:
-                                                    SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
+                                                    SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + str(VentCtrl_value)
                                                     if HVACmode_value == 2:
                                                         if VentCtrl_value == 2 or VentCtrl_value == 3:
-                                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
-                                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
-                                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
+                                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + str(self.MaxTempDiffVOF)
+                                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + str(self.MinTempDiffVOF)
+                                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + str(self.MultiplierVOF)
                                                     for VSToffset_value in self.VSToffset_List:
-                                                        SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(
+                                                        SetInputData[0].Program_Line_6 = 'set VSToffset = ' + str(
                                                             VSToffset_value)
                                                         for MinOToffset_value in self.MinOToffset_List:
-                                                            SetInputData[0].Program_Line_7 = 'set MinOToffset = ' + repr(
+                                                            SetInputData[0].Program_Line_7 = 'set MinOToffset = ' + str(
                                                                 MinOToffset_value)
                                                             for MaxWindSpeed_value in self.MaxWindSpeed_List:
                                                                 SetInputData[
-                                                                    0].Program_Line_8 = 'set MaxWindSpeed = ' + repr(
+                                                                    0].Program_Line_8 = 'set MaxWindSpeed = ' + str(
                                                                     MaxWindSpeed_value)
                                                                 for ASTtol_value in numpy.arange(self.ASTtol_value_from,
                                                                                                  self.ASTtol_value_to,
                                                                                                  self.ASTtol_value_steps):
-                                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
-                                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
-                                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
-                                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
-                                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
+                                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
+                                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
+                                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
+                                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
+                                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
+                                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
 
-                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
+                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
                                                                     outputname = (
                                                                             filename
                                                                             + ComfStand_dict[ComfStand_value]
-                                                                            + '[CA_' + repr(CAT_value)
-                                                                            + '[CM_' + repr(ComfMod_value)
-                                                                            + '[HM_' + repr(HVACmode_value)
-                                                                            + '[VC_' + repr(VentCtrl_value)
-                                                                            + '[VO_' + repr(VSToffset_value)
-                                                                            + '[MT_' + repr(MinOToffset_value)
-                                                                            + '[MW_' + repr(MaxWindSpeed_value)
-                                                                            + '[AT_' + repr(round(ASTtol_value, 2))
+                                                                            + '[CA_' + str(CAT_value)
+                                                                            + '[CM_' + str(ComfMod_value)
+                                                                            + '[HM_' + str(HVACmode_value)
+                                                                            + '[VC_' + str(VentCtrl_value)
+                                                                            + '[VO_' + str(VSToffset_value)
+                                                                            + '[MT_' + str(MinOToffset_value)
+                                                                            + '[MW_' + str(MaxWindSpeed_value)
+                                                                            + '[AT_' + str(round(ASTtol_value, 2))
                                                                             + suffix
                                                                             + '.idf'
                                                                     )
@@ -1517,7 +1517,7 @@ def genIDF(self,
                             elif ComfStand_value in [7, 8] and CAT_value not in range(80, 91, 5):
                                 continue
                             else:
-                                SetInputData[0].Program_Line_2 = 'set CAT = ' + repr(CAT_value)
+                                SetInputData[0].Program_Line_2 = 'set CAT = ' + str(CAT_value)
                                 for ComfMod_value in self.ComfMod_List:
                                     if ComfStand_value in [13, 14] and ComfMod_value in [0, 1]:
                                         continue
@@ -1526,40 +1526,40 @@ def genIDF(self,
                                     elif ComfStand_value == 21 and ComfMod_value not in [2, 3]:
                                         continue
                                     else:
-                                        SetInputData[0].Program_Line_3 = 'set ComfMod = ' + repr(ComfMod_value)
+                                        SetInputData[0].Program_Line_3 = 'set ComfMod = ' + str(ComfMod_value)
                                         for HVACmode_value in self.HVACmode_List:
-                                            SetInputData[0].Program_Line_4 = 'set HVACmode = ' + repr(HVACmode_value)
+                                            SetInputData[0].Program_Line_4 = 'set HVACmode = ' + str(HVACmode_value)
                                             if HVACmode_value == 0:
                                                 for ASTtol_value in numpy.arange(self.ASTtol_value_from,
                                                                                  self.ASTtol_value_to,
                                                                                  self.ASTtol_value_steps):
-                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
-                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
-                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
-                                                    # SetComfTemp[0].Program_Line_2 = f'set ComfTemp = PMOT*{repr(self.CustAST_m)}+{repr(self.CustAST_n)}'
-                                                    SetAppLimits[0].Program_Line_2 = f'set ACSTaul = {repr(self.CustAST_ACSTaul)}'
-                                                    SetAppLimits[0].Program_Line_3 = f'set ACSTall = {repr(self.CustAST_ACSTall)}'
-                                                    SetAppLimits[0].Program_Line_4 = f'set AHSTaul = {repr(self.CustAST_AHSTaul)}'
-                                                    SetAppLimits[0].Program_Line_5 = f'set AHSTall = {repr(self.CustAST_AHSTall)}'
-                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
-                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
-                                                    ApplyCAT[0].Program_Line_4 = f'set ACSToffset = {repr(self.CustAST_ACSToffset)} + {repr(self.CATcoolOffset)}'
-                                                    ApplyCAT[0].Program_Line_5 = f'set AHSToffset = {repr(self.CustAST_AHSToffset)} + {repr(self.CATheatOffset)}'
-                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
-                                                    SetAST[0].Program_Line_2 = 'set m = ' + repr(self.CustAST_m)
-                                                    SetAST[0].Program_Line_3 = 'set n = ' + repr(self.CustAST_n)
+                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
+                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
+                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
+                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
+                                                    # SetComfTemp[0].Program_Line_2 = f'set ComfTemp = PMOT*{str(self.CustAST_m)}+{str(self.CustAST_n)}'
+                                                    SetAppLimits[0].Program_Line_2 = f'set ACSTaul = {str(self.CustAST_ACSTaul)}'
+                                                    SetAppLimits[0].Program_Line_3 = f'set ACSTall = {str(self.CustAST_ACSTall)}'
+                                                    SetAppLimits[0].Program_Line_4 = f'set AHSTaul = {str(self.CustAST_AHSTaul)}'
+                                                    SetAppLimits[0].Program_Line_5 = f'set AHSTall = {str(self.CustAST_AHSTall)}'
+                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
+                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
+                                                    ApplyCAT[0].Program_Line_4 = f'set ACSToffset = {str(self.CustAST_ACSToffset)} + {str(self.CATcoolOffset)}'
+                                                    ApplyCAT[0].Program_Line_5 = f'set AHSToffset = {str(self.CustAST_AHSToffset)} + {str(self.CATheatOffset)}'
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
+                                                    SetAST[0].Program_Line_2 = 'set m = ' + str(self.CustAST_m)
+                                                    SetAST[0].Program_Line_3 = 'set n = ' + str(self.CustAST_n)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
-                                                            + '[CA_' + repr(CAT_value)
-                                                            + '[CM_' + repr(ComfMod_value)
-                                                            + '[HM_' + repr(HVACmode_value)
+                                                            + '[CA_' + str(CAT_value)
+                                                            + '[CM_' + str(ComfMod_value)
+                                                            + '[HM_' + str(HVACmode_value)
                                                             + '[VC_X'
                                                             + '[VO_X'
                                                             + '[MT_X'
                                                             + '[MW_X'
-                                                            + '[AT_' + repr(round(ASTtol_value, 2))
+                                                            + '[AT_' + str(round(ASTtol_value, 2))
                                                             + suffix
                                                             + '.idf'
                                                     )
@@ -1571,52 +1571,52 @@ def genIDF(self,
                                                     self.output_idf_dict.update({outputname: idf1})
                                             else:
                                                 for VentCtrl_value in self.VentCtrl_List:
-                                                    SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl_value)
+                                                    SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + str(VentCtrl_value)
                                                     if HVACmode_value == 2:
                                                         if VentCtrl_value == 2 or VentCtrl_value == 3:
-                                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(self.MaxTempDiffVOF)
-                                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + repr(self.MinTempDiffVOF)
-                                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + repr(self.MultiplierVOF)
+                                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + str(self.MaxTempDiffVOF)
+                                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + str(self.MinTempDiffVOF)
+                                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + str(self.MultiplierVOF)
                                                     for VSToffset_value in self.VSToffset_List:
-                                                        SetInputData[0].Program_Line_6 = 'set VSToffset = ' + repr(
+                                                        SetInputData[0].Program_Line_6 = 'set VSToffset = ' + str(
                                                             VSToffset_value)
                                                         for MinOToffset_value in self.MinOToffset_List:
-                                                            SetInputData[0].Program_Line_7 = 'set MinOToffset = ' + repr(
+                                                            SetInputData[0].Program_Line_7 = 'set MinOToffset = ' + str(
                                                                 MinOToffset_value)
                                                             for MaxWindSpeed_value in self.MaxWindSpeed_List:
-                                                                SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = ' + repr(MaxWindSpeed_value)
+                                                                SetInputData[0].Program_Line_8 = 'set MaxWindSpeed = ' + str(MaxWindSpeed_value)
                                                                 for ASTtol_value in numpy.arange(self.ASTtol_value_from,
                                                                                                  self.ASTtol_value_to,
                                                                                                  self.ASTtol_value_steps):
-                                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol_value)
-                                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol_value)
-                                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + repr(self.CoolSeasonStart)
-                                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + repr(self.CoolSeasonEnd)
-                                                                    # SetComfTemp[0].Program_Line_2 = f'set ComfTemp = PMOT*{repr(self.CustAST_m)}+{repr(self.CustAST_n)}'
-                                                                    SetAppLimits[0].Program_Line_2 = f'set ACSTaul = {repr(self.CustAST_ACSTaul)}'
-                                                                    SetAppLimits[0].Program_Line_3 = f'set ACSTall = {repr(self.CustAST_ACSTall)}'
-                                                                    SetAppLimits[0].Program_Line_4 = f'set AHSTaul = {repr(self.CustAST_AHSTaul)}'
-                                                                    SetAppLimits[0].Program_Line_5 = f'set AHSTall = {repr(self.CustAST_AHSTall)}'
+                                                                    SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
+                                                                    SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
+                                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
+                                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
+                                                                    # SetComfTemp[0].Program_Line_2 = f'set ComfTemp = PMOT*{str(self.CustAST_m)}+{str(self.CustAST_n)}'
+                                                                    SetAppLimits[0].Program_Line_2 = f'set ACSTaul = {str(self.CustAST_ACSTaul)}'
+                                                                    SetAppLimits[0].Program_Line_3 = f'set ACSTall = {str(self.CustAST_ACSTall)}'
+                                                                    SetAppLimits[0].Program_Line_4 = f'set AHSTaul = {str(self.CustAST_AHSTaul)}'
+                                                                    SetAppLimits[0].Program_Line_5 = f'set AHSTall = {str(self.CustAST_AHSTall)}'
 
-                                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + repr(self.CATcoolOffset)
-                                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + repr(self.CATheatOffset)
-                                                                    ApplyCAT[0].Program_Line_4 = f'set ACSToffset = {repr(self.CustAST_ACSToffset)} + {repr(self.CATcoolOffset)}'
-                                                                    ApplyCAT[0].Program_Line_5 = f'set AHSToffset = {repr(self.CustAST_AHSToffset)} + {repr(self.CATheatOffset)}'
-                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + repr(self.SetpointAcc)
-                                                                    SetAST[0].Program_Line_2 = 'set m = ' + repr(self.CustAST_m)
-                                                                    SetAST[0].Program_Line_3 = 'set n = ' + repr(self.CustAST_n)
+                                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
+                                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
+                                                                    ApplyCAT[0].Program_Line_4 = f'set ACSToffset = {str(self.CustAST_ACSToffset)} + {str(self.CATcoolOffset)}'
+                                                                    ApplyCAT[0].Program_Line_5 = f'set AHSToffset = {str(self.CustAST_AHSToffset)} + {str(self.CATheatOffset)}'
+                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
+                                                                    SetAST[0].Program_Line_2 = 'set m = ' + str(self.CustAST_m)
+                                                                    SetAST[0].Program_Line_3 = 'set n = ' + str(self.CustAST_n)
 
                                                                     outputname = (
                                                                             filename
                                                                             + ComfStand_dict[ComfStand_value]
-                                                                            + '[CA_' + repr(CAT_value)
-                                                                            + '[CM_' + repr(ComfMod_value)
-                                                                            + '[HM_' + repr(HVACmode_value)
-                                                                            + '[VC_' + repr(VentCtrl_value)
-                                                                            + '[VO_' + repr(VSToffset_value)
-                                                                            + '[MT_' + repr(MinOToffset_value)
-                                                                            + '[MW_' + repr(MaxWindSpeed_value)
-                                                                            + '[AT_' + repr(round(ASTtol_value, 2))
+                                                                            + '[CA_' + str(CAT_value)
+                                                                            + '[CM_' + str(ComfMod_value)
+                                                                            + '[HM_' + str(HVACmode_value)
+                                                                            + '[VC_' + str(VentCtrl_value)
+                                                                            + '[VO_' + str(VSToffset_value)
+                                                                            + '[MT_' + str(MinOToffset_value)
+                                                                            + '[MW_' + str(MaxWindSpeed_value)
+                                                                            + '[AT_' + str(round(ASTtol_value, 2))
                                                                             + suffix
                                                                             + '.idf'
                                                                     )

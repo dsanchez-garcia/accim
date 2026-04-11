@@ -423,13 +423,13 @@ def get_idd_path_from_ep_version(EnergyPlus_version: str):
     elif EnergyPlus_version.lower() == '9.6':
         iddfile = 'C:/EnergyPlusV9-6-0/Energy+.idd'
     elif EnergyPlus_version.lower() == '22.1':
-        iddfile = 'C:\EnergyPlusV22-1-0\Energy+.idd'
+        iddfile = 'C:/EnergyPlusV22-1-0/Energy+.idd'
     elif EnergyPlus_version.lower() == '22.2':
-        iddfile = 'C:\EnergyPlusV22-2-0\Energy+.idd'
+        iddfile = 'C:/EnergyPlusV22-2-0/Energy+.idd'
     elif EnergyPlus_version.lower() == '23.1':
-        iddfile = 'C:\EnergyPlusV23-1-0\Energy+.idd'
+        iddfile = 'C:/EnergyPlusV23-1-0/Energy+.idd'
     elif EnergyPlus_version.lower() == '23.2':
-        iddfile = 'C:\EnergyPlusV23-2-0\Energy+.idd'
+        iddfile = 'C:/EnergyPlusV23-2-0/Energy+.idd'
     elif EnergyPlus_version.lower() == '24.1':
         iddfile = 'C:/EnergyPlusV24-1-0/Energy+.idd'
     elif EnergyPlus_version.lower() == '24.2':

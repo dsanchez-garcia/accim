@@ -25,11 +25,13 @@ If you use this package, please cite us:
 
 [3] Daniel Sánchez-García, David Bienvenido-Huertas, William O’Brien, accim: a Python library for adaptive setpoint temperatures in building performance simulations, Journal of Building Performance Simulation (2025) 1–13. doi:10.1080/19401493.2025.2472305. https://doi.org/10.1080/19401493.2025.2472305
 
+[3] Daniel Sánchez-García, David Bienvenido-Huertas, Alberto Cerezo-Narváez, Mc. Delgado Guerrero, José Sánchez Ramos, A methodological framework and computational tool for adaptive predicted mean vote setpoints in EnergyPlus building simulations, Journal of Building Engineering. 119 (2026) 115273. doi:10.1016/j.jobe.2026.115273. https://doi.org/10.1016/j.jobe.2026.115273
+
 # 2. How to use
 
 ## 2.0 Requirements
 To use accim, the following must be installed:
-- Python 3.9
+- Python 3.9 or newer
 - EnergyPlus (any version between 9.1 and 25.1 those included)
 
 ## 2.1 Installation
@@ -227,12 +229,13 @@ This software has been funded by the following projects, which include the follo
 - "NAIPE - Nuevo Análisis Integral de la Pobreza Energética en Andalucía. Predicción, evaluación y adaptación al cambio climático de hogares vulnerables desde una perspectiva económica, ambiental y social" (US- 125546) funded by the European Regional Development Fund (ERDF) and by the “Consejería de Economía y Conocimiento de la Junta de Andalucía (Spain)”. **Research outputs: [1, 2, 3, 4, 5]**
 - "RIPEBA - Red Iberoamericana de Pobreza Energética y Bienestar Ambiental" (Thematic Network 722RT0135) financed by the call for Thematic Networks of the CYTED Program for 2021. **Research outputs: [7, 8, 9, 10, 11, 12, 13]**
 - "IBERESE - Red Iberoamericana de Eficiencia y Salubridad en Edificios" (Thematic Network 723RT0151) financed by the call for Thematic Networks of the CYTED Program for 2022. **Research outputs: [10, 12, 13, 14]**
-- "EPIU - Energy Poverty Intelligence Unit" (UIA04-212) by the Urban Innovative Actions initiative (European Comission). **Research outputs: [6, 9, 10, 12]**
+- "EPIU - Energy Poverty Intelligence Unit" (UIA04-212) by the Urban Innovative Actions initiative (European Commission). **Research outputs: [6, 9, 10, 12]**
 - "+ENERPOT - Positive Energy Buildings Potential for Climate Change Adaptation and Energy Poverty Mitigation" (PID2021-122437OA-I00) by the Spanish Ministry of Science, Innovation and Universities. **Research outputs: [7, 8, 9, 10, 11, 12]**
 - "ImplicAdapt - Implicaciones en la mitigación del cambio climático y de la pobreza energética mediante nuevo modelo de confort adaptativo para viviendas sociales" (US.22-02) by the Andalusian Ministry of Development, Articulation of the Territory and Housing. **Research outputs: [7, 8, 9, 11, 12]**
 - "CONSTANCY - Resilient urbanisation methodologies and natural conditioning using imaginative nature-based solutions and cultural heritage to recover the street life" (Grant Agreement PID2020-118972RB-I00) by the Spanish Ministry of Science, Innovation and Universities. **Research outputs: [14]**
-- "COSMIC - Combined AI and Data Solutions for Large Scale Resource Optimization with Green Deal Impact" (Grant Agreement GA-101189676) by the European Commission.  **Research outputs: [14]**
+- "COSMIC - Combined AI and Data Solutions for Large Scale Resource Optimization with Green Deal Impact" (Grant Agreement GA-101189676) by the European Commission.  **Research outputs: [14, 15]**
 - Vitality – Project Code ECS00000041, CUP I33C22001330007 - funded under the National Recovery and Resilience Plan (NRRP), Mission 4 Component 2 Investment 1.5 - 'Creation and strengthening of innovation ecosystems,' construction of 'territorial leaders in R&D' – Innovation Ecosystems - Project 'Innovation, digitalization and sustainability for the diffused economy in Central Italy – VITALITY' Call for tender No. 3277 of 30/12/2021, and Concession Decree No. 0001057.23-06-2022 of Italian Ministry of University funded by the European Union – NextGenerationEU. **Research outputs: [14]**
+- LIFE BUILD-OSS: OSS Training Programa Leading Energy Efficiency for BUILDing” (LIFE24-CET-BUILD-OSS), by the European Commission.   **Research outputs: [15]**
 
 References:
 - [1] D. Bienvenido-Huertas, D. Sánchez-García, C. Rubio-Bellido, Analysing natural ventilation to reduce the cooling energy consumption and the fuel poverty of social dwellings in coastal zones, Appl. Energy. 279 (2020) 115845. doi:10.1016/j.apenergy.2020.115845. https://www.doi.org/10.1016/j.apenergy.2020.115845
@@ -249,6 +252,7 @@ References:
 - [12] D. Sánchez-García, D. Bienvenido-Huertas, C. Rubio-Bellido, R.F. Rupp, Assessing the energy saving potential of using adaptive setpoint temperatures: The case study of a regional adaptive comfort model for Brazil in both the present and the future, Build. Simul. 17 (2024) 459–482. doi:10.1007/s12273-023-1084-3. https://www.doi.org/10.1007/s12273-023-1084-3
 - [13] D. Sánchez-García, D. Bienvenido-Huertas, W. O’Brien, accim: a Python library for adaptive setpoint temperatures in building performance simulations, J. Build. Perform. Simul. (2025) 1–13. doi:10.1080/19401493.2025.2472305. https://www.doi.org/10.1080/19401493.2025.2472305
 - [14] D. Sánchez-García, D. Bienvenido-Huertas, J. Kim, A.L. Pisello, Exploring the energy implications of human thermal adaptation to hot temperatures in present and future scenarios: a parametric simulation study, Energy. 325 (2025) 136029. doi:10.1016/j.energy.2025.136029. https://www.doi.org/10.1016/j.energy.2025.136029
+- [15] D. Sánchez-García, D. Bienvenido-Huertas, A. Cerezo-Narváez, Mc. Delgado Guerrero, J. Sánchez Ramos, A methodological framework and computational tool for adaptive predicted mean vote setpoints in EnergyPlus building simulations, Journal of Building Engineering. 119 (2026) 115273. https://doi.org/10.1016/j.jobe.2026.115273.
 
 # 5. Credits
 

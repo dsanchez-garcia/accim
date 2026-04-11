@@ -654,38 +654,38 @@ def modifyAccis(
 
 
 
-    SetInputData.Program_Line_1 = 'set ComfStand = ' + repr(ComfStand)
-    SetInputData.Program_Line_2 = 'set CAT = ' + repr(CAT)
-    SetInputData.Program_Line_3 = 'set ComfMod = ' + repr(ComfMod)
-    SetInputData.Program_Line_4 = 'set HVACmode = ' + repr(HVACmode)
-    SetInputData.Program_Line_5 = 'set VentCtrl = ' + repr(VentCtrl)
-    SetInputData.Program_Line_6 = 'set VSToffset = ' + repr(VSToffset)
-    SetInputData.Program_Line_7 = 'set MinOToffset = ' + repr(MinOToffset)
-    SetInputData.Program_Line_8 = 'set MaxWindSpeed = ' + repr(MaxWindSpeed)
-    SetInputData.Program_Line_9 = 'set ACSTtol = ' + repr(-ASTtol)
-    SetInputData.Program_Line_10 = 'set AHSTtol = ' + repr(ASTtol)
-    SetInputData.Program_Line_11 = 'set CoolSeasonStart = ' + repr(CoolSeasonStart)
-    SetInputData.Program_Line_12 = 'set CoolSeasonEnd = ' + repr(CoolSeasonEnd)
+    SetInputData.Program_Line_1 = 'set ComfStand = ' + str(ComfStand)
+    SetInputData.Program_Line_2 = 'set CAT = ' + str(CAT)
+    SetInputData.Program_Line_3 = 'set ComfMod = ' + str(ComfMod)
+    SetInputData.Program_Line_4 = 'set HVACmode = ' + str(HVACmode)
+    SetInputData.Program_Line_5 = 'set VentCtrl = ' + str(VentCtrl)
+    SetInputData.Program_Line_6 = 'set VSToffset = ' + str(VSToffset)
+    SetInputData.Program_Line_7 = 'set MinOToffset = ' + str(MinOToffset)
+    SetInputData.Program_Line_8 = 'set MaxWindSpeed = ' + str(MaxWindSpeed)
+    SetInputData.Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol)
+    SetInputData.Program_Line_10 = 'set AHSTtol = ' + str(ASTtol)
+    SetInputData.Program_Line_11 = 'set CoolSeasonStart = ' + str(CoolSeasonStart)
+    SetInputData.Program_Line_12 = 'set CoolSeasonEnd = ' + str(CoolSeasonEnd)
 
-    SetComfTemp.Program_Line_2 = f'set ComfTemp = PMOT*{repr(CustAST_m)}+{repr(CustAST_n)}'
+    SetComfTemp.Program_Line_2 = f'set ComfTemp = PMOT*{str(CustAST_m)}+{str(CustAST_n)}'
 
-    SetAppLimits.Program_Line_2 = f'set ACSTaul = {repr(CustAST_ACSTaul)}'
-    SetAppLimits.Program_Line_3 = f'set ACSTall = {repr(CustAST_ACSTall)}'
-    SetAppLimits.Program_Line_4 = f'set AHSTaul = {repr(CustAST_AHSTaul)}'
-    SetAppLimits.Program_Line_5 = f'set AHSTall = {repr(CustAST_AHSTall)}'
+    SetAppLimits.Program_Line_2 = f'set ACSTaul = {str(CustAST_ACSTaul)}'
+    SetAppLimits.Program_Line_3 = f'set ACSTall = {str(CustAST_ACSTall)}'
+    SetAppLimits.Program_Line_4 = f'set AHSTaul = {str(CustAST_AHSTaul)}'
+    SetAppLimits.Program_Line_5 = f'set AHSTall = {str(CustAST_AHSTall)}'
 
-    SetAST.Program_Line_1 = 'set SetpointAcc = ' + repr(SetpointAcc)
-    SetAST.Program_Line_2 = 'set m = ' + repr(CustAST_m)
-    SetAST.Program_Line_3 = 'set n = ' + repr(CustAST_n)
+    SetAST.Program_Line_1 = 'set SetpointAcc = ' + str(SetpointAcc)
+    SetAST.Program_Line_2 = 'set m = ' + str(CustAST_m)
+    SetAST.Program_Line_3 = 'set n = ' + str(CustAST_n)
 
-    SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + repr(MaxTempDiffVOF)
-    SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + repr(MinTempDiffVOF)
-    SetVOFinputData.Program_Line_3 = 'set MultiplierVOF = ' + repr(MultiplierVOF)
+    SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + str(MaxTempDiffVOF)
+    SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + str(MinTempDiffVOF)
+    SetVOFinputData.Program_Line_3 = 'set MultiplierVOF = ' + str(MultiplierVOF)
 
-    ApplyCAT.Program_Line_1 = 'set CATcoolOffset = ' + repr(CATcoolOffset)
-    ApplyCAT.Program_Line_2 = 'set CATheatOffset = ' + repr(CATheatOffset)
-    ApplyCAT.Program_Line_4 = f'set ACSToffset = {repr(CustAST_ACSToffset)} + {repr(CATcoolOffset)}'
-    ApplyCAT.Program_Line_5 = f'set AHSToffset = {repr(CustAST_AHSToffset)} + {repr(CATheatOffset)}'
+    ApplyCAT.Program_Line_1 = 'set CATcoolOffset = ' + str(CATcoolOffset)
+    ApplyCAT.Program_Line_2 = 'set CATheatOffset = ' + str(CATheatOffset)
+    ApplyCAT.Program_Line_4 = f'set ACSToffset = {str(CustAST_ACSToffset)} + {str(CATcoolOffset)}'
+    ApplyCAT.Program_Line_5 = f'set AHSToffset = {str(CustAST_AHSToffset)} + {str(CATheatOffset)}'
 
 
 def modify_param(idf, parameter, value):
