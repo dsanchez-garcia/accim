@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-04-12
+
+### Added
+- **Global `update_idf_version` Utility**: Added an automated function inside `accim.utils.py` to seamlessly upgrade the defined EnergyPlus version of target IDF files.
+- **Sizing Error Prevention**: Implemented automatic initialization of standard autosizing constraints within the `SimulationControl` object (via `setSimulationControlSizing` in `accim.sim.accim_Base`). This fully resolves strict EnergyPlus fatal sizing errors when modifying or autosizing components in exported skeleton environments.
+
+### Changed
+- **Unified Object Identification**: Globalized the robust hierarchy resolution logic from `apmv_setpoints._resolve_targets` into the central pipeline (`accim.sim.utils.scan_zones`). The overarching dataset map is meticulously managed across all hierarchical relationships for `People`, `Space`, `SpaceList`, and `ZoneList` objects universally without duplicate clashes.
+
+### Fixed
+- **Legacy Object Conflicts**: Eliminated an unstable hack inside `accim.sim.accim_Base` where duplicate dummy `People` objects were injected whenever it encountered `ZONELIST` configurations, thereby securing EnergyPlus engine safety. 
+
 ## [0.7.7] - 2026-04-11
 
 ### Fixed
@@ -74,6 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 A detailed changelog for versions prior to 0.7.5 was not formally maintained in this file.
 
 ---
-[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v0.7.6...HEAD
+[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v0.7.8...HEAD
+[0.7.8]: https://github.com/dsanchez-garcia/accim/compare/v0.7.7...v0.7.8
+[0.7.7]: https://github.com/dsanchez-garcia/accim/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/dsanchez-garcia/accim/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/dsanchez-garcia/accim/releases/tag/v0.7.5
