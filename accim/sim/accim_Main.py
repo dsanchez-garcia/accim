@@ -40,7 +40,8 @@ class accimJob():
         setPMVsetpoint, \
         addControlFilesObjects, \
         addOutputVariableDictionaryObject, \
-        addOutputEnergyManagementSystem
+        addOutputEnergyManagementSystem, \
+        setSimulationControlSizing
     from accim.sim.accim_Base_EMS import \
         addEMSActuatorsBase, \
         addEMSOutputVariableBase, \

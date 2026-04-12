@@ -3975,18 +3975,7 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
     """
     sensorlist = ([sensor.Name for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor']])
 
-    if len([i.Name for i in self.idf1.idfobjects['zonelist']]) > 0:
-        ppl_key_name = self.occupiedZones_orig[0] + ' People'
-    elif self.spacelist_use:
-        # space_list = []
-        # for people in self.idf1.idfobjects['PEOPLE']:
-        #     for spacelist in [i for i in self.idf1.idfobjects['SPACELIST'] if i.Name == people.Zone_or_ZoneList_or_Space_or_SpaceList_Name]:
-        #         for space in [i for i in self.idf1.idfobjects['SPACE'] if i.Space_Type == spacelist.Name]:
-        #             space_list.append(f'{space.Name} {people.Name}')
-        # ppl_key_name = space_list[0]
-        ppl_key_name = self.spacenames_for_ems_uniquekey_people[0]
-    else:
-        ppl_key_name = [i for i in self.idf1.idfobjects['PEOPLE']][0].Name
+    ppl_key_name = self.ems_objs_key[0]
 
     # spacelist = [i for i in self.idf1.idfobjects['spacelist']]
 
@@ -4036,11 +4025,7 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
     #                 print(f'Added - Occ_count_{self.spacenames_for_ems_name[i]} Sensor')
     # else:
 
-    if self.spacelist_use:
-        # occ_count_keys = [f'{i} People' for i in self.ems_objs_key]
-        occ_count_keys = [i for i in self.spacenames_for_ems_uniquekey_people]
-    else:
-        occ_count_keys = [f'People {i}' for i in self.ems_objs_key]
+    occ_count_keys = self.ems_objs_key
 
     for i in range(len(self.ems_objs_name)):
         if f'Occ_count_{self.ems_objs_name[i]}' in sensorlist:

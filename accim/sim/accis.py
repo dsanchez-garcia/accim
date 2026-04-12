@@ -622,6 +622,7 @@ class addAccis:
                 z.genOutputDataframe(idf_filename=file)
                 df_outputs_to_concat.append(z.df_outputs_temp)
 
+            z.setSimulationControlSizing(verboseMode=verboseMode)
             z.saveaccim(verboseMode=verboseMode)
             if verboseMode:
                 print('Ending with file:')

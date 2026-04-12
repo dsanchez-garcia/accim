@@ -175,17 +175,6 @@ def setComfFieldsPeople(
 
     ppl = ([people for people in self.idf1.idfobjects['PEOPLE']])
 
-    if len([i for i in self.idf1.idfobjects['zonelist']]) > 0:
-        # zonelist = [i for i in self.idf1.idfobjects['zonelist']]
-        # spacelist = [i for i in self.idf1.idfobjects['spacelist']]
-        ppl = [i for i in self.idf1.idfobjects['people']]
-        # todo if people zone or zonelist field is a zonelist, add a people object for a zone
-        newppl = ppl[-1]
-        newppl = self.idf1.copyidfobject(newppl)
-        newppl.Name = self.occupiedZones_orig[0] + ' People'
-        newppl.Zone_or_ZoneList_or_Space_or_SpaceList_Name = self.occupiedZones_orig[0]
-        self.newppl = newppl
-
     if verboseMode:
         print('The people objects in the model have been amended.')
         # print(*peoplelist,sep="\n")
@@ -329,3 +318,31 @@ def addOutputEnergyManagementSystem(self, verboseMode: bool = True):
         if verboseMode:
             print(f'Not added - Output:EnergyManagementSystem object')
 
+def setSimulationControlSizing(self, verboseMode: bool = True):
+    """
+    Checks if a SimulationControl object exists and modifies it to enable
+    Do_Zone_Sizing_Calculation, Do_System_Sizing_Calculation, and
+    Do_Plant_Sizing_Calculation. If the object does not exist, it is created.
+
+    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
+    """
+    sim_controls = [i for i in self.idf1.idfobjects['SimulationControl']]
+
+    if len(sim_controls) == 0:
+        self.idf1.newidfobject(
+            'SimulationControl',
+            Do_Zone_Sizing_Calculation='Yes',
+            Do_System_Sizing_Calculation='Yes',
+            Do_Plant_Sizing_Calculation='Yes',
+            Run_Simulation_for_Sizing_Periods='Yes',
+            Run_Simulation_for_Weather_File_Run_Periods='Yes'
+        )
+        if verboseMode:
+            print('Added - SimulationControl object with Sizing parameters enabled')
+    else:
+        sim_control = sim_controls[0]
+        sim_control.Do_Zone_Sizing_Calculation = 'Yes'
+        sim_control.Do_System_Sizing_Calculation = 'Yes'
+        sim_control.Do_Plant_Sizing_Calculation = 'Yes'
+        if verboseMode:
+            print('Modified - SimulationControl object: enabled Zone, System, and Plant Sizing Calculations')
