@@ -3725,6 +3725,7 @@ def addOutputVariablesStandard(
         'AFN Zone Infiltration Volume',
         'AFN Zone Ventilation Air Change Rate',
         'AFN Zone Ventilation Volume',
+        'Zone Ventilation Standard Density Air Change Rate',
     ]
     if TempCtrl.lower() == 'pmv':
         addittionaloutputs.extend([
@@ -3873,6 +3874,24 @@ def addOutputVariablesStandard(
             if verboseMode:
                 print('Added - ACST_Sch_'+zonename+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
 
+        if hasattr(self, 'natural_ventilation_type') and self.natural_ventilation_type == 'Scheduled':
+            for sch_name in self.scheduled_ventilation_dict.values():
+                output_exist = any(
+                    out.Variable_Name == 'Schedule Value' and out.Key_Value == sch_name 
+                    for out in self.idf1.idfobjects['Output:Variable']
+                    if out.Reporting_Frequency == freq.capitalize()
+                )
+                if not output_exist:
+                    self.idf1.newidfobject(
+                        'Output:Variable',
+                        Key_Value=sch_name,
+                        Variable_Name='Schedule Value',
+                        Reporting_Frequency=freq.capitalize(),
+                        Schedule_Name=''
+                    )
+                    if verboseMode:
+                        print('Added - Schedule Value for ' + sch_name + ' Reporting Frequency' + freq.capitalize() + ' Output:Variable data')
+
         # for zonename in self.zonenames_orig:
         #     self.idf1.newidfobject(
         #         'Output:Variable',
@@ -3939,6 +3958,7 @@ def addOutputVariablesDetailed(
 
     addittionaloutputs = [
         'AFN Surface Venting Window or Door Opening Factor',
+        'Zone Ventilation Standard Density Air Change Rate',
     ]
 
     for freq in Outputs_freq:
@@ -3965,6 +3985,25 @@ def addOutputVariablesDetailed(
                     )
                 if verboseMode:
                     print('Added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
+
+        # Add outputs for scheduled ventilation opening fractions
+        if hasattr(self, 'natural_ventilation_type') and self.natural_ventilation_type == 'Scheduled':
+            for sch_name in self.scheduled_ventilation_dict.values():
+                output_exist = any(
+                    out.Variable_Name == 'Schedule Value' and out.Key_Value == sch_name 
+                    for out in self.idf1.idfobjects['Output:Variable']
+                    if out.Reporting_Frequency == freq.capitalize()
+                )
+                if not output_exist:
+                    self.idf1.newidfobject(
+                        'Output:Variable',
+                        Key_Value=sch_name,
+                        Variable_Name='Schedule Value',
+                        Reporting_Frequency=freq.capitalize(),
+                        Schedule_Name=''
+                    )
+                    if verboseMode:
+                        print('Added - Schedule Value for ' + sch_name + ' Reporting Frequency' + freq.capitalize() + ' Output:Variable data')
 
 def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
     """Add EMS sensors for accim.
@@ -4132,10 +4171,16 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
                 if verboseMode:
                     print('Not added - '+self.windownamelist[i]+'_Occ_count Sensor')
             else:
+                correct_key = 'People '+self.windownamelist_orig_split[i][0]
+                # Try to find the exact key from ems_objs_key
+                for idx, z_name in enumerate(self.ems_zonenames):
+                    if z_name.lower() == self.windownamelist_orig_split[i][0].lower():
+                        correct_key = self.ems_objs_key[idx]
+                        break
                 self.idf1.newidfobject(
                     'EnergyManagementSystem:Sensor',
                     Name=self.windownamelist[i]+'_Occ_count',
-                    OutputVariable_or_OutputMeter_Index_Key_Name='People '+self.windownamelist_orig_split[i][0],
+                    OutputVariable_or_OutputMeter_Index_Key_Name=correct_key,
                     OutputVariable_or_OutputMeter_Name='People Occupant Count'
                     )
                 if verboseMode:
@@ -4216,13 +4261,22 @@ def addEMSActuatorsBase(self, ScriptType: str = None, verboseMode: bool = True):
                 if verboseMode:
                     print('Not added - '+self.windownamelist[i]+'_OpT Actuator')
             else:
-                self.idf1.newidfobject(
-                    'EnergyManagementSystem:Actuator',
-                    Name=self.windownamelist[i]+'_VentOpenFact',
-                    Actuated_Component_Unique_Name=self.windownamelist_orig[i],
-                    Actuated_Component_Type='AirFlow Network Window/Door Opening',
-                    Actuated_Component_Control_Type='Venting Opening Factor'
+                if hasattr(self, 'natural_ventilation_type') and self.natural_ventilation_type == 'Scheduled':
+                    self.idf1.newidfobject(
+                        'EnergyManagementSystem:Actuator',
+                        Name=self.windownamelist[i]+'_VentOpenFact',
+                        Actuated_Component_Unique_Name=self.scheduled_ventilation_dict[self.windownamelist_orig[i]],
+                        Actuated_Component_Type='Schedule:Constant',
+                        Actuated_Component_Control_Type='Schedule Value'
                     )
+                else:
+                    self.idf1.newidfobject(
+                        'EnergyManagementSystem:Actuator',
+                        Name=self.windownamelist[i]+'_VentOpenFact',
+                        Actuated_Component_Unique_Name=self.windownamelist_orig[i],
+                        Actuated_Component_Type='AirFlow Network Window/Door Opening',
+                        Actuated_Component_Control_Type='Venting Opening Factor'
+                        )
                 if verboseMode:
                     print('Added - '+self.windownamelist[i]+'_VentOpenFact Actuator')
     del actuatorlist
