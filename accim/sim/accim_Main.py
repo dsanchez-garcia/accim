@@ -64,6 +64,8 @@ class accimJob():
         addForscriptSchExistHVAC
     from accim.sim.accim_ExistingHVAC_EMS import \
         addEMSSensorsExisHVAC
+    from accim.sim.accim_ExistingHVAC_resolver import \
+        resolve_hvac_zone_map
     from accim.sim.accim_VRFsystem import \
         addBaseSchedules, \
         addCurveObj, \
@@ -86,9 +88,16 @@ class accimJob():
                  EnergyPlus_version: str = 'auto',
                  TempCtrl: str = None,
                  verboseMode: bool = True,
-                 accimNotWorking: bool = False):
+                 accimNotWorking: bool = False,
+                 hvac_zone_map: dict = None):
         """
         Constructor method.
+
+        :param hvac_zone_map: Optional manual mapping of existing HVAC object names
+            to zone names, used when ScriptType is 'ex_mm' or 'ex_ac' and the
+            automatic resolver cannot determine the correct zone (e.g. shared/central
+            equipment).  Format: ``{'HVAC Object Name': 'Zone Name'}``.
+        :type hvac_zone_map: dict or None
         """
         import eppy
         from eppy.modeleditor import IDF
@@ -497,35 +506,67 @@ class accimJob():
 
                 self.ExisHVAC = []
 
-                for i in range(len(HVACkeylist)):
+                for hvac_type in HVACkeylist:
                     try:
-                        temp = [i.Name for i in self.idf1.idfobjects[HVACkeylist[i]]]
-                        temp_zone_orig = [i.Name.split(' ')[0] for i in self.idf1.idfobjects[HVACkeylist[i]]]
-                        temp_zone = [i.Name.split(' ')[0].replace(':', '_') for i in self.idf1.idfobjects[HVACkeylist[i]]]
-                        temp_win = []
-                        for j in temp_zone:
-                            for k in self.windownamelist:
-                                if j in k:
-                                    temp_win.append(k)
-                        # hasta aqui
-                        if len(temp) == 0:
-                            continue
-                        else:
-                            self.ExisHVAC.append([HVACkeylist[i], temp, temp_zone_orig, temp_zone, temp_win])
+                        hvac_objs = self.idf1.idfobjects[hvac_type]
                     except KeyError:
                         if verboseMode:
-                            print(f'{HVACkeylist[i]} HVAC SYSTEM IS NOT SUPPORTED')
+                            print(f'{hvac_type} HVAC SYSTEM IS NOT SUPPORTED')
                         continue
+
+                    obj_names = [o.Name for o in hvac_objs]
+                    if not obj_names:
+                        continue
+
+                    # Use the multi-strategy resolver to map each HVAC object
+                    # to one or more zone names.
+                    zone_map = resolve_hvac_zone_map(
+                        idf=self.idf1,
+                        hvac_type=hvac_type,
+                        hvac_obj_names=obj_names,
+                        user_map=hvac_zone_map,
+                        verboseMode=verboseMode,
+                    )
+
+                    # Build flat parallel lists, expanding coils that serve
+                    # multiple zones (C2 AirLoop case) into one entry per zone.
+                    temp = []          # HVAC object names (may repeat for C2)
+                    temp_zone_orig = [] # zone names in original form
+                    temp_zone = []      # zone names with ':' replaced by '_'
+
+                    for obj_name, zones in zone_map.items():
+                        for zone in zones:
+                            temp.append(obj_name)
+                            temp_zone_orig.append(zone.upper())
+                            if ':' in zone:
+                                temp_zone.append(zone.upper().replace(':', '_'))
+                            else:
+                                temp_zone.append(zone.upper().replace(' ', '_'))
+
+                    # Build matching window list for each (object, zone) entry
+                    temp_win = []
+                    for tz in temp_zone:
+                        for wname in self.windownamelist:
+                            if tz in wname:
+                                temp_win.append(wname)
+
+                    self.ExisHVAC.append(
+                        [hvac_type, temp, temp_zone_orig, temp_zone, temp_win]
+                    )
 
                 for i in range(len(self.ExisHVAC)):
                     for j in range(len(self.ExisHVAC[i][2])):
                         if self.ExisHVAC[i][2][j] not in self.zonenames_orig:
                             if verboseMode:
-                                print(f'"{self.ExisHVAC[i][2][j]}" is not a valid room. \n'
-                                      f'That means "{self.ExisHVAC[i][1][j]}" is not named following [HVAC Zone] [HVAC Element] pattern or HVAC element is shared')
-                            # raise ValueError
+                                print(
+                                    f'"{self.ExisHVAC[i][2][j]}" is not a valid zone. \n'
+                                    f'The HVAC object "{self.ExisHVAC[i][1][j]}" ({self.ExisHVAC[i][0]}) '
+                                    f'could not be mapped to any occupied zone. \n'
+                                    f'If automatic detection failed, supply the correct mapping via '
+                                    f'hvac_zone_map={{"\'{self.ExisHVAC[i][1][j]}\'": "correct_zone_name"}}.'
+                                )
                             self.accimNotWorking = True
-                
+
                 if verboseMode:
                     for i in range(len(self.ExisHVAC)):
                         print(f'The names of the existing {self.ExisHVAC[i][0]} objects are:')

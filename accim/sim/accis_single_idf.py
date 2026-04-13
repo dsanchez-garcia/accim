@@ -78,6 +78,10 @@ class addAccis:
     :param debugging: If True, an Output:EnergyManagementSystem object is used
         to generate the EDD file.
     :type debugging: bool
+    :param hvac_zone_map: Optional. Manual mapping of existing HVAC object names to
+        zone names.  Used only when ScriptType is ``'ex_mm'`` or ``'ex_ac'``.
+        Format: ``{'HVAC Object Name': 'Zone Name'}``.
+    :type hvac_zone_map: dict or None
     :ivar arguments: A dictionary containing all arguments
     :ivar df_outputs: the pandas DataFrame instance created with argument ``Output_gen_dataframe``
     :ivar occupied_zones: A list containing all occupied zone names within the input idf.
@@ -103,6 +107,7 @@ class addAccis:
         cop: float = 2.1,
         make_averages: bool = False,
         debugging: bool = False,
+        hvac_zone_map: dict = None,
     ):
         """
         Constructor method.
@@ -276,7 +281,8 @@ class addAccis:
             ScriptType=ScriptType,
             EnergyPlus_version=EnergyPlus_version,
             TempCtrl=TempCtrl,
-            verboseMode=verboseMode
+            verboseMode=verboseMode,
+            hvac_zone_map=hvac_zone_map,
         )
 
         self.occupied_zones = z.occupiedZones

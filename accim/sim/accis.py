@@ -177,6 +177,14 @@ class addAccis:
     :param cop: The coefficient of performance of the VRF system for each zone,
     added when using ScriptType vrf_mm or vrf_ac
     :type: cop: int
+    :param hvac_zone_map: Optional. Manual mapping of existing HVAC object names to
+        zone names.  Used only when ScriptType is ``'ex_mm'`` or ``'ex_ac'`` and
+        the automatic resolver cannot determine the correct zone (e.g. shared or
+        central HVAC equipment not following the ``[ZoneName ObjectName]`` naming
+        convention).  Format: ``{'HVAC Object Name': 'Zone Name'}``.
+        If the resolver emits a ``UserWarning`` for a given object, provide that
+        object's name as a key in this dict with the correct zone name as the value.
+    :type hvac_zone_map: dict or None
     :param make_averages: Used to make averages of hour-counting variables.
     :type make_averages: bool
     :param debugging: If True, an Output:EnergyManagementSystem object is used
@@ -248,6 +256,7 @@ class addAccis:
         cop: float = 2.1,
         make_averages: bool = False,
         debugging: bool = False,
+        hvac_zone_map: dict = None,
     ):
         """
         Constructor method.
@@ -504,7 +513,8 @@ class addAccis:
                 ScriptType=ScriptType,
                 EnergyPlus_version=EnergyPlus_version,
                 TempCtrl=TempCtrl,
-                verboseMode=verboseMode
+                verboseMode=verboseMode,
+                hvac_zone_map=hvac_zone_map,
             )
 
             if EnergyPlus_version.lower() == 'auto':
