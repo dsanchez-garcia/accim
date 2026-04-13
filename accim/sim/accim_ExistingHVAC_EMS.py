@@ -41,7 +41,7 @@ def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
                     if verboseMode:
                         print('Added - ' + self.ExisHVAC[i][3][j] + '_CoolCoil Sensor')
                 for k in range(len(self.ExisHVAC[i][4])):
-                    if self.ExisHVAC[i][3][j] in self.ExisHVAC[i][4][k]:
+                    if self.ExisHVAC[i][3][j].lower() in self.ExisHVAC[i][4][k].lower():
                         if self.ExisHVAC[i][4][k] + '_CoolCoil' in sensorlist:
                             if verboseMode:
                                 print('Not added - ' + self.ExisHVAC[i][4][k] + '_CoolCoil Sensor')
@@ -70,7 +70,7 @@ def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
                         print('Added - ' + self.ExisHVAC[i][3][j] + '_HeatCoil Sensor')
                 # probando
                 for k in range(len(self.ExisHVAC[i][4])):
-                    if self.ExisHVAC[i][3][j] in self.ExisHVAC[i][4][k]:
+                    if self.ExisHVAC[i][3][j].lower() in self.ExisHVAC[i][4][k].lower():
                         if self.ExisHVAC[i][4][k] + '_HeatCoil' in sensorlist:
                             if verboseMode:
                                 print('Not added - ' + self.ExisHVAC[i][4][k] + '_HeatCoil Sensor')
