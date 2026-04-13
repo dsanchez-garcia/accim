@@ -257,22 +257,81 @@ class accimJob():
         ):
             self.ismixedmode = True
             self.windownamelist_orig = []
+            self.windownamelist = []
+            self.windownamelist_orig_split = []
 
-            for i in [window.Name for window in
-                      self.idf1.idfobjects
-                      ['AirflowNetwork:MultiZone:Component:DetailedOpening']
-                      if window.Name.endswith('_Win')
-                      or window.Name.endswith('_Door')
-                      ]:
-                for k in self.occupiedZones_orig:
-                    if i.split('_')[0].lower() == k.lower():
-                        self.windownamelist_orig.append(i)
+            # Check if there is already a ScheduleTypeLimits for Fractional
+            if len([stl for stl in self.idf1.idfobjects['ScheduleTypeLimits'] if stl.Name.lower() == 'fractional']) == 0:
+                self.idf1.newidfobject(
+                    'ScheduleTypeLimits',
+                    Name='Fractional',
+                    Lower_Limit_Value=0,
+                    Upper_Limit_Value=1,
+                    Numeric_Type='Continuous',
+                    Unit_Type='dimensionless'
+                )
 
-            self.windownamelist = [i.replace(':', '_') for i in self.windownamelist_orig]
+            if len(self.idf1.idfobjects['AirflowNetwork:SimulationControl']) > 0:
+                self.natural_ventilation_type = 'AFN'
+                for i in [window.Name for window in
+                          self.idf1.idfobjects
+                          ['AirflowNetwork:MultiZone:Component:DetailedOpening']
+                          if window.Name.endswith('_Win')
+                          or window.Name.endswith('_Door')
+                          ]:
+                    for k in self.occupiedZones_orig:
+                        if i.split('_')[0].lower() == k.lower():
+                            self.windownamelist_orig.append(i)
 
-            # print(self.windownamelist_orig)
-            self.windownamelist_orig_split = ([i.split('_') for i in self.windownamelist_orig])
-            # print(self.windownamelist_orig_split)
+                self.windownamelist = [i.replace(':', '_') for i in self.windownamelist_orig]
+                self.windownamelist_orig_split = ([i.split('_') for i in self.windownamelist_orig])
+            else:
+                self.natural_ventilation_type = 'Scheduled'
+                self.scheduled_ventilation_dict = {}
+
+                # Look for ZoneVentilation:WindandStackOpenArea
+                for zv in self.idf1.idfobjects['ZoneVentilation:WindandStackOpenArea']:
+                    for k in self.occupiedZones_orig:
+                        if zv.Zone_or_Space_Name.lower() == k.lower():
+                            sch_name = f'Vent_Sch_{k}'
+                            if len([sch for sch in self.idf1.idfobjects['Schedule:Constant'] if sch.Name == sch_name]) == 0:
+                                self.idf1.newidfobject(
+                                    'Schedule:Constant',
+                                    Name=sch_name,
+                                    Schedule_Type_Limits_Name='Fractional',
+                                    Hourly_Value=0
+                                )
+                            zv.Opening_Area_Fraction_Schedule_Name = sch_name
+                            
+                            virtual_window_name = f"{k}_Win"
+                            self.windownamelist_orig.append(virtual_window_name)
+                            self.windownamelist.append(virtual_window_name.replace(':', '_'))
+                            self.windownamelist_orig_split.append([k, 'Win'])
+                            self.scheduled_ventilation_dict[virtual_window_name] = sch_name
+
+                # Look for ZoneVentilation:DesignFlowRate
+                for zv in self.idf1.idfobjects['ZoneVentilation:DesignFlowRate']:
+                    for k in self.occupiedZones_orig:
+                        if zv.Zone_or_Space_Name.lower() == k.lower():
+                            if 'infiltration' in zv.Name.lower():
+                                continue
+                            sch_name = f'Vent_Sch_{k}'
+                            if len([sch for sch in self.idf1.idfobjects['Schedule:Constant'] if sch.Name == sch_name]) == 0:
+                                self.idf1.newidfobject(
+                                    'Schedule:Constant',
+                                    Name=sch_name,
+                                    Schedule_Type_Limits_Name='Fractional',
+                                    Hourly_Value=0
+                                )
+                            zv.Schedule_Name = sch_name
+                            
+                            virtual_window_name = f"{k}_Win"
+                            if virtual_window_name not in self.windownamelist_orig:
+                                self.windownamelist_orig.append(virtual_window_name)
+                                self.windownamelist.append(virtual_window_name.replace(':', '_'))
+                                self.windownamelist_orig_split.append([k, 'Win'])
+                                self.scheduled_ventilation_dict[virtual_window_name] = sch_name
+
             if verboseMode:
                 print(f'The windows and doors in the model {filename_temp} are:')
                 print(*self.windownamelist, sep="\n")
