@@ -413,7 +413,7 @@ class accimJob():
                     temp_win = []
                     for tz in temp_zone:
                         for wname in self.windownamelist:
-                            if tz in wname:
+                            if tz.lower() in wname.lower():
                                 temp_win.append(wname)
 
                     self.ExisHVAC.append(
