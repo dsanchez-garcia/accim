@@ -1732,3 +1732,49 @@ def update_idf_version(
         finally:
             # Revert to the original working directory so the rest of your app works normally
             os.chdir(original_cwd)
+
+
+def set_operative_temp_control(idf_path: str = None, idf_object=None):
+    """
+    Sets the thermostat control to operative temperature for all ZoneControl:Thermostat objects.
+    You can provide either the path to the IDF file or the eppy/besos IDF object.
+
+    :param idf_path: Path to the IDF file.
+    :param idf_object: eppy or besos IDF object.
+    :return: The modified IDF object if idf_object was provided, otherwise None.
+    """
+    if idf_path is None and idf_object is None:
+        raise ValueError("Either idf_path or idf_object must be provided.")
+
+    if idf_path is not None:
+        from besos.eppy_funcs import get_building
+        building = get_building(idf_path)
+    else:
+        building = idf_object
+
+    thermostats = [i for i in building.idfobjects['ZoneControl:Thermostat']]
+
+    if not thermostats:
+        print("No ZoneControl:Thermostat objects found in the IDF.")
+
+    for t in thermostats:
+        t_name = t.Name
+        op_temps = [op for op in building.idfobjects['ZoneControl:Thermostat:OperativeTemperature'] 
+                    if op.Thermostat_Name == t_name]
+
+        if not op_temps:
+            building.newidfobject(
+                key='ZoneControl:Thermostat:OperativeTemperature',
+                Thermostat_Name=t_name,
+                Radiative_Fraction_Input_Mode='Constant',
+                Fixed_Radiative_Fraction=0.5
+            )
+            print(f"Added ZoneControl:Thermostat:OperativeTemperature for {t_name}")
+        else:
+            print(f"ZoneControl:Thermostat:OperativeTemperature already exists for {t_name}")
+
+    if idf_path is not None:
+        building.save()
+        return None
+    else:
+        return building
