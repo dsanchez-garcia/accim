@@ -38,6 +38,7 @@ def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
                         OutputVariable_or_OutputMeter_Index_Key_Name=self.ExisHVAC[i][1][j],
                         OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
                     )
+                    sensorlist.append(self.ExisHVAC[i][3][j] + '_CoolCoil')
                     if verboseMode:
                         print('Added - ' + self.ExisHVAC[i][3][j] + '_CoolCoil Sensor')
                 for k in range(len(self.ExisHVAC[i][4])):
@@ -52,6 +53,7 @@ def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
                                 OutputVariable_or_OutputMeter_Index_Key_Name=self.ExisHVAC[i][1][j],
                                 OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
                             )
+                            sensorlist.append(self.ExisHVAC[i][4][k] + '_CoolCoil')
                             if verboseMode:
                                 print('Added - ' + self.ExisHVAC[i][4][k] + '_CoolCoil Sensor')
                 #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.ExisHVAC[i][3][j]+'_CoolCoil'])
@@ -66,6 +68,7 @@ def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
                         OutputVariable_or_OutputMeter_Index_Key_Name=self.ExisHVAC[i][1][j],
                         OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
                     )
+                    sensorlist.append(self.ExisHVAC[i][3][j] + '_HeatCoil')
                     if verboseMode:
                         print('Added - ' + self.ExisHVAC[i][3][j] + '_HeatCoil Sensor')
                 # probando
@@ -81,5 +84,6 @@ def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
                                 OutputVariable_or_OutputMeter_Index_Key_Name=self.ExisHVAC[i][1][j],
                                 OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
                             )
+                            sensorlist.append(self.ExisHVAC[i][4][k] + '_HeatCoil')
                             if verboseMode:
                                 print('Added - ' + self.ExisHVAC[i][4][k] + '_HeatCoil Sensor')
