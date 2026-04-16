@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Legacy Object Conflicts**: Eliminated an unstable hack inside `accim.sim.accim_Base` where duplicate dummy `People` objects were injected whenever it encountered `ZONELIST` configurations, thereby securing EnergyPlus engine safety.
 - **EMS Occupant Count Sensor Key**: Fixed a bug in `addEMSSensorsBase` where the `People Occupant Count` sensor was built with a hardcoded `'People ' + zonename` key. The sensor now correctly resolves the exact internal EnergyPlus key from the model hierarchy (e.g. `SpaceName PeopleName`), preventing fatal EMS sensor errors during simulation.
+- **EMS Coil Variable Initialization**: Resolved fatal EnergyPlus initialization array crashes (`Variable ... used in expression has not been initialized!`) in mixed-mode ExistingHVAC (`ex_mm`) simulations. Realigned EMS code injection to map coil variables to `ems_objs_name` and safely spawn a `BeginNewEnvironment` initialization program (`InitExisHVACCoils`) to explicitly pre-initialize actuator nodes to `0` prior to any timestep prediction executions.
+- **Accis Simulation Spillage Error**: Resolved an `IndexError` raised during the batch-creation of IDFs under the internal `genIDF` utility in `accim.sim.accis`. The model-loop has been robustified so it actively maps newly generated instance IDFs natively to memory, safely skipping stale or orphaned temporary `_pymod.idf` files left over physically on the drive by previous crashes.
 
 ## [0.7.7] - 2026-04-11
 
