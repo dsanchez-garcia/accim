@@ -957,7 +957,14 @@ def addDetHVACobj(
                       ' AirConditioner:VariableRefrigerantFlow '
                       'Object already was in the model')
         else:
-            if any([EnergyPlus_version.lower() == v for v in epvers_space_objs]):
+            temp_vrf = self.idf1.newidfobject('AirConditioner:VariableRefrigerantFlow')
+            if 'Minimum_Condenser_Inlet_Node_Temperature_in_Cooling_Mode' in temp_vrf.fieldnames:
+                use_new_fields = True
+            else:
+                use_new_fields = False
+            self.idf1.removeidfobject(temp_vrf)
+            
+            if use_new_fields:
                 self.idf1.newidfobject(
                     'AirConditioner:VariableRefrigerantFlow',
                     Heat_Pump_Name='VRF Outdoor Unit_'+zn,
