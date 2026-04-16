@@ -16,7 +16,7 @@
 
 """Class for accim."""
 from accim.utils import get_idd_path_from_ep_version
-from sim.accim_ExistingHVAC_resolver import resolve_hvac_zone_map
+from accim.sim.accim_ExistingHVAC_resolver import resolve_hvac_zone_map
 
 
 class accimJob():
