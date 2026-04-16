@@ -898,7 +898,8 @@ def genIDF(self,
     ASTtol_steps: float = 0.1,
     NameSuffix: str = '',
     verboseMode: bool = True,
-    confirmGen: bool = None
+    confirmGen: bool = None,
+    filelist_pymod: list = None
 ):
     """Generate IDFs.
 
@@ -1061,8 +1062,11 @@ def genIDF(self,
     else:
         suffix = '[NS_' + NameSuffix
 
-    filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
-    filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])
+    if filelist_pymod is None:
+        filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
+        filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod])
+    else:
+        filelist_pymod = ([file.split('.idf')[0] for file in filelist_pymod if file.endswith('_pymod.idf')])
     # print(filelist_pymod)
 
     # Characters not admitted: & ^ , = % " / \ : * ? " < > |

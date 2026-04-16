@@ -502,6 +502,7 @@ class addAccis:
         self.occupied_zones_original_name = {}
         self.windows_and_doors = {}
         self.windows_and_doors_original_name = {}
+        valid_pymod_files = []
 
         for file in filelist:
             if verboseMode:
@@ -639,6 +640,7 @@ class addAccis:
                 print('Ending with file:')
                 print(file)
                 print('''\n=======================END OF GENERIC IDF FILE GENERATION PROCESS=======================\n''')
+            valid_pymod_files.append(file.split('.idf')[0] + '_pymod.idf')
 
         if Output_gen_dataframe:
             self.df_outputs = pd.concat(df_outputs_to_concat)
@@ -678,6 +680,7 @@ class addAccis:
         if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
             if all(args_needed_mm):
                 z.genIDF(
+                    filelist_pymod=valid_pymod_files,
                     ScriptType=ScriptType,
                     TempCtrl=TempCtrl,
                     ComfStand=ComfStand,
@@ -760,12 +763,14 @@ class addAccis:
                     }
                 )
                 z.genIDF(
+                    filelist_pymod=valid_pymod_files,
                     ScriptType=ScriptType,
                     TempCtrl=TempCtrl,
                 )
         elif ScriptType.lower() == 'ex_ac' or ScriptType.lower() == 'vrf_ac':
             if all(args_needed_ac):
                 z.genIDF(
+                    filelist_pymod=valid_pymod_files,
                     ScriptType=ScriptType,
                     TempCtrl=TempCtrl,
                     ComfStand=ComfStand,
@@ -848,6 +853,7 @@ class addAccis:
                     }
                 )
                 z.genIDF(
+                    filelist_pymod=valid_pymod_files,
                     ScriptType=ScriptType,
                     TempCtrl=TempCtrl,
                 )
