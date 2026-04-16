@@ -107,3 +107,61 @@ def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
                             sensorlist.append(self.ExisHVAC[i][4][k] + '_HeatCoil')
                             if verboseMode:
                                 print('Added - ' + self.ExisHVAC[i][4][k] + '_HeatCoil Sensor')
+
+    # Keep the list of coil sensors for the init program
+    self._exis_hvac_coil_sensors = [s for s in sensorlist if s.endswith('_CoolCoil') or s.endswith('_HeatCoil')]
+    del sensorlist
+
+
+def addEMSInitExisHVAC(self, verboseMode: bool = True):
+    """
+    Adds an EMS Program and ProgramCallingManager with BeginNewEnvironment calling
+    point to initialize all coil sensor variables to 0. This prevents EnergyPlus from
+    raising a fatal "variable not initialized" error at the very first timestep, before
+    the HVAC system has produced any output values.
+
+    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
+    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
+    """
+    programlist = [p.Name for p in self.idf1.idfobjects['EnergyManagementSystem:Program']]
+    pcmlist = [p.Name for p in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager']]
+
+    init_prog_name = 'InitExisHVACCoils'
+
+    if init_prog_name in programlist:
+        if verboseMode:
+            print(f'Not added - {init_prog_name} Program (already exists)')
+        return
+
+    coil_sensors = getattr(self, '_exis_hvac_coil_sensors', [])
+    if not coil_sensors:
+        # Fall back: derive from ems_objs_name
+        coil_sensors = []
+        for name in getattr(self, 'ems_objs_name', []):
+            coil_sensors.append(name + '_CoolCoil')
+            coil_sensors.append(name + '_HeatCoil')
+
+    if not coil_sensors:
+        if verboseMode:
+            print(f'No coil sensors found, skipping {init_prog_name}')
+        return
+
+    # Build kwargs for newidfobject: each SET line initialises one sensor variable
+    prog_kwargs = {'Name': init_prog_name}
+    for idx, sensor_name in enumerate(coil_sensors, start=1):
+        prog_kwargs[f'Program_Line_{idx}'] = f'SET {sensor_name} = 0'
+
+    self.idf1.newidfobject('EnergyManagementSystem:Program', **prog_kwargs)
+    if verboseMode:
+        print(f'Added - {init_prog_name} Program ({len(coil_sensors)} coil variables initialised)')
+
+    # Register the init program under BeginNewEnvironment so it runs before any ApplyAST
+    if init_prog_name not in pcmlist:
+        self.idf1.newidfobject(
+            'EnergyManagementSystem:ProgramCallingManager',
+            Name=init_prog_name,
+            EnergyPlus_Model_Calling_Point='BeginNewEnvironment',
+            Program_Name_1=init_prog_name
+        )
+        if verboseMode:
+            print(f'Added - {init_prog_name} ProgramCallingManager (BeginNewEnvironment)')

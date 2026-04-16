@@ -325,6 +325,7 @@ def addAccis(
         z.addEMSSensorsVRFsystem(ScriptType=ScriptType, verboseMode=verboseMode)
     elif ScriptType.lower() == 'ex_mm':
         z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
+        z.addEMSInitExisHVAC(verboseMode=verboseMode)
 
     z.addEMSPCMBase(verboseMode=verboseMode)
 

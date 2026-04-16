@@ -64,7 +64,8 @@ class accimJob():
     from accim.sim.accim_ExistingHVAC import \
         addForscriptSchExistHVAC
     from accim.sim.accim_ExistingHVAC_EMS import \
-        addEMSSensorsExisHVAC
+        addEMSSensorsExisHVAC, \
+        addEMSInitExisHVAC
     from accim.sim.accim_ExistingHVAC_resolver import \
         resolve_hvac_zone_map
     from accim.sim.accim_VRFsystem import \
