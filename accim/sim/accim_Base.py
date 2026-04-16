@@ -39,7 +39,7 @@ def setComfFieldsPeople(
 
     for i in range(len(ppl)):
         if TempCtrl == 'pmv':
-            if any([EnergyPlus_version.lower() == v for v in epvers_space_objs]):
+            if 'Zone_or_ZoneList_or_Space_or_SpaceList_Name' in ppl[i].fieldnames:
                 self.idf1.newidfobject(
                     'PEOPLE',
                     Name=ppl[i].Name,
@@ -106,7 +106,7 @@ def setComfFieldsPeople(
                 firstpeopleobject = self.idf1.idfobjects['PEOPLE'][0]
                 self.idf1.removeidfobject(firstpeopleobject)
         else:
-            if any([EnergyPlus_version.lower() == v for v in epvers_space_objs]):
+            if 'Zone_or_ZoneList_or_Space_or_SpaceList_Name' in ppl[i].fieldnames:
                 self.idf1.newidfobject(
                     'PEOPLE',
                     Name=ppl[i].Name,
