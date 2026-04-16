@@ -373,12 +373,21 @@ class accimJob():
                     for j in range(len(self.ZCTlist)):
                         if self.ZCTlist[j].Control_1_Object_Type in TSPtypes[i]:
                             temp1.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper())
-                            if ':' in self.ZCTlist[j].Zone_or_ZoneList_Name:
-                                temp2.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper().replace(":", "_"))
-                            else:
-                                # temp_space =
-                                # temp2.append(self.ZCTlist[j].Zone_or_ZoneList_Name.upper().replace(" ", "_"))
-                                temp2.append([i.Name.upper() for i in self.idf1.idfobjects['SPACE'] if i.Zone_Name.upper() == self.ZCTlist[j].Zone_or_ZoneList_Name.upper()][0])
+                            zone_name_upper = self.ZCTlist[j].Zone_or_ZoneList_Name.upper()
+                            ems_name = None
+                            if hasattr(self, 'ems_zonenames') and hasattr(self, 'ems_objs_name'):
+                                for z_name, e_name in zip(self.ems_zonenames, self.ems_objs_name):
+                                    if z_name.upper() == zone_name_upper:
+                                        ems_name = e_name  # Keep exact matching case
+                                        break
+                            if ems_name is None:
+                                if ':' in self.ZCTlist[j].Zone_or_ZoneList_Name:
+                                    ems_name = self.ZCTlist[j].Zone_or_ZoneList_Name.upper().replace(":", "_")
+                                else:
+                                    sc_names = [s.Name.upper() for s in self.idf1.idfobjects['SPACE'] if s.Zone_Name.upper() == zone_name_upper]
+                                    ems_name = sc_names[0] if sc_names else zone_name_upper.replace(":", "_").replace(" ", "_")
+                                    
+                            temp2.append(ems_name)
                             temp3.append(self.ZCTlist[j].Control_1_Name)
                 self.HVACzonelist.append([TSPtypes[i], temp1, temp2, temp3])
             del temp1, temp2, temp3
