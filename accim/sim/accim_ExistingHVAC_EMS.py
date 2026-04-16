@@ -28,19 +28,29 @@ def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
     for i in range(len(self.ExisHVAC)):
         for j in range(len(self.ExisHVAC[i][1])):
             if 'Cool' in self.ExisHVAC[i][1][j] or 'Cool' in self.HVACdict[self.ExisHVAC[i][0]]:
-                if self.ExisHVAC[i][3][j] + '_CoolCoil' in sensorlist:
-                    if verboseMode:
-                        print('Not added - ' + self.ExisHVAC[i][3][j] + '_CoolCoil Sensor')
-                else:
-                    self.idf1.newidfobject(
-                        'EnergyManagementSystem:Sensor',
-                        Name=self.ExisHVAC[i][3][j] + '_CoolCoil',
-                        OutputVariable_or_OutputMeter_Index_Key_Name=self.ExisHVAC[i][1][j],
-                        OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
-                    )
-                    sensorlist.append(self.ExisHVAC[i][3][j] + '_CoolCoil')
-                    if verboseMode:
-                        print('Added - ' + self.ExisHVAC[i][3][j] + '_CoolCoil Sensor')
+                zone_for_coil = self.ExisHVAC[i][3][j]
+                matching_ems_names = []
+                if hasattr(self, 'ems_zonenames') and hasattr(self, 'ems_objs_name'):
+                    for z_idx, z_name in enumerate(self.ems_zonenames):
+                        if z_name.upper() == zone_for_coil.upper():
+                            matching_ems_names.append(self.ems_objs_name[z_idx])
+                if not matching_ems_names:
+                    matching_ems_names.append(zone_for_coil)
+
+                for ems_name in matching_ems_names:
+                    if ems_name + '_CoolCoil' in sensorlist:
+                        if verboseMode:
+                            print('Not added - ' + ems_name + '_CoolCoil Sensor')
+                    else:
+                        self.idf1.newidfobject(
+                            'EnergyManagementSystem:Sensor',
+                            Name=ems_name + '_CoolCoil',
+                            OutputVariable_or_OutputMeter_Index_Key_Name=self.ExisHVAC[i][1][j],
+                            OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
+                        )
+                        sensorlist.append(ems_name + '_CoolCoil')
+                        if verboseMode:
+                            print('Added - ' + ems_name + '_CoolCoil Sensor')
                 for k in range(len(self.ExisHVAC[i][4])):
                     if self.ExisHVAC[i][3][j].lower() in self.ExisHVAC[i][4][k].lower():
                         if self.ExisHVAC[i][4][k] + '_CoolCoil' in sensorlist:
@@ -58,19 +68,29 @@ def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
                                 print('Added - ' + self.ExisHVAC[i][4][k] + '_CoolCoil Sensor')
                 #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.ExisHVAC[i][3][j]+'_CoolCoil'])
             if 'Heating' in self.ExisHVAC[i][1][j] or 'Heating' in self.HVACdict[self.ExisHVAC[i][0]]:
-                if self.ExisHVAC[i][3][j] + '_HeatCoil' in sensorlist:
-                    if verboseMode:
-                        print('Not added - ' + self.ExisHVAC[i][3][j] + '_HeatCoil Sensor')
-                else:
-                    self.idf1.newidfobject(
-                        'EnergyManagementSystem:Sensor',
-                        Name=self.ExisHVAC[i][3][j] + '_HeatCoil',
-                        OutputVariable_or_OutputMeter_Index_Key_Name=self.ExisHVAC[i][1][j],
-                        OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
-                    )
-                    sensorlist.append(self.ExisHVAC[i][3][j] + '_HeatCoil')
-                    if verboseMode:
-                        print('Added - ' + self.ExisHVAC[i][3][j] + '_HeatCoil Sensor')
+                zone_for_coil = self.ExisHVAC[i][3][j]
+                matching_ems_names = []
+                if hasattr(self, 'ems_zonenames') and hasattr(self, 'ems_objs_name'):
+                    for z_idx, z_name in enumerate(self.ems_zonenames):
+                        if z_name.upper() == zone_for_coil.upper():
+                            matching_ems_names.append(self.ems_objs_name[z_idx])
+                if not matching_ems_names:
+                    matching_ems_names.append(zone_for_coil)
+
+                for ems_name in matching_ems_names:
+                    if ems_name + '_HeatCoil' in sensorlist:
+                        if verboseMode:
+                            print('Not added - ' + ems_name + '_HeatCoil Sensor')
+                    else:
+                        self.idf1.newidfobject(
+                            'EnergyManagementSystem:Sensor',
+                            Name=ems_name + '_HeatCoil',
+                            OutputVariable_or_OutputMeter_Index_Key_Name=self.ExisHVAC[i][1][j],
+                            OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
+                        )
+                        sensorlist.append(ems_name + '_HeatCoil')
+                        if verboseMode:
+                            print('Added - ' + ems_name + '_HeatCoil Sensor')
                 # probando
                 for k in range(len(self.ExisHVAC[i][4])):
                     if self.ExisHVAC[i][3][j].lower() in self.ExisHVAC[i][4][k].lower():
