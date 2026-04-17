@@ -22,3 +22,37 @@ try:
 
 except (ImportError, AttributeError):
     pass
+
+# Monkey-patch: besos.optimizer.get_operator throws TypeError on platypus>=1.4.0
+# because platypus.config.PlatypusConfig.default_variator was changed from a dict to a method.
+try:
+    import besos.optimizer
+    import platypus
+    # If default_variator is callable, we are on platypus >= 1.4.0
+    if hasattr(platypus.config.PlatypusConfig.default_variator, '__call__'):
+        def _get_operator_patched(problem: platypus.Problem, mutation=False):
+            operators = []
+            if mutation:
+                class_ = platypus.CompoundMutation
+                for t in problem.types:
+                    operators.append(platypus.config.PlatypusConfig.default_mutator(t.__class__))
+            else:
+                class_ = platypus.CompoundOperator
+                for t in problem.types:
+                    operators.append(platypus.config.PlatypusConfig.default_variator(t.__class__))
+            return class_(*operators)
+            
+        besos.optimizer.get_operator = _get_operator_patched
+        
+        # Re-wrap the standard platypus algorithms so they capture the patched get_operator
+        _alg_names = [
+            'GeneticAlgorithm', 'EvolutionaryStrategy', 'NSGAII', 'EpsMOEA',
+            'GDE3', 'SPEA2', 'MOEAD', 'NSGAIII', 'ParticleSwarm', 'OMOPSO',
+            'SMPSO', 'CMAES', 'IBEA', 'PAES', 'PESA2', 'EpsNSGAII'
+        ]
+        for _alg in _alg_names:
+            if hasattr(platypus, _alg) and hasattr(besos.optimizer, _alg):
+                setattr(besos.optimizer, _alg, besos.optimizer._alg_t(getattr(platypus, _alg)))
+
+except (ImportError, AttributeError):
+    pass
