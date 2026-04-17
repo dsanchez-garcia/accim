@@ -1777,4 +1777,657 @@ def set_operative_temp_control(idf_path: str = None, idf_object=None):
         building.save()
         return None
     else:
-        return building
+        return building
+
+
+def verify_accim_simulation(
+        eso_file_path: str,
+        idf_path: str,
+        eplus_install_dir: Optional[str] = None,
+        tolerance: float = 0.1,
+) -> pd.DataFrame:
+    """
+    Reads EnergyPlus simulation output and verifies that the ACCIS EMS scripts
+    added by AddAccis are working correctly.
+
+    The function performs two categories of checks:
+
+    **Check 1 – HVAC Setpoint Adherence (per zone):**
+    - If cooling is active (CoolCoil > 0): Zone Operative Temperature <= ACST_Sch + tolerance
+    - If heating is active (HeatCoil > 0): Zone Operative Temperature >= AHST_Sch - tolerance
+
+    **Check 2 – Window Operation Logic (per window in mixed-mode models):**
+    Replicates the explicit conditions of the EMS program ``SetWindowOperation_<windowname>``:
+
+    *HVACmode = 0 (HVAC only):*
+      Window must be closed (VentOpenFact == 0).
+
+    *HVACmode = 1 (Natural Ventilation priority — HVAC as backup):*
+      Window may open only when ALL of the following:
+      - HVAC coils are inactive (NoH_NoC_reqs == 1)
+      - OpT < ACST (cooling need)
+      - WindSpeed <= MaxWindSpeed
+      - OutT > MinOutTemp
+      - OutT < OpT
+      - Occupancy > 0
+
+      And the VentCtrl sub-condition (for Ventilates_HVACmode1):
+
+      - VentCtrl = 0: OutT < OpT, OutT > MinOutTemp, OpT > VST, WindSpeed <= MaxWindSpeed
+      - VentCtrl = 1: OutT < OpT, OutT > MinOutTemp, OpT > ACSTnoTol, WindSpeed <= MaxWindSpeed
+
+    *HVACmode = 2 (Changeover / Free-running):*
+      Window may open when:
+      NoH_NoC_reqs == 1 AND meets_base_reqs == 1 AND OpT > VST
+
+    :param eso_file_path: Path to the eplusout.eso file.
+    :type eso_file_path: str
+    :param idf_path: Path to the IDF file used for simulation (to read accim args and window names).
+    :type idf_path: str
+    :param eplus_install_dir: Path to EnergyPlus installation directory (for ReadVarsESO).
+    :type eplus_install_dir: str, optional
+    :param tolerance: Temperature tolerance in °C for setpoint checks. Default is 0.1 °C.
+    :type tolerance: float
+    :return: DataFrame with all detected mismatch timesteps, with columns
+        ['timestep', 'zone_or_window', 'check', 'description', 'value_found', 'value_expected'].
+        Empty DataFrame means all checks passed.
+    :rtype: pd.DataFrame
+    """
+
+    # ─────────────────────────────────────────────
+    # 1. READ SIMULATION OUTPUTS
+    # ─────────────────────────────────────────────
+    print(f"Reading ESO file: {eso_file_path}")
+    eso = read_eso_using_readvarseso(
+        eso_file_path=eso_file_path,
+        eplus_install_dir=eplus_install_dir,
+        only_run_period=True,
+        cleanup=True,
+    )
+
+    # Gather all data into one flat df to make column lookup easier
+    all_dfs = []
+    for freq, df in eso['data'].items():
+        if df.empty:
+            continue
+        df_flat = df.copy()
+        # Flatten MultiIndex columns to "Area:Variable" strings
+        df_flat.columns = [
+            f"{a}:{v}" if a != 'Environment' else f"Environment:{v}"
+            for (a, v, u) in df_flat.columns
+        ]
+        df_flat['_freq'] = freq
+        all_dfs.append(df_flat)
+
+    if not all_dfs:
+        warnings.warn("No simulation output data found in the ESO file.")
+        return pd.DataFrame()
+
+    # Use hourly if present, else first available frequency
+    freq_order = ['Hourly', 'Timestep', 'Daily', 'Monthly']
+    chosen_df = None
+    chosen_freq = None
+    for fq in freq_order:
+        for df_temp in all_dfs:
+            if df_temp['_freq'].iloc[0] == fq:
+                chosen_df = df_temp.drop(columns=['_freq'])
+                chosen_freq = fq
+                break
+        if chosen_df is not None:
+            break
+
+    if chosen_df is None:
+        chosen_df = all_dfs[0].drop(columns=['_freq'])
+        chosen_freq = all_dfs[0]['_freq'].iloc[0]
+
+    print(f"Using output frequency: {chosen_freq} ({len(chosen_df)} time steps)")
+
+    # ─────────────────────────────────────────────
+    # 2. READ ACCIM ARGS FROM IDF
+    # ─────────────────────────────────────────────
+    print(f"Reading IDF: {idf_path}")
+    building = get_building(idf_path)
+
+    try:
+        accim_args = get_accim_args_flattened(building)
+    except Exception as e:
+        warnings.warn(f"Could not read accim args from IDF: {e}. Skipping window checks.")
+        accim_args = {}
+
+    # Global EMS scalar parameters (set once per simulation, not per timestep)
+    MaxWindSpeed = float(accim_args.get('MaxWindSpeed', 5.0))
+    MinOutTemp   = float(accim_args.get('MinOutTemp', 6.0))
+    VentCtrl     = int(float(accim_args.get('VentCtrl', 0)))
+    HVACmode     = int(float(accim_args.get('HVACmode', 1)))
+    VST          = float(accim_args.get('VST', 20.0))
+
+    # ─────────────────────────────────────────────
+    # HELPER: case-insensitive column searcher
+    # ─────────────────────────────────────────────
+    def find_col(df, area_fragment: str, variable_fragment: str) -> Optional[str]:
+        """Return the first column whose 'area:variable' pattern (case-insensitive)
+        contains both fragments."""
+        area_frag_up = area_fragment.upper()
+        var_frag_up  = variable_fragment.upper()
+        for col in df.columns:
+            col_up = col.upper()
+            parts = col_up.split(':', 1)
+            if len(parts) == 2:
+                if area_frag_up in parts[0] and var_frag_up in parts[1]:
+                    return col
+            else:
+                if var_frag_up in col_up:
+                    return col
+        return None
+
+    def find_cols_by_variable(df, variable_fragment: str) -> List[str]:
+        """Return all columns whose variable part contains the fragment (case-insensitive)."""
+        var_frag_up = variable_fragment.upper()
+        matches = []
+        for col in df.columns:
+            col_up = col.upper()
+            parts = col_up.split(':', 1)
+            var_part = parts[1] if len(parts) == 2 else col_up
+            if var_frag_up in var_part:
+                matches.append(col)
+        return matches
+
+    def find_cols_by_area(df, area_fragment: str) -> List[str]:
+        """Return all columns whose area part contains the fragment (case-insensitive)."""
+        area_frag_up = area_fragment.upper()
+        matches = []
+        for col in df.columns:
+            col_up = col.upper()
+            parts = col_up.split(':', 1)
+            if len(parts) == 2 and area_frag_up in parts[0]:
+                matches.append(col)
+        return matches
+
+    # ─────────────────────────────────────────────
+    # 3. DETECT ZONES AND WINDOWS FROM EMS OBJECTS
+    # ─────────────────────────────────────────────
+    # EMS zone names (used for setpoint schedule keys)
+    ems_zone_names: List[str] = []
+    for sc in building.idfobjects['EnergyManagementSystem:Sensor']:
+        if sc.Name.endswith('_OpT'):
+            zone_raw = sc.Name[:-4]  # strip '_OpT'
+            ems_zone_names.append(zone_raw)
+
+    # Window names (from SetWindowOperation programs)
+    window_names: List[str] = []
+    for prog in building.idfobjects['EnergyManagementSystem:Program']:
+        if prog.Name.upper().startswith('SETWINDOWOPERATION_'):
+            w = prog.Name[len('SetWindowOperation_'):]
+            window_names.append(w)
+
+    is_mixed_mode = len(window_names) > 0
+    print(f"Detected {len(ems_zone_names)} zone(s): {ems_zone_names}")
+    print(f"Mixed-mode model: {is_mixed_mode}  |  Windows detected: {window_names}")
+    print(f"EMS params — HVACmode={HVACmode}, VentCtrl={VentCtrl}, "
+          f"MaxWindSpeed={MaxWindSpeed}, MinOutTemp={MinOutTemp}, VST={VST}")
+
+    # ─────────────────────────────────────────────
+    # 4. BUILD RESULTS ACCUMULATOR
+    # ─────────────────────────────────────────────
+    mismatch_rows: List[dict] = []
+
+    def add_mismatch(timestep, zone_or_window: str, check: str,
+                     description: str, value_found, value_expected):
+        mismatch_rows.append({
+            'timestep':       timestep,
+            'zone_or_window': zone_or_window,
+            'check':          check,
+            'description':    description,
+            'value_found':    round(float(value_found), 4) if isinstance(value_found, (int, float)) else value_found,
+            'value_expected': value_expected,
+        })
+
+    # ─────────────────────────────────────────────
+    # 5.A CHECK 1 – HVAC SETPOINT ADHERENCE
+    # ─────────────────────────────────────────────
+    print("\n--- Check 1: HVAC Setpoint Adherence ---")
+
+    for zone in ems_zone_names:
+        # Find operative temperature column for this zone
+        opt_col = find_col(chosen_df, zone, 'Operative Temperature')
+        if opt_col is None:
+            # Try without area prefix (EMS output variable)
+            opt_col = find_col(chosen_df, zone, 'Zone Operative Temperature')
+        if opt_col is None:
+            warnings.warn(f"Zone '{zone}': No 'Operative Temperature' column found. Skipping setpoint check.")
+            continue
+
+        # Find ACST and AHST schedule value columns
+        acst_col = find_col(chosen_df, f'ACST_Sch_{zone}', 'Schedule Value')
+        ahst_col = find_col(chosen_df, f'AHST_Sch_{zone}', 'Schedule Value')
+
+        if acst_col is None or ahst_col is None:
+            warnings.warn(
+                f"Zone '{zone}': ACST_Sch or AHST_Sch column not found "
+                f"(acst_col={acst_col}, ahst_col={ahst_col}). Skipping setpoint check."
+            )
+            continue
+
+        # Find cooling / heating rate columns for this zone
+        # Try HVAC coil outputs first, then VRF
+        cool_col = (
+            find_col(chosen_df, zone, 'Cooling Coil Total Cooling Rate')
+            or find_col(chosen_df, zone, 'VRF Heat Pump Cooling Electricity')
+            or find_col(chosen_df, zone, 'Cooling Rate')
+        )
+        heat_col = (
+            find_col(chosen_df, zone, 'Heating Coil Heating Rate')
+            or find_col(chosen_df, zone, 'VRF Heat Pump Heating Electricity')
+            or find_col(chosen_df, zone, 'Heating Rate')
+        )
+
+        if cool_col is None and heat_col is None:
+            warnings.warn(
+                f"Zone '{zone}': No cooling or heating rate column found. "
+                "Setpoint check will be skipped for this zone."
+            )
+            continue
+
+        opt    = chosen_df[opt_col].astype(float)
+        acst   = chosen_df[acst_col].astype(float)
+        ahst   = chosen_df[ahst_col].astype(float)
+
+        for idx in chosen_df.index:
+            opt_val  = opt.loc[idx]
+            acst_val = acst.loc[idx]
+            ahst_val = ahst.loc[idx]
+
+            # Cooling check
+            if cool_col is not None:
+                cool_rate = float(chosen_df[cool_col].loc[idx])
+                if cool_rate > 0 and opt_val > acst_val + tolerance:
+                    add_mismatch(
+                        timestep       = idx,
+                        zone_or_window = zone,
+                        check          = 'Check1_Cooling',
+                        description    = (
+                            f"Cooling active (rate={cool_rate:.2f} W) but OpT ({opt_val:.2f} °C) "
+                            f"> ACST ({acst_val:.2f} °C) + tolerance ({tolerance} °C)"
+                        ),
+                        value_found    = opt_val,
+                        value_expected = f"<= {acst_val + tolerance:.2f} °C",
+                    )
+
+            # Heating check
+            if heat_col is not None:
+                heat_rate = float(chosen_df[heat_col].loc[idx])
+                if heat_rate > 0 and opt_val < ahst_val - tolerance:
+                    add_mismatch(
+                        timestep       = idx,
+                        zone_or_window = zone,
+                        check          = 'Check1_Heating',
+                        description    = (
+                            f"Heating active (rate={heat_rate:.2f} W) but OpT ({opt_val:.2f} °C) "
+                            f"< AHST ({ahst_val:.2f} °C) - tolerance ({tolerance} °C)"
+                        ),
+                        value_found    = opt_val,
+                        value_expected = f">= {ahst_val - tolerance:.2f} °C",
+                    )
+
+        # Summary per zone
+        cool_fails = sum(1 for r in mismatch_rows
+                         if r['zone_or_window'] == zone and r['check'] == 'Check1_Cooling')
+        heat_fails = sum(1 for r in mismatch_rows
+                         if r['zone_or_window'] == zone and r['check'] == 'Check1_Heating')
+        total_ts = len(chosen_df)
+        print(f"  Zone '{zone}': Cooling mismatches: {cool_fails}/{total_ts} | "
+              f"Heating mismatches: {heat_fails}/{total_ts}")
+
+    # ─────────────────────────────────────────────
+    # 5.B CHECK 2 – WINDOW OPERATION LOGIC
+    # ─────────────────────────────────────────────
+    if is_mixed_mode:
+        print("\n--- Check 2: Window Operation Logic (SetWindowOperation) ---")
+
+        # Outdoor temperature and wind speed (Environment-level sensors)
+        out_t_col  = (find_col(chosen_df, 'Environment', 'Site Outdoor Air Drybulb Temperature')
+                      or find_col(chosen_df, 'ENVIRONMENT', 'Drybulb'))
+        wind_col   = (find_col(chosen_df, 'Environment', 'Site Wind Speed')
+                      or find_col(chosen_df, 'ENVIRONMENT', 'Wind Speed'))
+
+        if out_t_col is None:
+            warnings.warn("'Site Outdoor Air Drybulb Temperature' column not found. "
+                          "Window checks requiring OutT will be skipped.")
+        if wind_col is None:
+            warnings.warn("'Site Wind Speed' column not found. "
+                          "Window checks requiring WindSpeed will be skipped.")
+
+        for wname in window_names:
+            # ── Opening factor
+            vof_col = (
+                find_col(chosen_df, wname, 'AFN Surface Venting Window or Door Opening Factor')
+                or find_col(chosen_df, wname, 'Opening Factor')
+            )
+            if vof_col is None:
+                # Try EMS output variable format (e.g., 'Ventilates_HVACmode1_wname')
+                vof_col = find_col(chosen_df, wname, 'VentOpenFact')
+            if vof_col is None:
+                warnings.warn(
+                    f"Window '{wname}': No opening factor column found. Skipping window check."
+                )
+                continue
+
+            # ── Per-window operative temperature
+            opt_w_col = find_col(chosen_df, wname, 'Operative Temperature')
+            if opt_w_col is None:
+                # The window zone shares the same name as a zone (often the case)
+                opt_w_col = find_col(chosen_df, wname, 'Zone Operative Temperature')
+
+            # ── Cooling / heating coils (HVAC active check)
+            cool_w_col = (
+                find_col(chosen_df, wname, 'Cooling Coil Total Cooling Rate')
+                or find_col(chosen_df, wname, 'Cooling Rate')
+            )
+            heat_w_col = (
+                find_col(chosen_df, wname, 'Heating Coil Heating Rate')
+                or find_col(chosen_df, wname, 'Heating Rate')
+            )
+
+            # ── Occupancy (People Occupant Count for associated zone/space)
+            occ_col = find_col(chosen_df, wname, 'People Occupant Count')
+
+            # ── ACST without tolerance (used by VentCtrl==1 branch)
+            # The EMS variable 'ACSTnoTol' is global; look for an output or use ACST
+            acst_no_tol_col = None
+            for zone in ems_zone_names:
+                cand = find_col(chosen_df, f'ACST_Sch_{zone}', 'Schedule Value')
+                if cand:
+                    acst_no_tol_col = cand  # best approximation available in outputs
+                    break
+            acst_w_col = acst_no_tol_col  # re-used as the ACST reference for this window zone
+
+            vof    = chosen_df[vof_col].astype(float)
+            out_t  = chosen_df[out_t_col].astype(float) if out_t_col else None
+            wind   = chosen_df[wind_col].astype(float)  if wind_col  else None
+
+            prev_checks = len(mismatch_rows)
+
+            for idx in chosen_df.index:
+                vof_val = vof.loc[idx]
+                window_open = vof_val > 0.0
+
+                # Retrieve optional per-timestep variables safely
+                opt_val      = float(chosen_df[opt_w_col].loc[idx])  if opt_w_col  else None
+                cool_val     = float(chosen_df[cool_w_col].loc[idx]) if cool_w_col else 0.0
+                heat_val     = float(chosen_df[heat_w_col].loc[idx]) if heat_w_col else 0.0
+                occ_val      = float(chosen_df[occ_col].loc[idx])    if occ_col    else 1.0   # assume occupied if unknown
+                out_t_val    = float(out_t.loc[idx])  if out_t  is not None else None
+                wind_val     = float(wind.loc[idx])   if wind   is not None else 0.0
+                acst_val     = float(chosen_df[acst_w_col].loc[idx]) if acst_w_col else None
+
+                # ── Derive NoH_NoC_reqs
+                no_h_no_c = (cool_val == 0.0) and (heat_val == 0.0)
+
+                # ───────────────────────────────────────────────────
+                # HVACmode = 0: window must NEVER open
+                # ───────────────────────────────────────────────────
+                if HVACmode == 0:
+                    if window_open:
+                        add_mismatch(
+                            timestep       = idx,
+                            zone_or_window = wname,
+                            check          = 'Check2_HVACmode0',
+                            description    = (
+                                f"HVACmode=0 (HVAC-only) but window is open "
+                                f"(VentOpenFact={vof_val:.3f})"
+                            ),
+                            value_found    = vof_val,
+                            value_expected = 0.0,
+                        )
+
+                # ───────────────────────────────────────────────────
+                # HVACmode = 1: window opens only when all conditions met
+                # ───────────────────────────────────────────────────
+                elif HVACmode == 1:
+                    if window_open:
+                        # Condition: noH_noC_reqs must be True
+                        if not no_h_no_c:
+                            add_mismatch(
+                                timestep       = idx,
+                                zone_or_window = wname,
+                                check          = 'Check2_HVACmode1_NoHNoC',
+                                description    = (
+                                    f"HVACmode=1: Window open but HVAC is active "
+                                    f"(CoolCoil={cool_val:.2f}, HeatCoil={heat_val:.2f})"
+                                ),
+                                value_found    = f"cool={cool_val:.2f}, heat={heat_val:.2f}",
+                                value_expected = "CoolCoil=0 AND HeatCoil=0",
+                            )
+
+                        # Condition: OpT < roundedACST (cooling need)
+                        if opt_val is not None and acst_val is not None:
+                            if opt_val >= acst_val:
+                                add_mismatch(
+                                    timestep       = idx,
+                                    zone_or_window = wname,
+                                    check          = 'Check2_HVACmode1_OpT_lt_ACST',
+                                    description    = (
+                                        f"HVACmode=1: Window open but OpT ({opt_val:.2f} °C) "
+                                        f">= ACST ({acst_val:.2f} °C) — no cooling need"
+                                    ),
+                                    value_found    = opt_val,
+                                    value_expected = f"< {acst_val:.2f} °C",
+                                )
+
+                        # Condition: WindSpeed <= MaxWindSpeed
+                        if wind_val > MaxWindSpeed:
+                            add_mismatch(
+                                timestep       = idx,
+                                zone_or_window = wname,
+                                check          = 'Check2_HVACmode1_WindSpeed',
+                                description    = (
+                                    f"HVACmode=1: Window open but WindSpeed ({wind_val:.2f} m/s) "
+                                    f"> MaxWindSpeed ({MaxWindSpeed} m/s)"
+                                ),
+                                value_found    = wind_val,
+                                value_expected = f"<= {MaxWindSpeed} m/s",
+                            )
+
+                        # Condition: OutT > MinOutTemp
+                        if out_t_val is not None and out_t_val <= MinOutTemp:
+                            add_mismatch(
+                                timestep       = idx,
+                                zone_or_window = wname,
+                                check          = 'Check2_HVACmode1_MinOutTemp',
+                                description    = (
+                                    f"HVACmode=1: Window open but OutT ({out_t_val:.2f} °C) "
+                                    f"<= MinOutTemp ({MinOutTemp} °C)"
+                                ),
+                                value_found    = out_t_val,
+                                value_expected = f"> {MinOutTemp} °C",
+                            )
+
+                        # Condition: OutT < OpT (outdoor cooler than indoor)
+                        if out_t_val is not None and opt_val is not None:
+                            if out_t_val >= opt_val:
+                                add_mismatch(
+                                    timestep       = idx,
+                                    zone_or_window = wname,
+                                    check          = 'Check2_HVACmode1_OutT_lt_OpT',
+                                    description    = (
+                                        f"HVACmode=1: Window open but OutT ({out_t_val:.2f} °C) "
+                                        f">= OpT ({opt_val:.2f} °C)"
+                                    ),
+                                    value_found    = out_t_val,
+                                    value_expected = f"< OpT ({opt_val:.2f} °C)",
+                                )
+
+                        # Condition: Occupancy > 0
+                        if occ_val <= 0:
+                            add_mismatch(
+                                timestep       = idx,
+                                zone_or_window = wname,
+                                check          = 'Check2_HVACmode1_Occupancy',
+                                description    = (
+                                    f"HVACmode=1: Window open but zone is unoccupied "
+                                    f"(Occ_count={occ_val})"
+                                ),
+                                value_found    = occ_val,
+                                value_expected = "> 0",
+                            )
+
+                        # VentCtrl sub-condition for Ventilates_HVACmode1
+                        if VentCtrl == 0:
+                            # OpT > VST
+                            if opt_val is not None and opt_val <= VST:
+                                add_mismatch(
+                                    timestep       = idx,
+                                    zone_or_window = wname,
+                                    check          = 'Check2_HVACmode1_VentCtrl0_OpT_gt_VST',
+                                    description    = (
+                                        f"VentCtrl=0: Window open but OpT ({opt_val:.2f} °C) "
+                                        f"<= VST ({VST} °C)"
+                                    ),
+                                    value_found    = opt_val,
+                                    value_expected = f"> {VST} °C",
+                                )
+
+                        elif VentCtrl == 1:
+                            # OpT > ACSTnoTol (≈ ACST without offset)
+                            if opt_val is not None and acst_val is not None:
+                                if opt_val <= acst_val:
+                                    add_mismatch(
+                                        timestep       = idx,
+                                        zone_or_window = wname,
+                                        check          = 'Check2_HVACmode1_VentCtrl1_OpT_gt_ACSTnoTol',
+                                        description    = (
+                                            f"VentCtrl=1: Window open but OpT ({opt_val:.2f} °C) "
+                                            f"<= ACSTnoTol ({acst_val:.2f} °C)"
+                                        ),
+                                        value_found    = opt_val,
+                                        value_expected = f"> {acst_val:.2f} °C",
+                                    )
+
+                # ───────────────────────────────────────────────────
+                # HVACmode = 2: changeover / free-running
+                # Window can open when: NoH_NoC_reqs AND meets_base_reqs AND OpT > VST
+                # meets_base_reqs: OpT < ACST, WindSpeed <= MaxWind, OutT > MinOutTemp,
+                #                  OutT < OpT, Occ > 0
+                # ───────────────────────────────────────────────────
+                elif HVACmode == 2:
+                    if window_open:
+                        # NoH_NoC_reqs: HVAC must be off
+                        if not no_h_no_c:
+                            add_mismatch(
+                                timestep       = idx,
+                                zone_or_window = wname,
+                                check          = 'Check2_HVACmode2_NoHNoC',
+                                description    = (
+                                    f"HVACmode=2: Window open but HVAC is active "
+                                    f"(CoolCoil={cool_val:.2f}, HeatCoil={heat_val:.2f})"
+                                ),
+                                value_found    = f"cool={cool_val:.2f}, heat={heat_val:.2f}",
+                                value_expected = "CoolCoil=0 AND HeatCoil=0",
+                            )
+
+                        # meets_base_reqs: OpT < ACST
+                        if opt_val is not None and acst_val is not None:
+                            if opt_val >= acst_val:
+                                add_mismatch(
+                                    timestep       = idx,
+                                    zone_or_window = wname,
+                                    check          = 'Check2_HVACmode2_OpT_lt_ACST',
+                                    description    = (
+                                        f"HVACmode=2: Window open but OpT ({opt_val:.2f} °C) "
+                                        f">= ACST ({acst_val:.2f} °C)"
+                                    ),
+                                    value_found    = opt_val,
+                                    value_expected = f"< {acst_val:.2f} °C",
+                                )
+
+                        # meets_base_reqs: WindSpeed <= MaxWindSpeed
+                        if wind_val > MaxWindSpeed:
+                            add_mismatch(
+                                timestep       = idx,
+                                zone_or_window = wname,
+                                check          = 'Check2_HVACmode2_WindSpeed',
+                                description    = (
+                                    f"HVACmode=2: Window open but WindSpeed ({wind_val:.2f} m/s) "
+                                    f"> MaxWindSpeed ({MaxWindSpeed} m/s)"
+                                ),
+                                value_found    = wind_val,
+                                value_expected = f"<= {MaxWindSpeed} m/s",
+                            )
+
+                        # meets_base_reqs: OutT > MinOutTemp
+                        if out_t_val is not None and out_t_val <= MinOutTemp:
+                            add_mismatch(
+                                timestep       = idx,
+                                zone_or_window = wname,
+                                check          = 'Check2_HVACmode2_MinOutTemp',
+                                description    = (
+                                    f"HVACmode=2: Window open but OutT ({out_t_val:.2f} °C) "
+                                    f"<= MinOutTemp ({MinOutTemp} °C)"
+                                ),
+                                value_found    = out_t_val,
+                                value_expected = f"> {MinOutTemp} °C",
+                            )
+
+                        # meets_base_reqs: OutT < OpT
+                        if out_t_val is not None and opt_val is not None:
+                            if out_t_val >= opt_val:
+                                add_mismatch(
+                                    timestep       = idx,
+                                    zone_or_window = wname,
+                                    check          = 'Check2_HVACmode2_OutT_lt_OpT',
+                                    description    = (
+                                        f"HVACmode=2: Window open but OutT ({out_t_val:.2f} °C) "
+                                        f">= OpT ({opt_val:.2f} °C)"
+                                    ),
+                                    value_found    = out_t_val,
+                                    value_expected = f"< OpT ({opt_val:.2f} °C)",
+                                )
+
+                        # meets_base_reqs: Occupancy > 0
+                        if occ_val <= 0:
+                            add_mismatch(
+                                timestep       = idx,
+                                zone_or_window = wname,
+                                check          = 'Check2_HVACmode2_Occupancy',
+                                description    = (
+                                    f"HVACmode=2: Window open but zone is unoccupied "
+                                    f"(Occ_count={occ_val})"
+                                ),
+                                value_found    = occ_val,
+                                value_expected = "> 0",
+                            )
+
+                        # Ventilates_HVACmode2: OpT > VST
+                        if opt_val is not None and opt_val <= VST:
+                            add_mismatch(
+                                timestep       = idx,
+                                zone_or_window = wname,
+                                check          = 'Check2_HVACmode2_OpT_gt_VST',
+                                description    = (
+                                    f"HVACmode=2: Window open but OpT ({opt_val:.2f} °C) "
+                                    f"<= VST ({VST} °C)"
+                                ),
+                                value_found    = opt_val,
+                                value_expected = f"> {VST} °C",
+                            )
+
+            new_fails = len(mismatch_rows) - prev_checks
+            open_ts   = int((vof > 0.0).sum())
+            print(f"  Window '{wname}': {open_ts}/{len(chosen_df)} timesteps open | "
+                  f"Condition violations: {new_fails}")
+
+    # ─────────────────────────────────────────────
+    # 6. RETURN RESULTS
+    # ─────────────────────────────────────────────
+    result_df = pd.DataFrame(mismatch_rows)
+
+    if result_df.empty:
+        print("\n✓ All checks passed. No mismatches detected.")
+    else:
+        print(f"\n✗ {len(result_df)} mismatch(es) detected across "
+              f"{result_df['check'].nunique()} check type(s).")
+        print(result_df.groupby(['zone_or_window', 'check']).size()
+              .rename('count').reset_index().to_string(index=False))
+
+    return result_df
+

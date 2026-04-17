@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **EMS Results Verification Utility**: Added `verify_accim_simulation` to `accim.utils`.
+  - Reads an EnergyPlus simulation output (`.eso`) and verifies that the ACCIS EMS scripts injected by `AddAccis` are operating correctly.
+  - **Check 1 — HVAC Setpoint Adherence**: For each zone, verifies that when the cooling coil is active the Zone Operative Temperature does not exceed the adaptive cooling setpoint (`ACST_Sch`) plus a configurable tolerance (default 0.1 °C), and that when the heating coil is active the temperature does not fall below the adaptive heating setpoint (`AHST_Sch`) minus the same tolerance.
+  - **Check 2 — Window Operation Logic**: For mixed-mode models, explicitly replicates the full conditional logic of the EMS program `SetWindowOperation_<windowname>`, covering all three operating modes:
+    - *HVACmode = 0*: Verifies windows are always closed.
+    - *HVACmode = 1*: Verifies that windows only open when no HVAC load is active (`NoH_NoC_reqs`), there is a genuine cooling need (`OpT < ACST`), wind speed is within limits (`WindSpeed ≤ MaxWindSpeed`), outdoor temperature is above a minimum (`OutT > MinOutTemp`), outdoor is cooler than indoor (`OutT < OpT`), and the zone is occupied. Also validates the `VentCtrl`-dependent sub-condition (`OpT > VST` for `VentCtrl=0`, `OpT > ACSTnoTol` for `VentCtrl=1`).
+    - *HVACmode = 2*: Verifies all `meets_base_reqs` conditions plus `OpT > VST` (changeover / free-running logic).
+  - EMS parameters (`HVACmode`, `VentCtrl`, `MaxWindSpeed`, `MinOutTemp`, `VST`) are read automatically from the IDF via `get_accim_args_flattened`.
+  - Zone and window names are auto-detected from the IDF's EMS sensors and `SetWindowOperation` programs.
+  - Returns a `pandas.DataFrame` with columns `['timestep', 'zone_or_window', 'check', 'description', 'value_found', 'value_expected']` listing all mismatched timesteps. An empty DataFrame indicates all checks passed.
+
 ## [0.7.8] - 2026-04-17
 
 ### Fixed
