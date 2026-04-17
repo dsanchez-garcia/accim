@@ -56,3 +56,18 @@ try:
 
 except (ImportError, AttributeError):
     pass
+
+# Monkey-patch: besos.evaluator._freeze fails on platypus>=1.4.0
+# because platypus.core.FixedLengthArray is not deemed Iterable by isinstance()
+# but it is passed as a solution.variables instance that needs hashing for the cache.
+try:
+    import besos.evaluator
+    _original_freeze = besos.evaluator._freeze
+    def _freeze_patched(value):
+        if type(value).__name__ == 'FixedLengthArray':
+            return tuple(_freeze_patched(value[i]) for i in range(len(value)))
+        return _original_freeze(value)
+    
+    besos.evaluator._freeze = _freeze_patched
+except (ImportError, AttributeError):
+    pass
