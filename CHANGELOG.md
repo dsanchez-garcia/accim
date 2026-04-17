@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Python 3.12+ pyDOE2 Compatibility**: Injected a dynamically populated `imp` mock module in `accim.__init__`. This resolves the `ModuleNotFoundError` raised intrinsically by unmaintained external dependencies like `pyDOE2` (called by `besos`) which still naively request the removed native `imp` module.
+- **dask TokenizationError with EvaluatorEP**: Registered a custom `normalize_token` handler for `besos.evaluator.EvaluatorEP` in `accim.__init__`. Newer dask versions require deterministic tokenization of all callables passed to `ddf.apply()`, but `EvaluatorEP` contains non-serializable state (IDF building objects) that cannot be pickled, causing a `TokenizationError` when running `run_parametric_simulation()` with `processes > 1`. The handler uses `id()` as a stable per-instance token for the duration of a Python session.
 
 
 ## [0.7.8] - 2026-04-12
