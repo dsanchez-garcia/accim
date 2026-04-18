@@ -2784,6 +2784,15 @@ class AccimSimulationVerifier:
 
                 # Examine timesteps where window is open AND we are not in the transit delays
                 valid_open_mask = open_mask & ~just_turned_on & ~close_transit
+                
+                # For Hourly frequencies, averaging causes false positives when the 
+                # state toggles mid-hour (e.g. window opened or HVAC activated for just 10 mins).
+                # We extend the pardon to include the opening transit hour too.
+                if chosen_freq == 'Hourly':
+                    open_prev = pd.Series(open_mask).shift(1, fill_value=False).values
+                    open_transit = open_mask & ~open_prev
+                    valid_open_mask = valid_open_mask & ~open_transit
+
                 open_pos  = valid_open_mask.nonzero()[0]
                 n_open    = len(open_pos)
 
