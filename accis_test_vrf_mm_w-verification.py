@@ -77,28 +77,34 @@ run_energyplus(
 # Verifies that the ACCIS EMS scripts (setpoints and window operation) are
 # working correctly by inspecting the simulation output.
 
-from accim.utils import verify_accim_simulation
+from accim.utils import AccimSimulationVerifier
 import os
 
 base_idf = 'OSM_TestResidentialUnit_v01_onlygeometry_SchNatVent_v2520.idf'
 output_idf = base_idf.replace('.idf', '') + '[CS_AUS DeDear[CA_80[CM_3[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf'
-output_dir = 'temp_output_dir_vrf_mm_02'
+output_dir = 'temp_output_dir_vrf_mm_01'
 
 
 eso_path = os.path.join(output_dir, 'eplusout.eso')
 
-df_violations = verify_accim_simulation_simple(
+verifier = AccimSimulationVerifier(
     eso_file_path=eso_path,
     idf_path=output_idf,
     # eplus_install_dir=None,  # set to your EnergyPlus dir if auto-detection fails
 )
 
-# Show a summary of violations (empty DataFrame means all checks passed)
+# Show a summary of violations
 print('\n=== Verification Summary ===')
-if df_violations.empty:
-    print('✓ All EMS checks passed.')
-else:
-    print(f'✗ {len(df_violations)} violation(s) found:')
-    print(df_violations.groupby(['zone_or_window', 'check']).size()
+print(verifier.summary)
+
+print("\n--- Setpoint Violations Table ---")
+df_s = verifier.violations['setpoint']
+if not df_s.empty:
+    print(df_s.groupby(['zone_or_window', 'check']).size()
           .rename('count').reset_index().to_string(index=False))
-    print('\nFull details stored in df_violations.')
+
+print("\n--- Window Violations Table ---")
+df_w = verifier.violations['window']
+if not df_w.empty:
+    print(df_w.groupby(['zone_or_window', 'check']).size()
+          .rename('count').reset_index().to_string(index=False))

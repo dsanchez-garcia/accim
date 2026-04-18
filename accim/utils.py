@@ -2490,371 +2490,309 @@ def verify_accim_simulation(
     return result_df
 
 
-def verify_accim_simulation_simple(
-        eso_file_path: str,
-        idf_path: str,
-        eplus_install_dir: Optional[str] = None,
-) -> pd.DataFrame:
+class AccimSimulationVerifier:
     """
     Simplified two-check verification of ACCIM EMS simulation results.
-
-    **Check 1 — Operative Temperature within adjusted setpoint bounds (all timesteps):**
-
-    The schedule values ``ACST_SCH_*`` and ``AHST_SCH_*`` already incorporate the
-    EMS tolerance offsets ``ACSTtol`` and ``AHSTtol`` (from ``SetInputData``).
-    To recover the underlying adaptive comfort setpoints, those tolerances are
-    subtracted back:
-
-    - Adjusted cooling limit = ``ACST_SCH - ACSTtol``
-    - Adjusted heating limit = ``AHST_SCH - AHSTtol``
-
-    A violation is flagged when ``OpT > ACST_SCH - ACSTtol`` (zone is too hot)
-    or ``OpT < AHST_SCH - AHSTtol`` (zone is too cold).
-
-    ``ACSTtol`` and ``AHSTtol`` are read from the EMS output variables
-    ``z_test_ACSTtol`` / ``z_test_AHSTtol`` in the ESO results.
-
-    **Check 2 — Window operation logic (HVACmode = 2, Mixed-Mode only):**
-
-    When a window is open (ventilation schedule > 0), all 7 conditions from
-    ``SetWindowOperation_<windowname>`` must be simultaneously satisfied:
-
-    1. ``CoolCoil == 0`` AND ``HeatCoil == 0`` — HVAC coils are idle
-    2. ``Occ_count > 0`` — zone is occupied
-    3. ``OpT < ACST_SCH - ACSTtol`` (= roundedACST) — no cooling failure
-    4. ``OpT > VST`` — temperature above ventilation setpoint
-    5. ``OutT < OpT`` — outdoor is cooler than indoor
-    6. ``OutT > MinOutTemp`` — outdoor not too cold
-    7. ``WindSpeed <= MaxWindSpeed`` — wind not too strong
-
-    :param eso_file_path: Path to the eplusout.eso file.
-    :param idf_path: Path to the ACCIM-modified IDF (to read zone/window names and EMS params).
-    :param eplus_install_dir: EnergyPlus installation directory (for ReadVarsESO). Optional.
-    :return: DataFrame of violated timesteps with columns
-        ``['timestep', 'zone_or_window', 'check', 'description', 'value_found', 'value_expected']``.
-        An empty DataFrame means all checks passed.
+    
+    Check 1 — Operative Temperature within adjusted setpoint bounds (all timesteps).
+    Check 2 — Window operation logic (HVACmode = 2, Mixed-Mode only).
     """
+    def __init__(
+            self,
+            eso_file_path: str,
+            idf_path: str,
+            eplus_install_dir: Optional[str] = None,
+    ):
+        self.eso_file_path = eso_file_path
+        self.idf_path = idf_path
+        self.eplus_install_dir = eplus_install_dir
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # 1.  READ ESO → FLAT DATAFRAME
-    # ─────────────────────────────────────────────────────────────────────────
-    print(f"Reading ESO file: {eso_file_path}")
-    eso = read_eso_using_readvarseso(
-        eso_file_path=eso_file_path,
-        eplus_install_dir=eplus_install_dir,
-        only_run_period=True,
-        cleanup=False,
-    )
+        self.summary: str = ""
+        self.violations: Dict[str, pd.DataFrame] = {
+            "setpoint": pd.DataFrame(),
+            "window": pd.DataFrame()
+        }
 
-    all_dfs = []
-    for freq, df in eso['data'].items():
-        if df.empty:
-            continue
-        df_flat = df.copy()
-        df_flat.columns = [f"{a}:{v}" for (a, v, u) in df_flat.columns]
-        df_flat['_freq'] = freq
-        all_dfs.append(df_flat)
+        self._evaluate()
 
-    if not all_dfs:
-        warnings.warn("No simulation output data found in the ESO file.")
-        return pd.DataFrame()
+    def _evaluate(self):
+        # ─────────────────────────────────────────────────────────────────────────
+        # 1. READ ESO → FLAT DATAFRAME
+        # ─────────────────────────────────────────────────────────────────────────
+        print(f"Reading ESO file: {self.eso_file_path}")
+        eso = read_eso_using_readvarseso(
+            eso_file_path=self.eso_file_path,
+            eplus_install_dir=self.eplus_install_dir,
+            only_run_period=True,  # Note: 8832 hours often means EnergyPlus included 3 Design Days in the ESO
+            cleanup=False,
+        )
 
-    # Prefer the finest available frequency so window checks are accurate
-    for fq in ('Timestep', 'Hourly', 'Daily', 'Monthly'):
-        match = next((d for d in all_dfs if d['_freq'].iloc[0] == fq), None)
-        if match is not None:
-            chosen_df = match.drop(columns=['_freq'])
-            chosen_freq = fq
-            break
-    else:
-        chosen_df = all_dfs[0].drop(columns=['_freq'])
-        chosen_freq = all_dfs[0]['_freq'].iloc[0]
-
-    print(f"Using output frequency: {chosen_freq} ({len(chosen_df)} timesteps)")
-
-    # Save the original datetime index, then reset to integers for safe .iat access
-    _timestamps = pd.Series(chosen_df.index, dtype=object)
-    chosen_df = chosen_df.reset_index(drop=True)
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # HELPER: case-insensitive column lookup (Area:Variable format)
-    # ─────────────────────────────────────────────────────────────────────────
-    def _find(area_frag: str, var_frag: str) -> Optional[str]:
-        au, vu = area_frag.upper(), var_frag.upper()
-        for col in chosen_df.columns:
-            parts = col.upper().split(':', 1)
-            if len(parts) == 2 and au in parts[0] and vu in parts[1]:
-                return col
-        return None
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # 2.  READ IDF  — zone names, window names, EMS params
-    # ─────────────────────────────────────────────────────────────────────────
-    print(f"Reading IDF: {idf_path}")
-    building = get_building(idf_path)
-
-    # {ems_name: actual_ep_zone_key}
-    ems_zone_map: Dict[str, str] = {}
-    for sc in building.idfobjects['EnergyManagementSystem:Sensor']:
-        if sc.Name.endswith('_OpT'):
-            ems_zone_map[sc.Name[:-4]] = str(sc.OutputVariable_or_OutputMeter_Index_Key_Name)
-
-    window_names: List[str] = [
-        prog.Name[len('SetWindowOperation_'):]
-        for prog in building.idfobjects['EnergyManagementSystem:Program']
-        if prog.Name.upper().startswith('SETWINDOWOPERATION_')
-    ]
-    comfort_zones = [z for z in ems_zone_map if z not in window_names]
-
-    # Scalar EMS params from IDF args (best-effort)
-    try:
-        accim_args = get_accim_args_flattened(building)
-    except Exception:
-        accim_args = {}
-
-    HVACmode    = int(float(accim_args.get('HVACmode', 2)))
-    VST         = float(accim_args.get('VST', 20.0))
-    MinOutTemp  = float(accim_args.get('MinOutTemp', 6.0))
-    MaxWindSpeed= float(accim_args.get('MaxWindSpeed', 5.0))
-
-    # Window → ventilation schedule map (non-AFN models)
-    window_vent_sch_map: Dict[str, str] = {}
-    for act in building.idfobjects['EnergyManagementSystem:Actuator']:
-        act_name_up = act.Name.upper()
-        for wname in window_names:
-            if wname.upper() in act_name_up:
-                comp_id = str(act.Actuated_Component_Unique_Name)
-                if comp_id and comp_id not in ('', 'None'):
-                    window_vent_sch_map[wname] = comp_id
-                break
-
-    # ACSTtol / AHSTtol — read from EMS output variables in the CSV
-    _acst_tol_col = _find('EMS', 'z_test_ACSTtol')
-    _ahst_tol_col = _find('EMS', 'z_test_AHSTtol')
-    acst_tol = float(chosen_df[_acst_tol_col].iat[0]) if _acst_tol_col else 0.0
-    ahst_tol = float(chosen_df[_ahst_tol_col].iat[0]) if _ahst_tol_col else 0.0
-
-    print(f"ACSTtol={acst_tol} °C  |  AHSTtol={ahst_tol} °C")
-    print(f"HVACmode={HVACmode}  |  VST={VST} °C  |  MinOutTemp={MinOutTemp} °C  "
-          f"|  MaxWindSpeed={MaxWindSpeed} m/s")
-    print(f"Comfort zones: {comfort_zones}")
-    print(f"Window zones:  {window_names}  (VentSch map: {window_vent_sch_map})")
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # 3.  ACCUMULATE VIOLATIONS
-    # ─────────────────────────────────────────────────────────────────────────
-    violations: List[dict] = []
-
-    def _add(positions, zone_or_window: str, check: str,
-             description_fn, value_found_fn, value_expected_fn):
-        """Append one row per bad position."""
-        for p in positions:
-            violations.append({
-                'timestep':       _timestamps.iat[p],
-                'zone_or_window': zone_or_window,
-                'check':          check,
-                'description':    description_fn(p),
-                'value_found':    value_found_fn(p),
-                'value_expected': value_expected_fn(p),
-            })
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # CHECK 1: operative temperature within adjusted setpoint bounds
-    # ─────────────────────────────────────────────────────────────────────────
-    print("\n--- Check 1: Temperature within adjusted setpoint bounds ---")
-
-    for zone in comfort_zones:
-        actual_key = ems_zone_map.get(zone, zone)
-
-        opt_col  = _find(actual_key, 'Operative Temperature') or _find(actual_key, 'Zone Operative Temperature')
-        acst_col = _find(f'ACST_Sch_{zone}', 'Schedule Value')
-        ahst_col = _find(f'AHST_Sch_{zone}', 'Schedule Value')
-
-        if not opt_col or not acst_col or not ahst_col:
-            warnings.warn(
-                f"Zone '{zone}': missing column(s) "
-                f"(opt={opt_col}, acst={acst_col}, ahst={ahst_col}). Skipping."
-            )
-            continue
-
-        opt          = chosen_df[opt_col].astype(float)
-        acst_limit   = chosen_df[acst_col].astype(float) - acst_tol   # ACST_SCH − ACSTtol
-        ahst_limit   = chosen_df[ahst_col].astype(float) - ahst_tol   # AHST_SCH − AHSTtol
-
-        # Too hot: OpT > ACST_SCH − ACSTtol
-        hot_pos = (opt > acst_limit).to_numpy().nonzero()[0]
-        _add(hot_pos, zone, 'Check1_TooHot',
-             lambda p: (f"OpT ({opt.iat[p]:.2f}°C) > "
-                        f"ACST_SCH−ACSTtol ({acst_limit.iat[p]:.2f}°C)"),
-             lambda p: round(float(opt.iat[p]), 4),
-             lambda p: f"<= {acst_limit.iat[p]:.2f}°C")
-
-        # Too cold: OpT < AHST_SCH − AHSTtol
-        cold_pos = (opt < ahst_limit).to_numpy().nonzero()[0]
-        _add(cold_pos, zone, 'Check1_TooCold',
-             lambda p: (f"OpT ({opt.iat[p]:.2f}°C) < "
-                        f"AHST_SCH−AHSTtol ({ahst_limit.iat[p]:.2f}°C)"),
-             lambda p: round(float(opt.iat[p]), 4),
-             lambda p: f">= {ahst_limit.iat[p]:.2f}°C")
-
-        n_hot  = len(hot_pos)
-        n_cold = len(cold_pos)
-        total  = len(chosen_df)
-        print(f"  Zone '{zone}': too-hot={n_hot}/{total}  |  too-cold={n_cold}/{total}")
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # CHECK 2: window operation logic (HVACmode = 2 only)
-    # ─────────────────────────────────────────────────────────────────────────
-    if HVACmode == 2 and window_names:
-        print("\n--- Check 2: Window operation conditions (HVACmode=2) ---")
-
-        out_t_col = _find('Environment', 'Site Outdoor Air Drybulb Temperature')
-        wind_col  = _find('Environment', 'Site Wind Speed')
-
-        if out_t_col is None:
-            warnings.warn("'Site Outdoor Air Drybulb Temperature' not found. "
-                          "Outdoor-temp conditions in Check 2 will be skipped.")
-        if wind_col is None:
-            warnings.warn("'Site Wind Speed' not found. "
-                          "Wind-speed condition in Check 2 will be skipped.")
-
-        out_t = chosen_df[out_t_col].astype(float) if out_t_col else None
-        wind  = chosen_df[wind_col].astype(float)  if wind_col  else None
-
-        for wname in window_names:
-            actual_win_key = ems_zone_map.get(wname, wname)
-
-            # Opening factor / ventilation schedule
-            vof_col = (
-                _find(wname, 'AFN Surface Venting Window or Door Opening Factor')
-                or _find(actual_win_key, 'AFN Surface Venting Window or Door Opening Factor')
-            )
-            if vof_col is None:
-                sch_name = window_vent_sch_map.get(wname)
-                if sch_name:
-                    vof_col = _find(sch_name, 'Schedule Value')
-            if vof_col is None:
-                vof_col = _find(f'Vent_Sch_{actual_win_key}', 'Schedule Value')
-            if vof_col is None:
-                warnings.warn(f"Window '{wname}': no opening factor column found. Skipping.")
+        all_dfs = []
+        for freq, df in eso['data'].items():
+            if df.empty:
                 continue
+            df_flat = df.copy()
+            df_flat.columns = [f"{a}:{v}" for (a, v, u) in df_flat.columns]
+            df_flat['_freq'] = freq
+            all_dfs.append(df_flat)
 
-            # Per-window zone columns
-            opt_w_col  = (_find(actual_win_key, 'Operative Temperature')
-                          or _find(actual_win_key, 'Zone Operative Temperature'))
-            cool_w_col = (_find(actual_win_key, 'Cooling Coil Total Cooling Rate')
-                          or _find(actual_win_key, 'Cooling Rate'))
-            heat_w_col = (_find(actual_win_key, 'Heating Coil Heating Rate')
-                          or _find(actual_win_key, 'Heating Rate'))
-            occ_col    = (_find(actual_win_key, 'People Occupant Count')
-                          or _find(wname, 'People Occupant Count'))
-            if occ_col is None:
-                for cz in comfort_zones:
-                    occ_col = _find('EMS', f'People Occupant Count_{cz}')
-                    if occ_col:
-                        break
+        if not all_dfs:
+            warnings.warn("No simulation output data found in the ESO file.")
+            self.summary = "Verification failed: No simulation output data found."
+            return
 
-            # ACST reference (no-tolerance): ACST_SCH − ACSTtol from first comfort zone
-            acst_ref = None
-            for cz in comfort_zones:
-                cz_col = _find(f'ACST_Sch_{cz}', 'Schedule Value')
-                if cz_col is not None:
-                    acst_ref = chosen_df[cz_col].astype(float) - acst_tol
+        # Prefer the finest available frequency so window checks are accurate
+        for fq in ('Timestep', 'Hourly', 'Daily', 'Monthly'):
+            match = next((d for d in all_dfs if d['_freq'].iloc[0] == fq), None)
+            if match is not None:
+                chosen_df = match.drop(columns=['_freq'])
+                chosen_freq = fq
+                break
+        else:
+            chosen_df = all_dfs[0].drop(columns=['_freq'])
+            chosen_freq = all_dfs[0]['_freq'].iloc[0]
+
+        print(f"Using output frequency: {chosen_freq} ({len(chosen_df)} timesteps)")
+
+        _timestamps = pd.Series(chosen_df.index, dtype=object)
+        chosen_df = chosen_df.reset_index(drop=True)
+
+        def _find(area_frag: str, var_frag: str) -> Optional[str]:
+            au, vu = area_frag.upper(), var_frag.upper()
+            for col in chosen_df.columns:
+                parts = col.upper().split(':', 1)
+                if len(parts) == 2 and au in parts[0] and vu in parts[1]:
+                    return col
+            return None
+
+        # ─────────────────────────────────────────────────────────────────────────
+        # 2. READ IDF — zone names, window names, EMS params
+        # ─────────────────────────────────────────────────────────────────────────
+        print(f"Reading IDF: {self.idf_path}")
+        building = get_building(self.idf_path)
+
+        ems_zone_map: Dict[str, str] = {}
+        for sc in building.idfobjects['EnergyManagementSystem:Sensor']:
+            if sc.Name.endswith('_OpT'):
+                ems_zone_map[sc.Name[:-4]] = str(sc.OutputVariable_or_OutputMeter_Index_Key_Name)
+
+        window_names: List[str] = [
+            prog.Name[len('SetWindowOperation_'):]
+            for prog in building.idfobjects['EnergyManagementSystem:Program']
+            if prog.Name.upper().startswith('SETWINDOWOPERATION_')
+        ]
+        comfort_zones = [z for z in ems_zone_map if z not in window_names]
+
+        try:
+            accim_args = get_accim_args_flattened(building)
+        except Exception:
+            accim_args = {}
+
+        HVACmode    = int(float(accim_args.get('HVACmode', 2)))
+        VST         = float(accim_args.get('VST', 20.0))
+        MinOutTemp  = float(accim_args.get('MinOutTemp', 6.0))
+        MaxWindSpeed= float(accim_args.get('MaxWindSpeed', 5.0))
+
+        window_vent_sch_map: Dict[str, str] = {}
+        for act in building.idfobjects['EnergyManagementSystem:Actuator']:
+            act_name_up = act.Name.upper()
+            for wname in window_names:
+                if wname.upper() in act_name_up:
+                    comp_id = str(act.Actuated_Component_Unique_Name)
+                    if comp_id and comp_id not in ('', 'None'):
+                        window_vent_sch_map[wname] = comp_id
                     break
 
-            vof  = chosen_df[vof_col].astype(float)
-            opt_w = chosen_df[opt_w_col].astype(float) if opt_w_col else None
-            cool  = chosen_df[cool_w_col].astype(float) if cool_w_col else pd.Series(0.0, index=chosen_df.index)
-            heat  = chosen_df[heat_w_col].astype(float) if heat_w_col else pd.Series(0.0, index=chosen_df.index)
-            occ   = chosen_df[occ_col].astype(float)   if occ_col   else pd.Series(1.0, index=chosen_df.index)
+        _acst_tol_col = _find('EMS', 'z_test_ACSTtol')
+        _ahst_tol_col = _find('EMS', 'z_test_AHSTtol')
+        acst_tol = float(chosen_df[_acst_tol_col].iat[0]) if _acst_tol_col else 0.0
+        ahst_tol = float(chosen_df[_ahst_tol_col].iat[0]) if _ahst_tol_col else 0.0
 
-            # Only examine timesteps where the window is open
-            open_mask = vof > 0.0
-            open_pos  = open_mask.to_numpy().nonzero()[0]
-            n_open    = len(open_pos)
+        print(f"ACSTtol={acst_tol} °C  |  AHSTtol={ahst_tol} °C")
+        print(f"HVACmode={HVACmode}  |  VST={VST} °C  |  MinOutTemp={MinOutTemp} °C  "
+              f"|  MaxWindSpeed={MaxWindSpeed} m/s")
 
-            if n_open == 0:
-                print(f"  Window '{wname}': never open — no Check 2 violations possible.")
+        # ─────────────────────────────────────────────────────────────────────────
+        # 3. ACCUMULATE VIOLATIONS
+        # ─────────────────────────────────────────────────────────────────────────
+        violations_setpoint: List[dict] = []
+        violations_window: List[dict] = []
+        summary_lines = [f"Checked {len(chosen_df)} timesteps."]
+
+        def _add(pos_array, target_list: List[dict], zone_or_window: str, check: str,
+                 desc_fn, found_fn, expected_fn):
+            for p in pos_array:
+                target_list.append({
+                    'timestep':       _timestamps.iat[p],
+                    'zone_or_window': zone_or_window,
+                    'check':          check,
+                    'description':    desc_fn(p),
+                    'value_found':    found_fn(p),
+                    'value_expected': expected_fn(p),
+                })
+
+        # ─── CHECK 1: SETPOINTS ──────────────────────────────────────────────────
+        print("\n--- Check 1: Temperature within adjusted setpoint bounds ---")
+        summary_lines.append("\n[Check 1: Setpoints]")
+
+        for zone in comfort_zones:
+            actual_key = ems_zone_map.get(zone, zone)
+
+            opt_col  = _find(actual_key, 'Operative Temperature') or _find(actual_key, 'Zone Operative Temperature')
+            acst_col = _find(f'ACST_Sch_{zone}', 'Schedule Value')
+            ahst_col = _find(f'AHST_Sch_{zone}', 'Schedule Value')
+
+            if not opt_col or not acst_col or not ahst_col:
+                warnings.warn(
+                    f"Zone '{zone}': missing column(s) "
+                    f"(opt={opt_col}, acst={acst_col}, ahst={ahst_col}). Skipping."
+                )
                 continue
 
-            print(f"  Window '{wname}': {n_open}/{len(chosen_df)} timesteps open. "
-                  f"Checking 7 conditions...")
+            opt          = chosen_df[opt_col].astype(float)
+            acst_limit   = chosen_df[acst_col].astype(float) - acst_tol   # ACST_SCH − ACSTtol
+            ahst_limit   = chosen_df[ahst_col].astype(float) - ahst_tol   # AHST_SCH − AHSTtol
 
-            prev = len(violations)
+            hot_pos = (opt > acst_limit).to_numpy().nonzero()[0]
+            _add(hot_pos, violations_setpoint, zone, 'Check1_TooHot',
+                 lambda p: f"OpT ({opt.iat[p]:.2f}°C) > ACST_SCH−ACSTtol ({acst_limit.iat[p]:.2f}°C)",
+                 lambda p: round(float(opt.iat[p]), 4),
+                 lambda p: f"<= {acst_limit.iat[p]:.2f}°C")
 
-            # ── Condition 1: HVAC coils idle ─────────────────────────────────
-            bad = open_pos[(cool.iloc[open_pos].values > 0) | (heat.iloc[open_pos].values > 0)]
-            _add(bad, wname, 'Check2_Cond1_HVACidle',
-                 lambda p: (f"Window open but HVAC active "
-                            f"(cool={cool.iat[p]:.1f} W, heat={heat.iat[p]:.1f} W)"),
-                 lambda p: f"cool={cool.iat[p]:.1f}, heat={heat.iat[p]:.1f}",
-                 lambda p: "CoolCoil=0 AND HeatCoil=0")
+            cold_pos = (opt < ahst_limit).to_numpy().nonzero()[0]
+            _add(cold_pos, violations_setpoint, zone, 'Check1_TooCold',
+                 lambda p: f"OpT ({opt.iat[p]:.2f}°C) < AHST_SCH−AHSTtol ({ahst_limit.iat[p]:.2f}°C)",
+                 lambda p: round(float(opt.iat[p]), 4),
+                 lambda p: f">= {ahst_limit.iat[p]:.2f}°C")
 
-            # ── Condition 2: occupied ─────────────────────────────────────────
-            bad = open_pos[occ.iloc[open_pos].values <= 0]
-            _add(bad, wname, 'Check2_Cond2_Occupied',
-                 lambda p: f"Window open but zone unoccupied (Occ={occ.iat[p]:.0f})",
-                 lambda p: round(float(occ.iat[p]), 4),
-                 lambda p: "> 0")
+            n_hot, n_cold, total = len(hot_pos), len(cold_pos), len(chosen_df)
+            msg = f"  Zone '{zone}': too-hot={n_hot}/{total}  |  too-cold={n_cold}/{total}"
+            print(msg)
+            summary_lines.append(msg)
 
-            # ── Condition 3: OpT < roundedACST (= ACST_SCH − ACSTtol) ────────
-            if opt_w is not None and acst_ref is not None:
-                bad = open_pos[opt_w.iloc[open_pos].values >= acst_ref.iloc[open_pos].values]
-                _add(bad, wname, 'Check2_Cond3_OpT_lt_ACST',
-                     lambda p: (f"Window open but OpT ({opt_w.iat[p]:.2f}°C) "
-                                f">= roundedACST ({acst_ref.iat[p]:.2f}°C)"),
-                     lambda p: round(float(opt_w.iat[p]), 4),
-                     lambda p: f"< {acst_ref.iat[p]:.2f}°C")
+        # ─── CHECK 2: WINDOW OPERATION ───────────────────────────────────────────
+        if HVACmode == 2 and window_names:
+            print("\n--- Check 2: Window operation conditions (HVACmode=2) ---")
+            summary_lines.append("\n[Check 2: Windows]")
 
-            # ── Condition 4: OpT > VST ────────────────────────────────────────
-            if opt_w is not None:
-                bad = open_pos[opt_w.iloc[open_pos].values <= VST]
-                _add(bad, wname, 'Check2_Cond4_OpT_gt_VST',
-                     lambda p: f"Window open but OpT ({opt_w.iat[p]:.2f}°C) <= VST ({VST}°C)",
-                     lambda p: round(float(opt_w.iat[p]), 4),
-                     lambda p: f"> {VST}°C")
+            out_t_col = _find('Environment', 'Site Outdoor Air Drybulb Temperature')
+            wind_col  = _find('Environment', 'Site Wind Speed')
 
-            # ── Condition 5: OutT < OpT ───────────────────────────────────────
-            if out_t is not None and opt_w is not None:
-                bad = open_pos[out_t.iloc[open_pos].values >= opt_w.iloc[open_pos].values]
-                _add(bad, wname, 'Check2_Cond5_OutT_lt_OpT',
-                     lambda p: (f"Window open but OutT ({out_t.iat[p]:.2f}°C) "
-                                f">= OpT ({opt_w.iat[p]:.2f}°C)"),
-                     lambda p: round(float(out_t.iat[p]), 4),
-                     lambda p: f"< OpT ({opt_w.iat[p]:.2f}°C)" if opt_w is not None else "< OpT")
+            out_t = chosen_df[out_t_col].astype(float) if out_t_col else None
+            wind  = chosen_df[wind_col].astype(float)  if wind_col  else None
 
-            # ── Condition 6: OutT > MinOutTemp ───────────────────────────────
-            if out_t is not None:
-                bad = open_pos[out_t.iloc[open_pos].values <= MinOutTemp]
-                _add(bad, wname, 'Check2_Cond6_MinOutTemp',
-                     lambda p: (f"Window open but OutT ({out_t.iat[p]:.2f}°C) "
-                                f"<= MinOutTemp ({MinOutTemp}°C)"),
-                     lambda p: round(float(out_t.iat[p]), 4),
-                     lambda p: f"> {MinOutTemp}°C")
+            for wname in window_names:
+                actual_win_key = ems_zone_map.get(wname, wname)
 
-            # ── Condition 7: WindSpeed <= MaxWindSpeed ────────────────────────
-            if wind is not None:
-                bad = open_pos[wind.iloc[open_pos].values > MaxWindSpeed]
-                _add(bad, wname, 'Check2_Cond7_MaxWindSpeed',
-                     lambda p: (f"Window open but WindSpeed ({wind.iat[p]:.2f} m/s) "
-                                f"> MaxWindSpeed ({MaxWindSpeed} m/s)"),
-                     lambda p: round(float(wind.iat[p]), 4),
-                     lambda p: f"<= {MaxWindSpeed} m/s")
+                vof_col = (
+                    _find(wname, 'AFN Surface Venting Window or Door Opening Factor')
+                    or _find(actual_win_key, 'AFN Surface Venting Window or Door Opening Factor')
+                )
+                if not vof_col:
+                    sch_name = window_vent_sch_map.get(wname)
+                    if sch_name: vof_col = _find(sch_name, 'Schedule Value')
+                if not vof_col:
+                    vof_col = _find(f'Vent_Sch_{actual_win_key}', 'Schedule Value')
+                if not vof_col:
+                    continue
 
-            n_new = len(violations) - prev
-            print(f"    Condition violations (across all 7): {n_new}")
+                opt_w_col  = _find(actual_win_key, 'Operative Temperature') or _find(actual_win_key, 'Zone Operative Temperature')
+                cool_w_col = _find(actual_win_key, 'Cooling Coil Total Cooling Rate') or _find(actual_win_key, 'Cooling Rate')
+                heat_w_col = _find(actual_win_key, 'Heating Coil Heating Rate') or _find(actual_win_key, 'Heating Rate')
+                occ_col    = _find(actual_win_key, 'People Occupant Count') or _find(wname, 'People Occupant Count')
+                if not occ_col:
+                    for cz in comfort_zones:
+                        occ_col = _find('EMS', f'People Occupant Count_{cz}')
+                        if occ_col: break
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # 4.  RETURN
-    # ─────────────────────────────────────────────────────────────────────────
-    result = pd.DataFrame(violations)
+                acst_ref = None
+                for cz in comfort_zones:
+                    cz_col = _find(f'ACST_Sch_{cz}', 'Schedule Value')
+                    if cz_col:
+                        acst_ref = chosen_df[cz_col].astype(float) - acst_tol
+                        break
 
-    if result.empty:
-        print("\n✓ All checks passed — no violations detected.")
-    else:
-        print(f"\n✗ {len(result)} violation(s) detected.")
-        print(result.groupby(['zone_or_window', 'check']).size()
-              .rename('count').reset_index().to_string(index=False))
+                vof  = chosen_df[vof_col].astype(float)
+                opt_w = chosen_df[opt_w_col].astype(float) if opt_w_col else None
+                cool  = chosen_df[cool_w_col].astype(float) if cool_w_col else pd.Series(0.0, index=chosen_df.index)
+                heat  = chosen_df[heat_w_col].astype(float) if heat_w_col else pd.Series(0.0, index=chosen_df.index)
+                occ   = chosen_df[occ_col].astype(float)   if occ_col   else pd.Series(1.0, index=chosen_df.index)
 
-    return result
+                open_mask = vof > 0.0
+                open_pos  = open_mask.to_numpy().nonzero()[0]
+                n_open    = len(open_pos)
+
+                if n_open == 0:
+                    msg = f"  Window '{wname}': never open."
+                    print(msg); summary_lines.append(msg)
+                    continue
+
+                prev = len(violations_window)
+
+                bad = open_pos[(cool.iloc[open_pos].values > 0) | (heat.iloc[open_pos].values > 0)]
+                _add(bad, violations_window, wname, 'Check2_Cond1_HVACidle',
+                     lambda p: f"Window open but HVAC active (cool={cool.iat[p]:.1f} W, heat={heat.iat[p]:.1f} W)",
+                     lambda p: f"cool={cool.iat[p]:.1f}, heat={heat.iat[p]:.1f}",
+                     lambda p: "Cool==0 AND Heat==0")
+
+                bad = open_pos[occ.iloc[open_pos].values <= 0]
+                _add(bad, violations_window, wname, 'Check2_Cond2_Occupied',
+                     lambda p: f"Window open but zone unoccupied (Occ={occ.iat[p]:.0f})",
+                     lambda p: round(float(occ.iat[p]), 4),
+                     lambda p: "> 0")
+
+                if opt_w is not None and acst_ref is not None:
+                    bad = open_pos[opt_w.iloc[open_pos].values >= acst_ref.iloc[open_pos].values]
+                    _add(bad, violations_window, wname, 'Check2_Cond3_OpT_lt_ACST',
+                         lambda p: f"Window open but OpT ({opt_w.iat[p]:.2f}°C) >= roundedACST ({acst_ref.iat[p]:.2f}°C)",
+                         lambda p: round(float(opt_w.iat[p]), 4),
+                         lambda p: f"< {acst_ref.iat[p]:.2f}°C")
+
+                if opt_w is not None:
+                    bad = open_pos[opt_w.iloc[open_pos].values <= VST]
+                    _add(bad, violations_window, wname, 'Check2_Cond4_OpT_gt_VST',
+                         lambda p: f"Window open but OpT ({opt_w.iat[p]:.2f}°C) <= VST ({VST}°C)",
+                         lambda p: round(float(opt_w.iat[p]), 4),
+                         lambda p: f"> {VST}°C")
+
+                if out_t is not None and opt_w is not None:
+                    bad = open_pos[out_t.iloc[open_pos].values >= opt_w.iloc[open_pos].values]
+                    _add(bad, violations_window, wname, 'Check2_Cond5_OutT_lt_OpT',
+                         lambda p: f"Window open but OutT ({out_t.iat[p]:.2f}°C) >= OpT ({opt_w.iat[p]:.2f}°C)",
+                         lambda p: round(float(out_t.iat[p]), 4),
+                         lambda p: f"< OpT ({opt_w.iat[p]:.2f}°C)")
+
+                if out_t is not None:
+                    bad = open_pos[out_t.iloc[open_pos].values <= MinOutTemp]
+                    _add(bad, violations_window, wname, 'Check2_Cond6_MinOutTemp',
+                         lambda p: f"Window open but OutT ({out_t.iat[p]:.2f}°C) <= MinOutTemp ({MinOutTemp}°C)",
+                         lambda p: round(float(out_t.iat[p]), 4),
+                         lambda p: f"> {MinOutTemp}°C")
+
+                if wind is not None:
+                    bad = open_pos[wind.iloc[open_pos].values > MaxWindSpeed]
+                    _add(bad, violations_window, wname, 'Check2_Cond7_MaxWindSpeed',
+                         lambda p: f"Window open but WindSpeed ({wind.iat[p]:.2f} m/s) > MaxWindSpeed ({MaxWindSpeed} m/s)",
+                         lambda p: round(float(wind.iat[p]), 4),
+                         lambda p: f"<= {MaxWindSpeed} m/s")
+
+                n_new = len(violations_window) - prev
+                msg = f"  Window '{wname}': 7-condition violations = {n_new} (out of {n_open} open steps)."
+                print(msg); summary_lines.append(msg)
+
+        # ─────────────────────────────────────────────────────────────────────────
+        # 4. STORE RESULTS
+        # ─────────────────────────────────────────────────────────────────────────
+        self.violations["setpoint"] = pd.DataFrame(violations_setpoint)
+        self.violations["window"] = pd.DataFrame(violations_window)
+        self.summary = "\n".join(summary_lines)
+
+        n_s = len(self.violations['setpoint'])
+        n_w = len(self.violations['window'])
+        if n_s == 0 and n_w == 0:
+            msg = "\n[PASS] All checks passed — no violations detected."
+            print(msg); self.summary += msg
+        else:
+            msg = f"\n[FAIL] {n_s} setpoint violation(s), {n_w} window violation(s)."
+            print(msg); self.summary += msg
 
