@@ -2517,48 +2517,63 @@ class AccimSimulationVerifier:
 
     def _evaluate(self):
         # ─────────────────────────────────────────────────────────────────────────
-        # 1. READ ESO → FLAT DATAFRAME
+        # 1. READ CSV/ESO → FLAT DATAFRAME
         # ─────────────────────────────────────────────────────────────────────────
-        print(f"Reading ESO file: {self.eso_file_path}")
-        eso = read_eso_using_readvarseso(
-            eso_file_path=self.eso_file_path,
-            eplus_install_dir=self.eplus_install_dir,
-            only_run_period=True,  # Note: 8832 hours often means EnergyPlus included 3 Design Days in the ESO
-            cleanup=False,
-        )
-
-        all_dfs = []
-        for freq, df in eso['data'].items():
-            if df.empty:
-                continue
-            df_flat = df.copy()
-            df_flat.columns = [f"{a}:{v}" for (a, v, u) in df_flat.columns]
-            df_flat['_freq'] = freq
-            all_dfs.append(df_flat)
-
-        if not all_dfs:
-            warnings.warn("No simulation output data found in the ESO file.")
-            self.summary = "Verification failed: No simulation output data found."
-            return
-
-        # Prefer the finest available frequency so window checks are accurate
-        for fq in ('Timestep', 'Hourly', 'Daily', 'Monthly'):
-            match = next((d for d in all_dfs if d['_freq'].iloc[0] == fq), None)
-            if match is not None:
-                chosen_df = match.drop(columns=['_freq'])
-                chosen_freq = fq
-                break
+        csv_path = self.eso_file_path.replace('.eso', '.csv')
+        if os.path.exists(csv_path):
+            print(f"Reading CSV file directly: {csv_path}")
+            chosen_df = pd.read_csv(csv_path)
+            
+            if 'Date/Time' in chosen_df.columns:
+                _timestamps = chosen_df['Date/Time'].astype(str)
+            else:
+                _timestamps = pd.Series(chosen_df.index, dtype=str)
+                
+            chosen_freq = 'Unknown'
         else:
-            chosen_df = all_dfs[0].drop(columns=['_freq'])
-            chosen_freq = all_dfs[0]['_freq'].iloc[0]
+            print(f"Reading ESO file: {self.eso_file_path}")
+            eso = read_eso_using_readvarseso(
+                eso_file_path=self.eso_file_path,
+                eplus_install_dir=self.eplus_install_dir,
+                only_run_period=True,  # Note: 8832 hours often means EnergyPlus included 3 Design Days in the ESO
+                cleanup=False,
+            )
 
-        print(f"Using output frequency: {chosen_freq} ({len(chosen_df)} timesteps total)")
+            all_dfs = []
+            for freq, df in eso['data'].items():
+                if df.empty:
+                    continue
+                df_flat = df.copy()
+                df_flat.columns = [f"{a}:{v}" for (a, v, u) in df_flat.columns]
+                df_flat['_freq'] = freq
+                all_dfs.append(df_flat)
 
-        _timestamps = pd.Series(chosen_df.index, dtype=object)
+            if not all_dfs:
+                warnings.warn("No simulation output data found in the ESO file.")
+                self.summary = "Verification failed: No simulation output data found."
+                return
+
+            # Prefer the finest available frequency so window checks are accurate
+            for fq in ('Timestep', 'Hourly', 'Daily', 'Monthly'):
+                match = next((d for d in all_dfs if d['_freq'].iloc[0] == fq), None)
+                if match is not None:
+                    chosen_df = match.drop(columns=['_freq'])
+                    chosen_freq = fq
+                    break
+            else:
+                chosen_df = all_dfs[0].drop(columns=['_freq'])
+                chosen_freq = all_dfs[0]['_freq'].iloc[0]
+
+            print(f"Using output frequency: {chosen_freq} ({len(chosen_df)} timesteps total)")
+
+            _timestamps = pd.Series(chosen_df.index, dtype=object)
 
         # ─── Remove Design Days (Sizing Period) ──────────────────────────────────
-        if chosen_freq == 'Hourly':
-            expected_annual = 8784 if "02/29" in _timestamps.str.slice(0, 6).values else 8760
+        dt_str = _timestamps.str.strip().str.slice(0, 5)
+        if len(dt_str) > 0 and "/" in dt_str.iloc[0]:
+            ts_per_day = dt_str.value_counts().mode().iloc[0]
+            expected_annual = ts_per_day * (366 if "02/29" in dt_str.values else 365)
+            
             if len(chosen_df) > expected_annual:
                 drop_count = len(chosen_df) - expected_annual
                 chosen_df = chosen_df.iloc[drop_count:].copy()
@@ -2664,13 +2679,25 @@ class AccimSimulationVerifier:
             acst_limit   = chosen_df[acst_col].astype(float) - acst_tol   # ACST_SCH − ACSTtol
             ahst_limit   = chosen_df[ahst_col].astype(float) - ahst_tol   # AHST_SCH − AHSTtol
 
-            hot_pos = (opt > acst_limit).to_numpy().nonzero()[0]
+            # Too hot (pardon isolated 1-timestep spikes)
+            hot_mask = (opt > acst_limit).values
+            hot_prev = pd.Series(hot_mask).shift(1, fill_value=False).values
+            hot_next = pd.Series(hot_mask).shift(-1, fill_value=False).values
+            valid_hot = hot_mask & ~(hot_mask & ~hot_prev & ~hot_next)
+            hot_pos = valid_hot.nonzero()[0]
+            
             _add(hot_pos, violations_setpoint, zone, 'Check1_TooHot',
                  lambda p: f"OpT ({opt.iat[p]:.2f}°C) > ACST_SCH−ACSTtol ({acst_limit.iat[p]:.2f}°C)",
                  lambda p: round(float(opt.iat[p]), 4),
                  lambda p: f"<= {acst_limit.iat[p]:.2f}°C")
 
-            cold_pos = (opt < ahst_limit).to_numpy().nonzero()[0]
+            # Too cold (pardon isolated 1-timestep spikes)
+            cold_mask = (opt < ahst_limit).values
+            cold_prev = pd.Series(cold_mask).shift(1, fill_value=False).values
+            cold_next = pd.Series(cold_mask).shift(-1, fill_value=False).values
+            valid_cold = cold_mask & ~(cold_mask & ~cold_prev & ~cold_next)
+            cold_pos = valid_cold.nonzero()[0]
+            
             _add(cold_pos, violations_setpoint, zone, 'Check1_TooCold',
                  lambda p: f"OpT ({opt.iat[p]:.2f}°C) < AHST_SCH−AHSTtol ({ahst_limit.iat[p]:.2f}°C)",
                  lambda p: round(float(opt.iat[p]), 4),
