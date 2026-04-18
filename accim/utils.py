@@ -2691,6 +2691,20 @@ class AccimSimulationVerifier:
 
             out_t = chosen_df[out_t_col].astype(float) if out_t_col else None
             wind  = chosen_df[wind_col].astype(float)  if wind_col  else None
+            
+            # Dynamic references for VST and MinOutTemp (read per timestep if available)
+            min_out_t_col = _find('EMS', 'Minimum Outdoor Temperature for ventilation')
+            vst_col       = _find('EMS', 'Ventilation Setpoint Temperature')
+            
+            if min_out_t_col:
+                min_out_t_series = chosen_df[min_out_t_col].astype(float)
+            else:
+                min_out_t_series = pd.Series(MinOutTemp, index=chosen_df.index)
+                
+            if vst_col:
+                vst_series = chosen_df[vst_col].astype(float)
+            else:
+                vst_series = pd.Series(VST, index=chosen_df.index)
 
             for wname in window_names:
                 actual_win_key = ems_zone_map.get(wname, wname)
@@ -2733,10 +2747,15 @@ class AccimSimulationVerifier:
                 hvac_now = (cool.values > 0) | (heat.values > 0)
                 hvac_prev = pd.Series(hvac_now).shift(1, fill_value=False).values
                 just_turned_on = hvac_now & ~hvac_prev
-
-                # Examine timesteps where window is open AND we are not in the transit delay
+                
+                # Identify 1-timestep isolate opening spike (window open only for exactly 1 timestep)
                 open_mask = (vof > 0.0).values
-                valid_open_mask = open_mask & ~just_turned_on
+                open_prev = pd.Series(open_mask).shift(1, fill_value=False).values
+                open_next = pd.Series(open_mask).shift(-1, fill_value=False).values
+                single_step_open = open_mask & ~open_prev & ~open_next
+
+                # Examine timesteps where window is open AND we are not in the transit delays
+                valid_open_mask = open_mask & ~just_turned_on & ~single_step_open
                 open_pos  = valid_open_mask.nonzero()[0]
                 n_open    = len(open_pos)
 
@@ -2767,11 +2786,11 @@ class AccimSimulationVerifier:
                          lambda p: f"< {acst_ref.iat[p]:.2f}°C")
 
                 if opt_w is not None:
-                    bad = open_pos[opt_w.iloc[open_pos].values <= VST]
+                    bad = open_pos[opt_w.iloc[open_pos].values <= vst_series.iloc[open_pos].values]
                     _add(bad, violations_window, wname, 'Check2_Cond4_OpT_gt_VST',
-                         lambda p: f"Window open but OpT ({opt_w.iat[p]:.2f}°C) <= VST ({VST}°C)",
+                         lambda p: f"Window open but OpT ({opt_w.iat[p]:.2f}°C) <= VST ({vst_series.iat[p]:.2f}°C)",
                          lambda p: round(float(opt_w.iat[p]), 4),
-                         lambda p: f"> {VST}°C")
+                         lambda p: f"> {vst_series.iat[p]:.2f}°C")
 
                 if out_t is not None and opt_w is not None:
                     bad = open_pos[out_t.iloc[open_pos].values >= opt_w.iloc[open_pos].values]
@@ -2781,11 +2800,11 @@ class AccimSimulationVerifier:
                          lambda p: f"< OpT ({opt_w.iat[p]:.2f}°C)")
 
                 if out_t is not None:
-                    bad = open_pos[out_t.iloc[open_pos].values <= MinOutTemp]
+                    bad = open_pos[out_t.iloc[open_pos].values <= min_out_t_series.iloc[open_pos].values]
                     _add(bad, violations_window, wname, 'Check2_Cond6_MinOutTemp',
-                         lambda p: f"Window open but OutT ({out_t.iat[p]:.2f}°C) <= MinOutTemp ({MinOutTemp}°C)",
+                         lambda p: f"Window open but OutT ({out_t.iat[p]:.2f}°C) <= MinOutTemp ({min_out_t_series.iat[p]:.2f}°C)",
                          lambda p: round(float(out_t.iat[p]), 4),
-                         lambda p: f"> {MinOutTemp}°C")
+                         lambda p: f"> {min_out_t_series.iat[p]:.2f}°C")
 
                 if wind is not None:
                     bad = open_pos[wind.iloc[open_pos].values > MaxWindSpeed]
