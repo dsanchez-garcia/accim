@@ -2748,14 +2748,15 @@ class AccimSimulationVerifier:
                 hvac_prev = pd.Series(hvac_now).shift(1, fill_value=False).values
                 just_turned_on = hvac_now & ~hvac_prev
                 
-                # Identify 1-timestep isolate opening spike (window open only for exactly 1 timestep)
+                # Identify 1-timestep delay where Window closes in the NEXT timestep.
+                # This pardons transient limits (e.g. OpT falling below VST, Wind crossing MaxWindSpeed)
+                # because the EMS takes 1 timestep to fully actuate the window closure.
                 open_mask = (vof > 0.0).values
-                open_prev = pd.Series(open_mask).shift(1, fill_value=False).values
                 open_next = pd.Series(open_mask).shift(-1, fill_value=False).values
-                single_step_open = open_mask & ~open_prev & ~open_next
+                close_transit = open_mask & ~open_next
 
                 # Examine timesteps where window is open AND we are not in the transit delays
-                valid_open_mask = open_mask & ~just_turned_on & ~single_step_open
+                valid_open_mask = open_mask & ~just_turned_on & ~close_transit
                 open_pos  = valid_open_mask.nonzero()[0]
                 n_open    = len(open_pos)
 
