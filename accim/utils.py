@@ -2065,14 +2065,14 @@ def verify_accim_simulation(
         acst   = chosen_df[acst_col].astype(float)
         ahst   = chosen_df[ahst_col].astype(float)
 
-        for idx in chosen_df.index:
-            opt_val  = opt.loc[idx]
-            acst_val = acst.loc[idx]
-            ahst_val = ahst.loc[idx]
+        for pos, idx in enumerate(chosen_df.index):
+            opt_val  = float(opt.iat[pos])
+            acst_val = float(acst.iat[pos])
+            ahst_val = float(ahst.iat[pos])
 
             # Cooling check
             if cool_col is not None:
-                cool_rate = float(chosen_df[cool_col].loc[idx])
+                cool_rate = float(chosen_df[cool_col].iat[pos])
                 if cool_rate > 0 and opt_val > acst_val + tolerance:
                     add_mismatch(
                         timestep       = idx,
@@ -2088,7 +2088,7 @@ def verify_accim_simulation(
 
             # Heating check
             if heat_col is not None:
-                heat_rate = float(chosen_df[heat_col].loc[idx])
+                heat_rate = float(chosen_df[heat_col].iat[pos])
                 if heat_rate > 0 and opt_val < ahst_val - tolerance:
                     add_mismatch(
                         timestep       = idx,
@@ -2205,18 +2205,18 @@ def verify_accim_simulation(
 
             prev_checks = len(mismatch_rows)
 
-            for idx in chosen_df.index:
-                vof_val = vof.loc[idx]
+            for pos, idx in enumerate(chosen_df.index):
+                vof_val = float(vof.iat[pos])
                 window_open = vof_val > 0.0
 
                 # Retrieve optional per-timestep variables safely
-                opt_val      = float(chosen_df[opt_w_col].loc[idx])  if opt_w_col  else None
-                cool_val     = float(chosen_df[cool_w_col].loc[idx]) if cool_w_col else 0.0
-                heat_val     = float(chosen_df[heat_w_col].loc[idx]) if heat_w_col else 0.0
-                occ_val      = float(chosen_df[occ_col].loc[idx])    if occ_col    else 1.0   # assume occupied if unknown
-                out_t_val    = float(out_t.loc[idx])  if out_t  is not None else None
-                wind_val     = float(wind.loc[idx])   if wind   is not None else 0.0
-                acst_val     = float(chosen_df[acst_w_col].loc[idx]) if acst_w_col else None
+                opt_val   = float(chosen_df[opt_w_col].iat[pos])   if opt_w_col   else None
+                cool_val  = float(chosen_df[cool_w_col].iat[pos])  if cool_w_col  else 0.0
+                heat_val  = float(chosen_df[heat_w_col].iat[pos])  if heat_w_col  else 0.0
+                occ_val   = float(chosen_df[occ_col].iat[pos])     if occ_col     else 1.0
+                out_t_val = float(out_t.iat[pos])                  if out_t  is not None else None
+                wind_val  = float(wind.iat[pos])                   if wind   is not None else 0.0
+                acst_val  = float(chosen_df[acst_w_col].iat[pos])  if acst_w_col  else None
 
                 # ── Derive NoH_NoC_reqs
                 no_h_no_c = (cool_val == 0.0) and (heat_val == 0.0)
