@@ -1842,7 +1842,7 @@ def verify_accim_simulation(
         eso_file_path=eso_file_path,
         eplus_install_dir=eplus_install_dir,
         only_run_period=True,
-        cleanup=True,
+        cleanup=False,
     )
 
     # Gather all data into one flat df to make column lookup easier
@@ -1946,12 +1946,19 @@ def verify_accim_simulation(
     # ─────────────────────────────────────────────
     # 3. DETECT ZONES AND WINDOWS FROM EMS OBJECTS
     # ─────────────────────────────────────────────
-    # EMS zone names (used for setpoint schedule keys)
-    ems_zone_names: List[str] = []
+    # Build a map {ems_name: actual_ep_key} from _OpT sensors.
+    # 'ems_name'     = sensor Name without '_OpT'  (e.g. 'Floor_1_Residential_Living_Occupants')
+    #                  matches schedule keys ACST_Sch_{ems_name}, AHST_Sch_{ems_name}
+    # 'actual_ep_key'= OutputVariable_or_OutputMeter_Index_Key_Name  (e.g. 'Floor_1_Zone')
+    #                  matches EnergyPlus output column areas (Zone Operative Temperature, coils …)
+    ems_zone_map: Dict[str, str] = {}  # {ems_name: actual_ep_key}
     for sc in building.idfobjects['EnergyManagementSystem:Sensor']:
         if sc.Name.endswith('_OpT'):
-            zone_raw = sc.Name[:-4]  # strip '_OpT'
-            ems_zone_names.append(zone_raw)
+            ems_name   = sc.Name[:-4]  # strip '_OpT'
+            actual_key = str(sc.OutputVariable_or_OutputMeter_Index_Key_Name)
+            ems_zone_map[ems_name] = actual_key
+
+    ems_zone_names: List[str] = list(ems_zone_map.keys())
 
     # Window names (from SetWindowOperation programs)
     window_names: List[str] = []
@@ -1960,9 +1967,28 @@ def verify_accim_simulation(
             w = prog.Name[len('SetWindowOperation_'):]
             window_names.append(w)
 
+    # Comfort zones = all EMS zones that are NOT window zones
+    # (window zones have no ACST/AHST schedules)
+    comfort_zone_names: List[str] = [z for z in ems_zone_names if z not in window_names]
+
+    # Build map {window_ems_name: ventilation_schedule_name} for non-AFN models
+    # by scanning EMS actuators whose name contains the window name
+    window_vent_sch_map: Dict[str, str] = {}
+    for act in building.idfobjects['EnergyManagementSystem:Actuator']:
+        act_name_up = act.Name.upper()
+        for wname in window_names:
+            if wname.upper() in act_name_up:
+                comp_id = str(act.Actuated_Component_Unique_Name)
+                if comp_id and comp_id not in ('', 'None'):
+                    window_vent_sch_map[wname] = comp_id
+                break
+
     is_mixed_mode = len(window_names) > 0
-    print(f"Detected {len(ems_zone_names)} zone(s): {ems_zone_names}")
+    print(f"Detected {len(ems_zone_names)} EMS zone(s): {ems_zone_names}")
+    print(f"  EMS→EP key map: { {k: v for k, v in ems_zone_map.items()} }")
     print(f"Mixed-mode model: {is_mixed_mode}  |  Windows detected: {window_names}")
+    if window_vent_sch_map:
+        print(f"  Window→VentSchedule map: {window_vent_sch_map}")
     print(f"EMS params — HVACmode={HVACmode}, VentCtrl={VentCtrl}, "
           f"MaxWindSpeed={MaxWindSpeed}, MinOutTemp={MinOutTemp}, VST={VST}")
 
@@ -1987,17 +2013,22 @@ def verify_accim_simulation(
     # ─────────────────────────────────────────────
     print("\n--- Check 1: HVAC Setpoint Adherence ---")
 
-    for zone in ems_zone_names:
-        # Find operative temperature column for this zone
-        opt_col = find_col(chosen_df, zone, 'Operative Temperature')
+    # Only run setpoint checks for comfort zones (not raw window zones)
+    for zone in comfort_zone_names:
+        actual_ep_key = ems_zone_map.get(zone, zone)
+
+        # ── Operative temperature: use the actual EnergyPlus zone key in the column area
+        opt_col = find_col(chosen_df, actual_ep_key, 'Operative Temperature')
         if opt_col is None:
-            # Try without area prefix (EMS output variable)
-            opt_col = find_col(chosen_df, zone, 'Zone Operative Temperature')
+            opt_col = find_col(chosen_df, actual_ep_key, 'Zone Operative Temperature')
         if opt_col is None:
-            warnings.warn(f"Zone '{zone}': No 'Operative Temperature' column found. Skipping setpoint check.")
+            warnings.warn(
+                f"Zone '{zone}' (EP key '{actual_ep_key}'): "
+                f"No 'Operative Temperature' column found. Skipping setpoint check."
+            )
             continue
 
-        # Find ACST and AHST schedule value columns
+        # ── ACST / AHST schedules: key uses the EMS name (not the actual zone key)
         acst_col = find_col(chosen_df, f'ACST_Sch_{zone}', 'Schedule Value')
         ahst_col = find_col(chosen_df, f'AHST_Sch_{zone}', 'Schedule Value')
 
@@ -2008,25 +2039,27 @@ def verify_accim_simulation(
             )
             continue
 
-        # Find cooling / heating rate columns for this zone
-        # Try HVAC coil outputs first, then VRF
+        # ── Cooling / heating rate: use actual_ep_key (the area in the output)
         cool_col = (
-            find_col(chosen_df, zone, 'Cooling Coil Total Cooling Rate')
-            or find_col(chosen_df, zone, 'VRF Heat Pump Cooling Electricity')
-            or find_col(chosen_df, zone, 'Cooling Rate')
+            find_col(chosen_df, actual_ep_key, 'Cooling Coil Total Cooling Rate')
+            or find_col(chosen_df, actual_ep_key, 'VRF Heat Pump Cooling Electricity')
+            or find_col(chosen_df, actual_ep_key, 'Cooling Rate')
         )
         heat_col = (
-            find_col(chosen_df, zone, 'Heating Coil Heating Rate')
-            or find_col(chosen_df, zone, 'VRF Heat Pump Heating Electricity')
-            or find_col(chosen_df, zone, 'Heating Rate')
+            find_col(chosen_df, actual_ep_key, 'Heating Coil Heating Rate')
+            or find_col(chosen_df, actual_ep_key, 'VRF Heat Pump Heating Electricity')
+            or find_col(chosen_df, actual_ep_key, 'Heating Rate')
         )
 
         if cool_col is None and heat_col is None:
             warnings.warn(
-                f"Zone '{zone}': No cooling or heating rate column found. "
+                f"Zone '{zone}' (EP key '{actual_ep_key}'): No cooling or heating rate column found. "
                 "Setpoint check will be skipped for this zone."
             )
             continue
+
+        print(f"  Zone '{zone}': OpT col='{opt_col}', ACST col='{acst_col}', "
+              f"cool col='{cool_col}', heat col='{heat_col}'")
 
         opt    = chosen_df[opt_col].astype(float)
         acst   = chosen_df[acst_col].astype(float)
@@ -2098,48 +2131,73 @@ def verify_accim_simulation(
                           "Window checks requiring WindSpeed will be skipped.")
 
         for wname in window_names:
+            # Actual EnergyPlus key for the window zone (e.g. 'Floor_1_Zone')
+            actual_win_key = ems_zone_map.get(wname, wname)
+
             # ── Opening factor
+            # 1. Try AFN surface opening factor
             vof_col = (
                 find_col(chosen_df, wname, 'AFN Surface Venting Window or Door Opening Factor')
+                or find_col(chosen_df, actual_win_key, 'AFN Surface Venting Window or Door Opening Factor')
                 or find_col(chosen_df, wname, 'Opening Factor')
             )
             if vof_col is None:
-                # Try EMS output variable format (e.g., 'Ventilates_HVACmode1_wname')
-                vof_col = find_col(chosen_df, wname, 'VentOpenFact')
+                # 2. Scheduled ventilation: look up schedule from the actuator map built earlier
+                vent_sch_name = window_vent_sch_map.get(wname)
+                if vent_sch_name:
+                    vof_col = find_col(chosen_df, vent_sch_name, 'Schedule Value')
+            if vof_col is None:
+                # 3. Derive schedule name from actual EnergyPlus zone key: Vent_Sch_{actual_win_key}
+                vof_col = find_col(chosen_df, f'Vent_Sch_{actual_win_key}', 'Schedule Value')
             if vof_col is None:
                 warnings.warn(
-                    f"Window '{wname}': No opening factor column found. Skipping window check."
+                    f"Window '{wname}' (EP key '{actual_win_key}'): "
+                    f"No opening factor / ventilation schedule column found. Skipping window check."
                 )
                 continue
 
-            # ── Per-window operative temperature
-            opt_w_col = find_col(chosen_df, wname, 'Operative Temperature')
-            if opt_w_col is None:
-                # The window zone shares the same name as a zone (often the case)
-                opt_w_col = find_col(chosen_df, wname, 'Zone Operative Temperature')
+            print(f"  Window '{wname}': opening-factor col='{vof_col}'")
 
-            # ── Cooling / heating coils (HVAC active check)
+            # ── Per-window operative temperature: use actual EP key
+            opt_w_col = (
+                find_col(chosen_df, actual_win_key, 'Operative Temperature')
+                or find_col(chosen_df, actual_win_key, 'Zone Operative Temperature')
+                or find_col(chosen_df, wname, 'Operative Temperature')
+            )
+
+            # ── Cooling / heating coils: use actual EP key
             cool_w_col = (
-                find_col(chosen_df, wname, 'Cooling Coil Total Cooling Rate')
-                or find_col(chosen_df, wname, 'Cooling Rate')
+                find_col(chosen_df, actual_win_key, 'Cooling Coil Total Cooling Rate')
+                or find_col(chosen_df, actual_win_key, 'Cooling Rate')
+                or find_col(chosen_df, wname, 'Cooling Coil Total Cooling Rate')
             )
             heat_w_col = (
-                find_col(chosen_df, wname, 'Heating Coil Heating Rate')
-                or find_col(chosen_df, wname, 'Heating Rate')
+                find_col(chosen_df, actual_win_key, 'Heating Coil Heating Rate')
+                or find_col(chosen_df, actual_win_key, 'Heating Rate')
+                or find_col(chosen_df, wname, 'Heating Coil Heating Rate')
             )
 
-            # ── Occupancy (People Occupant Count for associated zone/space)
-            occ_col = find_col(chosen_df, wname, 'People Occupant Count')
+            # ── Occupancy: try window zone first, then fall back to any EMS occ column
+            occ_col = (
+                find_col(chosen_df, actual_win_key, 'People Occupant Count')
+                or find_col(chosen_df, wname, 'People Occupant Count')
+            )
+            # Last resort: use any EMS occupancy output (first comfort zone)
+            if occ_col is None:
+                for cz in comfort_zone_names:
+                    occ_col = find_col(chosen_df, 'EMS', f'People Occupant Count_{cz}')
+                    if occ_col:
+                        break
 
-            # ── ACST without tolerance (used by VentCtrl==1 branch)
-            # The EMS variable 'ACSTnoTol' is global; look for an output or use ACST
+            # ── ACST reference for window zone: take from first comfort zone
+            # (ACSTnoTol is a global EMS variable, approximated here by the schedule value)
             acst_no_tol_col = None
-            for zone in ems_zone_names:
-                cand = find_col(chosen_df, f'ACST_Sch_{zone}', 'Schedule Value')
+            for cz in comfort_zone_names:
+                cand = find_col(chosen_df, f'ACST_Sch_{cz}', 'Schedule Value')
                 if cand:
-                    acst_no_tol_col = cand  # best approximation available in outputs
+                    acst_no_tol_col = cand
                     break
-            acst_w_col = acst_no_tol_col  # re-used as the ACST reference for this window zone
+            acst_w_col = acst_no_tol_col
 
             vof    = chosen_df[vof_col].astype(float)
             out_t  = chosen_df[out_t_col].astype(float) if out_t_col else None
