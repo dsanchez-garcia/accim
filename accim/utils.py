@@ -2492,10 +2492,34 @@ def verify_accim_simulation(
 
 class AccimSimulationVerifier:
     """
-    Simplified two-check verification of ACCIM EMS simulation results.
+    Object-oriented utility to verify ACCIM EMS simulation results.
     
-    Check 1 — Operative Temperature within adjusted setpoint bounds (all timesteps).
-    Check 2 — Window operation logic (HVACmode = 2, Mixed-Mode only).
+    This class reads an EnergyPlus simulation output (either .csv or .eso) and
+    evaluates two primary checks to ensure adaptive comfort setups function accurately:
+    Check 1 — Operative Temperature adherence within setpoint bounds across all timesteps.
+    Check 2 — Window operation conditional logic (specifically for Mixed-Mode models, HVACmode = 2).
+
+    Parameters
+    ----------
+    eso_file_path : str
+        Absolute or relative path to the EnergyPlus output data. If the native 
+        eplusout.csv file exists in the same directory, the verifier will prioritize 
+        reading it directly to avoid the ReadVarsESO overhead. Otherwise, the ESO 
+        is parsed through besos.
+    idf_path : str
+        Path to the corresponding IDF input model. Used extensively to automatically
+        discover the specific EMS names, Window configurations, Parameters, and Target zones.
+    eplus_install_dir : Optional[str], default None
+        EnergyPlus installation directory required internally by `readvarseso` if 
+        working exclusively with `.eso` files in complex environments.
+        
+    Attributes
+    ----------
+    summary : str
+        A formatted string detailing the number of violations found across Check 1 and Check 2.
+    violations : Dict[str, pd.DataFrame]
+        Dictionary storing specific Pandas DataFrames linking violated timesteps. 
+        Keys are usually 'setpoint' and 'window'.
     """
     def __init__(
             self,
@@ -2565,6 +2589,18 @@ class AccimSimulationVerifier:
                 chosen_freq = all_dfs[0]['_freq'].iloc[0]
 
             print(f"Using output frequency: {chosen_freq} ({len(chosen_df)} timesteps total)")
+            
+            # Print warning if Hourly is selected because averaging behavior
+            # can mask instantaneous states and produce artificial logic conflicts.
+            if chosen_freq == 'Hourly':
+                warn_msg = (
+                    "Warning: Hourly frequency selected. Results may be mathematically "
+                    "inconsistent because hourly outputs average the window openings "
+                    "and HVAC active states. Mid-hour transitions generally trigger "
+                    "false-positive overlaps. Timestep frequency is highly recommended."
+                )
+                print(f"[{chosen_freq}] {warn_msg}")
+                warnings.warn(warn_msg)
 
             _timestamps = pd.Series(chosen_df.index, dtype=object)
 

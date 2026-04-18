@@ -7,27 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- **EMS Results Verification Utility**: Added `verify_accim_simulation` to `accim.utils`.
-  - Reads an EnergyPlus simulation output (`.eso`) and verifies that the ACCIS EMS scripts injected by `AddAccis` are operating correctly.
-  - **Check 1 — HVAC Setpoint Adherence**: For each zone, verifies that when the cooling coil is active the Zone Operative Temperature does not exceed the adaptive cooling setpoint (`ACST_Sch`) plus a configurable tolerance (default 0.1 °C), and that when the heating coil is active the temperature does not fall below the adaptive heating setpoint (`AHST_Sch`) minus the same tolerance.
-  - **Check 2 — Window Operation Logic**: For mixed-mode models, explicitly replicates the full conditional logic of the EMS program `SetWindowOperation_<windowname>`, covering all three operating modes:
-    - *HVACmode = 0*: Verifies windows are always closed.
-    - *HVACmode = 1*: Verifies that windows only open when no HVAC load is active (`NoH_NoC_reqs`), there is a genuine cooling need (`OpT < ACST`), wind speed is within limits (`WindSpeed ≤ MaxWindSpeed`), outdoor temperature is above a minimum (`OutT > MinOutTemp`), outdoor is cooler than indoor (`OutT < OpT`), and the zone is occupied. Also validates the `VentCtrl`-dependent sub-condition (`OpT > VST` for `VentCtrl=0`, `OpT > ACSTnoTol` for `VentCtrl=1`).
-    - *HVACmode = 2*: Verifies all `meets_base_reqs` conditions plus `OpT > VST` (changeover / free-running logic).
-  - EMS parameters (`HVACmode`, `VentCtrl`, `MaxWindSpeed`, `MinOutTemp`, `VST`) are read automatically from the IDF via `get_accim_args_flattened`.
-  - Zone and window names are auto-detected from the IDF's EMS sensors and `SetWindowOperation` programs.
-  - Returns a `pandas.DataFrame` with columns `['timestep', 'zone_or_window', 'check', 'description', 'value_found', 'value_expected']` listing all mismatched timesteps. An empty DataFrame indicates all checks passed.
-
-## [0.7.8] - 2026-04-17
-
-### Fixed
-- **Python 3.12+ pyDOE2 Compatibility**: Injected a dynamically populated `imp` mock module in `accim.__init__`. This resolves the `ModuleNotFoundError` raised intrinsically by unmaintained external dependencies like `pyDOE2` (called by `besos`) which still naively request the removed native `imp` module.
-- **dask TokenizationError with EvaluatorEP**: Registered a custom `normalize_token` handler for `besos.evaluator.EvaluatorEP` in `accim.__init__`. Newer dask versions require deterministic tokenization of all callables passed to `ddf.apply()`, but `EvaluatorEP` contains non-serializable state (IDF building objects) that cannot be pickled, causing a `TokenizationError` when running `run_parametric_simulation()` with `processes > 1`. The handler uses `id()` as a stable per-instance token for the duration of a Python session.
-- **Platypus >= 1.4.0 TypeError in besos.optimizer**: Monkey-patched `besos.optimizer.get_operator` to support `platypus>=1.4.0` in `accim.__init__`. Platypus changed `PlatypusConfig.default_variator` and `PlatypusConfig.default_mutator` from dictionaries to methods, causing a `TypeError` when `besos.optimizer` attempted to iterate over `defaults.items()`. The patch dynamically reconstructs operators using the new method signatures and gracefully re-wraps all affected `besos.optimizer` algorithm classes using the patched handler.
-- **Platypus >= 1.4.0 TypeError in besos.evaluator**: Monkey-patched `besos.evaluator._freeze` in `accim.__init__`. `platypus.core.FixedLengthArray` is used in newer versions of platypus for solution variables but is not recognized as `Iterable` by `isinstance()`, failing the `besos` result cache freezing mechanism with an `unhashable type` `TypeError`. The patch intercepts `FixedLengthArray` objects and correctly converts them to cache-friendly tuples.
+## [0.7.8] - 2026-04-18
 
 ### Added
+- **EMS Results Verification Utility**: Added `AccimSimulationVerifier` to `accim.utils`.
+  - Replaces the former procedural function with a robust Object-Oriented class.
+  - Reads an EnergyPlus simulation output (direct `.csv` parsing prioritize to bypass heavy `ReadVarsESO` operations) and verifies that the ACCIS EMS scripts injected by `AddAccis` operate correctly.
+  - **Check 1 — HVAC Setpoint Adherence**: Verifies adaptive cooling (`ACST_Sch`) and heating (`AHST_Sch`) setpoint parameters natively. Features anti-bounce mask logic to mathematically pardon 1-timestep transient threshold shocks naturally occurring in simulations.
+  - **Check 2 — Window Operation Logic**: Replicates the conditional logic of `SetWindowOperation_<windowname>`. Features dynamic parameter mapping directly from EMS evaluation series (`MinOutTemp` and `VST`) per-timestep instead of using static references.
+  - **Intelligent Timestep Filtering**: Implements frequency-agnostic design-day stripping logic, automatically slicing simulation warmup buffers natively using `DatetimeIndex` logic.
+  - **Leniency Models**: Integrates advanced 1-timestep window closing masks and mid-hour toggle aggregations (`open_transit`, `close_transit`) that mathematically excuse transition false positives inherently logged by EnergyPlus due to control lag or fractional overlapping in `Hourly` resolutions.
 - **Operative Temperature Control Utility**: Added a new function `set_operative_temp_control` inside `accim.utils` that allows users to easily update IDFs to use operative temperature control by appending `ZoneControl:Thermostat:OperativeTemperature` configurations dynamically to all zone thermostats.
 - **Global `update_idf_version` Utility**: Added an automated function inside `accim.utils.py` to seamlessly upgrade the defined EnergyPlus version of target IDF files.
 - **Sizing Error Prevention**: Implemented automatic initialization of standard autosizing constraints within the `SimulationControl` object (via `setSimulationControlSizing` in `accim.sim.accim_Base`). This fully resolves strict EnergyPlus fatal sizing errors when modifying or autosizing components in exported skeleton environments.
