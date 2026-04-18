@@ -2552,10 +2552,21 @@ class AccimSimulationVerifier:
             chosen_df = all_dfs[0].drop(columns=['_freq'])
             chosen_freq = all_dfs[0]['_freq'].iloc[0]
 
-        print(f"Using output frequency: {chosen_freq} ({len(chosen_df)} timesteps)")
+        print(f"Using output frequency: {chosen_freq} ({len(chosen_df)} timesteps total)")
 
         _timestamps = pd.Series(chosen_df.index, dtype=object)
+
+        # ─── Remove Design Days (Sizing Period) ──────────────────────────────────
+        if chosen_freq == 'Hourly':
+            expected_annual = 8784 if "02/29" in _timestamps.str.slice(0, 6).values else 8760
+            if len(chosen_df) > expected_annual:
+                drop_count = len(chosen_df) - expected_annual
+                chosen_df = chosen_df.iloc[drop_count:].copy()
+                _timestamps = _timestamps.iloc[drop_count:].copy()
+                print(f"Dropped {drop_count} design/warm-up timesteps. Kept {len(chosen_df)} run-period timesteps.")
+
         chosen_df = chosen_df.reset_index(drop=True)
+        _timestamps = _timestamps.reset_index(drop=True)
 
         def _find(area_frag: str, var_frag: str) -> Optional[str]:
             au, vu = area_frag.upper(), var_frag.upper()
@@ -2718,8 +2729,15 @@ class AccimSimulationVerifier:
                 heat  = chosen_df[heat_w_col].astype(float) if heat_w_col else pd.Series(0.0, index=chosen_df.index)
                 occ   = chosen_df[occ_col].astype(float)   if occ_col   else pd.Series(1.0, index=chosen_df.index)
 
-                open_mask = vof > 0.0
-                open_pos  = open_mask.to_numpy().nonzero()[0]
+                # Identify 1-timestep delay where HVAC just turned on
+                hvac_now = (cool.values > 0) | (heat.values > 0)
+                hvac_prev = pd.Series(hvac_now).shift(1, fill_value=False).values
+                just_turned_on = hvac_now & ~hvac_prev
+
+                # Examine timesteps where window is open AND we are not in the transit delay
+                open_mask = (vof > 0.0).values
+                valid_open_mask = open_mask & ~just_turned_on
+                open_pos  = valid_open_mask.nonzero()[0]
                 n_open    = len(open_pos)
 
                 if n_open == 0:
@@ -2731,7 +2749,7 @@ class AccimSimulationVerifier:
 
                 bad = open_pos[(cool.iloc[open_pos].values > 0) | (heat.iloc[open_pos].values > 0)]
                 _add(bad, violations_window, wname, 'Check2_Cond1_HVACidle',
-                     lambda p: f"Window open but HVAC active (cool={cool.iat[p]:.1f} W, heat={heat.iat[p]:.1f} W)",
+                     lambda p: f"Window open but HVAC already active (cool={cool.iat[p]:.1f} W, heat={heat.iat[p]:.1f} W)",
                      lambda p: f"cool={cool.iat[p]:.1f}, heat={heat.iat[p]:.1f}",
                      lambda p: "Cool==0 AND Heat==0")
 
