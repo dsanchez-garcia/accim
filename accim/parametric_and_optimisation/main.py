@@ -45,6 +45,10 @@ class GlobalAllCapsDict(dict):
         return super().__getitem__(key.upper())
 
 def _patched_eval_func(evaluator, all_outputs):
+    if getattr(evaluator, 'out_dir', None) is not None:
+        if not hasattr(evaluator, '_out_dir_patched'):
+            evaluator.out_dir = f"{evaluator.out_dir}_{os.getpid()}"
+            evaluator._out_dir_patched = True
     return evaluator.package_for_platypus(evaluator(all_outputs))
 
 def _patched_to_platypus(self):
