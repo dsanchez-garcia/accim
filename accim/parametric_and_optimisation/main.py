@@ -38,6 +38,11 @@ from accim.parametric_and_optimisation.utils import expand_to_hourly_dataframe, 
 import accim.sim.accis_single_idf_funcs as accis
 import accim.sim.apmv_setpoints as apmv
 
+# To avoid multiprocessing pickling issues with local classes on Windows
+class GlobalAllCapsDict(dict):
+    def __getitem__(self, key):
+        return super().__getitem__(key.upper())
+
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf_accim
 import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
 import accim.parametric_and_optimisation.parameters as params
@@ -944,6 +949,13 @@ class OptimParamSimulation:
                     epw=epw,
                     out_dir=out_dir
                 )
+                
+                # We need to temporarily decouple the building evaluator internal dictionaries
+                # because besos wraps `idfobjects` inside a local class `AllCapsDict` on `read()`,
+                # which natively conflicts with Windows Python ProcessPool Evaluators pickling process
+                if processes > 1 and hasattr(evaluator, '_building') and hasattr(evaluator._building, 'idfobjects'):
+                    evaluator._building.idfobjects = GlobalAllCapsDict(evaluator._building.idfobjects)
+
                 if algorithm == 'GeneticAlgorithm':
                     outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
                 elif algorithm == 'EvolutionaryStrategy':
