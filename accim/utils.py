@@ -87,6 +87,7 @@ def set_occupancy_to_always(idf_object: besos.IDF_class.IDF) -> besos.IDF_class.
     else:
         idf_object.newidfobject(
             key='Schedule:Compact',
+            Name='On 24/7',
             Schedule_Type_Limits_Name='Any Number',
             Field_1='Through: 12/31',
             Field_2='For: AllDays',
