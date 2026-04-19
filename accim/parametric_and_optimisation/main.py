@@ -816,6 +816,49 @@ class OptimParamSimulation:
         self.evaluators = evaluators
         # return outputs_param_simulation
 
+    def estimate_optimisation_sims(
+            self,
+            evaluations: int,
+            population_size: int,
+            epws: list,
+    ) -> int:
+        """
+        Estimates the maximum number of EnergyPlus simulations that will be run by
+        :meth:`run_optimisation` **before** launching it.
+
+        NSGA-II (and most platypus algorithms) work in discrete generations, each of which
+        evaluates exactly ``population_size`` individuals.  The stopping criterion
+        ``evaluations`` is checked **between** generations, so the algorithm always
+        completes the current generation before stopping.  Therefore:
+
+        .. code-block:: text
+
+            sims_per_epw = population_size × ⌈evaluations / population_size⌉
+            total_sims   = sims_per_epw × len(epws)
+
+        Special case: if ``evaluations < population_size`` the initial generation
+        already exceeds the budget, but it is always completed in full, so
+        ``sims_per_epw`` equals ``population_size``.
+
+        :param evaluations: same value you will pass to :meth:`run_optimisation`
+        :param population_size: same value you will pass to :meth:`run_optimisation`
+        :param epws: same list you will pass to :meth:`run_optimisation`
+        :return: estimated total number of EnergyPlus simulations
+        """
+        import math
+        sims_per_epw = population_size * math.ceil(evaluations / population_size)
+        total = sims_per_epw * len(epws)
+        print(
+            f"Estimated simulations\n"
+            f"  evaluations    : {evaluations}\n"
+            f"  population_size: {population_size}\n"
+            f"  EPWs           : {len(epws)} ({', '.join(epws)})\n"
+            f"  sims per EPW   : {sims_per_epw}  "
+            f"({math.ceil(evaluations / population_size)} generation(s) × {population_size})\n"
+            f"  TOTAL          : {total}"
+        )
+        return total
+
     def run_optimisation(
             self,
             epws: list,
@@ -823,17 +866,27 @@ class OptimParamSimulation:
             evaluations: int,
             population_size: int,
             algorithm: str = 'NSGAII',
+            processes: int = 1,
             **kwargs
     ) -> pd.DataFrame:
         """
-        Runs the optimisation using
+        Runs the optimisation.
 
-        :param epws: The epw filename
+        :param epws: a list of .epw filenames
         :param out_dir: the directory name to save the outputs
-        :param evaluations: The algorithm will be stopped once it uses more than this many evaluations.
-            For more information, refer to besos.optimizer.platypus_alg
-        :param population_size: The number of simulations to run
-        
+        :param evaluations: the algorithm will be stopped once it uses more than this many
+            evaluations (i.e. EnergyPlus simulations).  Because the algorithm always completes
+            the current generation before stopping, the actual number of simulations per EPW
+            is ``population_size × ⌈evaluations / population_size⌉``.
+            Use :meth:`estimate_optimisation_sims` to preview the count before running.
+        :param population_size: number of individuals in each generation; each individual
+            corresponds to one EnergyPlus simulation
+        :param algorithm: the optimisation algorithm to use; default is 'NSGAII'
+        :param processes: number of CPU cores to use for parallel evaluation of individuals
+            within each generation.  Uses ``platypus.ProcessPoolEvaluator`` internally.
+            Default is 1 (sequential).  Values > 1 are useful when ``population_size`` is
+            large and each simulation is independent.
+
         :return: a pandas DataFrame
         """
         available_algorithms = [
@@ -857,51 +910,64 @@ class OptimParamSimulation:
         outputs_dict = {}
         evaluators = {}
 
-        for epw in epws:
-            evaluator = self.set_evaluator(
-                epw=epw,
-                out_dir=out_dir
-            )
-            # outputs_optimisation = NSGAII(evaluator, evaluations=evaluations, population_size=population_size)
-            if algorithm == 'GeneticAlgorithm':
-                outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'EvolutionaryStrategy':
-                outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'NSGAII':
-                outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'EpsMOEA':
-                outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'GDE3':
-                outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'SPEA2':
-                outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'MOEAD':
-                outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'NSGAIII':
-                outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'ParticleSwarm':
-                outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'OMOPSO':
-                outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'SMPSO':
-                outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'CMAES':
-                outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'IBEA':
-                outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'PAES':
-                outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'PESA2':
-                outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            elif algorithm == 'EpsNSGAII':
-                outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-            else:
-                raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
+        # Build the platypus parallel evaluator kwarg when processes > 1.
+        # platypus.Algorithm accepts an `evaluator` keyword argument; passing
+        # ProcessPoolEvaluator causes each generation's individuals to be
+        # evaluated concurrently across the requested number of CPU cores.
+        if processes > 1:
+            import platypus
+            platypus_evaluator = platypus.ProcessPoolEvaluator(processes)
+            kwargs.setdefault('evaluator', platypus_evaluator)
 
-            epwname = epw.split('.epw')[0]
-            outputs_optimisation['epw'] = epwname
-            outputs_dict.update({epwname: outputs_optimisation})
-            evaluators.update({epwname: evaluator})
+        try:
+            for epw in epws:
+                evaluator = self.set_evaluator(
+                    epw=epw,
+                    out_dir=out_dir
+                )
+                if algorithm == 'GeneticAlgorithm':
+                    outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'EvolutionaryStrategy':
+                    outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'NSGAII':
+                    outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'EpsMOEA':
+                    outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'GDE3':
+                    outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'SPEA2':
+                    outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'MOEAD':
+                    outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'NSGAIII':
+                    outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'ParticleSwarm':
+                    outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'OMOPSO':
+                    outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'SMPSO':
+                    outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'CMAES':
+                    outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'IBEA':
+                    outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'PAES':
+                    outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'PESA2':
+                    outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                elif algorithm == 'EpsNSGAII':
+                    outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                else:
+                    raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
+
+                epwname = epw.split('.epw')[0]
+                outputs_optimisation['epw'] = epwname
+                outputs_dict.update({epwname: outputs_optimisation})
+                evaluators.update({epwname: evaluator})
+        finally:
+            # Always close the process pool, even if an error occurs mid-run.
+            if processes > 1:
+                platypus_evaluator.close()
 
         outputs_optimisation = pd.concat([df for df in outputs_dict.values()])
         if len(epws) > 1:

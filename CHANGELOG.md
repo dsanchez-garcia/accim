@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Otherwise, if `ZoneVentilation` objects are found for occupied zones, `Schedule:Constant` objects (named `Vent_Sch_{ZoneName}`) are automatically injected and linked to the ventilation objects.
   - EMS actuators target the `Schedule Value` of these schedules to modulate natural ventilation, preserving the full adaptive comfort control logic.
 - **Ventilation Output Variables for Scheduled Mode**: When using scheduled natural ventilation, `Output:Variable` objects are automatically added for `Zone Ventilation Standard Density Air Change Rate` (ACH) and `Schedule Value` for each `Vent_Sch_` schedule, enabling direct verification of mixed-mode operation.
+- **Optimisation Simulation Estimator**: Added `estimate_optimisation_sims()` method to `OptimParamSimulation` in `accim.parametric_and_optimisation.main`.
+  - Calculates and prints the exact number of EnergyPlus simulations that `run_optimisation()` will execute before launching it, taking into account that NSGA-II (and other platypus algorithms) always complete a full generation before checking the `evaluations` stopping criterion.
+  - Formula: `sims_per_epw = population_size × ⌈evaluations / population_size⌉`; `total = sims_per_epw × len(epws)`.
+- **Parallel Evaluation in Optimisation**: Added `processes` parameter to `run_optimisation()` in `OptimParamSimulation`.
+  - When `processes > 1`, uses `platypus.ProcessPoolEvaluator` to evaluate the individuals within each generation concurrently across the specified number of CPU cores.
+  - The process pool is always safely closed via a `finally` block, even if an error occurs mid-run.
+  - Default is `1` (sequential), preserving existing behaviour.
 
 ### Changed
 - **Unified Object Identification**: Globalized the robust hierarchy resolution logic from `apmv_setpoints._resolve_targets` into the central pipeline (`accim.sim.utils.scan_zones`). The overarching dataset map is meticulously managed across all hierarchical relationships for `People`, `Space`, `SpaceList`, and `ZoneList` objects universally without duplicate clashes.
