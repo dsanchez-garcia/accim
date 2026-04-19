@@ -917,6 +917,23 @@ class OptimParamSimulation:
         if processes > 1:
             import platypus
             from platypus.config import PlatypusConfig
+            from besos.evaluator import AbstractEvaluator
+
+            # Monkey-patch besos' AbstractEvaluator.to_platypus to avoid pickling error
+            # caused by unpicklable lambda functions when using multiprocessing.
+            if not hasattr(AbstractEvaluator, '_original_to_platypus'):
+                AbstractEvaluator._original_to_platypus = AbstractEvaluator.to_platypus
+
+            def _patched_eval_func(self, all_outputs):
+                return self.package_for_platypus(self(all_outputs))
+
+            def _patched_to_platypus(self):
+                problem = self.problem.to_platypus()
+                problem.function = _patched_eval_func.__get__(self)
+                return problem
+
+            AbstractEvaluator.to_platypus = _patched_to_platypus
+
             original_evaluator = PlatypusConfig.default_evaluator
             platypus_evaluator = platypus.ProcessPoolEvaluator(processes)
             PlatypusConfig.default_evaluator = platypus_evaluator
@@ -971,6 +988,8 @@ class OptimParamSimulation:
             if processes > 1:
                 platypus_evaluator.close()
                 PlatypusConfig.default_evaluator = original_evaluator
+                if hasattr(AbstractEvaluator, '_original_to_platypus'):
+                    AbstractEvaluator.to_platypus = AbstractEvaluator._original_to_platypus
 
         outputs_optimisation = pd.concat([df for df in outputs_dict.values()])
         if len(epws) > 1:
