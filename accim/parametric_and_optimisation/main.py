@@ -49,7 +49,11 @@ def _patched_eval_func(evaluator, all_outputs):
         if not hasattr(evaluator, '_out_dir_patched'):
             evaluator.out_dir = f"{evaluator.out_dir}_{os.getpid()}"
             evaluator._out_dir_patched = True
-    return evaluator.package_for_platypus(evaluator(all_outputs))
+    keep_dirs = getattr(evaluator, '_keep_dirs', False)
+    results = evaluator(all_outputs, keep_dirs=keep_dirs)
+    if keep_dirs:
+        results = results[:-1]
+    return evaluator.package_for_platypus(results)
 
 def _patched_to_platypus(self):
     problem = self.problem.to_platypus()
@@ -477,7 +481,7 @@ class OptimParamSimulation:
             self,
             accis_params_dict: dict,
             additional_params: list = None,
-            use_dflt_values: bool = False,
+            use_dflt_values: bool = True,
             # HVACmode: Literal[0, 1, 2] = 2,
             # VentCtrl: Literal[0, 1, 2, 3] = 0,
     ):
@@ -885,6 +889,7 @@ class OptimParamSimulation:
             population_size: int,
             algorithm: str = 'NSGAII',
             processes: int = 1,
+            keep_dirs: bool = True,
             **kwargs
     ) -> pd.DataFrame:
         """
@@ -904,7 +909,7 @@ class OptimParamSimulation:
             within each generation.  Uses ``platypus.ProcessPoolEvaluator`` internally.
             Default is 1 (sequential).  Values > 1 are useful when ``population_size`` is
             large and each simulation is independent.
-
+        :param keep_dirs: if True, keeps the output directories for all iterations, including .csv and .eso files.
         :return: a pandas DataFrame
         """
         available_algorithms = [
@@ -928,6 +933,13 @@ class OptimParamSimulation:
         outputs_dict = {}
         evaluators = {}
 
+        from besos.evaluator import AbstractEvaluator
+        # Monkey-patch besos' AbstractEvaluator.to_platypus to support keep_dirs seamlessly
+        # and avoid unpicklable lambda functions when using multiprocessing.
+        if not hasattr(AbstractEvaluator, '_original_to_platypus'):
+            AbstractEvaluator._original_to_platypus = AbstractEvaluator.to_platypus
+        AbstractEvaluator.to_platypus = _patched_to_platypus
+
         # Build the platypus parallel evaluator when processes > 1.
         # We cannot pass `evaluator` via kwargs because besos.optimizer wrappers
         # consume it positionally. Instead, we temporarily override the global
@@ -935,14 +947,6 @@ class OptimParamSimulation:
         if processes > 1:
             import platypus
             from platypus.config import PlatypusConfig
-            from besos.evaluator import AbstractEvaluator
-
-            # Monkey-patch besos' AbstractEvaluator.to_platypus to avoid pickling error
-            # caused by unpicklable lambda functions when using multiprocessing.
-            if not hasattr(AbstractEvaluator, '_original_to_platypus'):
-                AbstractEvaluator._original_to_platypus = AbstractEvaluator.to_platypus
-
-            AbstractEvaluator.to_platypus = _patched_to_platypus
 
             original_evaluator = PlatypusConfig.default_evaluator
             platypus_evaluator = platypus.ProcessPoolEvaluator(processes)
@@ -954,6 +958,7 @@ class OptimParamSimulation:
                     epw=epw,
                     out_dir=out_dir
                 )
+                evaluator._keep_dirs = keep_dirs
                 
                 # We need to temporarily decouple the building evaluator internal dictionaries
                 # because besos wraps `idfobjects` inside a local class `AllCapsDict` on `read()`,
