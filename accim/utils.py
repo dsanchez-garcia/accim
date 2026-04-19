@@ -2493,33 +2493,149 @@ def verify_accim_simulation(
 class AccimSimulationVerifier:
     """
     Object-oriented utility to verify ACCIM EMS simulation results.
-    
-    This class reads an EnergyPlus simulation output (either .csv or .eso) and
-    evaluates two primary checks to ensure adaptive comfort setups function accurately:
-    Check 1 — Operative Temperature adherence within setpoint bounds across all timesteps.
-    Check 2 — Window operation conditional logic (specifically for Mixed-Mode models, HVACmode = 2).
+
+    This class reads an EnergyPlus simulation output (either ``.csv`` or ``.eso``) and
+    evaluates two primary checks to ensure adaptive comfort setups function correctly:
+
+    - **Check 1**: Operative Temperature adherence within adjusted setpoint bounds (all timesteps).
+    - **Check 2**: Window operation conditional logic for Mixed-Mode models (HVACmode = 2).
 
     Parameters
     ----------
     eso_file_path : str
-        Absolute or relative path to the EnergyPlus output data. If the native 
-        eplusout.csv file exists in the same directory, the verifier will prioritize 
-        reading it directly to avoid the ReadVarsESO overhead. Otherwise, the ESO 
-        is parsed through besos.
+        Absolute or relative path to the EnergyPlus output data. If an ``eplusout.csv``
+        file exists alongside the ``.eso``, it is read directly to avoid the overhead of
+        running ``ReadVarsESO``. Otherwise the ESO is parsed via besos.
     idf_path : str
-        Path to the corresponding IDF input model. Used extensively to automatically
-        discover the specific EMS names, Window configurations, Parameters, and Target zones.
+        Path to the corresponding IDF model. Used to auto-discover EMS sensor names,
+        window names, zone names, and control parameters (HVACmode, MaxWindSpeed,
+        ACSTtol, AHSTtol) from the ``SetInputData`` EMS program.
     eplus_install_dir : Optional[str], default None
-        EnergyPlus installation directory required internally by `readvarseso` if 
-        working exclusively with `.eso` files in complex environments.
-        
+        EnergyPlus installation directory, required by ``ReadVarsESO`` when falling back
+        to ``.eso`` parsing.
+
     Attributes
     ----------
     summary : str
-        A formatted string detailing the number of violations found across Check 1 and Check 2.
+        Human-readable string summarising violation counts for Check 1 and Check 2.
     violations : Dict[str, pd.DataFrame]
-        Dictionary storing specific Pandas DataFrames linking violated timesteps. 
-        Keys are usually 'setpoint' and 'window'.
+        Raw violation rows, one per flagged timestep. Keys are ``'setpoint'`` and
+        ``'window'``. Each DataFrame has columns:
+        ``['timestep', 'zone_or_window', 'check', 'description', 'value_found',
+        'value_expected']``.
+    summary_table_setpoint : pd.DataFrame
+        Aggregated count table for Check 1 violations, grouped by zone and check type.
+        Columns: ``['zone_or_window', 'check', 'count']``. Empty if no violations.
+    summary_table_window : pd.DataFrame
+        Aggregated count table for Check 2 violations, grouped by window and condition.
+        Columns: ``['zone_or_window', 'check', 'count']``. Empty if no violations.
+
+    Check Identifiers
+    -----------------
+    The ``check`` column in the violation DataFrames uses the following identifiers:
+
+    **Check 1 -- Setpoint Adherence**
+
+    ``Check1_TooHot``
+        The zone Operative Temperature (OpT) exceeds the **adjusted cooling setpoint**,
+        defined as ``ACST_Sch - ACSTtol``. ``ACST_Sch`` is the per-timestep adaptive
+        cooling setpoint schedule computed by the EMS; ``ACSTtol`` is the tolerance
+        margin subtracted to give the effective upper comfort band limit.
+        EnergyPlus columns: ``Zone Operative Temperature``,
+        ``Schedule Value`` for ``ACST_Sch_<zone>``.
+        A single isolated spike (one timestep violated with no violation immediately
+        before or after) is **pardoned** to absorb transient thermal shocks (e.g. a brief
+        window opening that lets in cold/hot air).
+
+    ``Check1_TooCold``
+        The zone Operative Temperature (OpT) falls below the **adjusted heating setpoint**,
+        defined as ``AHST_Sch - AHSTtol``. ``AHST_Sch`` is the per-timestep adaptive
+        heating setpoint schedule; ``AHSTtol`` is the tolerance margin subtracted to give
+        the effective lower comfort band limit.
+        EnergyPlus columns: ``Zone Operative Temperature``,
+        ``Schedule Value`` for ``AHST_Sch_<zone>``.
+        Same single-spike pardon applies as for ``Check1_TooHot``.
+
+    **Check 2 -- Window Operation Logic (Mixed-Mode, HVACmode = 2)**
+
+    In Mixed-Mode the EMS program ``SetWindowOperation_<window>`` controls the ventilation
+    opening fraction every timestep. All seven conditions below must hold simultaneously
+    for the window to be legitimately open. A violation is flagged whenever the window is
+    open but any condition is not satisfied.
+
+    Automatic pardons are applied to account for the inherent one-timestep EMS actuation lag:
+
+    - ``close_transit``: the **last open timestep** before a window closing event is pardoned,
+      because the EMS detects the condition violation at timestep t but the close command only
+      takes effect at timestep t+1.
+    - ``just_turned_on``: the **first timestep of HVAC activation** is pardoned for the same
+      reason: the window was still open when the HVAC came on, and the EMS closes it at t+1.
+    - ``open_transit`` *(Hourly frequency only)*: the **first hour of a window opening block**
+      is also pardoned, because hourly averaging of mixed on/off states within the hour produces
+      artificial condition overlaps that do not represent true violations.
+
+    ``Check2_Cond1_HVACidle``
+        The mechanical system must not be active while the window is open. Mixed-Mode logic
+        prohibits simultaneous HVAC and natural ventilation to prevent energy waste (e.g.
+        conditioned air escaping through open windows).
+        EnergyPlus columns: ``Cooling Coil Total Cooling Rate``, ``Heating Coil Heating Rate``.
+        Condition: CoolingRate == 0 AND HeatingRate == 0.
+
+    ``Check2_Cond2_Occupied``
+        The zone must be occupied for natural ventilation to activate. The EMS suppresses window
+        opening when the zone is unoccupied to avoid unnecessary air infiltration.
+        EnergyPlus column: ``People Occupant Count``.
+        Condition: OccupantCount > 0.
+
+    ``Check2_Cond3_OpT_lt_ACST``
+        The zone Operative Temperature must be **below** the adaptive cooling setpoint. This
+        ensures natural ventilation is only triggered when there is a genuine cooling need,
+        i.e. indoor temperature has not yet reached the comfort upper limit.
+        EnergyPlus columns: ``Zone Operative Temperature``,
+        ``Schedule Value`` for ``ACST_Sch_<zone>`` (minus ACSTtol).
+        Condition: OpT < ACST_Sch - ACSTtol.
+
+    ``Check2_Cond4_OpT_gt_VST``
+        The zone Operative Temperature must be **above** the Ventilation Setpoint Temperature
+        (VST). VST is the lower thermal comfort bound: below it, natural ventilation would cause
+        overcooling discomfort, so the window must stay closed.
+        EnergyPlus column: EMS output ``Ventilation Setpoint Temperature`` -- a **per-timestep
+        series** computed dynamically by the EMS, not a static value.
+        Condition: OpT > VST.
+
+    ``Check2_Cond5_OutT_lt_OpT``
+        The outdoor air temperature must be **lower** than the indoor Operative Temperature for
+        natural ventilation to be thermally effective. If outdoor air is warmer than indoors,
+        opening windows would heat the space rather than cool it.
+        EnergyPlus columns: ``Site Outdoor Air Drybulb Temperature``, ``Zone Operative Temperature``.
+        Condition: OutdoorT < OpT.
+
+    ``Check2_Cond6_MinOutTemp``
+        The outdoor air temperature must **exceed** the Minimum Outdoor Temperature threshold.
+        This prevents natural ventilation when outdoor conditions are too cold, which could cause
+        thermal discomfort or damage HVAC equipment.
+        EnergyPlus column: EMS output ``Minimum Outdoor Temperature for ventilation`` -- a
+        **per-timestep series** computed dynamically by the EMS, not a static value.
+        Condition: OutdoorT > MinOutTemp.
+
+    ``Check2_Cond7_MaxWindSpeed``
+        The outdoor wind speed must not exceed the maximum allowed threshold. High wind speeds
+        can cause excessive infiltration rates, draughts, or structural concerns.
+        EnergyPlus column: ``Site Wind Speed``.
+        Condition: WindSpeed <= MaxWindSpeed, where MaxWindSpeed is a static scalar extracted
+        from the ``SetInputData`` EMS program in the IDF.
+
+    Notes
+    -----
+    **Hourly frequency warning**: Hourly outputs are averaged over the full hour, so a window
+    that opens for only 10 minutes shows a fractional opening factor. Conditions that were
+    mutually exclusive within the hour (e.g. HVAC active for 10 min, window open for 50 min)
+    can appear to overlap in the hourly average, causing false positives. Sub-hourly (Timestep)
+    output frequency is strongly recommended for accurate verification.
+
+    **Required EnergyPlus outputs**: All relevant ``Output:Variable`` objects must be present in
+    the IDF. If any required column is missing from the CSV/ESO, a ``ValueError`` is raised
+    identifying exactly which output is absent.
     """
     def __init__(
             self,
@@ -2954,4 +3070,4 @@ class AccimSimulationVerifier:
         else:
             msg = f"\n[FAIL] {n_s} setpoint violation(s), {n_w} window violation(s)."
             print(msg); self.summary += msg
-
+
