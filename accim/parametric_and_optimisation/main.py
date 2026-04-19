@@ -910,14 +910,16 @@ class OptimParamSimulation:
         outputs_dict = {}
         evaluators = {}
 
-        # Build the platypus parallel evaluator kwarg when processes > 1.
-        # platypus.Algorithm accepts an `evaluator` keyword argument; passing
-        # ProcessPoolEvaluator causes each generation's individuals to be
-        # evaluated concurrently across the requested number of CPU cores.
+        # Build the platypus parallel evaluator when processes > 1.
+        # We cannot pass `evaluator` via kwargs because besos.optimizer wrappers
+        # consume it positionally. Instead, we temporarily override the global
+        # PlatypusConfig.default_evaluator.
         if processes > 1:
             import platypus
+            from platypus.config import PlatypusConfig
+            original_evaluator = PlatypusConfig.default_evaluator
             platypus_evaluator = platypus.ProcessPoolEvaluator(processes)
-            kwargs.setdefault('evaluator', platypus_evaluator)
+            PlatypusConfig.default_evaluator = platypus_evaluator
 
         try:
             for epw in epws:
@@ -965,9 +967,10 @@ class OptimParamSimulation:
                 outputs_dict.update({epwname: outputs_optimisation})
                 evaluators.update({epwname: evaluator})
         finally:
-            # Always close the process pool, even if an error occurs mid-run.
+            # Always close the process pool and restore the original evaluator
             if processes > 1:
                 platypus_evaluator.close()
+                PlatypusConfig.default_evaluator = original_evaluator
 
         outputs_optimisation = pd.concat([df for df in outputs_dict.values()])
         if len(epws) > 1:
