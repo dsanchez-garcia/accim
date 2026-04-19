@@ -18,6 +18,7 @@ import os
 import re
 from typing import Literal, List, Union
 import warnings
+import functools
 
 import accim
 
@@ -42,6 +43,14 @@ import accim.sim.apmv_setpoints as apmv
 class GlobalAllCapsDict(dict):
     def __getitem__(self, key):
         return super().__getitem__(key.upper())
+
+def _patched_eval_func(evaluator, all_outputs):
+    return evaluator.package_for_platypus(evaluator(all_outputs))
+
+def _patched_to_platypus(self):
+    problem = self.problem.to_platypus()
+    problem.function = functools.partial(_patched_eval_func, self)
+    return problem
 
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf_accim
 import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
@@ -928,14 +937,6 @@ class OptimParamSimulation:
             # caused by unpicklable lambda functions when using multiprocessing.
             if not hasattr(AbstractEvaluator, '_original_to_platypus'):
                 AbstractEvaluator._original_to_platypus = AbstractEvaluator.to_platypus
-
-            def _patched_eval_func(self, all_outputs):
-                return self.package_for_platypus(self(all_outputs))
-
-            def _patched_to_platypus(self):
-                problem = self.problem.to_platypus()
-                problem.function = _patched_eval_func.__get__(self)
-                return problem
 
             AbstractEvaluator.to_platypus = _patched_to_platypus
 
