@@ -172,6 +172,7 @@ def addAccis(
         '24.1',
         '24.2',
         '25.1',
+        '25.2'
     ]
 
     fullTempCtrllist = [
