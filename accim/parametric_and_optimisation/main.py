@@ -16,7 +16,9 @@
 
 import os
 import re
-from typing import Literal, List, Union
+import json
+import glob as pyglob
+from typing import Literal, List, Union, Optional
 import warnings
 import functools
 
@@ -33,7 +35,7 @@ from besos.objectives import VariableReader, MeterReader
 from besos import IDF_class
 
 from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always, remove_accents_in_idf, \
-    reduce_runtime
+    reduce_runtime, read_eso_using_readvarseso
 from accim.parametric_and_optimisation.utils import expand_to_hourly_dataframe, identify_hourly_columns
 
 import accim.sim.accis_single_idf_funcs as accis
@@ -51,6 +53,42 @@ def _patched_eval_func(evaluator, all_outputs):
             evaluator._out_dir_patched = True
     keep_dirs = getattr(evaluator, '_keep_dirs', False)
     results = evaluator(all_outputs, keep_dirs=keep_dirs)
+    if not hasattr(evaluator, '_optimisation_eval_records'):
+        evaluator._optimisation_eval_records = []
+    eval_record = {'inputs': tuple(all_outputs)}
+    if keep_dirs:
+        eval_record['results'] = tuple(results[:-1])
+        eval_record['sim_dir'] = results[-1]
+    else:
+        eval_record['results'] = tuple(results)
+        eval_record['sim_dir'] = None
+    evaluator._optimisation_eval_records.append(eval_record)
+    log_base = getattr(evaluator, '_optimisation_log_base', None)
+    if log_base is not None:
+        def _json_safe(value):
+            if isinstance(value, dict):
+                return {k: _json_safe(v) for k, v in value.items()}
+            if isinstance(value, (list, tuple)):
+                return [_json_safe(v) for v in value]
+            if isinstance(value, os.PathLike):
+                return os.fspath(value)
+            if hasattr(value, 'item'):
+                try:
+                    return value.item()
+                except (ValueError, TypeError):
+                    pass
+            if isinstance(value, (str, int, float, bool)) or value is None:
+                return value
+            return str(value)
+
+        log_payload = {
+            'inputs': _json_safe(list(eval_record['inputs'])),
+            'results': _json_safe(list(eval_record['results'])),
+            'sim_dir': _json_safe(eval_record['sim_dir']),
+        }
+        log_path = f"{log_base}_{os.getpid()}.jsonl"
+        with open(log_path, 'a', encoding='utf-8') as logfile:
+            logfile.write(json.dumps(log_payload) + '\n')
     if keep_dirs:
         results = results[:-1]
     return evaluator.package_for_platypus(results)
@@ -247,6 +285,12 @@ class OptimParamSimulation:
         self.is_accim_custom_model = is_accim_custom_model
         self.is_accim_predef_model = is_accim_predef_model
         self.is_apmv_setpoints = is_apmv_setpoints
+        self.outputs_optimisation_full = None
+        self.outputs_optimisation_full_filepath = None
+        self.optimisation_csv_paths_non_dominated = []
+        self.optimisation_csv_paths_dominated = []
+        self.optimisation_csv_paths_non_dominated_by_epw = {}
+        self.optimisation_csv_paths_dominated_by_epw = {}
 
     def get_output_var_df_from_idf(self) -> pd.DataFrame:
         """
@@ -931,7 +975,9 @@ class OptimParamSimulation:
             'EpsNSGAII',
         ]
         outputs_dict = {}
+        full_outputs_dict = {}
         evaluators = {}
+        os.makedirs(out_dir, exist_ok=True)
 
         from besos.evaluator import AbstractEvaluator
         # Monkey-patch besos' AbstractEvaluator.to_platypus to support keep_dirs seamlessly
@@ -959,6 +1005,17 @@ class OptimParamSimulation:
                     out_dir=out_dir
                 )
                 evaluator._keep_dirs = keep_dirs
+                evaluator._optimisation_eval_records = []
+                epwname = epw.split('.epw')[0]
+                evaluator._optimisation_log_base = os.path.join(
+                    out_dir,
+                    f'optim_eval_log_{epwname}_{os.getpid()}'
+                )
+                for log_file in pyglob.glob(f"{evaluator._optimisation_log_base}_*.jsonl"):
+                    try:
+                        os.remove(log_file)
+                    except OSError:
+                        pass
                 
                 # We need to temporarily decouple the building evaluator internal dictionaries
                 # because besos wraps `idfobjects` inside a local class `AllCapsDict` on `read()`,
@@ -1001,9 +1058,13 @@ class OptimParamSimulation:
                 else:
                     raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
 
-                epwname = epw.split('.epw')[0]
                 outputs_optimisation['epw'] = epwname
                 outputs_dict.update({epwname: outputs_optimisation})
+                full_outputs_optimisation = self._build_full_optimisation_outputs_df(
+                    evaluator=evaluator,
+                    epwname=epwname
+                )
+                full_outputs_dict.update({epwname: full_outputs_optimisation})
                 evaluators.update({epwname: evaluator})
         finally:
             # Always close the process pool and restore the original evaluator
@@ -1017,10 +1078,211 @@ class OptimParamSimulation:
         if len(epws) > 1:
             outputs_optimisation = outputs_optimisation.reset_index()
 
-        self.outputs_optimisation = outputs_optimisation
+        outputs_optimisation_full = pd.concat([df for df in full_outputs_dict.values()])
+        if len(epws) > 1:
+            outputs_optimisation_full = outputs_optimisation_full.reset_index(drop=True)
+
+        outputs_optimisation_full = self._annotate_pareto_status(
+            outputs_optimisation_full=outputs_optimisation_full,
+            outputs_optimisation=outputs_optimisation
+        )
+        self._set_optimisation_outputs(
+            outputs_optimisation_full=outputs_optimisation_full,
+            outputs_optimisation_non_dominated=outputs_optimisation
+        )
+        self._save_outputs_optimisation_full(out_dir=out_dir)
         self.evaluators = evaluators
 
         # return outputs_optimisation
+
+    def _build_full_optimisation_outputs_df(
+            self,
+            evaluator: EvaluatorEP,
+            epwname: str,
+    ) -> pd.DataFrame:
+        records = getattr(evaluator, '_optimisation_eval_records', [])
+        if len(records) == 0:
+            log_base = getattr(evaluator, '_optimisation_log_base', None)
+            if log_base is not None:
+                log_files = pyglob.glob(f"{log_base}_*.jsonl")
+                for log_file in log_files:
+                    with open(log_file, 'r', encoding='utf-8') as logfile:
+                        for line in logfile:
+                            payload = json.loads(line)
+                            records.append(
+                                {
+                                    'inputs': tuple(payload['inputs']),
+                                    'results': tuple(payload['results']),
+                                    'sim_dir': payload['sim_dir'],
+                                }
+                            )
+        input_names = evaluator.problem.names("inputs")
+        output_names = evaluator.problem.names("outputs")
+        constraint_names = evaluator.problem.names("constraints")
+
+        rows = []
+        for record in records:
+            row = {}
+            for idx, input_name in enumerate(input_names):
+                row[input_name] = record['inputs'][idx]
+            for idx, output_name in enumerate(output_names):
+                row[output_name] = record['results'][idx]
+            for idx, constraint_name in enumerate(constraint_names):
+                row[constraint_name] = record['results'][len(output_names) + idx]
+            if record['sim_dir'] is not None:
+                row['simulation_directory'] = record['sim_dir']
+                row['simulation_output_csv_path'] = os.path.join(record['sim_dir'], 'eplusout.csv')
+            else:
+                row['simulation_directory'] = None
+                row['simulation_output_csv_path'] = None
+            row['epw'] = epwname
+            rows.append(row)
+
+        full_df = pd.DataFrame(rows)
+        required_columns = ['simulation_directory', 'simulation_output_csv_path', 'epw']
+        for col in required_columns:
+            if col not in full_df.columns:
+                full_df[col] = pd.Series(dtype=object)
+        return full_df
+
+    @staticmethod
+    def _make_match_key(df: pd.DataFrame, match_columns: list) -> pd.Series:
+        key_df = df[match_columns].copy()
+        for column in match_columns:
+            if pd.api.types.is_numeric_dtype(key_df[column]):
+                key_df[column] = key_df[column].astype(float).round(12)
+            key_df[column] = key_df[column].astype(str)
+        return key_df.apply(lambda row: '|'.join(row.values.tolist()), axis=1)
+
+    def _annotate_pareto_status(
+            self,
+            outputs_optimisation_full: pd.DataFrame,
+            outputs_optimisation: pd.DataFrame
+    ) -> pd.DataFrame:
+        if outputs_optimisation_full.empty:
+            outputs_optimisation_full['pareto-optimal'] = pd.Series(dtype=bool)
+            return outputs_optimisation_full
+
+        input_names = self.problem.names("inputs")
+        output_names = self.problem.names("outputs")
+        constraint_names = self.problem.names("constraints")
+        match_columns = input_names + output_names + constraint_names + ['epw']
+
+        non_dominated = outputs_optimisation.copy()
+        for column in match_columns:
+            if column not in non_dominated.columns:
+                non_dominated[column] = pd.NA
+            if column not in outputs_optimisation_full.columns:
+                outputs_optimisation_full[column] = pd.NA
+
+        full_keys = self._make_match_key(outputs_optimisation_full, match_columns)
+        nd_keys = set(self._make_match_key(non_dominated, match_columns))
+        outputs_optimisation_full['pareto-optimal'] = full_keys.isin(nd_keys)
+        return outputs_optimisation_full
+
+    def _set_optimisation_outputs(
+            self,
+            outputs_optimisation_full: pd.DataFrame,
+            outputs_optimisation_non_dominated: pd.DataFrame = None
+    ):
+        if 'pareto-optimal' not in outputs_optimisation_full.columns:
+            raise KeyError("Column 'pareto-optimal' is required in outputs_optimisation_full.")
+        if 'simulation_output_csv_path' not in outputs_optimisation_full.columns:
+            outputs_optimisation_full['simulation_output_csv_path'] = pd.NA
+        if 'epw' not in outputs_optimisation_full.columns:
+            outputs_optimisation_full['epw'] = pd.NA
+        if (
+            outputs_optimisation_non_dominated is not None
+            and 'epw' in outputs_optimisation_non_dominated.columns
+            and outputs_optimisation_full['epw'].isna().all()
+            and len(outputs_optimisation_non_dominated['epw'].dropna().unique()) == 1
+        ):
+            outputs_optimisation_full['epw'] = outputs_optimisation_non_dominated['epw'].dropna().iloc[0]
+
+        if outputs_optimisation_full.empty and outputs_optimisation_non_dominated is not None:
+            fallback_full = outputs_optimisation_non_dominated.copy()
+            if 'pareto-optimal' not in fallback_full.columns:
+                fallback_full['pareto-optimal'] = True
+            if 'simulation_output_csv_path' not in fallback_full.columns:
+                fallback_full['simulation_output_csv_path'] = pd.NA
+            if 'simulation_directory' not in fallback_full.columns:
+                fallback_full['simulation_directory'] = pd.NA
+            outputs_optimisation_full = fallback_full
+
+        self.outputs_optimisation_full = outputs_optimisation_full
+        self.outputs_optimisation = outputs_optimisation_full[
+            outputs_optimisation_full['pareto-optimal']
+        ].copy()
+        if 'epw' not in self.outputs_optimisation.columns:
+            self.outputs_optimisation['epw'] = pd.NA
+        self.optimisation_csv_paths_non_dominated = (
+            self.outputs_optimisation['simulation_output_csv_path']
+            .dropna()
+            .drop_duplicates()
+            .tolist()
+        )
+        self.optimisation_csv_paths_non_dominated_by_epw = {}
+        self.optimisation_csv_paths_dominated_by_epw = {}
+        if 'epw' in outputs_optimisation_full.columns:
+            non_dominated_df = outputs_optimisation_full[outputs_optimisation_full['pareto-optimal']].copy()
+            dominated_df = outputs_optimisation_full[~outputs_optimisation_full['pareto-optimal']].copy()
+            epws = sorted({str(epw) for epw in outputs_optimisation_full['epw'].dropna().unique().tolist()})
+            for epw in epws:
+                self.optimisation_csv_paths_non_dominated_by_epw[epw] = (
+                    non_dominated_df.loc[non_dominated_df['epw'].astype(str) == epw, 'simulation_output_csv_path']
+                    .dropna()
+                    .drop_duplicates()
+                    .tolist()
+                )
+                self.optimisation_csv_paths_dominated_by_epw[epw] = (
+                    dominated_df.loc[dominated_df['epw'].astype(str) == epw, 'simulation_output_csv_path']
+                    .dropna()
+                    .drop_duplicates()
+                    .tolist()
+                )
+        self.optimisation_csv_paths_dominated = (
+            outputs_optimisation_full[~outputs_optimisation_full['pareto-optimal']]['simulation_output_csv_path']
+            .dropna()
+            .drop_duplicates()
+            .tolist()
+        )
+
+    def _save_outputs_optimisation_full(self, out_dir: str):
+        os.makedirs(out_dir, exist_ok=True)
+        full_results_filename = f'outputs_optimisation_full_{os.getpid()}.csv'
+        full_results_path = os.path.join(out_dir, full_results_filename)
+        self.outputs_optimisation_full.to_csv(full_results_path, index=False)
+        self.outputs_optimisation_full_filepath = full_results_path
+
+    def load_outputs_optimisation_full(
+            self,
+            csv_path: str = None
+    ) -> pd.DataFrame:
+        """
+        Loads full optimisation outputs (dominated + non-dominated) from a CSV file
+        previously generated by :meth:`run_optimisation`, and rebuilds the related
+        internal attributes without rerunning simulations.
+
+        :param csv_path: path to a CSV file with full optimisation outputs.
+            If None, uses ``self.outputs_optimisation_full_filepath``.
+        :return: pandas DataFrame containing full optimisation outputs
+        """
+        target_csv_path = csv_path or self.outputs_optimisation_full_filepath
+        if target_csv_path is None:
+            raise ValueError(
+                'No csv_path was provided and no previous outputs_optimisation_full file is available. '
+                'Run run_optimisation first or provide a valid csv_path.'
+            )
+
+        outputs_optimisation_full = pd.read_csv(target_csv_path)
+        if 'pareto-optimal' not in outputs_optimisation_full.columns:
+            raise KeyError(
+                "Column 'pareto-optimal' not found in the provided CSV. "
+                "Please load a file generated from outputs_optimisation_full."
+            )
+        self.outputs_optimisation_full_filepath = target_csv_path
+        self._set_optimisation_outputs(outputs_optimisation_full=outputs_optimisation_full)
+        return self.outputs_optimisation_full
 
     def get_hourly_df(self, start_date: str = '2024-01-01 01'):
         """
@@ -1036,6 +1298,184 @@ class OptimParamSimulation:
             parameter_columns=parameter_columns,
             start_date=start_date
         )
+
+    @staticmethod
+    def _resolve_simulation_file_path(row: pd.Series, file_source: Literal['csv', 'eso']) -> str:
+        if file_source == 'csv':
+            if pd.notna(row.get('simulation_output_csv_path', pd.NA)):
+                return str(row['simulation_output_csv_path'])
+            if pd.notna(row.get('simulation_directory', pd.NA)):
+                return os.path.join(str(row['simulation_directory']), 'eplusout.csv')
+            raise ValueError("CSV path cannot be resolved: add 'simulation_output_csv_path' or 'simulation_directory'.")
+        if file_source == 'eso':
+            if pd.notna(row.get('simulation_directory', pd.NA)):
+                return os.path.join(str(row['simulation_directory']), 'eplusout.eso')
+            if pd.notna(row.get('simulation_output_csv_path', pd.NA)):
+                csv_path = str(row['simulation_output_csv_path'])
+                return os.path.join(os.path.dirname(csv_path), 'eplusout.eso')
+            raise ValueError("ESO path cannot be resolved: add 'simulation_directory' or 'simulation_output_csv_path'.")
+        raise ValueError(f"Unsupported file_source '{file_source}'. Use 'csv' or 'eso'.")
+
+    @staticmethod
+    def _flatten_eso_column_name(col: tuple) -> str:
+        area, variable, units = col
+        return f'{variable} [{units}] | {area}'
+
+    def _extract_hourly_outputs_from_file(
+            self,
+            row: pd.Series,
+            file_source: Literal['csv', 'eso'],
+            file_output_columns: Optional[List[str]] = None,
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True
+    ) -> dict:
+        path = self._resolve_simulation_file_path(row=row, file_source=file_source)
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Simulation output file not found: {path}")
+
+        if file_source == 'csv':
+            df_file = pd.read_csv(path)
+            excluded_columns = {'Date/Time', 'date/time'}
+            numeric_cols = [c for c in df_file.columns if c not in excluded_columns and pd.api.types.is_numeric_dtype(df_file[c])]
+            if file_output_columns is None:
+                selected_cols = numeric_cols
+            else:
+                selected_cols = []
+                missing = []
+                lower_exact_map = {c.lower(): c for c in df_file.columns}
+                for requested in file_output_columns:
+                    if requested in df_file.columns:
+                        selected_cols.append(requested)
+                        continue
+                    requested_lower = requested.lower()
+                    if requested_lower in lower_exact_map:
+                        selected_cols.append(lower_exact_map[requested_lower])
+                        continue
+                    contains_matches = [c for c in df_file.columns if requested_lower in c.lower()]
+                    if len(contains_matches) == 1:
+                        selected_cols.append(contains_matches[0])
+                    else:
+                        missing.append(requested)
+                if missing:
+                    sample_cols = [c for c in df_file.columns if ':Zone Operative Temperature' in c or 'VRF Heat Pump Cooling Electricity Energy' in c]
+                    raise KeyError(
+                        f"Requested CSV columns not found in '{path}': {missing}. "
+                        f"Example available columns: {sample_cols[:8]}"
+                    )
+            return {c: df_file[c].tolist() for c in selected_cols}
+
+        eso_results = read_eso_using_readvarseso(
+            eso_file_path=path,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            cleanup=True
+        )
+        data_by_freq = eso_results.get('data', {})
+        hourly_df = data_by_freq.get('Hourly')
+        if hourly_df is None or hourly_df.empty:
+            non_empty = [df for df in data_by_freq.values() if isinstance(df, pd.DataFrame) and not df.empty]
+            if len(non_empty) == 0:
+                raise ValueError(f'No readable data found in ESO file: {path}')
+            hourly_df = non_empty[0]
+
+        flattened_map = {}
+        for col in hourly_df.columns:
+            flattened_name = self._flatten_eso_column_name(col)
+            flattened_map[flattened_name] = hourly_df[col].tolist()
+
+        if file_output_columns is None:
+            return flattened_map
+        missing = [c for c in file_output_columns if c not in flattened_map]
+        if missing:
+            raise KeyError(f"Requested ESO columns not found in '{path}': {missing}")
+        return {c: flattened_map[c] for c in file_output_columns}
+
+    def _attach_hourly_outputs_from_simulation_files(
+            self,
+            df: pd.DataFrame,
+            file_source: Literal['csv', 'eso'],
+            file_output_columns: Optional[List[str]] = None,
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True
+    ) -> pd.DataFrame:
+        df_augmented = df.copy()
+        per_row_outputs = []
+        all_output_cols = set()
+        for _, row in df_augmented.iterrows():
+            row_outputs = self._extract_hourly_outputs_from_file(
+                row=row,
+                file_source=file_source,
+                file_output_columns=file_output_columns,
+                eplus_install_dir=eplus_install_dir,
+                only_run_period=only_run_period
+            )
+            per_row_outputs.append(row_outputs)
+            all_output_cols.update(row_outputs.keys())
+
+        for col in all_output_cols:
+            target_col = col
+            if target_col in df_augmented.columns:
+                target_col = f'{target_col}__from_{file_source}'
+            df_augmented[target_col] = [row_outputs[col] if col in row_outputs else [] for row_outputs in per_row_outputs]
+
+        return df_augmented
+
+    def get_hourly_df_optimisation(
+            self,
+            start_date: str = '2024-01-01 01',
+            df: Optional[pd.DataFrame] = None,
+            use_full: bool = False,
+            include_file_outputs: bool = False,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            file_output_columns: Optional[List[str]] = None,
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+    ):
+        """
+        Expands optimisation results to hourly frequency.
+
+        :param start_date: start date for the expanded hourly time index ('YYYY-MM-DD HH')
+        :param df: optional dataframe of simulations to expand; if None, uses outputs_optimisation
+            or outputs_optimisation_full depending on ``use_full``.
+        :param use_full: if True and ``df`` is None, expands ``outputs_optimisation_full``;
+            if False, expands ``outputs_optimisation``.
+        :param include_file_outputs: if True, reads additional hourly outputs from simulation files
+            (.csv or .eso) and appends them before expanding.
+        :param file_source: source file type for additional outputs ('csv' or 'eso').
+        :param file_output_columns: optional list of output columns to extract from file source.
+            If None, all numeric CSV columns or all parsed ESO hourly columns are used.
+        :param eplus_install_dir: optional EnergyPlus directory used by ESO parsing.
+        :param only_run_period: when ``file_source='eso'``, keeps run period only if True.
+        """
+        if df is None:
+            source_df = self.outputs_optimisation_full.copy() if use_full else self.outputs_optimisation.copy()
+        else:
+            source_df = df.copy()
+
+        if source_df is None or source_df.empty:
+            raise ValueError('No optimisation data available to expand hourly.')
+
+        if include_file_outputs:
+            source_df = self._attach_hourly_outputs_from_simulation_files(
+                df=source_df,
+                file_source=file_source,
+                file_output_columns=file_output_columns,
+                eplus_install_dir=eplus_install_dir,
+                only_run_period=only_run_period
+            )
+
+        parameter_columns = [i.name for i in self.parameters_list if i.name in source_df.columns]
+        for extra_col in ['epw', 'pareto-optimal']:
+            if extra_col in source_df.columns:
+                parameter_columns.append(extra_col)
+
+        self.outputs_optimisation_hourly = expand_to_hourly_dataframe(
+            df=source_df,
+            parameter_columns=parameter_columns,
+            start_date=start_date
+        )
+        if use_full:
+            self.outputs_optimisation_full_hourly = self.outputs_optimisation_hourly.copy()
 
     def get_hourly_df_columns(self):
         """

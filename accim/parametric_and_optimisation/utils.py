@@ -57,6 +57,12 @@ def expand_to_hourly_dataframe(
     # Identify columns with hourly data
     if hourly_columns is None:
         hourly_columns = identify_hourly_columns(df)
+    if len(hourly_columns) == 0:
+        raise ValueError(
+            'No hourly columns were detected to expand. '
+            'If you are using optimisation file outputs, check file_output_columns names '
+            'or use include_file_outputs=True with file_output_columns=None.'
+        )
 
     # print(f"Hourly columns identified: {hourly_columns}")
 
@@ -107,9 +113,17 @@ def identify_hourly_columns(df):
     :param df: the pandas DataFrame
     :return: the list of column names
     """
+    def _is_hourly_value(value):
+        if isinstance(value, str):
+            stripped = value.strip()
+            return stripped.startswith('[') and stripped.endswith(']')
+        if isinstance(value, (list, tuple, np.ndarray)):
+            return True
+        return False
+
     hourly_columns = [
-        col for col in df.columns if
-        df[col].apply(lambda x: isinstance(x, str) and x.startswith('[') and x.endswith(']')).all()
+        col for col in df.columns
+        if len(df[col]) > 0 and df[col].apply(_is_hourly_value).all()
     ]
 
     if not hourly_columns:
