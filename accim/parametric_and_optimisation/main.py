@@ -24,6 +24,7 @@ import functools
 
 import accim
 
+import numpy as np
 import pandas as pd
 import besos
 from besos import sampling
@@ -285,8 +286,8 @@ class OptimParamSimulation:
         self.is_accim_custom_model = is_accim_custom_model
         self.is_accim_predef_model = is_accim_predef_model
         self.is_apmv_setpoints = is_apmv_setpoints
-        self.outputs_optimisation_full = None
-        self.outputs_optimisation_full_filepath = None
+        self.outputs_optimisation = None
+        self.outputs_optimisation_filepath = None
         self.optimisation_csv_paths_non_dominated = []
         self.optimisation_csv_paths_dominated = []
         self.optimisation_csv_paths_non_dominated_by_epw = {}
@@ -1074,21 +1075,21 @@ class OptimParamSimulation:
                 if hasattr(AbstractEvaluator, '_original_to_platypus'):
                     AbstractEvaluator.to_platypus = AbstractEvaluator._original_to_platypus
 
-        outputs_optimisation = pd.concat([df for df in outputs_dict.values()])
+        outputs_optimisation_non_dominated = pd.concat([df for df in outputs_dict.values()])
         if len(epws) > 1:
-            outputs_optimisation = outputs_optimisation.reset_index()
+            outputs_optimisation_non_dominated = outputs_optimisation_non_dominated.reset_index()
 
-        outputs_optimisation_full = pd.concat([df for df in full_outputs_dict.values()])
+        outputs_optimisation = pd.concat([df for df in full_outputs_dict.values()])
         if len(epws) > 1:
-            outputs_optimisation_full = outputs_optimisation_full.reset_index(drop=True)
+            outputs_optimisation = outputs_optimisation.reset_index(drop=True)
 
-        outputs_optimisation_full = self._annotate_pareto_status(
-            outputs_optimisation_full=outputs_optimisation_full,
-            outputs_optimisation=outputs_optimisation
+        outputs_optimisation = self._annotate_pareto_status(
+            outputs_optimisation_full=outputs_optimisation,
+            outputs_optimisation=outputs_optimisation_non_dominated
         )
         self._set_optimisation_outputs(
-            outputs_optimisation_full=outputs_optimisation_full,
-            outputs_optimisation_non_dominated=outputs_optimisation
+            outputs_optimisation_full=outputs_optimisation,
+            outputs_optimisation_non_dominated=outputs_optimisation_non_dominated
         )
         self._save_outputs_optimisation_full(out_dir=out_dir)
         self.evaluators = evaluators
@@ -1159,27 +1160,76 @@ class OptimParamSimulation:
             outputs_optimisation_full: pd.DataFrame,
             outputs_optimisation: pd.DataFrame
     ) -> pd.DataFrame:
+        """
+        Recomputes the Pareto front from scratch using the objective values
+        directly on the full evaluation history, grouped per EPW.
+
+        This approach is more reliable than matching against the final NSGA-II
+        population (which only contains the last generation), avoiding both
+        false negatives caused by points evaluated in earlier generations that
+        are genuinely non-dominated, and floating-point matching issues.
+        """
         if outputs_optimisation_full.empty:
             outputs_optimisation_full['pareto-optimal'] = pd.Series(dtype=bool)
             return outputs_optimisation_full
 
-        input_names = self.problem.names("inputs")
         output_names = self.problem.names("outputs")
-        constraint_names = self.problem.names("constraints")
-        match_columns = input_names + output_names + constraint_names + ['epw']
+        minimize_outputs = getattr(self.problem, 'minimize_outputs', None)
 
-        non_dominated = outputs_optimisation.copy()
-        for column in match_columns:
-            if column not in non_dominated.columns:
-                non_dominated[column] = pd.NA
-            if column not in outputs_optimisation_full.columns:
-                outputs_optimisation_full[column] = pd.NA
+        # Determine minimisation direction per objective.
+        # minimize_outputs is a list of booleans (True = minimise, False = maximise, None = show only).
+        # For Pareto dominance we always work in a "lower is better" space,
+        # so we flip maximised objectives before the dominance check.
+        if minimize_outputs is None:
+            minimize_flags = [True] * len(output_names)
+        else:
+            minimize_flags = [
+                (m if m is not None else True) for m in minimize_outputs
+            ]
 
-        full_keys = self._make_match_key(outputs_optimisation_full, match_columns)
-        nd_keys = set(self._make_match_key(non_dominated, match_columns))
-        outputs_optimisation_full['pareto-optimal'] = full_keys.isin(nd_keys)
+        def _is_pareto_optimal(costs: np.ndarray) -> np.ndarray:
+            """
+            Return a boolean mask of length n where True means the row is
+            Pareto-non-dominated (all objectives already in minimisation space).
+
+            Solution i is dominated iff there exists j such that:
+              j <= i on ALL objectives  AND  j < i on AT LEAST ONE objective.
+            """
+            n = costs.shape[0]
+            is_pareto = np.ones(n, dtype=bool)
+            for i in range(n):
+                if not is_pareto[i]:
+                    continue
+                # Check whether i is dominated by any other row currently
+                # considered non-dominated.
+                others_mask = np.arange(n) != i
+                dominated_i = (
+                    np.all(costs[others_mask] <= costs[i], axis=1)
+                    & np.any(costs[others_mask] < costs[i], axis=1)
+                )
+                if np.any(dominated_i):
+                    is_pareto[i] = False
+            return is_pareto
+
+        def _pareto_mask_for_group(group: pd.DataFrame) -> pd.Series:
+            """Compute Pareto mask for a single EPW group."""
+            objective_data = group[output_names].values.astype(float)
+            # Convert to minimisation space
+            for j, minimise in enumerate(minimize_flags):
+                if not minimise:
+                    objective_data[:, j] = -objective_data[:, j]
+            mask = _is_pareto_optimal(objective_data)
+            return pd.Series(mask, index=group.index)
+
+        pareto_mask = pd.Series(False, index=outputs_optimisation_full.index)
+        if 'epw' in outputs_optimisation_full.columns and outputs_optimisation_full['epw'].notna().any():
+            for epw, group in outputs_optimisation_full.groupby('epw'):
+                pareto_mask.loc[group.index] = _pareto_mask_for_group(group)
+        else:
+            pareto_mask = _pareto_mask_for_group(outputs_optimisation_full)
+
+        outputs_optimisation_full['pareto-optimal'] = pareto_mask
         return outputs_optimisation_full
-
     def _set_optimisation_outputs(
             self,
             outputs_optimisation_full: pd.DataFrame,
@@ -1209,14 +1259,11 @@ class OptimParamSimulation:
                 fallback_full['simulation_directory'] = pd.NA
             outputs_optimisation_full = fallback_full
 
-        self.outputs_optimisation_full = outputs_optimisation_full
-        self.outputs_optimisation = outputs_optimisation_full[
-            outputs_optimisation_full['pareto-optimal']
-        ].copy()
+        self.outputs_optimisation = outputs_optimisation_full
         if 'epw' not in self.outputs_optimisation.columns:
             self.outputs_optimisation['epw'] = pd.NA
         self.optimisation_csv_paths_non_dominated = (
-            self.outputs_optimisation['simulation_output_csv_path']
+            self.outputs_optimisation[self.outputs_optimisation['pareto-optimal']]['simulation_output_csv_path']
             .dropna()
             .drop_duplicates()
             .tolist()
@@ -1249,12 +1296,12 @@ class OptimParamSimulation:
 
     def _save_outputs_optimisation_full(self, out_dir: str):
         os.makedirs(out_dir, exist_ok=True)
-        full_results_filename = f'outputs_optimisation_full_{os.getpid()}.csv'
+        full_results_filename = f'outputs_optimisation_{os.getpid()}.csv'
         full_results_path = os.path.join(out_dir, full_results_filename)
-        self.outputs_optimisation_full.to_csv(full_results_path, index=False)
-        self.outputs_optimisation_full_filepath = full_results_path
+        self.outputs_optimisation.to_csv(full_results_path, index=False)
+        self.outputs_optimisation_filepath = full_results_path
 
-    def load_outputs_optimisation_full(
+    def load_outputs_optimisation(
             self,
             csv_path: str = None
     ) -> pd.DataFrame:
@@ -1264,25 +1311,25 @@ class OptimParamSimulation:
         internal attributes without rerunning simulations.
 
         :param csv_path: path to a CSV file with full optimisation outputs.
-            If None, uses ``self.outputs_optimisation_full_filepath``.
-        :return: pandas DataFrame containing full optimisation outputs
+            If None, uses ``self.outputs_optimisation_filepath``.
+        :return: pandas DataFrame containing full optimisation outputs (dominated + non-dominated)
         """
-        target_csv_path = csv_path or self.outputs_optimisation_full_filepath
+        target_csv_path = csv_path or self.outputs_optimisation_filepath
         if target_csv_path is None:
             raise ValueError(
-                'No csv_path was provided and no previous outputs_optimisation_full file is available. '
+                'No csv_path was provided and no previous outputs_optimisation file is available. '
                 'Run run_optimisation first or provide a valid csv_path.'
             )
 
-        outputs_optimisation_full = pd.read_csv(target_csv_path)
-        if 'pareto-optimal' not in outputs_optimisation_full.columns:
+        outputs_optimisation = pd.read_csv(target_csv_path)
+        if 'pareto-optimal' not in outputs_optimisation.columns:
             raise KeyError(
                 "Column 'pareto-optimal' not found in the provided CSV. "
-                "Please load a file generated from outputs_optimisation_full."
+                "Please load a file generated from outputs_optimisation."
             )
-        self.outputs_optimisation_full_filepath = target_csv_path
-        self._set_optimisation_outputs(outputs_optimisation_full=outputs_optimisation_full)
-        return self.outputs_optimisation_full
+        self.outputs_optimisation_filepath = target_csv_path
+        self._set_optimisation_outputs(outputs_optimisation_full=outputs_optimisation)
+        return self.outputs_optimisation
 
     def get_hourly_df(self, start_date: str = '2024-01-01 01'):
         """
@@ -1424,7 +1471,6 @@ class OptimParamSimulation:
             self,
             start_date: str = '2024-01-01 01',
             df: Optional[pd.DataFrame] = None,
-            use_full: bool = False,
             include_file_outputs: bool = False,
             file_source: Literal['csv', 'eso'] = 'csv',
             file_output_columns: Optional[List[str]] = None,
@@ -1432,13 +1478,14 @@ class OptimParamSimulation:
             only_run_period: bool = True,
     ):
         """
-        Expands optimisation results to hourly frequency.
+        Expands optimisation results (dominated + non-dominated) to hourly frequency,
+        and saves the result in ``outputs_optimisation_hourly``.
+        The ``pareto-optimal`` column is preserved so dominated and non-dominated rows
+        can be filtered afterwards.
 
         :param start_date: start date for the expanded hourly time index ('YYYY-MM-DD HH')
-        :param df: optional dataframe of simulations to expand; if None, uses outputs_optimisation
-            or outputs_optimisation_full depending on ``use_full``.
-        :param use_full: if True and ``df`` is None, expands ``outputs_optimisation_full``;
-            if False, expands ``outputs_optimisation``.
+        :param df: optional dataframe of simulations to expand; if None, uses ``outputs_optimisation``
+            (which contains all simulations, dominated and non-dominated).
         :param include_file_outputs: if True, reads additional hourly outputs from simulation files
             (.csv or .eso) and appends them before expanding.
         :param file_source: source file type for additional outputs ('csv' or 'eso').
@@ -1448,7 +1495,7 @@ class OptimParamSimulation:
         :param only_run_period: when ``file_source='eso'``, keeps run period only if True.
         """
         if df is None:
-            source_df = self.outputs_optimisation_full.copy() if use_full else self.outputs_optimisation.copy()
+            source_df = self.outputs_optimisation.copy()
         else:
             source_df = df.copy()
 
@@ -1474,8 +1521,6 @@ class OptimParamSimulation:
             parameter_columns=parameter_columns,
             start_date=start_date
         )
-        if use_full:
-            self.outputs_optimisation_full_hourly = self.outputs_optimisation_hourly.copy()
 
     def get_hourly_df_columns(self):
         """

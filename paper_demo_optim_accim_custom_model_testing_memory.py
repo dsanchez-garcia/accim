@@ -90,10 +90,10 @@ parametric.set_parameters(accis_params_dict=accis_parameters)
 parametric.set_problem(minimize_outputs=[True, True])
 parametric.run_optimisation(
     algorithm='NSGAII',
-    epws=['Seville.epw', 'Sydney.epw'],
-    out_dir='paper_optim_custom_temp_testing_4',
-    evaluations=10,
-    population_size=5,
+    epws=['Seville.epw'],
+    out_dir='paper_optim_custom_temp_testing_6',
+    evaluations=30,
+    population_size=10,
     processes=6,
     keep_dirs=True
 )
@@ -101,7 +101,7 @@ parametric.run_optimisation(
 # ---------------------------------------------------------------------------
 ## 6. Post-process
 # ---------------------------------------------------------------------------
-df = parametric.outputs_optimisation_full.copy()
+df = parametric.outputs_optimisation.copy()
 
 param_cols = ['CustAST_m', 'CustAST_n', 'CustAST_ASToffset', 'CustAST_ASTall', 'CustAST_ASTaul']
 available_energy_cols = [c for c in df.columns if ':Electricity' in c]
@@ -118,7 +118,7 @@ df['Heating [kWh]'] = df[heating_col] / 3.6e6
 df['Cooling [kWh]'] = df[cooling_col] / 3.6e6
 df['Total [kWh]'] = df['Heating [kWh]'] + df['Cooling [kWh]']
 df['pareto_str'] = df['pareto-optimal'].map({True: 'Pareto-optimal', False: 'Dominated'})
-df.to_csv('results_optim_custom.csv', index=False)
+df.to_csv('results_optim_custom_recomputed.csv', index=False)
 
 pareto = df[df['pareto-optimal']].copy()
 dominated = df[~df['pareto-optimal']].copy()
@@ -126,16 +126,16 @@ dominated = df[~df['pareto-optimal']].copy()
 # Save the paths to each simulation CSV grouped by Pareto status.
 pd.DataFrame(
     {'simulation_output_csv_path': parametric.optimisation_csv_paths_non_dominated}
-).to_csv('results_optim_custom_non_dominated_paths.csv', index=False)
+).to_csv('results_optim_custom_non_dominated_paths_recomputed.csv', index=False)
 pd.DataFrame(
     {'simulation_output_csv_path': parametric.optimisation_csv_paths_dominated}
-).to_csv('results_optim_custom_dominated_paths.csv', index=False)
+).to_csv('results_optim_custom_dominated_paths_recomputed.csv', index=False)
 pd.DataFrame(parametric.optimisation_csv_paths_non_dominated_by_epw).to_csv(
-    'results_optim_custom_non_dominated_paths_by_epw.csv',
+    'results_optim_custom_non_dominated_paths_by_epw_recomputed.csv',
     index=False
 )
 pd.DataFrame(parametric.optimisation_csv_paths_dominated_by_epw).to_csv(
-    'results_optim_custom_dominated_paths_by_epw.csv',
+    'results_optim_custom_dominated_paths_by_epw_recomputed.csv',
     index=False
 )
 
@@ -147,13 +147,12 @@ parametric.get_hourly_df_optimisation(
     file_source='csv',
     file_output_columns=None,
 )
-parametric.outputs_optimisation_hourly.to_csv('results_optim_custom_hourly_subset.csv', index=False)
+parametric.outputs_optimisation_hourly.to_csv('results_optim_custom_hourly_subset_recomputed.csv', index=False)
 
 parametric.get_hourly_df_optimisation(
-    use_full=True,
     include_file_outputs=True
 )
-parametric.outputs_optimisation_full_hourly.to_csv('results_optim_custom_hourly_full.csv', index=False)
+parametric.outputs_optimisation_hourly.to_csv('results_optim_custom_hourly_full_recomputed.csv', index=False)
 
 # ---------------------------------------------------------------------------
 # 7. Figure 1 – Pareto front scatter
@@ -180,7 +179,7 @@ ax.set_title('NSGA-II Pareto Front – Custom Adaptive Comfort Model\n'
              'Dot size ∝ slope m  |  Colour = Comfort bandwidth (ASToffset)', fontsize=10)
 ax.legend(fontsize=9)
 plt.tight_layout()
-plt.savefig('plot_optim_custom_pareto.png', dpi=300, bbox_inches='tight')
+plt.savefig('plot_optim_custom_pareto_recomputed.png', dpi=300, bbox_inches='tight')
 plt.close()
 
 # ---------------------------------------------------------------------------
@@ -216,7 +215,7 @@ legend_elements = [
 ]
 ax.legend(handles=legend_elements, loc='upper right', fontsize=9)
 plt.tight_layout()
-plt.savefig('plot_optim_custom_parallel.png', dpi=300, bbox_inches='tight')
+plt.savefig('plot_optim_custom_parallel_recomputed.png', dpi=300, bbox_inches='tight')
 plt.close()
 
 # ---------------------------------------------------------------------------
@@ -242,24 +241,36 @@ cbar = g.figure.colorbar(sm, ax=g.axes, shrink=0.6, pad=0.02)
 cbar.set_label('Total HVAC Energy (kWh)', fontsize=9)
 g.figure.suptitle('Pairwise Parameter Space – Pareto-Optimal Solutions\n'
                   '(Colour = Total Annual HVAC Energy)', y=1.01, fontsize=11)
-g.figure.savefig('plot_optim_custom_pairplot.png', dpi=300, bbox_inches='tight')
+g.figure.savefig('plot_optim_custom_pairplot_recomputed.png', dpi=300, bbox_inches='tight')
 plt.close('all')
 
 print("Done. Outputs saved:")
-print("  results_optim_custom.csv")
-print("  results_optim_custom_non_dominated_paths.csv")
-print("  results_optim_custom_dominated_paths.csv")
-print("  results_optim_custom_non_dominated_paths_by_epw.csv")
-print("  results_optim_custom_dominated_paths_by_epw.csv")
-print("  results_optim_custom_hourly_subset.csv")
-print("  results_optim_custom_hourly_full.csv")
-print("  plot_optim_custom_pareto.png")
-print("  plot_optim_custom_parallel.png")
-print("  plot_optim_custom_pairplot.png")
-print("  Full results file:", parametric.outputs_optimisation_full_filepath)
+print("  results_optim_custom_recomputed.csv")
+print("  results_optim_custom_non_dominated_paths_recomputed.csv")
+print("  results_optim_custom_dominated_paths_recomputed.csv")
+print("  results_optim_custom_non_dominated_paths_by_epw_recomputed.csv")
+print("  results_optim_custom_dominated_paths_by_epw_recomputed.csv")
+print("  results_optim_custom_hourly_subset_recomputed.csv")
+print("  results_optim_custom_hourly_full_recomputed.csv")
+print("  plot_optim_custom_pareto_recomputed.png")
+print("  plot_optim_custom_parallel_recomputed.png")
+print("  plot_optim_custom_pairplot_recomputed.png")
+print("  Full results file:", parametric.outputs_optimisation_filepath)
 
 
 # if __name__ == '__main__':
 #     from multiprocessing import freeze_support
 #     freeze_support()
 #     main()
+
+
+##
+
+sns.scatterplot(
+    data=parametric.outputs_optimisation,
+    x='Heating:Electricity', y='Cooling:Electricity',
+    hue='pareto-optimal', palette='Set1',
+    s=100, alpha=0.8, edgecolors='k', linewidths=0.2,
+    legend=True,
+)
+plt.show()
