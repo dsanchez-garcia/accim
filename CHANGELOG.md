@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Default is `1` (sequential), preserving existing behaviour.
 
 ### Changed
+- **Optimisation Memory and Disk Usage Management**: Completely overhauled how the `OptimParamSimulation.run_optimisation` method manages raw simulation outputs. The legacy `keep_dirs` argument was removed in favor of `keep_sim_files`, `keep_sim_files_batch_size`, and `keep_df`. This enables "on-the-fly" batch cleanups of dominated simulation results during the optimization loop (reducing peak disk storage required for massive optimizations) and allows memory-efficient final DataFrames by selectively discarding dominated solutions. Furthermore, `get_hourly_df_optimisation` now gracefully ignores missing/deleted simulation directories natively instead of failing.
 - **Unified Object Identification**: Globalized the robust hierarchy resolution logic from `apmv_setpoints._resolve_targets` into the central pipeline (`accim.sim.utils.scan_zones`). The overarching dataset map is meticulously managed across all hierarchical relationships for `People`, `Space`, `SpaceList`, and `ZoneList` objects universally without duplicate clashes.
 
 ### Fixed
