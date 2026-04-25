@@ -92,6 +92,52 @@ def _patched_eval_func(evaluator, all_outputs):
             logfile.write(json.dumps(log_payload) + '\n')
     if keep_dirs:
         results = results[:-1]
+
+    keep_sim_files = getattr(evaluator, '_keep_sim_files', 'all')
+    if keep_dirs and keep_sim_files == 'non-dominated':
+        records = evaluator._optimisation_eval_records
+        if len(records) > 0 and len(records) % getattr(evaluator, '_keep_sim_files_batch_size', 50) == 0:
+            import shutil
+            import numpy as np
+            minimize_flags = getattr(evaluator.problem, 'minimize_outputs', None)
+            output_names = evaluator.problem.names("outputs")
+            n_outputs = len(output_names)
+            if minimize_flags is None:
+                minimize_flags = [True] * n_outputs
+            else:
+                minimize_flags = [(m if m is not None else True) for m in minimize_flags]
+            
+            costs = np.zeros((len(records), n_outputs))
+            for i, rec in enumerate(records):
+                costs[i, :] = rec['results'][:n_outputs]
+                
+            for j, minimize in enumerate(minimize_flags):
+                if not minimize:
+                    costs[:, j] = -costs[:, j]
+                    
+            n = costs.shape[0]
+            is_pareto = np.ones(n, dtype=bool)
+            for i in range(n):
+                if not is_pareto[i]:
+                    continue
+                others_mask = np.arange(n) != i
+                dominated_i = (
+                    np.all(costs[others_mask] <= costs[i], axis=1)
+                    & np.any(costs[others_mask] < costs[i], axis=1)
+                )
+                if np.any(dominated_i):
+                    is_pareto[i] = False
+                    
+            for i in range(n):
+                if not is_pareto[i]:
+                    sim_dir = records[i].get('sim_dir')
+                    if sim_dir is not None and os.path.exists(sim_dir):
+                        try:
+                            shutil.rmtree(sim_dir)
+                        except Exception:
+                            pass
+                        records[i]['sim_dir'] = None
+
     return evaluator.package_for_platypus(results)
 
 def _patched_to_platypus(self):
@@ -934,7 +980,9 @@ class OptimParamSimulation:
             population_size: int,
             algorithm: str = 'NSGAII',
             processes: int = 1,
-            keep_dirs: bool = True,
+            keep_sim_files: Literal['all', 'non-dominated', 'none'] = 'all',
+            keep_sim_files_batch_size: int = 50,
+            keep_df: Literal['all', 'non-dominated'] = 'all',
             **kwargs
     ) -> pd.DataFrame:
         """
@@ -954,7 +1002,12 @@ class OptimParamSimulation:
             within each generation.  Uses ``platypus.ProcessPoolEvaluator`` internally.
             Default is 1 (sequential).  Values > 1 are useful when ``population_size`` is
             large and each simulation is independent.
-        :param keep_dirs: if True, keeps the output directories for all iterations, including .csv and .eso files.
+        :param keep_sim_files: specifies which simulation results directories to keep:
+            'all' (keeps everything), 'non-dominated' (deletes directories of dominated solutions to save space),
+            or 'none' (keeps no simulation files).
+        :param keep_sim_files_batch_size: number of evaluations per worker to wait before running the local pareto batch cleanup.
+        :param keep_df: specifies which evaluations to keep in the outputs_optimisation DataFrame:
+            'all' (keeps dominated and non-dominated) or 'non-dominated'.
         :return: a pandas DataFrame
         """
         available_algorithms = [
@@ -1005,7 +1058,9 @@ class OptimParamSimulation:
                     epw=epw,
                     out_dir=out_dir
                 )
-                evaluator._keep_dirs = keep_dirs
+                evaluator._keep_sim_files = keep_sim_files
+                evaluator._keep_sim_files_batch_size = keep_sim_files_batch_size
+                evaluator._keep_dirs = False if keep_sim_files == 'none' else True
                 evaluator._optimisation_eval_records = []
                 epwname = epw.split('.epw')[0]
                 evaluator._optimisation_log_base = os.path.join(
@@ -1087,6 +1142,24 @@ class OptimParamSimulation:
             outputs_optimisation_full=outputs_optimisation,
             outputs_optimisation=outputs_optimisation_non_dominated
         )
+
+        if keep_sim_files == 'non-dominated':
+            import shutil
+            for idx, row in outputs_optimisation[~outputs_optimisation['pareto-optimal']].iterrows():
+                sim_dir = row.get('simulation_directory')
+                if pd.notna(sim_dir) and isinstance(sim_dir, str) and os.path.exists(sim_dir):
+                    try:
+                        shutil.rmtree(sim_dir)
+                    except Exception:
+                        pass
+                outputs_optimisation.at[idx, 'simulation_directory'] = pd.NA
+                outputs_optimisation.at[idx, 'simulation_output_csv_path'] = pd.NA
+
+        if keep_df == 'non-dominated':
+            outputs_optimisation = outputs_optimisation[outputs_optimisation['pareto-optimal']].copy()
+            if len(epws) > 1:
+                outputs_optimisation = outputs_optimisation.reset_index(drop=True)
+
         self._set_optimisation_outputs(
             outputs_optimisation_full=outputs_optimisation,
             outputs_optimisation_non_dominated=outputs_optimisation_non_dominated
@@ -1348,19 +1421,24 @@ class OptimParamSimulation:
 
     @staticmethod
     def _resolve_simulation_file_path(row: pd.Series, file_source: Literal['csv', 'eso']) -> str:
+        error_msg = (
+            f"{file_source.upper()} path cannot be resolved for this simulation. "
+            f"If you used keep_sim_files='non-dominated' and this is a dominated simulation, "
+            f"the files were deleted to save space. To analyze this simulation, re-run keeping its files."
+        )
         if file_source == 'csv':
             if pd.notna(row.get('simulation_output_csv_path', pd.NA)):
                 return str(row['simulation_output_csv_path'])
             if pd.notna(row.get('simulation_directory', pd.NA)):
                 return os.path.join(str(row['simulation_directory']), 'eplusout.csv')
-            raise ValueError("CSV path cannot be resolved: add 'simulation_output_csv_path' or 'simulation_directory'.")
+            raise ValueError(error_msg)
         if file_source == 'eso':
             if pd.notna(row.get('simulation_directory', pd.NA)):
                 return os.path.join(str(row['simulation_directory']), 'eplusout.eso')
             if pd.notna(row.get('simulation_output_csv_path', pd.NA)):
                 csv_path = str(row['simulation_output_csv_path'])
                 return os.path.join(os.path.dirname(csv_path), 'eplusout.eso')
-            raise ValueError("ESO path cannot be resolved: add 'simulation_directory' or 'simulation_output_csv_path'.")
+            raise ValueError(error_msg)
         raise ValueError(f"Unsupported file_source '{file_source}'. Use 'csv' or 'eso'.")
 
     @staticmethod
@@ -1449,13 +1527,18 @@ class OptimParamSimulation:
         per_row_outputs = []
         all_output_cols = set()
         for _, row in df_augmented.iterrows():
-            row_outputs = self._extract_hourly_outputs_from_file(
-                row=row,
-                file_source=file_source,
-                file_output_columns=file_output_columns,
-                eplus_install_dir=eplus_install_dir,
-                only_run_period=only_run_period
-            )
+            try:
+                row_outputs = self._extract_hourly_outputs_from_file(
+                    row=row,
+                    file_source=file_source,
+                    file_output_columns=file_output_columns,
+                    eplus_install_dir=eplus_install_dir,
+                    only_run_period=only_run_period
+                )
+            except (ValueError, FileNotFoundError) as e:
+                # If files were deleted by keep_sim_files='non-dominated' (or missing for any reason),
+                # we skip this row. The resulting hourly df will only contain data for valid rows.
+                row_outputs = {}
             per_row_outputs.append(row_outputs)
             all_output_cols.update(row_outputs.keys())
 
