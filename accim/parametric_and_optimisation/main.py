@@ -1829,6 +1829,285 @@ class OptimParamSimulation:
         else:
             raise ValueError(f"Unknown MCDM method: {method}")
 
+    def run_sensitivity_analysis_by_epw(
+            self,
+            method: Literal['sobol', 'morris'] = 'morris',
+            out_dir: str = '.',
+            **kwargs
+    ) -> dict:
+        """
+        Runs Sensitivity Analysis separately for each EPW found in
+        ``outputs_param_simulation``, saves a CSV and a bar-chart PNG per EPW,
+        and returns a nested dict ``{epw_label: SALib_results_dict}``.
+
+        The results are also stored in ``self.sensitivity_results_by_epw``.
+
+        Typical workflow::
+
+            sim.sampling_morris(num_samples=50)
+            sim.run_parametric_simulation(epws=['Seville.epw', 'Sydney.epw'], ...)
+            sa = sim.run_sensitivity_analysis_by_epw(method='morris', out_dir='results')
+
+        :param method: ``'sobol'`` or ``'morris'``. Must match the sampling
+            method used before calling ``run_parametric_simulation``.
+        :param out_dir: directory where CSV and PNG files will be saved.
+        :param kwargs: additional keyword arguments forwarded to
+            ``run_sensitivity_analysis``.
+        :return: nested dict ``{epw_label: {output_name: SALib_result}}``.
+        """
+        import matplotlib
+        import matplotlib.pyplot as plt
+
+        if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
+            raise ValueError(
+                'No parametric simulation results found. '
+                'Run run_parametric_simulation before calling this method.'
+            )
+
+        os.makedirs(out_dir, exist_ok=True)
+        epw_labels = self.outputs_param_simulation['epw'].unique()
+        results_by_epw = {}
+        original_df = self.outputs_param_simulation
+
+        for epw_label in epw_labels:
+            epw_tag = str(epw_label).replace(' ', '_')
+
+            # Restrict to this EPW for SA
+            self.outputs_param_simulation = original_df[
+                original_df['epw'] == epw_label
+            ].copy()
+
+            sa_results = self.run_sensitivity_analysis(method=method, **kwargs)
+            results_by_epw[epw_label] = sa_results
+            self.outputs_param_simulation = original_df  # restore
+
+            # --- Build and save tidy CSV ---
+            rows = []
+            if method == 'sobol':
+                for output_name, res in sa_results.items():
+                    for param, s1, st in zip(res['names'], res['S1'], res['ST']):
+                        rows.append({
+                            'epw': epw_tag, 'output': output_name,
+                            'parameter': param,
+                            'S1': round(float(s1), 4),
+                            'ST': round(float(st), 4),
+                        })
+                x_labels = ('S1 (first-order)', 'ST (total-order)')
+                bar_keys = ('S1', 'ST')
+                y_label = 'Sobol Index'
+                title_prefix = 'Sobol Sensitivity'
+                bar_colours = ('#457b9d', '#e63946')
+                ylim = (0, 1)
+            else:  # morris
+                for output_name, res in sa_results.items():
+                    for param, mu, mu_star, sigma in zip(
+                        res['names'], res['mu'], res['mu_star'], res['sigma']
+                    ):
+                        rows.append({
+                            'epw': epw_tag, 'output': output_name,
+                            'parameter': param,
+                            'mu': round(float(mu), 4),
+                            'mu_star': round(float(mu_star), 4),
+                            'sigma': round(float(sigma), 4),
+                        })
+                x_labels = ('mu* (importance)', 'sigma (interactions)')
+                bar_keys = ('mu_star', 'sigma')
+                y_label = 'Morris Index'
+                title_prefix = 'Morris Sensitivity'
+                bar_colours = ('#457b9d', '#e63946')
+                ylim = None
+
+            sa_df = pd.DataFrame(rows)
+            fname_csv = os.path.join(out_dir, f'results_sa_{method}_{epw_tag}.csv')
+            sa_df.to_csv(fname_csv, index=False)
+            print(f'  SA ({method}) results saved: {fname_csv}')
+
+            # --- Bar chart per output ---
+            output_names_sa = list(sa_results.keys())
+            n_outputs = len(output_names_sa)
+            fig, axes = plt.subplots(1, n_outputs, figsize=(6 * n_outputs, 5), squeeze=False)
+            width = 0.35
+            for ax_idx, output_name in enumerate(output_names_sa):
+                res = sa_results[output_name]
+                ax_sa = axes[0][ax_idx]
+                x = np.arange(len(res['names']))
+                vals_a = np.abs(res[bar_keys[0]])
+                vals_b = np.abs(res[bar_keys[1]])
+                ax_sa.bar(x - width / 2, vals_a, width,
+                          label=x_labels[0], color=bar_colours[0], alpha=0.85)
+                ax_sa.bar(x + width / 2, vals_b, width,
+                          label=x_labels[1], color=bar_colours[1], alpha=0.85)
+                ax_sa.set_xticks(x)
+                ax_sa.set_xticklabels(res['names'], rotation=30, ha='right', fontsize=9)
+                ax_sa.set_ylabel(y_label, fontsize=10)
+                ax_sa.set_title(f'{title_prefix} — {output_name}\n[{epw_tag}]', fontsize=10)
+                ax_sa.legend(fontsize=8)
+                if ylim:
+                    ax_sa.set_ylim(*ylim)
+                ax_sa.axhline(0, color='k', lw=0.5)
+            plt.tight_layout()
+            fname_plot = os.path.join(out_dir, f'plot_sa_{method}_{epw_tag}.png')
+            plt.savefig(fname_plot, dpi=300, bbox_inches='tight')
+            plt.close()
+            print(f'  SA ({method}) plot saved: {fname_plot}')
+
+        self.sensitivity_results_by_epw = results_by_epw
+        return results_by_epw
+
+    def plot_best_compromise_solutions(
+            self,
+            out_dir: str = '.',
+            mcdm_configs: list = None,
+    ) -> pd.DataFrame:
+        """
+        Identifies the best compromise solution(s) from the Pareto front for
+        each EPW found in ``outputs_optimisation``, saves the results to a
+        CSV and a scatter-plot PNG, and returns the combined DataFrame.
+
+        :param out_dir: directory where output files will be saved.
+        :param mcdm_configs: list of dicts, each specifying one MCDM run.
+            Each dict must have a ``'method'`` key (``'knee_point'`` or
+            ``'topsis'``) and may optionally have:
+
+            - ``'weights'``: list of per-objective weights (TOPSIS only).
+            - ``'label'``: string label used in the legend and CSV column
+              (auto-generated if omitted).
+
+            Default (when ``None``)::
+
+                [
+                    {'method': 'knee_point'},
+                    {'method': 'topsis'},
+                    {'method': 'topsis', 'weights': [0.7, 0.3], 'label': 'topsis_w70_30'},
+                ]
+
+        :return: pandas DataFrame with all best solutions (one row per
+            EPW × MCDM method), also saved to CSV.
+        """
+        import matplotlib.pyplot as plt
+
+        if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
+            raise ValueError(
+                'No optimisation results found. '
+                'Run run_optimisation (or load via load_outputs_optimisation) first.'
+            )
+
+        os.makedirs(out_dir, exist_ok=True)
+
+        if mcdm_configs is None:
+            output_names = self.problem.names('outputs')
+            n_obj = len(output_names)
+            mcdm_configs = [
+                {'method': 'knee_point'},
+                {'method': 'topsis'},
+                {'method': 'topsis',
+                 'weights': [0.7] + [0.3 / max(n_obj - 1, 1)] * (n_obj - 1),
+                 'label': 'topsis_w70_30'},
+            ]
+
+        # Auto-generate labels if missing
+        label_counts: dict = {}
+        for cfg in mcdm_configs:
+            if 'label' not in cfg:
+                base = cfg['method']
+                label_counts[base] = label_counts.get(base, 0) + 1
+                suffix = '' if label_counts[base] == 1 else f'_{label_counts[base]}'
+                cfg['label'] = f"{base}{suffix}"
+
+        # Colour / marker scheme for up to 8 configs
+        _marker_cycle = ['*', 'D', 's', '^', 'P', 'X', 'v', 'o']
+        _colour_cycle = ['#e63946', '#f4a261', '#2a9d8f', '#e9c46a',
+                         '#264653', '#a8dadc', '#457b9d', '#6d6875']
+        _size_cycle   = [220, 120, 120, 120, 120, 120, 120, 120]
+
+        epw_labels = self.outputs_optimisation['epw'].unique()
+        output_names = self.problem.names('outputs')
+        heating_col = next((c for c in output_names if 'Heating' in c), output_names[0])
+        _fallback_cool = output_names[-1] if len(output_names) > 1 else output_names[0]
+        cooling_col = next((c for c in output_names if 'Cooling' in c), _fallback_cool)
+
+        all_mcdm_rows = []
+        original_optim = self.outputs_optimisation
+
+        for epw_label in epw_labels:
+            epw_tag = str(epw_label).replace(' ', '_')
+            self.outputs_optimisation = original_optim[
+                original_optim['epw'] == epw_label
+            ].copy()
+
+            print(f'\n  [{epw_tag}] Best compromise solutions:')
+            for cfg in mcdm_configs:
+                method = cfg['method']
+                weights = cfg.get('weights', None)
+                label = cfg['label']
+                row_df = self.get_best_compromise_solution(method=method, weights=weights)
+                row_df = row_df.copy()
+                row_df['mcdm_method'] = label
+                row_df['epw'] = epw_tag
+                all_mcdm_rows.append(row_df)
+
+                h_kwh = row_df[heating_col].iloc[0] / 3.6e6
+                c_kwh = row_df[cooling_col].iloc[0] / 3.6e6
+                print(f'    {label:25s} | {heating_col}={h_kwh:.1f} kWh'
+                      f' | {cooling_col}={c_kwh:.1f} kWh')
+
+            self.outputs_optimisation = original_optim  # restore
+
+        mcdm_df = pd.concat(all_mcdm_rows, ignore_index=True)
+        fname_csv = os.path.join(out_dir, 'results_mcdm_best_solutions.csv')
+        mcdm_df.to_csv(fname_csv, index=False)
+        print(f'\n  MCDM summary saved: {fname_csv}')
+
+        # --- Figure: one subplot per EPW ---
+        fig, axes = plt.subplots(
+            1, len(epw_labels),
+            figsize=(8 * len(epw_labels), 6),
+            squeeze=False
+        )
+        for ax_idx, epw_label in enumerate(epw_labels):
+            epw_tag = str(epw_label).replace(' ', '_')
+            ax_m = axes[0][ax_idx]
+            df_epw = original_optim[original_optim['epw'] == epw_label].copy()
+            df_epw['_h'] = df_epw[heating_col] / 3.6e6
+            df_epw['_c'] = df_epw[cooling_col] / 3.6e6
+
+            dom = df_epw[~df_epw['pareto-optimal']]
+            par = df_epw[df_epw['pareto-optimal']]
+            ax_m.scatter(dom['_h'], dom['_c'], c='#cccccc', alpha=0.3, s=15, zorder=1)
+            ax_m.scatter(par['_h'], par['_c'], c='#457b9d', alpha=0.6, s=40,
+                         edgecolors='k', linewidths=0.4, zorder=2, label='Pareto-optimal')
+
+            for i, cfg in enumerate(mcdm_configs):
+                label = cfg['label']
+                row = mcdm_df[
+                    (mcdm_df['epw'] == epw_tag) &
+                    (mcdm_df['mcdm_method'] == label)
+                ]
+                if row.empty:
+                    continue
+                h = row[heating_col].iloc[0] / 3.6e6
+                c = row[cooling_col].iloc[0] / 3.6e6
+                ax_m.scatter(
+                    h, c,
+                    marker=_marker_cycle[i % len(_marker_cycle)],
+                    c=_colour_cycle[i % len(_colour_cycle)],
+                    s=_size_cycle[i % len(_size_cycle)],
+                    zorder=5, edgecolors='k', linewidths=0.6, label=label
+                )
+
+            ax_m.set_xlabel(f'{heating_col} (kWh)', fontsize=11)
+            ax_m.set_ylabel(f'{cooling_col} (kWh)', fontsize=11)
+            ax_m.set_title(f'Pareto Front + MCDM best solutions\n[{epw_tag}]', fontsize=11)
+            ax_m.legend(fontsize=9)
+
+        plt.tight_layout()
+        fname_plot = os.path.join(out_dir, 'plot_mcdm_best_solutions.png')
+        plt.savefig(fname_plot, dpi=300, bbox_inches='tight')
+        plt.close()
+        print(f'  MCDM plot saved: {fname_plot}')
+
+        return mcdm_df
+
 class AccimPredefModelsParamSim(OptimParamSimulation):
     def __init__(
             self,
