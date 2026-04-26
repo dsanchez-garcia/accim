@@ -91,11 +91,23 @@ parametric.set_problem(minimize_outputs=[True, True])
 parametric.run_optimisation(
     algorithm='NSGAII',
     epws=['Seville.epw'],
-    out_dir='paper_optim_custom_temp_testing_6',
-    evaluations=30,
+    out_dir='paper_optim_custom_temp_testing_8',
+    evaluations=20,
     population_size=10,
-    processes=6,
-    keep_dirs=True
+    processes=8,
+    # keep_df='all',
+    # keep_sim_files='non-dominated',
+
+    # keep_df='non-dominated',
+    # keep_sim_files='non-dominated',
+
+    # keep_df='all',
+    # keep_sim_files='all',
+
+    keep_df='all',
+    keep_sim_files='none',
+
+    keep_sim_files_batch_size=10,
 )
 
 # ---------------------------------------------------------------------------

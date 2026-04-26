@@ -101,7 +101,7 @@ generated_files = []
 
 print("\n--- [10] Sensitivity Analysis (Morris) ---")
 
-parametric.sampling_morris(num_samples=5, num_levels=4)  # 5*(5+1)=30 sims/EPW
+parametric.sampling_morris(num_samples=3, num_levels=4)  # 5*(5+1)=30 sims/EPW
 parametric.run_parametric_simulation(
     epws=['Seville.epw', 'Sydney.epw'],
     out_dir='testing_new_functionalities',
