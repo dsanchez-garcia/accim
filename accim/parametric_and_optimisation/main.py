@@ -332,6 +332,7 @@ class OptimParamSimulation:
         self.is_accim_custom_model = is_accim_custom_model
         self.is_accim_predef_model = is_accim_predef_model
         self.is_apmv_setpoints = is_apmv_setpoints
+        self.last_run_type = None
         self.outputs_optimisation = None
         self.outputs_optimisation_filepath = None
         self.optimisation_csv_paths_non_dominated = []
@@ -1042,6 +1043,7 @@ class OptimParamSimulation:
             f"({math.ceil(evaluations / population_size)} generation(s) × {population_size})\n"
             f"  TOTAL          : {total}"
         )
+        self.last_run_type = 'parametric'
         return total
 
     def run_optimisation(
@@ -1718,6 +1720,11 @@ class OptimParamSimulation:
         :param kwargs: additional arguments to pass to SALib.analyze.sobol or SALib.analyze.morris.
         :return: a dictionary mapping each output name to its SALib analysis results.
         """
+        if getattr(self, 'last_run_type', None) != 'parametric':
+            raise ValueError(
+                "Sensitivity Analysis can only be run after a parametric simulation. "
+                "Please ensure you run run_parametric_simulation() first."
+            )
         if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
             raise ValueError("You must run run_parametric_simulation before running sensitivity analysis.")
 
@@ -1765,6 +1772,11 @@ class OptimParamSimulation:
             If None, equal weights are applied. Must match the number of objectives.
         :return: A pandas DataFrame containing the best compromise solution(s).
         """
+        if getattr(self, 'last_run_type', None) != 'optimisation':
+            raise ValueError(
+                "MCDM best compromise solutions can only be evaluated after an optimisation simulation. "
+                "Please ensure you run run_optimisation() first."
+            )
         if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
             raise ValueError("No optimization results found. Run optimization first.")
 
@@ -1881,6 +1893,11 @@ class OptimParamSimulation:
             ``run_sensitivity_analysis``.
         :return: nested dict ``{epw_label: {output_name: SALib_result}}``.
         """
+        if getattr(self, 'last_run_type', None) != 'parametric':
+            raise ValueError(
+                "Sensitivity Analysis by EPW can only be run after a parametric simulation. "
+                "Please ensure you run run_parametric_simulation() first."
+            )
         import matplotlib
         import matplotlib.pyplot as plt
 
@@ -2010,6 +2027,11 @@ class OptimParamSimulation:
         :return: pandas DataFrame with all best solutions (one row per
             EPW × MCDM method), also saved to CSV.
         """
+        if getattr(self, 'last_run_type', None) != 'optimisation':
+            raise ValueError(
+                "MCDM best compromise solutions can only be evaluated after an optimisation simulation. "
+                "Please ensure you run run_optimisation() first."
+            )
         import matplotlib.pyplot as plt
 
         if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
@@ -2133,6 +2155,449 @@ class OptimParamSimulation:
         print(f'  MCDM plot saved: {fname_plot}')
 
         return mcdm_df
+
+    def run_clustering(
+            self,
+            n_clusters: int = 3,
+            cluster_by: str = 'parameters',
+            pareto_only: bool = True,
+            out_dir: str = '.'
+    ):
+        """
+        if pareto_only and getattr(self, 'last_run_type', None) != 'optimisation':
+            raise ValueError('Clustering with pareto_only=True requires an optimisation simulation. Run run_optimisation() first, or set pareto_only=False.')
+        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
+            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
+
+        Groups solutions into K clusters using KMeans to identify design families.
+        
+        :param n_clusters: Number of clusters (K).
+        :param cluster_by: 'parameters' or 'objectives'.
+        :param pareto_only: If True, only clusters the Pareto optimal solutions.
+        :param out_dir: Output directory for saving the CSV and plot.
+        :return: DataFrame with the 'Cluster_ID' column added.
+        """
+        if pareto_only and getattr(self, 'last_run_type', None) != 'optimisation':
+            raise ValueError(
+                "Clustering with pareto_only=True requires an optimisation simulation. "
+                "Please ensure you run run_optimisation() first, or set pareto_only=False."
+            )
+        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
+            raise ValueError("Clustering requires either a parametric or optimisation simulation to be run first.")
+            
+        import os
+        import pandas as pd
+        from sklearn.cluster import KMeans
+        from sklearn.preprocessing import StandardScaler
+        import matplotlib.pyplot as plt
+
+        os.makedirs(out_dir, exist_ok=True)
+        df = self.outputs_optimisation.copy()
+        
+        if pareto_only:
+            df = df[df['pareto-optimal']].copy()
+            if df.empty:
+                raise ValueError("No Pareto-optimal solutions found to cluster.")
+
+        if cluster_by == 'parameters':
+            features = self.problem.names('inputs')
+        elif cluster_by == 'objectives':
+            features = self.problem.names('outputs')
+        else:
+            raise ValueError("cluster_by must be 'parameters' or 'objectives'.")
+
+        missing_cols = [f for f in features if f not in df.columns]
+        if missing_cols:
+            raise KeyError(f"Missing features in DataFrame for clustering: {missing_cols}")
+
+        epw_labels = df['epw'].unique()
+        df['Cluster_ID'] = -1
+
+        for epw_label in epw_labels:
+            df_epw = df[df['epw'] == epw_label].copy()
+            X = df_epw[features].values
+            
+            if len(X) < n_clusters:
+                print(f"[!] Warning: Not enough points in {epw_label} to form {n_clusters} clusters.")
+                df.loc[df['epw'] == epw_label, 'Cluster_ID'] = 0
+                continue
+
+            scaler = StandardScaler()
+            X_scaled = scaler.fit_transform(X)
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+            df_epw['Cluster_ID'] = kmeans.fit_predict(X_scaled)
+            df.update(df_epw['Cluster_ID'])
+
+        df['Cluster_ID'] = df['Cluster_ID'].astype(int)
+        
+        # Persist Cluster_ID back into the main attribute so subsequent calls
+        # to plot_pareto_front(color_by='Cluster_ID') can find the column.
+        self.outputs_optimisation = df.copy()
+
+        # Save results
+        csv_path = os.path.join(out_dir, 'results_clustering.csv')
+        df.to_csv(csv_path, index=False)
+        print(f"  Clustering complete. Results saved: {csv_path}")
+
+        return df
+
+    def plot_pareto_front(
+            self,
+            color_by: str = None,
+            size_by: str = None,
+            out_dir: str = '.'
+    ):
+        """
+        if getattr(self, 'last_run_type', None) != 'optimisation':
+            raise ValueError('This method can only be run after an optimisation simulation. Ensure you run run_optimisation() first.')
+
+        Plots the Pareto front scatter for each EPW.
+        If color_by is provided a colorbar is added. If size_by is provided,
+        representative size handles appear in the legend.
+        """
+        if getattr(self, 'last_run_type', None) != 'optimisation':
+            raise ValueError(
+                "Pareto front scatter plot can only be generated after an optimisation simulation. "
+                "Please ensure you run run_optimisation() first."
+            )
+        import os
+        import matplotlib.pyplot as plt
+        import matplotlib.cm as cm
+        from matplotlib.colors import Normalize
+        from matplotlib.lines import Line2D
+        import pandas as pd
+
+        os.makedirs(out_dir, exist_ok=True)
+        df = self.outputs_optimisation.copy()
+        epw_labels = df['epw'].unique()
+
+        heating_col = next((c for c in df.columns if 'Heating:Electricity' in c), None)
+        cooling_col = next((c for c in df.columns if 'Cooling:Electricity' in c), None)
+
+        if not heating_col or not cooling_col:
+            print("[!] Heating or Cooling electricity columns not found.")
+            return
+
+        for epw_label in epw_labels:
+            epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
+            df_epw = df[df['epw'] == epw_label].copy()
+            pareto_epw = df_epw[df_epw['pareto-optimal']].copy()
+            dominated_epw = df_epw[~df_epw['pareto-optimal']].copy()
+
+            fig, ax = plt.subplots(figsize=(8, 6))
+
+            # Dominated points
+            ax.scatter(
+                dominated_epw[heating_col] / 3.6e6, dominated_epw[cooling_col] / 3.6e6,
+                c='#cccccc', alpha=0.3, s=15, zorder=1
+            )
+
+            # Sizes for Pareto points
+            if size_by and size_by in pareto_epw.columns:
+                sizes = pareto_epw[size_by] * 300
+            else:
+                sizes = 80
+
+            # Colors
+            use_colormap = (
+                color_by
+                and color_by in pareto_epw.columns
+                and pd.api.types.is_numeric_dtype(pareto_epw[color_by])
+            )
+
+            if use_colormap:
+                vmin = df_epw[color_by].min()
+                vmax = df_epw[color_by].max()
+                norm = Normalize(vmin=vmin, vmax=vmax)
+                sc = ax.scatter(
+                    pareto_epw[heating_col] / 3.6e6, pareto_epw[cooling_col] / 3.6e6,
+                    c=pareto_epw[color_by], cmap='RdYlGn', norm=norm,
+                    s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3
+                )
+                cbar = fig.colorbar(sc, ax=ax, pad=0.02, shrink=0.85)
+                cbar.set_label(color_by, fontsize=10)
+            else:
+                sc = ax.scatter(
+                    pareto_epw[heating_col] / 3.6e6, pareto_epw[cooling_col] / 3.6e6,
+                    c='#e63946', s=sizes, alpha=0.85,
+                    edgecolors='k', linewidths=0.4, zorder=3
+                )
+
+            # Pareto front dashed line
+            pf_epw = pareto_epw.sort_values(heating_col)
+            ax.plot(
+                pf_epw[heating_col] / 3.6e6, pf_epw[cooling_col] / 3.6e6,
+                '--', color='grey', lw=0.8, zorder=2
+            )
+
+            # Legend
+            legend_handles = [
+                Line2D([0], [0], marker='o', color='w', markerfacecolor='#cccccc',
+                       markersize=7, alpha=0.6, label='Dominated'),
+            ]
+
+            if use_colormap:
+                if size_by and size_by in pareto_epw.columns:
+                    size_col = pareto_epw[size_by]
+                    for sv in [size_col.min(), size_col.median(), size_col.max()]:
+                        ms = max(4, min(18, (sv * 300) ** 0.5 / 1.5))
+                        legend_handles.append(
+                            Line2D([0], [0], marker='o', color='w',
+                                   markerfacecolor='#888888', markeredgecolor='k',
+                                   markersize=ms, label=f'{size_by} = {sv:.2f}')
+                        )
+                legend_handles.append(
+                    Line2D([0], [0], marker='o', color='w',
+                           markerfacecolor='#888888', markeredgecolor='k',
+                           markersize=9, label='Pareto-optimal')
+                )
+            else:
+                legend_handles.append(
+                    Line2D([0], [0], marker='o', color='w', markerfacecolor='#e63946',
+                           markeredgecolor='k', markersize=9, label='Pareto-optimal')
+                )
+
+            ax.legend(handles=legend_handles, fontsize=8, loc='upper right')
+
+            ax.set_xlabel('Annual Heating Electricity (kWh)', fontsize=12)
+            ax.set_ylabel('Annual Cooling Electricity (kWh)', fontsize=12)
+            title_base = 'Pareto Front'
+            if hasattr(self, 'parameters_type'):
+                title_base += ' - ' + self.parameters_type.title()
+            title_lines = [title_base + ' [' + epw_tag + ']']
+            subtitle_parts = []
+            if size_by:
+                subtitle_parts.append('Dot size proportional to ' + size_by)
+            if color_by:
+                subtitle_parts.append('Colour = ' + color_by)
+            if subtitle_parts:
+                title_lines.append('  |  '.join(subtitle_parts))
+            ax.set_title('\n'.join(title_lines), fontsize=10)
+
+            plt.tight_layout()
+            # Build filename: include color_by and size_by suffixes to avoid
+            # overwriting when the method is called multiple times with different encodings.
+            fname_suffix = epw_tag
+            if color_by:
+                fname_suffix += '_c_' + color_by
+            if size_by:
+                fname_suffix += '_s_' + size_by
+            fname_pareto = os.path.join(out_dir, 'plot_pareto_front_' + fname_suffix + '.png')
+            plt.savefig(fname_pareto, dpi=300, bbox_inches='tight')
+            plt.close()
+            print('  Pareto front plot saved: ' + fname_pareto)
+
+    def plot_parallel_coordinates(self, out_dir: str = '.'):
+        """
+        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
+            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
+
+        Plots a multivariate parallel coordinates visualization of the parameter space.
+        """
+        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
+            raise ValueError("Parallel coordinates plot requires either a parametric or optimisation simulation to be run first.")
+        import os
+        import matplotlib.pyplot as plt
+        from matplotlib.lines import Line2D
+
+        os.makedirs(out_dir, exist_ok=True)
+        df = self.outputs_optimisation.copy()
+        epw_labels = df['epw'].unique()
+        param_cols = self.problem.names('inputs')
+
+        df['pareto_str'] = df['pareto-optimal'].map({True: 'Pareto-optimal', False: 'Dominated'})
+
+        for epw_label in epw_labels:
+            epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
+            df_epw = df[df['epw'] == epw_label].copy()
+            
+            df_pc_norm = df_epw[param_cols + ['pareto_str']].copy()
+            for c in param_cols:
+                lo, hi = df_pc_norm[c].min(), df_pc_norm[c].max()
+                if hi > lo:
+                    df_pc_norm[c] = (df_pc_norm[c] - lo) / (hi - lo)
+                else:
+                    df_pc_norm[c] = 0.5
+
+            fig, ax = plt.subplots(figsize=(12, 5))
+            colour_map = {'Pareto-optimal': '#e63946', 'Dominated': '#adb5bd'}
+            
+            for _, row in df_pc_norm.iterrows():
+                colour = colour_map[row['pareto_str']]
+                alpha = 0.7 if row['pareto_str'] == 'Pareto-optimal' else 0.12
+                lw = 1.2 if row['pareto_str'] == 'Pareto-optimal' else 0.5
+                ax.plot(range(len(param_cols)), row[param_cols].values, color=colour, alpha=alpha, lw=lw)
+
+            ax.set_xticks(range(len(param_cols)))
+            ax.set_xticklabels([c.replace('_', '\n') for c in param_cols], fontsize=9)
+            ax.set_ylabel('Normalised parameter value', fontsize=10)
+            ax.set_title(f'Parallel Coordinates [{epw_tag}]\n(Red = Pareto-optimal | Grey = Dominated)', fontsize=11)
+            
+            legend_elements = [
+                Line2D([0], [0], color='#e63946', lw=1.5, label='Pareto-optimal'),
+                Line2D([0], [0], color='#adb5bd', lw=1.0, label='Dominated'),
+            ]
+            ax.legend(handles=legend_elements, loc='upper right', fontsize=9)
+            
+            plt.tight_layout()
+            fname_parallel = os.path.join(out_dir, f'plot_parallel_coordinates_{epw_tag}.png')
+            plt.savefig(fname_parallel, dpi=300, bbox_inches='tight')
+            plt.close()
+            print(f"  Parallel coordinates plot saved: {fname_parallel}")
+
+    def plot_pairwise_scatter_matrix(self, out_dir: str = '.'):
+        """
+        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
+            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
+
+        Plots a pairwise scatter matrix using seaborn.PairGrid for Pareto-optimal solutions.
+        """
+        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
+            raise ValueError("Pairwise scatter matrix requires either a parametric or optimisation simulation to be run first.")
+        import os
+        import matplotlib.pyplot as plt
+        import matplotlib.cm as cm
+        from matplotlib.colors import Normalize
+        try:
+            import seaborn as sns
+        except ImportError:
+            print("[!] Seaborn is required for PairGrid. Please pip install seaborn.")
+            return
+
+        os.makedirs(out_dir, exist_ok=True)
+        df = self.outputs_optimisation.copy()
+        
+        heating_col = next((c for c in df.columns if 'Heating:Electricity' in c), None)
+        cooling_col = next((c for c in df.columns if 'Cooling:Electricity' in c), None)
+        if heating_col and cooling_col:
+            df['Total [kWh]'] = (df[heating_col] + df[cooling_col]) / 3.6e6
+        else:
+            df['Total [kWh]'] = 0
+
+        epw_labels = df['epw'].unique()
+        param_cols = self.problem.names('inputs')
+
+        for epw_label in epw_labels:
+            epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
+            pareto_epw = df[(df['epw'] == epw_label) & (df['pareto-optimal'])].copy()
+
+            if len(pareto_epw) < 2:
+                print(f"  [!] Skipping PairGrid for {epw_tag}: fewer than 2 Pareto-optimal points.")
+                continue
+
+            norm_e = Normalize(pareto_epw['Total [kWh]'].min(), pareto_epw['Total [kWh]'].max())
+            cmap_e = cm.get_cmap('coolwarm')
+
+            def _pairplot_scatter(x, y, **kwargs):
+                ax_pg = plt.gca()
+                colours = cmap_e(norm_e(pareto_epw.loc[x.index, 'Total [kWh]'].values))
+                ax_pg.scatter(x.values, y.values, c=colours, s=30, alpha=0.8, edgecolors='k', linewidths=0.2)
+
+            def _pairplot_hist(x, **kwargs):
+                plt.gca().hist(x, bins=10, color='#457b9d', alpha=0.7, edgecolor='white')
+
+            g = sns.PairGrid(pareto_epw[param_cols + ['Total [kWh]']], vars=param_cols)
+            g.map_diag(_pairplot_hist)
+            g.map_offdiag(_pairplot_scatter)
+            
+            sm = cm.ScalarMappable(cmap='coolwarm', norm=norm_e)
+            sm.set_array([])
+            cbar = g.figure.colorbar(sm, ax=g.axes, shrink=0.6, pad=0.02)
+            cbar.set_label('Total HVAC Energy (kWh)', fontsize=9)
+            
+            g.figure.suptitle(f'Pairwise Parameter Space – Pareto-Optimal Solutions [{epw_tag}]', y=1.01, fontsize=11)
+            
+            fname_pair = os.path.join(out_dir, f'plot_pairwise_scatter_matrix_{epw_tag}.png')
+            g.figure.savefig(fname_pair, dpi=300, bbox_inches='tight')
+            plt.close('all')
+            print(f"  Pairwise scatter matrix saved: {fname_pair}")
+
+    def run_robustness_analysis(
+            self,
+            optimal_solutions_df: pd.DataFrame,
+            epws_robustness: list,
+            out_dir: str = '.'
+    ):
+        """
+        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
+            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
+
+        Evaluates the robustness of selected optimal solutions against variations in weather (multiple EPWs).
+        
+        TODO: Future expansion could include small mathematical parametric perturbations (e.g. ±5%) 
+        within the same method or via an additional argument.
+        
+        :param optimal_solutions_df: A subset DataFrame of the optimal solutions (e.g., from MCDM).
+        :param epws_robustness: A list of EPW strings to test against.
+        :param out_dir: Output directory for saving the robustness results.
+        """
+        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
+            raise ValueError("Robustness analysis requires either a parametric or optimisation simulation to be run first.")
+        import os
+        import glob
+        import shutil
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+
+        os.makedirs(out_dir, exist_ok=True)
+        df_params = optimal_solutions_df[self.problem.names('inputs')].copy().drop_duplicates()
+        
+        print(f"Starting Robustness Analysis: {len(df_params)} solutions across {len(epws_robustness)} alternative EPWs.")
+        
+        results_list = []
+        for epw in epws_robustness:
+            epw_tag = epw.replace('\\', '/').split('/')[-1].replace('.epw', '')
+            print(f"  Evaluating robustness against EPW: {epw_tag}...")
+            
+            evaluator = self.set_evaluator(epw=epw, out_dir=out_dir)
+            outputs = evaluator.df_apply(df_params, keep_input=True, keep_dirs=False)
+            outputs['Robustness_EPW'] = epw_tag
+            
+            # Basic identification of solutions by their parameter combination string
+            outputs['Solution_ID'] = 'Sol_' + outputs.index.astype(str)
+            results_list.append(outputs)
+            
+            # Clean up BESOS_Output working directories created by df_apply when keep_dirs=False
+            worker_dirs = glob.glob(os.path.join(out_dir, "BESOS_Output*"))
+            for w_dir in worker_dirs:
+                if os.path.isdir(w_dir):
+                    try:
+                        shutil.rmtree(w_dir)
+                    except Exception:
+                        pass
+        
+        robustness_df = pd.concat(results_list, ignore_index=True)
+        
+        # Identify heating/cooling columns
+        heating_col = next((c for c in robustness_df.columns if 'Heating:Electricity' in c), None)
+        cooling_col = next((c for c in robustness_df.columns if 'Cooling:Electricity' in c), None)
+        
+        if heating_col and cooling_col:
+            robustness_df['Total_Energy_kWh'] = (robustness_df[heating_col] + robustness_df[cooling_col]) / 3.6e6
+            
+            # Plot the robustness variation (Boxplot)
+            plt.figure(figsize=(10, 6))
+            sns.boxplot(x='Solution_ID', y='Total_Energy_kWh', data=robustness_df, color='lightblue')
+            sns.stripplot(x='Solution_ID', y='Total_Energy_kWh', data=robustness_df, hue='Robustness_EPW',
+                          jitter=True, marker='o', alpha=0.8)
+            plt.title('Robustness Analysis: Optimal Solutions under Weather Variations')
+            plt.ylabel('Total HVAC Energy (kWh)')
+            plt.xlabel('Candidate Solutions')
+            plt.legend(title='Climate Scenario', bbox_to_anchor=(1.05, 1), loc='upper left')
+            plt.tight_layout()
+            
+            fname_plot = os.path.join(out_dir, 'plot_robustness_analysis.png')
+            plt.savefig(fname_plot, dpi=300, bbox_inches='tight')
+            plt.close()
+            print(f"  Robustness plot saved: {fname_plot}")
+            
+        csv_path = os.path.join(out_dir, 'results_robustness.csv')
+        robustness_df.to_csv(csv_path, index=False)
+        print(f"  Robustness data saved: {csv_path}")
+        
+        return robustness_df
+
 
 class AccimPredefModelsParamSim(OptimParamSimulation):
     def __init__(
