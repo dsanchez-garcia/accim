@@ -1226,6 +1226,32 @@ class OptimParamSimulation:
                         pass
                 outputs_optimisation.at[idx, 'simulation_directory'] = pd.NA
                 outputs_optimisation.at[idx, 'simulation_output_csv_path'] = pd.NA
+        elif keep_sim_files == 'none':
+            import shutil
+            import glob
+            # Forcefully clean up any worker BESOS_Output folders created during this run.
+            # When keep_sim_files='none', besos does not generate unique subdirectories
+            # per evaluation, so the raw files overwrite each other directly in the 
+            # out_dir/BESOS_Output_{pid} working directory, which is left behind.
+            worker_dirs = glob.glob(os.path.join(out_dir, "BESOS_Output*"))
+            for w_dir in worker_dirs:
+                if os.path.isdir(w_dir):
+                    try:
+                        shutil.rmtree(w_dir)
+                    except Exception:
+                        pass
+            
+            # Clean up the JSONL evaluation logs that are no longer needed
+            log_files = glob.glob(os.path.join(out_dir, "optim_eval_log_*.jsonl"))
+            for log_file in log_files:
+                try:
+                    os.remove(log_file)
+                except OSError:
+                    pass
+            
+            # Since simulation files are deleted, clean the dataframe paths
+            outputs_optimisation['simulation_directory'] = pd.NA
+            outputs_optimisation['simulation_output_csv_path'] = pd.NA
 
         if keep_df == 'non-dominated':
             outputs_optimisation = outputs_optimisation[outputs_optimisation['pareto-optimal']].copy()
