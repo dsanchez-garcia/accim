@@ -856,6 +856,78 @@ class OptimParamSimulation:
 
         self.parameters_values_df = parameters_values_df
 
+    def _get_salib_problem(self) -> dict:
+        """
+        Internal method to build the SALib problem dictionary based on besos parameters.
+        """
+        names = self.problem.names('inputs')
+        bounds = []
+        from besos.parameters import RangeParameter
+        for inp in self.problem.inputs:
+            desc = inp.value_descriptors[0]
+            if not isinstance(desc, RangeParameter):
+                raise ValueError(f"Parameter {inp.name} must be a RangeParameter for Sensitivity Analysis.")
+            bounds.append([desc.min, desc.max])
+
+        problem = {
+            'num_vars': len(names),
+            'names': names,
+            'bounds': bounds
+        }
+        return problem
+
+    def sampling_sobol(self, num_samples: int = 128):
+        """
+        Uses Saltelli's extension of the Sobol sequence to generate samples for Sensitivity Analysis.
+        The samples are saved into a pandas DataFrame, stored in an internal variable named parameters_values_df.
+        Requires SALib to be installed.
+
+        :param num_samples: an integer; represents the number of samples to generate.
+            The total number of samples generated will be num_samples * (2 * num_vars + 2).
+            For Sobol, num_samples should preferably be a power of 2 (e.g. 64, 128, 256, 512, 1024).
+        """
+        if not self.descriptors_has_range:
+            raise KeyError('sampling_sobol method can only be used with range descriptors.')
+
+        try:
+            from SALib.sample import saltelli
+        except ImportError:
+            raise ImportError("SALib is required for Sensitivity Analysis. Install it with: pip install SALib")
+
+        problem = self._get_salib_problem()
+        
+        # Generate samples using SALib
+        samples = saltelli.sample(problem, num_samples)
+        
+        # Convert to pandas DataFrame with column names matching the parameters
+        self.parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
+
+    def sampling_morris(self, num_samples: int = 100, num_levels: int = 4):
+        """
+        Uses Morris' method to generate samples for Sensitivity Analysis.
+        The samples are saved into a pandas DataFrame, stored in an internal variable named parameters_values_df.
+        Requires SALib to be installed.
+
+        :param num_samples: an integer; represents the number of trajectories (N).
+            The total number of samples generated will be num_samples * (num_vars + 1).
+        :param num_levels: number of grid levels.
+        """
+        if not self.descriptors_has_range:
+            raise KeyError('sampling_morris method can only be used with range descriptors.')
+
+        try:
+            from SALib.sample import morris as morris_sampler
+        except ImportError:
+            raise ImportError("SALib is required for Sensitivity Analysis. Install it with: pip install SALib")
+
+        problem = self._get_salib_problem()
+        
+        # Generate samples using SALib
+        samples = morris_sampler.sample(problem, N=num_samples, num_levels=num_levels)
+        
+        # Convert to pandas DataFrame with column names matching the parameters
+        self.parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
+
     def set_evaluator(
             self,
             epw: str,
@@ -1611,6 +1683,151 @@ class OptimParamSimulation:
         internal variable named outputs_hourly_columns
         """
         self.outputs_hourly_columns = identify_hourly_columns(self.outputs_param_simulation)
+
+    def run_sensitivity_analysis(self, method: Literal['sobol', 'morris'] = 'sobol', **kwargs) -> dict:
+        """
+        Runs Sensitivity Analysis on the results of a parametric simulation using SALib.
+        
+        :param method: 'sobol' or 'morris'. Must match the sampling method used.
+        :param kwargs: additional arguments to pass to SALib.analyze.sobol or SALib.analyze.morris.
+        :return: a dictionary mapping each output name to its SALib analysis results.
+        """
+        if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
+            raise ValueError("You must run run_parametric_simulation before running sensitivity analysis.")
+
+        try:
+            from SALib.analyze import sobol, morris
+        except ImportError:
+            raise ImportError("SALib is required for Sensitivity Analysis. Install it with: pip install SALib")
+
+        problem = self._get_salib_problem()
+        df = self.outputs_param_simulation
+        output_names = self.problem.names("outputs")
+        
+        results = {}
+        for output_name in output_names:
+            if output_name not in df.columns:
+                print(f"Warning: Output {output_name} not found in results DataFrame. Skipping.")
+                continue
+                
+            Y = df[output_name].values.astype(float)
+            
+            if method == 'sobol':
+                try:
+                    res = sobol.analyze(problem, Y, **kwargs)
+                except ValueError as e:
+                    raise ValueError(f"Error analyzing with Sobol. Make sure you generated samples with sampling_sobol(). Details: {e}")
+            elif method == 'morris':
+                try:
+                    res = morris.analyze(problem, df[problem['names']].values.astype(float), Y, **kwargs)
+                except ValueError as e:
+                    raise ValueError(f"Error analyzing with Morris. Make sure you generated samples with sampling_morris(). Details: {e}")
+            else:
+                raise ValueError(f"Unknown sensitivity analysis method: {method}")
+                
+            results[output_name] = res
+            
+        self.sensitivity_results = results
+        return results
+
+    def get_best_compromise_solution(self, method: Literal['knee_point', 'topsis'] = 'topsis', weights: list = None) -> pd.DataFrame:
+        """
+        Identifies the best compromise solution from the Pareto front.
+
+        :param method: The MCDM method to use. 'knee_point' (closest distance to Utopia point) or 'topsis'.
+        :param weights: A list of weights for each objective, used only in 'topsis'. 
+            If None, equal weights are applied. Must match the number of objectives.
+        :return: A pandas DataFrame containing the best compromise solution(s).
+        """
+        if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
+            raise ValueError("No optimization results found. Run optimization first.")
+
+        # Filter for Pareto optimal solutions
+        pareto_df = self.outputs_optimisation[self.outputs_optimisation['pareto-optimal'] == True].copy()
+        if pareto_df.empty:
+            raise ValueError("No Pareto optimal solutions found in outputs_optimisation.")
+
+        output_names = self.problem.names("outputs")
+        minimize_outputs = getattr(self.problem, 'minimize_outputs', None)
+        
+        if minimize_outputs is None:
+            minimize_flags = [True] * len(output_names)
+        else:
+            minimize_flags = [(m if m is not None else True) for m in minimize_outputs]
+
+        # Extract objectives array
+        obj_values = pareto_df[output_names].values.astype(float)
+        
+        # Step 1: Normalize (Min-Max normalization to [0, 1])
+        mins = obj_values.min(axis=0)
+        maxs = obj_values.max(axis=0)
+        
+        # Avoid division by zero if all values in an objective are the same
+        ranges = maxs - mins
+        ranges[ranges == 0] = 1.0
+        
+        norm_values = (obj_values - mins) / ranges
+        
+        if method == 'knee_point':
+            # Step 2: Define Utopia point in normalized space
+            # For minimized objectives, ideal is 0. For maximized, ideal is 1.
+            utopia = np.zeros(len(output_names))
+            for i, minimize in enumerate(minimize_flags):
+                if not minimize:
+                    utopia[i] = 1.0
+                    
+            # Step 3: Calculate Euclidean distance to Utopia point
+            distances = np.sqrt(np.sum((norm_values - utopia)**2, axis=1))
+            pareto_df['distance_to_utopia'] = distances
+            
+            # Step 4: Find minimum distance
+            best_idx = np.argmin(distances)
+            return pareto_df.iloc[[best_idx]].copy()
+            
+        elif method == 'topsis':
+            if weights is None:
+                weights = np.ones(len(output_names)) / len(output_names)
+            else:
+                if len(weights) != len(output_names):
+                    raise ValueError(f"Length of weights ({len(weights)}) must match number of outputs ({len(output_names)}).")
+                weights = np.array(weights) / np.sum(weights)
+
+            sq_sum = np.sqrt(np.sum(obj_values**2, axis=0))
+            sq_sum[sq_sum == 0] = 1.0
+            topsis_norm = obj_values / sq_sum
+            
+            weighted_norm = topsis_norm * weights
+            
+            # Determine ideal best and ideal worst
+            ideal_best = np.zeros(len(output_names))
+            ideal_worst = np.zeros(len(output_names))
+            
+            for i, minimize in enumerate(minimize_flags):
+                if minimize:
+                    ideal_best[i] = np.min(weighted_norm[:, i])
+                    ideal_worst[i] = np.max(weighted_norm[:, i])
+                else:
+                    ideal_best[i] = np.max(weighted_norm[:, i])
+                    ideal_worst[i] = np.min(weighted_norm[:, i])
+                    
+            # Distance to ideal best and worst
+            d_best = np.sqrt(np.sum((weighted_norm - ideal_best)**2, axis=1))
+            d_worst = np.sqrt(np.sum((weighted_norm - ideal_worst)**2, axis=1))
+            
+            # Closeness coefficient (C)
+            # Avoid division by zero
+            denom = d_best + d_worst
+            denom[denom == 0] = 1.0
+            closeness = d_worst / denom
+            
+            pareto_df['topsis_score'] = closeness
+            
+            # Best is maximum closeness
+            best_idx = np.argmax(closeness)
+            return pareto_df.iloc[[best_idx]].copy()
+            
+        else:
+            raise ValueError(f"Unknown MCDM method: {method}")
 
 class AccimPredefModelsParamSim(OptimParamSimulation):
     def __init__(
