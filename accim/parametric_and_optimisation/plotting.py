@@ -38,7 +38,7 @@ class PlottingMixin:
             raise ValueError('MCDM best compromise solutions can only be evaluated after an optimisation simulation. Please ensure you run run_optimisation() first.')
         import matplotlib.pyplot as plt
         unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
-        divisor = divisor
+        divisor = 3600000.0
         if normalize_per_m2:
             area = getattr(self, 'building_floor_area', None)
             if not area:
@@ -139,7 +139,7 @@ class PlottingMixin:
         from matplotlib.lines import Line2D
         import pandas as pd
         unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
-        divisor = divisor
+        divisor = 3600000.0
         if normalize_per_m2:
             area = getattr(self, 'building_floor_area', None)
             if not area:
@@ -274,7 +274,7 @@ class PlottingMixin:
         import matplotlib.cm as cm
         from matplotlib.colors import Normalize
         unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
-        divisor = divisor
+        divisor = 3600000.0
         if normalize_per_m2:
             area = getattr(self, 'building_floor_area', None)
             if not area:

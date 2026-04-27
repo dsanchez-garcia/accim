@@ -387,7 +387,7 @@ class AnalysisMixin:
         import matplotlib.pyplot as plt
         import seaborn as sns
         unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
-        divisor = divisor
+        divisor = 3600000.0
         if normalize_per_m2:
             area = getattr(self, 'building_floor_area', None)
             if not area:
