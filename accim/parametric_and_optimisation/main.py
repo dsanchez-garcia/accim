@@ -76,7 +76,7 @@ def get_mdd_file_as_df():
 
 class OptimParamSimulation(AnalysisMixin, PlottingMixin):
 
-    def __init__(self, building: IDF_class=None, parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None]=None, output_type: Literal['standard', 'custom', 'detailed', 'simplified']='standard', output_keep_existing: bool=False, output_freqs: List[allowed_output_freqs]=['hourly'], ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac']='vrf_mm', SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature']='temperature difference', make_averages: bool=False, debugging: bool=False, verbosemode: bool=True, bypass_addAccis: bool=False):
+    def __init__(self, building: Union[IDF_class, List]=None, parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None]=None, output_type: Literal['standard', 'custom', 'detailed', 'simplified']='standard', output_keep_existing: bool=False, output_freqs: List[allowed_output_freqs]=['hourly'], ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac']='vrf_mm', SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature']='temperature difference', make_averages: bool=False, debugging: bool=False, verbosemode: bool=True, bypass_addAccis: bool=False):
         """
         Creates a class instance to run parametric simulations and optimisation.
 
@@ -130,9 +130,18 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.output_type = output_type
             self.make_averages = make_averages
             if not bypass_addAccis:
-                accis.addAccis(idf=building, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=output_keep_existing, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
+                if isinstance(building, list):
+                    for b in building:
+                        accis.addAccis(idf=b, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=output_keep_existing, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
+                else:
+                    accis.addAccis(idf=building, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=output_keep_existing, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
         elif is_apmv_setpoints:
-            apmv.apply_apmv_setpoints(building=building, outputs_freq=output_freqs)
+            if not bypass_addAccis:
+                if isinstance(building, list):
+                    for b in building:
+                        apmv.apply_apmv_setpoints(building=b, outputs_freq=output_freqs)
+                else:
+                    apmv.apply_apmv_setpoints(building=building, outputs_freq=output_freqs)
             print('Arguments output_type, output_keep_existing, ScriptType, and SupplyAirTempInputMethod are only used in accim predefined and custom models, therefore these will not have any effect in this case.')
         elif parameters_type is None:
             self.ScriptType = None
@@ -141,7 +150,8 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.output_keep_existing = None
             self.output_type = None
             self.make_averages = None
-        self.building = building
+        self.building = building[0] if isinstance(building, list) and len(building) > 0 else building
+        self.buildings = building if isinstance(building, list) else ([building] if building is not None else [])
         self.output_freqs = output_freqs
         self.parameters_type = parameters_type
         self.is_accim_custom_model = is_accim_custom_model
@@ -167,7 +177,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
 
     def _save_idf_backup(self, label: str = '', out_dir: str = None) -> str:
         """
-        Saves a copy of ``self.building`` to disk as an IDF file and stores
+        Saves a copy of ``self.buildings`` to disk as an IDF file and stores
         the path in ``self.idf_backup_path``.
 
         :param label: optional suffix to embed in the filename.
@@ -182,10 +192,15 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             backup_dir = out_dir
         os.makedirs(backup_dir, exist_ok=True)
         suffix = f'_{label}' if label else ''
-        filename = f'accim_idf_backup{suffix}_{timestamp}.idf'
-        backup_path = os.path.join(backup_dir, filename)
-        self.building.savecopy(backup_path)
-        self.idf_backup_path = os.path.abspath(backup_path)
+        self.idf_backup_path = []
+        for i, b in enumerate(self.buildings):
+            idf_basename = os.path.basename(b.idfname).replace('.idf', '') if hasattr(b, 'idfname') and b.idfname else f'unknown_idf_{i}'
+            filename = f'accim_idf_backup_{idf_basename}{suffix}_{timestamp}.idf'
+            backup_path = os.path.join(backup_dir, filename)
+            b.savecopy(backup_path)
+            self.idf_backup_path.append(os.path.abspath(backup_path))
+        if len(self.idf_backup_path) == 1:
+            self.idf_backup_path = self.idf_backup_path[0]
         return self.idf_backup_path
 
     def get_output_var_df_from_idf(self) -> pd.DataFrame:
@@ -224,13 +239,15 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         :return:
         """
         if self.is_accim_custom_model or self.is_accim_predef_model:
-            accis.addAccis(idf=self.building, ScriptType=self.ScriptType, SupplyAirTempInputMethod=self.SupplyAirTempInputMethod, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_take_dataframe=outputs_df, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, make_averages=self.make_averages, verboseMode=False)
+            for b in self.buildings:
+                accis.addAccis(idf=b, ScriptType=self.ScriptType, SupplyAirTempInputMethod=self.SupplyAirTempInputMethod, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_take_dataframe=outputs_df, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, make_averages=self.make_averages, verboseMode=False)
         else:
-            alloutputs = [output for output in self.building.idfobjects['Output:Variable']]
-            for i in alloutputs:
-                self.building.removeidfobject(i)
-            for i in outputs_df.index:
-                self.building.newidfobject('Output:Variable', Key_Value=outputs_df.loc[i, 'key_value'], Variable_Name=outputs_df.loc[i, 'variable_name'], Reporting_Frequency=outputs_df.loc[i, 'frequency'].capitalize(), Schedule_Name=outputs_df.loc[i, 'schedule_name'])
+            for b in self.buildings:
+                alloutputs = [output for output in b.idfobjects['Output:Variable']]
+                for i in alloutputs:
+                    b.removeidfobject(i)
+                for i in outputs_df.index:
+                    b.newidfobject('Output:Variable', Key_Value=outputs_df.loc[i, 'key_value'], Variable_Name=outputs_df.loc[i, 'variable_name'], Reporting_Frequency=outputs_df.loc[i, 'frequency'].capitalize(), Schedule_Name=outputs_df.loc[i, 'schedule_name'])
 
     def set_output_met_objects_to_idf(self, output_meters: list):
         """
@@ -240,9 +257,10 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         :param output_meters: a list containing Output:Meter objects to be added
         :return:
         """
-        for meter in output_meters:
-            for freq in self.output_freqs:
-                self.building.newidfobject(key='OUTPUT:METER', Key_Name=meter, Reporting_Frequency=freq)
+        for b in self.buildings:
+            for meter in output_meters:
+                for freq in self.output_freqs:
+                    b.newidfobject(key='OUTPUT:METER', Key_Name=meter, Reporting_Frequency=freq)
 
     def get_outputs_df_from_testsim(self, reduce_sim_time: bool=True) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
@@ -320,9 +338,11 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             available_params = [i for i in params_dicts.accim_custom_model_params.keys()]
         elif self.is_apmv_setpoints:
             available_params = [i for i in params_dicts.apmv_setpoints_params.keys()]
+        else:
+            available_params = []
         return available_params
 
-    def set_parameters(self, accis_params_dict: dict, additional_params: list=None, use_dflt_values: bool=True):
+    def set_parameters(self, accis_params_dict: dict = None, additional_params: list=None, use_dflt_values: bool=True):
         """
         Sets the parameters for the parametric analysis or optimisation.
 
@@ -335,10 +355,12 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         :param VentCtrl: only used in accim predefined and custom models; sets the VentCtrl argument;
             for more information, refer to addAccis
         """
+        if accis_params_dict is None:
+            accis_params_dict = {}
         accis_descriptors_has_options = False
         add_descriptors_has_options = False
         descriptors_has_options = False
-        if all([type(v) == list for v in accis_params_dict.values()]):
+        if len(accis_params_dict) > 0 and all([type(v) == list for v in accis_params_dict.values()]):
             accis_descriptors_has_options = True
         if additional_params is not None:
             if all([type(additional_params[i].value_descriptor) == CategoryParameter for i in range(len(additional_params))]):
@@ -355,7 +377,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         accis_descriptors_has_range = False
         add_descriptors_has_range = False
         descriptors_has_range = False
-        if all([type(v) == tuple for v in accis_params_dict.values()]):
+        if len(accis_params_dict) > 0 and all([type(v) == tuple for v in accis_params_dict.values()]):
             accis_descriptors_has_range = True
         if additional_params is not None:
             if all([type(additional_params[i].value_descriptor) == RangeParameter for i in range(len(additional_params))]):
@@ -374,7 +396,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         for p in parameters:
             if p not in available_parameters:
                 not_allowed_parameters.append(p)
-        if len(not_allowed_parameters) > 0:
+        if len(not_allowed_parameters) > 0 and self.parameters_type is not None:
             raise ValueError(f'The following parameters are not allowed in parameters_type {self.parameters_type}: {not_allowed_parameters}')
         if self.is_accim_custom_model:
             bf_accim.modify_ComfStand(self.building, 99)
@@ -586,15 +608,17 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         samples = morris_sampler.sample(problem, N=num_samples, num_levels=num_levels)
         self.parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
 
-    def set_evaluator(self, epw: str, out_dir: str) -> besos.evaluator.EvaluatorEP:
+    def set_evaluator(self, epw: str, out_dir: str, building: IDF_class = None) -> besos.evaluator.EvaluatorEP:
         """
         Used internally for setting the evaluator in run_parametric_simulation and run_optimisation methods.
 
         :param epw: The epw file name
         :param out_dir: The name of the output directory to save the results.
+        :param building: Optional building to evaluate (if multiple are simulated)
         :return: the besos.evaluator.EvaluatorEP class instance
         """
-        evaluator = EvaluatorEP(problem=self.problem, building=self.building, epw=epw, out_dir=out_dir)
+        b = building if building is not None else self.building
+        evaluator = EvaluatorEP(problem=self.problem, building=b, epw=epw, out_dir=out_dir)
         return evaluator
 
     def run_parametric_simulation(self, epws: list, out_dir: str, df: pd.DataFrame, processes: int=2, keep_input: bool=True, keep_dirs: bool=True) -> pd.DataFrame:
@@ -611,16 +635,20 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         """
         outputs_dict = {}
         evaluators = {}
-        for epw in epws:
-            epwname = epw.split('.epw')[0]
-            evaluator = self.set_evaluator(epw=epw, out_dir=out_dir)
-            outputs = evaluator.df_apply(df=df, keep_input=keep_input, keep_dirs=keep_dirs, processes=processes)
-            outputs['epw'] = epwname
-            outputs_dict.update({epwname: outputs})
-            evaluators.update({epwname: evaluator})
+        for b in self.buildings:
+            idf_basename = os.path.basename(b.idfname).replace('.idf', '') if hasattr(b, 'idfname') and b.idfname else 'unknown_idf'
+            for epw in epws:
+                epwname = epw.split('.epw')[0]
+                evaluator = self.set_evaluator(epw=epw, out_dir=out_dir, building=b)
+                outputs = evaluator.df_apply(df=df, keep_input=keep_input, keep_dirs=keep_dirs, processes=processes)
+                outputs['epw'] = epwname
+                outputs['idf'] = idf_basename
+                key = f"{idf_basename}_{epwname}" if len(self.buildings) > 1 else epwname
+                outputs_dict.update({key: outputs})
+                evaluators.update({key: evaluator})
         outputs_param_simulation = pd.concat([df for df in outputs_dict.values()])
-        if len(epws) > 1:
-            outputs_param_simulation = outputs_param_simulation.reset_index()
+        if len(epws) > 1 or len(self.buildings) > 1:
+            outputs_param_simulation = outputs_param_simulation.reset_index(drop=True)
         if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
             outputs_param_simulation.attrs['parameters_names'] = self.problem.names('inputs')
             outputs_param_simulation.attrs['outputs_names'] = self.problem.names('outputs')
@@ -790,19 +818,21 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             platypus_evaluator = platypus.ProcessPoolEvaluator(processes)
             PlatypusConfig.default_evaluator = platypus_evaluator
         try:
-            for epw in epws:
-                evaluator = self.set_evaluator(epw=epw, out_dir=out_dir)
-                evaluator._keep_sim_files = keep_sim_files
-                evaluator._keep_sim_files_batch_size = keep_sim_files_batch_size
-                evaluator._keep_dirs = False if keep_sim_files == 'none' else True
-                evaluator._optimisation_eval_records = []
-                epwname = epw.split('.epw')[0]
-                evaluator._optimisation_log_base = os.path.join(out_dir, f'optim_eval_log_{epwname}_{os.getpid()}')
-                for log_file in pyglob.glob(f'{evaluator._optimisation_log_base}_*.jsonl'):
-                    try:
-                        os.remove(log_file)
-                    except OSError:
-                        pass
+            for b in self.buildings:
+                idf_basename = os.path.basename(b.idfname).replace('.idf', '') if hasattr(b, 'idfname') and b.idfname else 'unknown_idf'
+                for epw in epws:
+                    evaluator = self.set_evaluator(epw=epw, out_dir=out_dir, building=b)
+                    evaluator._keep_sim_files = keep_sim_files
+                    evaluator._keep_sim_files_batch_size = keep_sim_files_batch_size
+                    evaluator._keep_dirs = False if keep_sim_files == 'none' else True
+                    evaluator._optimisation_eval_records = []
+                    epwname = epw.split('.epw')[0]
+                    evaluator._optimisation_log_base = os.path.join(out_dir, f'optim_eval_log_{idf_basename}_{epwname}_{os.getpid()}')
+                    for log_file in pyglob.glob(f'{evaluator._optimisation_log_base}_*.jsonl'):
+                        try:
+                            os.remove(log_file)
+                        except OSError:
+                            pass
                 if processes > 1 and hasattr(evaluator, '_building') and hasattr(evaluator._building, 'idfobjects'):
                     evaluator._building.idfobjects = GlobalAllCapsDict(evaluator._building.idfobjects)
                 if algorithm == 'GeneticAlgorithm':
@@ -840,10 +870,13 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 else:
                     raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
                 outputs_optimisation['epw'] = epwname
-                outputs_dict.update({epwname: outputs_optimisation})
+                outputs_optimisation['idf'] = idf_basename
+                key = f"{idf_basename}_{epwname}" if len(self.buildings) > 1 else epwname
+                outputs_dict.update({key: outputs_optimisation})
                 full_outputs_optimisation = self._build_full_optimisation_outputs_df(evaluator=evaluator, epwname=epwname)
-                full_outputs_dict.update({epwname: full_outputs_optimisation})
-                evaluators.update({epwname: evaluator})
+                full_outputs_optimisation['idf'] = idf_basename
+                full_outputs_dict.update({key: full_outputs_optimisation})
+                evaluators.update({key: evaluator})
         finally:
             if processes > 1:
                 platypus_evaluator.close()
@@ -851,10 +884,10 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 if hasattr(AbstractEvaluator, '_original_to_platypus'):
                     AbstractEvaluator.to_platypus = AbstractEvaluator._original_to_platypus
         outputs_optimisation_non_dominated = pd.concat([df for df in outputs_dict.values()])
-        if len(epws) > 1:
-            outputs_optimisation_non_dominated = outputs_optimisation_non_dominated.reset_index()
+        if len(epws) > 1 or len(self.buildings) > 1:
+            outputs_optimisation_non_dominated = outputs_optimisation_non_dominated.reset_index(drop=True)
         outputs_optimisation = pd.concat([df for df in full_outputs_dict.values()])
-        if len(epws) > 1:
+        if len(epws) > 1 or len(self.buildings) > 1:
             outputs_optimisation = outputs_optimisation.reset_index(drop=True)
         outputs_optimisation = self._annotate_pareto_status(outputs_optimisation_full=outputs_optimisation, outputs_optimisation=outputs_optimisation_non_dominated)
         if keep_sim_files == 'non-dominated':
