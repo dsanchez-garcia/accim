@@ -773,6 +773,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             'all' (keeps dominated and non-dominated) or 'non-dominated'.
         :return: a pandas DataFrame
         """
+        self.epws = epws
         available_algorithms = ['GeneticAlgorithm', 'EvolutionaryStrategy', 'NSGAII', 'EpsMOEA', 'GDE3', 'SPEA2', 'MOEAD', 'NSGAIII', 'ParticleSwarm', 'OMOPSO', 'SMPSO', 'CMAES', 'IBEA', 'PAES', 'PESA2', 'EpsNSGAII']
         outputs_dict = {}
         full_outputs_dict = {}
