@@ -192,7 +192,7 @@ class PlottingMixin:
             ax.set_xlabel(f'Annual Heating Electricity ({unit_str})', fontsize=12)
             ax.set_ylabel(f'Annual Cooling Electricity ({unit_str})', fontsize=12)
             title_base = 'Pareto Front'
-            if hasattr(self, 'parameters_type'):
+            if getattr(self, 'parameters_type', None):
                 title_base += ' - ' + self.parameters_type.title()
             title_lines = [title_base + ' [' + epw_tag + ']']
             subtitle_parts = []
