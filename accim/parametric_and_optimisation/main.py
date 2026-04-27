@@ -1,19 +1,3 @@
-# accim - Adaptive-Comfort-Control-Implemented Model
-# Copyright (C) 2021-2025 Daniel Sánchez-García
-
-# accim is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# any later version.
-
-# accim is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-
 import os
 import re
 import json
@@ -21,9 +5,7 @@ import glob as pyglob
 from typing import Literal, List, Union, Optional
 import warnings
 import functools
-
 import accim
-
 import numpy as np
 import pandas as pd
 import besos
@@ -34,125 +16,18 @@ from besos.parameters import RangeParameter, CategoryParameter
 from besos.problem import EPProblem
 from besos.objectives import VariableReader, MeterReader
 from besos import IDF_class
-
-from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always, remove_accents_in_idf, \
-    reduce_runtime, read_eso_using_readvarseso
+from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always, remove_accents_in_idf, reduce_runtime, read_eso_using_readvarseso
 from accim.parametric_and_optimisation.utils import expand_to_hourly_dataframe, identify_hourly_columns
-
 import accim.sim.accis_single_idf_funcs as accis
 import accim.sim.apmv_setpoints as apmv
-
-# To avoid multiprocessing pickling issues with local classes on Windows
-class GlobalAllCapsDict(dict):
-    def __getitem__(self, key):
-        return super().__getitem__(key.upper())
-
-def _patched_eval_func(evaluator, all_outputs):
-    if getattr(evaluator, 'out_dir', None) is not None:
-        if not hasattr(evaluator, '_out_dir_patched'):
-            evaluator.out_dir = f"{evaluator.out_dir}_{os.getpid()}"
-            evaluator._out_dir_patched = True
-    keep_dirs = getattr(evaluator, '_keep_dirs', False)
-    results = evaluator(all_outputs, keep_dirs=keep_dirs)
-    if not hasattr(evaluator, '_optimisation_eval_records'):
-        evaluator._optimisation_eval_records = []
-    eval_record = {'inputs': tuple(all_outputs)}
-    if keep_dirs:
-        eval_record['results'] = tuple(results[:-1])
-        eval_record['sim_dir'] = results[-1]
-    else:
-        eval_record['results'] = tuple(results)
-        eval_record['sim_dir'] = None
-    evaluator._optimisation_eval_records.append(eval_record)
-    log_base = getattr(evaluator, '_optimisation_log_base', None)
-    if log_base is not None:
-        def _json_safe(value):
-            if isinstance(value, dict):
-                return {k: _json_safe(v) for k, v in value.items()}
-            if isinstance(value, (list, tuple)):
-                return [_json_safe(v) for v in value]
-            if isinstance(value, os.PathLike):
-                return os.fspath(value)
-            if hasattr(value, 'item'):
-                try:
-                    return value.item()
-                except (ValueError, TypeError):
-                    pass
-            if isinstance(value, (str, int, float, bool)) or value is None:
-                return value
-            return str(value)
-
-        log_payload = {
-            'inputs': _json_safe(list(eval_record['inputs'])),
-            'results': _json_safe(list(eval_record['results'])),
-            'sim_dir': _json_safe(eval_record['sim_dir']),
-        }
-        log_path = f"{log_base}_{os.getpid()}.jsonl"
-        with open(log_path, 'a', encoding='utf-8') as logfile:
-            logfile.write(json.dumps(log_payload) + '\n')
-    if keep_dirs:
-        results = results[:-1]
-
-    keep_sim_files = getattr(evaluator, '_keep_sim_files', 'all')
-    if keep_dirs and keep_sim_files == 'non-dominated':
-        records = evaluator._optimisation_eval_records
-        if len(records) > 0 and len(records) % getattr(evaluator, '_keep_sim_files_batch_size', 50) == 0:
-            import shutil
-            import numpy as np
-            minimize_flags = getattr(evaluator.problem, 'minimize_outputs', None)
-            output_names = evaluator.problem.names("outputs")
-            n_outputs = len(output_names)
-            if minimize_flags is None:
-                minimize_flags = [True] * n_outputs
-            else:
-                minimize_flags = [(m if m is not None else True) for m in minimize_flags]
-            
-            costs = np.zeros((len(records), n_outputs))
-            for i, rec in enumerate(records):
-                costs[i, :] = rec['results'][:n_outputs]
-                
-            for j, minimize in enumerate(minimize_flags):
-                if not minimize:
-                    costs[:, j] = -costs[:, j]
-                    
-            n = costs.shape[0]
-            is_pareto = np.ones(n, dtype=bool)
-            for i in range(n):
-                if not is_pareto[i]:
-                    continue
-                others_mask = np.arange(n) != i
-                dominated_i = (
-                    np.all(costs[others_mask] <= costs[i], axis=1)
-                    & np.any(costs[others_mask] < costs[i], axis=1)
-                )
-                if np.any(dominated_i):
-                    is_pareto[i] = False
-                    
-            for i in range(n):
-                if not is_pareto[i]:
-                    sim_dir = records[i].get('sim_dir')
-                    if sim_dir is not None and os.path.exists(sim_dir):
-                        try:
-                            shutil.rmtree(sim_dir)
-                        except Exception:
-                            pass
-                        records[i]['sim_dir'] = None
-
-    return evaluator.package_for_platypus(results)
-
-def _patched_to_platypus(self):
-    problem = self.problem.to_platypus()
-    problem.function = functools.partial(_patched_eval_func, self)
-    return problem
-
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf_accim
 import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
 import accim.parametric_and_optimisation.parameters as params
+from accim.parametric_and_optimisation.analysis import AnalysisMixin
+from accim.parametric_and_optimisation.plotting import PlottingMixin
+from accim.parametric_and_optimisation.patches import GlobalAllCapsDict, _patched_eval_func, _patched_to_platypus
 import accim.parametric_and_optimisation.params_dicts as params_dicts
-
-
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
-
 
 def get_rdd_file_as_df():
     """
@@ -160,15 +35,8 @@ def get_rdd_file_as_df():
 
     :return: a pandas DataFrame containing the .rdd file from the test simulation
     """
-    rdd_df = pd.read_csv(
-        filepath_or_buffer='available_outputs/eplusout.rdd',
-        sep=',|;',
-        skiprows=2,
-        names=['object', 'key_value', 'variable_name', 'frequency', 'units'],
-        engine='python'
-    )
+    rdd_df = pd.read_csv(filepath_or_buffer='available_outputs/eplusout.rdd', sep=',|;', skiprows=2, names=['object', 'key_value', 'variable_name', 'frequency', 'units'], engine='python')
     return rdd_df
-
 
 def parse_mtd_file() -> list[Union[dict[str, Union[str, None, list[str]]], dict[str, Union[str, None, list[str]]]]]:
     """
@@ -179,37 +47,23 @@ def parse_mtd_file() -> list[Union[dict[str, Union[str, None, list[str]]], dict[
     meter_list = []
     with open('available_outputs/eplusout.mtd', 'r') as file:
         lines = file.readlines()
-
-    meter_id, description = None, None
+    (meter_id, description) = (None, None)
     on_meters = []
-
     for line in lines:
         line = line.strip()
         if line.startswith('Meters for'):
             if meter_id is not None:
-                meter_list.append({
-                    'meter_id': meter_id,
-                    'description': description,
-                    'on_meters': on_meters
-                })
-            match = re.match(r'Meters for (\d+),(.+)', line)
+                meter_list.append({'meter_id': meter_id, 'description': description, 'on_meters': on_meters})
+            match = re.match('Meters for (\\d+),(.+)', line)
             if match:
                 meter_id = match.group(1)
                 description = match.group(2)
                 on_meters = []
         elif line.startswith('OnMeter'):
             on_meters.append(line.split('=')[1].strip())
-
-    # Add the last meter
     if meter_id is not None:
-        meter_list.append({
-            'meter_id': meter_id,
-            'description': description,
-            'on_meters': on_meters
-        })
-
+        meter_list.append({'meter_id': meter_id, 'description': description, 'on_meters': on_meters})
     return meter_list
-
 
 def get_mdd_file_as_df():
     """
@@ -217,31 +71,12 @@ def get_mdd_file_as_df():
 
     :return: a pandas DataFrame containing the .mdd file from the test simulation
     """
-    mdd_df = pd.read_csv(
-        filepath_or_buffer='available_outputs/eplusout.mdd',
-        sep=',|;',
-        skiprows=2,
-        names=['object', 'meter_name', 'frequency', 'units'],
-        engine='python'
-    )
+    mdd_df = pd.read_csv(filepath_or_buffer='available_outputs/eplusout.mdd', sep=',|;', skiprows=2, names=['object', 'meter_name', 'frequency', 'units'], engine='python')
     return mdd_df
 
+class OptimParamSimulation(AnalysisMixin, PlottingMixin):
 
-class OptimParamSimulation:
-    def __init__(
-            self,
-            building: IDF_class = None,
-            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
-            output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
-            output_keep_existing: bool = False,
-            output_freqs: List[allowed_output_freqs] = ['hourly'],
-            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
-            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
-            make_averages: bool = False,
-            debugging: bool = False,
-            verbosemode: bool = True,
-            bypass_addAccis: bool = False,
-    ):
+    def __init__(self, building: IDF_class=None, parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None]=None, output_type: Literal['standard', 'custom', 'detailed', 'simplified']='standard', output_keep_existing: bool=False, output_freqs: List[allowed_output_freqs]=['hourly'], ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac']='vrf_mm', SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature']='temperature difference', make_averages: bool=False, debugging: bool=False, verbosemode: bool=True, bypass_addAccis: bool=False):
         """
         Creates a class instance to run parametric simulations and optimisation.
 
@@ -265,7 +100,6 @@ class OptimParamSimulation:
         is_accim_predef_model = False
         is_accim_custom_model = False
         is_apmv_setpoints = False
-        
         if parameters_type == 'accim custom model':
             temp_ctrl = 'temperature'
             is_accim_custom_model = True
@@ -276,29 +110,18 @@ class OptimParamSimulation:
             temp_ctrl = 'PMV'
             is_apmv_setpoints = True
         elif parameters_type is None:
-            # Bypass setup logic for loading previous sessions
             temp_ctrl = None
         else:
-            raise KeyError(f'String {parameters_type} entered in argument parametric_simulation_type '
-                           f'is not supported. Valid strings are: '
-                           f'"accim custom model", "accim predefined model" or "apmv setpoints".')
-
-        #todo not working
-        # if not all(freq in allowed_output_freqs for freq in output_freqs):
-        #     raise ValueError(f"Invalid output frequencies: {output_freqs}. Allowed values are: {allowed_output_freqs}")
-        
+            raise KeyError(f'String {parameters_type} entered in argument parametric_simulation_type is not supported. Valid strings are: "accim custom model", "accim predefined model" or "apmv setpoints".')
         allowed_ScriptType = ['vrf_mm', 'vrf_ac', 'ex_ac']
         if ScriptType not in allowed_ScriptType:
-            raise ValueError(f"Invalid ScriptType: {ScriptType}. Allowed values are: {allowed_ScriptType}")
-
+            raise ValueError(f'Invalid ScriptType: {ScriptType}. Allowed values are: {allowed_ScriptType}')
         allowed_SupplyAirTempInputMethod = ['temperature difference', 'supply air temperature']
         if SupplyAirTempInputMethod not in allowed_SupplyAirTempInputMethod:
-            raise ValueError(f"Invalid ScriptType: {SupplyAirTempInputMethod}. Allowed values are: {allowed_SupplyAirTempInputMethod}")
-        
+            raise ValueError(f'Invalid ScriptType: {SupplyAirTempInputMethod}. Allowed values are: {allowed_SupplyAirTempInputMethod}')
         allowed_output_type = ['standard', 'custom', 'detailed', 'simplified']
         if output_type not in allowed_output_type:
-            raise ValueError(f"Invalid output_type: {output_type}. Allowed values are: {allowed_output_type}")
-
+            raise ValueError(f'Invalid output_type: {output_type}. Allowed values are: {allowed_output_type}')
         if is_accim_custom_model or is_accim_predef_model:
             self.ScriptType = ScriptType
             self.temp_ctrl = temp_ctrl
@@ -306,39 +129,21 @@ class OptimParamSimulation:
             self.output_keep_existing = output_keep_existing
             self.output_type = output_type
             self.make_averages = make_averages
-
             if not bypass_addAccis:
-                accis.addAccis(
-                    idf=building,
-                    ScriptType=ScriptType,
-                    SupplyAirTempInputMethod=SupplyAirTempInputMethod,
-                    Output_keep_existing=output_keep_existing,
-                    Output_type=output_type,
-                    Output_freqs=output_freqs,
-                    TempCtrl=temp_ctrl,
-                    make_averages=make_averages,
-                    debugging=debugging,
-                    verboseMode=verbosemode
-                )
+                accis.addAccis(idf=building, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=output_keep_existing, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
         elif is_apmv_setpoints:
-            # apmv.add_vrf_system(building=building)
             apmv.apply_apmv_setpoints(building=building, outputs_freq=output_freqs)
-            print('Arguments output_type, output_keep_existing, ScriptType, and SupplyAirTempInputMethod '
-                  'are only used in accim predefined and custom models, '
-                  'therefore these will not have any effect in this case.')
+            print('Arguments output_type, output_keep_existing, ScriptType, and SupplyAirTempInputMethod are only used in accim predefined and custom models, therefore these will not have any effect in this case.')
         elif parameters_type is None:
-            # Bypassed
             self.ScriptType = None
             self.temp_ctrl = None
             self.SupplyAirTempInputMethod = None
             self.output_keep_existing = None
             self.output_type = None
             self.make_averages = None
-
         self.building = building
         self.output_freqs = output_freqs
         self.parameters_type = parameters_type
-
         self.is_accim_custom_model = is_accim_custom_model
         self.is_accim_predef_model = is_accim_predef_model
         self.is_apmv_setpoints = is_apmv_setpoints
@@ -359,24 +164,10 @@ class OptimParamSimulation:
         :return: a pandas DataFrame which contains the Output:Variable objects from the idf
         """
         if self.is_accim_custom_model or self.is_accim_predef_model:
-            output_variable_df = accis.gen_outputs_df(
-                idf=self.building,
-                ScriptType=self.ScriptType,
-                Output_keep_existing=self.output_keep_existing,
-                Output_type=self.output_type,
-                Output_freqs=self.output_freqs,
-                TempCtrl=self.temp_ctrl,
-                verboseMode=False,
-            )
+            output_variable_df = accis.gen_outputs_df(idf=self.building, ScriptType=self.ScriptType, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, verboseMode=False)
         else:
-            output_var_dict = {
-                'key_value': [i.Key_Value for i in self.building.idfobjects['Output:Variable']],
-                'variable_name': [i.Variable_Name for i in self.building.idfobjects['Output:Variable']],
-                'frequency': [i.Reporting_Frequency for i in self.building.idfobjects['Output:Variable']],
-                'schedule_name': [i.Schedule_Name for i in self.building.idfobjects['Output:Variable']],
-            }
+            output_var_dict = {'key_value': [i.Key_Value for i in self.building.idfobjects['Output:Variable']], 'variable_name': [i.Variable_Name for i in self.building.idfobjects['Output:Variable']], 'frequency': [i.Reporting_Frequency for i in self.building.idfobjects['Output:Variable']], 'schedule_name': [i.Schedule_Name for i in self.building.idfobjects['Output:Variable']]}
             output_variable_df = pd.DataFrame.from_dict(output_var_dict)
-
         return output_variable_df
 
     def get_output_meter_df_from_idf(self) -> pd.DataFrame:
@@ -385,15 +176,11 @@ class OptimParamSimulation:
 
         :return: a pandas DataFrame which contains the Output:Meter objects from the idf
         """
-        output_meter_dict = {
-            'key_name': [i.Key_Name for i in self.building.idfobjects['Output:Meter']],
-            'frequency': [i.Reporting_Frequency for i in self.building.idfobjects['Output:Meter']],
-        }
+        output_meter_dict = {'key_name': [i.Key_Name for i in self.building.idfobjects['Output:Meter']], 'frequency': [i.Reporting_Frequency for i in self.building.idfobjects['Output:Meter']]}
         output_meter_df = pd.DataFrame.from_dict(output_meter_dict)
-
         return output_meter_df
 
-    def set_output_var_df_to_idf(self, outputs_df: pd.DataFrame = None):
+    def set_output_var_df_to_idf(self, outputs_df: pd.DataFrame=None):
         """
         Keeps the Output:Variable objects contained in the input pandas DataFrame and removes
         all others. This is important to save space if thousands of simulations with heavy outputs
@@ -404,39 +191,13 @@ class OptimParamSimulation:
         :return:
         """
         if self.is_accim_custom_model or self.is_accim_predef_model:
-            accis.addAccis(
-                idf=self.building,
-                ScriptType=self.ScriptType,
-                SupplyAirTempInputMethod=self.SupplyAirTempInputMethod,
-                Output_keep_existing=self.output_keep_existing,
-                Output_type=self.output_type,
-                Output_take_dataframe=outputs_df,
-                Output_freqs=self.output_freqs,
-
-                # EnergyPlus_version='9.4',
-                TempCtrl=self.temp_ctrl,
-                # Output_gen_dataframe=True,
-                make_averages=self.make_averages,
-                # debugging=True,
-                verboseMode=False,
-            )
+            accis.addAccis(idf=self.building, ScriptType=self.ScriptType, SupplyAirTempInputMethod=self.SupplyAirTempInputMethod, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_take_dataframe=outputs_df, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, make_averages=self.make_averages, verboseMode=False)
         else:
             alloutputs = [output for output in self.building.idfobjects['Output:Variable']]
             for i in alloutputs:
                 self.building.removeidfobject(i)
-
             for i in outputs_df.index:
-                self.building.newidfobject(
-                    'Output:Variable',
-                    Key_Value=outputs_df.loc[i, 'key_value'],
-                    Variable_Name=outputs_df.loc[i, 'variable_name'],
-                    Reporting_Frequency=outputs_df.loc[i, 'frequency'].capitalize(),
-                    Schedule_Name=outputs_df.loc[i, 'schedule_name']
-                )
-
-            # raise KeyError('get_output_var_df_from_idf method is only available for "accim custom model" or '
-            #                '"accim predefined model" types.')
-
+                self.building.newidfobject('Output:Variable', Key_Value=outputs_df.loc[i, 'key_value'], Variable_Name=outputs_df.loc[i, 'variable_name'], Reporting_Frequency=outputs_df.loc[i, 'frequency'].capitalize(), Schedule_Name=outputs_df.loc[i, 'schedule_name'])
 
     def set_output_met_objects_to_idf(self, output_meters: list):
         """
@@ -448,13 +209,9 @@ class OptimParamSimulation:
         """
         for meter in output_meters:
             for freq in self.output_freqs:
-                self.building.newidfobject(
-                    key='OUTPUT:METER',
-                    Key_Name=meter,
-                    Reporting_Frequency=freq
-                )
+                self.building.newidfobject(key='OUTPUT:METER', Key_Name=meter, Reporting_Frequency=freq)
 
-    def get_outputs_df_from_testsim(self, reduce_sim_time: bool = True) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def get_outputs_df_from_testsim(self, reduce_sim_time: bool=True) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.
         Therefore, it won't contain wildcards such as '*'.
@@ -464,35 +221,20 @@ class OptimParamSimulation:
         :return: a tuple containing the DataFrames containing Output:Variable and Output:Meter
         """
         building_for_testsim = self.building
-
         if reduce_sim_time:
             from besos.eppy_funcs import get_building
             self.building.savecopy('temp_reduced_runtime.idf')
             building_for_testsim = get_building('temp_reduced_runtime.idf')
             reduce_runtime(idf_object=building_for_testsim, maximum_figures_in_shadow_overlap_calculations=200, timesteps=2)
-
         available_outputs = print_available_outputs_mod(building_for_testsim)
-
         if reduce_sim_time:
             from os import remove
             remove('temp_reduced_runtime.idf')
+        df_outputmeters = pd.DataFrame(available_outputs.meterreaderlist, columns=['key_name', 'frequency'])
+        df_outputvariables = pd.DataFrame(available_outputs.variablereaderlist, columns=['key_value', 'variable_name', 'frequency'])
+        return (df_outputmeters, df_outputvariables)
 
-        df_outputmeters = pd.DataFrame(
-            available_outputs.meterreaderlist,
-            columns=['key_name', 'frequency']
-        )
-        df_outputvariables = pd.DataFrame(
-            available_outputs.variablereaderlist,
-            columns=['key_value', 'variable_name', 'frequency']
-        )
-
-        return df_outputmeters, df_outputvariables
-
-    def set_outputs_for_simulation(
-            self,
-            df_output_variable: pd.DataFrame = None,
-            df_output_meter: pd.DataFrame = None,
-    ):
+    def set_outputs_for_simulation(self, df_output_variable: pd.DataFrame=None, df_output_meter: pd.DataFrame=None):
         """
         Sets the outputs for the parametric analysis or optimisation based on the input pandas DataFrames
         for Output:Variable and/or Output:Meter objects. These DataFrames can include columns for the output name
@@ -511,58 +253,26 @@ class OptimParamSimulation:
                 df_output_variable['output_name'] = df_output_variable['name']
             else:
                 df_output_variable['output_name'] = df_output_variable['variable_name']
-
         if df_output_meter is not None:
             df_output_meter['output_name'] = 'temp'
             if 'name' in df_output_meter.columns:
                 df_output_meter['output_name'] = df_output_meter['name']
             else:
                 df_output_meter['output_name'] = df_output_meter['key_name']
-
         objs_meters = []
         if df_output_meter is not None:
             for i in df_output_meter.index:
                 if 'func' in [c for c in df_output_meter.columns]:
-                    objs_meters.append(
-                            MeterReader(
-                                key_name=df_output_meter.loc[i, 'key_name'],
-                                frequency=df_output_meter.loc[i, 'frequency'],
-                                name=df_output_meter.loc[i, 'output_name'],
-                                func=df_output_meter.loc[i, 'func'],
-                            )
-                        )
+                    objs_meters.append(MeterReader(key_name=df_output_meter.loc[i, 'key_name'], frequency=df_output_meter.loc[i, 'frequency'], name=df_output_meter.loc[i, 'output_name'], func=df_output_meter.loc[i, 'func']))
                 else:
-                    objs_meters.append(
-                        MeterReader(
-                            key_name=df_output_meter.loc[i, 'key_name'],
-                            frequency=df_output_meter.loc[i, 'frequency'],
-                            name=df_output_meter.loc[i, 'output_name'],
-                        )
-                    )
-
+                    objs_meters.append(MeterReader(key_name=df_output_meter.loc[i, 'key_name'], frequency=df_output_meter.loc[i, 'frequency'], name=df_output_meter.loc[i, 'output_name']))
         objs_variables = []
         if df_output_variable is not None:
             for i in df_output_variable.index:
                 if 'func' in [c for c in df_output_variable.columns]:
-                    objs_variables.append(
-                            VariableReader(
-                                key_value=df_output_variable.loc[i, 'key_value'],
-                                variable_name=df_output_variable.loc[i, 'variable_name'],
-                                frequency=df_output_variable.loc[i, 'frequency'],
-                                name=df_output_variable.loc[i, 'output_name'],
-                                func=df_output_variable.loc[i, 'func'],
-                            )
-                        )
+                    objs_variables.append(VariableReader(key_value=df_output_variable.loc[i, 'key_value'], variable_name=df_output_variable.loc[i, 'variable_name'], frequency=df_output_variable.loc[i, 'frequency'], name=df_output_variable.loc[i, 'output_name'], func=df_output_variable.loc[i, 'func']))
                 else:
-                    objs_variables.append(
-                            VariableReader(
-                                key_value=df_output_variable.loc[i, 'key_value'],
-                                variable_name=df_output_variable.loc[i, 'variable_name'],
-                                frequency=df_output_variable.loc[i, 'frequency'],
-                                name=df_output_variable.loc[i, 'output_name'],
-                            )
-                        )
-
+                    objs_variables.append(VariableReader(key_value=df_output_variable.loc[i, 'key_value'], variable_name=df_output_variable.loc[i, 'variable_name'], frequency=df_output_variable.loc[i, 'frequency'], name=df_output_variable.loc[i, 'output_name']))
         self.sim_outputs = objs_meters + objs_variables
 
     def get_available_parameters(self) -> list:
@@ -579,14 +289,7 @@ class OptimParamSimulation:
             available_params = [i for i in params_dicts.apmv_setpoints_params.keys()]
         return available_params
 
-    def set_parameters(
-            self,
-            accis_params_dict: dict,
-            additional_params: list = None,
-            use_dflt_values: bool = True,
-            # HVACmode: Literal[0, 1, 2] = 2,
-            # VentCtrl: Literal[0, 1, 2, 3] = 0,
-    ):
+    def set_parameters(self, accis_params_dict: dict, additional_params: list=None, use_dflt_values: bool=True):
         """
         Sets the parameters for the parametric analysis or optimisation.
 
@@ -613,12 +316,9 @@ class OptimParamSimulation:
                     descriptors_has_options = True
             else:
                 descriptors_has_options = True
-
         if descriptors_has_options is True:
-            for k, v in accis_params_dict.items():
+            for (k, v) in accis_params_dict.items():
                 accis_params_dict[k] = [round(float(i), 2) for i in v]
-
-
         accis_descriptors_has_range = False
         add_descriptors_has_range = False
         descriptors_has_range = False
@@ -633,43 +333,27 @@ class OptimParamSimulation:
                     descriptors_has_range = True
             else:
                 descriptors_has_range = True
-
         if descriptors_has_options is False and descriptors_has_range is False:
             raise TypeError('All Descriptors are not CategoryParameters or RangeParameters.')
-
         parameters = [k for k in accis_params_dict.keys()]
         available_parameters = self.get_available_parameters()
-
         not_allowed_parameters = []
         for p in parameters:
             if p not in available_parameters:
                 not_allowed_parameters.append(p)
         if len(not_allowed_parameters) > 0:
-            raise ValueError(f'The following parameters are not allowed in '
-                             f'parameters_type {self.parameters_type}: {not_allowed_parameters}')
-
+            raise ValueError(f'The following parameters are not allowed in parameters_type {self.parameters_type}: {not_allowed_parameters}')
         if self.is_accim_custom_model:
-            # accis.modifyAccis(
-            #     idf=self.building,
-            #     ComfStand=99,
-            #     ComfMod=3,
-            #     CAT=80,
-            #     # HVACmode=HVACmode,
-            #     # VentCtrl=VentCtrl,
-            # )
             bf_accim.modify_ComfStand(self.building, 99)
             bf_accim.modify_ComfMod(self.building, 3)
             bf_accim.modify_CAT(self.building, 80)
-
-            # Checking parameters are defined:
             bf_accim.modify_CustAST_m(self.building, 0)
             bf_accim.modify_CustAST_n(self.building, 0)
             bf_accim.modify_CustAST_ASToffset(self.building, 0)
             bf_accim.modify_CustAST_ASTaul(self.building, 0)
             bf_accim.modify_CustAST_ASTall(self.building, 0)
-
             args = accim.utils.get_accim_args(self.building)
-            parameters_to_check = [k for k, v in args['CustAST'].items() if 'CustAST_' + k not in parameters and v == 0]
+            parameters_to_check = [k for (k, v) in args['CustAST'].items() if 'CustAST_' + k not in parameters and v == 0]
             if 'CustAST_ASToffset' in parameters:
                 try:
                     parameters_to_check.remove('AHSToffset')
@@ -688,25 +372,13 @@ class OptimParamSimulation:
                     parameters_to_check.remove('ACSTaul')
                 except ValueError:
                     pass
-
             parameters_to_be_defined = []
             for p in parameters_to_check:
                 if args['CustAST'][p] == 0:
                     parameters_to_be_defined.append(p)
             if len(parameters_to_be_defined) > 0:
-                print(f'The following parameters are not included in the parameters to be set, '
-                                 f'and have not been defined yet (i.e. the value is 0): '
-                                 f'{parameters_to_be_defined}')
-                dflt_values = {
-                    'm': 0.31,
-                    'n': 17.8,
-                    'ACSToffset': 3.5,
-                    'AHSToffset': -3.5,
-                    'ACSTaul': 33.5,
-                    'ACSTall': 10,
-                    'AHSTaul': 33.5,
-                    'AHSTall': 10
-                }
+                print(f'The following parameters are not included in the parameters to be set, and have not been defined yet (i.e. the value is 0): {parameters_to_be_defined}')
+                dflt_values = {'m': 0.31, 'n': 17.8, 'ACSToffset': 3.5, 'AHSToffset': -3.5, 'ACSTaul': 33.5, 'ACSTall': 10, 'AHSTaul': 33.5, 'AHSTall': 10}
                 if use_dflt_values:
                     print('Default values will be set for these parameters. The default values are:')
                     for p in parameters_to_be_defined:
@@ -754,27 +426,17 @@ class OptimParamSimulation:
                             bf_accim.modify_CustAST_AHSTaul(self.building, user_values['AHSTaul'])
                         if 'AHSTall' in parameters_to_be_defined:
                             bf_accim.modify_CustAST_AHSTall(self.building, user_values['AHSTall'])
-
         elif self.is_accim_predef_model:
             if descriptors_has_range:
                 raise KeyError('Accim predefined models approach is only valid with options descriptors.')
-
-
-        parameters_list = [params.accis_parameter(k, v) for k, v in accis_params_dict.items()]
+        parameters_list = [params.accis_parameter(k, v) for (k, v) in accis_params_dict.items()]
         if additional_params is not None:
             parameters_list.extend(additional_params)
-
         self.parameters_list = parameters_list
         self.descriptors_has_options = descriptors_has_options
         self.descriptors_has_range = descriptors_has_range
 
-    def set_problem(
-            self,
-            minimize_outputs: list = None,
-            constraints: list = None,
-            constraint_bounds: list = None,
-            **kwargs
-    ):
+    def set_problem(self, minimize_outputs: list=None, constraints: list=None, constraint_bounds: list=None, **kwargs):
         """
         Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters
         method, and for outputs, those set using the set_outputs_for_simulation method.
@@ -786,20 +448,7 @@ class OptimParamSimulation:
         :param constraint_bounds: only used in optimisation;
             a list containing the logical expressions for the constraints
         """
-        # if type == 'parametric_and_optimisation simulation':
-        #     problem = EPProblem(
-        #         inputs=self.parameters_list,
-        #         outputs=self.sim_outputs
-        #     )
-        # elif type == 'optimisation':
-        problem = EPProblem(
-            inputs=self.parameters_list,
-            outputs=self.sim_outputs,
-            minimize_outputs=minimize_outputs,
-            constraints=constraints,
-            constraint_bounds=constraint_bounds,
-            **kwargs
-        )
+        problem = EPProblem(inputs=self.parameters_list, outputs=self.sim_outputs, minimize_outputs=minimize_outputs, constraints=constraints, constraint_bounds=constraint_bounds, **kwargs)
         self.problem = problem
 
     def sampling_full_set(self):
@@ -814,18 +463,11 @@ class OptimParamSimulation:
             for p in self.parameters_list:
                 num_samples = num_samples * len(p.value_descriptors[0].options)
                 parameters_values.update({p.value_descriptors[0].name: p.value_descriptors[0].options})
-            # from itertools import product
-            # combinations = list(product(*parameters_values.values()))
-            # parameters_values_df = pd.DataFrame(combinations, columns=parameters_values.keys())
             parameters_values_df = make_all_combinations(parameters_values)
         else:
             raise KeyError('sampling_full_set method can only be used with option (i.e. category) descriptors.')
-
-
         if self.is_accim_predef_model:
             parameters_values_df = bf_accim.drop_invalid_param_combinations(parameters_values_df)
-
-
         self.parameters_values_df = parameters_values_df
 
     def sampling_full_factorial(self, level: int):
@@ -837,16 +479,10 @@ class OptimParamSimulation:
         :param level: an integer; represents the number of parts to split each parameter's range
         """
         if self.descriptors_has_range:
-            parameters_values_df = sampling.dist_sampler(
-                sampling.full_factorial,
-                self.problem,
-                num_samples=2,
-                level=level
-            )
+            parameters_values_df = sampling.dist_sampler(sampling.full_factorial, self.problem, num_samples=2, level=level)
         else:
             raise KeyError('sampling_full_factorial method can only be used with range descriptors.')
         self.parameters_values_df = parameters_values_df
-
 
     def sampling_lhs(self, num_samples: int):
         """
@@ -857,14 +493,9 @@ class OptimParamSimulation:
         :param num_samples: an integer; represents the total number of samples
         """
         if self.descriptors_has_range:
-            parameters_values_df = sampling.dist_sampler(
-                sampling.lhs,
-                self.problem,
-                num_samples=num_samples
-            )
+            parameters_values_df = sampling.dist_sampler(sampling.lhs, self.problem, num_samples=num_samples)
         else:
             raise KeyError('sampling_lhs method can only be used with range descriptors.')
-
         self.parameters_values_df = parameters_values_df
 
     def _get_salib_problem(self) -> dict:
@@ -877,17 +508,12 @@ class OptimParamSimulation:
         for inp in self.problem.inputs:
             desc = inp.value_descriptors[0]
             if not isinstance(desc, RangeParameter):
-                raise ValueError(f"Parameter {inp.name} must be a RangeParameter for Sensitivity Analysis.")
+                raise ValueError(f'Parameter {inp.name} must be a RangeParameter for Sensitivity Analysis.')
             bounds.append([desc.min, desc.max])
-
-        problem = {
-            'num_vars': len(names),
-            'names': names,
-            'bounds': bounds
-        }
+        problem = {'num_vars': len(names), 'names': names, 'bounds': bounds}
         return problem
 
-    def sampling_sobol(self, num_samples: int = 128):
+    def sampling_sobol(self, num_samples: int=128):
         """
         Uses Saltelli's extension of the Sobol sequence to generate samples for Sensitivity Analysis.
         The samples are saved into a pandas DataFrame, stored in an internal variable named parameters_values_df.
@@ -899,21 +525,15 @@ class OptimParamSimulation:
         """
         if not self.descriptors_has_range:
             raise KeyError('sampling_sobol method can only be used with range descriptors.')
-
         try:
             from SALib.sample import saltelli
         except ImportError:
-            raise ImportError("SALib is required for Sensitivity Analysis. Install it with: pip install SALib")
-
+            raise ImportError('SALib is required for Sensitivity Analysis. Install it with: pip install SALib')
         problem = self._get_salib_problem()
-        
-        # Generate samples using SALib
         samples = saltelli.sample(problem, num_samples)
-        
-        # Convert to pandas DataFrame with column names matching the parameters
         self.parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
 
-    def sampling_morris(self, num_samples: int = 100, num_levels: int = 4):
+    def sampling_morris(self, num_samples: int=100, num_levels: int=4):
         """
         Uses Morris' method to generate samples for Sensitivity Analysis.
         The samples are saved into a pandas DataFrame, stored in an internal variable named parameters_values_df.
@@ -925,25 +545,15 @@ class OptimParamSimulation:
         """
         if not self.descriptors_has_range:
             raise KeyError('sampling_morris method can only be used with range descriptors.')
-
         try:
             from SALib.sample import morris as morris_sampler
         except ImportError:
-            raise ImportError("SALib is required for Sensitivity Analysis. Install it with: pip install SALib")
-
+            raise ImportError('SALib is required for Sensitivity Analysis. Install it with: pip install SALib')
         problem = self._get_salib_problem()
-        
-        # Generate samples using SALib
         samples = morris_sampler.sample(problem, N=num_samples, num_levels=num_levels)
-        
-        # Convert to pandas DataFrame with column names matching the parameters
         self.parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
 
-    def set_evaluator(
-            self,
-            epw: str,
-            out_dir: str,
-    ) -> besos.evaluator.EvaluatorEP:
+    def set_evaluator(self, epw: str, out_dir: str) -> besos.evaluator.EvaluatorEP:
         """
         Used internally for setting the evaluator in run_parametric_simulation and run_optimisation methods.
 
@@ -951,24 +561,10 @@ class OptimParamSimulation:
         :param out_dir: The name of the output directory to save the results.
         :return: the besos.evaluator.EvaluatorEP class instance
         """
-        evaluator = EvaluatorEP(
-            problem=self.problem,
-            building=self.building,
-            epw=epw,
-            out_dir=out_dir
-        )
+        evaluator = EvaluatorEP(problem=self.problem, building=self.building, epw=epw, out_dir=out_dir)
         return evaluator
 
-
-    def run_parametric_simulation(
-            self,
-            epws: list,
-            out_dir: str,
-            df: pd.DataFrame,
-            processes: int = 2,
-            keep_input: bool = True,
-            keep_dirs: bool = True,
-    ) -> pd.DataFrame:
+    def run_parametric_simulation(self, epws: list, out_dir: str, df: pd.DataFrame, processes: int=2, keep_input: bool=True, keep_dirs: bool=True) -> pd.DataFrame:
         """
         Runs the parametric simulation.
 
@@ -984,66 +580,34 @@ class OptimParamSimulation:
         evaluators = {}
         for epw in epws:
             epwname = epw.split('.epw')[0]
-            # evaluator = EvaluatorEP(
-            #     problem=self.problem,
-            #     building=self.building,
-            #     epw=epw,
-            #     out_dir=out_dir
-            # )
-            evaluator = self.set_evaluator(
-                epw=epw,
-                out_dir=out_dir,
-            )
-            outputs = evaluator.df_apply(
-                df=df,
-                keep_input=keep_input,
-                keep_dirs=keep_dirs,
-                processes=processes
-            )
+            evaluator = self.set_evaluator(epw=epw, out_dir=out_dir)
+            outputs = evaluator.df_apply(df=df, keep_input=keep_input, keep_dirs=keep_dirs, processes=processes)
             outputs['epw'] = epwname
             outputs_dict.update({epwname: outputs})
             evaluators.update({epwname: evaluator})
-
         outputs_param_simulation = pd.concat([df for df in outputs_dict.values()])
         if len(epws) > 1:
             outputs_param_simulation = outputs_param_simulation.reset_index()
-
         if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
             outputs_param_simulation.attrs['parameters_names'] = self.problem.names('inputs')
             outputs_param_simulation.attrs['outputs_names'] = self.problem.names('outputs')
         elif hasattr(self, 'parameters_names') and hasattr(self, 'outputs_names'):
             outputs_param_simulation.attrs['parameters_names'] = self.parameters_names
             outputs_param_simulation.attrs['outputs_names'] = self.outputs_names
-
         self.outputs_param_simulation = outputs_param_simulation
         self.evaluators = evaluators
-
-        # Auto-save CSV + Pickle + JSON for session resumption
         os.makedirs(out_dir, exist_ok=True)
         _base = os.path.join(out_dir, f'outputs_param_simulation_{os.getpid()}')
         self.outputs_param_simulation.to_csv(f'{_base}.csv', index=False)
         self.outputs_param_simulation.to_pickle(f'{_base}.pkl')
         import json as _json
-        _json_payload = {
-            'attrs': self.outputs_param_simulation.attrs,
-            'data': self.outputs_param_simulation.to_dict(orient='list')
-        }
+        _json_payload = {'attrs': self.outputs_param_simulation.attrs, 'data': self.outputs_param_simulation.to_dict(orient='list')}
         with open(f'{_base}.json', 'w', encoding='utf-8') as _f:
             _json.dump(_json_payload, _f, indent=2, default=str)
         self.outputs_param_simulation_filepath = f'{_base}.csv'
         self.last_run_type = 'parametric'
-        # return outputs_param_simulation
 
-    def load_outputs_parametric(
-            self,
-            csv_path: str = None,
-            pickle_path: str = None,
-            json_path: str = None,
-            hourly_csv_path: str = None,
-            hourly_pickle_path: str = None,
-            parameters_names: list = None,
-            outputs_names: list = None
-    ) -> pd.DataFrame:
+    def load_outputs_parametric(self, csv_path: str=None, pickle_path: str=None, json_path: str=None, hourly_csv_path: str=None, hourly_pickle_path: str=None, parameters_names: list=None, outputs_names: list=None) -> pd.DataFrame:
         """
         Loads outputs of a previous parametric simulation from a CSV, Pickle, or JSON file.
         This allows you to resume a parametric session without rerunning the simulations.
@@ -1058,10 +622,8 @@ class OptimParamSimulation:
         :return: pandas DataFrame containing the loaded parametric simulation outputs.
         """
         import pandas as pd
-        
-        if not csv_path and not pickle_path and not json_path:
-            raise ValueError("A valid csv_path, pickle_path, or json_path must be provided.")
-            
+        if not csv_path and (not pickle_path) and (not json_path):
+            raise ValueError('A valid csv_path, pickle_path, or json_path must be provided.')
         if pickle_path:
             self.outputs_param_simulation = pd.read_pickle(pickle_path)
         elif json_path:
@@ -1069,41 +631,36 @@ class OptimParamSimulation:
             with open(json_path, 'r', encoding='utf-8') as f:
                 payload = json.load(f)
             self.outputs_param_simulation = pd.DataFrame(payload['data'])
-            # Restore attrs from JSON metadata
-            for k, v in payload.get('attrs', {}).items():
+            for (k, v) in payload.get('attrs', {}).items():
                 self.outputs_param_simulation.attrs[k] = v
         else:
             self.outputs_param_simulation = pd.read_csv(csv_path)
-            
         if hourly_pickle_path:
             self.outputs_param_simulation_hourly = pd.read_pickle(hourly_pickle_path)
         elif hourly_csv_path:
             self.outputs_param_simulation_hourly = pd.read_csv(hourly_csv_path)
-
         parameters_names = parameters_names or self.outputs_param_simulation.attrs.get('parameters_names')
         outputs_names = outputs_names or self.outputs_param_simulation.attrs.get('outputs_names')
-
         if parameters_names and outputs_names:
+
             class MockProblem:
+
                 def __init__(self, inputs, outputs):
                     self._inputs = inputs
                     self._outputs = outputs
+
                 def names(self, typ):
-                    if typ == 'inputs': return self._inputs
-                    elif typ == 'outputs': return self._outputs
+                    if typ == 'inputs':
+                        return self._inputs
+                    elif typ == 'outputs':
+                        return self._outputs
             self.problem = MockProblem(parameters_names, outputs_names)
             self.parameters_names = parameters_names
             self.outputs_names = outputs_names
-
         self.last_run_type = 'parametric'
         return self.outputs_param_simulation
 
-    def estimate_optimisation_sims(
-            self,
-            evaluations: int,
-            population_size: int,
-            epws: list,
-    ) -> int:
+    def estimate_optimisation_sims(self, evaluations: int, population_size: int, epws: list) -> int:
         """
         Estimates the maximum number of EnergyPlus simulations that will be run by
         :meth:`run_optimisation` **before** launching it.
@@ -1130,31 +687,11 @@ class OptimParamSimulation:
         import math
         sims_per_epw = population_size * math.ceil(evaluations / population_size)
         total = sims_per_epw * len(epws)
-        print(
-            f"Estimated simulations\n"
-            f"  evaluations    : {evaluations}\n"
-            f"  population_size: {population_size}\n"
-            f"  EPWs           : {len(epws)} ({', '.join(epws)})\n"
-            f"  sims per EPW   : {sims_per_epw}  "
-            f"({math.ceil(evaluations / population_size)} generation(s) × {population_size})\n"
-            f"  TOTAL          : {total}"
-        )
+        print(f"Estimated simulations\n  evaluations    : {evaluations}\n  population_size: {population_size}\n  EPWs           : {len(epws)} ({', '.join(epws)})\n  sims per EPW   : {sims_per_epw}  ({math.ceil(evaluations / population_size)} generation(s) × {population_size})\n  TOTAL          : {total}")
         self.last_run_type = 'parametric'
         return total
 
-    def run_optimisation(
-            self,
-            epws: list,
-            out_dir: str,
-            evaluations: int,
-            population_size: int,
-            algorithm: str = 'NSGAII',
-            processes: int = 1,
-            keep_sim_files: Literal['all', 'non-dominated', 'none'] = 'all',
-            keep_sim_files_batch_size: int = 50,
-            keep_df: Literal['all', 'non-dominated'] = 'all',
-            **kwargs
-    ) -> pd.DataFrame:
+    def run_optimisation(self, epws: list, out_dir: str, evaluations: int, population_size: int, algorithm: str='NSGAII', processes: int=1, keep_sim_files: Literal['all', 'non-dominated', 'none']='all', keep_sim_files_batch_size: int=50, keep_df: Literal['all', 'non-dominated']='all', **kwargs) -> pd.DataFrame:
         """
         Runs the optimisation.
 
@@ -1180,75 +717,37 @@ class OptimParamSimulation:
             'all' (keeps dominated and non-dominated) or 'non-dominated'.
         :return: a pandas DataFrame
         """
-        available_algorithms = [
-            'GeneticAlgorithm',
-            'EvolutionaryStrategy',
-            'NSGAII',
-            'EpsMOEA',
-            'GDE3',
-            'SPEA2',
-            'MOEAD',
-            'NSGAIII',
-            'ParticleSwarm',
-            'OMOPSO',
-            'SMPSO',
-            'CMAES',
-            'IBEA',
-            'PAES',
-            'PESA2',
-            'EpsNSGAII',
-        ]
+        available_algorithms = ['GeneticAlgorithm', 'EvolutionaryStrategy', 'NSGAII', 'EpsMOEA', 'GDE3', 'SPEA2', 'MOEAD', 'NSGAIII', 'ParticleSwarm', 'OMOPSO', 'SMPSO', 'CMAES', 'IBEA', 'PAES', 'PESA2', 'EpsNSGAII']
         outputs_dict = {}
         full_outputs_dict = {}
         evaluators = {}
         os.makedirs(out_dir, exist_ok=True)
-
         from besos.evaluator import AbstractEvaluator
-        # Monkey-patch besos' AbstractEvaluator.to_platypus to support keep_dirs seamlessly
-        # and avoid unpicklable lambda functions when using multiprocessing.
         if not hasattr(AbstractEvaluator, '_original_to_platypus'):
             AbstractEvaluator._original_to_platypus = AbstractEvaluator.to_platypus
         AbstractEvaluator.to_platypus = _patched_to_platypus
-
-        # Build the platypus parallel evaluator when processes > 1.
-        # We cannot pass `evaluator` via kwargs because besos.optimizer wrappers
-        # consume it positionally. Instead, we temporarily override the global
-        # PlatypusConfig.default_evaluator.
         if processes > 1:
             import platypus
             from platypus.config import PlatypusConfig
-
             original_evaluator = PlatypusConfig.default_evaluator
             platypus_evaluator = platypus.ProcessPoolEvaluator(processes)
             PlatypusConfig.default_evaluator = platypus_evaluator
-
         try:
             for epw in epws:
-                evaluator = self.set_evaluator(
-                    epw=epw,
-                    out_dir=out_dir
-                )
+                evaluator = self.set_evaluator(epw=epw, out_dir=out_dir)
                 evaluator._keep_sim_files = keep_sim_files
                 evaluator._keep_sim_files_batch_size = keep_sim_files_batch_size
                 evaluator._keep_dirs = False if keep_sim_files == 'none' else True
                 evaluator._optimisation_eval_records = []
                 epwname = epw.split('.epw')[0]
-                evaluator._optimisation_log_base = os.path.join(
-                    out_dir,
-                    f'optim_eval_log_{epwname}_{os.getpid()}'
-                )
-                for log_file in pyglob.glob(f"{evaluator._optimisation_log_base}_*.jsonl"):
+                evaluator._optimisation_log_base = os.path.join(out_dir, f'optim_eval_log_{epwname}_{os.getpid()}')
+                for log_file in pyglob.glob(f'{evaluator._optimisation_log_base}_*.jsonl'):
                     try:
                         os.remove(log_file)
                     except OSError:
                         pass
-                
-                # We need to temporarily decouple the building evaluator internal dictionaries
-                # because besos wraps `idfobjects` inside a local class `AllCapsDict` on `read()`,
-                # which natively conflicts with Windows Python ProcessPool Evaluators pickling process
                 if processes > 1 and hasattr(evaluator, '_building') and hasattr(evaluator._building, 'idfobjects'):
                     evaluator._building.idfobjects = GlobalAllCapsDict(evaluator._building.idfobjects)
-
                 if algorithm == 'GeneticAlgorithm':
                     outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
                 elif algorithm == 'EvolutionaryStrategy':
@@ -1283,39 +782,27 @@ class OptimParamSimulation:
                     outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
                 else:
                     raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
-
                 outputs_optimisation['epw'] = epwname
                 outputs_dict.update({epwname: outputs_optimisation})
-                full_outputs_optimisation = self._build_full_optimisation_outputs_df(
-                    evaluator=evaluator,
-                    epwname=epwname
-                )
+                full_outputs_optimisation = self._build_full_optimisation_outputs_df(evaluator=evaluator, epwname=epwname)
                 full_outputs_dict.update({epwname: full_outputs_optimisation})
                 evaluators.update({epwname: evaluator})
         finally:
-            # Always close the process pool and restore the original evaluator
             if processes > 1:
                 platypus_evaluator.close()
                 PlatypusConfig.default_evaluator = original_evaluator
                 if hasattr(AbstractEvaluator, '_original_to_platypus'):
                     AbstractEvaluator.to_platypus = AbstractEvaluator._original_to_platypus
-
         outputs_optimisation_non_dominated = pd.concat([df for df in outputs_dict.values()])
         if len(epws) > 1:
             outputs_optimisation_non_dominated = outputs_optimisation_non_dominated.reset_index()
-
         outputs_optimisation = pd.concat([df for df in full_outputs_dict.values()])
         if len(epws) > 1:
             outputs_optimisation = outputs_optimisation.reset_index(drop=True)
-
-        outputs_optimisation = self._annotate_pareto_status(
-            outputs_optimisation_full=outputs_optimisation,
-            outputs_optimisation=outputs_optimisation_non_dominated
-        )
-
+        outputs_optimisation = self._annotate_pareto_status(outputs_optimisation_full=outputs_optimisation, outputs_optimisation=outputs_optimisation_non_dominated)
         if keep_sim_files == 'non-dominated':
             import shutil
-            for idx, row in outputs_optimisation[~outputs_optimisation['pareto-optimal']].iterrows():
+            for (idx, row) in outputs_optimisation[~outputs_optimisation['pareto-optimal']].iterrows():
                 sim_dir = row.get('simulation_directory')
                 if pd.notna(sim_dir) and isinstance(sim_dir, str) and os.path.exists(sim_dir):
                     try:
@@ -1327,78 +814,52 @@ class OptimParamSimulation:
         elif keep_sim_files == 'none':
             import shutil
             import glob
-            # Forcefully clean up any worker BESOS_Output folders created during this run.
-            # When keep_sim_files='none', besos does not generate unique subdirectories
-            # per evaluation, so the raw files overwrite each other directly in the 
-            # out_dir/BESOS_Output_{pid} working directory, which is left behind.
-            worker_dirs = glob.glob(os.path.join(out_dir, "BESOS_Output*"))
+            worker_dirs = glob.glob(os.path.join(out_dir, 'BESOS_Output*'))
             for w_dir in worker_dirs:
                 if os.path.isdir(w_dir):
                     try:
                         shutil.rmtree(w_dir)
                     except Exception:
                         pass
-            
-            # Clean up the JSONL evaluation logs that are no longer needed
-            log_files = glob.glob(os.path.join(out_dir, "optim_eval_log_*.jsonl"))
+            log_files = glob.glob(os.path.join(out_dir, 'optim_eval_log_*.jsonl'))
             for log_file in log_files:
                 try:
                     os.remove(log_file)
                 except OSError:
                     pass
-            
-            # Since simulation files are deleted, clean the dataframe paths
             outputs_optimisation['simulation_directory'] = pd.NA
             outputs_optimisation['simulation_output_csv_path'] = pd.NA
-
         if keep_df == 'non-dominated':
             outputs_optimisation = outputs_optimisation[outputs_optimisation['pareto-optimal']].copy()
             if len(epws) > 1:
                 outputs_optimisation = outputs_optimisation.reset_index(drop=True)
-
-        self._set_optimisation_outputs(
-            outputs_optimisation_full=outputs_optimisation,
-            outputs_optimisation_non_dominated=outputs_optimisation_non_dominated
-        )
+        self._set_optimisation_outputs(outputs_optimisation_full=outputs_optimisation, outputs_optimisation_non_dominated=outputs_optimisation_non_dominated)
         self._save_outputs_optimisation_full(out_dir=out_dir)
         self.last_run_type = 'optimisation'
         self.evaluators = evaluators
 
-        # return outputs_optimisation
-
-    def _build_full_optimisation_outputs_df(
-            self,
-            evaluator: EvaluatorEP,
-            epwname: str,
-    ) -> pd.DataFrame:
+    def _build_full_optimisation_outputs_df(self, evaluator: EvaluatorEP, epwname: str) -> pd.DataFrame:
         records = getattr(evaluator, '_optimisation_eval_records', [])
         if len(records) == 0:
             log_base = getattr(evaluator, '_optimisation_log_base', None)
             if log_base is not None:
-                log_files = pyglob.glob(f"{log_base}_*.jsonl")
+                log_files = pyglob.glob(f'{log_base}_*.jsonl')
                 for log_file in log_files:
                     with open(log_file, 'r', encoding='utf-8') as logfile:
                         for line in logfile:
                             payload = json.loads(line)
-                            records.append(
-                                {
-                                    'inputs': tuple(payload['inputs']),
-                                    'results': tuple(payload['results']),
-                                    'sim_dir': payload['sim_dir'],
-                                }
-                            )
-        input_names = evaluator.problem.names("inputs")
-        output_names = evaluator.problem.names("outputs")
-        constraint_names = evaluator.problem.names("constraints")
-
+                            records.append({'inputs': tuple(payload['inputs']), 'results': tuple(payload['results']), 'sim_dir': payload['sim_dir']})
+        input_names = evaluator.problem.names('inputs')
+        output_names = evaluator.problem.names('outputs')
+        constraint_names = evaluator.problem.names('constraints')
         rows = []
         for record in records:
             row = {}
-            for idx, input_name in enumerate(input_names):
+            for (idx, input_name) in enumerate(input_names):
                 row[input_name] = record['inputs'][idx]
-            for idx, output_name in enumerate(output_names):
+            for (idx, output_name) in enumerate(output_names):
                 row[output_name] = record['results'][idx]
-            for idx, constraint_name in enumerate(constraint_names):
+            for (idx, constraint_name) in enumerate(constraint_names):
                 row[constraint_name] = record['results'][len(output_names) + idx]
             if record['sim_dir'] is not None:
                 row['simulation_directory'] = record['sim_dir']
@@ -1408,7 +869,6 @@ class OptimParamSimulation:
                 row['simulation_output_csv_path'] = None
             row['epw'] = epwname
             rows.append(row)
-
         full_df = pd.DataFrame(rows)
         required_columns = ['simulation_directory', 'simulation_output_csv_path', 'epw']
         for col in required_columns:
@@ -1425,11 +885,7 @@ class OptimParamSimulation:
             key_df[column] = key_df[column].astype(str)
         return key_df.apply(lambda row: '|'.join(row.values.tolist()), axis=1)
 
-    def _annotate_pareto_status(
-            self,
-            outputs_optimisation_full: pd.DataFrame,
-            outputs_optimisation: pd.DataFrame
-    ) -> pd.DataFrame:
+    def _annotate_pareto_status(self, outputs_optimisation_full: pd.DataFrame, outputs_optimisation: pd.DataFrame) -> pd.DataFrame:
         """
         Recomputes the Pareto front from scratch using the objective values
         directly on the full evaluation history, grouped per EPW.
@@ -1442,20 +898,12 @@ class OptimParamSimulation:
         if outputs_optimisation_full.empty:
             outputs_optimisation_full['pareto-optimal'] = pd.Series(dtype=bool)
             return outputs_optimisation_full
-
-        output_names = self.problem.names("outputs")
+        output_names = self.problem.names('outputs')
         minimize_outputs = getattr(self.problem, 'minimize_outputs', None)
-
-        # Determine minimisation direction per objective.
-        # minimize_outputs is a list of booleans (True = minimise, False = maximise, None = show only).
-        # For Pareto dominance we always work in a "lower is better" space,
-        # so we flip maximised objectives before the dominance check.
         if minimize_outputs is None:
             minimize_flags = [True] * len(output_names)
         else:
-            minimize_flags = [
-                (m if m is not None else True) for m in minimize_outputs
-            ]
+            minimize_flags = [m if m is not None else True for m in minimize_outputs]
 
         def _is_pareto_optimal(costs: np.ndarray) -> np.ndarray:
             """
@@ -1470,13 +918,8 @@ class OptimParamSimulation:
             for i in range(n):
                 if not is_pareto[i]:
                     continue
-                # Check whether i is dominated by any other row currently
-                # considered non-dominated.
                 others_mask = np.arange(n) != i
-                dominated_i = (
-                    np.all(costs[others_mask] <= costs[i], axis=1)
-                    & np.any(costs[others_mask] < costs[i], axis=1)
-                )
+                dominated_i = np.all(costs[others_mask] <= costs[i], axis=1) & np.any(costs[others_mask] < costs[i], axis=1)
                 if np.any(dominated_i):
                     is_pareto[i] = False
             return is_pareto
@@ -1484,41 +927,29 @@ class OptimParamSimulation:
         def _pareto_mask_for_group(group: pd.DataFrame) -> pd.Series:
             """Compute Pareto mask for a single EPW group."""
             objective_data = group[output_names].values.astype(float)
-            # Convert to minimisation space
-            for j, minimise in enumerate(minimize_flags):
+            for (j, minimise) in enumerate(minimize_flags):
                 if not minimise:
                     objective_data[:, j] = -objective_data[:, j]
             mask = _is_pareto_optimal(objective_data)
             return pd.Series(mask, index=group.index)
-
         pareto_mask = pd.Series(False, index=outputs_optimisation_full.index)
         if 'epw' in outputs_optimisation_full.columns and outputs_optimisation_full['epw'].notna().any():
-            for epw, group in outputs_optimisation_full.groupby('epw'):
+            for (epw, group) in outputs_optimisation_full.groupby('epw'):
                 pareto_mask.loc[group.index] = _pareto_mask_for_group(group)
         else:
             pareto_mask = _pareto_mask_for_group(outputs_optimisation_full)
-
         outputs_optimisation_full['pareto-optimal'] = pareto_mask
         return outputs_optimisation_full
-    def _set_optimisation_outputs(
-            self,
-            outputs_optimisation_full: pd.DataFrame,
-            outputs_optimisation_non_dominated: pd.DataFrame = None
-    ):
+
+    def _set_optimisation_outputs(self, outputs_optimisation_full: pd.DataFrame, outputs_optimisation_non_dominated: pd.DataFrame=None):
         if 'pareto-optimal' not in outputs_optimisation_full.columns:
             raise KeyError("Column 'pareto-optimal' is required in outputs_optimisation_full.")
         if 'simulation_output_csv_path' not in outputs_optimisation_full.columns:
             outputs_optimisation_full['simulation_output_csv_path'] = pd.NA
         if 'epw' not in outputs_optimisation_full.columns:
             outputs_optimisation_full['epw'] = pd.NA
-        if (
-            outputs_optimisation_non_dominated is not None
-            and 'epw' in outputs_optimisation_non_dominated.columns
-            and outputs_optimisation_full['epw'].isna().all()
-            and len(outputs_optimisation_non_dominated['epw'].dropna().unique()) == 1
-        ):
+        if outputs_optimisation_non_dominated is not None and 'epw' in outputs_optimisation_non_dominated.columns and outputs_optimisation_full['epw'].isna().all() and (len(outputs_optimisation_non_dominated['epw'].dropna().unique()) == 1):
             outputs_optimisation_full['epw'] = outputs_optimisation_non_dominated['epw'].dropna().iloc[0]
-
         if outputs_optimisation_full.empty and outputs_optimisation_non_dominated is not None:
             fallback_full = outputs_optimisation_non_dominated.copy()
             if 'pareto-optimal' not in fallback_full.columns:
@@ -1528,7 +959,6 @@ class OptimParamSimulation:
             if 'simulation_directory' not in fallback_full.columns:
                 fallback_full['simulation_directory'] = pd.NA
             outputs_optimisation_full = fallback_full
-
         if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
             outputs_optimisation_full.attrs['parameters_names'] = self.problem.names('inputs')
             outputs_optimisation_full.attrs['outputs_names'] = self.problem.names('outputs')
@@ -1537,16 +967,10 @@ class OptimParamSimulation:
             outputs_optimisation_full.attrs['parameters_names'] = self.parameters_names
             outputs_optimisation_full.attrs['outputs_names'] = self.outputs_names
             outputs_optimisation_full.attrs['minimize_outputs'] = getattr(self.problem, 'minimize_outputs', []) if hasattr(self, 'problem') else []
-
         self.outputs_optimisation = outputs_optimisation_full
         if 'epw' not in self.outputs_optimisation.columns:
             self.outputs_optimisation['epw'] = pd.NA
-        self.optimisation_csv_paths_non_dominated = (
-            self.outputs_optimisation[self.outputs_optimisation['pareto-optimal']]['simulation_output_csv_path']
-            .dropna()
-            .drop_duplicates()
-            .tolist()
-        )
+        self.optimisation_csv_paths_non_dominated = self.outputs_optimisation[self.outputs_optimisation['pareto-optimal']]['simulation_output_csv_path'].dropna().drop_duplicates().tolist()
         self.optimisation_csv_paths_non_dominated_by_epw = {}
         self.optimisation_csv_paths_dominated_by_epw = {}
         if 'epw' in outputs_optimisation_full.columns:
@@ -1554,24 +978,9 @@ class OptimParamSimulation:
             dominated_df = outputs_optimisation_full[~outputs_optimisation_full['pareto-optimal']].copy()
             epws = sorted({str(epw) for epw in outputs_optimisation_full['epw'].dropna().unique().tolist()})
             for epw in epws:
-                self.optimisation_csv_paths_non_dominated_by_epw[epw] = (
-                    non_dominated_df.loc[non_dominated_df['epw'].astype(str) == epw, 'simulation_output_csv_path']
-                    .dropna()
-                    .drop_duplicates()
-                    .tolist()
-                )
-                self.optimisation_csv_paths_dominated_by_epw[epw] = (
-                    dominated_df.loc[dominated_df['epw'].astype(str) == epw, 'simulation_output_csv_path']
-                    .dropna()
-                    .drop_duplicates()
-                    .tolist()
-                )
-        self.optimisation_csv_paths_dominated = (
-            outputs_optimisation_full[~outputs_optimisation_full['pareto-optimal']]['simulation_output_csv_path']
-            .dropna()
-            .drop_duplicates()
-            .tolist()
-        )
+                self.optimisation_csv_paths_non_dominated_by_epw[epw] = non_dominated_df.loc[non_dominated_df['epw'].astype(str) == epw, 'simulation_output_csv_path'].dropna().drop_duplicates().tolist()
+                self.optimisation_csv_paths_dominated_by_epw[epw] = dominated_df.loc[dominated_df['epw'].astype(str) == epw, 'simulation_output_csv_path'].dropna().drop_duplicates().tolist()
+        self.optimisation_csv_paths_dominated = outputs_optimisation_full[~outputs_optimisation_full['pareto-optimal']]['simulation_output_csv_path'].dropna().drop_duplicates().tolist()
 
     def _save_outputs_optimisation_full(self, out_dir: str):
         import json
@@ -1580,25 +989,12 @@ class OptimParamSimulation:
         full_results_path = os.path.join(out_dir, f'{full_results_filename}.csv')
         self.outputs_optimisation.to_csv(full_results_path, index=False)
         self.outputs_optimisation.to_pickle(os.path.join(out_dir, f'{full_results_filename}.pkl'))
-        json_payload = {
-            'attrs': self.outputs_optimisation.attrs,
-            'data': self.outputs_optimisation.to_dict(orient='list')
-        }
+        json_payload = {'attrs': self.outputs_optimisation.attrs, 'data': self.outputs_optimisation.to_dict(orient='list')}
         with open(os.path.join(out_dir, f'{full_results_filename}.json'), 'w', encoding='utf-8') as f:
             json.dump(json_payload, f, indent=2, default=str)
         self.outputs_optimisation_filepath = full_results_path
 
-    def load_outputs_optimisation(
-            self,
-            csv_path: str = None,
-            pickle_path: str = None,
-            json_path: str = None,
-            hourly_csv_path: str = None,
-            hourly_pickle_path: str = None,
-            parameters_names: list = None,
-            outputs_names: list = None,
-            minimize_outputs: list = None
-    ) -> pd.DataFrame:
+    def load_outputs_optimisation(self, csv_path: str=None, pickle_path: str=None, json_path: str=None, hourly_csv_path: str=None, hourly_pickle_path: str=None, parameters_names: list=None, outputs_names: list=None, minimize_outputs: list=None) -> pd.DataFrame:
         """
         Loads full optimisation outputs (dominated + non-dominated) from a CSV, Pickle, or JSON file
         previously generated by :meth:`run_optimisation`, and rebuilds the related
@@ -1616,11 +1012,7 @@ class OptimParamSimulation:
         """
         target_path = pickle_path or json_path or csv_path or self.outputs_optimisation_filepath
         if target_path is None:
-            raise ValueError(
-                'No path was provided and no previous outputs_optimisation file is available. '
-                'Run run_optimisation first or provide a valid csv_path/pickle_path/json_path.'
-            )
-
+            raise ValueError('No path was provided and no previous outputs_optimisation file is available. Run run_optimisation first or provide a valid csv_path/pickle_path/json_path.')
         if pickle_path or str(target_path).endswith('.pkl') or str(target_path).endswith('.pickle'):
             outputs_optimisation = pd.read_pickle(target_path)
         elif json_path or str(target_path).endswith('.json'):
@@ -1628,54 +1020,48 @@ class OptimParamSimulation:
             with open(target_path, 'r', encoding='utf-8') as f:
                 payload = json.load(f)
             outputs_optimisation = pd.DataFrame(payload['data'])
-            for k, v in payload.get('attrs', {}).items():
+            for (k, v) in payload.get('attrs', {}).items():
                 outputs_optimisation.attrs[k] = v
         else:
             outputs_optimisation = pd.read_csv(target_path)
-
         if 'pareto-optimal' not in outputs_optimisation.columns:
-            raise KeyError(
-                "Column 'pareto-optimal' not found in the provided file. "
-                "Please load a file generated from outputs_optimisation."
-            )
-            
+            raise KeyError("Column 'pareto-optimal' not found in the provided file. Please load a file generated from outputs_optimisation.")
         self.outputs_optimisation_filepath = target_path
         self._set_optimisation_outputs(outputs_optimisation_full=outputs_optimisation)
-        
         if hourly_pickle_path:
             self.outputs_optimisation_hourly = pd.read_pickle(hourly_pickle_path)
         elif hourly_csv_path:
             self.outputs_optimisation_hourly = pd.read_csv(hourly_csv_path)
-
         parameters_names = parameters_names or outputs_optimisation.attrs.get('parameters_names')
         outputs_names = outputs_names or outputs_optimisation.attrs.get('outputs_names')
         minimize_outputs = minimize_outputs or outputs_optimisation.attrs.get('minimize_outputs')
-
         if parameters_names and outputs_names:
+
             class MockProblem:
+
                 def __init__(self, inputs, outputs, minimize_flags):
                     self._inputs = inputs
                     self._outputs = outputs
                     self.minimize_outputs = minimize_flags
+
                 def names(self, typ):
-                    if typ == 'inputs': return self._inputs
-                    elif typ == 'outputs': return self._outputs
-            
+                    if typ == 'inputs':
+                        return self._inputs
+                    elif typ == 'outputs':
+                        return self._outputs
             self.problem = MockProblem(parameters_names, outputs_names, minimize_outputs)
             self.parameters_names = parameters_names
             self.outputs_names = outputs_names
-            
         self.last_run_type = 'optimisation'
         return self.outputs_optimisation
 
-    def get_hourly_df(self, start_date: str = '2024-01-01 01'):
+    def get_hourly_df(self, start_date: str='2024-01-01 01'):
         """
         Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame, saved in the
          internal variable named outputs_param_simulation_hourly.
 
         :param start_date: the start date for the simulation results, in format 'YYY-MM-DD HH'
         """
-        # Resolve parameter columns with fallback chain
         if hasattr(self, 'parameters_list'):
             parameter_columns = [i.name for i in self.parameters_list]
         elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
@@ -1687,20 +1073,11 @@ class OptimParamSimulation:
         if 'epw' not in parameter_columns:
             parameter_columns.append('epw')
         parameter_columns = [c for c in parameter_columns if c in self.outputs_param_simulation.columns]
-
-        self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(
-            df=self.outputs_param_simulation,
-            parameter_columns=parameter_columns,
-            start_date=start_date
-        )
+        self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(df=self.outputs_param_simulation, parameter_columns=parameter_columns, start_date=start_date)
 
     @staticmethod
     def _resolve_simulation_file_path(row: pd.Series, file_source: Literal['csv', 'eso']) -> str:
-        error_msg = (
-            f"{file_source.upper()} path cannot be resolved for this simulation. "
-            f"If you used keep_sim_files='non-dominated' and this is a dominated simulation, "
-            f"the files were deleted to save space. To analyze this simulation, re-run keeping its files."
-        )
+        error_msg = f"{file_source.upper()} path cannot be resolved for this simulation. If you used keep_sim_files='non-dominated' and this is a dominated simulation, the files were deleted to save space. To analyze this simulation, re-run keeping its files."
         if file_source == 'csv':
             if pd.notna(row.get('simulation_output_csv_path', pd.NA)):
                 return str(row['simulation_output_csv_path'])
@@ -1718,21 +1095,13 @@ class OptimParamSimulation:
 
     @staticmethod
     def _flatten_eso_column_name(col: tuple) -> str:
-        area, variable, units = col
+        (area, variable, units) = col
         return f'{variable} [{units}] | {area}'
 
-    def _extract_hourly_outputs_from_file(
-            self,
-            row: pd.Series,
-            file_source: Literal['csv', 'eso'],
-            file_output_columns: Optional[List[str]] = None,
-            eplus_install_dir: Optional[str] = None,
-            only_run_period: bool = True
-    ) -> dict:
+    def _extract_hourly_outputs_from_file(self, row: pd.Series, file_source: Literal['csv', 'eso'], file_output_columns: Optional[List[str]]=None, eplus_install_dir: Optional[str]=None, only_run_period: bool=True) -> dict:
         path = self._resolve_simulation_file_path(row=row, file_source=file_source)
         if not os.path.exists(path):
-            raise FileNotFoundError(f"Simulation output file not found: {path}")
-
+            raise FileNotFoundError(f'Simulation output file not found: {path}')
         if file_source == 'csv':
             df_file = pd.read_csv(path)
             excluded_columns = {'Date/Time', 'date/time'}
@@ -1758,31 +1127,20 @@ class OptimParamSimulation:
                         missing.append(requested)
                 if missing:
                     sample_cols = [c for c in df_file.columns if ':Zone Operative Temperature' in c or 'VRF Heat Pump Cooling Electricity Energy' in c]
-                    raise KeyError(
-                        f"Requested CSV columns not found in '{path}': {missing}. "
-                        f"Example available columns: {sample_cols[:8]}"
-                    )
+                    raise KeyError(f"Requested CSV columns not found in '{path}': {missing}. Example available columns: {sample_cols[:8]}")
             return {c: df_file[c].tolist() for c in selected_cols}
-
-        eso_results = read_eso_using_readvarseso(
-            eso_file_path=path,
-            eplus_install_dir=eplus_install_dir,
-            only_run_period=only_run_period,
-            cleanup=True
-        )
+        eso_results = read_eso_using_readvarseso(eso_file_path=path, eplus_install_dir=eplus_install_dir, only_run_period=only_run_period, cleanup=True)
         data_by_freq = eso_results.get('data', {})
         hourly_df = data_by_freq.get('Hourly')
         if hourly_df is None or hourly_df.empty:
-            non_empty = [df for df in data_by_freq.values() if isinstance(df, pd.DataFrame) and not df.empty]
+            non_empty = [df for df in data_by_freq.values() if isinstance(df, pd.DataFrame) and (not df.empty)]
             if len(non_empty) == 0:
                 raise ValueError(f'No readable data found in ESO file: {path}')
             hourly_df = non_empty[0]
-
         flattened_map = {}
         for col in hourly_df.columns:
             flattened_name = self._flatten_eso_column_name(col)
             flattened_map[flattened_name] = hourly_df[col].tolist()
-
         if file_output_columns is None:
             return flattened_map
         missing = [c for c in file_output_columns if c not in flattened_map]
@@ -1790,54 +1148,25 @@ class OptimParamSimulation:
             raise KeyError(f"Requested ESO columns not found in '{path}': {missing}")
         return {c: flattened_map[c] for c in file_output_columns}
 
-    def _attach_hourly_outputs_from_simulation_files(
-            self,
-            df: pd.DataFrame,
-            file_source: Literal['csv', 'eso'],
-            file_output_columns: Optional[List[str]] = None,
-            eplus_install_dir: Optional[str] = None,
-            only_run_period: bool = True
-    ) -> pd.DataFrame:
+    def _attach_hourly_outputs_from_simulation_files(self, df: pd.DataFrame, file_source: Literal['csv', 'eso'], file_output_columns: Optional[List[str]]=None, eplus_install_dir: Optional[str]=None, only_run_period: bool=True) -> pd.DataFrame:
         df_augmented = df.copy()
         per_row_outputs = []
         all_output_cols = set()
-        for _, row in df_augmented.iterrows():
+        for (_, row) in df_augmented.iterrows():
             try:
-                row_outputs = self._extract_hourly_outputs_from_file(
-                    row=row,
-                    file_source=file_source,
-                    file_output_columns=file_output_columns,
-                    eplus_install_dir=eplus_install_dir,
-                    only_run_period=only_run_period
-                )
+                row_outputs = self._extract_hourly_outputs_from_file(row=row, file_source=file_source, file_output_columns=file_output_columns, eplus_install_dir=eplus_install_dir, only_run_period=only_run_period)
             except (ValueError, FileNotFoundError) as e:
-                # If files were deleted by keep_sim_files='non-dominated' (or missing for any reason),
-                # we skip this row. The resulting hourly df will only contain data for valid rows.
                 row_outputs = {}
             per_row_outputs.append(row_outputs)
             all_output_cols.update(row_outputs.keys())
-
         for col in all_output_cols:
             target_col = col
             if target_col in df_augmented.columns:
                 target_col = f'{target_col}__from_{file_source}'
             df_augmented[target_col] = [row_outputs[col] if col in row_outputs else [] for row_outputs in per_row_outputs]
-
         return df_augmented
 
-    def get_hourly_df_optimisation(
-            self,
-            only_pareto_optimal: bool = True,
-            epw_filter: Union[str, List[str]] = None,
-            simulation_indices: Optional[List[int]] = None,
-            output_columns: Optional[List[str]] = None,
-            include_summary_columns: bool = True,
-            file_source: Literal['csv', 'eso'] = 'csv',
-            eplus_install_dir: Optional[str] = None,
-            only_run_period: bool = True,
-            start_date: Optional[str] = None,
-            skip_confirmation: bool = False,
-    ):
+    def get_hourly_df_optimisation(self, only_pareto_optimal: bool=True, epw_filter: Union[str, List[str]]=None, simulation_indices: Optional[List[int]]=None, output_columns: Optional[List[str]]=None, include_summary_columns: bool=True, file_source: Literal['csv', 'eso']='csv', eplus_install_dir: Optional[str]=None, only_run_period: bool=True, start_date: Optional[str]=None, skip_confirmation: bool=False):
         """
         Expands optimisation results to hourly frequency and saves the result
         in ``outputs_optimisation_hourly``.
@@ -1894,48 +1223,24 @@ class OptimParamSimulation:
             (scripts, notebooks, CI pipelines).
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
-            raise ValueError(
-                "This method requires optimisation outputs. "
-                "Please run run_optimisation() or load_outputs_optimisation() first."
-            )
+            raise ValueError('This method requires optimisation outputs. Please run run_optimisation() or load_outputs_optimisation() first.')
         if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
             raise ValueError('No optimisation data available to expand hourly.')
-
-        _using_defaults = (epw_filter is None and output_columns is None and simulation_indices is None)
-
-        # ── 1. Row filtering ──────────────────────────────────────────────────
+        _using_defaults = epw_filter is None and output_columns is None and (simulation_indices is None)
         source_df = self.outputs_optimisation.copy()
-
         if simulation_indices is not None:
             source_df = source_df.loc[simulation_indices]
         else:
             if only_pareto_optimal and 'pareto-optimal' in source_df.columns:
                 source_df = source_df[source_df['pareto-optimal']]
-
             if epw_filter is not None:
                 if isinstance(epw_filter, str):
                     epw_filter = [epw_filter]
-                epw_mask = source_df['epw'].astype(str).apply(
-                    lambda x: any(f.lower() in x.lower() for f in epw_filter)
-                )
+                epw_mask = source_df['epw'].astype(str).apply(lambda x: any((f.lower() in x.lower() for f in epw_filter)))
                 source_df = source_df[epw_mask]
-
         if source_df.empty:
-            raise ValueError(
-                'The applied filters resulted in an empty selection. '
-                'Relax only_pareto_optimal, epw_filter, or simulation_indices.'
-            )
-
-        # ── 2. Read hourly outputs from simulation files ──────────────────────
-        source_df = self._attach_hourly_outputs_from_simulation_files(
-            df=source_df,
-            file_source=file_source,
-            file_output_columns=output_columns,
-            eplus_install_dir=eplus_install_dir,
-            only_run_period=only_run_period
-        )
-
-        # ── 3. Infer start_date automatically if not provided ─────────────────
+            raise ValueError('The applied filters resulted in an empty selection. Relax only_pareto_optimal, epw_filter, or simulation_indices.')
+        source_df = self._attach_hourly_outputs_from_simulation_files(df=source_df, file_source=file_source, file_output_columns=output_columns, eplus_install_dir=eplus_install_dir, only_run_period=only_run_period)
         if start_date is None:
             try:
                 first_row = self.outputs_optimisation.iloc[0]
@@ -1943,47 +1248,31 @@ class OptimParamSimulation:
                 if os.path.exists(csv_path):
                     _dt_raw = pd.read_csv(csv_path, usecols=['Date/Time'], nrows=1)['Date/Time'].iloc[0]
                     _dt_clean = _dt_raw.strip()
-                    _month_day, _time = _dt_clean.split()
-                    _month, _day = _month_day.split('/')
+                    (_month_day, _time) = _dt_clean.split()
+                    (_month, _day) = _month_day.split('/')
                     _hour = int(_time.split(':')[0])
                     start_date = f'2024-{int(_month):02d}-{int(_day):02d} {_hour:02d}'
             except Exception:
                 pass
             if start_date is None:
                 start_date = '2024-01-01 01'
-
-        # ── 4. Identify identifier (parameter) columns ────────────────────────
         if include_summary_columns:
-            # Priority 1: parameters_list (full session with set_parameters)
             if hasattr(self, 'parameters_list'):
                 param_cols = [i.name for i in self.parameters_list if i.name in source_df.columns]
-            # Priority 2: problem.names('inputs') (full session or MockProblem from load)
             elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
                 param_cols = [c for c in self.problem.names('inputs') if c in source_df.columns]
-            # Priority 3: attrs embedded in the DataFrame when saved (pkl/json)
             elif self.outputs_optimisation.attrs.get('parameters_names'):
                 param_cols = [c for c in self.outputs_optimisation.attrs['parameters_names'] if c in source_df.columns]
             else:
-                # Fallback: columns that exist in outputs_optimisation but are not
-                # objective outputs, epw, pareto-optimal, or internal path columns
-                _known_non_param = {
-                    'epw', 'pareto-optimal', 'simulation_output_csv_path', 'simulation_directory'
-                }
+                _known_non_param = {'epw', 'pareto-optimal', 'simulation_output_csv_path', 'simulation_directory'}
                 if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
                     _known_non_param.update(self.problem.names('outputs') or [])
-                param_cols = [
-                    c for c in source_df.columns
-                    if c not in _known_non_param
-                    and not source_df[c].apply(lambda x: isinstance(x, (list, tuple))).any()
-                ]
-
+                param_cols = [c for c in source_df.columns if c not in _known_non_param and (not source_df[c].apply(lambda x: isinstance(x, (list, tuple))).any())]
             for extra_col in ['epw', 'pareto-optimal']:
                 if extra_col in source_df.columns and extra_col not in param_cols:
                     param_cols.append(extra_col)
         else:
             param_cols = []
-
-        # ── 5. Size estimate ─────────────────────────────────────────────────
         from accim.parametric_and_optimisation.utils import identify_hourly_columns
         hourly_cols = identify_hourly_columns(source_df)
         n_rows = len(source_df)
@@ -1993,35 +1282,19 @@ class OptimParamSimulation:
             n_steps = len(sample) if isinstance(sample, (list, tuple)) else 8760
         else:
             n_steps = 8760
-
         total_rows = n_rows * n_steps
-        total_cols = len(param_cols) + n_hourly + 2  # +2 for hour, datetime
-        approx_mb = total_rows * total_cols * 8 / 1e6
-
-        size_msg = (
-            f"\n  Simulations selected : {n_rows}\n"
-            f"  Hourly steps per sim : {n_steps}\n"
-            f"  Hourly output columns: {n_hourly}  "
-            f"→ {hourly_cols[:5]}{'...' if n_hourly > 5 else ''}\n"
-            f"  Expanded shape       : ~{total_rows:,} rows × {total_cols} cols\n"
-            f"  Approx. memory       : ~{approx_mb:.1f} MB"
-        )
-
-        if _using_defaults and not skip_confirmation:
-            print(f"[get_hourly_df_optimisation] Estimated output size:{size_msg}")
-            answer = input("\nProceed with expansion? [y/N]: ").strip().lower()
+        total_cols = len(param_cols) + n_hourly + 2
+        approx_mb = total_rows * total_cols * 8 / 1000000.0
+        size_msg = f"\n  Simulations selected : {n_rows}\n  Hourly steps per sim : {n_steps}\n  Hourly output columns: {n_hourly}  → {hourly_cols[:5]}{('...' if n_hourly > 5 else '')}\n  Expanded shape       : ~{total_rows:,} rows × {total_cols} cols\n  Approx. memory       : ~{approx_mb:.1f} MB"
+        if _using_defaults and (not skip_confirmation):
+            print(f'[get_hourly_df_optimisation] Estimated output size:{size_msg}')
+            answer = input('\nProceed with expansion? [y/N]: ').strip().lower()
             if answer != 'y':
-                print("Expansion cancelled. Use epw_filter, output_columns or simulation_indices to reduce the size.")
+                print('Expansion cancelled. Use epw_filter, output_columns or simulation_indices to reduce the size.')
                 return None
         else:
-            print(f"[get_hourly_df_optimisation] Expanding…{size_msg}")
-
-        # ── 6. Expand ─────────────────────────────────────────────────────────
-        self.outputs_optimisation_hourly = expand_to_hourly_dataframe(
-            df=source_df,
-            parameter_columns=param_cols,
-            start_date=start_date
-        )
+            print(f'[get_hourly_df_optimisation] Expanding…{size_msg}')
+        self.outputs_optimisation_hourly = expand_to_hourly_dataframe(df=source_df, parameter_columns=param_cols, start_date=start_date)
 
     def get_hourly_df_columns(self):
         """
@@ -2030,12 +1303,10 @@ class OptimParamSimulation:
         """
         import os
         import pandas as pd
-        
         if getattr(self, 'last_run_type', None) == 'optimisation':
             if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
-                raise ValueError("Optimisation outputs not found. Run or load optimisation first.")
-            
-            for _, row in self.outputs_optimisation.iterrows():
+                raise ValueError('Optimisation outputs not found. Run or load optimisation first.')
+            for (_, row) in self.outputs_optimisation.iterrows():
                 try:
                     path = self._resolve_simulation_file_path(row=row, file_source='csv')
                     if os.path.exists(path):
@@ -2046,932 +1317,17 @@ class OptimParamSimulation:
                         return self.outputs_hourly_columns
                 except Exception:
                     continue
-            raise FileNotFoundError("Could not find any valid simulation output CSV files to infer hourly columns.")
-            
+            raise FileNotFoundError('Could not find any valid simulation output CSV files to infer hourly columns.')
         elif getattr(self, 'last_run_type', None) == 'parametric':
             if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
-                raise ValueError("Parametric outputs not found. Run or load parametric simulation first.")
+                raise ValueError('Parametric outputs not found. Run or load parametric simulation first.')
             self.outputs_hourly_columns = identify_hourly_columns(self.outputs_param_simulation)
             return self.outputs_hourly_columns
-            
         else:
-            raise ValueError("No previous simulation run type detected. Please run parametric or optimisation first.")
-
-    def run_sensitivity_analysis(self, method: Literal['sobol', 'morris'] = 'sobol', **kwargs) -> dict:
-        """
-        Runs Sensitivity Analysis on the results of a parametric simulation using SALib.
-        
-        :param method: 'sobol' or 'morris'. Must match the sampling method used.
-        :param kwargs: additional arguments to pass to SALib.analyze.sobol or SALib.analyze.morris.
-        :return: a dictionary mapping each output name to its SALib analysis results.
-        """
-        if getattr(self, 'last_run_type', None) != 'parametric':
-            raise ValueError(
-                "Sensitivity Analysis can only be run after a parametric simulation. "
-                "Please ensure you run run_parametric_simulation() first."
-            )
-        if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
-            raise ValueError("You must run run_parametric_simulation before running sensitivity analysis.")
-
-        try:
-            from SALib.analyze import sobol, morris
-        except ImportError:
-            raise ImportError("SALib is required for Sensitivity Analysis. Install it with: pip install SALib")
-
-        problem = self._get_salib_problem()
-        df = self.outputs_param_simulation
-        output_names = self.problem.names("outputs")
-        
-        results = {}
-        for output_name in output_names:
-            if output_name not in df.columns:
-                print(f"Warning: Output {output_name} not found in results DataFrame. Skipping.")
-                continue
-                
-            Y = df[output_name].values.astype(float)
-            
-            if method == 'sobol':
-                try:
-                    res = sobol.analyze(problem, Y, **kwargs)
-                except ValueError as e:
-                    raise ValueError(f"Error analyzing with Sobol. Make sure you generated samples with sampling_sobol(). Details: {e}")
-            elif method == 'morris':
-                try:
-                    res = morris.analyze(problem, df[problem['names']].values.astype(float), Y, **kwargs)
-                except ValueError as e:
-                    raise ValueError(f"Error analyzing with Morris. Make sure you generated samples with sampling_morris(). Details: {e}")
-            else:
-                raise ValueError(f"Unknown sensitivity analysis method: {method}")
-                
-            results[output_name] = res
-            
-        self.sensitivity_results = results
-        return results
-
-    def get_best_compromise_solution(self, method: Literal['knee_point', 'topsis'] = 'topsis', weights: list = None) -> pd.DataFrame:
-        """
-        Identifies the best compromise solution from the Pareto front.
-
-        :param method: The MCDM method to use. 'knee_point' (closest distance to Utopia point) or 'topsis'.
-        :param weights: A list of weights for each objective, used only in 'topsis'. 
-            If None, equal weights are applied. Must match the number of objectives.
-        :return: A pandas DataFrame containing the best compromise solution(s).
-        """
-        if getattr(self, 'last_run_type', None) != 'optimisation':
-            raise ValueError(
-                "MCDM best compromise solutions can only be evaluated after an optimisation simulation. "
-                "Please ensure you run run_optimisation() first."
-            )
-        if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
-            raise ValueError("No optimization results found. Run optimization first.")
-
-        # Filter for Pareto optimal solutions
-        pareto_df = self.outputs_optimisation[self.outputs_optimisation['pareto-optimal'] == True].copy()
-        if pareto_df.empty:
-            raise ValueError("No Pareto optimal solutions found in outputs_optimisation.")
-
-        output_names = self.problem.names("outputs")
-        minimize_outputs = getattr(self.problem, 'minimize_outputs', None)
-        
-        if minimize_outputs is None:
-            minimize_flags = [True] * len(output_names)
-        else:
-            minimize_flags = [(m if m is not None else True) for m in minimize_outputs]
-
-        # Extract objectives array
-        obj_values = pareto_df[output_names].values.astype(float)
-        
-        # Step 1: Normalize (Min-Max normalization to [0, 1])
-        mins = obj_values.min(axis=0)
-        maxs = obj_values.max(axis=0)
-        
-        # Avoid division by zero if all values in an objective are the same
-        ranges = maxs - mins
-        ranges[ranges == 0] = 1.0
-        
-        norm_values = (obj_values - mins) / ranges
-        
-        if method == 'knee_point':
-            # Step 2: Define Utopia point in normalized space
-            # For minimized objectives, ideal is 0. For maximized, ideal is 1.
-            utopia = np.zeros(len(output_names))
-            for i, minimize in enumerate(minimize_flags):
-                if not minimize:
-                    utopia[i] = 1.0
-                    
-            # Step 3: Calculate Euclidean distance to Utopia point
-            distances = np.sqrt(np.sum((norm_values - utopia)**2, axis=1))
-            pareto_df['distance_to_utopia'] = distances
-            
-            # Step 4: Find minimum distance
-            best_idx = np.argmin(distances)
-            return pareto_df.iloc[[best_idx]].copy()
-            
-        elif method == 'topsis':
-            if weights is None:
-                weights = np.ones(len(output_names)) / len(output_names)
-            else:
-                if len(weights) != len(output_names):
-                    raise ValueError(f"Length of weights ({len(weights)}) must match number of outputs ({len(output_names)}).")
-                weights = np.array(weights) / np.sum(weights)
-
-            sq_sum = np.sqrt(np.sum(obj_values**2, axis=0))
-            sq_sum[sq_sum == 0] = 1.0
-            topsis_norm = obj_values / sq_sum
-            
-            weighted_norm = topsis_norm * weights
-            
-            # Determine ideal best and ideal worst
-            ideal_best = np.zeros(len(output_names))
-            ideal_worst = np.zeros(len(output_names))
-            
-            for i, minimize in enumerate(minimize_flags):
-                if minimize:
-                    ideal_best[i] = np.min(weighted_norm[:, i])
-                    ideal_worst[i] = np.max(weighted_norm[:, i])
-                else:
-                    ideal_best[i] = np.max(weighted_norm[:, i])
-                    ideal_worst[i] = np.min(weighted_norm[:, i])
-                    
-            # Distance to ideal best and worst
-            d_best = np.sqrt(np.sum((weighted_norm - ideal_best)**2, axis=1))
-            d_worst = np.sqrt(np.sum((weighted_norm - ideal_worst)**2, axis=1))
-            
-            # Closeness coefficient (C)
-            # Avoid division by zero
-            denom = d_best + d_worst
-            denom[denom == 0] = 1.0
-            closeness = d_worst / denom
-            
-            pareto_df['topsis_score'] = closeness
-            
-            # Best is maximum closeness
-            best_idx = np.argmax(closeness)
-            return pareto_df.iloc[[best_idx]].copy()
-            
-        else:
-            raise ValueError(f"Unknown MCDM method: {method}")
-
-    def run_sensitivity_analysis_by_epw(
-            self,
-            method: Literal['sobol', 'morris'] = 'morris',
-            out_dir: str = '.',
-            **kwargs
-    ) -> dict:
-        """
-        Runs Sensitivity Analysis separately for each EPW found in
-        ``outputs_param_simulation``, saves a CSV and a bar-chart PNG per EPW,
-        and returns a nested dict ``{epw_label: SALib_results_dict}``.
-
-        The results are also stored in ``self.sensitivity_results_by_epw``.
-
-        Typical workflow::
-
-            sim.sampling_morris(num_samples=50)
-            sim.run_parametric_simulation(epws=['Seville.epw', 'Sydney.epw'], ...)
-            sa = sim.run_sensitivity_analysis_by_epw(method='morris', out_dir='results')
-
-        :param method: ``'sobol'`` or ``'morris'``. Must match the sampling
-            method used before calling ``run_parametric_simulation``.
-        :param out_dir: directory where CSV and PNG files will be saved.
-        :param kwargs: additional keyword arguments forwarded to
-            ``run_sensitivity_analysis``.
-        :return: nested dict ``{epw_label: {output_name: SALib_result}}``.
-        """
-        if getattr(self, 'last_run_type', None) != 'parametric':
-            raise ValueError(
-                "Sensitivity Analysis by EPW can only be run after a parametric simulation. "
-                "Please ensure you run run_parametric_simulation() first."
-            )
-        import matplotlib
-        import matplotlib.pyplot as plt
-
-        if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
-            raise ValueError(
-                'No parametric simulation results found. '
-                'Run run_parametric_simulation before calling this method.'
-            )
-
-        os.makedirs(out_dir, exist_ok=True)
-        epw_labels = self.outputs_param_simulation['epw'].unique()
-        results_by_epw = {}
-        original_df = self.outputs_param_simulation
-
-        for epw_label in epw_labels:
-            epw_tag = str(epw_label).replace(' ', '_')
-
-            # Restrict to this EPW for SA
-            self.outputs_param_simulation = original_df[
-                original_df['epw'] == epw_label
-            ].copy()
-
-            sa_results = self.run_sensitivity_analysis(method=method, **kwargs)
-            results_by_epw[epw_label] = sa_results
-            self.outputs_param_simulation = original_df  # restore
-
-            # --- Build and save tidy CSV ---
-            rows = []
-            if method == 'sobol':
-                for output_name, res in sa_results.items():
-                    for param, s1, st in zip(res['names'], res['S1'], res['ST']):
-                        rows.append({
-                            'epw': epw_tag, 'output': output_name,
-                            'parameter': param,
-                            'S1': round(float(s1), 4),
-                            'ST': round(float(st), 4),
-                        })
-                x_labels = ('S1 (first-order)', 'ST (total-order)')
-                bar_keys = ('S1', 'ST')
-                y_label = 'Sobol Index'
-                title_prefix = 'Sobol Sensitivity'
-                bar_colours = ('#457b9d', '#e63946')
-                ylim = (0, 1)
-            else:  # morris
-                for output_name, res in sa_results.items():
-                    for param, mu, mu_star, sigma in zip(
-                        res['names'], res['mu'], res['mu_star'], res['sigma']
-                    ):
-                        rows.append({
-                            'epw': epw_tag, 'output': output_name,
-                            'parameter': param,
-                            'mu': round(float(mu), 4),
-                            'mu_star': round(float(mu_star), 4),
-                            'sigma': round(float(sigma), 4),
-                        })
-                x_labels = ('mu* (importance)', 'sigma (interactions)')
-                bar_keys = ('mu_star', 'sigma')
-                y_label = 'Morris Index'
-                title_prefix = 'Morris Sensitivity'
-                bar_colours = ('#457b9d', '#e63946')
-                ylim = None
-
-            sa_df = pd.DataFrame(rows)
-            fname_csv = os.path.join(out_dir, f'results_sa_{method}_{epw_tag}.csv')
-            sa_df.to_csv(fname_csv, index=False)
-            print(f'  SA ({method}) results saved: {fname_csv}')
-
-            # --- Bar chart per output ---
-            output_names_sa = list(sa_results.keys())
-            n_outputs = len(output_names_sa)
-            fig, axes = plt.subplots(1, n_outputs, figsize=(6 * n_outputs, 5), squeeze=False)
-            width = 0.35
-            for ax_idx, output_name in enumerate(output_names_sa):
-                res = sa_results[output_name]
-                ax_sa = axes[0][ax_idx]
-                x = np.arange(len(res['names']))
-                vals_a = np.abs(res[bar_keys[0]])
-                vals_b = np.abs(res[bar_keys[1]])
-                ax_sa.bar(x - width / 2, vals_a, width,
-                          label=x_labels[0], color=bar_colours[0], alpha=0.85)
-                ax_sa.bar(x + width / 2, vals_b, width,
-                          label=x_labels[1], color=bar_colours[1], alpha=0.85)
-                ax_sa.set_xticks(x)
-                ax_sa.set_xticklabels(res['names'], rotation=30, ha='right', fontsize=9)
-                ax_sa.set_ylabel(y_label, fontsize=10)
-                ax_sa.set_title(f'{title_prefix} — {output_name}\n[{epw_tag}]', fontsize=10)
-                ax_sa.legend(fontsize=8)
-                if ylim:
-                    ax_sa.set_ylim(*ylim)
-                ax_sa.axhline(0, color='k', lw=0.5)
-            plt.tight_layout()
-            fname_plot = os.path.join(out_dir, f'plot_sa_{method}_{epw_tag}.png')
-            plt.savefig(fname_plot, dpi=300, bbox_inches='tight')
-            plt.close()
-            print(f'  SA ({method}) plot saved: {fname_plot}')
-
-        self.sensitivity_results_by_epw = results_by_epw
-        return results_by_epw
-
-    def plot_best_compromise_solutions(
-            self,
-            out_dir: str = '.',
-            mcdm_configs: list = None,
-    ) -> pd.DataFrame:
-        """
-        Identifies the best compromise solution(s) from the Pareto front for
-        each EPW found in ``outputs_optimisation``, saves the results to a
-        CSV and a scatter-plot PNG, and returns the combined DataFrame.
-
-        :param out_dir: directory where output files will be saved.
-        :param mcdm_configs: list of dicts, each specifying one MCDM run.
-            Each dict must have a ``'method'`` key (``'knee_point'`` or
-            ``'topsis'``) and may optionally have:
-
-            - ``'weights'``: list of per-objective weights (TOPSIS only).
-            - ``'label'``: string label used in the legend and CSV column
-              (auto-generated if omitted).
-
-            Default (when ``None``)::
-
-                [
-                    {'method': 'knee_point'},
-                    {'method': 'topsis'},
-                    {'method': 'topsis', 'weights': [0.7, 0.3], 'label': 'topsis_w70_30'},
-                ]
-
-        :return: pandas DataFrame with all best solutions (one row per
-            EPW × MCDM method), also saved to CSV.
-        """
-        if getattr(self, 'last_run_type', None) != 'optimisation':
-            raise ValueError(
-                "MCDM best compromise solutions can only be evaluated after an optimisation simulation. "
-                "Please ensure you run run_optimisation() first."
-            )
-        import matplotlib.pyplot as plt
-
-        if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
-            raise ValueError(
-                'No optimisation results found. '
-                'Run run_optimisation (or load via load_outputs_optimisation) first.'
-            )
-
-        os.makedirs(out_dir, exist_ok=True)
-
-        if mcdm_configs is None:
-            output_names = self.problem.names('outputs')
-            n_obj = len(output_names)
-            mcdm_configs = [
-                {'method': 'knee_point'},
-                {'method': 'topsis'},
-                {'method': 'topsis',
-                 'weights': [0.7] + [0.3 / max(n_obj - 1, 1)] * (n_obj - 1),
-                 'label': 'topsis_w70_30'},
-            ]
-
-        # Auto-generate labels if missing
-        label_counts: dict = {}
-        for cfg in mcdm_configs:
-            if 'label' not in cfg:
-                base = cfg['method']
-                label_counts[base] = label_counts.get(base, 0) + 1
-                suffix = '' if label_counts[base] == 1 else f'_{label_counts[base]}'
-                cfg['label'] = f"{base}{suffix}"
-
-        # Colour / marker scheme for up to 8 configs
-        _marker_cycle = ['*', 'D', 's', '^', 'P', 'X', 'v', 'o']
-        _colour_cycle = ['#e63946', '#f4a261', '#2a9d8f', '#e9c46a',
-                         '#264653', '#a8dadc', '#457b9d', '#6d6875']
-        _size_cycle   = [220, 120, 120, 120, 120, 120, 120, 120]
-
-        epw_labels = self.outputs_optimisation['epw'].unique()
-        output_names = self.problem.names('outputs')
-        heating_col = next((c for c in output_names if 'Heating' in c), output_names[0])
-        _fallback_cool = output_names[-1] if len(output_names) > 1 else output_names[0]
-        cooling_col = next((c for c in output_names if 'Cooling' in c), _fallback_cool)
-
-        all_mcdm_rows = []
-        original_optim = self.outputs_optimisation
-
-        for epw_label in epw_labels:
-            epw_tag = str(epw_label).replace(' ', '_')
-            self.outputs_optimisation = original_optim[
-                original_optim['epw'] == epw_label
-            ].copy()
-
-            print(f'\n  [{epw_tag}] Best compromise solutions:')
-            for cfg in mcdm_configs:
-                method = cfg['method']
-                weights = cfg.get('weights', None)
-                label = cfg['label']
-                row_df = self.get_best_compromise_solution(method=method, weights=weights)
-                row_df = row_df.copy()
-                row_df['mcdm_method'] = label
-                row_df['epw'] = epw_tag
-                all_mcdm_rows.append(row_df)
-
-                h_kwh = row_df[heating_col].iloc[0] / 3.6e6
-                c_kwh = row_df[cooling_col].iloc[0] / 3.6e6
-                print(f'    {label:25s} | {heating_col}={h_kwh:.1f} kWh'
-                      f' | {cooling_col}={c_kwh:.1f} kWh')
-
-            self.outputs_optimisation = original_optim  # restore
-
-        mcdm_df = pd.concat(all_mcdm_rows, ignore_index=True)
-        fname_csv = os.path.join(out_dir, 'results_mcdm_best_solutions.csv')
-        mcdm_df.to_csv(fname_csv, index=False)
-        print(f'\n  MCDM summary saved: {fname_csv}')
-
-        # --- Figure: one subplot per EPW ---
-        fig, axes = plt.subplots(
-            1, len(epw_labels),
-            figsize=(8 * len(epw_labels), 6),
-            squeeze=False
-        )
-        for ax_idx, epw_label in enumerate(epw_labels):
-            epw_tag = str(epw_label).replace(' ', '_')
-            ax_m = axes[0][ax_idx]
-            df_epw = original_optim[original_optim['epw'] == epw_label].copy()
-            df_epw['_h'] = df_epw[heating_col] / 3.6e6
-            df_epw['_c'] = df_epw[cooling_col] / 3.6e6
-
-            dom = df_epw[~df_epw['pareto-optimal']]
-            par = df_epw[df_epw['pareto-optimal']]
-            ax_m.scatter(dom['_h'], dom['_c'], c='#cccccc', alpha=0.3, s=15, zorder=1)
-            ax_m.scatter(par['_h'], par['_c'], c='#457b9d', alpha=0.6, s=40,
-                         edgecolors='k', linewidths=0.4, zorder=2, label='Pareto-optimal')
-
-            for i, cfg in enumerate(mcdm_configs):
-                label = cfg['label']
-                row = mcdm_df[
-                    (mcdm_df['epw'] == epw_tag) &
-                    (mcdm_df['mcdm_method'] == label)
-                ]
-                if row.empty:
-                    continue
-                h = row[heating_col].iloc[0] / 3.6e6
-                c = row[cooling_col].iloc[0] / 3.6e6
-                ax_m.scatter(
-                    h, c,
-                    marker=_marker_cycle[i % len(_marker_cycle)],
-                    c=_colour_cycle[i % len(_colour_cycle)],
-                    s=_size_cycle[i % len(_size_cycle)],
-                    zorder=5, edgecolors='k', linewidths=0.6, label=label
-                )
-
-            ax_m.set_xlabel(f'{heating_col} (kWh)', fontsize=11)
-            ax_m.set_ylabel(f'{cooling_col} (kWh)', fontsize=11)
-            ax_m.set_title(f'Pareto Front + MCDM best solutions\n[{epw_tag}]', fontsize=11)
-            ax_m.legend(fontsize=9)
-
-        plt.tight_layout()
-        fname_plot = os.path.join(out_dir, 'plot_mcdm_best_solutions.png')
-        plt.savefig(fname_plot, dpi=300, bbox_inches='tight')
-        plt.close()
-        print(f'  MCDM plot saved: {fname_plot}')
-
-        return mcdm_df
-
-    def run_clustering(
-            self,
-            n_clusters: int = 3,
-            cluster_by: str = 'parameters',
-            pareto_only: bool = True,
-            out_dir: str = '.'
-    ):
-        """
-        if pareto_only and getattr(self, 'last_run_type', None) != 'optimisation':
-            raise ValueError('Clustering with pareto_only=True requires an optimisation simulation. Run run_optimisation() first, or set pareto_only=False.')
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
-
-        Groups solutions into K clusters using KMeans to identify design families.
-        
-        :param n_clusters: Number of clusters (K).
-        :param cluster_by: 'parameters' or 'objectives'.
-        :param pareto_only: If True, only clusters the Pareto optimal solutions.
-        :param out_dir: Output directory for saving the CSV and plot.
-        :return: DataFrame with the 'Cluster_ID' column added.
-        """
-        if pareto_only and getattr(self, 'last_run_type', None) != 'optimisation':
-            raise ValueError(
-                "Clustering with pareto_only=True requires an optimisation simulation. "
-                "Please ensure you run run_optimisation() first, or set pareto_only=False."
-            )
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError("Clustering requires either a parametric or optimisation simulation to be run first.")
-            
-        import os
-        import pandas as pd
-        from sklearn.cluster import KMeans
-        from sklearn.preprocessing import StandardScaler
-        import matplotlib.pyplot as plt
-
-        os.makedirs(out_dir, exist_ok=True)
-        df = self.outputs_optimisation.copy()
-        
-        if pareto_only:
-            df = df[df['pareto-optimal']].copy()
-            if df.empty:
-                raise ValueError("No Pareto-optimal solutions found to cluster.")
-
-        if cluster_by == 'parameters':
-            features = self.problem.names('inputs')
-        elif cluster_by == 'objectives':
-            features = self.problem.names('outputs')
-        else:
-            raise ValueError("cluster_by must be 'parameters' or 'objectives'.")
-
-        missing_cols = [f for f in features if f not in df.columns]
-        if missing_cols:
-            raise KeyError(f"Missing features in DataFrame for clustering: {missing_cols}")
-
-        epw_labels = df['epw'].unique()
-        df['Cluster_ID'] = -1
-
-        for epw_label in epw_labels:
-            df_epw = df[df['epw'] == epw_label].copy()
-            X = df_epw[features].values
-            
-            if len(X) < n_clusters:
-                print(f"[!] Warning: Not enough points in {epw_label} to form {n_clusters} clusters.")
-                df.loc[df['epw'] == epw_label, 'Cluster_ID'] = 0
-                continue
-
-            scaler = StandardScaler()
-            X_scaled = scaler.fit_transform(X)
-            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-            df_epw['Cluster_ID'] = kmeans.fit_predict(X_scaled)
-            df.update(df_epw['Cluster_ID'])
-
-        df['Cluster_ID'] = df['Cluster_ID'].astype(int)
-        
-        # Persist Cluster_ID back into the main attribute so subsequent calls
-        # to plot_pareto_front(color_by='Cluster_ID') can find the column.
-        self.outputs_optimisation = df.copy()
-
-        # Save results
-        csv_path = os.path.join(out_dir, 'results_clustering.csv')
-        df.to_csv(csv_path, index=False)
-        print(f"  Clustering complete. Results saved: {csv_path}")
-
-        return df
-
-    def plot_pareto_front(
-            self,
-            color_by: str = None,
-            size_by: str = None,
-            out_dir: str = '.'
-    ):
-        """
-        if getattr(self, 'last_run_type', None) != 'optimisation':
-            raise ValueError('This method can only be run after an optimisation simulation. Ensure you run run_optimisation() first.')
-
-        Plots the Pareto front scatter for each EPW.
-        If color_by is provided a colorbar is added. If size_by is provided,
-        representative size handles appear in the legend.
-        """
-        if getattr(self, 'last_run_type', None) != 'optimisation':
-            raise ValueError(
-                "Pareto front scatter plot can only be generated after an optimisation simulation. "
-                "Please ensure you run run_optimisation() first."
-            )
-        import os
-        import matplotlib.pyplot as plt
-        import matplotlib.cm as cm
-        from matplotlib.colors import Normalize
-        from matplotlib.lines import Line2D
-        import pandas as pd
-
-        os.makedirs(out_dir, exist_ok=True)
-        df = self.outputs_optimisation.copy()
-        epw_labels = df['epw'].unique()
-
-        heating_col = next((c for c in df.columns if 'Heating:Electricity' in c), None)
-        cooling_col = next((c for c in df.columns if 'Cooling:Electricity' in c), None)
-
-        if not heating_col or not cooling_col:
-            print("[!] Heating or Cooling electricity columns not found.")
-            return
-
-        for epw_label in epw_labels:
-            epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
-            df_epw = df[df['epw'] == epw_label].copy()
-            pareto_epw = df_epw[df_epw['pareto-optimal']].copy()
-            dominated_epw = df_epw[~df_epw['pareto-optimal']].copy()
-
-            fig, ax = plt.subplots(figsize=(8, 6))
-
-            # Dominated points
-            ax.scatter(
-                dominated_epw[heating_col] / 3.6e6, dominated_epw[cooling_col] / 3.6e6,
-                c='#cccccc', alpha=0.3, s=15, zorder=1
-            )
-
-            # Sizes for Pareto points
-            if size_by and size_by in pareto_epw.columns:
-                sizes = pareto_epw[size_by] * 300
-            else:
-                sizes = 80
-
-            # Colors
-            use_colormap = (
-                color_by
-                and color_by in pareto_epw.columns
-                and pd.api.types.is_numeric_dtype(pareto_epw[color_by])
-            )
-
-            if use_colormap:
-                vmin = df_epw[color_by].min()
-                vmax = df_epw[color_by].max()
-                norm = Normalize(vmin=vmin, vmax=vmax)
-                sc = ax.scatter(
-                    pareto_epw[heating_col] / 3.6e6, pareto_epw[cooling_col] / 3.6e6,
-                    c=pareto_epw[color_by], cmap='RdYlGn', norm=norm,
-                    s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3
-                )
-                cbar = fig.colorbar(sc, ax=ax, pad=0.02, shrink=0.85)
-                cbar.set_label(color_by, fontsize=10)
-            else:
-                sc = ax.scatter(
-                    pareto_epw[heating_col] / 3.6e6, pareto_epw[cooling_col] / 3.6e6,
-                    c='#e63946', s=sizes, alpha=0.85,
-                    edgecolors='k', linewidths=0.4, zorder=3
-                )
-
-            # Pareto front dashed line
-            pf_epw = pareto_epw.sort_values(heating_col)
-            ax.plot(
-                pf_epw[heating_col] / 3.6e6, pf_epw[cooling_col] / 3.6e6,
-                '--', color='grey', lw=0.8, zorder=2
-            )
-
-            # Legend
-            legend_handles = [
-                Line2D([0], [0], marker='o', color='w', markerfacecolor='#cccccc',
-                       markersize=7, alpha=0.6, label='Dominated'),
-            ]
-
-            if use_colormap:
-                if size_by and size_by in pareto_epw.columns:
-                    size_col = pareto_epw[size_by]
-                    for sv in [size_col.min(), size_col.median(), size_col.max()]:
-                        ms = max(4, min(18, (sv * 300) ** 0.5 / 1.5))
-                        legend_handles.append(
-                            Line2D([0], [0], marker='o', color='w',
-                                   markerfacecolor='#888888', markeredgecolor='k',
-                                   markersize=ms, label=f'{size_by} = {sv:.2f}')
-                        )
-                legend_handles.append(
-                    Line2D([0], [0], marker='o', color='w',
-                           markerfacecolor='#888888', markeredgecolor='k',
-                           markersize=9, label='Pareto-optimal')
-                )
-            else:
-                legend_handles.append(
-                    Line2D([0], [0], marker='o', color='w', markerfacecolor='#e63946',
-                           markeredgecolor='k', markersize=9, label='Pareto-optimal')
-                )
-
-            ax.legend(handles=legend_handles, fontsize=8, loc='upper right')
-
-            ax.set_xlabel('Annual Heating Electricity (kWh)', fontsize=12)
-            ax.set_ylabel('Annual Cooling Electricity (kWh)', fontsize=12)
-            title_base = 'Pareto Front'
-            if hasattr(self, 'parameters_type'):
-                title_base += ' - ' + self.parameters_type.title()
-            title_lines = [title_base + ' [' + epw_tag + ']']
-            subtitle_parts = []
-            if size_by:
-                subtitle_parts.append('Dot size proportional to ' + size_by)
-            if color_by:
-                subtitle_parts.append('Colour = ' + color_by)
-            if subtitle_parts:
-                title_lines.append('  |  '.join(subtitle_parts))
-            ax.set_title('\n'.join(title_lines), fontsize=10)
-
-            plt.tight_layout()
-            # Build filename: include color_by and size_by suffixes to avoid
-            # overwriting when the method is called multiple times with different encodings.
-            fname_suffix = epw_tag
-            if color_by:
-                fname_suffix += '_c_' + color_by
-            if size_by:
-                fname_suffix += '_s_' + size_by
-            fname_pareto = os.path.join(out_dir, 'plot_pareto_front_' + fname_suffix + '.png')
-            plt.savefig(fname_pareto, dpi=300, bbox_inches='tight')
-            plt.close()
-            print('  Pareto front plot saved: ' + fname_pareto)
-
-    def plot_parallel_coordinates(self, out_dir: str = '.'):
-        """
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
-
-        Plots a multivariate parallel coordinates visualization of the parameter space.
-        """
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError("Parallel coordinates plot requires either a parametric or optimisation simulation to be run first.")
-        import os
-        import matplotlib.pyplot as plt
-        from matplotlib.lines import Line2D
-
-        os.makedirs(out_dir, exist_ok=True)
-        df = self.outputs_optimisation.copy()
-        epw_labels = df['epw'].unique()
-        param_cols = self.problem.names('inputs')
-
-        df['pareto_str'] = df['pareto-optimal'].map({True: 'Pareto-optimal', False: 'Dominated'})
-
-        for epw_label in epw_labels:
-            epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
-            df_epw = df[df['epw'] == epw_label].copy()
-            
-            df_pc_norm = df_epw[param_cols + ['pareto_str']].copy()
-            for c in param_cols:
-                lo, hi = df_pc_norm[c].min(), df_pc_norm[c].max()
-                if hi > lo:
-                    df_pc_norm[c] = (df_pc_norm[c] - lo) / (hi - lo)
-                else:
-                    df_pc_norm[c] = 0.5
-
-            fig, ax = plt.subplots(figsize=(12, 5))
-            colour_map = {'Pareto-optimal': '#e63946', 'Dominated': '#adb5bd'}
-            
-            for _, row in df_pc_norm.iterrows():
-                colour = colour_map[row['pareto_str']]
-                alpha = 0.7 if row['pareto_str'] == 'Pareto-optimal' else 0.12
-                lw = 1.2 if row['pareto_str'] == 'Pareto-optimal' else 0.5
-                ax.plot(range(len(param_cols)), row[param_cols].values, color=colour, alpha=alpha, lw=lw)
-
-            ax.set_xticks(range(len(param_cols)))
-            ax.set_xticklabels([c.replace('_', '\n') for c in param_cols], fontsize=9)
-            ax.set_ylabel('Normalised parameter value', fontsize=10)
-            ax.set_title(f'Parallel Coordinates [{epw_tag}]\n(Red = Pareto-optimal | Grey = Dominated)', fontsize=11)
-            
-            legend_elements = [
-                Line2D([0], [0], color='#e63946', lw=1.5, label='Pareto-optimal'),
-                Line2D([0], [0], color='#adb5bd', lw=1.0, label='Dominated'),
-            ]
-            ax.legend(handles=legend_elements, loc='upper right', fontsize=9)
-            
-            plt.tight_layout()
-            fname_parallel = os.path.join(out_dir, f'plot_parallel_coordinates_{epw_tag}.png')
-            plt.savefig(fname_parallel, dpi=300, bbox_inches='tight')
-            plt.close()
-            print(f"  Parallel coordinates plot saved: {fname_parallel}")
-
-    def plot_pairwise_scatter_matrix(self, out_dir: str = '.'):
-        """
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
-
-        Plots a pairwise scatter matrix using seaborn.PairGrid for Pareto-optimal solutions.
-        """
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError("Pairwise scatter matrix requires either a parametric or optimisation simulation to be run first.")
-        import os
-        import matplotlib.pyplot as plt
-        import matplotlib.cm as cm
-        from matplotlib.colors import Normalize
-        try:
-            import seaborn as sns
-        except ImportError:
-            print("[!] Seaborn is required for PairGrid. Please pip install seaborn.")
-            return
-
-        os.makedirs(out_dir, exist_ok=True)
-        df = self.outputs_optimisation.copy()
-        
-        heating_col = next((c for c in df.columns if 'Heating:Electricity' in c), None)
-        cooling_col = next((c for c in df.columns if 'Cooling:Electricity' in c), None)
-        if heating_col and cooling_col:
-            df['Total [kWh]'] = (df[heating_col] + df[cooling_col]) / 3.6e6
-        else:
-            df['Total [kWh]'] = 0
-
-        epw_labels = df['epw'].unique()
-        param_cols = self.problem.names('inputs')
-
-        for epw_label in epw_labels:
-            epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
-            pareto_epw = df[(df['epw'] == epw_label) & (df['pareto-optimal'])].copy()
-
-            if len(pareto_epw) < 2:
-                print(f"  [!] Skipping PairGrid for {epw_tag}: fewer than 2 Pareto-optimal points.")
-                continue
-
-            norm_e = Normalize(pareto_epw['Total [kWh]'].min(), pareto_epw['Total [kWh]'].max())
-            cmap_e = cm.get_cmap('coolwarm')
-
-            def _pairplot_scatter(x, y, **kwargs):
-                ax_pg = plt.gca()
-                colours = cmap_e(norm_e(pareto_epw.loc[x.index, 'Total [kWh]'].values))
-                ax_pg.scatter(x.values, y.values, c=colours, s=30, alpha=0.8, edgecolors='k', linewidths=0.2)
-
-            def _pairplot_hist(x, **kwargs):
-                plt.gca().hist(x, bins=10, color='#457b9d', alpha=0.7, edgecolor='white')
-
-            g = sns.PairGrid(pareto_epw[param_cols + ['Total [kWh]']], vars=param_cols)
-            g.map_diag(_pairplot_hist)
-            g.map_offdiag(_pairplot_scatter)
-            
-            sm = cm.ScalarMappable(cmap='coolwarm', norm=norm_e)
-            sm.set_array([])
-            cbar = g.figure.colorbar(sm, ax=g.axes, shrink=0.6, pad=0.02)
-            cbar.set_label('Total HVAC Energy (kWh)', fontsize=9)
-            
-            g.figure.suptitle(f'Pairwise Parameter Space – Pareto-Optimal Solutions [{epw_tag}]', y=1.01, fontsize=11)
-            
-            fname_pair = os.path.join(out_dir, f'plot_pairwise_scatter_matrix_{epw_tag}.png')
-            g.figure.savefig(fname_pair, dpi=300, bbox_inches='tight')
-            plt.close('all')
-            print(f"  Pairwise scatter matrix saved: {fname_pair}")
-
-    def run_robustness_analysis(
-            self,
-            optimal_solutions_df: pd.DataFrame,
-            epws_robustness: list,
-            out_dir: str = '.'
-    ):
-        """
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
-
-        Evaluates the robustness of selected optimal solutions against variations in weather (multiple EPWs).
-        
-        TODO: Future expansion could include small mathematical parametric perturbations (e.g. ±5%) 
-        within the same method or via an additional argument.
-        
-        :param optimal_solutions_df: A subset DataFrame of the optimal solutions (e.g., from MCDM).
-        :param epws_robustness: A list of EPW strings to test against.
-        :param out_dir: Output directory for saving the robustness results.
-        """
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError("Robustness analysis requires either a parametric or optimisation simulation to be run first.")
-        import os
-        import glob
-        import shutil
-        import pandas as pd
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-
-        os.makedirs(out_dir, exist_ok=True)
-        df_params = optimal_solutions_df[self.problem.names('inputs')].copy().drop_duplicates()
-        
-        print(f"Starting Robustness Analysis: {len(df_params)} solutions across {len(epws_robustness)} alternative EPWs.")
-        
-        results_list = []
-        for epw in epws_robustness:
-            epw_tag = epw.replace('\\', '/').split('/')[-1].replace('.epw', '')
-            print(f"  Evaluating robustness against EPW: {epw_tag}...")
-            
-            evaluator = self.set_evaluator(epw=epw, out_dir=out_dir)
-            outputs = evaluator.df_apply(df_params, keep_input=True, keep_dirs=False)
-            outputs['Robustness_EPW'] = epw_tag
-            
-            # Basic identification of solutions by their parameter combination string
-            outputs['Solution_ID'] = 'Sol_' + outputs.index.astype(str)
-            results_list.append(outputs)
-            
-            # Clean up BESOS_Output working directories created by df_apply when keep_dirs=False
-            worker_dirs = glob.glob(os.path.join(out_dir, "BESOS_Output*"))
-            for w_dir in worker_dirs:
-                if os.path.isdir(w_dir):
-                    try:
-                        shutil.rmtree(w_dir)
-                    except Exception:
-                        pass
-        
-        robustness_df = pd.concat(results_list, ignore_index=True)
-        
-        # Identify heating/cooling columns
-        heating_col = next((c for c in robustness_df.columns if 'Heating:Electricity' in c), None)
-        cooling_col = next((c for c in robustness_df.columns if 'Cooling:Electricity' in c), None)
-        
-        if heating_col and cooling_col:
-            robustness_df['Total_Energy_kWh'] = (robustness_df[heating_col] + robustness_df[cooling_col]) / 3.6e6
-            
-            # Plot the robustness variation (Boxplot)
-            plt.figure(figsize=(10, 6))
-            sns.boxplot(x='Solution_ID', y='Total_Energy_kWh', data=robustness_df, color='lightblue')
-            sns.stripplot(x='Solution_ID', y='Total_Energy_kWh', data=robustness_df, hue='Robustness_EPW',
-                          jitter=True, marker='o', alpha=0.8)
-            plt.title('Robustness Analysis: Optimal Solutions under Weather Variations')
-            plt.ylabel('Total HVAC Energy (kWh)')
-            plt.xlabel('Candidate Solutions')
-            plt.legend(title='Climate Scenario', bbox_to_anchor=(1.05, 1), loc='upper left')
-            plt.tight_layout()
-            
-            fname_plot = os.path.join(out_dir, 'plot_robustness_analysis.png')
-            plt.savefig(fname_plot, dpi=300, bbox_inches='tight')
-            plt.close()
-            print(f"  Robustness plot saved: {fname_plot}")
-            
-        csv_path = os.path.join(out_dir, 'results_robustness.csv')
-        robustness_df.to_csv(csv_path, index=False)
-        print(f"  Robustness data saved: {csv_path}")
-        
-        return robustness_df
-
+            raise ValueError('No previous simulation run type detected. Please run parametric or optimisation first.')
 
 class AccimPredefModelsParamSim(OptimParamSimulation):
-    def __init__(
-            self,
-            building: besos.IDF_class,
-            output_type: str = 'standard',
-            output_keep_existing: bool = False,
-            output_freqs: list = ['hourly'],
-            ScriptType: str = 'vrf_mm',
-            SupplyAirTempInputMethod: str = 'temperature difference',
-            debugging: bool = False,
-    ):
-        super().__init__(
-            self,
-            building,
-            output_type,
-            output_keep_existing,
-            output_freqs,
-            ScriptType,
-            SupplyAirTempInputMethod,
-            debugging
-        )
 
-        accis.modifyAccis(
-            idf=building,
-            ComfStand=99,
-            ComfMod=3,
-            CAT=80,
-            HVACmode=2,
-            VentCtrl=0,
-        )
-
+    def __init__(self, building: besos.IDF_class, output_type: str='standard', output_keep_existing: bool=False, output_freqs: list=['hourly'], ScriptType: str='vrf_mm', SupplyAirTempInputMethod: str='temperature difference', debugging: bool=False):
+        super().__init__(building=building, output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging)
+        accis.modifyAccis(idf=building, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)
