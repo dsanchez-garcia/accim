@@ -695,7 +695,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.outputs_param_simulation_hourly = pd.read_csv(hourly_csv_path)
         parameters_names = parameters_names or self.outputs_param_simulation.attrs.get('parameters_names')
         outputs_names = outputs_names or self.outputs_param_simulation.attrs.get('outputs_names')
-        if parameters_names and outputs_names:
+        if parameters_names and outputs_names and not (hasattr(self, 'problem') and type(self.problem).__name__ != 'MockProblem'):
 
             class MockProblem:
 
@@ -1113,7 +1113,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         parameters_names = parameters_names or outputs_optimisation.attrs.get('parameters_names')
         outputs_names = outputs_names or outputs_optimisation.attrs.get('outputs_names')
         minimize_outputs = minimize_outputs or outputs_optimisation.attrs.get('minimize_outputs')
-        if parameters_names and outputs_names:
+        if parameters_names and outputs_names and not (hasattr(self, 'problem') and type(self.problem).__name__ != 'MockProblem'):
 
             class MockProblem:
 
