@@ -634,8 +634,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         # Update the IDF backup with the exact building state used for this run
         self._save_idf_backup(label='pre_parametric', out_dir=out_dir)
-        # Embed the backup path in attrs so it survives pickle serialisation
+        # Embed the backup path and epws in attrs so they survive pickle serialisation
         self.outputs_param_simulation.attrs['idf_backup_path'] = self.idf_backup_path
+        self.outputs_param_simulation.attrs['epws'] = epws
         _base = os.path.join(out_dir, f'outputs_param_simulation_{timestamp}')
         self.outputs_param_simulation.to_csv(f'{_base}.csv', index=False)
         self.outputs_param_simulation.to_pickle(f'{_base}.pkl')
@@ -648,6 +649,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         with open(f'{_base}.json', 'w', encoding='utf-8') as _f:
             _json.dump(_json_payload, _f, indent=2, default=str)
         self.outputs_param_simulation_filepath = f'{_base}.csv'
+        self.epws = self.outputs_param_simulation.attrs.get('epws', [])
         self.last_run_type = 'parametric'
 
     def load_outputs_parametric(self, csv_path: str=None, pickle_path: str=None, json_path: str=None, hourly_csv_path: str=None, hourly_pickle_path: str=None, parameters_names: list=None, outputs_names: list=None) -> pd.DataFrame:
@@ -709,6 +711,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.problem = MockProblem(parameters_names, outputs_names)
             self.parameters_names = parameters_names
             self.outputs_names = outputs_names
+        self.epws = self.outputs_param_simulation.attrs.get('epws', [])
         self.last_run_type = 'parametric'
         return self.outputs_param_simulation
 
@@ -740,6 +743,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         sims_per_epw = population_size * math.ceil(evaluations / population_size)
         total = sims_per_epw * len(epws)
         print(f"Estimated simulations\n  evaluations    : {evaluations}\n  population_size: {population_size}\n  EPWs           : {len(epws)} ({', '.join(epws)})\n  sims per EPW   : {sims_per_epw}  ({math.ceil(evaluations / population_size)} generation(s) × {population_size})\n  TOTAL          : {total}")
+        self.epws = self.outputs_param_simulation.attrs.get('epws', [])
         self.last_run_type = 'parametric'
         return total
 
@@ -887,6 +891,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 outputs_optimisation = outputs_optimisation.reset_index(drop=True)
         self._set_optimisation_outputs(outputs_optimisation_full=outputs_optimisation, outputs_optimisation_non_dominated=outputs_optimisation_non_dominated)
         self._save_outputs_optimisation_full(out_dir=out_dir)
+        self.epws = self.outputs_optimisation.attrs.get('epws', [])
         self.last_run_type = 'optimisation'
         self.evaluators = evaluators
 
@@ -1041,8 +1046,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         os.makedirs(out_dir, exist_ok=True)
         # Update the IDF backup with the exact building state used for this optimisation run
         self._save_idf_backup(label='pre_optimisation', out_dir=out_dir)
-        # Embed the backup path in attrs so it survives pickle serialisation
+        # Embed the backup path and epws in attrs so they survive pickle serialisation
         self.outputs_optimisation.attrs['idf_backup_path'] = self.idf_backup_path
+        self.outputs_optimisation.attrs['epws'] = getattr(self, 'epws', [])
         full_results_filename = f'outputs_optimisation_{timestamp}'
         full_results_path = os.path.join(out_dir, f'{full_results_filename}.csv')
         self.outputs_optimisation.to_csv(full_results_path, index=False)
@@ -1123,6 +1129,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.problem = MockProblem(parameters_names, outputs_names, minimize_outputs)
             self.parameters_names = parameters_names
             self.outputs_names = outputs_names
+        self.epws = self.outputs_optimisation.attrs.get('epws', [])
         self.last_run_type = 'optimisation'
         return self.outputs_optimisation
 
