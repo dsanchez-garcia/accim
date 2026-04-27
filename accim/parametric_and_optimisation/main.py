@@ -667,6 +667,10 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.outputs_param_simulation = pd.DataFrame(payload['data'])
             for (k, v) in payload.get('attrs', {}).items():
                 self.outputs_param_simulation.attrs[k] = v
+            # Restore the IDF backup path stored at save time
+            if payload.get('idf_backup_path'):
+                self.idf_backup_path = payload['idf_backup_path']
+                print(f'  [info] idf_backup_path restored: {self.idf_backup_path}')
         else:
             self.outputs_param_simulation = pd.read_csv(csv_path)
         if hourly_pickle_path:
@@ -1062,6 +1066,10 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             outputs_optimisation = pd.DataFrame(payload['data'])
             for (k, v) in payload.get('attrs', {}).items():
                 outputs_optimisation.attrs[k] = v
+            # Restore the IDF backup path stored at save time
+            if payload.get('idf_backup_path'):
+                self.idf_backup_path = payload['idf_backup_path']
+                print(f'  [info] idf_backup_path restored: {self.idf_backup_path}')
         else:
             outputs_optimisation = pd.read_csv(target_path)
         if 'pareto-optimal' not in outputs_optimisation.columns:
