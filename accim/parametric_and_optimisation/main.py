@@ -230,8 +230,8 @@ def get_mdd_file_as_df():
 class OptimParamSimulation:
     def __init__(
             self,
-            building: IDF_class,
-            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints'],
+            building: IDF_class = None,
+            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
             output_keep_existing: bool = False,
             output_freqs: List[allowed_output_freqs] = ['hourly'],
@@ -240,6 +240,7 @@ class OptimParamSimulation:
             make_averages: bool = False,
             debugging: bool = False,
             verbosemode: bool = True,
+            bypass_addAccis: bool = False,
     ):
         """
         Creates a class instance to run parametric simulations and optimisation.
@@ -259,6 +260,7 @@ class OptimParamSimulation:
             temperature input method for the VRF systems
         :param make_averages: to make average outputs of hour-counting and operative temperature related outputs
         :param debugging: True to generate the .EDD file
+        :param bypass_addAccis: True to skip the internal addAccis execution (useful when loading previous sessions)
         """
         is_accim_predef_model = False
         is_accim_custom_model = False
@@ -273,6 +275,9 @@ class OptimParamSimulation:
         elif parameters_type == 'apmv setpoints':
             temp_ctrl = 'PMV'
             is_apmv_setpoints = True
+        elif parameters_type is None:
+            # Bypass setup logic for loading previous sessions
+            temp_ctrl = None
         else:
             raise KeyError(f'String {parameters_type} entered in argument parametric_simulation_type '
                            f'is not supported. Valid strings are: '
@@ -302,28 +307,33 @@ class OptimParamSimulation:
             self.output_type = output_type
             self.make_averages = make_averages
 
-            accis.addAccis(
-                idf=building,
-                ScriptType=ScriptType,
-                SupplyAirTempInputMethod=SupplyAirTempInputMethod,
-                Output_keep_existing=output_keep_existing,
-                Output_type=output_type,
-                # Output_take_dataframe=set_outputs_df,
-                Output_freqs=output_freqs,
-    
-                # EnergyPlus_version='9.4',
-                TempCtrl=temp_ctrl,
-                # Output_gen_dataframe=True,
-                make_averages=make_averages,
-                debugging=debugging,
-                verboseMode=verbosemode
-            )
+            if not bypass_addAccis:
+                accis.addAccis(
+                    idf=building,
+                    ScriptType=ScriptType,
+                    SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+                    Output_keep_existing=output_keep_existing,
+                    Output_type=output_type,
+                    Output_freqs=output_freqs,
+                    TempCtrl=temp_ctrl,
+                    make_averages=make_averages,
+                    debugging=debugging,
+                    verboseMode=verbosemode
+                )
         elif is_apmv_setpoints:
             # apmv.add_vrf_system(building=building)
             apmv.apply_apmv_setpoints(building=building, outputs_freq=output_freqs)
             print('Arguments output_type, output_keep_existing, ScriptType, and SupplyAirTempInputMethod '
                   'are only used in accim predefined and custom models, '
                   'therefore these will not have any effect in this case.')
+        elif parameters_type is None:
+            # Bypassed
+            self.ScriptType = None
+            self.temp_ctrl = None
+            self.SupplyAirTempInputMethod = None
+            self.output_keep_existing = None
+            self.output_type = None
+            self.make_averages = None
 
         self.building = building
         self.output_freqs = output_freqs
@@ -998,9 +1008,95 @@ class OptimParamSimulation:
         if len(epws) > 1:
             outputs_param_simulation = outputs_param_simulation.reset_index()
 
+        if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+            outputs_param_simulation.attrs['parameters_names'] = self.problem.names('inputs')
+            outputs_param_simulation.attrs['outputs_names'] = self.problem.names('outputs')
+        elif hasattr(self, 'parameters_names') and hasattr(self, 'outputs_names'):
+            outputs_param_simulation.attrs['parameters_names'] = self.parameters_names
+            outputs_param_simulation.attrs['outputs_names'] = self.outputs_names
+
         self.outputs_param_simulation = outputs_param_simulation
         self.evaluators = evaluators
+
+        # Auto-save CSV + Pickle + JSON for session resumption
+        os.makedirs(out_dir, exist_ok=True)
+        _base = os.path.join(out_dir, f'outputs_param_simulation_{os.getpid()}')
+        self.outputs_param_simulation.to_csv(f'{_base}.csv', index=False)
+        self.outputs_param_simulation.to_pickle(f'{_base}.pkl')
+        import json as _json
+        _json_payload = {
+            'attrs': self.outputs_param_simulation.attrs,
+            'data': self.outputs_param_simulation.to_dict(orient='list')
+        }
+        with open(f'{_base}.json', 'w', encoding='utf-8') as _f:
+            _json.dump(_json_payload, _f, indent=2, default=str)
+        self.outputs_param_simulation_filepath = f'{_base}.csv'
+        self.last_run_type = 'parametric'
         # return outputs_param_simulation
+
+    def load_outputs_parametric(
+            self,
+            csv_path: str = None,
+            pickle_path: str = None,
+            json_path: str = None,
+            hourly_csv_path: str = None,
+            hourly_pickle_path: str = None,
+            parameters_names: list = None,
+            outputs_names: list = None
+    ) -> pd.DataFrame:
+        """
+        Loads outputs of a previous parametric simulation from a CSV, Pickle, or JSON file.
+        This allows you to resume a parametric session without rerunning the simulations.
+        
+        :param csv_path: path to the CSV file containing parametric simulation results.
+        :param pickle_path: path to the Pickle file containing parametric simulation results (recommended).
+        :param json_path: path to the JSON file containing parametric simulation results (human-readable).
+        :param hourly_csv_path: path to the CSV file containing hourly parametric simulation results.
+        :param hourly_pickle_path: path to the Pickle file containing hourly parametric simulation results.
+        :param parameters_names: optional list of parameter names to reconstruct the internal problem object.
+        :param outputs_names: optional list of output names to reconstruct the internal problem object.
+        :return: pandas DataFrame containing the loaded parametric simulation outputs.
+        """
+        import pandas as pd
+        
+        if not csv_path and not pickle_path and not json_path:
+            raise ValueError("A valid csv_path, pickle_path, or json_path must be provided.")
+            
+        if pickle_path:
+            self.outputs_param_simulation = pd.read_pickle(pickle_path)
+        elif json_path:
+            import json
+            with open(json_path, 'r', encoding='utf-8') as f:
+                payload = json.load(f)
+            self.outputs_param_simulation = pd.DataFrame(payload['data'])
+            # Restore attrs from JSON metadata
+            for k, v in payload.get('attrs', {}).items():
+                self.outputs_param_simulation.attrs[k] = v
+        else:
+            self.outputs_param_simulation = pd.read_csv(csv_path)
+            
+        if hourly_pickle_path:
+            self.outputs_param_simulation_hourly = pd.read_pickle(hourly_pickle_path)
+        elif hourly_csv_path:
+            self.outputs_param_simulation_hourly = pd.read_csv(hourly_csv_path)
+
+        parameters_names = parameters_names or self.outputs_param_simulation.attrs.get('parameters_names')
+        outputs_names = outputs_names or self.outputs_param_simulation.attrs.get('outputs_names')
+
+        if parameters_names and outputs_names:
+            class MockProblem:
+                def __init__(self, inputs, outputs):
+                    self._inputs = inputs
+                    self._outputs = outputs
+                def names(self, typ):
+                    if typ == 'inputs': return self._inputs
+                    elif typ == 'outputs': return self._outputs
+            self.problem = MockProblem(parameters_names, outputs_names)
+            self.parameters_names = parameters_names
+            self.outputs_names = outputs_names
+
+        self.last_run_type = 'parametric'
+        return self.outputs_param_simulation
 
     def estimate_optimisation_sims(
             self,
@@ -1265,6 +1361,7 @@ class OptimParamSimulation:
             outputs_optimisation_non_dominated=outputs_optimisation_non_dominated
         )
         self._save_outputs_optimisation_full(out_dir=out_dir)
+        self.last_run_type = 'optimisation'
         self.evaluators = evaluators
 
         # return outputs_optimisation
@@ -1432,6 +1529,15 @@ class OptimParamSimulation:
                 fallback_full['simulation_directory'] = pd.NA
             outputs_optimisation_full = fallback_full
 
+        if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+            outputs_optimisation_full.attrs['parameters_names'] = self.problem.names('inputs')
+            outputs_optimisation_full.attrs['outputs_names'] = self.problem.names('outputs')
+            outputs_optimisation_full.attrs['minimize_outputs'] = getattr(self.problem, 'minimize_outputs', [])
+        elif hasattr(self, 'parameters_names') and hasattr(self, 'outputs_names'):
+            outputs_optimisation_full.attrs['parameters_names'] = self.parameters_names
+            outputs_optimisation_full.attrs['outputs_names'] = self.outputs_names
+            outputs_optimisation_full.attrs['minimize_outputs'] = getattr(self.problem, 'minimize_outputs', []) if hasattr(self, 'problem') else []
+
         self.outputs_optimisation = outputs_optimisation_full
         if 'epw' not in self.outputs_optimisation.columns:
             self.outputs_optimisation['epw'] = pd.NA
@@ -1468,40 +1574,98 @@ class OptimParamSimulation:
         )
 
     def _save_outputs_optimisation_full(self, out_dir: str):
+        import json
         os.makedirs(out_dir, exist_ok=True)
-        full_results_filename = f'outputs_optimisation_{os.getpid()}.csv'
-        full_results_path = os.path.join(out_dir, full_results_filename)
+        full_results_filename = f'outputs_optimisation_{os.getpid()}'
+        full_results_path = os.path.join(out_dir, f'{full_results_filename}.csv')
         self.outputs_optimisation.to_csv(full_results_path, index=False)
+        self.outputs_optimisation.to_pickle(os.path.join(out_dir, f'{full_results_filename}.pkl'))
+        json_payload = {
+            'attrs': self.outputs_optimisation.attrs,
+            'data': self.outputs_optimisation.to_dict(orient='list')
+        }
+        with open(os.path.join(out_dir, f'{full_results_filename}.json'), 'w', encoding='utf-8') as f:
+            json.dump(json_payload, f, indent=2, default=str)
         self.outputs_optimisation_filepath = full_results_path
 
     def load_outputs_optimisation(
             self,
-            csv_path: str = None
+            csv_path: str = None,
+            pickle_path: str = None,
+            json_path: str = None,
+            hourly_csv_path: str = None,
+            hourly_pickle_path: str = None,
+            parameters_names: list = None,
+            outputs_names: list = None,
+            minimize_outputs: list = None
     ) -> pd.DataFrame:
         """
-        Loads full optimisation outputs (dominated + non-dominated) from a CSV file
+        Loads full optimisation outputs (dominated + non-dominated) from a CSV, Pickle, or JSON file
         previously generated by :meth:`run_optimisation`, and rebuilds the related
         internal attributes without rerunning simulations.
 
         :param csv_path: path to a CSV file with full optimisation outputs.
-            If None, uses ``self.outputs_optimisation_filepath``.
+        :param pickle_path: path to a Pickle file with full optimisation outputs (recommended).
+        :param json_path: path to a JSON file with full optimisation outputs (human-readable).
+        :param hourly_csv_path: path to a CSV file with hourly optimisation outputs.
+        :param hourly_pickle_path: path to a Pickle file with hourly optimisation outputs.
+        :param parameters_names: optional list of parameter names to reconstruct the internal problem object.
+        :param outputs_names: optional list of output names to reconstruct the internal problem object.
+        :param minimize_outputs: optional list of booleans indicating if outputs should be minimized.
         :return: pandas DataFrame containing full optimisation outputs (dominated + non-dominated)
         """
-        target_csv_path = csv_path or self.outputs_optimisation_filepath
-        if target_csv_path is None:
+        target_path = pickle_path or json_path or csv_path or self.outputs_optimisation_filepath
+        if target_path is None:
             raise ValueError(
-                'No csv_path was provided and no previous outputs_optimisation file is available. '
-                'Run run_optimisation first or provide a valid csv_path.'
+                'No path was provided and no previous outputs_optimisation file is available. '
+                'Run run_optimisation first or provide a valid csv_path/pickle_path/json_path.'
             )
 
-        outputs_optimisation = pd.read_csv(target_csv_path)
+        if pickle_path or str(target_path).endswith('.pkl') or str(target_path).endswith('.pickle'):
+            outputs_optimisation = pd.read_pickle(target_path)
+        elif json_path or str(target_path).endswith('.json'):
+            import json
+            with open(target_path, 'r', encoding='utf-8') as f:
+                payload = json.load(f)
+            outputs_optimisation = pd.DataFrame(payload['data'])
+            for k, v in payload.get('attrs', {}).items():
+                outputs_optimisation.attrs[k] = v
+        else:
+            outputs_optimisation = pd.read_csv(target_path)
+
         if 'pareto-optimal' not in outputs_optimisation.columns:
             raise KeyError(
-                "Column 'pareto-optimal' not found in the provided CSV. "
+                "Column 'pareto-optimal' not found in the provided file. "
                 "Please load a file generated from outputs_optimisation."
             )
-        self.outputs_optimisation_filepath = target_csv_path
+            
+        self.outputs_optimisation_filepath = target_path
         self._set_optimisation_outputs(outputs_optimisation_full=outputs_optimisation)
+        
+        if hourly_pickle_path:
+            self.outputs_optimisation_hourly = pd.read_pickle(hourly_pickle_path)
+        elif hourly_csv_path:
+            self.outputs_optimisation_hourly = pd.read_csv(hourly_csv_path)
+
+        parameters_names = parameters_names or outputs_optimisation.attrs.get('parameters_names')
+        outputs_names = outputs_names or outputs_optimisation.attrs.get('outputs_names')
+        minimize_outputs = minimize_outputs or outputs_optimisation.attrs.get('minimize_outputs')
+
+        if parameters_names and outputs_names:
+            class MockProblem:
+                def __init__(self, inputs, outputs, minimize_flags):
+                    self._inputs = inputs
+                    self._outputs = outputs
+                    self.minimize_outputs = minimize_flags
+                def names(self, typ):
+                    if typ == 'inputs': return self._inputs
+                    elif typ == 'outputs': return self._outputs
+            
+            self.problem = MockProblem(parameters_names, outputs_names, minimize_outputs)
+            self.parameters_names = parameters_names
+            self.outputs_names = outputs_names
+            
+        self.last_run_type = 'optimisation'
         return self.outputs_optimisation
 
     def get_hourly_df(self, start_date: str = '2024-01-01 01'):
@@ -1511,8 +1675,19 @@ class OptimParamSimulation:
 
         :param start_date: the start date for the simulation results, in format 'YYY-MM-DD HH'
         """
-        parameter_columns = [i.name for i in self.parameters_list]
-        parameter_columns.append('epw')
+        # Resolve parameter columns with fallback chain
+        if hasattr(self, 'parameters_list'):
+            parameter_columns = [i.name for i in self.parameters_list]
+        elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+            parameter_columns = self.problem.names('inputs')
+        elif hasattr(self, 'outputs_param_simulation') and self.outputs_param_simulation.attrs.get('parameters_names'):
+            parameter_columns = list(self.outputs_param_simulation.attrs['parameters_names'])
+        else:
+            parameter_columns = []
+        if 'epw' not in parameter_columns:
+            parameter_columns.append('epw')
+        parameter_columns = [c for c in parameter_columns if c in self.outputs_param_simulation.columns]
+
         self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(
             df=self.outputs_param_simulation,
             parameter_columns=parameter_columns,
@@ -1652,65 +1827,235 @@ class OptimParamSimulation:
 
     def get_hourly_df_optimisation(
             self,
-            start_date: str = '2024-01-01 01',
-            df: Optional[pd.DataFrame] = None,
-            include_file_outputs: bool = False,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
             file_source: Literal['csv', 'eso'] = 'csv',
-            file_output_columns: Optional[List[str]] = None,
             eplus_install_dir: Optional[str] = None,
             only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
     ):
         """
-        Expands optimisation results (dominated + non-dominated) to hourly frequency,
-        and saves the result in ``outputs_optimisation_hourly``.
-        The ``pareto-optimal`` column is preserved so dominated and non-dominated rows
-        can be filtered afterwards.
+        Expands optimisation results to hourly frequency and saves the result
+        in ``outputs_optimisation_hourly``.
 
-        :param start_date: start date for the expanded hourly time index ('YYYY-MM-DD HH')
-        :param df: optional dataframe of simulations to expand; if None, uses ``outputs_optimisation``
-            (which contains all simulations, dominated and non-dominated).
-        :param include_file_outputs: if True, reads additional hourly outputs from simulation files
-            (.csv or .eso) and appends them before expanding.
-        :param file_source: source file type for additional outputs ('csv' or 'eso').
-        :param file_output_columns: optional list of output columns to extract from file source.
-            If None, all numeric CSV columns or all parsed ESO hourly columns are used.
-        :param eplus_install_dir: optional EnergyPlus directory used by ESO parsing.
-        :param only_run_period: when ``file_source='eso'``, keeps run period only if True.
+        The method reads hourly values directly from the simulation output files
+        (CSV or ESO), giving you full control over which simulations and which
+        outputs are expanded to avoid memory saturation with large batches.
+
+        When ``epw_filter`` and ``output_columns`` are both left as None (defaults),
+        an automatic size estimate is printed and you will be asked to confirm before
+        the expansion proceeds. Use ``skip_confirmation=True`` to bypass this prompt.
+
+        :param only_pareto_optimal: if True (default), only Pareto-optimal (non-dominated)
+            solutions are expanded. Set to False to include dominated solutions too.
+        :param epw_filter: EPW name or list of EPW names to limit the expansion to
+            specific climates. Partial strings are accepted (substring match).
+            If None (default), all available EPWs are included.
+            Example: ``'Seville'`` or ``['Seville', 'Sydney']``.
+        :param simulation_indices: optional list of integer row indices (0-based, from
+            ``outputs_optimisation``) to select exactly which simulations to expand.
+            This is the most direct way to expand specific runs.
+            Overrides ``only_pareto_optimal`` and ``epw_filter`` when provided.
+
+            Example – expand only the 3rd and 7th rows::
+
+                parametric.get_hourly_df_optimisation(simulation_indices=[2, 6])
+
+            Example – expand only the Pareto-optimal rows with index < 10::
+
+                pareto_idx = parametric.outputs_optimisation[
+                    parametric.outputs_optimisation['pareto-optimal']
+                ].index[:10].tolist()
+                parametric.get_hourly_df_optimisation(simulation_indices=pareto_idx)
+
+        :param output_columns: list of column names (or partial names) to extract from
+            the simulation output file. If None (default), all numeric hourly columns
+            are used. Use ``get_hourly_df_columns()`` first to discover available names.
+            Example: ``['Zone Operative Temperature', 'VRF Heat Pump Cooling']``.
+        :param include_summary_columns: if True (default), the parameter columns
+            (e.g. ``CustAST_m``, ``CustAST_n`` …), ``epw`` and ``pareto-optimal`` are
+            preserved as identifier columns in the expanded DataFrame.
+        :param file_source: source file to read hourly values from: ``'csv'`` (default)
+            or ``'eso'``.
+        :param eplus_install_dir: EnergyPlus installation directory, only required
+            when ``file_source='eso'``.
+        :param only_run_period: when ``file_source='eso'``, keep only the run-period
+            data (True by default).
+        :param start_date: start date and time for the hourly index in
+            ``'YYYY-MM-DD HH'`` format. When None (default), the date is inferred
+            automatically from the first simulation CSV file.
+        :param skip_confirmation: if True, skips the interactive size-confirmation
+            prompt that is shown when ``epw_filter`` and ``output_columns`` are both
+            left at their defaults. Useful for running in non-interactive environments
+            (scripts, notebooks, CI pipelines).
         """
-        if df is None:
-            source_df = self.outputs_optimisation.copy()
-        else:
-            source_df = df.copy()
-
-        if source_df is None or source_df.empty:
+        if getattr(self, 'last_run_type', None) != 'optimisation':
+            raise ValueError(
+                "This method requires optimisation outputs. "
+                "Please run run_optimisation() or load_outputs_optimisation() first."
+            )
+        if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
             raise ValueError('No optimisation data available to expand hourly.')
 
-        if include_file_outputs:
-            source_df = self._attach_hourly_outputs_from_simulation_files(
-                df=source_df,
-                file_source=file_source,
-                file_output_columns=file_output_columns,
-                eplus_install_dir=eplus_install_dir,
-                only_run_period=only_run_period
+        _using_defaults = (epw_filter is None and output_columns is None and simulation_indices is None)
+
+        # ── 1. Row filtering ──────────────────────────────────────────────────
+        source_df = self.outputs_optimisation.copy()
+
+        if simulation_indices is not None:
+            source_df = source_df.loc[simulation_indices]
+        else:
+            if only_pareto_optimal and 'pareto-optimal' in source_df.columns:
+                source_df = source_df[source_df['pareto-optimal']]
+
+            if epw_filter is not None:
+                if isinstance(epw_filter, str):
+                    epw_filter = [epw_filter]
+                epw_mask = source_df['epw'].astype(str).apply(
+                    lambda x: any(f.lower() in x.lower() for f in epw_filter)
+                )
+                source_df = source_df[epw_mask]
+
+        if source_df.empty:
+            raise ValueError(
+                'The applied filters resulted in an empty selection. '
+                'Relax only_pareto_optimal, epw_filter, or simulation_indices.'
             )
 
-        parameter_columns = [i.name for i in self.parameters_list if i.name in source_df.columns]
-        for extra_col in ['epw', 'pareto-optimal']:
-            if extra_col in source_df.columns:
-                parameter_columns.append(extra_col)
+        # ── 2. Read hourly outputs from simulation files ──────────────────────
+        source_df = self._attach_hourly_outputs_from_simulation_files(
+            df=source_df,
+            file_source=file_source,
+            file_output_columns=output_columns,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period
+        )
 
+        # ── 3. Infer start_date automatically if not provided ─────────────────
+        if start_date is None:
+            try:
+                first_row = self.outputs_optimisation.iloc[0]
+                csv_path = self._resolve_simulation_file_path(row=first_row, file_source='csv')
+                if os.path.exists(csv_path):
+                    _dt_raw = pd.read_csv(csv_path, usecols=['Date/Time'], nrows=1)['Date/Time'].iloc[0]
+                    _dt_clean = _dt_raw.strip()
+                    _month_day, _time = _dt_clean.split()
+                    _month, _day = _month_day.split('/')
+                    _hour = int(_time.split(':')[0])
+                    start_date = f'2024-{int(_month):02d}-{int(_day):02d} {_hour:02d}'
+            except Exception:
+                pass
+            if start_date is None:
+                start_date = '2024-01-01 01'
+
+        # ── 4. Identify identifier (parameter) columns ────────────────────────
+        if include_summary_columns:
+            # Priority 1: parameters_list (full session with set_parameters)
+            if hasattr(self, 'parameters_list'):
+                param_cols = [i.name for i in self.parameters_list if i.name in source_df.columns]
+            # Priority 2: problem.names('inputs') (full session or MockProblem from load)
+            elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+                param_cols = [c for c in self.problem.names('inputs') if c in source_df.columns]
+            # Priority 3: attrs embedded in the DataFrame when saved (pkl/json)
+            elif self.outputs_optimisation.attrs.get('parameters_names'):
+                param_cols = [c for c in self.outputs_optimisation.attrs['parameters_names'] if c in source_df.columns]
+            else:
+                # Fallback: columns that exist in outputs_optimisation but are not
+                # objective outputs, epw, pareto-optimal, or internal path columns
+                _known_non_param = {
+                    'epw', 'pareto-optimal', 'simulation_output_csv_path', 'simulation_directory'
+                }
+                if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+                    _known_non_param.update(self.problem.names('outputs') or [])
+                param_cols = [
+                    c for c in source_df.columns
+                    if c not in _known_non_param
+                    and not source_df[c].apply(lambda x: isinstance(x, (list, tuple))).any()
+                ]
+
+            for extra_col in ['epw', 'pareto-optimal']:
+                if extra_col in source_df.columns and extra_col not in param_cols:
+                    param_cols.append(extra_col)
+        else:
+            param_cols = []
+
+        # ── 5. Size estimate ─────────────────────────────────────────────────
+        from accim.parametric_and_optimisation.utils import identify_hourly_columns
+        hourly_cols = identify_hourly_columns(source_df)
+        n_rows = len(source_df)
+        n_hourly = len(hourly_cols)
+        if n_hourly > 0:
+            sample = source_df[hourly_cols[0]].iloc[0]
+            n_steps = len(sample) if isinstance(sample, (list, tuple)) else 8760
+        else:
+            n_steps = 8760
+
+        total_rows = n_rows * n_steps
+        total_cols = len(param_cols) + n_hourly + 2  # +2 for hour, datetime
+        approx_mb = total_rows * total_cols * 8 / 1e6
+
+        size_msg = (
+            f"\n  Simulations selected : {n_rows}\n"
+            f"  Hourly steps per sim : {n_steps}\n"
+            f"  Hourly output columns: {n_hourly}  "
+            f"→ {hourly_cols[:5]}{'...' if n_hourly > 5 else ''}\n"
+            f"  Expanded shape       : ~{total_rows:,} rows × {total_cols} cols\n"
+            f"  Approx. memory       : ~{approx_mb:.1f} MB"
+        )
+
+        if _using_defaults and not skip_confirmation:
+            print(f"[get_hourly_df_optimisation] Estimated output size:{size_msg}")
+            answer = input("\nProceed with expansion? [y/N]: ").strip().lower()
+            if answer != 'y':
+                print("Expansion cancelled. Use epw_filter, output_columns or simulation_indices to reduce the size.")
+                return None
+        else:
+            print(f"[get_hourly_df_optimisation] Expanding…{size_msg}")
+
+        # ── 6. Expand ─────────────────────────────────────────────────────────
         self.outputs_optimisation_hourly = expand_to_hourly_dataframe(
             df=source_df,
-            parameter_columns=parameter_columns,
+            parameter_columns=param_cols,
             start_date=start_date
         )
 
     def get_hourly_df_columns(self):
         """
         Identifies the columns which contain hourly values, and save the names in a list, saved in the
-        internal variable named outputs_hourly_columns
+        internal variable named outputs_hourly_columns. Supports both parametric and optimisation runs.
         """
-        self.outputs_hourly_columns = identify_hourly_columns(self.outputs_param_simulation)
+        import os
+        import pandas as pd
+        
+        if getattr(self, 'last_run_type', None) == 'optimisation':
+            if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
+                raise ValueError("Optimisation outputs not found. Run or load optimisation first.")
+            
+            for _, row in self.outputs_optimisation.iterrows():
+                try:
+                    path = self._resolve_simulation_file_path(row=row, file_source='csv')
+                    if os.path.exists(path):
+                        df_file = pd.read_csv(path, nrows=5)
+                        excluded_columns = {'Date/Time', 'date/time'}
+                        numeric_cols = [c for c in df_file.columns if c not in excluded_columns and pd.api.types.is_numeric_dtype(df_file[c])]
+                        self.outputs_hourly_columns = numeric_cols
+                        return self.outputs_hourly_columns
+                except Exception:
+                    continue
+            raise FileNotFoundError("Could not find any valid simulation output CSV files to infer hourly columns.")
+            
+        elif getattr(self, 'last_run_type', None) == 'parametric':
+            if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
+                raise ValueError("Parametric outputs not found. Run or load parametric simulation first.")
+            self.outputs_hourly_columns = identify_hourly_columns(self.outputs_param_simulation)
+            return self.outputs_hourly_columns
+            
+        else:
+            raise ValueError("No previous simulation run type detected. Please run parametric or optimisation first.")
 
     def run_sensitivity_analysis(self, method: Literal['sobol', 'morris'] = 'sobol', **kwargs) -> dict:
         """
