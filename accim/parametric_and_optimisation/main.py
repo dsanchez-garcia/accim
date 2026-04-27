@@ -154,6 +154,34 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         self.optimisation_csv_paths_dominated = []
         self.optimisation_csv_paths_non_dominated_by_epw = {}
         self.optimisation_csv_paths_dominated_by_epw = {}
+        # Save an initial IDF backup right after addAccis/apply_apmv_setpoints so the
+        # modified IDF (with EMS scripts and outputs already injected) is always
+        # recoverable, even if run_parametric_simulation / run_optimisation are not called yet.
+        self.idf_backup_path: str = None
+        if parameters_type is not None and not bypass_addAccis:
+            self._save_idf_backup(label='post_setup')
+
+    # ------------------------------------------------------------------
+    # IDF backup helpers
+    # ------------------------------------------------------------------
+
+    def _save_idf_backup(self, label: str = '') -> str:
+        """
+        Saves a copy of ``self.building`` to disk as an IDF file and stores
+        the path in ``self.idf_backup_path``.
+
+        :param label: optional suffix to embed in the filename.
+        :return: absolute path to the saved IDF.
+        """
+        import tempfile
+        backup_dir = os.path.join(os.getcwd(), 'accim_idf_backups')
+        os.makedirs(backup_dir, exist_ok=True)
+        suffix = f'_{label}' if label else ''
+        filename = f'accim_idf_backup{suffix}_{os.getpid()}.idf'
+        backup_path = os.path.join(backup_dir, filename)
+        self.building.savecopy(backup_path)
+        self.idf_backup_path = os.path.abspath(backup_path)
+        return self.idf_backup_path
 
     def get_output_var_df_from_idf(self) -> pd.DataFrame:
         """
@@ -597,11 +625,17 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         self.outputs_param_simulation = outputs_param_simulation
         self.evaluators = evaluators
         os.makedirs(out_dir, exist_ok=True)
+        # Update the IDF backup with the exact building state used for this run
+        self._save_idf_backup(label='pre_parametric')
         _base = os.path.join(out_dir, f'outputs_param_simulation_{os.getpid()}')
         self.outputs_param_simulation.to_csv(f'{_base}.csv', index=False)
         self.outputs_param_simulation.to_pickle(f'{_base}.pkl')
         import json as _json
-        _json_payload = {'attrs': self.outputs_param_simulation.attrs, 'data': self.outputs_param_simulation.to_dict(orient='list')}
+        _json_payload = {
+            'attrs': self.outputs_param_simulation.attrs,
+            'data': self.outputs_param_simulation.to_dict(orient='list'),
+            'idf_backup_path': self.idf_backup_path,
+        }
         with open(f'{_base}.json', 'w', encoding='utf-8') as _f:
             _json.dump(_json_payload, _f, indent=2, default=str)
         self.outputs_param_simulation_filepath = f'{_base}.csv'
@@ -985,11 +1019,17 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
     def _save_outputs_optimisation_full(self, out_dir: str):
         import json
         os.makedirs(out_dir, exist_ok=True)
+        # Update the IDF backup with the exact building state used for this optimisation run
+        self._save_idf_backup(label='pre_optimisation')
         full_results_filename = f'outputs_optimisation_{os.getpid()}'
         full_results_path = os.path.join(out_dir, f'{full_results_filename}.csv')
         self.outputs_optimisation.to_csv(full_results_path, index=False)
         self.outputs_optimisation.to_pickle(os.path.join(out_dir, f'{full_results_filename}.pkl'))
-        json_payload = {'attrs': self.outputs_optimisation.attrs, 'data': self.outputs_optimisation.to_dict(orient='list')}
+        json_payload = {
+            'attrs': self.outputs_optimisation.attrs,
+            'data': self.outputs_optimisation.to_dict(orient='list'),
+            'idf_backup_path': self.idf_backup_path,
+        }
         with open(os.path.join(out_dir, f'{full_results_filename}.json'), 'w', encoding='utf-8') as f:
             json.dump(json_payload, f, indent=2, default=str)
         self.outputs_optimisation_filepath = full_results_path
