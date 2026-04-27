@@ -165,19 +165,24 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
     # IDF backup helpers
     # ------------------------------------------------------------------
 
-    def _save_idf_backup(self, label: str = '') -> str:
+    def _save_idf_backup(self, label: str = '', out_dir: str = None) -> str:
         """
         Saves a copy of ``self.building`` to disk as an IDF file and stores
         the path in ``self.idf_backup_path``.
 
         :param label: optional suffix to embed in the filename.
+        :param out_dir: optional directory where the backup should be saved.
         :return: absolute path to the saved IDF.
         """
-        import tempfile
-        backup_dir = os.path.join(os.getcwd(), 'accim_idf_backups')
+        import datetime
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        if out_dir is None:
+            backup_dir = os.path.join(os.getcwd(), 'accim_idf_backups')
+        else:
+            backup_dir = out_dir
         os.makedirs(backup_dir, exist_ok=True)
         suffix = f'_{label}' if label else ''
-        filename = f'accim_idf_backup{suffix}_{os.getpid()}.idf'
+        filename = f'accim_idf_backup{suffix}_{timestamp}.idf'
         backup_path = os.path.join(backup_dir, filename)
         self.building.savecopy(backup_path)
         self.idf_backup_path = os.path.abspath(backup_path)
@@ -625,11 +630,13 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         self.outputs_param_simulation = outputs_param_simulation
         self.evaluators = evaluators
         os.makedirs(out_dir, exist_ok=True)
+        import datetime
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         # Update the IDF backup with the exact building state used for this run
-        self._save_idf_backup(label='pre_parametric')
+        self._save_idf_backup(label='pre_parametric', out_dir=out_dir)
         # Embed the backup path in attrs so it survives pickle serialisation
         self.outputs_param_simulation.attrs['idf_backup_path'] = self.idf_backup_path
-        _base = os.path.join(out_dir, f'outputs_param_simulation_{os.getpid()}')
+        _base = os.path.join(out_dir, f'outputs_param_simulation_{timestamp}')
         self.outputs_param_simulation.to_csv(f'{_base}.csv', index=False)
         self.outputs_param_simulation.to_pickle(f'{_base}.pkl')
         import json as _json
@@ -1029,12 +1036,14 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
 
     def _save_outputs_optimisation_full(self, out_dir: str):
         import json
+        import datetime
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         os.makedirs(out_dir, exist_ok=True)
         # Update the IDF backup with the exact building state used for this optimisation run
-        self._save_idf_backup(label='pre_optimisation')
+        self._save_idf_backup(label='pre_optimisation', out_dir=out_dir)
         # Embed the backup path in attrs so it survives pickle serialisation
         self.outputs_optimisation.attrs['idf_backup_path'] = self.idf_backup_path
-        full_results_filename = f'outputs_optimisation_{os.getpid()}'
+        full_results_filename = f'outputs_optimisation_{timestamp}'
         full_results_path = os.path.join(out_dir, f'{full_results_filename}.csv')
         self.outputs_optimisation.to_csv(full_results_path, index=False)
         self.outputs_optimisation.to_pickle(os.path.join(out_dir, f'{full_results_filename}.pkl'))
