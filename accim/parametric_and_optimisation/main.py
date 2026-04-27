@@ -627,6 +627,8 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         os.makedirs(out_dir, exist_ok=True)
         # Update the IDF backup with the exact building state used for this run
         self._save_idf_backup(label='pre_parametric')
+        # Embed the backup path in attrs so it survives pickle serialisation
+        self.outputs_param_simulation.attrs['idf_backup_path'] = self.idf_backup_path
         _base = os.path.join(out_dir, f'outputs_param_simulation_{os.getpid()}')
         self.outputs_param_simulation.to_csv(f'{_base}.csv', index=False)
         self.outputs_param_simulation.to_pickle(f'{_base}.pkl')
@@ -660,6 +662,11 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             raise ValueError('A valid csv_path, pickle_path, or json_path must be provided.')
         if pickle_path:
             self.outputs_param_simulation = pd.read_pickle(pickle_path)
+            # Restore idf_backup_path from attrs if it was embedded at save time
+            _ibp = self.outputs_param_simulation.attrs.get('idf_backup_path')
+            if _ibp:
+                self.idf_backup_path = _ibp
+                print(f'  [info] idf_backup_path restored: {self.idf_backup_path}')
         elif json_path:
             import json
             with open(json_path, 'r', encoding='utf-8') as f:
@@ -1025,6 +1032,8 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         os.makedirs(out_dir, exist_ok=True)
         # Update the IDF backup with the exact building state used for this optimisation run
         self._save_idf_backup(label='pre_optimisation')
+        # Embed the backup path in attrs so it survives pickle serialisation
+        self.outputs_optimisation.attrs['idf_backup_path'] = self.idf_backup_path
         full_results_filename = f'outputs_optimisation_{os.getpid()}'
         full_results_path = os.path.join(out_dir, f'{full_results_filename}.csv')
         self.outputs_optimisation.to_csv(full_results_path, index=False)
@@ -1059,6 +1068,11 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             raise ValueError('No path was provided and no previous outputs_optimisation file is available. Run run_optimisation first or provide a valid csv_path/pickle_path/json_path.')
         if pickle_path or str(target_path).endswith('.pkl') or str(target_path).endswith('.pickle'):
             outputs_optimisation = pd.read_pickle(target_path)
+            # Restore idf_backup_path from attrs if it was embedded at save time
+            _ibp = outputs_optimisation.attrs.get('idf_backup_path')
+            if _ibp:
+                self.idf_backup_path = _ibp
+                print(f'  [info] idf_backup_path restored: {self.idf_backup_path}')
         elif json_path or str(target_path).endswith('.json'):
             import json
             with open(target_path, 'r', encoding='utf-8') as f:

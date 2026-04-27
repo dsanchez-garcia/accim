@@ -31,7 +31,21 @@ class AnalysisMixin:
                 raise ValueError("custom_area must be provided when mode='custom'")
             self.building_floor_area = float(custom_area)
             return self.building_floor_area
+
         idf = self.building
+        if idf is None:
+            # When loaded from JSON/pickle without an IDF, try to reload from the backup
+            backup_path = getattr(self, 'idf_backup_path', None)
+            if not backup_path or not os.path.isfile(backup_path):
+                raise AttributeError(
+                    "self.building is None and no valid idf_backup_path is available. "
+                    "Either provide mode='custom' with a custom_area value, or load the "
+                    "session with an IDF object (building= argument)."
+                )
+            from besos import eppy_funcs as ef
+            idf = ef.get_building(backup_path)
+            self.building = idf
+            print(f'  [info] IDF auto-loaded from backup: {backup_path}')
         try:
             surfaces = idf.idfobjects['BuildingSurface:Detailed']
         except KeyError:
