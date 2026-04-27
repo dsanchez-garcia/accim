@@ -9,6 +9,88 @@ from typing import Literal
 
 class AnalysisMixin:
 
+    def set_building_floor_area(self, mode: Literal['all', 'occupied', 'custom', 'list']='all', zones_list: list=None, custom_area: float=None) -> float:
+        """
+        Calculates or sets the floor area to be used for normalizing energy results (kWh/m2).
+        
+        # TODO: Recordatorio para parametrización geométrica.
+        # Si se utiliza parametrización de geometría en el futuro (áreas variables entre simulaciones
+        # o distintos IDFs base), este cálculo estático aquí no servirá. Debería evaluarse
+        # el área en cada variante iterativamente leyendo sus respectivos .bnd o archivos generados.
+        
+        :param mode: 'all' to use all Floor surfaces in the IDF.
+                     'occupied' to use Floor surfaces in zones that have a People object.
+                     'custom' to use the value provided in `custom_area`.
+                     'list' to use Floor surfaces only in the zones specified in `zones_list`.
+        :param zones_list: List of zone names for mode 'list'.
+        :param custom_area: Float value for the area in mode 'custom'.
+        :return: the calculated or assigned floor area.
+        """
+        if mode == 'custom':
+            if custom_area is None:
+                raise ValueError("custom_area must be provided when mode='custom'")
+            self.building_floor_area = float(custom_area)
+            return self.building_floor_area
+        idf = self.building
+        try:
+            surfaces = idf.idfobjects['BuildingSurface:Detailed']
+        except KeyError:
+            surfaces = []
+        floors = [s for s in surfaces if s.Surface_Type.lower() == 'floor']
+        if mode == 'all':
+            total_area = sum((f.area for f in floors))
+        elif mode == 'occupied':
+            occupied_names = set()
+            try:
+                people_objs = idf.idfobjects['PEOPLE']
+            except KeyError:
+                people_objs = []
+            for p in people_objs:
+                name = getattr(p, 'Zone_or_ZoneList_or_Space_or_SpaceList_Name', getattr(p, 'Zone_or_ZoneList_Name', None))
+                if name:
+                    occupied_names.add(name.upper())
+            try:
+                for zl in idf.idfobjects['ZONELIST']:
+                    if zl.Name.upper() in occupied_names:
+                        for i in range(1, 500):
+                            z_name = getattr(zl, f'Zone_{i}_Name', getattr(zl, f'Zone_Name_{i}', None))
+                            if z_name:
+                                occupied_names.add(z_name.upper())
+            except KeyError:
+                pass
+            try:
+                for sl in idf.idfobjects['SPACELIST']:
+                    if sl.Name.upper() in occupied_names:
+                        for i in range(1, 500):
+                            s_name = getattr(sl, f'Space_{i}_Name', getattr(sl, f'Space_Name_{i}', None))
+                            if s_name:
+                                occupied_names.add(s_name.upper())
+            except KeyError:
+                pass
+            try:
+                for s in idf.idfobjects['SPACE']:
+                    if s.Name.upper() in occupied_names:
+                        z_name = getattr(s, 'Zone_Name', getattr(s, 'Zone_or_ZoneList_Name', None))
+                        if z_name:
+                            occupied_names.add(z_name.upper())
+            except KeyError:
+                pass
+            total_area = 0.0
+            for f in floors:
+                z_name = getattr(f, 'Zone_Name', '').upper()
+                s_name = getattr(f, 'Space_Name', '').upper()
+                if z_name in occupied_names or s_name in occupied_names:
+                    total_area += f.area
+        elif mode == 'list':
+            if not zones_list:
+                raise ValueError("zones_list must be provided when mode='list'")
+            upper_zones = [z.upper() for z in zones_list]
+            total_area = sum((f.area for f in floors if getattr(f, 'Zone_Name', '').upper() in upper_zones or getattr(f, 'Space_Name', '').upper() in upper_zones))
+        else:
+            raise ValueError(f'Unknown mode: {mode}')
+        self.building_floor_area = total_area
+        return total_area
+
     def run_sensitivity_analysis(self, method: Literal['sobol', 'morris']='sobol', **kwargs) -> dict:
         """
         Runs Sensitivity Analysis on the results of a parametric simulation using SALib.
@@ -268,7 +350,7 @@ class AnalysisMixin:
         print(f'  Clustering complete. Results saved: {csv_path}')
         return df
 
-    def run_robustness_analysis(self, optimal_solutions_df: pd.DataFrame, epws_robustness: list, out_dir: str='.'):
+    def run_robustness_analysis(self, optimal_solutions_df: pd.DataFrame, epws_robustness: list, out_dir: str='.', normalize_per_m2: bool=False):
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
@@ -290,6 +372,15 @@ class AnalysisMixin:
         import pandas as pd
         import matplotlib.pyplot as plt
         import seaborn as sns
+        unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+        divisor = divisor
+        if normalize_per_m2:
+            area = getattr(self, 'building_floor_area', None)
+            if not area:
+                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                unit_str = 'kWh'
+            else:
+                divisor *= area
         os.makedirs(out_dir, exist_ok=True)
         df_params = optimal_solutions_df[self.problem.names('inputs')].copy().drop_duplicates()
         print(f'Starting Robustness Analysis: {len(df_params)} solutions across {len(epws_robustness)} alternative EPWs.')
@@ -313,12 +404,12 @@ class AnalysisMixin:
         heating_col = next((c for c in robustness_df.columns if 'Heating:Electricity' in c), None)
         cooling_col = next((c for c in robustness_df.columns if 'Cooling:Electricity' in c), None)
         if heating_col and cooling_col:
-            robustness_df['Total_Energy_kWh'] = (robustness_df[heating_col] + robustness_df[cooling_col]) / 3600000.0
+            robustness_df[f'Total_Energy_{unit_str.replace("/", "_")}'] = (robustness_df[heating_col] + robustness_df[cooling_col]) / divisor
             plt.figure(figsize=(10, 6))
-            sns.boxplot(x='Solution_ID', y='Total_Energy_kWh', data=robustness_df, color='lightblue')
-            sns.stripplot(x='Solution_ID', y='Total_Energy_kWh', data=robustness_df, hue='Robustness_EPW', jitter=True, marker='o', alpha=0.8)
+            sns.boxplot(x='Solution_ID', y=f'Total_Energy_{unit_str.replace("/", "_")}', data=robustness_df, color='lightblue')
+            sns.stripplot(x='Solution_ID', y=f'Total_Energy_{unit_str.replace("/", "_")}', data=robustness_df, hue='Robustness_EPW', jitter=True, marker='o', alpha=0.8)
             plt.title('Robustness Analysis: Optimal Solutions under Weather Variations')
-            plt.ylabel('Total HVAC Energy (kWh)')
+            plt.ylabel(f'Total HVAC Energy ({unit_str})')
             plt.xlabel('Candidate Solutions')
             plt.legend(title='Climate Scenario', bbox_to_anchor=(1.05, 1), loc='upper left')
             plt.tight_layout()

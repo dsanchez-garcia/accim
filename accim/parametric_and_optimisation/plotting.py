@@ -8,7 +8,7 @@ import seaborn as sns
 
 class PlottingMixin:
 
-    def plot_best_compromise_solutions(self, out_dir: str='.', mcdm_configs: list=None) -> pd.DataFrame:
+    def plot_best_compromise_solutions(self, out_dir: str='.', mcdm_configs: list=None, normalize_per_m2: bool=False) -> pd.DataFrame:
         """
         Identifies the best compromise solution(s) from the Pareto front for
         each EPW found in ``outputs_optimisation``, saves the results to a
@@ -37,6 +37,15 @@ class PlottingMixin:
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('MCDM best compromise solutions can only be evaluated after an optimisation simulation. Please ensure you run run_optimisation() first.')
         import matplotlib.pyplot as plt
+        unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+        divisor = divisor
+        if normalize_per_m2:
+            area = getattr(self, 'building_floor_area', None)
+            if not area:
+                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                unit_str = 'kWh'
+            else:
+                divisor *= area
         if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
             raise ValueError('No optimisation results found. Run run_optimisation (or load via load_outputs_optimisation) first.')
         os.makedirs(out_dir, exist_ok=True)
@@ -74,9 +83,9 @@ class PlottingMixin:
                 row_df['mcdm_method'] = label
                 row_df['epw'] = epw_tag
                 all_mcdm_rows.append(row_df)
-                h_kwh = row_df[heating_col].iloc[0] / 3600000.0
-                c_kwh = row_df[cooling_col].iloc[0] / 3600000.0
-                print(f'    {label:25s} | {heating_col}={h_kwh:.1f} kWh | {cooling_col}={c_kwh:.1f} kWh')
+                h_kwh = row_df[heating_col].iloc[0] / divisor
+                c_kwh = row_df[cooling_col].iloc[0] / divisor
+                print(f'    {label:25s} | {heating_col}={h_kwh:.1f} {unit_str} | {cooling_col}={c_kwh:.1f} {unit_str}')
             self.outputs_optimisation = original_optim
         mcdm_df = pd.concat(all_mcdm_rows, ignore_index=True)
         fname_csv = os.path.join(out_dir, 'results_mcdm_best_solutions.csv')
@@ -87,8 +96,8 @@ class PlottingMixin:
             epw_tag = str(epw_label).replace(' ', '_')
             ax_m = axes[0][ax_idx]
             df_epw = original_optim[original_optim['epw'] == epw_label].copy()
-            df_epw['_h'] = df_epw[heating_col] / 3600000.0
-            df_epw['_c'] = df_epw[cooling_col] / 3600000.0
+            df_epw['_h'] = df_epw[heating_col] / divisor
+            df_epw['_c'] = df_epw[cooling_col] / divisor
             dom = df_epw[~df_epw['pareto-optimal']]
             par = df_epw[df_epw['pareto-optimal']]
             ax_m.scatter(dom['_h'], dom['_c'], c='#cccccc', alpha=0.3, s=15, zorder=1)
@@ -98,11 +107,11 @@ class PlottingMixin:
                 row = mcdm_df[(mcdm_df['epw'] == epw_tag) & (mcdm_df['mcdm_method'] == label)]
                 if row.empty:
                     continue
-                h = row[heating_col].iloc[0] / 3600000.0
-                c = row[cooling_col].iloc[0] / 3600000.0
+                h = row[heating_col].iloc[0] / divisor
+                c = row[cooling_col].iloc[0] / divisor
                 ax_m.scatter(h, c, marker=_marker_cycle[i % len(_marker_cycle)], c=_colour_cycle[i % len(_colour_cycle)], s=_size_cycle[i % len(_size_cycle)], zorder=5, edgecolors='k', linewidths=0.6, label=label)
-            ax_m.set_xlabel(f'{heating_col} (kWh)', fontsize=11)
-            ax_m.set_ylabel(f'{cooling_col} (kWh)', fontsize=11)
+            ax_m.set_xlabel(f'{heating_col} ({unit_str})', fontsize=11)
+            ax_m.set_ylabel(f'{cooling_col} ({unit_str})', fontsize=11)
             ax_m.set_title(f'Pareto Front + MCDM best solutions\n[{epw_tag}]', fontsize=11)
             ax_m.legend(fontsize=9)
         plt.tight_layout()
@@ -112,7 +121,7 @@ class PlottingMixin:
         print(f'  MCDM plot saved: {fname_plot}')
         return mcdm_df
 
-    def plot_pareto_front(self, color_by: str=None, size_by: str=None, out_dir: str='.'):
+    def plot_pareto_front(self, color_by: str=None, size_by: str=None, out_dir: str='.', normalize_per_m2: bool=False):
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('This method can only be run after an optimisation simulation. Ensure you run run_optimisation() first.')
@@ -129,6 +138,15 @@ class PlottingMixin:
         from matplotlib.colors import Normalize
         from matplotlib.lines import Line2D
         import pandas as pd
+        unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+        divisor = divisor
+        if normalize_per_m2:
+            area = getattr(self, 'building_floor_area', None)
+            if not area:
+                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                unit_str = 'kWh'
+            else:
+                divisor *= area
         os.makedirs(out_dir, exist_ok=True)
         df = self.outputs_optimisation.copy()
         epw_labels = df['epw'].unique()
@@ -143,7 +161,7 @@ class PlottingMixin:
             pareto_epw = df_epw[df_epw['pareto-optimal']].copy()
             dominated_epw = df_epw[~df_epw['pareto-optimal']].copy()
             (fig, ax) = plt.subplots(figsize=(8, 6))
-            ax.scatter(dominated_epw[heating_col] / 3600000.0, dominated_epw[cooling_col] / 3600000.0, c='#cccccc', alpha=0.3, s=15, zorder=1)
+            ax.scatter(dominated_epw[heating_col] / divisor, dominated_epw[cooling_col] / divisor, c='#cccccc', alpha=0.3, s=15, zorder=1)
             if size_by and size_by in pareto_epw.columns:
                 sizes = pareto_epw[size_by] * 300
             else:
@@ -153,13 +171,13 @@ class PlottingMixin:
                 vmin = df_epw[color_by].min()
                 vmax = df_epw[color_by].max()
                 norm = Normalize(vmin=vmin, vmax=vmax)
-                sc = ax.scatter(pareto_epw[heating_col] / 3600000.0, pareto_epw[cooling_col] / 3600000.0, c=pareto_epw[color_by], cmap='RdYlGn', norm=norm, s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
+                sc = ax.scatter(pareto_epw[heating_col] / divisor, pareto_epw[cooling_col] / divisor, c=pareto_epw[color_by], cmap='RdYlGn', norm=norm, s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
                 cbar = fig.colorbar(sc, ax=ax, pad=0.02, shrink=0.85)
                 cbar.set_label(color_by, fontsize=10)
             else:
-                sc = ax.scatter(pareto_epw[heating_col] / 3600000.0, pareto_epw[cooling_col] / 3600000.0, c='#e63946', s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
+                sc = ax.scatter(pareto_epw[heating_col] / divisor, pareto_epw[cooling_col] / divisor, c='#e63946', s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
             pf_epw = pareto_epw.sort_values(heating_col)
-            ax.plot(pf_epw[heating_col] / 3600000.0, pf_epw[cooling_col] / 3600000.0, '--', color='grey', lw=0.8, zorder=2)
+            ax.plot(pf_epw[heating_col] / divisor, pf_epw[cooling_col] / divisor, '--', color='grey', lw=0.8, zorder=2)
             legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor='#cccccc', markersize=7, alpha=0.6, label='Dominated')]
             if use_colormap:
                 if size_by and size_by in pareto_epw.columns:
@@ -171,8 +189,8 @@ class PlottingMixin:
             else:
                 legend_handles.append(Line2D([0], [0], marker='o', color='w', markerfacecolor='#e63946', markeredgecolor='k', markersize=9, label='Pareto-optimal'))
             ax.legend(handles=legend_handles, fontsize=8, loc='upper right')
-            ax.set_xlabel('Annual Heating Electricity (kWh)', fontsize=12)
-            ax.set_ylabel('Annual Cooling Electricity (kWh)', fontsize=12)
+            ax.set_xlabel(f'Annual Heating Electricity ({unit_str})', fontsize=12)
+            ax.set_ylabel(f'Annual Cooling Electricity ({unit_str})', fontsize=12)
             title_base = 'Pareto Front'
             if hasattr(self, 'parameters_type'):
                 title_base += ' - ' + self.parameters_type.title()
@@ -242,7 +260,7 @@ class PlottingMixin:
             plt.close()
             print(f'  Parallel coordinates plot saved: {fname_parallel}')
 
-    def plot_pairwise_scatter_matrix(self, out_dir: str='.'):
+    def plot_pairwise_scatter_matrix(self, out_dir: str='.', normalize_per_m2: bool=False):
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
@@ -255,6 +273,15 @@ class PlottingMixin:
         import matplotlib.pyplot as plt
         import matplotlib.cm as cm
         from matplotlib.colors import Normalize
+        unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+        divisor = divisor
+        if normalize_per_m2:
+            area = getattr(self, 'building_floor_area', None)
+            if not area:
+                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                unit_str = 'kWh'
+            else:
+                divisor *= area
         try:
             import seaborn as sns
         except ImportError:
@@ -265,9 +292,9 @@ class PlottingMixin:
         heating_col = next((c for c in df.columns if 'Heating:Electricity' in c), None)
         cooling_col = next((c for c in df.columns if 'Cooling:Electricity' in c), None)
         if heating_col and cooling_col:
-            df['Total [kWh]'] = (df[heating_col] + df[cooling_col]) / 3600000.0
+            df['Total_Energy'] = (df[heating_col] + df[cooling_col]) / divisor
         else:
-            df['Total [kWh]'] = 0
+            df['Total_Energy'] = 0
         epw_labels = df['epw'].unique()
         param_cols = self.problem.names('inputs')
         for epw_label in epw_labels:
@@ -276,23 +303,23 @@ class PlottingMixin:
             if len(pareto_epw) < 2:
                 print(f'  [!] Skipping PairGrid for {epw_tag}: fewer than 2 Pareto-optimal points.')
                 continue
-            norm_e = Normalize(pareto_epw['Total [kWh]'].min(), pareto_epw['Total [kWh]'].max())
+            norm_e = Normalize(pareto_epw['Total_Energy'].min(), pareto_epw['Total_Energy'].max())
             cmap_e = cm.get_cmap('coolwarm')
 
             def _pairplot_scatter(x, y, **kwargs):
                 ax_pg = plt.gca()
-                colours = cmap_e(norm_e(pareto_epw.loc[x.index, 'Total [kWh]'].values))
+                colours = cmap_e(norm_e(pareto_epw.loc[x.index, 'Total_Energy'].values))
                 ax_pg.scatter(x.values, y.values, c=colours, s=30, alpha=0.8, edgecolors='k', linewidths=0.2)
 
             def _pairplot_hist(x, **kwargs):
                 plt.gca().hist(x, bins=10, color='#457b9d', alpha=0.7, edgecolor='white')
-            g = sns.PairGrid(pareto_epw[param_cols + ['Total [kWh]']], vars=param_cols)
+            g = sns.PairGrid(pareto_epw[param_cols + ['Total_Energy']], vars=param_cols)
             g.map_diag(_pairplot_hist)
             g.map_offdiag(_pairplot_scatter)
             sm = cm.ScalarMappable(cmap='coolwarm', norm=norm_e)
             sm.set_array([])
             cbar = g.figure.colorbar(sm, ax=g.axes, shrink=0.6, pad=0.02)
-            cbar.set_label('Total HVAC Energy (kWh)', fontsize=9)
+            cbar.set_label(f'Total HVAC Energy ({unit_str})', fontsize=9)
             g.figure.suptitle(f'Pairwise Parameter Space – Pareto-Optimal Solutions [{epw_tag}]', y=1.01, fontsize=11)
             fname_pair = os.path.join(out_dir, f'plot_pairwise_scatter_matrix_{epw_tag}.png')
             g.figure.savefig(fname_pair, dpi=300, bbox_inches='tight')
