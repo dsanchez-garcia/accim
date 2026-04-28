@@ -2,7 +2,7 @@ import os
 import re
 import json
 import glob as pyglob
-from typing import Literal, List, Union, Optional
+from typing import Literal, List, Union, Optional, Any
 import warnings
 import functools
 import accim
@@ -76,7 +76,7 @@ def get_mdd_file_as_df():
 
 class OptimParamSimulation(AnalysisMixin, PlottingMixin):
 
-    def __init__(self, building: Union[IDF_class, List]=None, parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None]=None, output_type: Literal['standard', 'custom', 'detailed', 'simplified']='standard', output_keep_existing: bool=False, output_freqs: List[allowed_output_freqs]=['hourly'], ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac']='vrf_mm', SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature']='temperature difference', make_averages: bool=False, debugging: bool=False, verbosemode: bool=True, bypass_addAccis: bool=False):
+    def __init__(self, building: Union[Any, List]=None, parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None]=None, output_type: Literal['standard', 'custom', 'detailed', 'simplified']='standard', output_keep_existing: bool=False, output_freqs: List[allowed_output_freqs]=['hourly'], ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac']='vrf_mm', SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature']='temperature difference', make_averages: bool=False, debugging: bool=False, verbosemode: bool=True, bypass_addAccis: bool=False):
         """
         Creates a class instance to run parametric simulations and optimisation.
 
@@ -157,6 +157,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         self.is_accim_custom_model = is_accim_custom_model
         self.is_accim_predef_model = is_accim_predef_model
         self.is_apmv_setpoints = is_apmv_setpoints
+        self.bypass_addAccis = bypass_addAccis
         self.last_run_type = None
         self.outputs_optimisation = None
         self.outputs_optimisation_filepath = None
@@ -217,6 +218,99 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             output_var_dict = {'key_value': [i.Key_Value for i in self.building.idfobjects['Output:Variable']], 'variable_name': [i.Variable_Name for i in self.building.idfobjects['Output:Variable']], 'frequency': [i.Reporting_Frequency for i in self.building.idfobjects['Output:Variable']], 'schedule_name': [i.Schedule_Name for i in self.building.idfobjects['Output:Variable']]}
             output_variable_df = pd.DataFrame.from_dict(output_var_dict)
         return output_variable_df
+
+    def _get_idf_identifier(self, building: Any, index: int = None) -> str:
+        if hasattr(building, 'idfname') and building.idfname:
+            return os.path.basename(building.idfname).replace('.idf', '')
+        if index is not None:
+            return f'unknown_idf_{index}'
+        return 'unknown_idf'
+
+    def _get_buildings_by_idf(self) -> dict:
+        buildings_by_idf = {}
+        for (idx, building) in enumerate(self.buildings):
+            idf_name = self._get_idf_identifier(building=building, index=idx)
+            if idf_name in buildings_by_idf:
+                raise ValueError(
+                    f'Duplicate IDF identifier detected: {idf_name}. '
+                    f'Please provide buildings with unique file names.'
+                )
+            buildings_by_idf[idf_name] = building
+        return buildings_by_idf
+
+    def _get_problem_input_names(self) -> list:
+        if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+            return list(self.problem.names('inputs'))
+        if hasattr(self, 'parameters_list'):
+            return [parameter.name for parameter in self.parameters_list]
+        return []
+
+    def _get_external_input_names(self) -> list:
+        return ['idf'] if len(self.buildings) > 1 else []
+
+    def _get_all_input_names(self) -> list:
+        return self._get_problem_input_names() + self._get_external_input_names()
+
+    def _prepare_dataframe_for_buildings(self, df: pd.DataFrame, epws: list = None) -> dict:
+        if df is None:
+            raise ValueError('Argument df must be a pandas DataFrame.')
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError('Argument df must be a pandas DataFrame.')
+
+        prepared_df = df.copy()
+        buildings_by_idf = self._get_buildings_by_idf()
+        input_names = self._get_problem_input_names()
+        allowed_external_columns = self._get_external_input_names()
+        if epws is not None:
+            allowed_external_columns = allowed_external_columns + ['epw']
+
+        if len(self.buildings) > 1:
+            if 'idf' in prepared_df.columns:
+                unknown_idfs = sorted(set(prepared_df['idf'].dropna().astype(str)) - set(buildings_by_idf.keys()))
+                if unknown_idfs:
+                    raise ValueError(
+                        f'The following IDFs in df are not part of this OptimParamSimulation instance: {unknown_idfs}'
+                    )
+                prepared_df['idf'] = prepared_df['idf'].astype(str)
+            else:
+                if len(prepared_df) == 0:
+                    prepared_df = pd.DataFrame({'idf': list(buildings_by_idf.keys())})
+                else:
+                    prepared_df = pd.concat(
+                        [prepared_df.assign(idf=idf_name) for idf_name in buildings_by_idf.keys()],
+                        ignore_index=True,
+                    )
+        elif 'idf' in prepared_df.columns:
+            prepared_df = prepared_df.drop(columns=['idf'])
+
+        if 'epw' in prepared_df.columns:
+            allowed_epws = {str(epw) for epw in epws or []}
+            unknown_epws = sorted(set(prepared_df['epw'].dropna().astype(str)) - allowed_epws)
+            if unknown_epws:
+                raise ValueError(
+                    f'The following EPWs in df are not part of the epws argument: {unknown_epws}'
+                )
+            prepared_df['epw'] = prepared_df['epw'].astype(str)
+
+        missing_columns = [column for column in input_names if column not in prepared_df.columns]
+        if missing_columns:
+            raise ValueError(f'The following input columns are missing in df: {missing_columns}')
+
+        extra_columns = [column for column in prepared_df.columns if column not in input_names + allowed_external_columns]
+        if extra_columns:
+            warnings.warn(
+                f'The following columns in df are not used by the evaluator and will be ignored: {extra_columns}',
+                UserWarning,
+            )
+
+        grouped = {}
+        if len(self.buildings) > 1:
+            for idf_name, subset in prepared_df.groupby('idf', sort=False):
+                grouped[idf_name] = subset.reset_index(drop=True)
+        else:
+            grouped[self._get_idf_identifier(self.building, 0)] = prepared_df.reset_index(drop=True)
+
+        return grouped
 
     def get_output_meter_df_from_idf(self) -> pd.DataFrame:
         """
@@ -388,7 +482,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                     descriptors_has_range = True
             else:
                 descriptors_has_range = True
-        if descriptors_has_options is False and descriptors_has_range is False:
+        if descriptors_has_options is False and descriptors_has_range is False and additional_params is None and len(accis_params_dict) == 0:
+            parameters_list = []
+        elif descriptors_has_options is False and descriptors_has_range is False:
             raise TypeError('All Descriptors are not CategoryParameters or RangeParameters.')
         parameters = [k for k in accis_params_dict.keys()]
         available_parameters = self.get_available_parameters()
@@ -398,7 +494,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 not_allowed_parameters.append(p)
         if len(not_allowed_parameters) > 0 and self.parameters_type is not None:
             raise ValueError(f'The following parameters are not allowed in parameters_type {self.parameters_type}: {not_allowed_parameters}')
-        if self.is_accim_custom_model:
+        if self.is_accim_custom_model and len(accis_params_dict) > 0:
             bf_accim.modify_ComfStand(self.building, 99)
             bf_accim.modify_ComfMod(self.building, 3)
             bf_accim.modify_CAT(self.building, 80)
@@ -481,10 +577,13 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                             bf_accim.modify_CustAST_AHSTaul(self.building, user_values['AHSTaul'])
                         if 'AHSTall' in parameters_to_be_defined:
                             bf_accim.modify_CustAST_AHSTall(self.building, user_values['AHSTall'])
-        elif self.is_accim_predef_model:
+        elif self.is_accim_predef_model and len(accis_params_dict) > 0:
             if descriptors_has_range:
                 raise KeyError('Accim predefined models approach is only valid with options descriptors.')
-        parameters_list = [params.accis_parameter(k, v) for (k, v) in accis_params_dict.items()]
+        if not (descriptors_has_options or descriptors_has_range):
+            parameters_list = []
+        else:
+            parameters_list = [params.accis_parameter(k, v) for (k, v) in accis_params_dict.items()]
         if additional_params is not None:
             parameters_list.extend(additional_params)
         self.parameters_list = parameters_list
@@ -608,7 +707,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         samples = morris_sampler.sample(problem, N=num_samples, num_levels=num_levels)
         self.parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
 
-    def set_evaluator(self, epw: str, out_dir: str, building: IDF_class = None) -> besos.evaluator.EvaluatorEP:
+    def set_evaluator(self, epw: str, out_dir: str, building: Any = None) -> besos.evaluator.EvaluatorEP:
         """
         Used internally for setting the evaluator in run_parametric_simulation and run_optimisation methods.
 
@@ -620,6 +719,39 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         b = building if building is not None else self.building
         evaluator = EvaluatorEP(problem=self.problem, building=b, epw=epw, out_dir=out_dir)
         return evaluator
+
+    def _run_evaluator_df_apply(
+        self,
+        evaluator: EvaluatorEP,
+        df: pd.DataFrame,
+        keep_input: bool,
+        keep_dirs: bool,
+        processes: int,
+    ) -> pd.DataFrame:
+        if len(self._get_problem_input_names()) > 0:
+            return evaluator.df_apply(
+                df=df,
+                keep_input=keep_input,
+                keep_dirs=keep_dirs,
+                processes=processes,
+            )
+
+        rows = []
+        output_names = evaluator.problem.names('outputs')
+        for (_, row) in df.iterrows():
+            result = evaluator(row, keep_dirs=keep_dirs)
+            if not isinstance(result, (list, tuple)):
+                result = (result,)
+            result_dict = {
+                output_names[idx]: result[idx]
+                for idx in range(len(output_names))
+            }
+            if keep_dirs and len(result) > len(output_names):
+                result_dict['output_dir'] = result[-1]
+            if keep_input:
+                result_dict.update(row.to_dict())
+            rows.append(result_dict)
+        return pd.DataFrame(rows)
 
     def run_parametric_simulation(self, epws: list, out_dir: str, df: pd.DataFrame, processes: int=2, keep_input: bool=True, keep_dirs: bool=True) -> pd.DataFrame:
         """
@@ -635,12 +767,26 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         """
         outputs_dict = {}
         evaluators = {}
-        for b in self.buildings:
-            idf_basename = os.path.basename(b.idfname).replace('.idf', '') if hasattr(b, 'idfname') and b.idfname else 'unknown_idf'
-            for epw in epws:
+        grouped_dfs = self._prepare_dataframe_for_buildings(df=df, epws=epws)
+        buildings_by_idf = self._get_buildings_by_idf()
+        for (idf_basename, df_for_idf) in grouped_dfs.items():
+            b = buildings_by_idf[idf_basename]
+            epws_for_idf = df_for_idf['epw'].drop_duplicates().tolist() if 'epw' in df_for_idf.columns else epws
+            for epw in epws_for_idf:
                 epwname = epw.split('.epw')[0]
                 evaluator = self.set_evaluator(epw=epw, out_dir=out_dir, building=b)
-                outputs = evaluator.df_apply(df=df, keep_input=keep_input, keep_dirs=keep_dirs, processes=processes)
+                if 'epw' in df_for_idf.columns:
+                    evaluator_input_df = df_for_idf.loc[df_for_idf['epw'] == epw, self._get_problem_input_names()]
+                else:
+                    evaluator_input_df = df_for_idf[self._get_problem_input_names()]
+                evaluator_df = evaluator_input_df.reset_index(drop=True).copy()
+                outputs = self._run_evaluator_df_apply(
+                    evaluator=evaluator,
+                    df=evaluator_df,
+                    keep_input=keep_input,
+                    keep_dirs=keep_dirs,
+                    processes=processes,
+                )
                 outputs['epw'] = epwname
                 outputs['idf'] = idf_basename
                 key = f"{idf_basename}_{epwname}" if len(self.buildings) > 1 else epwname
@@ -650,10 +796,10 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         if len(epws) > 1 or len(self.buildings) > 1:
             outputs_param_simulation = outputs_param_simulation.reset_index(drop=True)
         if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
-            outputs_param_simulation.attrs['parameters_names'] = self.problem.names('inputs')
+            outputs_param_simulation.attrs['parameters_names'] = self._get_all_input_names()
             outputs_param_simulation.attrs['outputs_names'] = self.problem.names('outputs')
         elif hasattr(self, 'parameters_names') and hasattr(self, 'outputs_names'):
-            outputs_param_simulation.attrs['parameters_names'] = self.parameters_names
+            outputs_param_simulation.attrs['parameters_names'] = self.parameters_names + self._get_external_input_names()
             outputs_param_simulation.attrs['outputs_names'] = self.outputs_names
         self.outputs_param_simulation = outputs_param_simulation
         self.evaluators = evaluators
@@ -818,8 +964,8 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             platypus_evaluator = platypus.ProcessPoolEvaluator(processes)
             PlatypusConfig.default_evaluator = platypus_evaluator
         try:
-            for b in self.buildings:
-                idf_basename = os.path.basename(b.idfname).replace('.idf', '') if hasattr(b, 'idfname') and b.idfname else 'unknown_idf'
+            buildings_by_idf = self._get_buildings_by_idf()
+            for (idf_basename, b) in buildings_by_idf.items():
                 for epw in epws:
                     evaluator = self.set_evaluator(epw=epw, out_dir=out_dir, building=b)
                     evaluator._keep_sim_files = keep_sim_files
@@ -1051,11 +1197,11 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 fallback_full['simulation_directory'] = pd.NA
             outputs_optimisation_full = fallback_full
         if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
-            outputs_optimisation_full.attrs['parameters_names'] = self.problem.names('inputs')
+            outputs_optimisation_full.attrs['parameters_names'] = self._get_all_input_names()
             outputs_optimisation_full.attrs['outputs_names'] = self.problem.names('outputs')
             outputs_optimisation_full.attrs['minimize_outputs'] = getattr(self.problem, 'minimize_outputs', [])
         elif hasattr(self, 'parameters_names') and hasattr(self, 'outputs_names'):
-            outputs_optimisation_full.attrs['parameters_names'] = self.parameters_names
+            outputs_optimisation_full.attrs['parameters_names'] = self.parameters_names + self._get_external_input_names()
             outputs_optimisation_full.attrs['outputs_names'] = self.outputs_names
             outputs_optimisation_full.attrs['minimize_outputs'] = getattr(self.problem, 'minimize_outputs', []) if hasattr(self, 'problem') else []
         self.outputs_optimisation = outputs_optimisation_full
@@ -1440,6 +1586,6 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
 
 class AccimPredefModelsParamSim(OptimParamSimulation):
 
-    def __init__(self, building: besos.IDF_class, output_type: str='standard', output_keep_existing: bool=False, output_freqs: list=['hourly'], ScriptType: str='vrf_mm', SupplyAirTempInputMethod: str='temperature difference', debugging: bool=False):
+    def __init__(self, building: Any, output_type: str='standard', output_keep_existing: bool=False, output_freqs: list=['hourly'], ScriptType: str='vrf_mm', SupplyAirTempInputMethod: str='temperature difference', debugging: bool=False):
         super().__init__(building=building, output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging)
         accis.modifyAccis(idf=building, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)

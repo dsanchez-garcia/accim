@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Multi-IDF Parametric Validation Script**: Added `check_parametric_multiple_idfs.py` to exercise `OptimParamSimulation` with multiple IDFs and per-row EPW assignments without modifying the original IDF files.
+
+### Changed
+- **BESOS-style Parametric Flexibility**: `OptimParamSimulation` can now be configured without ACCIM-specific parameters, allowing workflows that bypass `addAccis`/`apply_apmv_setpoints` and rely on generic BESOS parameters or even zero internal parameters.
+- **IDF as Explicit Input Variable**: Multi-building simulations now expose `idf` as an input-like variable in `outputs_param_simulation` and `outputs_optimisation`, preserving the selected model in the result tables and metadata.
+- **Per-row EPW Routing for Multi-IDF Runs**: `run_parametric_simulation` now accepts an `epw` column in the input dataframe so users can define exact IDF/EPW combinations instead of always evaluating the full Cartesian product.
+
+### Fixed
+- **Zero-input BESOS Compatibility**: Added an internal fallback path so parametric runs still work when the BESOS problem has no native input parameters and only external routing such as `idf` is used.
+- **Python 3.9 Type Hint Compatibility**: Relaxed internal `IDF_class` type annotations in `OptimParamSimulation` to avoid import-time failures in environments where `besos.IDF_class` resolves as a module rather than a concrete type.
+
 ## [0.7.8] - 2026-04-18
 
 ### Added
