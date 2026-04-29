@@ -126,7 +126,8 @@ setuptools.setup(
         'datapackage',
         'unidecode',
         'besos',
-        'SALib'
+        'SALib',
+        'seaborn'
         # 'shutil',
         # 'glob'
         ],

@@ -143,13 +143,53 @@ parametric.plot_best_compromise_solutions(
     ],
 )
 
+# ---------------------------------------------------------------------------
+# 12. Data Visualization
+# ---------------------------------------------------------------------------
+print("\n--- [12] Data Visualization ---")
+# Utilizing the same mock outputs_optimisation as before
+parametric.plot_pareto_front(out_dir='testing_new_functionalities', color_by='CustAST_ASToffset', size_by='CustAST_m')
+parametric.plot_parallel_coordinates(out_dir='testing_new_functionalities')
+# We need seaborn installed to run PairGrid, which is included in setup.py requirements
+parametric.plot_pairwise_scatter_matrix(out_dir='testing_new_functionalities')
+
+# ---------------------------------------------------------------------------
+# 13. Clustering of Optimal Solutions (K-Means)
+# ---------------------------------------------------------------------------
+print("\n--- [13] Clustering Optimal Solutions ---")
+try:
+    parametric.run_clustering(
+        n_clusters=3,
+        cluster_by='parameters',
+        pareto_only=True,
+        out_dir='testing_new_functionalities'
+    )
+    # The clustering method automatically plots a pareto front color-coded by Cluster_ID
+    parametric.plot_pareto_front(color_by='Cluster_ID', out_dir='testing_new_functionalities')
+except Exception as e:
+    print(f"Clustering error (likely too few pareto points in mock data): {e}")
+
+# ---------------------------------------------------------------------------
+# 14. Robustness Analysis
+# ---------------------------------------------------------------------------
+print("\n--- [14] Robustness Analysis ---")
+# To test robustness, we pass the optimal solutions (e.g. mcdm results)
+# Here we take 2 top solutions for demonstration and run them under multiple EPWs.
+try:
+    mcdm_df = pd.read_csv('testing_new_functionalities/results_mcdm_best_solutions.csv')
+    best_solutions = mcdm_df.head(2).copy()
+    parametric.run_robustness_analysis(
+        optimal_solutions_df=best_solutions,
+        epws_robustness=['Seville.epw', 'Sydney.epw'],
+        out_dir='testing_new_functionalities_robustness'
+    )
+except FileNotFoundError:
+    print("MCDM results not found to run robustness analysis.")
+except Exception as e:
+    print(f"Robustness analysis error: {e}")
+
 # if __name__ == '__main__':
 #     from multiprocessing import freeze_support
 #     freeze_support()
 #     main()
 
-
-# if __name__ == '__main__':
-#     from multiprocessing import freeze_support
-#     freeze_support()
-#     main()

@@ -91,7 +91,7 @@ parametric.set_outputs_for_simulation(df_output_meter=df_meters_ts)
 
 # No parameters => inputs empty; parametric simulation becomes just evaluating the 4 (idf, epw) pairs.
 parametric.set_parameters()
-parametric.set_problem(minimize_outputs=[True, True])
+parametric.set_problem()
 
 simulation_plan = pd.DataFrame(
     {
@@ -117,7 +117,7 @@ parametric.run_parametric_simulation(
     df=simulation_plan,
     processes=1,
     keep_input=True,
-    keep_dirs=False,
+    keep_dirs=True,
 )
 
 ##
