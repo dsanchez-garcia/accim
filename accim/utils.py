@@ -158,15 +158,18 @@ def reduce_runtime(
     runperiod_obj.End_Month = runperiod_end_month
     runperiod_obj.End_Day_of_Month = runperiod_end_day_of_month
 
-    obj_shadowcalc = [i for i in idf_object.idfobjects['ShadowCalculation']][0]
-    shadowcalc_freq_prev = obj_shadowcalc.Shading_Calculation_Update_Frequency
-    obj_shadowcalc.Shading_Calculation_Update_Frequency = shading_calculation_update_frequency
-    print(f'Shading Calculation Update Frequency was previously set to '
-          f'{shadowcalc_freq_prev} days, and it has been modified to {shading_calculation_update_frequency} days.')
-    shadowcalc_maxfigs_prev = obj_shadowcalc.Maximum_Figures_in_Shadow_Overlap_Calculations
-    obj_shadowcalc.Maximum_Figures_in_Shadow_Overlap_Calculations = maximum_figures_in_shadow_overlap_calculations
-    print(f'Maximum Figures in Shadow Overlap Calculations was previously set to '
-          f'{shadowcalc_maxfigs_prev} days, and it has been modified to {maximum_figures_in_shadow_overlap_calculations} days.')
+    try:
+        obj_shadowcalc = [i for i in idf_object.idfobjects['ShadowCalculation']][0]
+        shadowcalc_freq_prev = obj_shadowcalc.Shading_Calculation_Update_Frequency
+        obj_shadowcalc.Shading_Calculation_Update_Frequency = shading_calculation_update_frequency
+        print(f'Shading Calculation Update Frequency was previously set to '
+              f'{shadowcalc_freq_prev} days, and it has been modified to {shading_calculation_update_frequency} days.')
+        shadowcalc_maxfigs_prev = obj_shadowcalc.Maximum_Figures_in_Shadow_Overlap_Calculations
+        obj_shadowcalc.Maximum_Figures_in_Shadow_Overlap_Calculations = maximum_figures_in_shadow_overlap_calculations
+        print(f'Maximum Figures in Shadow Overlap Calculations was previously set to '
+              f'{shadowcalc_maxfigs_prev} days, and it has been modified to {maximum_figures_in_shadow_overlap_calculations} days.')
+    except IndexError:
+        print('There was no ShadowCalculation object. Therefore it has not been simplified.')
 
     obj_timestep = [i for i in idf_object.idfobjects['Timestep']][0]
     timestep_prev = obj_timestep.Number_of_Timesteps_per_Hour
