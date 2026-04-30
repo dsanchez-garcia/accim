@@ -76,11 +76,12 @@ def get_mdd_file_as_df():
 
 class OptimParamSimulation(AnalysisMixin, PlottingMixin):
 
-    def __init__(self, building: Union[Any, List]=None, parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None]=None, output_type: Literal['standard', 'custom', 'detailed', 'simplified']='standard', output_keep_existing: bool=False, output_freqs: List[allowed_output_freqs]=['hourly'], ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac']='vrf_mm', SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature']='temperature difference', make_averages: bool=False, debugging: bool=False, verbosemode: bool=True, bypass_addAccis: bool=False):
+    def __init__(self, buildings: Union[Any, List]=None, epws: list=None, parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None]=None, output_type: Literal['standard', 'custom', 'detailed', 'simplified']='standard', output_keep_existing: bool=False, output_freqs: List[allowed_output_freqs]=['hourly'], ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac']='vrf_mm', SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature']='temperature difference', make_averages: bool=False, debugging: bool=False, verbosemode: bool=True, bypass_addAccis: bool=False, **kwargs):
         """
         Creates a class instance to run parametric simulations and optimisation.
 
-        :param building: the besos.IDF_class returned from method get_building(idfpath)
+        :param buildings: the besos.IDF_class returned from method get_building(idfpath)
+        :param epws: a list of .epw filenames
         :param parameters_type: to specify the type of parameters that should be used:
             can be 'accim custom model', 'accim predefined model', or 'apmv setpoints'
         :param output_type: to specify the outputs that are going to be requested;
@@ -97,6 +98,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         :param debugging: True to generate the .EDD file
         :param bypass_addAccis: True to skip the internal addAccis execution (useful when loading previous sessions)
         """
+        if buildings is None and 'building' in kwargs:
+            buildings = kwargs['building']
+            
         is_accim_predef_model = False
         is_accim_custom_model = False
         is_apmv_setpoints = False
@@ -130,18 +134,18 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.output_type = output_type
             self.make_averages = make_averages
             if not bypass_addAccis:
-                if isinstance(building, list):
-                    for b in building:
+                if isinstance(buildings, list):
+                    for b in buildings:
                         accis.addAccis(idf=b, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=output_keep_existing, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
                 else:
-                    accis.addAccis(idf=building, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=output_keep_existing, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
+                    accis.addAccis(idf=buildings, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=output_keep_existing, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
         elif is_apmv_setpoints:
             if not bypass_addAccis:
-                if isinstance(building, list):
-                    for b in building:
+                if isinstance(buildings, list):
+                    for b in buildings:
                         apmv.apply_apmv_setpoints(building=b, outputs_freq=output_freqs)
                 else:
-                    apmv.apply_apmv_setpoints(building=building, outputs_freq=output_freqs)
+                    apmv.apply_apmv_setpoints(building=buildings, outputs_freq=output_freqs)
             print('Arguments output_type, output_keep_existing, ScriptType, and SupplyAirTempInputMethod are only used in accim predefined and custom models, therefore these will not have any effect in this case.')
         elif parameters_type is None:
             self.ScriptType = None
@@ -150,8 +154,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.output_keep_existing = None
             self.output_type = None
             self.make_averages = None
-        self.building = building[0] if isinstance(building, list) and len(building) > 0 else building
-        self.buildings = building if isinstance(building, list) else ([building] if building is not None else [])
+        self.building = buildings[0] if isinstance(buildings, list) and len(buildings) > 0 else buildings
+        self.buildings = buildings if isinstance(buildings, list) else ([buildings] if buildings is not None else [])
+        self.epws = epws if isinstance(epws, list) else ([epws] if epws is not None else [])
         self.output_freqs = output_freqs
         self.parameters_type = parameters_type
         self.is_accim_custom_model = is_accim_custom_model
@@ -611,18 +616,54 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         named parameters_values_df.
         """
         from accim.parametric_and_optimisation.utils import make_all_combinations
-        if self.descriptors_has_options:
-            num_samples = 1
-            parameters_values = {}
-            for p in self.parameters_list:
-                num_samples = num_samples * len(p.value_descriptors[0].options)
-                parameters_values.update({p.value_descriptors[0].name: p.value_descriptors[0].options})
-            parameters_values_df = make_all_combinations(parameters_values)
-        else:
+        
+        has_params = hasattr(self, 'parameters_list') and len(self.parameters_list) > 0
+        if has_params and not getattr(self, 'descriptors_has_options', False):
             raise KeyError('sampling_full_set method can only be used with option (i.e. category) descriptors.')
-        if self.is_accim_predef_model:
-            parameters_values_df = bf_accim.drop_invalid_param_combinations(parameters_values_df)
+            
+        parameters_values = {}
+        if has_params:
+            for p in self.parameters_list:
+                parameters_values.update({p.value_descriptors[0].name: p.value_descriptors[0].options})
+                
+        if hasattr(self, 'buildings') and len(self.buildings) > 0:
+            idf_names = [self._get_idf_identifier(b, i) for i, b in enumerate(self.buildings)]
+            parameters_values['idf'] = idf_names
+            
+        if hasattr(self, 'epws') and len(self.epws) > 0:
+            parameters_values['epw'] = self.epws
+            
+        if not parameters_values:
+            parameters_values_df = pd.DataFrame()
+        else:
+            parameters_values_df = make_all_combinations(parameters_values)
+            if self.is_accim_predef_model:
+                parameters_values_df = bf_accim.drop_invalid_param_combinations(parameters_values_df)
         self.parameters_values_df = parameters_values_df
+
+    def _expand_samples_with_buildings_and_epws(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Expands a parameter samples DataFrame with cartesian products for IDFs and EPWs.
+        """
+        if df is None or df.empty:
+            return df
+            
+        dfs_to_concat = []
+        idf_names = [self._get_idf_identifier(b, i) for i, b in enumerate(self.buildings)] if hasattr(self, 'buildings') and self.buildings else [None]
+        epw_names = self.epws if hasattr(self, 'epws') and self.epws else [None]
+        
+        for idf_name in idf_names:
+            for epw_name in epw_names:
+                temp_df = df.copy()
+                if idf_name is not None and len(self.buildings) > 1:
+                    temp_df['idf'] = idf_name
+                if epw_name is not None and len(self.epws) > 0:
+                    temp_df['epw'] = epw_name
+                dfs_to_concat.append(temp_df)
+                
+        if dfs_to_concat:
+            return pd.concat(dfs_to_concat, ignore_index=True)
+        return df
 
     def sampling_full_factorial(self, level: int):
         """
@@ -636,7 +677,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             parameters_values_df = sampling.dist_sampler(sampling.full_factorial, self.problem, num_samples=2, level=level)
         else:
             raise KeyError('sampling_full_factorial method can only be used with range descriptors.')
-        self.parameters_values_df = parameters_values_df
+        self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
     def sampling_lhs(self, num_samples: int):
         """
@@ -650,7 +691,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             parameters_values_df = sampling.dist_sampler(sampling.lhs, self.problem, num_samples=num_samples)
         else:
             raise KeyError('sampling_lhs method can only be used with range descriptors.')
-        self.parameters_values_df = parameters_values_df
+        self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
     def _get_salib_problem(self) -> dict:
         """
@@ -685,7 +726,8 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             raise ImportError('SALib is required for Sensitivity Analysis. Install it with: pip install SALib')
         problem = self._get_salib_problem()
         samples = saltelli.sample(problem, num_samples)
-        self.parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
+        parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
+        self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
     def sampling_morris(self, num_samples: int=100, num_levels: int=4):
         """
@@ -705,7 +747,8 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             raise ImportError('SALib is required for Sensitivity Analysis. Install it with: pip install SALib')
         problem = self._get_salib_problem()
         samples = morris_sampler.sample(problem, N=num_samples, num_levels=num_levels)
-        self.parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
+        parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
+        self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
     def set_evaluator(self, epw: str, out_dir: str, building: Any = None) -> besos.evaluator.EvaluatorEP:
         """
@@ -753,7 +796,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             rows.append(result_dict)
         return pd.DataFrame(rows)
 
-    def run_parametric_simulation(self, epws: list, out_dir: str, df: pd.DataFrame, processes: int=2, keep_input: bool=True, keep_dirs: bool=True) -> pd.DataFrame:
+    def run_parametric_simulation(self, epws: list = None, out_dir: str = 'param_results', df: pd.DataFrame = None, processes: int=2, keep_input: bool=True, keep_dirs: bool=True) -> pd.DataFrame:
         """
         Runs the parametric simulation.
 
@@ -765,6 +808,15 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         :param keep_dirs: True to keep the simulation results
         :return: a pandas DataFrame
         """
+        if epws is None:
+            epws = getattr(self, 'epws', [])
+        if not epws:
+            raise ValueError("No EPWs provided and no default EPWs found in class instance.")
+        if df is None:
+            df = getattr(self, 'parameters_values_df', None)
+            if df is None:
+                raise ValueError("Argument 'df' cannot be None if self.parameters_values_df is not populated. Run a sampling method first or provide 'df'.")
+
         outputs_dict = {}
         evaluators = {}
         grouped_dfs = self._prepare_dataframe_for_buildings(df=df, epws=epws)
@@ -921,7 +973,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         self.last_run_type = 'parametric'
         return total
 
-    def run_optimisation(self, epws: list, out_dir: str, evaluations: int, population_size: int, algorithm: str='NSGAII', processes: int=1, keep_sim_files: Literal['all', 'non-dominated', 'none']='all', keep_sim_files_batch_size: int=50, keep_df: Literal['all', 'non-dominated']='all', **kwargs) -> pd.DataFrame:
+    def run_optimisation(self, epws: list = None, out_dir: str = 'optim_results', evaluations: int = 2, population_size: int = 2, algorithm: str='NSGAII', processes: int=1, keep_sim_files: Literal['all', 'non-dominated', 'none']='all', keep_sim_files_batch_size: int=50, keep_df: Literal['all', 'non-dominated']='all', **kwargs) -> pd.DataFrame:
         """
         Runs the optimisation.
 
@@ -947,6 +999,10 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             'all' (keeps dominated and non-dominated) or 'non-dominated'.
         :return: a pandas DataFrame
         """
+        if epws is None:
+            epws = getattr(self, 'epws', [])
+        if not epws:
+            raise ValueError("No EPWs provided and no default EPWs found in class instance.")
         self.epws = epws
         available_algorithms = ['GeneticAlgorithm', 'EvolutionaryStrategy', 'NSGAII', 'EpsMOEA', 'GDE3', 'SPEA2', 'MOEAD', 'NSGAIII', 'ParticleSwarm', 'OMOPSO', 'SMPSO', 'CMAES', 'IBEA', 'PAES', 'PESA2', 'EpsNSGAII']
         outputs_dict = {}
@@ -1586,6 +1642,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
 
 class AccimPredefModelsParamSim(OptimParamSimulation):
 
-    def __init__(self, building: Any, output_type: str='standard', output_keep_existing: bool=False, output_freqs: list=['hourly'], ScriptType: str='vrf_mm', SupplyAirTempInputMethod: str='temperature difference', debugging: bool=False):
-        super().__init__(building=building, output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging)
-        accis.modifyAccis(idf=building, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)
+    def __init__(self, buildings: Union[Any, List]=None, epws: list=None, output_type: str='standard', output_keep_existing: bool=False, output_freqs: list=['hourly'], ScriptType: str='vrf_mm', SupplyAirTempInputMethod: str='temperature difference', debugging: bool=False, **kwargs):
+        if buildings is None and 'building' in kwargs:
+            buildings = kwargs['building']
+        super().__init__(buildings=buildings, epws=epws, parameters_type='accim predefined model', output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging)
+        for b in self.buildings:
+            accis.modifyAccis(idf=b, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)

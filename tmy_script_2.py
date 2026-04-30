@@ -40,7 +40,7 @@ from besos import eppy_funcs as ef
 # Option A:
 #   - No `addAccis` (no parameterisation of ACCIM)
 #   - You may add Output:Meter objects for Heating/Cooling
-#   - Total simulations = 4 (2 IDFs x 4 EPWs plan → 4 pairs)
+#   - Total simulations = 8 (2 IDFs x 4 EPWs plan → 8 pairs)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__name__))
 EP_PATH = r"C:\EnergyPlusV9-6-0"
@@ -51,11 +51,7 @@ IDF_PATHS = [os.path.join(BASE_DIR, f"{name}.idf") for name in IDF_BASENAMES]
 EPW_BASENAMES = ["seville_2024", "seville_2025", "madrid_2024", "madrid_2025"]
 EPW_PATHS = [os.path.join(BASE_DIR, f"{name}.epw") for name in EPW_BASENAMES]
 
-# 4 pairs total (as in check_parametric_multiple_idfs.py):
-#   B + seville_2024
-#   B + seville_2025
-#   D + madrid_2024
-#   D + madrid_2025
+# We will evaluate all 8 pairs (2 IDFs x 4 EPWs) using the new native sampling methods.
 OUT_DIR = os.path.join(BASE_DIR, "tmy_parametric_analysis_outputs")
 ANALYSIS_DIR = os.path.join(OUT_DIR, "analysis")
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -75,12 +71,13 @@ for building in buildings:
 #    and add ONLY the heating/cooling Output:Meters
 # ---------------------------------------------------------------------------
 parametric = OptimParamSimulation(
-    building=buildings,
+    buildings=buildings,
+    epws=EPW_PATHS,
     parameters_type=None,
     bypass_addAccis=True,
     output_freqs=["hourly"],
 )
-
+##
 buildings[0].idfobjects['output:meter']
 
 parametric.set_output_met_objects_to_idf(
@@ -91,32 +88,22 @@ df_meters_ts, _ = parametric.get_outputs_df_from_testsim()
 df_meters_ts = df_meters_ts[df_meters_ts["key_name"].isin(["DistrictHeating:Facility", "DistrictCooling:Facility"])]
 parametric.set_outputs_for_simulation(df_output_meter=df_meters_ts)
 
-# No parameters => inputs empty; parametric simulation becomes just evaluating the 4 (idf, epw) pairs.
+# No parameters => inputs empty; parametric simulation becomes just evaluating the (idf, epw) pairs.
 parametric.set_parameters()
 parametric.set_problem()
 
-simulation_plan = pd.DataFrame(
-    {
-        "idf": [
-            IDF_BASENAMES[0],
-            IDF_BASENAMES[0],
-            IDF_BASENAMES[1],
-            IDF_BASENAMES[1],
-        ],
-        "epw": [
-            os.path.join(BASE_DIR, "seville_2024.epw"),
-            os.path.join(BASE_DIR, "seville_2025.epw"),
-            os.path.join(BASE_DIR, "madrid_2024.epw"),
-            os.path.join(BASE_DIR, "madrid_2025.epw"),
-        ],
-    },
-)
+# Option A: Generate the full simulation plan (all combinations of IDFs and EPWs) natively using sampling_full_set
+# Since we passed buildings and epws to the OptimParamSimulation constructor, we can just call:
+parametric.sampling_full_set()
 
-print("\n[1/4] Run 4 parametric simulations (Heating + Cooling only)...")
+# Option B: (Alternative) Generate the simulation plan manually using make_all_combinations
+# from accim.parametric_and_optimisation.utils import make_all_combinations
+# simulation_plan = make_all_combinations({"idf": IDF_BASENAMES, "epw": EPW_PATHS})
+# parametric.parameters_values_df = simulation_plan
+
+print(f"\n[1/4] Run {len(parametric.parameters_values_df)} parametric simulations (Heating + Cooling only)...")
 parametric.run_parametric_simulation(
-    epws=EPW_PATHS,
     out_dir=OUT_DIR,
-    df=simulation_plan,
     processes=1,
     keep_input=True,
     keep_dirs=True,
