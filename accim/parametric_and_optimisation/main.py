@@ -1392,12 +1392,13 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         self.last_run_type = 'optimisation'
         return self.outputs_optimisation
 
-    def get_hourly_df(self, start_date: str='2024-01-01 01'):
+    def get_hourly_df(self, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
         """
         Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame, saved in the
          internal variable named outputs_param_simulation_hourly.
 
         :param start_date: the start date for the simulation results, in format 'YYY-MM-DD HH'
+        :param normalize_per_m2: if True, divides energy columns by the building floor area.
         """
         if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
             raise ValueError('No parametric simulation data available to expand hourly.')
@@ -1435,8 +1436,15 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             source_df = self.outputs_param_simulation
             
         self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(df=source_df, parameter_columns=parameter_columns, start_date=start_date)
+        
+        if normalize_per_m2:
+            if getattr(self, 'outputs_normalized', False):
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
+            else:
+                self.normalize_outputs(df_types=['parametric_hourly'])
+                self.outputs_normalized = False # Revert to False because we only normalized the hourly df
 
-    def get_monthly_df(self, agg_funcs: dict = None, start_date: str='2024-01-01 01'):
+    def get_monthly_df(self, agg_funcs: dict = None, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
         """
         Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame with monthly aggregated values,
         saved in the internal variable named outputs_param_simulation_monthly.
@@ -1445,6 +1453,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             (e.g. {'DistrictHeating:Facility': 'sum', 'Zone Mean Air Temperature': 'mean'}).
             Defaults to 'mean' for temperature, PMV, PPD, rate, and coefficient, and 'sum' for everything else.
         :param start_date: the start date for the simulation results, in format 'YYY-MM-DD HH'
+        :param normalize_per_m2: if True, divides energy columns by the building floor area.
         """
         if getattr(self, 'outputs_param_simulation_hourly', None) is None:
             self.get_hourly_df(start_date=start_date)
@@ -1489,6 +1498,13 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         
         monthly_df = df_hourly.groupby(groupby_cols).agg(default_agg).reset_index()
         self.outputs_param_simulation_monthly = monthly_df
+        
+        if normalize_per_m2:
+            if getattr(self, 'outputs_normalized', False):
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
+            else:
+                self.normalize_outputs(df_types=['parametric_monthly'])
+                self.outputs_normalized = False # Revert because we only normalized the monthly df
 
     @staticmethod
     def _resolve_simulation_file_path(row: pd.Series, file_source: Literal['csv', 'eso']) -> str:
@@ -1587,7 +1603,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             df_augmented[target_col] = [row_outputs[col] if col in row_outputs else [] for row_outputs in per_row_outputs]
         return df_augmented
 
-    def get_hourly_df_optimisation(self, only_pareto_optimal: bool=True, epw_filter: Union[str, List[str]]=None, simulation_indices: Optional[List[int]]=None, output_columns: Optional[List[str]]=None, include_summary_columns: bool=True, file_source: Literal['csv', 'eso']='csv', eplus_install_dir: Optional[str]=None, only_run_period: bool=True, start_date: Optional[str]=None, skip_confirmation: bool=False):
+    def get_hourly_df_optimisation(self, only_pareto_optimal: bool=True, epw_filter: Union[str, List[str]]=None, simulation_indices: Optional[List[int]]=None, output_columns: Optional[List[str]]=None, include_summary_columns: bool=True, file_source: Literal['csv', 'eso']='csv', eplus_install_dir: Optional[str]=None, only_run_period: bool=True, start_date: Optional[str]=None, skip_confirmation: bool=False, normalize_per_m2: bool = False):
         """
         Expands optimisation results to hourly frequency and saves the result
         in ``outputs_optimisation_hourly``.
@@ -1716,6 +1732,12 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         else:
             print(f'[get_hourly_df_optimisation] Expanding…{size_msg}')
         self.outputs_optimisation_hourly = expand_to_hourly_dataframe(df=source_df, parameter_columns=param_cols, start_date=start_date)
+        if normalize_per_m2:
+            if getattr(self, 'outputs_normalized', False):
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
+            else:
+                self.normalize_outputs(df_types=['optimisation_hourly'])
+                self.outputs_normalized = False # Revert to False because we only normalized the hourly df
 
     def get_monthly_df_optimisation(self, agg_funcs: dict = None, **kwargs):
         """
@@ -1771,6 +1793,14 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         
         monthly_df = df_hourly.groupby(groupby_cols).agg(default_agg).reset_index()
         self.outputs_optimisation_monthly = monthly_df
+        
+        normalize_per_m2 = kwargs.get('normalize_per_m2', False)
+        if normalize_per_m2:
+            if getattr(self, 'outputs_normalized', False):
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
+            else:
+                self.normalize_outputs(df_types=['optimisation_monthly'])
+                self.outputs_normalized = False # Revert because we only normalized the monthly df
 
     def get_hourly_df_columns(self):
         """

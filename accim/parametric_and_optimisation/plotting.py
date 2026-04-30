@@ -37,15 +37,21 @@ class PlottingMixin:
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('MCDM best compromise solutions can only be evaluated after an optimisation simulation. Please ensure you run run_optimisation() first.')
         import matplotlib.pyplot as plt
-        unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
-        divisor = 3600000.0
-        if normalize_per_m2:
-            area = getattr(self, 'building_floor_area', None)
-            if not area:
-                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
-                unit_str = 'kWh'
-            else:
-                divisor *= area
+        if getattr(self, 'outputs_normalized', False):
+            if normalize_per_m2:
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+            normalize_per_m2 = False
+            unit_str = 'kWh/m2'
+            base_divisor = 1.0
+        else:
+            unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+            base_divisor = 3600000.0
+            if normalize_per_m2:
+                area_attr = getattr(self, 'building_floor_area', None)
+                if not area_attr:
+                    print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                    unit_str = 'kWh'
+                    normalize_per_m2 = False
         if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
             raise ValueError('No optimisation results found. Run run_optimisation (or load via load_outputs_optimisation) first.')
         os.makedirs(out_dir, exist_ok=True)
@@ -83,8 +89,17 @@ class PlottingMixin:
                 row_df['mcdm_method'] = label
                 row_df['epw'] = epw_tag
                 all_mcdm_rows.append(row_df)
-                h_kwh = row_df[heating_col].iloc[0] / divisor
-                c_kwh = row_df[cooling_col].iloc[0] / divisor
+                if normalize_per_m2:
+                    if isinstance(area_attr, dict) and 'idf' in row_df.columns:
+                        area_val = area_attr.get(row_df['idf'].iloc[0], 1.0)
+                    else:
+                        area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    div = base_divisor * area_val
+                else:
+                    div = base_divisor
+                    
+                h_kwh = row_df[heating_col].iloc[0] / div
+                c_kwh = row_df[cooling_col].iloc[0] / div
                 print(f'    {label:25s} | {heating_col}={h_kwh:.1f} {unit_str} | {cooling_col}={c_kwh:.1f} {unit_str}')
             self.outputs_optimisation = original_optim
         mcdm_df = pd.concat(all_mcdm_rows, ignore_index=True)
@@ -96,8 +111,18 @@ class PlottingMixin:
             epw_tag = str(epw_label).replace(' ', '_')
             ax_m = axes[0][ax_idx]
             df_epw = original_optim[original_optim['epw'] == epw_label].copy()
-            df_epw['_h'] = df_epw[heating_col] / divisor
-            df_epw['_c'] = df_epw[cooling_col] / divisor
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in df_epw.columns:
+                    areas = df_epw['idf'].map(area_attr).fillna(1.0)
+                    divs = base_divisor * areas
+                else:
+                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    divs = base_divisor * area_val
+            else:
+                divs = base_divisor
+                
+            df_epw['_h'] = df_epw[heating_col] / divs
+            df_epw['_c'] = df_epw[cooling_col] / divs
             dom = df_epw[~df_epw['pareto-optimal']]
             par = df_epw[df_epw['pareto-optimal']]
             ax_m.scatter(dom['_h'], dom['_c'], c='#cccccc', alpha=0.3, s=15, zorder=1)
@@ -107,8 +132,17 @@ class PlottingMixin:
                 row = mcdm_df[(mcdm_df['epw'] == epw_tag) & (mcdm_df['mcdm_method'] == label)]
                 if row.empty:
                     continue
-                h = row[heating_col].iloc[0] / divisor
-                c = row[cooling_col].iloc[0] / divisor
+                if normalize_per_m2:
+                    if isinstance(area_attr, dict) and 'idf' in row.columns:
+                        area_val = area_attr.get(row['idf'].iloc[0], 1.0)
+                    else:
+                        area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    div = base_divisor * area_val
+                else:
+                    div = base_divisor
+                    
+                h = row[heating_col].iloc[0] / div
+                c = row[cooling_col].iloc[0] / div
                 ax_m.scatter(h, c, marker=_marker_cycle[i % len(_marker_cycle)], c=_colour_cycle[i % len(_colour_cycle)], s=_size_cycle[i % len(_size_cycle)], zorder=5, edgecolors='k', linewidths=0.6, label=label)
             ax_m.set_xlabel(f'{heating_col} ({unit_str})', fontsize=11)
             ax_m.set_ylabel(f'{cooling_col} ({unit_str})', fontsize=11)
@@ -138,15 +172,21 @@ class PlottingMixin:
         from matplotlib.colors import Normalize
         from matplotlib.lines import Line2D
         import pandas as pd
-        unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
-        divisor = 3600000.0
-        if normalize_per_m2:
-            area = getattr(self, 'building_floor_area', None)
-            if not area:
-                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
-                unit_str = 'kWh'
-            else:
-                divisor *= area
+        if getattr(self, 'outputs_normalized', False):
+            if normalize_per_m2:
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+            normalize_per_m2 = False
+            unit_str = 'kWh/m2'
+            base_divisor = 1.0
+        else:
+            unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+            base_divisor = 3600000.0
+            if normalize_per_m2:
+                area_attr = getattr(self, 'building_floor_area', None)
+                if not area_attr:
+                    print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                    unit_str = 'kWh'
+                    normalize_per_m2 = False
         os.makedirs(out_dir, exist_ok=True)
         df = self.outputs_optimisation.copy()
         epw_labels = df['epw'].unique()
@@ -160,8 +200,25 @@ class PlottingMixin:
             df_epw = df[df['epw'] == epw_label].copy()
             pareto_epw = df_epw[df_epw['pareto-optimal']].copy()
             dominated_epw = df_epw[~df_epw['pareto-optimal']].copy()
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in df_epw.columns:
+                    areas = df_epw['idf'].map(area_attr).fillna(1.0)
+                    divs = base_divisor * areas
+                    
+                    dom_divs = dominated_epw['idf'].map(area_attr).fillna(1.0) * base_divisor
+                    par_divs = pareto_epw['idf'].map(area_attr).fillna(1.0) * base_divisor
+                else:
+                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    divs = base_divisor * area_val
+                    dom_divs = divs
+                    par_divs = divs
+            else:
+                divs = base_divisor
+                dom_divs = base_divisor
+                par_divs = base_divisor
+                
             (fig, ax) = plt.subplots(figsize=(8, 6))
-            ax.scatter(dominated_epw[heating_col] / divisor, dominated_epw[cooling_col] / divisor, c='#cccccc', alpha=0.3, s=15, zorder=1)
+            ax.scatter(dominated_epw[heating_col] / dom_divs, dominated_epw[cooling_col] / dom_divs, c='#cccccc', alpha=0.3, s=15, zorder=1)
             if size_by and size_by in pareto_epw.columns:
                 sizes = pareto_epw[size_by] * 300
             else:
@@ -171,13 +228,19 @@ class PlottingMixin:
                 vmin = df_epw[color_by].min()
                 vmax = df_epw[color_by].max()
                 norm = Normalize(vmin=vmin, vmax=vmax)
-                sc = ax.scatter(pareto_epw[heating_col] / divisor, pareto_epw[cooling_col] / divisor, c=pareto_epw[color_by], cmap='RdYlGn', norm=norm, s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
+                sc = ax.scatter(pareto_epw[heating_col] / par_divs, pareto_epw[cooling_col] / par_divs, c=pareto_epw[color_by], cmap='RdYlGn', norm=norm, s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
                 cbar = fig.colorbar(sc, ax=ax, pad=0.02, shrink=0.85)
                 cbar.set_label(color_by, fontsize=10)
             else:
-                sc = ax.scatter(pareto_epw[heating_col] / divisor, pareto_epw[cooling_col] / divisor, c='#e63946', s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
+                sc = ax.scatter(pareto_epw[heating_col] / par_divs, pareto_epw[cooling_col] / par_divs, c='#e63946', s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
             pf_epw = pareto_epw.sort_values(heating_col)
-            ax.plot(pf_epw[heating_col] / divisor, pf_epw[cooling_col] / divisor, '--', color='grey', lw=0.8, zorder=2)
+            
+            if normalize_per_m2 and isinstance(area_attr, dict) and 'idf' in pf_epw.columns:
+                pf_divs = pf_epw['idf'].map(area_attr).fillna(1.0) * base_divisor
+            else:
+                pf_divs = divs
+                
+            ax.plot(pf_epw[heating_col] / pf_divs, pf_epw[cooling_col] / pf_divs, '--', color='grey', lw=0.8, zorder=2)
             legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor='#cccccc', markersize=7, alpha=0.6, label='Dominated')]
             if use_colormap:
                 if size_by and size_by in pareto_epw.columns:
@@ -273,15 +336,21 @@ class PlottingMixin:
         import matplotlib.pyplot as plt
         import matplotlib.cm as cm
         from matplotlib.colors import Normalize
-        unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
-        divisor = 3600000.0
-        if normalize_per_m2:
-            area = getattr(self, 'building_floor_area', None)
-            if not area:
-                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
-                unit_str = 'kWh'
-            else:
-                divisor *= area
+        if getattr(self, 'outputs_normalized', False):
+            if normalize_per_m2:
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+            normalize_per_m2 = False
+            unit_str = 'kWh/m2'
+            base_divisor = 1.0
+        else:
+            unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+            base_divisor = 3600000.0
+            if normalize_per_m2:
+                area_attr = getattr(self, 'building_floor_area', None)
+                if not area_attr:
+                    print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                    unit_str = 'kWh'
+                    normalize_per_m2 = False
         try:
             import seaborn as sns
         except ImportError:
@@ -292,7 +361,15 @@ class PlottingMixin:
         heating_col = next((c for c in df.columns if 'Heating:Electricity' in c), None)
         cooling_col = next((c for c in df.columns if 'Cooling:Electricity' in c), None)
         if heating_col and cooling_col:
-            df['Total_Energy'] = (df[heating_col] + df[cooling_col]) / divisor
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in df.columns:
+                    divs = df['idf'].map(area_attr).fillna(1.0) * base_divisor
+                else:
+                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    divs = base_divisor * area_val
+            else:
+                divs = base_divisor
+            df['Total_Energy'] = (df[heating_col] + df[cooling_col]) / divs
         else:
             df['Total_Energy'] = 0
         epw_labels = df['epw'].unique()

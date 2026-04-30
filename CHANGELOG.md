@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.7.8] - 2026-04-18
 
 ### Added
+- **Parametric and Optimisation Area Normalization**: Upgraded energy normalisation capabilities to fully support multi-building (`idf`) simulations. 
+  - `set_building_floor_area` now calculates and maps areas for multiple IDFs simultaneously.
+  - Added the `normalize_outputs()` method to forcefully convert energy results across all base, hourly, and monthly DataFrames to $kWh/m^2$ in-place.
+  - Added the `normalize_per_m2` argument natively to all dataframe extraction methods (`get_hourly_df`, `get_monthly_df`, `get_hourly_df_optimisation`, `get_monthly_df_optimisation`).
+  - Integrated a double-normalisation safeguard (`self.outputs_normalized`) that automatically prevents unintended scaling across analytical plotting workflows.
 - **EMS Results Verification Utility**: Added `AccimSimulationVerifier` to `accim.utils`.
   - Replaces the former procedural function with a robust Object-Oriented class.
   - Reads an EnergyPlus simulation output (direct `.csv` parsing prioritize to bypass heavy `ReadVarsESO` operations) and verifies that the ACCIS EMS scripts injected by `AddAccis` operate correctly.

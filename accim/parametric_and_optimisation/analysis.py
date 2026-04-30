@@ -32,78 +32,189 @@ class AnalysisMixin:
             self.building_floor_area = float(custom_area)
             return self.building_floor_area
 
-        idf = self.building
-        if idf is None:
-            # When loaded from JSON/pickle without an IDF, try to reload from the backup
-            backup_path = getattr(self, 'idf_backup_path', None)
-            if not backup_path or not os.path.isfile(backup_path):
-                raise AttributeError(
-                    "self.building is None and no valid idf_backup_path is available. "
-                    "Either provide mode='custom' with a custom_area value, or load the "
-                    "session with an IDF object (building= argument)."
-                )
-            from besos import eppy_funcs as ef
-            idf = ef.get_building(backup_path)
-            self.building = idf
-            print(f'  [info] IDF auto-loaded from backup: {backup_path}')
-        try:
-            surfaces = idf.idfobjects['BuildingSurface:Detailed']
-        except KeyError:
-            surfaces = []
-        floors = [s for s in surfaces if s.Surface_Type.lower() == 'floor']
-        if mode == 'all':
-            total_area = sum((f.area for f in floors))
-        elif mode == 'occupied':
-            occupied_names = set()
+        buildings = getattr(self, 'buildings', [])
+        if not buildings:
+            idf = self.building
+            if idf is None:
+                # When loaded from JSON/pickle without an IDF, try to reload from the backup
+                backup_path = getattr(self, 'idf_backup_path', None)
+                if not backup_path or not os.path.isfile(backup_path):
+                    raise AttributeError(
+                        "self.building is None and no valid idf_backup_path is available. "
+                        "Either provide mode='custom' with a custom_area value, or load the "
+                        "session with an IDF object (building= argument)."
+                    )
+                from besos import eppy_funcs as ef
+                idf = ef.get_building(backup_path)
+                self.building = idf
+                print(f'  [info] IDF auto-loaded from backup: {backup_path}')
+            buildings = [idf]
+            
+        areas = {}
+        for idx, idf in enumerate(buildings):
+            if hasattr(self, '_get_idf_identifier'):
+                idf_name = self._get_idf_identifier(idf, idx)
+            else:
+                idf_name = getattr(idf, 'idfname', f'unknown_idf_{idx}')
+                if idf_name:
+                    idf_name = os.path.basename(idf_name).replace('.idf', '')
+            
             try:
-                people_objs = idf.idfobjects['PEOPLE']
+                surfaces = idf.idfobjects['BuildingSurface:Detailed']
             except KeyError:
-                people_objs = []
-            for p in people_objs:
-                name = getattr(p, 'Zone_or_ZoneList_or_Space_or_SpaceList_Name', getattr(p, 'Zone_or_ZoneList_Name', None))
-                if name:
-                    occupied_names.add(name.upper())
-            try:
-                for zl in idf.idfobjects['ZONELIST']:
-                    if zl.Name.upper() in occupied_names:
-                        for i in range(1, 500):
-                            z_name = getattr(zl, f'Zone_{i}_Name', getattr(zl, f'Zone_Name_{i}', None))
+                surfaces = []
+            floors = [s for s in surfaces if s.Surface_Type.lower() == 'floor']
+            if mode == 'all':
+                total_area = sum((f.area for f in floors))
+            elif mode == 'occupied':
+                occupied_names = set()
+                try:
+                    people_objs = idf.idfobjects['PEOPLE']
+                except KeyError:
+                    people_objs = []
+                for p in people_objs:
+                    name = getattr(p, 'Zone_or_ZoneList_or_Space_or_SpaceList_Name', getattr(p, 'Zone_or_ZoneList_Name', None))
+                    if name:
+                        occupied_names.add(name.upper())
+                try:
+                    for zl in idf.idfobjects['ZONELIST']:
+                        if zl.Name.upper() in occupied_names:
+                            for i in range(1, 500):
+                                z_name = getattr(zl, f'Zone_{i}_Name', getattr(zl, f'Zone_Name_{i}', None))
+                                if z_name:
+                                    occupied_names.add(z_name.upper())
+                except KeyError:
+                    pass
+                try:
+                    for sl in idf.idfobjects['SPACELIST']:
+                        if sl.Name.upper() in occupied_names:
+                            for i in range(1, 500):
+                                s_name = getattr(sl, f'Space_{i}_Name', getattr(sl, f'Space_Name_{i}', None))
+                                if s_name:
+                                    occupied_names.add(s_name.upper())
+                except KeyError:
+                    pass
+                try:
+                    for s in idf.idfobjects['SPACE']:
+                        if s.Name.upper() in occupied_names:
+                            z_name = getattr(s, 'Zone_Name', getattr(s, 'Zone_or_ZoneList_Name', None))
                             if z_name:
                                 occupied_names.add(z_name.upper())
-            except KeyError:
-                pass
-            try:
-                for sl in idf.idfobjects['SPACELIST']:
-                    if sl.Name.upper() in occupied_names:
-                        for i in range(1, 500):
-                            s_name = getattr(sl, f'Space_{i}_Name', getattr(sl, f'Space_Name_{i}', None))
-                            if s_name:
-                                occupied_names.add(s_name.upper())
-            except KeyError:
-                pass
-            try:
-                for s in idf.idfobjects['SPACE']:
-                    if s.Name.upper() in occupied_names:
-                        z_name = getattr(s, 'Zone_Name', getattr(s, 'Zone_or_ZoneList_Name', None))
-                        if z_name:
-                            occupied_names.add(z_name.upper())
-            except KeyError:
-                pass
-            total_area = 0.0
-            for f in floors:
-                z_name = getattr(f, 'Zone_Name', '').upper()
-                s_name = getattr(f, 'Space_Name', '').upper()
-                if z_name in occupied_names or s_name in occupied_names:
-                    total_area += f.area
-        elif mode == 'list':
-            if not zones_list:
-                raise ValueError("zones_list must be provided when mode='list'")
-            upper_zones = [z.upper() for z in zones_list]
-            total_area = sum((f.area for f in floors if getattr(f, 'Zone_Name', '').upper() in upper_zones or getattr(f, 'Space_Name', '').upper() in upper_zones))
+                except KeyError:
+                    pass
+                total_area = 0.0
+                for f in floors:
+                    z_name = getattr(f, 'Zone_Name', '').upper()
+                    s_name = getattr(f, 'Space_Name', '').upper()
+                    if z_name in occupied_names or s_name in occupied_names:
+                        total_area += f.area
+            elif mode == 'list':
+                if not zones_list:
+                    raise ValueError("zones_list must be provided when mode='list'")
+                upper_zones = [z.upper() for z in zones_list]
+                total_area = sum((f.area for f in floors if getattr(f, 'Zone_Name', '').upper() in upper_zones or getattr(f, 'Space_Name', '').upper() in upper_zones))
+            else:
+                raise ValueError(f'Unknown mode: {mode}')
+            
+            areas[idf_name] = total_area
+
+        if len(areas) == 1:
+            self.building_floor_area = list(areas.values())[0]
+            return self.building_floor_area
         else:
-            raise ValueError(f'Unknown mode: {mode}')
-        self.building_floor_area = total_area
-        return total_area
+            self.building_floor_area = areas
+            return sum(areas.values())
+
+    def normalize_outputs(self, df_types: list=None):
+        """
+        Normalizes energy-related columns in the specified dataframes by dividing them
+        by the building floor area (and converting from Joules to kWh). 
+        The results are saved in-place, and `self.outputs_normalized` is set to True.
+        
+        :param df_types: A list of strings specifying which dataframes to normalize.
+            Options include: 'parametric', 'parametric_hourly', 'parametric_monthly',
+            'optimisation', 'optimisation_hourly', 'optimisation_monthly'.
+            If None, all available dataframes will be normalized.
+        """
+        import pandas as pd
+        area_attr = getattr(self, 'building_floor_area', None)
+        if not area_attr:
+            raise ValueError('building_floor_area is not set. Please call set_building_floor_area() first.')
+            
+        if getattr(self, 'outputs_normalized', False):
+            print('Outputs are already normalized. Skipping.')
+            return
+
+        if df_types is None:
+            df_types = [
+                'parametric', 'parametric_hourly', 'parametric_monthly',
+                'optimisation', 'optimisation_hourly', 'optimisation_monthly'
+            ]
+            
+        df_mapping = {
+            'parametric': 'outputs_param_simulation',
+            'parametric_hourly': 'outputs_param_simulation_hourly',
+            'parametric_monthly': 'outputs_param_simulation_monthly',
+            'optimisation': 'outputs_optimisation',
+            'optimisation_hourly': 'outputs_optimisation_hourly',
+            'optimisation_monthly': 'outputs_optimisation_monthly'
+        }
+        
+        energy_keywords = ['Heating', 'Cooling', 'Energy', 'Electricity', 'Gas', 'Facility']
+        
+        for df_key in df_types:
+            df_attr = df_mapping.get(df_key)
+            if not df_attr:
+                continue
+                
+            df = getattr(self, df_attr, None)
+            if df is None or df.empty:
+                continue
+                
+            # Find energy columns
+            energy_cols = []
+            for col in df.columns:
+                if any(kw in col for kw in energy_keywords) and pd.api.types.is_numeric_dtype(df[col]):
+                    energy_cols.append(col)
+                    
+            if not energy_cols:
+                continue
+                
+            # Calculate divisors per row
+            if isinstance(area_attr, dict) and 'idf' in df.columns:
+                areas = df['idf'].map(area_attr)
+                # Fill missing areas with 1 to avoid NaN if idf not found (though it shouldn't happen)
+                areas = areas.fillna(1.0)
+                divisors = 3600000.0 * areas
+            else:
+                area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                divisors = 3600000.0 * area_val
+                
+            # Apply normalisation
+            for col in energy_cols:
+                def safe_divide(val, div):
+                    if isinstance(val, list):
+                        return [v / div for v in val]
+                    return val / div
+                
+                df[col] = [safe_divide(val, div) for val, div in zip(df[col], divisors)]
+                
+            # Rename columns
+            new_columns = {}
+            for col in energy_cols:
+                new_col = col
+                if '[J]' in new_col:
+                    new_col = new_col.replace('[J]', '[kWh/m2]')
+                elif ' [J]' in new_col:
+                    new_col = new_col.replace(' [J]', ' [kWh/m2]')
+                else:
+                    new_col = new_col + '_kWh/m2'
+                new_columns[col] = new_col
+                
+            df.rename(columns=new_columns, inplace=True)
+            print(f'  [info] Normalized {len(energy_cols)} energy columns in {df_attr}.')
+            
+        self.outputs_normalized = True
 
     def run_sensitivity_analysis(self, method: Literal['sobol', 'morris']='sobol', **kwargs) -> dict:
         """
@@ -387,14 +498,12 @@ class AnalysisMixin:
         import matplotlib.pyplot as plt
         import seaborn as sns
         unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
-        divisor = 3600000.0
         if normalize_per_m2:
-            area = getattr(self, 'building_floor_area', None)
-            if not area:
+            area_attr = getattr(self, 'building_floor_area', None)
+            if not area_attr:
                 print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
                 unit_str = 'kWh'
-            else:
-                divisor *= area
+                normalize_per_m2 = False
         os.makedirs(out_dir, exist_ok=True)
         df_params = optimal_solutions_df[self.problem.names('inputs')].copy().drop_duplicates()
         print(f'Starting Robustness Analysis: {len(df_params)} solutions across {len(epws_robustness)} alternative EPWs.')
@@ -418,7 +527,17 @@ class AnalysisMixin:
         heating_col = next((c for c in robustness_df.columns if 'Heating:Electricity' in c), None)
         cooling_col = next((c for c in robustness_df.columns if 'Cooling:Electricity' in c), None)
         if heating_col and cooling_col:
-            robustness_df[f'Total_Energy_{unit_str.replace("/", "_")}'] = (robustness_df[heating_col] + robustness_df[cooling_col]) / divisor
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in robustness_df.columns:
+                    areas = robustness_df['idf'].map(area_attr).fillna(1.0)
+                    divisors = 3600000.0 * areas
+                else:
+                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    divisors = 3600000.0 * area_val
+            else:
+                divisors = 3600000.0
+                
+            robustness_df[f'Total_Energy_{unit_str.replace("/", "_")}'] = (robustness_df[heating_col] + robustness_df[cooling_col]) / divisors
             plt.figure(figsize=(10, 6))
             sns.boxplot(x='Solution_ID', y=f'Total_Energy_{unit_str.replace("/", "_")}', data=robustness_df, color='lightblue')
             sns.stripplot(x='Solution_ID', y=f'Total_Energy_{unit_str.replace("/", "_")}', data=robustness_df, hue='Robustness_EPW', jitter=True, marker='o', alpha=0.8)
