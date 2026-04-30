@@ -641,6 +641,29 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 parameters_values_df = bf_accim.drop_invalid_param_combinations(parameters_values_df)
         self.parameters_values_df = parameters_values_df
 
+    def sampling_custom(self, custom_plan: Union[List[dict], dict, pd.DataFrame]):
+        """
+        Sets a custom simulation plan.
+        :param custom_plan: A pandas DataFrame, a list of dictionaries, or a dictionary mapping IDFs to EPWs.
+            Example list: [{'idf': 'Building_A', 'epw': 'seville.epw'}, {'idf': 'Building_B', 'epw': 'madrid.epw'}]
+            Example dict: {'Building_A': 'seville.epw', 'Building_B': ['madrid_2024.epw', 'madrid_2025.epw']}
+        """
+        import pandas as pd
+        if isinstance(custom_plan, pd.DataFrame):
+            self.parameters_values_df = custom_plan.copy()
+        elif isinstance(custom_plan, list):
+            self.parameters_values_df = pd.DataFrame(custom_plan)
+        elif isinstance(custom_plan, dict):
+            rows = []
+            for idf, epws in custom_plan.items():
+                if isinstance(epws, str):
+                    epws = [epws]
+                for epw in epws:
+                    rows.append({'idf': idf, 'epw': epw})
+            self.parameters_values_df = pd.DataFrame(rows)
+        else:
+            raise TypeError('custom_plan must be a pandas DataFrame, a list of dicts, or a dict.')
+
     def _expand_samples_with_buildings_and_epws(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Expands a parameter samples DataFrame with cartesian products for IDFs and EPWs.
@@ -1376,6 +1399,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
 
         :param start_date: the start date for the simulation results, in format 'YYY-MM-DD HH'
         """
+        if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
+            raise ValueError('No parametric simulation data available to expand hourly.')
+
         if hasattr(self, 'parameters_list'):
             parameter_columns = [i.name for i in self.parameters_list]
         elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
@@ -1386,8 +1412,83 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             parameter_columns = []
         if 'epw' not in parameter_columns:
             parameter_columns.append('epw')
+        if 'idf' not in parameter_columns and 'idf' in self.outputs_param_simulation.columns:
+            parameter_columns.append('idf')
+            
+        for extra_col in ['pareto-optimal']:
+            if extra_col in self.outputs_param_simulation.columns and extra_col not in parameter_columns:
+                parameter_columns.append(extra_col)
+
         parameter_columns = [c for c in parameter_columns if c in self.outputs_param_simulation.columns]
-        self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(df=self.outputs_param_simulation, parameter_columns=parameter_columns, start_date=start_date)
+        
+        from accim.parametric_and_optimisation.utils import identify_hourly_columns
+        hourly_cols = identify_hourly_columns(self.outputs_param_simulation)
+        
+        # If no list columns are detected, attempt to read them from the CSV files natively
+        if len(hourly_cols) == 0:
+            print("[get_hourly_df] No hourly lists found in outputs_param_simulation. Attempting to extract from output CSV files...")
+            try:
+                source_df = self._attach_hourly_outputs_from_simulation_files(df=self.outputs_param_simulation, file_source='csv', file_output_columns=None)
+            except Exception as e:
+                raise ValueError(f"Failed to extract hourly columns from simulation files: {e}")
+        else:
+            source_df = self.outputs_param_simulation
+            
+        self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(df=source_df, parameter_columns=parameter_columns, start_date=start_date)
+
+    def get_monthly_df(self, agg_funcs: dict = None, start_date: str='2024-01-01 01'):
+        """
+        Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame with monthly aggregated values,
+        saved in the internal variable named outputs_param_simulation_monthly.
+
+        :param agg_funcs: a dictionary mapping column names to aggregation functions 
+            (e.g. {'DistrictHeating:Facility': 'sum', 'Zone Mean Air Temperature': 'mean'}).
+            Defaults to 'mean' for temperature, PMV, PPD, rate, and coefficient, and 'sum' for everything else.
+        :param start_date: the start date for the simulation results, in format 'YYY-MM-DD HH'
+        """
+        if getattr(self, 'outputs_param_simulation_hourly', None) is None:
+            self.get_hourly_df(start_date=start_date)
+
+        df_hourly = self.outputs_param_simulation_hourly.copy()
+        
+        if hasattr(self, 'parameters_list'):
+            parameter_columns = [i.name for i in self.parameters_list]
+        elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+            parameter_columns = self.problem.names('inputs')
+        elif hasattr(self, 'outputs_param_simulation') and self.outputs_param_simulation.attrs.get('parameters_names'):
+            parameter_columns = list(self.outputs_param_simulation.attrs['parameters_names'])
+        else:
+            parameter_columns = []
+            
+        if 'epw' not in parameter_columns:
+            parameter_columns.append('epw')
+        if 'idf' not in parameter_columns and 'idf' in df_hourly.columns:
+            parameter_columns.append('idf')
+            
+        parameter_columns = [c for c in parameter_columns if c in df_hourly.columns]
+        
+        # Identify data columns (excluding parameters, datetime, hour, etc)
+        exclude_cols = set(parameter_columns + ['datetime', 'hour'])
+        data_columns = [c for c in df_hourly.columns if c not in exclude_cols]
+        
+        # Determine default aggregations
+        default_agg = {}
+        for col in data_columns:
+            col_lower = col.lower()
+            if any(keyword in col_lower for keyword in ['temperature', 'pmv', 'ppd', 'rate', 'coefficient']):
+                default_agg[col] = 'mean'
+            else:
+                default_agg[col] = 'sum'
+                
+        if agg_funcs:
+            default_agg.update(agg_funcs)
+            
+        # Extract month from datetime for grouping
+        df_hourly['month'] = df_hourly['datetime'].dt.to_period('M')
+        groupby_cols = parameter_columns + ['month']
+        
+        monthly_df = df_hourly.groupby(groupby_cols).agg(default_agg).reset_index()
+        self.outputs_param_simulation_monthly = monthly_df
 
     @staticmethod
     def _resolve_simulation_file_path(row: pd.Series, file_source: Literal['csv', 'eso']) -> str:
@@ -1397,6 +1498,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 return str(row['simulation_output_csv_path'])
             if pd.notna(row.get('simulation_directory', pd.NA)):
                 return os.path.join(str(row['simulation_directory']), 'eplusout.csv')
+            # Parametric runs store the BESOS output dir in 'output_dir'
+            if pd.notna(row.get('output_dir', pd.NA)):
+                return os.path.join(str(row['output_dir']), 'eplusout.csv')
             raise ValueError(error_msg)
         if file_source == 'eso':
             if pd.notna(row.get('simulation_directory', pd.NA)):
@@ -1404,6 +1508,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             if pd.notna(row.get('simulation_output_csv_path', pd.NA)):
                 csv_path = str(row['simulation_output_csv_path'])
                 return os.path.join(os.path.dirname(csv_path), 'eplusout.eso')
+            # Parametric runs store the BESOS output dir in 'output_dir'
+            if pd.notna(row.get('output_dir', pd.NA)):
+                return os.path.join(str(row['output_dir']), 'eplusout.eso')
             raise ValueError(error_msg)
         raise ValueError(f"Unsupported file_source '{file_source}'. Use 'csv' or 'eso'.")
 
@@ -1609,6 +1716,61 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         else:
             print(f'[get_hourly_df_optimisation] Expanding…{size_msg}')
         self.outputs_optimisation_hourly = expand_to_hourly_dataframe(df=source_df, parameter_columns=param_cols, start_date=start_date)
+
+    def get_monthly_df_optimisation(self, agg_funcs: dict = None, **kwargs):
+        """
+        Transforms the hourly values of outputs_optimisation to a new pandas DataFrame with monthly aggregated values,
+        saved in the internal variable named outputs_optimisation_monthly.
+        
+        :param agg_funcs: a dictionary mapping column names to aggregation functions 
+            (e.g. {'DistrictHeating:Facility': 'sum', 'Zone Mean Air Temperature': 'mean'}).
+            Defaults to 'mean' for temperature, PMV, PPD, rate, and coefficient, and 'sum' for everything else.
+        :param kwargs: arguments passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        """
+        if getattr(self, 'outputs_optimisation_hourly', None) is None:
+            self.get_hourly_df_optimisation(**kwargs)
+            
+        if getattr(self, 'outputs_optimisation_hourly', None) is None:
+            raise ValueError('Failed to generate hourly dataframe for optimisation.')
+
+        df_hourly = self.outputs_optimisation_hourly.copy()
+        
+        param_cols = []
+        if hasattr(self, 'parameters_list'):
+            param_cols = [i.name for i in self.parameters_list]
+        elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+            param_cols = self.problem.names('inputs')
+        elif getattr(self, 'outputs_optimisation', None) is not None and self.outputs_optimisation.attrs.get('parameters_names'):
+            param_cols = list(self.outputs_optimisation.attrs['parameters_names'])
+            
+        for extra_col in ['epw', 'idf', 'pareto-optimal']:
+            if extra_col not in param_cols and extra_col in df_hourly.columns:
+                param_cols.append(extra_col)
+                
+        param_cols = [c for c in param_cols if c in df_hourly.columns]
+        
+        # Identify data columns (excluding parameters, datetime, hour, etc)
+        exclude_cols = set(param_cols + ['datetime', 'hour'])
+        data_columns = [c for c in df_hourly.columns if c not in exclude_cols]
+        
+        # Determine default aggregations
+        default_agg = {}
+        for col in data_columns:
+            col_lower = col.lower()
+            if any(keyword in col_lower for keyword in ['temperature', 'pmv', 'ppd', 'rate', 'coefficient']):
+                default_agg[col] = 'mean'
+            else:
+                default_agg[col] = 'sum'
+                
+        if agg_funcs:
+            default_agg.update(agg_funcs)
+            
+        # Extract month from datetime for grouping
+        df_hourly['month'] = df_hourly['datetime'].dt.to_period('M')
+        groupby_cols = param_cols + ['month']
+        
+        monthly_df = df_hourly.groupby(groupby_cols).agg(default_agg).reset_index()
+        self.outputs_optimisation_monthly = monthly_df
 
     def get_hourly_df_columns(self):
         """

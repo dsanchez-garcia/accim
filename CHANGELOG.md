@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Multi-IDF Parametric Validation Script**: Added `check_parametric_multiple_idfs.py` to exercise `OptimParamSimulation` with multiple IDFs and per-row EPW assignments without modifying the original IDF files.
+- **`sampling_custom` Method**: Added `OptimParamSimulation.sampling_custom()` to define custom (non-cartesian) simulation plans intuitively. Accepts a list of dicts (e.g. `[{'idf': 'A', 'epw': 'seville.epw'}]`) or a dict mapping IDFs to one or more EPWs (e.g. `{'BuildingA': 'seville.epw', 'BuildingB': ['madrid_2024.epw', 'madrid_2025.epw']}`), or a pandas DataFrame directly.
+- **`get_monthly_df` and `get_monthly_df_optimisation` Methods**: Added monthly aggregation methods for parametric and optimisation workflows respectively. Each method reads hourly data (automatically calling `get_hourly_df` / `get_hourly_df_optimisation` if needed) and aggregates to monthly periods. Default aggregation is `'sum'` for energy-type variables and `'mean'` for temperature, PMV, PPD, rate, and coefficient variables. Users can override any column's aggregation via the `agg_funcs` dict argument.
+- **Automatic Hourly CSV Extraction in `get_hourly_df`**: When `outputs_param_simulation` does not already contain hourly list columns (i.e. outputs were configured as aggregate scalars), `get_hourly_df` now automatically falls back to reading the hourly data directly from the EnergyPlus CSV output files.
 
 ### Changed
 - **BESOS-style Parametric Flexibility**: `OptimParamSimulation` can now be configured without ACCIM-specific parameters, allowing workflows that bypass `addAccis`/`apply_apmv_setpoints` and rely on generic BESOS parameters or even zero internal parameters.
