@@ -944,71 +944,84 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             n_new = len(epw_rules) + len(idf_rules)
             print(f'  [info] apply_category_mapping: added/updated {n_new} category column(s) in {attr}.')
 
-    def preview_category_mapping(self) -> pd.DataFrame:
+    def preview_category_mapping(self) -> dict:
         """
-        Returns a DataFrame showing the category labels that would be assigned to each
+        Returns a dictionary containing DataFrames showing the category labels that would be assigned to each
         EPW and IDF currently registered in this instance, based on the rules defined
-        via :meth:`set_category_mapping`.
+        via :meth:`set_category_mapping`. The DataFrames are also saved in the attribute
+        `category_mapping_preview_dfs`.
 
         Use this **before running any simulation** to verify that the mapping rules
-        produce the expected results. The returned DataFrame has one row per EPW or IDF
-        and one column per defined category (plus a ``type`` column indicating ``'epw'``
-        or ``'idf'``).
+        produce the expected results.
 
-        :return: a pandas DataFrame with columns ``['type', 'file', <category_1>, ...]``.
-            Returns an empty DataFrame if no mapping rules have been set.
+        :return: a dictionary with keys ``'epw'`` and ``'idf'``, where each value is a pandas DataFrame.
+            Returns empty DataFrames if no mapping rules have been set.
 
         Example::
 
             preview = parametric.preview_category_mapping()
-            print(preview.to_string(index=False))
-            # type    file                       city      scenario
-            # epw     seville_2024.epw           seville   historical
-            # epw     london_gatwick_rcp85.epw   london    future
-            # idf     office_building_A.idf      None      None
+            print(preview['epw'].to_string(index=False))
+            # file                       city      scenario
+            # seville_2024.epw           seville   historical
+            # london_gatwick_rcp85.epw   london    future
+            print(preview['idf'].to_string(index=False))
+            # file                       typology
+            # office_building_A.idf      None
         """
         epw_rules = getattr(self, 'epw_mapping_rules', {})
         idf_rules = getattr(self, 'idf_mapping_rules', {})
-        if not epw_rules and not idf_rules:
-            print('  [info] No category mapping rules are defined. Call set_category_mapping() first.')
-            return pd.DataFrame()
-
-        rows = []
+        
+        epw_rows = []
+        idf_rows = []
 
         # EPW rows
         if epw_rules:
             epws = getattr(self, 'epws', [])
             for epw in epws:
-                row = {'type': 'epw', 'file': os.path.basename(epw)}
+                row = {'file': os.path.basename(epw)}
                 for category, rules in epw_rules.items():
                     row[category] = self._resolve_category_for_value(str(epw), rules)
-                rows.append(row)
+                epw_rows.append(row)
 
         # IDF rows
         if idf_rules:
             buildings = getattr(self, 'buildings', [])
             for idx, b in enumerate(buildings):
                 idf_name = self._get_idf_identifier(b, idx)
-                row = {'type': 'idf', 'file': idf_name}
+                row = {'file': idf_name}
                 for category, rules in idf_rules.items():
                     row[category] = self._resolve_category_for_value(idf_name, rules)
-                rows.append(row)
+                idf_rows.append(row)
 
-        preview_df = pd.DataFrame(rows)
+        epw_df = pd.DataFrame(epw_rows)
+        idf_df = pd.DataFrame(idf_rows)
+
+        if not epw_rules and not idf_rules:
+            print('  [info] No category mapping rules are defined. Call set_category_mapping() first.')
 
         # Warn about any files that didn't match any category
         unmatched = []
-        category_cols = list(epw_rules.keys()) + list(idf_rules.keys())
-        for _, r in preview_df.iterrows():
-            unmatched_cats = [c for c in category_cols if c in r and r[c] is None]
-            if unmatched_cats:
-                unmatched.append(f"  '{r['file']}' → no match for: {unmatched_cats}")
+        if epw_rules and not epw_df.empty:
+            category_cols = list(epw_rules.keys())
+            for _, r in epw_df.iterrows():
+                unmatched_cats = [c for c in category_cols if c in r and r[c] is None]
+                if unmatched_cats:
+                    unmatched.append(f"  EPW '{r['file']}' -> no match for: {unmatched_cats}")
+
+        if idf_rules and not idf_df.empty:
+            category_cols = list(idf_rules.keys())
+            for _, r in idf_df.iterrows():
+                unmatched_cats = [c for c in category_cols if c in r and r[c] is None]
+                if unmatched_cats:
+                    unmatched.append(f"  IDF '{r['file']}' -> no match for: {unmatched_cats}")
+
         if unmatched:
             print('[!] Warning: the following files did not match any keyword for some categories:')
             for msg in unmatched:
                 print(msg)
 
-        return preview_df
+        self.category_mapping_preview_dfs = {'epw': epw_df, 'idf': idf_df}
+        return self.category_mapping_preview_dfs
 
     def set_evaluator(self, epw: str, out_dir: str, building: Any = None) -> besos.evaluator.EvaluatorEP:
         """
