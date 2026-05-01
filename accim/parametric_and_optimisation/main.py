@@ -773,6 +773,177 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
         self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
+    # ------------------------------------------------------------------
+    # Category mapping helpers
+    # ------------------------------------------------------------------
+
+    def set_category_mapping(self, epw_mapping_rules: dict = None, idf_mapping_rules: dict = None) -> None:
+        """
+        Defines keyword-based mapping rules to automatically assign category labels to EPW
+        and/or IDF files in the simulation results. Once set, categories are applied
+        automatically at the end of ``run_parametric_simulation`` and ``run_optimisation``,
+        and can be re-applied manually at any time with :meth:`apply_category_mapping`.
+
+        The format follows the pyfwg convention:
+
+        .. code-block:: python
+
+            epw_mapping_rules = {
+                'city': {
+                    'seville': ['sevilla', 'SVQ'],
+                    'london': ['london', 'gatwick'],
+                },
+                'scenario': {
+                    'historical': 'hist',
+                    'future': ['rcp45', 'rcp85'],
+                },
+            }
+
+            idf_mapping_rules = {
+                'typology': {
+                    'residential': ['res', 'house'],
+                    'office': ['office', 'ofic'],
+                },
+            }
+
+        Matching is **case-insensitive substring search** on the file basename (without path
+        or extension). The first matching keyword wins. If no keyword matches, the category
+        value for that row will be ``None``.
+
+        :param epw_mapping_rules: dict of ``{category_name: {category_value: keyword_or_list}}``.
+            Applied to the ``epw`` column of result DataFrames.
+        :param idf_mapping_rules: dict of ``{category_name: {category_value: keyword_or_list}}``.
+            Applied to the ``idf`` column of result DataFrames.
+        """
+        def _validate_rules(rules: dict, name: str):
+            if rules is None:
+                return
+            if not isinstance(rules, dict):
+                raise TypeError(f'{name} must be a dict, got {type(rules).__name__}.')
+            for category, mapping in rules.items():
+                if not isinstance(mapping, dict):
+                    raise TypeError(
+                        f'{name}[{category!r}] must be a dict mapping category values to keywords, '
+                        f'got {type(mapping).__name__}.'
+                    )
+                for value, keywords in mapping.items():
+                    if not isinstance(keywords, (str, list)):
+                        raise TypeError(
+                            f'{name}[{category!r}][{value!r}] must be a str or list of str, '
+                            f'got {type(keywords).__name__}.'
+                        )
+
+        _validate_rules(epw_mapping_rules, 'epw_mapping_rules')
+        _validate_rules(idf_mapping_rules, 'idf_mapping_rules')
+        self.epw_mapping_rules = epw_mapping_rules or {}
+        self.idf_mapping_rules = idf_mapping_rules or {}
+        print(f'  [info] Category mapping set: '
+              f'{len(self.epw_mapping_rules)} EPW categor{"y" if len(self.epw_mapping_rules)==1 else "ies"}, '
+              f'{len(self.idf_mapping_rules)} IDF categor{"y" if len(self.idf_mapping_rules)==1 else "ies"}.')
+
+    @staticmethod
+    def _resolve_category_for_value(filename: str, category_rules: dict):
+        """
+        Returns the category value for *filename* based on *category_rules*, or ``None``
+        if no keyword matches.
+
+        :param filename: the EPW or IDF basename (without path or extension).
+        :param category_rules: a ``{category_value: keyword_or_list}`` dict for one category.
+        :return: matched category value string, or ``None``.
+        """
+        name_lower = os.path.basename(filename).lower()
+        # Strip common extensions so matching works on the stem
+        for ext in ('.epw', '.idf'):
+            if name_lower.endswith(ext):
+                name_lower = name_lower[:-len(ext)]
+                break
+        for cat_value, keywords in category_rules.items():
+            if isinstance(keywords, str):
+                keywords = [keywords]
+            for kw in keywords:
+                if kw.lower() in name_lower:
+                    return cat_value
+        return None
+
+    def apply_category_mapping(self, df_types: list = None) -> None:
+        """
+        Applies the category mapping rules (previously set via :meth:`set_category_mapping`)
+        to the specified result DataFrames, adding one new column per category.
+
+        Columns are inserted immediately after the ``epw`` or ``idf`` column they derive from.
+        If a category column already exists it is overwritten with a warning.
+
+        :param df_types: list of strings specifying which DataFrames to process.
+            Valid values: ``'parametric'``, ``'parametric_hourly'``, ``'parametric_monthly'``,
+            ``'optimisation'``, ``'optimisation_hourly'``, ``'optimisation_monthly'``.
+            If ``None``, all available DataFrames are processed.
+        """
+        epw_rules = getattr(self, 'epw_mapping_rules', {})
+        idf_rules = getattr(self, 'idf_mapping_rules', {})
+        if not epw_rules and not idf_rules:
+            return  # Nothing to do — preserve existing behaviour
+
+        if df_types is None:
+            df_types = [
+                'parametric', 'parametric_hourly', 'parametric_monthly',
+                'optimisation', 'optimisation_hourly', 'optimisation_monthly',
+            ]
+
+        df_attr_map = {
+            'parametric':            'outputs_param_simulation',
+            'parametric_hourly':     'outputs_param_simulation_hourly',
+            'parametric_monthly':    'outputs_param_simulation_monthly',
+            'optimisation':          'outputs_optimisation',
+            'optimisation_hourly':   'outputs_optimisation_hourly',
+            'optimisation_monthly':  'outputs_optimisation_monthly',
+        }
+
+        for df_key in df_types:
+            attr = df_attr_map.get(df_key)
+            if not attr:
+                continue
+            df = getattr(self, attr, None)
+            if df is None or df.empty:
+                continue
+
+            # ---- EPW categories ----
+            if epw_rules and 'epw' in df.columns:
+                epw_insert_pos = df.columns.get_loc('epw') + 1
+                for category, rules in epw_rules.items():
+                    col_values = df['epw'].apply(
+                        lambda v: self._resolve_category_for_value(str(v), rules)
+                    )
+                    if category in df.columns:
+                        warnings.warn(
+                            f"Column '{category}' already exists in {attr} and will be overwritten.",
+                            UserWarning,
+                        )
+                        df[category] = col_values
+                    else:
+                        df.insert(epw_insert_pos, category, col_values)
+                        epw_insert_pos += 1  # keep inserting after previous new column
+
+            # ---- IDF categories ----
+            if idf_rules and 'idf' in df.columns:
+                idf_insert_pos = df.columns.get_loc('idf') + 1
+                for category, rules in idf_rules.items():
+                    col_values = df['idf'].apply(
+                        lambda v: self._resolve_category_for_value(str(v), rules)
+                    )
+                    if category in df.columns:
+                        warnings.warn(
+                            f"Column '{category}' already exists in {attr} and will be overwritten.",
+                            UserWarning,
+                        )
+                        df[category] = col_values
+                    else:
+                        df.insert(idf_insert_pos, category, col_values)
+                        idf_insert_pos += 1
+
+            setattr(self, attr, df)
+            n_new = len(epw_rules) + len(idf_rules)
+            print(f'  [info] apply_category_mapping: added/updated {n_new} category column(s) in {attr}.')
+
     def set_evaluator(self, epw: str, out_dir: str, building: Any = None) -> besos.evaluator.EvaluatorEP:
         """
         Used internally for setting the evaluator in run_parametric_simulation and run_optimisation methods.
@@ -900,6 +1071,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         self.outputs_param_simulation_filepath = f'{_base}.csv'
         self.epws = self.outputs_param_simulation.attrs.get('epws', [])
         self.last_run_type = 'parametric'
+        # Auto-apply category mapping if rules were previously set
+        if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
+            self.apply_category_mapping(df_types=['parametric'])
 
     def load_outputs_parametric(self, csv_path: str=None, pickle_path: str=None, json_path: str=None, hourly_csv_path: str=None, hourly_pickle_path: str=None, parameters_names: list=None, outputs_names: list=None) -> pd.DataFrame:
         """
@@ -962,6 +1136,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.outputs_names = outputs_names
         self.epws = self.outputs_param_simulation.attrs.get('epws', [])
         self.last_run_type = 'parametric'
+        # Re-apply category mapping if rules are already set on this instance
+        if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
+            self.apply_category_mapping(df_types=['parametric'])
         return self.outputs_param_simulation
 
     def estimate_optimisation_sims(self, evaluations: int, population_size: int, epws: list) -> int:
@@ -1153,6 +1330,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         self.epws = self.outputs_optimisation.attrs.get('epws', [])
         self.last_run_type = 'optimisation'
         self.evaluators = evaluators
+        # Auto-apply category mapping if rules were previously set
+        if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
+            self.apply_category_mapping(df_types=['optimisation'])
 
     def _build_full_optimisation_outputs_df(self, evaluator: EvaluatorEP, epwname: str) -> pd.DataFrame:
         records = getattr(evaluator, '_optimisation_eval_records', [])
@@ -1390,6 +1570,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.outputs_names = outputs_names
         self.epws = self.outputs_optimisation.attrs.get('epws', [])
         self.last_run_type = 'optimisation'
+        # Re-apply category mapping if rules are already set on this instance
+        if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
+            self.apply_category_mapping(df_types=['optimisation'])
         return self.outputs_optimisation
 
     def get_hourly_df(self, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
