@@ -403,7 +403,7 @@ class PlottingMixin:
             plt.close('all')
             print(f'  Pairwise scatter matrix saved: {fname_pair}')
 
-    def plot_categorical_boxplots(self, df_source: str='parametric', y_vars: list=None, col: str=None, row: str=None, hue: str=None, highlight_dict: dict=None, out_dir: str='.', normalize_per_m2: bool=False):
+    def plot_categorical_boxplots(self, df_source: str='parametric', y_vars: list=None, col: str=None, row: str=None, hue: str=None, highlight_dict: dict=None, out_dir: str='.', normalize_per_m2: bool=False, sharey: bool=True, show_points: bool=True):
         """
         Generates categorical boxplots from simulation results, automatically melting
         specified energy columns (or detecting Heating/Cooling by default) so they share
@@ -420,6 +420,8 @@ class PlottingMixin:
             as overlaid points (e.g., {'weather_type': ['tmy', 'met']}).
         :param out_dir: Output directory for saving the plot.
         :param normalize_per_m2: If True, values will be divided by building floor area.
+        :param sharey: If True, all subplots will share the same Y-axis scale.
+        :param show_points: If True, overlays all underlying simulation data points on the boxplots.
         """
         import os
         import pandas as pd
@@ -512,11 +514,34 @@ class PlottingMixin:
             order=order,
             hue_order=hue_order,
             sharex=True,
-            sharey=True,
+            sharey=sharey,
             palette='Set2',
             height=4,
             aspect=1.2
         )
+        
+        # Overlay all points if requested
+        if show_points:
+            def plot_all_points(data, **kwargs):
+                if data.empty:
+                    return
+                sns.stripplot(
+                    data=data,
+                    x='Energy_Type',
+                    y='Energy_Value',
+                    hue=hue,
+                    order=order,
+                    hue_order=hue_order,
+                    dodge=True if hue else False,
+                    palette=['#555555']*len(hue_order) if hue else None,
+                    color='#555555' if not hue else None,
+                    alpha=0.6,
+                    jitter=True,
+                    size=4,
+                    ax=plt.gca(),
+                    legend=False
+                )
+            g.map_dataframe(plot_all_points)
         
         # Overlay highlights if requested
         if highlight_dict:
