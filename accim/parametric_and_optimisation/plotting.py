@@ -402,3 +402,190 @@ class PlottingMixin:
             g.figure.savefig(fname_pair, dpi=300, bbox_inches='tight')
             plt.close('all')
             print(f'  Pairwise scatter matrix saved: {fname_pair}')
+
+    def plot_categorical_boxplots(self, df_source: str='parametric', y_vars: list=None, col: str=None, row: str=None, hue: str=None, highlight_dict: dict=None, out_dir: str='.', normalize_per_m2: bool=False):
+        """
+        Generates categorical boxplots from simulation results, automatically melting
+        specified energy columns (or detecting Heating/Cooling by default) so they share
+        the Y-axis and appear side-by-side on the X-axis for each FacetGrid subplot.
+
+        :param df_source: 'parametric' (uses outputs_param_simulation) or 'optimisation'
+            (uses outputs_optimisation).
+        :param y_vars: List of column names to plot on the Y-axis. If None, it attempts
+            to find 'Heating' and 'Cooling' electricity columns.
+        :param col: Category mapping variable to use for grid columns.
+        :param row: Category mapping variable to use for grid rows.
+        :param hue: Category mapping variable to use for color coding.
+        :param highlight_dict: Dictionary of category columns and values to highlight 
+            as overlaid points (e.g., {'weather_type': ['tmy', 'met']}).
+        :param out_dir: Output directory for saving the plot.
+        :param normalize_per_m2: If True, values will be divided by building floor area.
+        """
+        import os
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_categorical_boxplots. Please pip install seaborn.')
+            return
+
+        if df_source == 'parametric':
+            df = getattr(self, 'outputs_param_simulation', None)
+        elif df_source == 'optimisation':
+            df = getattr(self, 'outputs_optimisation', None)
+        else:
+            raise ValueError("df_source must be 'parametric' or 'optimisation'")
+
+        if df is None or df.empty:
+            raise ValueError(f"No results found for {df_source}. Please run the simulation first.")
+
+        df = df.copy()
+        
+        if getattr(self, 'outputs_normalized', False):
+            if normalize_per_m2:
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+            normalize_per_m2 = False
+            unit_str = 'kWh/m2'
+            base_divisor = 1.0
+        else:
+            unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+            base_divisor = 3600000.0
+            if normalize_per_m2:
+                area_attr = getattr(self, 'building_floor_area', None)
+                if not area_attr:
+                    print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                    unit_str = 'kWh'
+                    normalize_per_m2 = False
+
+        if y_vars is None:
+            heating_col = next((c for c in df.columns if 'Heating' in c), None)
+            cooling_col = next((c for c in df.columns if 'Cooling' in c), None)
+            y_vars = []
+            if heating_col: y_vars.append(heating_col)
+            if cooling_col: y_vars.append(cooling_col)
+            if not y_vars:
+                print('[!] Heating or Cooling columns not found and y_vars not provided.')
+                return
+
+        # Apply Normalization
+        for y_var in y_vars:
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in df.columns:
+                    divs = df['idf'].map(area_attr).fillna(1.0) * base_divisor
+                else:
+                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    divs = base_divisor * area_val
+                df[y_var] = df[y_var] / divs
+            else:
+                df[y_var] = df[y_var] / base_divisor
+
+        id_vars = [v for v in [col, row, hue, 'idf', 'epw'] if v and v in df.columns]
+        if highlight_dict:
+            for k in highlight_dict.keys():
+                if k in df.columns and k not in id_vars:
+                    id_vars.append(k)
+                    
+        df_melt = df.melt(
+            id_vars=id_vars,
+            value_vars=y_vars,
+            var_name='Energy_Type',
+            value_name='Energy_Value'
+        )
+
+        # Clean variable names for the legend
+        df_melt['Energy_Type'] = df_melt['Energy_Type'].apply(lambda x: 'Heating' if 'Heating' in x else ('Cooling' if 'Cooling' in x else x))
+
+        os.makedirs(out_dir, exist_ok=True)
+
+        order = df_melt['Energy_Type'].unique().tolist()
+        hue_order = sorted(df_melt[hue].dropna().unique()) if hue else None
+
+        g = sns.catplot(
+            data=df_melt,
+            x='Energy_Type',
+            y='Energy_Value',
+            col=col,
+            row=row,
+            hue=hue,
+            kind='box',
+            order=order,
+            hue_order=hue_order,
+            sharex=True,
+            sharey=True,
+            palette='Set2',
+            height=4,
+            aspect=1.2
+        )
+        
+        # Overlay highlights if requested
+        if highlight_dict:
+            axes_dict = g.axes_dict
+            markers = ['*', 'X', 'D', '^', 'v', 'p']
+            legend_handles = []
+            
+            for k, v in highlight_dict.items():
+                if k not in df_melt.columns:
+                    print(f"[!] Highlight column '{k}' not found in dataframe.")
+                    continue
+                v_list = v if isinstance(v, list) else [v]
+                
+                for i, val in enumerate(v_list):
+                    marker = markers[i % len(markers)]
+                    df_val = df_melt[df_melt[k] == val]
+                    if df_val.empty:
+                        continue
+                        
+                    # Add to legend handles
+                    from matplotlib.lines import Line2D
+                    legend_handles.append(Line2D([0], [0], marker=marker, color='w', markerfacecolor='black', markersize=9, label=f"{k}: {val}"))
+                    
+                    for facet_key, ax in axes_dict.items():
+                        mask = pd.Series(True, index=df_val.index)
+                        if row and col:
+                            # Seaborn uses a tuple (row_val, col_val) for row and col
+                            mask &= (df_val[row] == facet_key[0]) & (df_val[col] == facet_key[1])
+                        elif row:
+                            mask &= (df_val[row] == facet_key)
+                        elif col:
+                            mask &= (df_val[col] == facet_key)
+                            
+                        df_facet = df_val[mask]
+                        if not df_facet.empty:
+                            sns.stripplot(
+                                data=df_facet,
+                                x='Energy_Type',
+                                y='Energy_Value',
+                                hue=hue,
+                                order=order,
+                                hue_order=hue_order,
+                                dodge=True if hue else False,
+                                marker=marker,
+                                palette=['black']*len(hue_order) if hue else None,
+                                color='black' if not hue else None,
+                                size=8,
+                                linewidth=0.5,
+                                edgecolor='white',
+                                ax=ax,
+                                jitter=False,
+                                legend=False
+                            )
+            
+            # Add custom legend for highlighted points
+            if legend_handles and g.axes.size > 0:
+                ax_for_legend = g.axes[0][0]
+                ax_for_legend.legend(handles=legend_handles, title='Highlights', loc='best')
+
+        g.set_axis_labels('Energy Type', f'Energy ({unit_str})')
+        g.fig.subplots_adjust(top=0.9)
+        g.fig.suptitle(f"Categorical Energy Boxplots ({df_source.capitalize()})", fontsize=14)
+
+        fname_suffix = f"col_{col}" if col else ""
+        fname_suffix += f"_row_{row}" if row else ""
+        fname_suffix += f"_hue_{hue}" if hue else ""
+        
+        fname_plot = os.path.join(out_dir, f'plot_categorical_boxplots_{df_source}_{fname_suffix}.png')
+        g.savefig(fname_plot, dpi=300, bbox_inches='tight')
+        plt.close(g.fig)
+        print(f'  Categorical boxplot saved: {fname_plot}')
+        return g
