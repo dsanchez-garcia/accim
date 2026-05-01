@@ -7,24 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-04-18
+
 ### Added
 - **Multi-IDF Parametric Validation Script**: Added `check_parametric_multiple_idfs.py` to exercise `OptimParamSimulation` with multiple IDFs and per-row EPW assignments without modifying the original IDF files.
 - **`sampling_custom` Method**: Added `OptimParamSimulation.sampling_custom()` to define custom (non-cartesian) simulation plans intuitively. Accepts a list of dicts (e.g. `[{'idf': 'A', 'epw': 'seville.epw'}]`) or a dict mapping IDFs to one or more EPWs (e.g. `{'BuildingA': 'seville.epw', 'BuildingB': ['madrid_2024.epw', 'madrid_2025.epw']}`), or a pandas DataFrame directly.
 - **`get_monthly_df` and `get_monthly_df_optimisation` Methods**: Added monthly aggregation methods for parametric and optimisation workflows respectively. Each method reads hourly data (automatically calling `get_hourly_df` / `get_hourly_df_optimisation` if needed) and aggregates to monthly periods. Default aggregation is `'sum'` for energy-type variables and `'mean'` for temperature, PMV, PPD, rate, and coefficient variables. Users can override any column's aggregation via the `agg_funcs` dict argument.
 - **Automatic Hourly CSV Extraction in `get_hourly_df`**: When `outputs_param_simulation` does not already contain hourly list columns (i.e. outputs were configured as aggregate scalars), `get_hourly_df` now automatically falls back to reading the hourly data directly from the EnergyPlus CSV output files.
-
-### Changed
-- **BESOS-style Parametric Flexibility**: `OptimParamSimulation` can now be configured without ACCIM-specific parameters, allowing workflows that bypass `addAccis`/`apply_apmv_setpoints` and rely on generic BESOS parameters or even zero internal parameters.
-- **IDF as Explicit Input Variable**: Multi-building simulations now expose `idf` as an input-like variable in `outputs_param_simulation` and `outputs_optimisation`, preserving the selected model in the result tables and metadata.
-- **Per-row EPW Routing for Multi-IDF Runs**: `run_parametric_simulation` now accepts an `epw` column in the input dataframe so users can define exact IDF/EPW combinations instead of always evaluating the full Cartesian product.
-
-### Fixed
-- **Zero-input BESOS Compatibility**: Added an internal fallback path so parametric runs still work when the BESOS problem has no native input parameters and only external routing such as `idf` is used.
-- **Python 3.9 Type Hint Compatibility**: Relaxed internal `IDF_class` type annotations in `OptimParamSimulation` to avoid import-time failures in environments where `besos.IDF_class` resolves as a module rather than a concrete type.
-
-## [0.7.8] - 2026-04-18
-
-### Added
+- **Automated Category Mapping**: Added `set_category_mapping`, `apply_category_mapping` and `preview_category_mapping` to support robust keyword-based mapping logic directly onto EPW and IDF names for advanced filtering and data aggregation workflows.
 - **Parametric and Optimisation Area Normalization**: Upgraded energy normalisation capabilities to fully support multi-building (`idf`) simulations. 
   - `set_building_floor_area` now calculates and maps areas for multiple IDFs simultaneously.
   - Added the `normalize_outputs()` method to forcefully convert energy results across all base, hourly, and monthly DataFrames to $kWh/m^2$ in-place.
@@ -63,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Simulation Workflow Safeguards**: Added robust contextual tracking (`last_run_type`) to `OptimParamSimulation` to natively enforce correct analytical sequencing. All post-simulation analysis methods (such as `plot_best_compromise_solutions`, `run_sensitivity_analysis`) now validate the executed simulation context, raising `ValueError` exceptions immediately if applied to incompatible data types (e.g. attempting to run sensitivity analysis over NSGA-II populations).
 
 ### Changed
+- **BESOS-style Parametric Flexibility**: `OptimParamSimulation` can now be configured without ACCIM-specific parameters, allowing workflows that bypass `addAccis`/`apply_apmv_setpoints` and rely on generic BESOS parameters or even zero internal parameters.
+- **IDF as Explicit Input Variable**: Multi-building simulations now expose `idf` as an input-like variable in `outputs_param_simulation` and `outputs_optimisation`, preserving the selected model in the result tables and metadata.
+- **Per-row EPW Routing for Multi-IDF Runs**: `run_parametric_simulation` now accepts an `epw` column in the input dataframe so users can define exact IDF/EPW combinations instead of always evaluating the full Cartesian product.
+- **Top-Level Parametric Parallelization**: Refactored `run_parametric_simulation` to evaluate iterations via `concurrent.futures.ProcessPoolExecutor` across all EPW and IDF combos globally. Ensures multi-core `processes` execution speeds up non-cartesian parametric plans and 1-to-1 building-to-weather matrixes instead of bottlenecking inside `besos.evaluator.df_apply`.
 - **Native Multiple IDFs & EPWs Integration**: The `OptimParamSimulation` class now natively accepts `buildings` (list of IDFs) and `epws` (list of climate files) in its constructor. All parameter sampling methods (like `sampling_full_set`, `sampling_lhs`, etc.) automatically compute and include the full combinations of IDFs and EPWs into the simulation plan without requiring manual DataFrame construction.
 - **Optimisation Memory and Disk Usage Management**: Completely overhauled how the `OptimParamSimulation.run_optimisation` method manages raw simulation outputs. The legacy `keep_dirs` argument was removed in favor of `keep_sim_files`, `keep_sim_files_batch_size`, and `keep_df`. This enables "on-the-fly" batch cleanups of dominated simulation results during the optimization loop (reducing peak disk storage required for massive optimizations) and allows memory-efficient final DataFrames by selectively discarding dominated solutions. Furthermore, `get_hourly_df_optimisation` now gracefully ignores missing/deleted simulation directories natively instead of failing.
 - **Unified Object Identification**: Globalized the robust hierarchy resolution logic from `apmv_setpoints._resolve_targets` into the central pipeline (`accim.sim.utils.scan_zones`). The overarching dataset map is meticulously managed across all hierarchical relationships for `People`, `Space`, `SpaceList`, and `ZoneList` objects universally without duplicate clashes.
@@ -70,6 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **File Naming & Timestamping**: Hardened all internal naming conventions for output dataframes, json state files, and idf backups to use universally chronological timestamp suffixes (`YYYYMMDD_HHMMSS`) instead of transient system Process IDs, preventing file collisions in highly parallelized environments and improving readability.
 
 ### Fixed
+- **Zero-input BESOS Compatibility**: Added an internal fallback path so parametric runs still work when the BESOS problem has no native input parameters and only external routing such as `idf` is used.
+- **Python 3.9 Type Hint Compatibility**: Relaxed internal `IDF_class` type annotations in `OptimParamSimulation` to avoid import-time failures in environments where `besos.IDF_class` resolves as a module rather than a concrete type.
 - **NSGA-II Pareto Status Annotation**: Fixed a bug in `OptimParamSimulation` where non-dominated points from earlier generations were incorrectly marked as dominated (`False`) due to strict matching against only the final optimizer population. The logic has been rewritten to deterministically recompute the Pareto front from scratch using the objective values across the full evaluation history, grouped by EPW.
 - **Pandas Groupby Compatibility**: Resolved a `ValueError` (`Cannot set a DataFrame with multiple columns to the single column pareto-optimal`) triggered in Pandas 2.2+ by refactoring the `_annotate_pareto_status` method to use an explicit iterative grouping approach, completely bypassing unstable `groupby().apply()` DataFrame return shape variations.
 - **Legacy Object Conflicts**: Eliminated an unstable hack inside `accim.sim.accim_Base` where duplicate dummy `People` objects were injected whenever it encountered `ZONELIST` configurations, thereby securing EnergyPlus engine safety.

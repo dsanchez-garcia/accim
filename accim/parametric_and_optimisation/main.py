@@ -74,6 +74,60 @@ def get_mdd_file_as_df():
     mdd_df = pd.read_csv(filepath_or_buffer='available_outputs/eplusout.mdd', sep=',|;', skiprows=2, names=['object', 'meter_name', 'frequency', 'units'], engine='python')
     return mdd_df
 
+def _run_single_evaluation_worker(
+    idf_path: str,
+    epw: str,
+    epwname: str,
+    idf_basename: str,
+    out_dir: str,
+    problem_names_inputs: list,
+    problem_names_outputs: list,
+    row_dict: dict,
+    keep_dirs: bool,
+    keep_input: bool
+) -> dict:
+    import warnings
+    warnings.filterwarnings('ignore')
+    from besos.evaluator import EvaluatorEP
+    from besos.problem import EPProblem
+    from besos.parameters import Parameter
+    
+    print(f"[WORKER] Loading IDF: {idf_path}")
+    from accim.utils import get_building
+    try:
+        b = get_building(idf_path)
+    except Exception as e:
+        print(f"[WORKER] Crash while loading {idf_path}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+        
+    dummy_inputs = [Parameter(name=n) for n in problem_names_inputs]
+    prob = EPProblem(inputs=dummy_inputs, outputs=problem_names_outputs)
+    
+    evaluator = EvaluatorEP(problem=prob, building=b, epw=epw, out_dir=out_dir)
+    row_values = [row_dict[n] for n in problem_names_inputs]
+    
+    result = evaluator(row_values, keep_dirs=keep_dirs)
+    if not isinstance(result, (list, tuple)):
+        result = (result,)
+        
+    result_dict = {
+        problem_names_outputs[idx]: result[idx]
+        for idx in range(len(problem_names_outputs))
+    }
+    
+    if keep_dirs and len(result) > len(problem_names_outputs):
+        result_dict['output_dir'] = result[-1]
+        
+    if keep_input:
+        result_dict.update(row_dict)
+        
+    result_dict['epw'] = epwname
+    result_dict['idf'] = idf_basename
+    
+    return result_dict
+
 class OptimParamSimulation(AnalysisMixin, PlottingMixin):
 
     def __init__(self, buildings: Union[Any, List]=None, epws: list=None, parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None]=None, output_type: Literal['standard', 'custom', 'detailed', 'simplified']='standard', output_keep_existing: bool=False, output_freqs: List[allowed_output_freqs]=['hourly'], ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac']='vrf_mm', SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature']='temperature difference', make_averages: bool=False, debugging: bool=False, verbosemode: bool=True, bypass_addAccis: bool=False, **kwargs):
@@ -1090,69 +1144,116 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             if df is None:
                 raise ValueError("Argument 'df' cannot be None if self.parameters_values_df is not populated. Run a sampling method first or provide 'df'.")
 
-        outputs_dict = {}
-        evaluators = {}
+        os.makedirs(out_dir, exist_ok=True)
+        # Update the IDF backup with the exact building state used for this run
+        self._save_idf_backup(label='pre_parametric', out_dir=out_dir)
+
         grouped_dfs = self._prepare_dataframe_for_buildings(df=df, epws=epws)
-        buildings_by_idf = self._get_buildings_by_idf()
+        
+        problem_names_inputs = self._get_problem_input_names()
+        problem_names_outputs = self.problem.names('outputs') if hasattr(self, 'problem') and hasattr(self.problem, 'names') else getattr(self, 'outputs_names', [])
+        
+        tasks = []
+        # Ensure idf_backup_path is iterable even if it's a single string
+        _backup_paths = []
+        if hasattr(self, 'idf_backup_path') and self.idf_backup_path:
+            _backup_paths = self.idf_backup_path if isinstance(self.idf_backup_path, list) else [self.idf_backup_path]
+
         for (idf_basename, df_for_idf) in grouped_dfs.items():
-            b = buildings_by_idf[idf_basename]
+            # Find the actual path to the saved backup for this IDF
+            idf_backup_file = None
+            for p in _backup_paths:
+                # The backup filename format is accim_idf_backup_{idf_basename}{suffix}_{timestamp}.idf
+                # We can check if the idf_basename is in the path
+                if f"_{idf_basename}_" in os.path.basename(p) or f"_{idf_basename}." in os.path.basename(p):
+                    idf_backup_file = p
+                    break
+            
+            if not idf_backup_file:
+                # Fallback: assume the file is in the current directory with .idf appended if missing
+                idf_backup_file = idf_basename if idf_basename.lower().endswith('.idf') else f"{idf_basename}.idf"
+                
             epws_for_idf = df_for_idf['epw'].drop_duplicates().tolist() if 'epw' in df_for_idf.columns else epws
             for epw in epws_for_idf:
                 epwname = epw.split('.epw')[0]
-                evaluator = self.set_evaluator(epw=epw, out_dir=out_dir, building=b)
                 if 'epw' in df_for_idf.columns:
-                    evaluator_input_df = df_for_idf.loc[df_for_idf['epw'] == epw, self._get_problem_input_names()]
+                    evaluator_input_df = df_for_idf.loc[df_for_idf['epw'] == epw, problem_names_inputs]
                 else:
-                    evaluator_input_df = df_for_idf[self._get_problem_input_names()]
+                    evaluator_input_df = df_for_idf[problem_names_inputs]
+                    
                 evaluator_df = evaluator_input_df.reset_index(drop=True).copy()
-                outputs = self._run_evaluator_df_apply(
-                    evaluator=evaluator,
-                    df=evaluator_df,
-                    keep_input=keep_input,
-                    keep_dirs=keep_dirs,
-                    processes=processes,
-                )
-                outputs['epw'] = epwname
-                outputs['idf'] = idf_basename
-                key = f"{idf_basename}_{epwname}" if len(self.buildings) > 1 else epwname
-                outputs_dict.update({key: outputs})
-                evaluators.update({key: evaluator})
-        outputs_param_simulation = pd.concat([df for df in outputs_dict.values()])
+                
+                for _, row in evaluator_df.iterrows():
+                    tasks.append((
+                        idf_backup_file,
+                        epw,
+                        epwname,
+                        idf_basename,
+                        out_dir,
+                        problem_names_inputs,
+                        problem_names_outputs,
+                        row.to_dict(),
+                        keep_dirs,
+                        keep_input
+                    ))
+
+        all_results = []
+        if processes > 1 and len(tasks) > 1:
+            import concurrent.futures
+            from tqdm import tqdm
+            with concurrent.futures.ProcessPoolExecutor(max_workers=processes) as executor:
+                futures = [executor.submit(_run_single_evaluation_worker, *t) for t in tasks]
+                for future in tqdm(concurrent.futures.as_completed(futures), total=len(tasks), desc="Executing parametric simulations", unit="row"):
+                    all_results.append(future.result())
+        else:
+            from tqdm import tqdm
+            for t in tqdm(tasks, desc="Executing parametric simulations", unit="row"):
+                all_results.append(_run_single_evaluation_worker(*t))
+                
+        import pandas as pd
+        outputs_param_simulation = pd.DataFrame(all_results)
+        
         if len(epws) > 1 or len(self.buildings) > 1:
             outputs_param_simulation = outputs_param_simulation.reset_index(drop=True)
+            
+        outputs_param_simulation.attrs = getattr(outputs_param_simulation, 'attrs', {})
         if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
             outputs_param_simulation.attrs['parameters_names'] = self._get_all_input_names()
             outputs_param_simulation.attrs['outputs_names'] = self.problem.names('outputs')
         elif hasattr(self, 'parameters_names') and hasattr(self, 'outputs_names'):
             outputs_param_simulation.attrs['parameters_names'] = self.parameters_names + self._get_external_input_names()
             outputs_param_simulation.attrs['outputs_names'] = self.outputs_names
+            
         self.outputs_param_simulation = outputs_param_simulation
-        self.evaluators = evaluators
-        os.makedirs(out_dir, exist_ok=True)
+        self.evaluators = {} 
+        
         import datetime
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        # Update the IDF backup with the exact building state used for this run
-        self._save_idf_backup(label='pre_parametric', out_dir=out_dir)
-        # Embed the backup path and epws in attrs so they survive pickle serialisation
-        self.outputs_param_simulation.attrs['idf_backup_path'] = self.idf_backup_path
+        
+        self.outputs_param_simulation.attrs['idf_backup_path'] = getattr(self, 'idf_backup_path', [])
         self.outputs_param_simulation.attrs['epws'] = epws
+        
         _base = os.path.join(out_dir, f'outputs_param_simulation_{timestamp}')
         self.outputs_param_simulation.to_csv(f'{_base}.csv', index=False)
         self.outputs_param_simulation.to_pickle(f'{_base}.pkl')
+        
         import json as _json
         _json_payload = {
             'attrs': self.outputs_param_simulation.attrs,
             'data': self.outputs_param_simulation.to_dict(orient='list'),
-            'idf_backup_path': self.idf_backup_path,
+            'idf_backup_path': getattr(self, 'idf_backup_path', []),
         }
         with open(f'{_base}.json', 'w', encoding='utf-8') as _f:
             _json.dump(_json_payload, _f, indent=2, default=str)
+            
         self.outputs_param_simulation_filepath = f'{_base}.csv'
         self.epws = self.outputs_param_simulation.attrs.get('epws', [])
         self.last_run_type = 'parametric'
-        # Auto-apply category mapping if rules were previously set
+        
         if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
             self.apply_category_mapping(df_types=['parametric'])
+        
+        return self.outputs_param_simulation
 
     def load_outputs_parametric(self, csv_path: str=None, pickle_path: str=None, json_path: str=None, hourly_csv_path: str=None, hourly_pickle_path: str=None, parameters_names: list=None, outputs_names: list=None) -> pd.DataFrame:
         """
