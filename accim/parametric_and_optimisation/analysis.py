@@ -34,21 +34,26 @@ class AnalysisMixin:
 
         buildings = getattr(self, 'buildings', [])
         if not buildings:
-            idf = self.building
+            idf = getattr(self, 'building', None)
             if idf is None:
-                # When loaded from JSON/pickle without an IDF, try to reload from the backup
+                # When loaded from JSON/pickle without an IDF, try to reload from the backup.
+                # idf_backup_path may be a string (single IDF) or a list (multi-IDF)
                 backup_path = getattr(self, 'idf_backup_path', None)
-                if not backup_path or not os.path.isfile(backup_path):
+                backup_list = backup_path if isinstance(backup_path, list) else ([backup_path] if backup_path else [])
+                valid_backups = [p for p in backup_list if p and os.path.isfile(p)]
+                if not valid_backups:
                     raise AttributeError(
                         "self.building is None and no valid idf_backup_path is available. "
                         "Either provide mode='custom' with a custom_area value, or load the "
                         "session with an IDF object (building= argument)."
                     )
-                from besos import eppy_funcs as ef
-                idf = ef.get_building(backup_path)
-                self.building = idf
-                print(f'  [info] IDF auto-loaded from backup: {backup_path}')
-            buildings = [idf]
+                from accim.utils import get_building
+                loaded = [get_building(p) for p in valid_backups]
+                self.buildings = loaded
+                buildings = loaded
+                print(f'  [info] {len(loaded)} IDF(s) auto-loaded from backup paths.')
+            else:
+                buildings = [idf]
             
         areas = {}
         for idx, idf in enumerate(buildings):
@@ -191,13 +196,17 @@ class AnalysisMixin:
                 divisors = 3600000.0 * area_val
                 
             # Apply normalisation
-            for col in energy_cols:
-                def safe_divide(val, div):
-                    if isinstance(val, list):
-                        return [v / div for v in val]
-                    return val / div
-                
-                df[col] = [safe_divide(val, div) for val, div in zip(df[col], divisors)]
+            # divisors is either a pd.Series (per-row, when area is a dict) or a float (uniform)
+            if isinstance(divisors, float):
+                for col in energy_cols:
+                    df[col] = df[col] / divisors
+            else:
+                for col in energy_cols:
+                    def safe_divide(val, div):
+                        if isinstance(val, list):
+                            return [v / div for v in val]
+                        return val / div
+                    df[col] = [safe_divide(val, div) for val, div in zip(df[col], divisors)]
                 
             # Rename columns
             new_columns = {}

@@ -998,6 +998,22 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             n_new = len(epw_rules) + len(idf_rules)
             print(f'  [info] apply_category_mapping: added/updated {n_new} category column(s) in {attr}.')
 
+            # --- Persist mapping rules in DataFrame.attrs so they survive pickle/load ---
+            df.attrs['epw_mapping_rules'] = epw_rules
+            df.attrs['idf_mapping_rules'] = idf_rules
+
+            # Overwrite the last saved .pkl on disk with the updated data
+            for pkl_attr in ('outputs_param_simulation_filepath', 'outputs_optimisation_filepath'):
+                last_path = getattr(self, pkl_attr, None)
+                if last_path and last_path.endswith('.csv'):
+                    pkl_path = last_path.replace('.csv', '.pkl')
+                    if os.path.isfile(pkl_path):
+                        try:
+                            getattr(self, attr).to_pickle(pkl_path)
+                            print(f'  [info] Mapping rules persisted to {pkl_path}')
+                        except Exception as _e:
+                            print(f'  [!] Could not update {pkl_path}: {_e}')
+
     def preview_category_mapping(self) -> dict:
         """
         Returns a dictionary containing DataFrames showing the category labels that would be assigned to each
@@ -1316,6 +1332,13 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.outputs_names = outputs_names
         self.epws = self.outputs_param_simulation.attrs.get('epws', [])
         self.last_run_type = 'parametric'
+        # Restore category mapping rules saved in .attrs at apply_category_mapping time
+        _epw_rules = self.outputs_param_simulation.attrs.get('epw_mapping_rules')
+        _idf_rules = self.outputs_param_simulation.attrs.get('idf_mapping_rules')
+        if _epw_rules or _idf_rules:
+            self.epw_mapping_rules = _epw_rules or {}
+            self.idf_mapping_rules = _idf_rules or {}
+            print(f'  [info] Category mapping rules restored from pickle.')
         # Re-apply category mapping if rules are already set on this instance
         if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
             self.apply_category_mapping(df_types=['parametric'])
