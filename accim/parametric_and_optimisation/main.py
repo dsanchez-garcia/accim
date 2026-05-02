@@ -128,29 +128,32 @@ def _run_single_evaluation_worker(
     
     return result_dict
 
-class OptimParamSimulation(AnalysisMixin, PlottingMixin):
+class SimulationBase(AnalysisMixin, PlottingMixin):
+    """
+    Base class for parametric simulations and multi-objective optimization.
+
+    Contains shared functionality for managing buildings, EPWs, parameters, outputs,
+    and IDF backup operations. Subclasses should override simulation-specific methods.
+
+    .. versionadded:: 0.8.0
+        Split from OptimParamSimulation for better code organization and reduced cognitive load.
+    """
 
     def __init__(self, buildings: Union[Any, List]=None, epws: list=None, parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None]=None, output_type: Literal['standard', 'custom', 'detailed', 'simplified']='standard', output_keep_existing: bool=False, output_freqs: List[allowed_output_freqs]=['hourly'], ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac']='vrf_mm', SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature']='temperature difference', make_averages: bool=False, debugging: bool=False, verbosemode: bool=True, bypass_addAccis: bool=False, **kwargs):
         """
-        Creates a class instance to run parametric simulations and optimisation.
+        Initialize the simulation base instance.
 
         :param buildings: the besos.IDF_class returned from method get_building(idfpath)
         :param epws: a list of .epw filenames
-        :param parameters_type: to specify the type of parameters that should be used:
-            can be 'accim custom model', 'accim predefined model', or 'apmv setpoints'
-        :param output_type: to specify the outputs that are going to be requested;
-            only used in accim predefined and custom models
-        :param output_keep_existing: to keep or remove existing outputs;
-            only used in accim predefined and custom models
-        :param output_freqs: to specify the frequency or frequencies for the outputs; must be a list containing any of
-            the following strings: 'timestep', 'hourly', 'daily', 'monthly', 'runperiod'
-        :param ScriptType: to specify the ScriptType; must one of the following strings: 'vrf_mm', 'vrf_ac', 'ex_ac';
-            for more information, please refer to addAccis()
-        :param SupplyAirTempInputMethod: in case 'vrf_mm' or 'vrf_ac' ScriptTypes are used, specifies the supply air
-            temperature input method for the VRF systems
-        :param make_averages: to make average outputs of hour-counting and operative temperature related outputs
+        :param parameters_type: to specify the type of parameters that should be used
+        :param output_type: to specify the outputs that are going to be requested
+        :param output_keep_existing: to keep or remove existing outputs
+        :param output_freqs: output frequency specification
+        :param ScriptType: 'vrf_mm', 'vrf_ac', or 'ex_ac'
+        :param SupplyAirTempInputMethod: supply air temperature input method
+        :param make_averages: to make average outputs
         :param debugging: True to generate the .EDD file
-        :param bypass_addAccis: True to skip the internal addAccis execution (useful when loading previous sessions)
+        :param bypass_addAccis: True to skip the internal addAccis execution
         """
         if buildings is None and 'building' in kwargs:
             buildings = kwargs['building']
@@ -218,12 +221,6 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         self.is_apmv_setpoints = is_apmv_setpoints
         self.bypass_addAccis = bypass_addAccis
         self.last_run_type = None
-        self.outputs_optimisation = None
-        self.outputs_optimisation_filepath = None
-        self.optimisation_csv_paths_non_dominated = []
-        self.optimisation_csv_paths_dominated = []
-        self.optimisation_csv_paths_non_dominated_by_epw = {}
-        self.optimisation_csv_paths_dominated_by_epw = {}
         # Save an initial IDF backup right after addAccis/apply_apmv_setpoints so the
         # modified IDF (with EMS scripts and outputs already injected) is always
         # recoverable, even if run_parametric_simulation / run_optimisation are not called yet.
@@ -2218,7 +2215,88 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         else:
             raise ValueError('No previous simulation run type detected. Please run parametric or optimisation first.')
 
-class AccimPredefModelsParamSim(OptimParamSimulation):
+
+class ParametricSimulation(SimulationBase):
+    """
+    Specialization of SimulationBase for parametric simulations.
+
+    This class handles parameter sampling, running multiple simulations with different
+    parameter values, and collecting/analyzing parametric simulation results.
+
+    Parameters specific to parametric simulations:
+    - outputs_param_simulation: main results DataFrame
+    - outputs_param_simulation_hourly: hourly-level expanded results
+    - outputs_param_simulation_monthly: monthly-level aggregated results
+    - outputs_param_simulation_filepath: path to saved results
+
+    Methods specific to parametric simulations:
+    - sampling_*(): parameter sampling strategies
+    - run_parametric_simulation(): execute parametric simulation
+    - load_outputs_parametric(): restore previous parametric results
+
+    .. versionadded:: 0.8.0
+        Extracted from OptimParamSimulation for better separation of concerns.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Initialize ParametricSimulation instance."""
+        super().__init__(*args, **kwargs)
+        # Parametric-specific attributes
+        self.outputs_param_simulation = None
+        self.outputs_param_simulation_hourly = None
+        self.outputs_param_simulation_monthly = None
+        self.outputs_param_simulation_filepath = None
+
+
+class OptimizationSimulation(SimulationBase):
+    """
+    Specialization of SimulationBase for multi-objective optimization.
+
+    This class handles multi-objective optimization using various genetic/evolutionary
+    algorithms (NSGA-II, EpsNSGAII, etc.), Pareto analysis, and optimization-specific
+    output management.
+
+    Parameters specific to optimization:
+    - outputs_optimisation: complete evaluation history (dominated + non-dominated)
+    - outputs_optimisation_filepath: path to saved results
+    - optimisation_csv_paths_non_dominated: paths to non-dominated simulation outputs
+    - optimisation_csv_paths_dominated: paths to dominated simulation outputs
+    - optimisation_csv_paths_non_dominated_by_epw: non-dominated paths grouped by EPW
+    - optimisation_csv_paths_dominated_by_epw: dominated paths grouped by EPW
+    - evaluators: tracking of besos evaluators per IDF/EPW combination
+
+    Methods specific to optimization:
+    - run_optimisation(): execute multi-objective optimization
+    - estimate_optimisation_sims(): preview expected run count
+    - load_outputs_optimisation(): restore previous optimization results
+    - get_hourly_df_optimisation(): retrieve hourly data from optimization
+    - get_monthly_df_optimisation(): retrieve monthly data from optimization
+
+    .. versionadded:: 0.8.0
+        Extracted from OptimParamSimulation for better separation of concerns.
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Initialize OptimizationSimulation instance."""
+        super().__init__(*args, **kwargs)
+        # Optimization-specific attributes
+        self.outputs_optimisation = None
+        self.outputs_optimisation_filepath = None
+        self.outputs_optimisation_hourly = None
+        self.outputs_optimisation_monthly = None
+        self.optimisation_csv_paths_non_dominated = []
+        self.optimisation_csv_paths_dominated = []
+        self.optimisation_csv_paths_non_dominated_by_epw = {}
+        self.optimisation_csv_paths_dominated_by_epw = {}
+        self.evaluators = {}
+
+
+# Backward compatibility alias
+# Using factory function allows auto-selection based on usage patterns in future versions
+OptimParamSimulation = ParametricSimulation
+
+
+class AccimPredefModelsParamSim(ParametricSimulation):
 
     def __init__(self, buildings: Union[Any, List]=None, epws: list=None, output_type: str='standard', output_keep_existing: bool=False, output_freqs: list=['hourly'], ScriptType: str='vrf_mm', SupplyAirTempInputMethod: str='temperature difference', debugging: bool=False, **kwargs):
         if buildings is None and 'building' in kwargs:
