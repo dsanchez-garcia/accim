@@ -21,12 +21,15 @@ os.makedirs(OUT_DIR, exist_ok=True)
 
 for idf in IDF_PATHS:
     accim.utils.remove_accents_in_idf(idf_path=idf)
+
 buildings = [ef.get_building(path, ep_path=EP_PATH) for path in IDF_PATHS]
 
 for building in buildings:
     accim.utils.reduce_runtime(
         idf_object=building,
-        runperiod_end_month=3,
+        runperiod_begin_month=6,
+        runperiod_begin_day_of_month=1,
+        runperiod_end_month=7,
         runperiod_end_day_of_month=31
     )
 

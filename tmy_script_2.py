@@ -78,7 +78,7 @@ parametric = OptimParamSimulation(
     output_freqs=["hourly"],
 )
 ##
-buildings[0].idfobjects['output:meter']
+# buildings[0].idfobjects['output:meter']
 
 parametric.set_output_met_objects_to_idf(
     output_meters=["DistrictHeating:Facility", "DistrictCooling:Facility"],
@@ -104,7 +104,7 @@ parametric.sampling_full_set()
 print(f"\n[1/4] Run {len(parametric.parameters_values_df)} parametric simulations (Heating + Cooling only)...")
 parametric.run_parametric_simulation(
     out_dir=OUT_DIR,
-    processes=1,
+    processes=4,
     keep_input=True,
     keep_dirs=True,
 )
