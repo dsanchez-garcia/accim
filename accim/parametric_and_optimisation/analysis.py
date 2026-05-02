@@ -58,7 +58,14 @@ class AnalysisMixin:
         areas = {}
         for idx, idf in enumerate(buildings):
             if hasattr(self, '_get_idf_identifier'):
-                idf_name = self._get_idf_identifier(idf, idx)
+                raw_name = self._get_idf_identifier(idf, idx)
+                # Strip the accim backup prefix/suffix so the key matches the 'idf' column
+                # e.g. 'accim_idf_backup_SF_Detached_A_max_South_pre_parametric_20260501_102536'
+                # → 'SF_Detached_A_max_South'
+                import re as _re
+                stripped = _re.sub(r'^accim_idf_backup_', '', raw_name)
+                stripped = _re.sub(r'_pre_(?:parametric|optimisation)_\d{8}_\d{6}$', '', stripped)
+                idf_name = stripped if stripped else raw_name
             else:
                 idf_name = getattr(idf, 'idfname', f'unknown_idf_{idx}')
                 if idf_name:
@@ -125,10 +132,13 @@ class AnalysisMixin:
 
         if len(areas) == 1:
             self.building_floor_area = list(areas.values())[0]
+            print(f'  [info] Building floor area: {self.building_floor_area:.2f} m² (single IDF)')
             return self.building_floor_area
         else:
             self.building_floor_area = areas
-            return sum(areas.values())
+            for idf_name, area in areas.items():
+                print(f'  [info] Building floor area [{idf_name}]: {area:.2f} m²')
+            return areas
 
     def normalize_outputs(self, df_types: list=None):
         """
