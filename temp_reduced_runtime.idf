@@ -32,6 +32,16 @@ Site:Location,
     -6,                       !- Time Zone
     190;                      !- Elevation
 
+SIZINGPERIOD:WEATHERFILEDAYS,
+    SummerSizing,             !- Name
+    6,                        !- Begin Month
+    1,                        !- Begin Day of Month
+    7,                        !- End Month
+    31,                       !- End Day of Month
+    Sunday,                   !- Day of Week for Start Day
+    Yes,                      !- Use Weather File Daylight Saving Period
+    Yes;                      !- Use Weather File Rain and Snow Indicators
+
 RunPeriod,
     Year,                     !- Name
     6,                        !- Begin Month
@@ -4555,25 +4565,7 @@ DESIGNSPECIFICATION:OUTDOORAIR,
     On 24/7;                  !- Outdoor Air Schedule Name
 
 DESIGNSPECIFICATION:OUTDOORAIR,
-    BR3 Design Specification Outdoor Air Object,    !- Name
-    Flow/Person,              !- Outdoor Air Method
-    0.00944,                  !- Outdoor Air Flow per Person
-    0,                        !- Outdoor Air Flow per Zone Floor Area
-    0,                        !- Outdoor Air Flow per Zone
-    0,                        !- Outdoor Air Flow Air Changes per Hour
-    On 24/7;                  !- Outdoor Air Schedule Name
-
-DESIGNSPECIFICATION:OUTDOORAIR,
-    BR5 Design Specification Outdoor Air Object,    !- Name
-    Flow/Person,              !- Outdoor Air Method
-    0.00944,                  !- Outdoor Air Flow per Person
-    0,                        !- Outdoor Air Flow per Zone Floor Area
-    0,                        !- Outdoor Air Flow per Zone
-    0,                        !- Outdoor Air Flow Air Changes per Hour
-    On 24/7;                  !- Outdoor Air Schedule Name
-
-DESIGNSPECIFICATION:OUTDOORAIR,
-    LivingRoom Design Specification Outdoor Air Object,    !- Name
+    OFFICE Design Specification Outdoor Air Object,    !- Name
     Flow/Person,              !- Outdoor Air Method
     0.00944,                  !- Outdoor Air Flow per Person
     0,                        !- Outdoor Air Flow per Zone Floor Area
@@ -4591,7 +4583,16 @@ DESIGNSPECIFICATION:OUTDOORAIR,
     On 24/7;                  !- Outdoor Air Schedule Name
 
 DESIGNSPECIFICATION:OUTDOORAIR,
-    OFFICE Design Specification Outdoor Air Object,    !- Name
+    BR3 Design Specification Outdoor Air Object,    !- Name
+    Flow/Person,              !- Outdoor Air Method
+    0.00944,                  !- Outdoor Air Flow per Person
+    0,                        !- Outdoor Air Flow per Zone Floor Area
+    0,                        !- Outdoor Air Flow per Zone
+    0,                        !- Outdoor Air Flow Air Changes per Hour
+    On 24/7;                  !- Outdoor Air Schedule Name
+
+DESIGNSPECIFICATION:OUTDOORAIR,
+    BR4 Design Specification Outdoor Air Object,    !- Name
     Flow/Person,              !- Outdoor Air Method
     0.00944,                  !- Outdoor Air Flow per Person
     0,                        !- Outdoor Air Flow per Zone Floor Area
@@ -4609,7 +4610,16 @@ DESIGNSPECIFICATION:OUTDOORAIR,
     On 24/7;                  !- Outdoor Air Schedule Name
 
 DESIGNSPECIFICATION:OUTDOORAIR,
-    BR4 Design Specification Outdoor Air Object,    !- Name
+    LivingRoom Design Specification Outdoor Air Object,    !- Name
+    Flow/Person,              !- Outdoor Air Method
+    0.00944,                  !- Outdoor Air Flow per Person
+    0,                        !- Outdoor Air Flow per Zone Floor Area
+    0,                        !- Outdoor Air Flow per Zone
+    0,                        !- Outdoor Air Flow Air Changes per Hour
+    On 24/7;                  !- Outdoor Air Schedule Name
+
+DESIGNSPECIFICATION:OUTDOORAIR,
+    BR5 Design Specification Outdoor Air Object,    !- Name
     Flow/Person,              !- Outdoor Air Method
     0.00944,                  !- Outdoor Air Flow per Person
     0,                        !- Outdoor Air Flow per Zone Floor Area
@@ -4626,23 +4636,7 @@ DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
     0;                        !- Minimum Zone Ventilation Efficiency
 
 DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
-    BR3 Design Specification Zone Air Distribution Object,    !- Name
-    1,                        !- Zone Air Distribution Effectiveness in Cooling Mode
-    1,                        !- Zone Air Distribution Effectiveness in Heating Mode
-    ,                         !- Zone Air Distribution Effectiveness Schedule Name
-    0,                        !- Zone Secondary Recirculation Fraction
-    0;                        !- Minimum Zone Ventilation Efficiency
-
-DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
-    BR5 Design Specification Zone Air Distribution Object,    !- Name
-    1,                        !- Zone Air Distribution Effectiveness in Cooling Mode
-    1,                        !- Zone Air Distribution Effectiveness in Heating Mode
-    ,                         !- Zone Air Distribution Effectiveness Schedule Name
-    0,                        !- Zone Secondary Recirculation Fraction
-    0;                        !- Minimum Zone Ventilation Efficiency
-
-DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
-    LivingRoom Design Specification Zone Air Distribution Object,    !- Name
+    OFFICE Design Specification Zone Air Distribution Object,    !- Name
     1,                        !- Zone Air Distribution Effectiveness in Cooling Mode
     1,                        !- Zone Air Distribution Effectiveness in Heating Mode
     ,                         !- Zone Air Distribution Effectiveness Schedule Name
@@ -4658,7 +4652,15 @@ DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
     0;                        !- Minimum Zone Ventilation Efficiency
 
 DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
-    OFFICE Design Specification Zone Air Distribution Object,    !- Name
+    BR3 Design Specification Zone Air Distribution Object,    !- Name
+    1,                        !- Zone Air Distribution Effectiveness in Cooling Mode
+    1,                        !- Zone Air Distribution Effectiveness in Heating Mode
+    ,                         !- Zone Air Distribution Effectiveness Schedule Name
+    0,                        !- Zone Secondary Recirculation Fraction
+    0;                        !- Minimum Zone Ventilation Efficiency
+
+DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
+    BR4 Design Specification Zone Air Distribution Object,    !- Name
     1,                        !- Zone Air Distribution Effectiveness in Cooling Mode
     1,                        !- Zone Air Distribution Effectiveness in Heating Mode
     ,                         !- Zone Air Distribution Effectiveness Schedule Name
@@ -4674,7 +4676,15 @@ DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
     0;                        !- Minimum Zone Ventilation Efficiency
 
 DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
-    BR4 Design Specification Zone Air Distribution Object,    !- Name
+    LivingRoom Design Specification Zone Air Distribution Object,    !- Name
+    1,                        !- Zone Air Distribution Effectiveness in Cooling Mode
+    1,                        !- Zone Air Distribution Effectiveness in Heating Mode
+    ,                         !- Zone Air Distribution Effectiveness Schedule Name
+    0,                        !- Zone Secondary Recirculation Fraction
+    0;                        !- Minimum Zone Ventilation Efficiency
+
+DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION,
+    BR5 Design Specification Zone Air Distribution Object,    !- Name
     1,                        !- Zone Air Distribution Effectiveness in Cooling Mode
     1,                        !- Zone Air Distribution Effectiveness in Heating Mode
     ,                         !- Zone Air Distribution Effectiveness Schedule Name
@@ -4711,7 +4721,7 @@ SIZING:ZONE,
     autosize;                 !- Dedicated Outdoor Air High Setpoint Temperature for Design
 
 SIZING:ZONE,
-    BR3,                      !- Zone or ZoneList Name
+    OFFICE,                   !- Zone or ZoneList Name
     TemperatureDifference,    !- Zone Cooling Design Supply Air Temperature Input Method
     14,                       !- Zone Cooling Design Supply Air Temperature
     5,                        !- Zone Cooling Design Supply Air Temperature Difference
@@ -4720,7 +4730,7 @@ SIZING:ZONE,
     5,                        !- Zone Heating Design Supply Air Temperature Difference
     0.009,                    !- Zone Cooling Design Supply Air Humidity Ratio
     0.004,                    !- Zone Heating Design Supply Air Humidity Ratio
-    BR3 Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
+    OFFICE Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
     1.25,                     !- Zone Heating Sizing Factor
     1.15,                     !- Zone Cooling Sizing Factor
     DesignDay,                !- Cooling Design Air Flow Method
@@ -4733,65 +4743,7 @@ SIZING:ZONE,
     0.00203,                  !- Heating Maximum Air Flow per Zone Floor Area
     0.14158,                  !- Heating Maximum Air Flow
     0.3,                      !- Heating Maximum Air Flow Fraction
-    BR3 Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
-    Yes,                      !- Account for Dedicated Outdoor Air System
-    NeutralSupplyAir,         !- Dedicated Outdoor Air System Control Strategy
-    autosize,                 !- Dedicated Outdoor Air Low Setpoint Temperature for Design
-    autosize;                 !- Dedicated Outdoor Air High Setpoint Temperature for Design
-
-SIZING:ZONE,
-    BR5,                      !- Zone or ZoneList Name
-    TemperatureDifference,    !- Zone Cooling Design Supply Air Temperature Input Method
-    14,                       !- Zone Cooling Design Supply Air Temperature
-    5,                        !- Zone Cooling Design Supply Air Temperature Difference
-    TemperatureDifference,    !- Zone Heating Design Supply Air Temperature Input Method
-    50,                       !- Zone Heating Design Supply Air Temperature
-    5,                        !- Zone Heating Design Supply Air Temperature Difference
-    0.009,                    !- Zone Cooling Design Supply Air Humidity Ratio
-    0.004,                    !- Zone Heating Design Supply Air Humidity Ratio
-    BR5 Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
-    1.25,                     !- Zone Heating Sizing Factor
-    1.15,                     !- Zone Cooling Sizing Factor
-    DesignDay,                !- Cooling Design Air Flow Method
-    0,                        !- Cooling Design Air Flow Rate
-    0.00076,                  !- Cooling Minimum Air Flow per Zone Floor Area
-    0,                        !- Cooling Minimum Air Flow
-    0,                        !- Cooling Minimum Air Flow Fraction
-    DesignDay,                !- Heating Design Air Flow Method
-    0,                        !- Heating Design Air Flow Rate
-    0.00203,                  !- Heating Maximum Air Flow per Zone Floor Area
-    0.14158,                  !- Heating Maximum Air Flow
-    0.3,                      !- Heating Maximum Air Flow Fraction
-    BR5 Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
-    Yes,                      !- Account for Dedicated Outdoor Air System
-    NeutralSupplyAir,         !- Dedicated Outdoor Air System Control Strategy
-    autosize,                 !- Dedicated Outdoor Air Low Setpoint Temperature for Design
-    autosize;                 !- Dedicated Outdoor Air High Setpoint Temperature for Design
-
-SIZING:ZONE,
-    LivingRoom,               !- Zone or ZoneList Name
-    TemperatureDifference,    !- Zone Cooling Design Supply Air Temperature Input Method
-    14,                       !- Zone Cooling Design Supply Air Temperature
-    5,                        !- Zone Cooling Design Supply Air Temperature Difference
-    TemperatureDifference,    !- Zone Heating Design Supply Air Temperature Input Method
-    50,                       !- Zone Heating Design Supply Air Temperature
-    5,                        !- Zone Heating Design Supply Air Temperature Difference
-    0.009,                    !- Zone Cooling Design Supply Air Humidity Ratio
-    0.004,                    !- Zone Heating Design Supply Air Humidity Ratio
-    LivingRoom Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
-    1.25,                     !- Zone Heating Sizing Factor
-    1.15,                     !- Zone Cooling Sizing Factor
-    DesignDay,                !- Cooling Design Air Flow Method
-    0,                        !- Cooling Design Air Flow Rate
-    0.00076,                  !- Cooling Minimum Air Flow per Zone Floor Area
-    0,                        !- Cooling Minimum Air Flow
-    0,                        !- Cooling Minimum Air Flow Fraction
-    DesignDay,                !- Heating Design Air Flow Method
-    0,                        !- Heating Design Air Flow Rate
-    0.00203,                  !- Heating Maximum Air Flow per Zone Floor Area
-    0.14158,                  !- Heating Maximum Air Flow
-    0.3,                      !- Heating Maximum Air Flow Fraction
-    LivingRoom Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
+    OFFICE Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
     Yes,                      !- Account for Dedicated Outdoor Air System
     NeutralSupplyAir,         !- Dedicated Outdoor Air System Control Strategy
     autosize,                 !- Dedicated Outdoor Air Low Setpoint Temperature for Design
@@ -4827,7 +4779,7 @@ SIZING:ZONE,
     autosize;                 !- Dedicated Outdoor Air High Setpoint Temperature for Design
 
 SIZING:ZONE,
-    OFFICE,                   !- Zone or ZoneList Name
+    BR3,                      !- Zone or ZoneList Name
     TemperatureDifference,    !- Zone Cooling Design Supply Air Temperature Input Method
     14,                       !- Zone Cooling Design Supply Air Temperature
     5,                        !- Zone Cooling Design Supply Air Temperature Difference
@@ -4836,7 +4788,7 @@ SIZING:ZONE,
     5,                        !- Zone Heating Design Supply Air Temperature Difference
     0.009,                    !- Zone Cooling Design Supply Air Humidity Ratio
     0.004,                    !- Zone Heating Design Supply Air Humidity Ratio
-    OFFICE Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
+    BR3 Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
     1.25,                     !- Zone Heating Sizing Factor
     1.15,                     !- Zone Cooling Sizing Factor
     DesignDay,                !- Cooling Design Air Flow Method
@@ -4849,7 +4801,36 @@ SIZING:ZONE,
     0.00203,                  !- Heating Maximum Air Flow per Zone Floor Area
     0.14158,                  !- Heating Maximum Air Flow
     0.3,                      !- Heating Maximum Air Flow Fraction
-    OFFICE Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
+    BR3 Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
+    Yes,                      !- Account for Dedicated Outdoor Air System
+    NeutralSupplyAir,         !- Dedicated Outdoor Air System Control Strategy
+    autosize,                 !- Dedicated Outdoor Air Low Setpoint Temperature for Design
+    autosize;                 !- Dedicated Outdoor Air High Setpoint Temperature for Design
+
+SIZING:ZONE,
+    BR4,                      !- Zone or ZoneList Name
+    TemperatureDifference,    !- Zone Cooling Design Supply Air Temperature Input Method
+    14,                       !- Zone Cooling Design Supply Air Temperature
+    5,                        !- Zone Cooling Design Supply Air Temperature Difference
+    TemperatureDifference,    !- Zone Heating Design Supply Air Temperature Input Method
+    50,                       !- Zone Heating Design Supply Air Temperature
+    5,                        !- Zone Heating Design Supply Air Temperature Difference
+    0.009,                    !- Zone Cooling Design Supply Air Humidity Ratio
+    0.004,                    !- Zone Heating Design Supply Air Humidity Ratio
+    BR4 Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
+    1.25,                     !- Zone Heating Sizing Factor
+    1.15,                     !- Zone Cooling Sizing Factor
+    DesignDay,                !- Cooling Design Air Flow Method
+    0,                        !- Cooling Design Air Flow Rate
+    0.00076,                  !- Cooling Minimum Air Flow per Zone Floor Area
+    0,                        !- Cooling Minimum Air Flow
+    0,                        !- Cooling Minimum Air Flow Fraction
+    DesignDay,                !- Heating Design Air Flow Method
+    0,                        !- Heating Design Air Flow Rate
+    0.00203,                  !- Heating Maximum Air Flow per Zone Floor Area
+    0.14158,                  !- Heating Maximum Air Flow
+    0.3,                      !- Heating Maximum Air Flow Fraction
+    BR4 Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
     Yes,                      !- Account for Dedicated Outdoor Air System
     NeutralSupplyAir,         !- Dedicated Outdoor Air System Control Strategy
     autosize,                 !- Dedicated Outdoor Air Low Setpoint Temperature for Design
@@ -4885,7 +4866,7 @@ SIZING:ZONE,
     autosize;                 !- Dedicated Outdoor Air High Setpoint Temperature for Design
 
 SIZING:ZONE,
-    BR4,                      !- Zone or ZoneList Name
+    LivingRoom,               !- Zone or ZoneList Name
     TemperatureDifference,    !- Zone Cooling Design Supply Air Temperature Input Method
     14,                       !- Zone Cooling Design Supply Air Temperature
     5,                        !- Zone Cooling Design Supply Air Temperature Difference
@@ -4894,7 +4875,7 @@ SIZING:ZONE,
     5,                        !- Zone Heating Design Supply Air Temperature Difference
     0.009,                    !- Zone Cooling Design Supply Air Humidity Ratio
     0.004,                    !- Zone Heating Design Supply Air Humidity Ratio
-    BR4 Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
+    LivingRoom Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
     1.25,                     !- Zone Heating Sizing Factor
     1.15,                     !- Zone Cooling Sizing Factor
     DesignDay,                !- Cooling Design Air Flow Method
@@ -4907,7 +4888,36 @@ SIZING:ZONE,
     0.00203,                  !- Heating Maximum Air Flow per Zone Floor Area
     0.14158,                  !- Heating Maximum Air Flow
     0.3,                      !- Heating Maximum Air Flow Fraction
-    BR4 Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
+    LivingRoom Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
+    Yes,                      !- Account for Dedicated Outdoor Air System
+    NeutralSupplyAir,         !- Dedicated Outdoor Air System Control Strategy
+    autosize,                 !- Dedicated Outdoor Air Low Setpoint Temperature for Design
+    autosize;                 !- Dedicated Outdoor Air High Setpoint Temperature for Design
+
+SIZING:ZONE,
+    BR5,                      !- Zone or ZoneList Name
+    TemperatureDifference,    !- Zone Cooling Design Supply Air Temperature Input Method
+    14,                       !- Zone Cooling Design Supply Air Temperature
+    5,                        !- Zone Cooling Design Supply Air Temperature Difference
+    TemperatureDifference,    !- Zone Heating Design Supply Air Temperature Input Method
+    50,                       !- Zone Heating Design Supply Air Temperature
+    5,                        !- Zone Heating Design Supply Air Temperature Difference
+    0.009,                    !- Zone Cooling Design Supply Air Humidity Ratio
+    0.004,                    !- Zone Heating Design Supply Air Humidity Ratio
+    BR5 Design Specification Outdoor Air Object,    !- Design Specification Outdoor Air Object Name
+    1.25,                     !- Zone Heating Sizing Factor
+    1.15,                     !- Zone Cooling Sizing Factor
+    DesignDay,                !- Cooling Design Air Flow Method
+    0,                        !- Cooling Design Air Flow Rate
+    0.00076,                  !- Cooling Minimum Air Flow per Zone Floor Area
+    0,                        !- Cooling Minimum Air Flow
+    0,                        !- Cooling Minimum Air Flow Fraction
+    DesignDay,                !- Heating Design Air Flow Method
+    0,                        !- Heating Design Air Flow Rate
+    0.00203,                  !- Heating Maximum Air Flow per Zone Floor Area
+    0.14158,                  !- Heating Maximum Air Flow
+    0.3,                      !- Heating Maximum Air Flow Fraction
+    BR5 Design Specification Zone Air Distribution Object,    !- Design Specification Zone Air Distribution Object Name
     Yes,                      !- Account for Dedicated Outdoor Air System
     NeutralSupplyAir,         !- Dedicated Outdoor Air System Control Strategy
     autosize,                 !- Dedicated Outdoor Air Low Setpoint Temperature for Design
@@ -4919,62 +4929,6 @@ ZONECONTROL:THERMOSTAT,
     Control type schedule: Always 4,    !- Control Type Schedule Name
     ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
     BR1 Dual SP,              !- Control 1 Name
-    ,                         !- Control 2 Object Type
-    ,                         !- Control 2 Name
-    ,                         !- Control 3 Object Type
-    ,                         !- Control 3 Name
-    ,                         !- Control 4 Object Type
-    ,                         !- Control 4 Name
-    0;                        !- Temperature Difference Between Cutout And Setpoint
-
-ZONECONTROL:THERMOSTAT,
-    BR3 Thermostat,           !- Name
-    BR3,                      !- Zone or ZoneList Name
-    Control type schedule: Always 4,    !- Control Type Schedule Name
-    ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
-    BR3 Dual SP,              !- Control 1 Name
-    ,                         !- Control 2 Object Type
-    ,                         !- Control 2 Name
-    ,                         !- Control 3 Object Type
-    ,                         !- Control 3 Name
-    ,                         !- Control 4 Object Type
-    ,                         !- Control 4 Name
-    0;                        !- Temperature Difference Between Cutout And Setpoint
-
-ZONECONTROL:THERMOSTAT,
-    BR5 Thermostat,           !- Name
-    BR5,                      !- Zone or ZoneList Name
-    Control type schedule: Always 4,    !- Control Type Schedule Name
-    ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
-    BR5 Dual SP,              !- Control 1 Name
-    ,                         !- Control 2 Object Type
-    ,                         !- Control 2 Name
-    ,                         !- Control 3 Object Type
-    ,                         !- Control 3 Name
-    ,                         !- Control 4 Object Type
-    ,                         !- Control 4 Name
-    0;                        !- Temperature Difference Between Cutout And Setpoint
-
-ZONECONTROL:THERMOSTAT,
-    LivingRoom Thermostat,    !- Name
-    LivingRoom,               !- Zone or ZoneList Name
-    Control type schedule: Always 4,    !- Control Type Schedule Name
-    ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
-    LivingRoom Dual SP,       !- Control 1 Name
-    ,                         !- Control 2 Object Type
-    ,                         !- Control 2 Name
-    ,                         !- Control 3 Object Type
-    ,                         !- Control 3 Name
-    ,                         !- Control 4 Object Type
-    ,                         !- Control 4 Name
-    0;                        !- Temperature Difference Between Cutout And Setpoint
-
-ZONECONTROL:THERMOSTAT,
-    BR2 Thermostat,           !- Name
-    BR2,                      !- Zone or ZoneList Name
-    Control type schedule: Always 4,    !- Control Type Schedule Name
-    ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
-    BR2 Dual SP,              !- Control 1 Name
     ,                         !- Control 2 Object Type
     ,                         !- Control 2 Name
     ,                         !- Control 3 Object Type
@@ -4998,11 +4952,25 @@ ZONECONTROL:THERMOSTAT,
     0;                        !- Temperature Difference Between Cutout And Setpoint
 
 ZONECONTROL:THERMOSTAT,
-    DinnerRoom Thermostat,    !- Name
-    DinnerRoom,               !- Zone or ZoneList Name
+    BR2 Thermostat,           !- Name
+    BR2,                      !- Zone or ZoneList Name
     Control type schedule: Always 4,    !- Control Type Schedule Name
     ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
-    DinnerRoom Dual SP,       !- Control 1 Name
+    BR2 Dual SP,              !- Control 1 Name
+    ,                         !- Control 2 Object Type
+    ,                         !- Control 2 Name
+    ,                         !- Control 3 Object Type
+    ,                         !- Control 3 Name
+    ,                         !- Control 4 Object Type
+    ,                         !- Control 4 Name
+    0;                        !- Temperature Difference Between Cutout And Setpoint
+
+ZONECONTROL:THERMOSTAT,
+    BR3 Thermostat,           !- Name
+    BR3,                      !- Zone or ZoneList Name
+    Control type schedule: Always 4,    !- Control Type Schedule Name
+    ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
+    BR3 Dual SP,              !- Control 1 Name
     ,                         !- Control 2 Object Type
     ,                         !- Control 2 Name
     ,                         !- Control 3 Object Type
@@ -5025,36 +4993,50 @@ ZONECONTROL:THERMOSTAT,
     ,                         !- Control 4 Name
     0;                        !- Temperature Difference Between Cutout And Setpoint
 
+ZONECONTROL:THERMOSTAT,
+    DinnerRoom Thermostat,    !- Name
+    DinnerRoom,               !- Zone or ZoneList Name
+    Control type schedule: Always 4,    !- Control Type Schedule Name
+    ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
+    DinnerRoom Dual SP,       !- Control 1 Name
+    ,                         !- Control 2 Object Type
+    ,                         !- Control 2 Name
+    ,                         !- Control 3 Object Type
+    ,                         !- Control 3 Name
+    ,                         !- Control 4 Object Type
+    ,                         !- Control 4 Name
+    0;                        !- Temperature Difference Between Cutout And Setpoint
+
+ZONECONTROL:THERMOSTAT,
+    LivingRoom Thermostat,    !- Name
+    LivingRoom,               !- Zone or ZoneList Name
+    Control type schedule: Always 4,    !- Control Type Schedule Name
+    ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
+    LivingRoom Dual SP,       !- Control 1 Name
+    ,                         !- Control 2 Object Type
+    ,                         !- Control 2 Name
+    ,                         !- Control 3 Object Type
+    ,                         !- Control 3 Name
+    ,                         !- Control 4 Object Type
+    ,                         !- Control 4 Name
+    0;                        !- Temperature Difference Between Cutout And Setpoint
+
+ZONECONTROL:THERMOSTAT,
+    BR5 Thermostat,           !- Name
+    BR5,                      !- Zone or ZoneList Name
+    Control type schedule: Always 4,    !- Control Type Schedule Name
+    ThermostatSetpoint:DualSetpoint,    !- Control 1 Object Type
+    BR5 Dual SP,              !- Control 1 Name
+    ,                         !- Control 2 Object Type
+    ,                         !- Control 2 Name
+    ,                         !- Control 3 Object Type
+    ,                         !- Control 3 Name
+    ,                         !- Control 4 Object Type
+    ,                         !- Control 4 Name
+    0;                        !- Temperature Difference Between Cutout And Setpoint
+
 ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
     BR1 Thermostat,           !- Thermostat Name
-    Scheduled,                !- Radiative Fraction Input Mode
-    ,                         !- Fixed Radiative Fraction
-    TypOperativeTempControlSch,    !- Radiative Fraction Schedule Name
-    None;                     !- Adaptive Comfort Model Type
-
-ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
-    BR3 Thermostat,           !- Thermostat Name
-    Scheduled,                !- Radiative Fraction Input Mode
-    ,                         !- Fixed Radiative Fraction
-    TypOperativeTempControlSch,    !- Radiative Fraction Schedule Name
-    None;                     !- Adaptive Comfort Model Type
-
-ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
-    BR5 Thermostat,           !- Thermostat Name
-    Scheduled,                !- Radiative Fraction Input Mode
-    ,                         !- Fixed Radiative Fraction
-    TypOperativeTempControlSch,    !- Radiative Fraction Schedule Name
-    None;                     !- Adaptive Comfort Model Type
-
-ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
-    LivingRoom Thermostat,    !- Thermostat Name
-    Scheduled,                !- Radiative Fraction Input Mode
-    ,                         !- Fixed Radiative Fraction
-    TypOperativeTempControlSch,    !- Radiative Fraction Schedule Name
-    None;                     !- Adaptive Comfort Model Type
-
-ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
-    BR2 Thermostat,           !- Thermostat Name
     Scheduled,                !- Radiative Fraction Input Mode
     ,                         !- Fixed Radiative Fraction
     TypOperativeTempControlSch,    !- Radiative Fraction Schedule Name
@@ -5068,7 +5050,14 @@ ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
     None;                     !- Adaptive Comfort Model Type
 
 ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
-    DinnerRoom Thermostat,    !- Thermostat Name
+    BR2 Thermostat,           !- Thermostat Name
+    Scheduled,                !- Radiative Fraction Input Mode
+    ,                         !- Fixed Radiative Fraction
+    TypOperativeTempControlSch,    !- Radiative Fraction Schedule Name
+    None;                     !- Adaptive Comfort Model Type
+
+ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
+    BR3 Thermostat,           !- Thermostat Name
     Scheduled,                !- Radiative Fraction Input Mode
     ,                         !- Fixed Radiative Fraction
     TypOperativeTempControlSch,    !- Radiative Fraction Schedule Name
@@ -5076,6 +5065,27 @@ ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
 
 ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
     BR4 Thermostat,           !- Thermostat Name
+    Scheduled,                !- Radiative Fraction Input Mode
+    ,                         !- Fixed Radiative Fraction
+    TypOperativeTempControlSch,    !- Radiative Fraction Schedule Name
+    None;                     !- Adaptive Comfort Model Type
+
+ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
+    DinnerRoom Thermostat,    !- Thermostat Name
+    Scheduled,                !- Radiative Fraction Input Mode
+    ,                         !- Fixed Radiative Fraction
+    TypOperativeTempControlSch,    !- Radiative Fraction Schedule Name
+    None;                     !- Adaptive Comfort Model Type
+
+ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
+    LivingRoom Thermostat,    !- Thermostat Name
+    Scheduled,                !- Radiative Fraction Input Mode
+    ,                         !- Fixed Radiative Fraction
+    TypOperativeTempControlSch,    !- Radiative Fraction Schedule Name
+    None;                     !- Adaptive Comfort Model Type
+
+ZONECONTROL:THERMOSTAT:OPERATIVETEMPERATURE,
+    BR5 Thermostat,           !- Thermostat Name
     Scheduled,                !- Radiative Fraction Input Mode
     ,                         !- Fixed Radiative Fraction
     TypOperativeTempControlSch,    !- Radiative Fraction Schedule Name
@@ -5473,10 +5483,10 @@ ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
     21;                       !- Maximum Outdoor DryBulb Temperature for Supplemental Heater Operation
 
 ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
-    BR3 VRF Indoor Unit,      !- Zone Terminal Unit Name
+    OFFICE VRF Indoor Unit,    !- Zone Terminal Unit Name
     On 24/7,                  !- Terminal Unit Availability Schedule
-    BR3 VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
-    BR3 VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
+    OFFICE VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
+    OFFICE VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
     autosize,                 !- Cooling Supply Air Flow Rate
     autosize,                 !- No Cooling Supply Air Flow Rate
     autosize,                 !- Heating Supply Air Flow Rate
@@ -5487,77 +5497,13 @@ ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
     On 24/7,                  !- Supply Air Fan Operating Mode Schedule Name
     DrawThrough,              !- Supply Air Fan Placement
     Fan:ConstantVolume,       !- Supply Air Fan Object Type
-    BR3 VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
+    OFFICE VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
     ,                         !- Outside Air Mixer Object Type
     ,                         !- Outside Air Mixer Object Name
     Coil:Cooling:DX:VariableRefrigerantFlow,    !- Cooling Coil Object Type
-    BR3 VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
+    OFFICE VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
     Coil:Heating:DX:VariableRefrigerantFlow,    !- Heating Coil Object Type
-    BR3 VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
-    30,                       !- Zone Terminal Unit On Parasitic Electric Energy Use
-    20,                       !- Zone Terminal Unit Off Parasitic Electric Energy Use
-    ,                         !- Rated Heating Capacity Sizing Ratio
-    ,                         !- Availability Manager List Name
-    ,                         !- Design Specification ZoneHVAC Sizing Object Name
-    ,                         !- Supplemental Heating Coil Object Type
-    ,                         !- Supplemental Heating Coil Name
-    autosize,                 !- Maximum Supply Air Temperature from Supplemental Heater
-    21;                       !- Maximum Outdoor DryBulb Temperature for Supplemental Heater Operation
-
-ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
-    BR5 VRF Indoor Unit,      !- Zone Terminal Unit Name
-    On 24/7,                  !- Terminal Unit Availability Schedule
-    BR5 VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
-    BR5 VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
-    autosize,                 !- Cooling Supply Air Flow Rate
-    autosize,                 !- No Cooling Supply Air Flow Rate
-    autosize,                 !- Heating Supply Air Flow Rate
-    autosize,                 !- No Heating Supply Air Flow Rate
-    0,                        !- Cooling Outdoor Air Flow Rate
-    0,                        !- Heating Outdoor Air Flow Rate
-    0,                        !- No Load Outdoor Air Flow Rate
-    On 24/7,                  !- Supply Air Fan Operating Mode Schedule Name
-    DrawThrough,              !- Supply Air Fan Placement
-    Fan:ConstantVolume,       !- Supply Air Fan Object Type
-    BR5 VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
-    ,                         !- Outside Air Mixer Object Type
-    ,                         !- Outside Air Mixer Object Name
-    Coil:Cooling:DX:VariableRefrigerantFlow,    !- Cooling Coil Object Type
-    BR5 VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
-    Coil:Heating:DX:VariableRefrigerantFlow,    !- Heating Coil Object Type
-    BR5 VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
-    30,                       !- Zone Terminal Unit On Parasitic Electric Energy Use
-    20,                       !- Zone Terminal Unit Off Parasitic Electric Energy Use
-    ,                         !- Rated Heating Capacity Sizing Ratio
-    ,                         !- Availability Manager List Name
-    ,                         !- Design Specification ZoneHVAC Sizing Object Name
-    ,                         !- Supplemental Heating Coil Object Type
-    ,                         !- Supplemental Heating Coil Name
-    autosize,                 !- Maximum Supply Air Temperature from Supplemental Heater
-    21;                       !- Maximum Outdoor DryBulb Temperature for Supplemental Heater Operation
-
-ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
-    LivingRoom VRF Indoor Unit,    !- Zone Terminal Unit Name
-    On 24/7,                  !- Terminal Unit Availability Schedule
-    LivingRoom VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
-    LivingRoom VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
-    autosize,                 !- Cooling Supply Air Flow Rate
-    autosize,                 !- No Cooling Supply Air Flow Rate
-    autosize,                 !- Heating Supply Air Flow Rate
-    autosize,                 !- No Heating Supply Air Flow Rate
-    0,                        !- Cooling Outdoor Air Flow Rate
-    0,                        !- Heating Outdoor Air Flow Rate
-    0,                        !- No Load Outdoor Air Flow Rate
-    On 24/7,                  !- Supply Air Fan Operating Mode Schedule Name
-    DrawThrough,              !- Supply Air Fan Placement
-    Fan:ConstantVolume,       !- Supply Air Fan Object Type
-    LivingRoom VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
-    ,                         !- Outside Air Mixer Object Type
-    ,                         !- Outside Air Mixer Object Name
-    Coil:Cooling:DX:VariableRefrigerantFlow,    !- Cooling Coil Object Type
-    LivingRoom VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
-    Coil:Heating:DX:VariableRefrigerantFlow,    !- Heating Coil Object Type
-    LivingRoom VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
+    OFFICE VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
     30,                       !- Zone Terminal Unit On Parasitic Electric Energy Use
     20,                       !- Zone Terminal Unit Off Parasitic Electric Energy Use
     ,                         !- Rated Heating Capacity Sizing Ratio
@@ -5601,10 +5547,10 @@ ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
     21;                       !- Maximum Outdoor DryBulb Temperature for Supplemental Heater Operation
 
 ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
-    OFFICE VRF Indoor Unit,    !- Zone Terminal Unit Name
+    BR3 VRF Indoor Unit,      !- Zone Terminal Unit Name
     On 24/7,                  !- Terminal Unit Availability Schedule
-    OFFICE VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
-    OFFICE VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
+    BR3 VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
+    BR3 VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
     autosize,                 !- Cooling Supply Air Flow Rate
     autosize,                 !- No Cooling Supply Air Flow Rate
     autosize,                 !- Heating Supply Air Flow Rate
@@ -5615,13 +5561,45 @@ ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
     On 24/7,                  !- Supply Air Fan Operating Mode Schedule Name
     DrawThrough,              !- Supply Air Fan Placement
     Fan:ConstantVolume,       !- Supply Air Fan Object Type
-    OFFICE VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
+    BR3 VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
     ,                         !- Outside Air Mixer Object Type
     ,                         !- Outside Air Mixer Object Name
     Coil:Cooling:DX:VariableRefrigerantFlow,    !- Cooling Coil Object Type
-    OFFICE VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
+    BR3 VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
     Coil:Heating:DX:VariableRefrigerantFlow,    !- Heating Coil Object Type
-    OFFICE VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
+    BR3 VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
+    30,                       !- Zone Terminal Unit On Parasitic Electric Energy Use
+    20,                       !- Zone Terminal Unit Off Parasitic Electric Energy Use
+    ,                         !- Rated Heating Capacity Sizing Ratio
+    ,                         !- Availability Manager List Name
+    ,                         !- Design Specification ZoneHVAC Sizing Object Name
+    ,                         !- Supplemental Heating Coil Object Type
+    ,                         !- Supplemental Heating Coil Name
+    autosize,                 !- Maximum Supply Air Temperature from Supplemental Heater
+    21;                       !- Maximum Outdoor DryBulb Temperature for Supplemental Heater Operation
+
+ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
+    BR4 VRF Indoor Unit,      !- Zone Terminal Unit Name
+    On 24/7,                  !- Terminal Unit Availability Schedule
+    BR4 VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
+    BR4 VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
+    autosize,                 !- Cooling Supply Air Flow Rate
+    autosize,                 !- No Cooling Supply Air Flow Rate
+    autosize,                 !- Heating Supply Air Flow Rate
+    autosize,                 !- No Heating Supply Air Flow Rate
+    0,                        !- Cooling Outdoor Air Flow Rate
+    0,                        !- Heating Outdoor Air Flow Rate
+    0,                        !- No Load Outdoor Air Flow Rate
+    On 24/7,                  !- Supply Air Fan Operating Mode Schedule Name
+    DrawThrough,              !- Supply Air Fan Placement
+    Fan:ConstantVolume,       !- Supply Air Fan Object Type
+    BR4 VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
+    ,                         !- Outside Air Mixer Object Type
+    ,                         !- Outside Air Mixer Object Name
+    Coil:Cooling:DX:VariableRefrigerantFlow,    !- Cooling Coil Object Type
+    BR4 VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
+    Coil:Heating:DX:VariableRefrigerantFlow,    !- Heating Coil Object Type
+    BR4 VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
     30,                       !- Zone Terminal Unit On Parasitic Electric Energy Use
     20,                       !- Zone Terminal Unit Off Parasitic Electric Energy Use
     ,                         !- Rated Heating Capacity Sizing Ratio
@@ -5665,10 +5643,10 @@ ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
     21;                       !- Maximum Outdoor DryBulb Temperature for Supplemental Heater Operation
 
 ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
-    BR4 VRF Indoor Unit,      !- Zone Terminal Unit Name
+    LivingRoom VRF Indoor Unit,    !- Zone Terminal Unit Name
     On 24/7,                  !- Terminal Unit Availability Schedule
-    BR4 VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
-    BR4 VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
+    LivingRoom VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
+    LivingRoom VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
     autosize,                 !- Cooling Supply Air Flow Rate
     autosize,                 !- No Cooling Supply Air Flow Rate
     autosize,                 !- Heating Supply Air Flow Rate
@@ -5679,13 +5657,45 @@ ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
     On 24/7,                  !- Supply Air Fan Operating Mode Schedule Name
     DrawThrough,              !- Supply Air Fan Placement
     Fan:ConstantVolume,       !- Supply Air Fan Object Type
-    BR4 VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
+    LivingRoom VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
     ,                         !- Outside Air Mixer Object Type
     ,                         !- Outside Air Mixer Object Name
     Coil:Cooling:DX:VariableRefrigerantFlow,    !- Cooling Coil Object Type
-    BR4 VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
+    LivingRoom VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
     Coil:Heating:DX:VariableRefrigerantFlow,    !- Heating Coil Object Type
-    BR4 VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
+    LivingRoom VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
+    30,                       !- Zone Terminal Unit On Parasitic Electric Energy Use
+    20,                       !- Zone Terminal Unit Off Parasitic Electric Energy Use
+    ,                         !- Rated Heating Capacity Sizing Ratio
+    ,                         !- Availability Manager List Name
+    ,                         !- Design Specification ZoneHVAC Sizing Object Name
+    ,                         !- Supplemental Heating Coil Object Type
+    ,                         !- Supplemental Heating Coil Name
+    autosize,                 !- Maximum Supply Air Temperature from Supplemental Heater
+    21;                       !- Maximum Outdoor DryBulb Temperature for Supplemental Heater Operation
+
+ZONEHVAC:TERMINALUNIT:VARIABLEREFRIGERANTFLOW,
+    BR5 VRF Indoor Unit,      !- Zone Terminal Unit Name
+    On 24/7,                  !- Terminal Unit Availability Schedule
+    BR5 VRF Indoor Unit Return,    !- Terminal Unit Air Inlet Node Name
+    BR5 VRF Indoor Unit Supply Outlet,    !- Terminal Unit Air Outlet Node Name
+    autosize,                 !- Cooling Supply Air Flow Rate
+    autosize,                 !- No Cooling Supply Air Flow Rate
+    autosize,                 !- Heating Supply Air Flow Rate
+    autosize,                 !- No Heating Supply Air Flow Rate
+    0,                        !- Cooling Outdoor Air Flow Rate
+    0,                        !- Heating Outdoor Air Flow Rate
+    0,                        !- No Load Outdoor Air Flow Rate
+    On 24/7,                  !- Supply Air Fan Operating Mode Schedule Name
+    DrawThrough,              !- Supply Air Fan Placement
+    Fan:ConstantVolume,       !- Supply Air Fan Object Type
+    BR5 VRF Indoor Unit Supply Fan,    !- Supply Air Fan Object Name
+    ,                         !- Outside Air Mixer Object Type
+    ,                         !- Outside Air Mixer Object Name
+    Coil:Cooling:DX:VariableRefrigerantFlow,    !- Cooling Coil Object Type
+    BR5 VRF Indoor Unit DX Cooling Coil,    !- Cooling Coil Object Name
+    Coil:Heating:DX:VariableRefrigerantFlow,    !- Heating Coil Object Type
+    BR5 VRF Indoor Unit DX Heating Coil,    !- Heating Coil Object Name
     30,                       !- Zone Terminal Unit On Parasitic Electric Energy Use
     20,                       !- Zone Terminal Unit Off Parasitic Electric Energy Use
     ,                         !- Rated Heating Capacity Sizing Ratio
@@ -5707,30 +5717,10 @@ ZONEHVAC:EQUIPMENTLIST,
     ;                         !- Zone Equipment 1 Sequential Heating Fraction Schedule Name
 
 ZONEHVAC:EQUIPMENTLIST,
-    BR3 Equipment,            !- Name
+    OFFICE Equipment,         !- Name
     SequentialLoad,           !- Load Distribution Scheme
     ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,    !- Zone Equipment 1 Object Type
-    BR3 VRF Indoor Unit,      !- Zone Equipment 1 Name
-    1,                        !- Zone Equipment 1 Cooling Sequence
-    1,                        !- Zone Equipment 1 Heating or NoLoad Sequence
-    ,                         !- Zone Equipment 1 Sequential Cooling Fraction Schedule Name
-    ;                         !- Zone Equipment 1 Sequential Heating Fraction Schedule Name
-
-ZONEHVAC:EQUIPMENTLIST,
-    BR5 Equipment,            !- Name
-    SequentialLoad,           !- Load Distribution Scheme
-    ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,    !- Zone Equipment 1 Object Type
-    BR5 VRF Indoor Unit,      !- Zone Equipment 1 Name
-    1,                        !- Zone Equipment 1 Cooling Sequence
-    1,                        !- Zone Equipment 1 Heating or NoLoad Sequence
-    ,                         !- Zone Equipment 1 Sequential Cooling Fraction Schedule Name
-    ;                         !- Zone Equipment 1 Sequential Heating Fraction Schedule Name
-
-ZONEHVAC:EQUIPMENTLIST,
-    LivingRoom Equipment,     !- Name
-    SequentialLoad,           !- Load Distribution Scheme
-    ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,    !- Zone Equipment 1 Object Type
-    LivingRoom VRF Indoor Unit,    !- Zone Equipment 1 Name
+    OFFICE VRF Indoor Unit,    !- Zone Equipment 1 Name
     1,                        !- Zone Equipment 1 Cooling Sequence
     1,                        !- Zone Equipment 1 Heating or NoLoad Sequence
     ,                         !- Zone Equipment 1 Sequential Cooling Fraction Schedule Name
@@ -5747,10 +5737,20 @@ ZONEHVAC:EQUIPMENTLIST,
     ;                         !- Zone Equipment 1 Sequential Heating Fraction Schedule Name
 
 ZONEHVAC:EQUIPMENTLIST,
-    OFFICE Equipment,         !- Name
+    BR3 Equipment,            !- Name
     SequentialLoad,           !- Load Distribution Scheme
     ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,    !- Zone Equipment 1 Object Type
-    OFFICE VRF Indoor Unit,    !- Zone Equipment 1 Name
+    BR3 VRF Indoor Unit,      !- Zone Equipment 1 Name
+    1,                        !- Zone Equipment 1 Cooling Sequence
+    1,                        !- Zone Equipment 1 Heating or NoLoad Sequence
+    ,                         !- Zone Equipment 1 Sequential Cooling Fraction Schedule Name
+    ;                         !- Zone Equipment 1 Sequential Heating Fraction Schedule Name
+
+ZONEHVAC:EQUIPMENTLIST,
+    BR4 Equipment,            !- Name
+    SequentialLoad,           !- Load Distribution Scheme
+    ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,    !- Zone Equipment 1 Object Type
+    BR4 VRF Indoor Unit,      !- Zone Equipment 1 Name
     1,                        !- Zone Equipment 1 Cooling Sequence
     1,                        !- Zone Equipment 1 Heating or NoLoad Sequence
     ,                         !- Zone Equipment 1 Sequential Cooling Fraction Schedule Name
@@ -5767,10 +5767,20 @@ ZONEHVAC:EQUIPMENTLIST,
     ;                         !- Zone Equipment 1 Sequential Heating Fraction Schedule Name
 
 ZONEHVAC:EQUIPMENTLIST,
-    BR4 Equipment,            !- Name
+    LivingRoom Equipment,     !- Name
     SequentialLoad,           !- Load Distribution Scheme
     ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,    !- Zone Equipment 1 Object Type
-    BR4 VRF Indoor Unit,      !- Zone Equipment 1 Name
+    LivingRoom VRF Indoor Unit,    !- Zone Equipment 1 Name
+    1,                        !- Zone Equipment 1 Cooling Sequence
+    1,                        !- Zone Equipment 1 Heating or NoLoad Sequence
+    ,                         !- Zone Equipment 1 Sequential Cooling Fraction Schedule Name
+    ;                         !- Zone Equipment 1 Sequential Heating Fraction Schedule Name
+
+ZONEHVAC:EQUIPMENTLIST,
+    BR5 Equipment,            !- Name
+    SequentialLoad,           !- Load Distribution Scheme
+    ZoneHVAC:TerminalUnit:VariableRefrigerantFlow,    !- Zone Equipment 1 Object Type
+    BR5 VRF Indoor Unit,      !- Zone Equipment 1 Name
     1,                        !- Zone Equipment 1 Cooling Sequence
     1,                        !- Zone Equipment 1 Heating or NoLoad Sequence
     ,                         !- Zone Equipment 1 Sequential Cooling Fraction Schedule Name
@@ -5785,28 +5795,12 @@ ZONEHVAC:EQUIPMENTCONNECTIONS,
     BR1 Return Outlet;        !- Zone Return Air Node or NodeList Name
 
 ZONEHVAC:EQUIPMENTCONNECTIONS,
-    BR3,                      !- Zone Name
-    BR3 Equipment,            !- Zone Conditioning Equipment List Name
-    BR3 Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
-    BR3 Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
-    BR3 Zone Air Node,        !- Zone Air Node Name
-    BR3 Return Outlet;        !- Zone Return Air Node or NodeList Name
-
-ZONEHVAC:EQUIPMENTCONNECTIONS,
-    BR5,                      !- Zone Name
-    BR5 Equipment,            !- Zone Conditioning Equipment List Name
-    BR5 Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
-    BR5 Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
-    BR5 Zone Air Node,        !- Zone Air Node Name
-    BR5 Return Outlet;        !- Zone Return Air Node or NodeList Name
-
-ZONEHVAC:EQUIPMENTCONNECTIONS,
-    LivingRoom,               !- Zone Name
-    LivingRoom Equipment,     !- Zone Conditioning Equipment List Name
-    LivingRoom Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
-    LivingRoom Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
-    LivingRoom Zone Air Node,    !- Zone Air Node Name
-    LivingRoom Return Outlet;    !- Zone Return Air Node or NodeList Name
+    OFFICE,                   !- Zone Name
+    OFFICE Equipment,         !- Zone Conditioning Equipment List Name
+    OFFICE Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
+    OFFICE Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
+    OFFICE Zone Air Node,     !- Zone Air Node Name
+    OFFICE Return Outlet;     !- Zone Return Air Node or NodeList Name
 
 ZONEHVAC:EQUIPMENTCONNECTIONS,
     BR2,                      !- Zone Name
@@ -5817,12 +5811,20 @@ ZONEHVAC:EQUIPMENTCONNECTIONS,
     BR2 Return Outlet;        !- Zone Return Air Node or NodeList Name
 
 ZONEHVAC:EQUIPMENTCONNECTIONS,
-    OFFICE,                   !- Zone Name
-    OFFICE Equipment,         !- Zone Conditioning Equipment List Name
-    OFFICE Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
-    OFFICE Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
-    OFFICE Zone Air Node,     !- Zone Air Node Name
-    OFFICE Return Outlet;     !- Zone Return Air Node or NodeList Name
+    BR3,                      !- Zone Name
+    BR3 Equipment,            !- Zone Conditioning Equipment List Name
+    BR3 Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
+    BR3 Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
+    BR3 Zone Air Node,        !- Zone Air Node Name
+    BR3 Return Outlet;        !- Zone Return Air Node or NodeList Name
+
+ZONEHVAC:EQUIPMENTCONNECTIONS,
+    BR4,                      !- Zone Name
+    BR4 Equipment,            !- Zone Conditioning Equipment List Name
+    BR4 Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
+    BR4 Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
+    BR4 Zone Air Node,        !- Zone Air Node Name
+    BR4 Return Outlet;        !- Zone Return Air Node or NodeList Name
 
 ZONEHVAC:EQUIPMENTCONNECTIONS,
     DinnerRoom,               !- Zone Name
@@ -5833,12 +5835,20 @@ ZONEHVAC:EQUIPMENTCONNECTIONS,
     DinnerRoom Return Outlet;    !- Zone Return Air Node or NodeList Name
 
 ZONEHVAC:EQUIPMENTCONNECTIONS,
-    BR4,                      !- Zone Name
-    BR4 Equipment,            !- Zone Conditioning Equipment List Name
-    BR4 Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
-    BR4 Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
-    BR4 Zone Air Node,        !- Zone Air Node Name
-    BR4 Return Outlet;        !- Zone Return Air Node or NodeList Name
+    LivingRoom,               !- Zone Name
+    LivingRoom Equipment,     !- Zone Conditioning Equipment List Name
+    LivingRoom Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
+    LivingRoom Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
+    LivingRoom Zone Air Node,    !- Zone Air Node Name
+    LivingRoom Return Outlet;    !- Zone Return Air Node or NodeList Name
+
+ZONEHVAC:EQUIPMENTCONNECTIONS,
+    BR5,                      !- Zone Name
+    BR5 Equipment,            !- Zone Conditioning Equipment List Name
+    BR5 Air Inlet Node List,    !- Zone Air Inlet Node or NodeList Name
+    BR5 Air Exhaust Node List,    !- Zone Air Exhaust Node or NodeList Name
+    BR5 Zone Air Node,        !- Zone Air Node Name
+    BR5 Return Outlet;        !- Zone Return Air Node or NodeList Name
 
 FAN:CONSTANTVOLUME,
     BR1 VRF Indoor Unit Supply Fan,    !- Name
@@ -5850,54 +5860,6 @@ FAN:CONSTANTVOLUME,
     1,                        !- Motor In Airstream Fraction
     BR1 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
     BR1 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
-    General;                  !- EndUse Subcategory
-
-FAN:CONSTANTVOLUME,
-    BR3 VRF Indoor Unit Supply Fan,    !- Name
-    On 24/7,                  !- Availability Schedule Name
-    0.7,                      !- Fan Total Efficiency
-    100,                      !- Pressure Rise
-    autosize,                 !- Maximum Flow Rate
-    0.9,                      !- Motor Efficiency
-    1,                        !- Motor In Airstream Fraction
-    BR3 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
-    BR3 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
-    General;                  !- EndUse Subcategory
-
-FAN:CONSTANTVOLUME,
-    BR5 VRF Indoor Unit Supply Fan,    !- Name
-    On 24/7,                  !- Availability Schedule Name
-    0.7,                      !- Fan Total Efficiency
-    100,                      !- Pressure Rise
-    autosize,                 !- Maximum Flow Rate
-    0.9,                      !- Motor Efficiency
-    1,                        !- Motor In Airstream Fraction
-    BR5 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
-    BR5 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
-    General;                  !- EndUse Subcategory
-
-FAN:CONSTANTVOLUME,
-    LivingRoom VRF Indoor Unit Supply Fan,    !- Name
-    On 24/7,                  !- Availability Schedule Name
-    0.7,                      !- Fan Total Efficiency
-    100,                      !- Pressure Rise
-    autosize,                 !- Maximum Flow Rate
-    0.9,                      !- Motor Efficiency
-    1,                        !- Motor In Airstream Fraction
-    LivingRoom VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
-    LivingRoom VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
-    General;                  !- EndUse Subcategory
-
-FAN:CONSTANTVOLUME,
-    BR2 VRF Indoor Unit Supply Fan,    !- Name
-    On 24/7,                  !- Availability Schedule Name
-    0.7,                      !- Fan Total Efficiency
-    100,                      !- Pressure Rise
-    autosize,                 !- Maximum Flow Rate
-    0.9,                      !- Motor Efficiency
-    1,                        !- Motor In Airstream Fraction
-    BR2 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
-    BR2 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
     General;                  !- EndUse Subcategory
 
 FAN:CONSTANTVOLUME,
@@ -5913,15 +5875,27 @@ FAN:CONSTANTVOLUME,
     General;                  !- EndUse Subcategory
 
 FAN:CONSTANTVOLUME,
-    DinnerRoom VRF Indoor Unit Supply Fan,    !- Name
+    BR2 VRF Indoor Unit Supply Fan,    !- Name
     On 24/7,                  !- Availability Schedule Name
     0.7,                      !- Fan Total Efficiency
     100,                      !- Pressure Rise
     autosize,                 !- Maximum Flow Rate
     0.9,                      !- Motor Efficiency
     1,                        !- Motor In Airstream Fraction
-    DinnerRoom VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
-    DinnerRoom VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
+    BR2 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
+    BR2 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
+    General;                  !- EndUse Subcategory
+
+FAN:CONSTANTVOLUME,
+    BR3 VRF Indoor Unit Supply Fan,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    0.7,                      !- Fan Total Efficiency
+    100,                      !- Pressure Rise
+    autosize,                 !- Maximum Flow Rate
+    0.9,                      !- Motor Efficiency
+    1,                        !- Motor In Airstream Fraction
+    BR3 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
+    BR3 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
     General;                  !- EndUse Subcategory
 
 FAN:CONSTANTVOLUME,
@@ -5934,6 +5908,42 @@ FAN:CONSTANTVOLUME,
     1,                        !- Motor In Airstream Fraction
     BR4 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
     BR4 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
+    General;                  !- EndUse Subcategory
+
+FAN:CONSTANTVOLUME,
+    DinnerRoom VRF Indoor Unit Supply Fan,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    0.7,                      !- Fan Total Efficiency
+    100,                      !- Pressure Rise
+    autosize,                 !- Maximum Flow Rate
+    0.9,                      !- Motor Efficiency
+    1,                        !- Motor In Airstream Fraction
+    DinnerRoom VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
+    DinnerRoom VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
+    General;                  !- EndUse Subcategory
+
+FAN:CONSTANTVOLUME,
+    LivingRoom VRF Indoor Unit Supply Fan,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    0.7,                      !- Fan Total Efficiency
+    100,                      !- Pressure Rise
+    autosize,                 !- Maximum Flow Rate
+    0.9,                      !- Motor Efficiency
+    1,                        !- Motor In Airstream Fraction
+    LivingRoom VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
+    LivingRoom VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
+    General;                  !- EndUse Subcategory
+
+FAN:CONSTANTVOLUME,
+    BR5 VRF Indoor Unit Supply Fan,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    0.7,                      !- Fan Total Efficiency
+    100,                      !- Pressure Rise
+    autosize,                 !- Maximum Flow Rate
+    0.9,                      !- Motor Efficiency
+    1,                        !- Motor In Airstream Fraction
+    BR5 VRF Indoor Unit DX Heating Coil Outlet,    !- Air Inlet Node Name
+    BR5 VRF Indoor Unit Supply Outlet,    !- Air Outlet Node Name
     General;                  !- EndUse Subcategory
 
 COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
@@ -5949,39 +5959,15 @@ COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
     ;                         !- Name of Water Storage Tank for Condensate Collection
 
 COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
-    BR3 VRF Indoor Unit DX Cooling Coil,    !- Name
+    OFFICE VRF Indoor Unit DX Cooling Coil,    !- Name
     On 24/7,                  !- Availability Schedule Name
     autosize,                 !- Gross Rated Total Cooling Capacity
     autosize,                 !- Gross Rated Sensible Heat Ratio
     autosize,                 !- Rated Air Flow Rate
     VRFTUCoolCapFT,           !- Cooling Capacity Ratio Modifier Function of Temperature Curve Name
     VRFACCoolCapFFF,          !- Cooling Capacity Modifier Curve Function of Flow Fraction Name
-    BR3 VRF Indoor Unit Return,    !- Coil Air Inlet Node
-    BR3 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
-    ;                         !- Name of Water Storage Tank for Condensate Collection
-
-COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
-    BR5 VRF Indoor Unit DX Cooling Coil,    !- Name
-    On 24/7,                  !- Availability Schedule Name
-    autosize,                 !- Gross Rated Total Cooling Capacity
-    autosize,                 !- Gross Rated Sensible Heat Ratio
-    autosize,                 !- Rated Air Flow Rate
-    VRFTUCoolCapFT,           !- Cooling Capacity Ratio Modifier Function of Temperature Curve Name
-    VRFACCoolCapFFF,          !- Cooling Capacity Modifier Curve Function of Flow Fraction Name
-    BR5 VRF Indoor Unit Return,    !- Coil Air Inlet Node
-    BR5 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
-    ;                         !- Name of Water Storage Tank for Condensate Collection
-
-COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
-    LivingRoom VRF Indoor Unit DX Cooling Coil,    !- Name
-    On 24/7,                  !- Availability Schedule Name
-    autosize,                 !- Gross Rated Total Cooling Capacity
-    autosize,                 !- Gross Rated Sensible Heat Ratio
-    autosize,                 !- Rated Air Flow Rate
-    VRFTUCoolCapFT,           !- Cooling Capacity Ratio Modifier Function of Temperature Curve Name
-    VRFACCoolCapFFF,          !- Cooling Capacity Modifier Curve Function of Flow Fraction Name
-    LivingRoom VRF Indoor Unit Return,    !- Coil Air Inlet Node
-    LivingRoom VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
+    OFFICE VRF Indoor Unit Return,    !- Coil Air Inlet Node
+    OFFICE VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
     ;                         !- Name of Water Storage Tank for Condensate Collection
 
 COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
@@ -5997,15 +5983,27 @@ COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
     ;                         !- Name of Water Storage Tank for Condensate Collection
 
 COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
-    OFFICE VRF Indoor Unit DX Cooling Coil,    !- Name
+    BR3 VRF Indoor Unit DX Cooling Coil,    !- Name
     On 24/7,                  !- Availability Schedule Name
     autosize,                 !- Gross Rated Total Cooling Capacity
     autosize,                 !- Gross Rated Sensible Heat Ratio
     autosize,                 !- Rated Air Flow Rate
     VRFTUCoolCapFT,           !- Cooling Capacity Ratio Modifier Function of Temperature Curve Name
     VRFACCoolCapFFF,          !- Cooling Capacity Modifier Curve Function of Flow Fraction Name
-    OFFICE VRF Indoor Unit Return,    !- Coil Air Inlet Node
-    OFFICE VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
+    BR3 VRF Indoor Unit Return,    !- Coil Air Inlet Node
+    BR3 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
+    ;                         !- Name of Water Storage Tank for Condensate Collection
+
+COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
+    BR4 VRF Indoor Unit DX Cooling Coil,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    autosize,                 !- Gross Rated Sensible Heat Ratio
+    autosize,                 !- Rated Air Flow Rate
+    VRFTUCoolCapFT,           !- Cooling Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF,          !- Cooling Capacity Modifier Curve Function of Flow Fraction Name
+    BR4 VRF Indoor Unit Return,    !- Coil Air Inlet Node
+    BR4 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
     ;                         !- Name of Water Storage Tank for Condensate Collection
 
 COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
@@ -6021,15 +6019,27 @@ COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
     ;                         !- Name of Water Storage Tank for Condensate Collection
 
 COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
-    BR4 VRF Indoor Unit DX Cooling Coil,    !- Name
+    LivingRoom VRF Indoor Unit DX Cooling Coil,    !- Name
     On 24/7,                  !- Availability Schedule Name
     autosize,                 !- Gross Rated Total Cooling Capacity
     autosize,                 !- Gross Rated Sensible Heat Ratio
     autosize,                 !- Rated Air Flow Rate
     VRFTUCoolCapFT,           !- Cooling Capacity Ratio Modifier Function of Temperature Curve Name
     VRFACCoolCapFFF,          !- Cooling Capacity Modifier Curve Function of Flow Fraction Name
-    BR4 VRF Indoor Unit Return,    !- Coil Air Inlet Node
-    BR4 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
+    LivingRoom VRF Indoor Unit Return,    !- Coil Air Inlet Node
+    LivingRoom VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
+    ;                         !- Name of Water Storage Tank for Condensate Collection
+
+COIL:COOLING:DX:VARIABLEREFRIGERANTFLOW,
+    BR5 VRF Indoor Unit DX Cooling Coil,    !- Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    autosize,                 !- Gross Rated Sensible Heat Ratio
+    autosize,                 !- Rated Air Flow Rate
+    VRFTUCoolCapFT,           !- Cooling Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF,          !- Cooling Capacity Modifier Curve Function of Flow Fraction Name
+    BR5 VRF Indoor Unit Return,    !- Coil Air Inlet Node
+    BR5 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Outlet Node
     ;                         !- Name of Water Storage Tank for Condensate Collection
 
 COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
@@ -6039,46 +6049,6 @@ COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
     autosize,                 !- Rated Air Flow Rate
     BR1 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
     BR1 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
-    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
-    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
-
-COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
-    BR3 VRF Indoor Unit DX Heating Coil,    !- Name
-    On 24/7,                  !- Availability Schedule
-    autosize,                 !- Gross Rated Heating Capacity
-    autosize,                 !- Rated Air Flow Rate
-    BR3 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
-    BR3 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
-    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
-    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
-
-COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
-    BR5 VRF Indoor Unit DX Heating Coil,    !- Name
-    On 24/7,                  !- Availability Schedule
-    autosize,                 !- Gross Rated Heating Capacity
-    autosize,                 !- Rated Air Flow Rate
-    BR5 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
-    BR5 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
-    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
-    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
-
-COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
-    LivingRoom VRF Indoor Unit DX Heating Coil,    !- Name
-    On 24/7,                  !- Availability Schedule
-    autosize,                 !- Gross Rated Heating Capacity
-    autosize,                 !- Rated Air Flow Rate
-    LivingRoom VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
-    LivingRoom VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
-    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
-    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
-
-COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
-    BR2 VRF Indoor Unit DX Heating Coil,    !- Name
-    On 24/7,                  !- Availability Schedule
-    autosize,                 !- Gross Rated Heating Capacity
-    autosize,                 !- Rated Air Flow Rate
-    BR2 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
-    BR2 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
     VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
     VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
 
@@ -6093,12 +6063,22 @@ COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
     VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
 
 COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
-    DinnerRoom VRF Indoor Unit DX Heating Coil,    !- Name
+    BR2 VRF Indoor Unit DX Heating Coil,    !- Name
     On 24/7,                  !- Availability Schedule
     autosize,                 !- Gross Rated Heating Capacity
     autosize,                 !- Rated Air Flow Rate
-    DinnerRoom VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
-    DinnerRoom VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
+    BR2 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
+    BR2 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
+    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
+
+COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
+    BR3 VRF Indoor Unit DX Heating Coil,    !- Name
+    On 24/7,                  !- Availability Schedule
+    autosize,                 !- Gross Rated Heating Capacity
+    autosize,                 !- Rated Air Flow Rate
+    BR3 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
+    BR3 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
     VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
     VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
 
@@ -6109,6 +6089,36 @@ COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
     autosize,                 !- Rated Air Flow Rate
     BR4 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
     BR4 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
+    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
+
+COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
+    DinnerRoom VRF Indoor Unit DX Heating Coil,    !- Name
+    On 24/7,                  !- Availability Schedule
+    autosize,                 !- Gross Rated Heating Capacity
+    autosize,                 !- Rated Air Flow Rate
+    DinnerRoom VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
+    DinnerRoom VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
+    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
+
+COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
+    LivingRoom VRF Indoor Unit DX Heating Coil,    !- Name
+    On 24/7,                  !- Availability Schedule
+    autosize,                 !- Gross Rated Heating Capacity
+    autosize,                 !- Rated Air Flow Rate
+    LivingRoom VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
+    LivingRoom VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
+    VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
+    VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
+
+COIL:HEATING:DX:VARIABLEREFRIGERANTFLOW,
+    BR5 VRF Indoor Unit DX Heating Coil,    !- Name
+    On 24/7,                  !- Availability Schedule
+    autosize,                 !- Gross Rated Heating Capacity
+    autosize,                 !- Rated Air Flow Rate
+    BR5 VRF Indoor Unit DX Cooling Coil Outlet,    !- Coil Air Inlet Node
+    BR5 VRF Indoor Unit DX Heating Coil Outlet,    !- Coil Air Outlet Node
     VRFTUHeatCapFT,           !- Heating Capacity Ratio Modifier Function of Temperature Curve Name
     VRFACCoolCapFFF;          !- Heating Capacity Modifier Function of Flow Fraction Curve Name
 
@@ -6170,338 +6180,6 @@ AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
     5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
     AirCooled,                !- Condenser Type
     VRF Outdoor Unit_BR1 Outdoor Air Node,    !- Condenser Inlet Node Name
-    ,                         !- Condenser Outlet Node Name
-    autosize,                 !- Water Condenser Volume Flow Rate
-    0.9,                      !- Evaporative Condenser Effectiveness
-    autosize,                 !- Evaporative Condenser Air Flow Rate
-    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
-    ,                         !- Supply Water Storage Tank Name
-    0,                        !- Basin Heater Capacity
-    2,                        !- Basin Heater Setpoint Temperature
-    On 24/7,                  !- Basin Heater Operating Schedule Name
-    Electricity,              !- Fuel Type
-    -5.99,                    !- Minimum Condenser Inlet Node Temperature in Heat Recovery Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Heat Recovery Mode
-    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
-    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
-    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
-    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
-    1,                        !- Initial Heat Recovery Cooling Energy Fraction
-    0,                        !- Heat Recovery Cooling Energy Time Constant
-    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
-    1,                        !- Initial Heat Recovery Heating Capacity Fraction
-    0.15,                     !- Heat Recovery Heating Capacity Time Constant
-    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
-    1,                        !- Initial Heat Recovery Heating Energy Fraction
-    0;                        !- Heat Recovery Heating Energy Time Constant
-
-AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
-    VRF Outdoor Unit_BR3,     !- Heat Pump Name
-    On 24/7,                  !- Availability Schedule Name
-    autosize,                 !- Gross Rated Total Cooling Capacity
-    2,                        !- Gross Rated Cooling COP
-    -20,                      !- Minimum Condenser Inlet Node Temperature in Cooling Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Cooling Mode
-    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
-    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
-    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
-    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
-    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
-    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
-    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
-    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
-    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
-    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
-    autosize,                 !- Gross Rated Heating Capacity
-    1,                        !- Rated Heating Capacity Sizing Ratio
-    2.1,                      !- Gross Rated Heating COP
-    -20,                      !- Minimum Condenser Inlet Node Temperature in Heating Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Heating Mode
-    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
-    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
-    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
-    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
-    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
-    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
-    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
-    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
-    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
-    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
-    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
-    0.2,                      !- Minimum Heat Pump PartLoad Ratio
-    ,                         !- Zone Name for Master Thermostat Location
-    LoadPriority,             !- Master Thermostat Priority Control Type
-    ,                         !- Thermostat Priority Schedule Name
-    VRF Outdoor Unit_BR3 Zone List,    !- Zone Terminal Unit List Name
-    Yes,                      !- Heat Pump Waste Heat Recovery
-    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
-    15,                       !- Vertical Height used for Piping Correction Factor
-    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
-    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
-    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
-    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
-    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
-    15,                       !- Crankcase Heater Power per Compressor
-    2,                        !- Number of Compressors
-    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
-    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
-    Resistive,                !- Defrost Strategy
-    Timed,                    !- Defrost Control
-    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
-    0,                        !- Defrost Time Period Fraction
-    autosize,                 !- Resistive Defrost Heater Capacity
-    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
-    AirCooled,                !- Condenser Type
-    VRF Outdoor Unit_BR3 Outdoor Air Node,    !- Condenser Inlet Node Name
-    ,                         !- Condenser Outlet Node Name
-    autosize,                 !- Water Condenser Volume Flow Rate
-    0.9,                      !- Evaporative Condenser Effectiveness
-    autosize,                 !- Evaporative Condenser Air Flow Rate
-    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
-    ,                         !- Supply Water Storage Tank Name
-    0,                        !- Basin Heater Capacity
-    2,                        !- Basin Heater Setpoint Temperature
-    On 24/7,                  !- Basin Heater Operating Schedule Name
-    Electricity,              !- Fuel Type
-    -5.99,                    !- Minimum Condenser Inlet Node Temperature in Heat Recovery Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Heat Recovery Mode
-    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
-    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
-    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
-    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
-    1,                        !- Initial Heat Recovery Cooling Energy Fraction
-    0,                        !- Heat Recovery Cooling Energy Time Constant
-    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
-    1,                        !- Initial Heat Recovery Heating Capacity Fraction
-    0.15,                     !- Heat Recovery Heating Capacity Time Constant
-    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
-    1,                        !- Initial Heat Recovery Heating Energy Fraction
-    0;                        !- Heat Recovery Heating Energy Time Constant
-
-AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
-    VRF Outdoor Unit_BR5,     !- Heat Pump Name
-    On 24/7,                  !- Availability Schedule Name
-    autosize,                 !- Gross Rated Total Cooling Capacity
-    2,                        !- Gross Rated Cooling COP
-    -20,                      !- Minimum Condenser Inlet Node Temperature in Cooling Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Cooling Mode
-    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
-    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
-    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
-    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
-    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
-    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
-    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
-    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
-    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
-    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
-    autosize,                 !- Gross Rated Heating Capacity
-    1,                        !- Rated Heating Capacity Sizing Ratio
-    2.1,                      !- Gross Rated Heating COP
-    -20,                      !- Minimum Condenser Inlet Node Temperature in Heating Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Heating Mode
-    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
-    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
-    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
-    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
-    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
-    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
-    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
-    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
-    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
-    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
-    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
-    0.2,                      !- Minimum Heat Pump PartLoad Ratio
-    ,                         !- Zone Name for Master Thermostat Location
-    LoadPriority,             !- Master Thermostat Priority Control Type
-    ,                         !- Thermostat Priority Schedule Name
-    VRF Outdoor Unit_BR5 Zone List,    !- Zone Terminal Unit List Name
-    Yes,                      !- Heat Pump Waste Heat Recovery
-    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
-    15,                       !- Vertical Height used for Piping Correction Factor
-    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
-    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
-    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
-    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
-    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
-    15,                       !- Crankcase Heater Power per Compressor
-    2,                        !- Number of Compressors
-    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
-    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
-    Resistive,                !- Defrost Strategy
-    Timed,                    !- Defrost Control
-    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
-    0,                        !- Defrost Time Period Fraction
-    autosize,                 !- Resistive Defrost Heater Capacity
-    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
-    AirCooled,                !- Condenser Type
-    VRF Outdoor Unit_BR5 Outdoor Air Node,    !- Condenser Inlet Node Name
-    ,                         !- Condenser Outlet Node Name
-    autosize,                 !- Water Condenser Volume Flow Rate
-    0.9,                      !- Evaporative Condenser Effectiveness
-    autosize,                 !- Evaporative Condenser Air Flow Rate
-    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
-    ,                         !- Supply Water Storage Tank Name
-    0,                        !- Basin Heater Capacity
-    2,                        !- Basin Heater Setpoint Temperature
-    On 24/7,                  !- Basin Heater Operating Schedule Name
-    Electricity,              !- Fuel Type
-    -5.99,                    !- Minimum Condenser Inlet Node Temperature in Heat Recovery Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Heat Recovery Mode
-    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
-    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
-    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
-    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
-    1,                        !- Initial Heat Recovery Cooling Energy Fraction
-    0,                        !- Heat Recovery Cooling Energy Time Constant
-    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
-    1,                        !- Initial Heat Recovery Heating Capacity Fraction
-    0.15,                     !- Heat Recovery Heating Capacity Time Constant
-    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
-    1,                        !- Initial Heat Recovery Heating Energy Fraction
-    0;                        !- Heat Recovery Heating Energy Time Constant
-
-AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
-    VRF Outdoor Unit_LivingRoom,    !- Heat Pump Name
-    On 24/7,                  !- Availability Schedule Name
-    autosize,                 !- Gross Rated Total Cooling Capacity
-    2,                        !- Gross Rated Cooling COP
-    -20,                      !- Minimum Condenser Inlet Node Temperature in Cooling Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Cooling Mode
-    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
-    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
-    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
-    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
-    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
-    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
-    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
-    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
-    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
-    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
-    autosize,                 !- Gross Rated Heating Capacity
-    1,                        !- Rated Heating Capacity Sizing Ratio
-    2.1,                      !- Gross Rated Heating COP
-    -20,                      !- Minimum Condenser Inlet Node Temperature in Heating Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Heating Mode
-    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
-    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
-    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
-    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
-    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
-    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
-    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
-    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
-    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
-    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
-    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
-    0.2,                      !- Minimum Heat Pump PartLoad Ratio
-    ,                         !- Zone Name for Master Thermostat Location
-    LoadPriority,             !- Master Thermostat Priority Control Type
-    ,                         !- Thermostat Priority Schedule Name
-    VRF Outdoor Unit_LivingRoom Zone List,    !- Zone Terminal Unit List Name
-    Yes,                      !- Heat Pump Waste Heat Recovery
-    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
-    15,                       !- Vertical Height used for Piping Correction Factor
-    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
-    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
-    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
-    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
-    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
-    15,                       !- Crankcase Heater Power per Compressor
-    2,                        !- Number of Compressors
-    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
-    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
-    Resistive,                !- Defrost Strategy
-    Timed,                    !- Defrost Control
-    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
-    0,                        !- Defrost Time Period Fraction
-    autosize,                 !- Resistive Defrost Heater Capacity
-    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
-    AirCooled,                !- Condenser Type
-    VRF Outdoor Unit_LivingRoom Outdoor Air Node,    !- Condenser Inlet Node Name
-    ,                         !- Condenser Outlet Node Name
-    autosize,                 !- Water Condenser Volume Flow Rate
-    0.9,                      !- Evaporative Condenser Effectiveness
-    autosize,                 !- Evaporative Condenser Air Flow Rate
-    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
-    ,                         !- Supply Water Storage Tank Name
-    0,                        !- Basin Heater Capacity
-    2,                        !- Basin Heater Setpoint Temperature
-    On 24/7,                  !- Basin Heater Operating Schedule Name
-    Electricity,              !- Fuel Type
-    -5.99,                    !- Minimum Condenser Inlet Node Temperature in Heat Recovery Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Heat Recovery Mode
-    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
-    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
-    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
-    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
-    1,                        !- Initial Heat Recovery Cooling Energy Fraction
-    0,                        !- Heat Recovery Cooling Energy Time Constant
-    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
-    1,                        !- Initial Heat Recovery Heating Capacity Fraction
-    0.15,                     !- Heat Recovery Heating Capacity Time Constant
-    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
-    1,                        !- Initial Heat Recovery Heating Energy Fraction
-    0;                        !- Heat Recovery Heating Energy Time Constant
-
-AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
-    VRF Outdoor Unit_BR2,     !- Heat Pump Name
-    On 24/7,                  !- Availability Schedule Name
-    autosize,                 !- Gross Rated Total Cooling Capacity
-    2,                        !- Gross Rated Cooling COP
-    -20,                      !- Minimum Condenser Inlet Node Temperature in Cooling Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Cooling Mode
-    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
-    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
-    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
-    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
-    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
-    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
-    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
-    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
-    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
-    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
-    autosize,                 !- Gross Rated Heating Capacity
-    1,                        !- Rated Heating Capacity Sizing Ratio
-    2.1,                      !- Gross Rated Heating COP
-    -20,                      !- Minimum Condenser Inlet Node Temperature in Heating Mode
-    80,                       !- Maximum Condenser Inlet Node Temperature in Heating Mode
-    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
-    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
-    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
-    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
-    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
-    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
-    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
-    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
-    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
-    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
-    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
-    0.2,                      !- Minimum Heat Pump PartLoad Ratio
-    ,                         !- Zone Name for Master Thermostat Location
-    LoadPriority,             !- Master Thermostat Priority Control Type
-    ,                         !- Thermostat Priority Schedule Name
-    VRF Outdoor Unit_BR2 Zone List,    !- Zone Terminal Unit List Name
-    Yes,                      !- Heat Pump Waste Heat Recovery
-    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
-    15,                       !- Vertical Height used for Piping Correction Factor
-    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
-    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
-    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
-    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
-    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
-    15,                       !- Crankcase Heater Power per Compressor
-    2,                        !- Number of Compressors
-    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
-    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
-    Resistive,                !- Defrost Strategy
-    Timed,                    !- Defrost Control
-    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
-    0,                        !- Defrost Time Period Fraction
-    autosize,                 !- Resistive Defrost Heater Capacity
-    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
-    AirCooled,                !- Condenser Type
-    VRF Outdoor Unit_BR2 Outdoor Air Node,    !- Condenser Inlet Node Name
     ,                         !- Condenser Outlet Node Name
     autosize,                 !- Water Condenser Volume Flow Rate
     0.9,                      !- Evaporative Condenser Effectiveness
@@ -6611,7 +6289,7 @@ AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
     0;                        !- Heat Recovery Heating Energy Time Constant
 
 AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
-    VRF Outdoor Unit_DinnerRoom,    !- Heat Pump Name
+    VRF Outdoor Unit_BR2,     !- Heat Pump Name
     On 24/7,                  !- Availability Schedule Name
     autosize,                 !- Gross Rated Total Cooling Capacity
     2,                        !- Gross Rated Cooling COP
@@ -6647,7 +6325,7 @@ AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
     ,                         !- Zone Name for Master Thermostat Location
     LoadPriority,             !- Master Thermostat Priority Control Type
     ,                         !- Thermostat Priority Schedule Name
-    VRF Outdoor Unit_DinnerRoom Zone List,    !- Zone Terminal Unit List Name
+    VRF Outdoor Unit_BR2 Zone List,    !- Zone Terminal Unit List Name
     Yes,                      !- Heat Pump Waste Heat Recovery
     50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
     15,                       !- Vertical Height used for Piping Correction Factor
@@ -6667,7 +6345,90 @@ AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
     autosize,                 !- Resistive Defrost Heater Capacity
     5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
     AirCooled,                !- Condenser Type
-    VRF Outdoor Unit_DinnerRoom Outdoor Air Node,    !- Condenser Inlet Node Name
+    VRF Outdoor Unit_BR2 Outdoor Air Node,    !- Condenser Inlet Node Name
+    ,                         !- Condenser Outlet Node Name
+    autosize,                 !- Water Condenser Volume Flow Rate
+    0.9,                      !- Evaporative Condenser Effectiveness
+    autosize,                 !- Evaporative Condenser Air Flow Rate
+    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
+    ,                         !- Supply Water Storage Tank Name
+    0,                        !- Basin Heater Capacity
+    2,                        !- Basin Heater Setpoint Temperature
+    On 24/7,                  !- Basin Heater Operating Schedule Name
+    Electricity,              !- Fuel Type
+    -5.99,                    !- Minimum Condenser Inlet Node Temperature in Heat Recovery Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Heat Recovery Mode
+    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
+    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
+    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
+    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Cooling Energy Fraction
+    0,                        !- Heat Recovery Cooling Energy Time Constant
+    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Capacity Fraction
+    0.15,                     !- Heat Recovery Heating Capacity Time Constant
+    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Energy Fraction
+    0;                        !- Heat Recovery Heating Energy Time Constant
+
+AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
+    VRF Outdoor Unit_BR3,     !- Heat Pump Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    2,                        !- Gross Rated Cooling COP
+    -20,                      !- Minimum Condenser Inlet Node Temperature in Cooling Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Cooling Mode
+    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
+    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
+    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
+    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
+    autosize,                 !- Gross Rated Heating Capacity
+    1,                        !- Rated Heating Capacity Sizing Ratio
+    2.1,                      !- Gross Rated Heating COP
+    -20,                      !- Minimum Condenser Inlet Node Temperature in Heating Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Heating Mode
+    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
+    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
+    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
+    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
+    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
+    0.2,                      !- Minimum Heat Pump PartLoad Ratio
+    ,                         !- Zone Name for Master Thermostat Location
+    LoadPriority,             !- Master Thermostat Priority Control Type
+    ,                         !- Thermostat Priority Schedule Name
+    VRF Outdoor Unit_BR3 Zone List,    !- Zone Terminal Unit List Name
+    Yes,                      !- Heat Pump Waste Heat Recovery
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
+    15,                       !- Vertical Height used for Piping Correction Factor
+    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
+    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
+    15,                       !- Crankcase Heater Power per Compressor
+    2,                        !- Number of Compressors
+    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
+    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
+    Resistive,                !- Defrost Strategy
+    Timed,                    !- Defrost Control
+    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
+    0,                        !- Defrost Time Period Fraction
+    autosize,                 !- Resistive Defrost Heater Capacity
+    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
+    AirCooled,                !- Condenser Type
+    VRF Outdoor Unit_BR3 Outdoor Air Node,    !- Condenser Inlet Node Name
     ,                         !- Condenser Outlet Node Name
     autosize,                 !- Water Condenser Volume Flow Rate
     0.9,                      !- Evaporative Condenser Effectiveness
@@ -6776,37 +6537,286 @@ AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
     1,                        !- Initial Heat Recovery Heating Energy Fraction
     0;                        !- Heat Recovery Heating Energy Time Constant
 
+AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
+    VRF Outdoor Unit_DinnerRoom,    !- Heat Pump Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    2,                        !- Gross Rated Cooling COP
+    -20,                      !- Minimum Condenser Inlet Node Temperature in Cooling Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Cooling Mode
+    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
+    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
+    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
+    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
+    autosize,                 !- Gross Rated Heating Capacity
+    1,                        !- Rated Heating Capacity Sizing Ratio
+    2.1,                      !- Gross Rated Heating COP
+    -20,                      !- Minimum Condenser Inlet Node Temperature in Heating Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Heating Mode
+    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
+    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
+    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
+    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
+    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
+    0.2,                      !- Minimum Heat Pump PartLoad Ratio
+    ,                         !- Zone Name for Master Thermostat Location
+    LoadPriority,             !- Master Thermostat Priority Control Type
+    ,                         !- Thermostat Priority Schedule Name
+    VRF Outdoor Unit_DinnerRoom Zone List,    !- Zone Terminal Unit List Name
+    Yes,                      !- Heat Pump Waste Heat Recovery
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
+    15,                       !- Vertical Height used for Piping Correction Factor
+    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
+    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
+    15,                       !- Crankcase Heater Power per Compressor
+    2,                        !- Number of Compressors
+    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
+    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
+    Resistive,                !- Defrost Strategy
+    Timed,                    !- Defrost Control
+    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
+    0,                        !- Defrost Time Period Fraction
+    autosize,                 !- Resistive Defrost Heater Capacity
+    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
+    AirCooled,                !- Condenser Type
+    VRF Outdoor Unit_DinnerRoom Outdoor Air Node,    !- Condenser Inlet Node Name
+    ,                         !- Condenser Outlet Node Name
+    autosize,                 !- Water Condenser Volume Flow Rate
+    0.9,                      !- Evaporative Condenser Effectiveness
+    autosize,                 !- Evaporative Condenser Air Flow Rate
+    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
+    ,                         !- Supply Water Storage Tank Name
+    0,                        !- Basin Heater Capacity
+    2,                        !- Basin Heater Setpoint Temperature
+    On 24/7,                  !- Basin Heater Operating Schedule Name
+    Electricity,              !- Fuel Type
+    -5.99,                    !- Minimum Condenser Inlet Node Temperature in Heat Recovery Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Heat Recovery Mode
+    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
+    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
+    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
+    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Cooling Energy Fraction
+    0,                        !- Heat Recovery Cooling Energy Time Constant
+    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Capacity Fraction
+    0.15,                     !- Heat Recovery Heating Capacity Time Constant
+    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Energy Fraction
+    0;                        !- Heat Recovery Heating Energy Time Constant
+
+AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
+    VRF Outdoor Unit_LivingRoom,    !- Heat Pump Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    2,                        !- Gross Rated Cooling COP
+    -20,                      !- Minimum Condenser Inlet Node Temperature in Cooling Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Cooling Mode
+    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
+    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
+    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
+    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
+    autosize,                 !- Gross Rated Heating Capacity
+    1,                        !- Rated Heating Capacity Sizing Ratio
+    2.1,                      !- Gross Rated Heating COP
+    -20,                      !- Minimum Condenser Inlet Node Temperature in Heating Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Heating Mode
+    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
+    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
+    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
+    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
+    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
+    0.2,                      !- Minimum Heat Pump PartLoad Ratio
+    ,                         !- Zone Name for Master Thermostat Location
+    LoadPriority,             !- Master Thermostat Priority Control Type
+    ,                         !- Thermostat Priority Schedule Name
+    VRF Outdoor Unit_LivingRoom Zone List,    !- Zone Terminal Unit List Name
+    Yes,                      !- Heat Pump Waste Heat Recovery
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
+    15,                       !- Vertical Height used for Piping Correction Factor
+    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
+    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
+    15,                       !- Crankcase Heater Power per Compressor
+    2,                        !- Number of Compressors
+    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
+    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
+    Resistive,                !- Defrost Strategy
+    Timed,                    !- Defrost Control
+    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
+    0,                        !- Defrost Time Period Fraction
+    autosize,                 !- Resistive Defrost Heater Capacity
+    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
+    AirCooled,                !- Condenser Type
+    VRF Outdoor Unit_LivingRoom Outdoor Air Node,    !- Condenser Inlet Node Name
+    ,                         !- Condenser Outlet Node Name
+    autosize,                 !- Water Condenser Volume Flow Rate
+    0.9,                      !- Evaporative Condenser Effectiveness
+    autosize,                 !- Evaporative Condenser Air Flow Rate
+    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
+    ,                         !- Supply Water Storage Tank Name
+    0,                        !- Basin Heater Capacity
+    2,                        !- Basin Heater Setpoint Temperature
+    On 24/7,                  !- Basin Heater Operating Schedule Name
+    Electricity,              !- Fuel Type
+    -5.99,                    !- Minimum Condenser Inlet Node Temperature in Heat Recovery Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Heat Recovery Mode
+    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
+    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
+    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
+    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Cooling Energy Fraction
+    0,                        !- Heat Recovery Cooling Energy Time Constant
+    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Capacity Fraction
+    0.15,                     !- Heat Recovery Heating Capacity Time Constant
+    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Energy Fraction
+    0;                        !- Heat Recovery Heating Energy Time Constant
+
+AIRCONDITIONER:VARIABLEREFRIGERANTFLOW,
+    VRF Outdoor Unit_BR5,     !- Heat Pump Name
+    On 24/7,                  !- Availability Schedule Name
+    autosize,                 !- Gross Rated Total Cooling Capacity
+    2,                        !- Gross Rated Cooling COP
+    -20,                      !- Minimum Condenser Inlet Node Temperature in Cooling Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Cooling Mode
+    VRFCoolCapFT,             !- Cooling Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolCapFTBoundary,     !- Cooling Capacity Ratio Boundary Curve Name
+    VRFCoolCapFTHi,           !- Cooling Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFCoolEIRFT,             !- Cooling Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFCoolEIRFTBoundary,     !- Cooling Energy Input Ratio Boundary Curve Name
+    VRFCoolEIRFTHi,           !- Cooling Energy Input Ratio Modifier Function of High Temperature Curve Name
+    CoolingEIRLowPLR,         !- Cooling Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    CoolingEIRHiPLR,          !- Cooling Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    CoolingCombRatio,         !- Cooling Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Cooling PartLoad Fraction Correlation Curve Name
+    autosize,                 !- Gross Rated Heating Capacity
+    1,                        !- Rated Heating Capacity Sizing Ratio
+    2.1,                      !- Gross Rated Heating COP
+    -20,                      !- Minimum Condenser Inlet Node Temperature in Heating Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Heating Mode
+    VRFHeatCapFT,             !- Heating Capacity Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatCapFTBoundary,     !- Heating Capacity Ratio Boundary Curve Name
+    VRFHeatCapFTHi,           !- Heating Capacity Ratio Modifier Function of High Temperature Curve Name
+    VRFHeatEIRFT,             !- Heating Energy Input Ratio Modifier Function of Low Temperature Curve Name
+    VRFHeatEIRFTBoundary,     !- Heating Energy Input Ratio Boundary Curve Name
+    VRFHeatEIRFTHi,           !- Heating Energy Input Ratio Modifier Function of High Temperature Curve Name
+    WetBulbTemperature,       !- Heating Performance Curve Outdoor Temperature Type
+    HeatingEIRLowPLR,         !- Heating Energy Input Ratio Modifier Function of Low PartLoad Ratio Curve Name
+    HeatingEIRHiPLR,          !- Heating Energy Input Ratio Modifier Function of High PartLoad Ratio Curve Name
+    HeatingCombRatio,         !- Heating Combination Ratio Correction Factor Curve Name
+    VRFCPLFFPLR,              !- Heating PartLoad Fraction Correlation Curve Name
+    0.2,                      !- Minimum Heat Pump PartLoad Ratio
+    ,                         !- Zone Name for Master Thermostat Location
+    LoadPriority,             !- Master Thermostat Priority Control Type
+    ,                         !- Thermostat Priority Schedule Name
+    VRF Outdoor Unit_BR5 Zone List,    !- Zone Terminal Unit List Name
+    Yes,                      !- Heat Pump Waste Heat Recovery
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Cooling Mode
+    15,                       !- Vertical Height used for Piping Correction Factor
+    CoolingLengthCorrectionFactor,    !- Piping Correction Factor for Length in Cooling Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Cooling Mode Coefficient
+    50,                       !- Equivalent Piping Length used for Piping Correction Factor in Heating Mode
+    VRF Piping Correction Factor for Length in Heating Mode,    !- Piping Correction Factor for Length in Heating Mode Curve Name
+    0,                        !- Piping Correction Factor for Height in Heating Mode Coefficient
+    15,                       !- Crankcase Heater Power per Compressor
+    2,                        !- Number of Compressors
+    0.5,                      !- Ratio of Compressor Size to Total Compressor Capacity
+    5,                        !- Maximum Outdoor DryBulb Temperature for Crankcase Heater
+    Resistive,                !- Defrost Strategy
+    Timed,                    !- Defrost Control
+    ,                         !- Defrost Energy Input Ratio Modifier Function of Temperature Curve Name
+    0,                        !- Defrost Time Period Fraction
+    autosize,                 !- Resistive Defrost Heater Capacity
+    5,                        !- Maximum Outdoor Drybulb Temperature for Defrost Operation
+    AirCooled,                !- Condenser Type
+    VRF Outdoor Unit_BR5 Outdoor Air Node,    !- Condenser Inlet Node Name
+    ,                         !- Condenser Outlet Node Name
+    autosize,                 !- Water Condenser Volume Flow Rate
+    0.9,                      !- Evaporative Condenser Effectiveness
+    autosize,                 !- Evaporative Condenser Air Flow Rate
+    autosize,                 !- Evaporative Condenser Pump Rated Power Consumption
+    ,                         !- Supply Water Storage Tank Name
+    0,                        !- Basin Heater Capacity
+    2,                        !- Basin Heater Setpoint Temperature
+    On 24/7,                  !- Basin Heater Operating Schedule Name
+    Electricity,              !- Fuel Type
+    -5.99,                    !- Minimum Condenser Inlet Node Temperature in Heat Recovery Mode
+    80,                       !- Maximum Condenser Inlet Node Temperature in Heat Recovery Mode
+    VRF Heat Recovery Cooling Capacity Modifier,    !- Heat Recovery Cooling Capacity Modifier Curve Name
+    0.5,                      !- Initial Heat Recovery Cooling Capacity Fraction
+    0.15,                     !- Heat Recovery Cooling Capacity Time Constant
+    VRF Heat Recovery Cooling Energy Modifier,    !- Heat Recovery Cooling Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Cooling Energy Fraction
+    0,                        !- Heat Recovery Cooling Energy Time Constant
+    VRF Heat Recovery Heating Capacity Modifier,    !- Heat Recovery Heating Capacity Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Capacity Fraction
+    0.15,                     !- Heat Recovery Heating Capacity Time Constant
+    VRF Heat Recovery Heating Energy Modifier,    !- Heat Recovery Heating Energy Modifier Curve Name
+    1,                        !- Initial Heat Recovery Heating Energy Fraction
+    0;                        !- Heat Recovery Heating Energy Time Constant
+
 ZONETERMINALUNITLIST,
     VRF Outdoor Unit_BR1 Zone List,    !- Zone Terminal Unit List Name
     BR1 VRF Indoor Unit;      !- Zone Terminal Unit Name 1
-
-ZONETERMINALUNITLIST,
-    VRF Outdoor Unit_BR3 Zone List,    !- Zone Terminal Unit List Name
-    BR3 VRF Indoor Unit;      !- Zone Terminal Unit Name 1
-
-ZONETERMINALUNITLIST,
-    VRF Outdoor Unit_BR5 Zone List,    !- Zone Terminal Unit List Name
-    BR5 VRF Indoor Unit;      !- Zone Terminal Unit Name 1
-
-ZONETERMINALUNITLIST,
-    VRF Outdoor Unit_LivingRoom Zone List,    !- Zone Terminal Unit List Name
-    LivingRoom VRF Indoor Unit;    !- Zone Terminal Unit Name 1
-
-ZONETERMINALUNITLIST,
-    VRF Outdoor Unit_BR2 Zone List,    !- Zone Terminal Unit List Name
-    BR2 VRF Indoor Unit;      !- Zone Terminal Unit Name 1
 
 ZONETERMINALUNITLIST,
     VRF Outdoor Unit_OFFICE Zone List,    !- Zone Terminal Unit List Name
     OFFICE VRF Indoor Unit;    !- Zone Terminal Unit Name 1
 
 ZONETERMINALUNITLIST,
-    VRF Outdoor Unit_DinnerRoom Zone List,    !- Zone Terminal Unit List Name
-    DinnerRoom VRF Indoor Unit;    !- Zone Terminal Unit Name 1
+    VRF Outdoor Unit_BR2 Zone List,    !- Zone Terminal Unit List Name
+    BR2 VRF Indoor Unit;      !- Zone Terminal Unit Name 1
+
+ZONETERMINALUNITLIST,
+    VRF Outdoor Unit_BR3 Zone List,    !- Zone Terminal Unit List Name
+    BR3 VRF Indoor Unit;      !- Zone Terminal Unit Name 1
 
 ZONETERMINALUNITLIST,
     VRF Outdoor Unit_BR4 Zone List,    !- Zone Terminal Unit List Name
     BR4 VRF Indoor Unit;      !- Zone Terminal Unit Name 1
+
+ZONETERMINALUNITLIST,
+    VRF Outdoor Unit_DinnerRoom Zone List,    !- Zone Terminal Unit List Name
+    DinnerRoom VRF Indoor Unit;    !- Zone Terminal Unit Name 1
+
+ZONETERMINALUNITLIST,
+    VRF Outdoor Unit_LivingRoom Zone List,    !- Zone Terminal Unit List Name
+    LivingRoom VRF Indoor Unit;    !- Zone Terminal Unit Name 1
+
+ZONETERMINALUNITLIST,
+    VRF Outdoor Unit_BR5 Zone List,    !- Zone Terminal Unit List Name
+    BR5 VRF Indoor Unit;      !- Zone Terminal Unit Name 1
 
 NODELIST,
     BR1 Air Inlet Node List,    !- Name
@@ -6817,28 +6827,12 @@ NODELIST,
     BR1 VRF Indoor Unit Return;    !- Node 1 Name
 
 NODELIST,
-    BR3 Air Inlet Node List,    !- Name
-    BR3 VRF Indoor Unit Supply Outlet;    !- Node 1 Name
+    OFFICE Air Inlet Node List,    !- Name
+    OFFICE VRF Indoor Unit Supply Outlet;    !- Node 1 Name
 
 NODELIST,
-    BR3 Air Exhaust Node List,    !- Name
-    BR3 VRF Indoor Unit Return;    !- Node 1 Name
-
-NODELIST,
-    BR5 Air Inlet Node List,    !- Name
-    BR5 VRF Indoor Unit Supply Outlet;    !- Node 1 Name
-
-NODELIST,
-    BR5 Air Exhaust Node List,    !- Name
-    BR5 VRF Indoor Unit Return;    !- Node 1 Name
-
-NODELIST,
-    LivingRoom Air Inlet Node List,    !- Name
-    LivingRoom VRF Indoor Unit Supply Outlet;    !- Node 1 Name
-
-NODELIST,
-    LivingRoom Air Exhaust Node List,    !- Name
-    LivingRoom VRF Indoor Unit Return;    !- Node 1 Name
+    OFFICE Air Exhaust Node List,    !- Name
+    OFFICE VRF Indoor Unit Return;    !- Node 1 Name
 
 NODELIST,
     BR2 Air Inlet Node List,    !- Name
@@ -6849,12 +6843,20 @@ NODELIST,
     BR2 VRF Indoor Unit Return;    !- Node 1 Name
 
 NODELIST,
-    OFFICE Air Inlet Node List,    !- Name
-    OFFICE VRF Indoor Unit Supply Outlet;    !- Node 1 Name
+    BR3 Air Inlet Node List,    !- Name
+    BR3 VRF Indoor Unit Supply Outlet;    !- Node 1 Name
 
 NODELIST,
-    OFFICE Air Exhaust Node List,    !- Name
-    OFFICE VRF Indoor Unit Return;    !- Node 1 Name
+    BR3 Air Exhaust Node List,    !- Name
+    BR3 VRF Indoor Unit Return;    !- Node 1 Name
+
+NODELIST,
+    BR4 Air Inlet Node List,    !- Name
+    BR4 VRF Indoor Unit Supply Outlet;    !- Node 1 Name
+
+NODELIST,
+    BR4 Air Exhaust Node List,    !- Name
+    BR4 VRF Indoor Unit Return;    !- Node 1 Name
 
 NODELIST,
     DinnerRoom Air Inlet Node List,    !- Name
@@ -6865,36 +6867,44 @@ NODELIST,
     DinnerRoom VRF Indoor Unit Return;    !- Node 1 Name
 
 NODELIST,
-    BR4 Air Inlet Node List,    !- Name
-    BR4 VRF Indoor Unit Supply Outlet;    !- Node 1 Name
+    LivingRoom Air Inlet Node List,    !- Name
+    LivingRoom VRF Indoor Unit Supply Outlet;    !- Node 1 Name
 
 NODELIST,
-    BR4 Air Exhaust Node List,    !- Name
-    BR4 VRF Indoor Unit Return;    !- Node 1 Name
+    LivingRoom Air Exhaust Node List,    !- Name
+    LivingRoom VRF Indoor Unit Return;    !- Node 1 Name
+
+NODELIST,
+    BR5 Air Inlet Node List,    !- Name
+    BR5 VRF Indoor Unit Supply Outlet;    !- Node 1 Name
+
+NODELIST,
+    BR5 Air Exhaust Node List,    !- Name
+    BR5 VRF Indoor Unit Return;    !- Node 1 Name
 
 OUTDOORAIR:NODELIST,
     VRF Outdoor Unit_BR1 Outdoor Air Node;    !- Node or NodeList Name 1
 
 OUTDOORAIR:NODELIST,
-    VRF Outdoor Unit_BR3 Outdoor Air Node;    !- Node or NodeList Name 1
-
-OUTDOORAIR:NODELIST,
-    VRF Outdoor Unit_BR5 Outdoor Air Node;    !- Node or NodeList Name 1
-
-OUTDOORAIR:NODELIST,
-    VRF Outdoor Unit_LivingRoom Outdoor Air Node;    !- Node or NodeList Name 1
+    VRF Outdoor Unit_OFFICE Outdoor Air Node;    !- Node or NodeList Name 1
 
 OUTDOORAIR:NODELIST,
     VRF Outdoor Unit_BR2 Outdoor Air Node;    !- Node or NodeList Name 1
 
 OUTDOORAIR:NODELIST,
-    VRF Outdoor Unit_OFFICE Outdoor Air Node;    !- Node or NodeList Name 1
+    VRF Outdoor Unit_BR3 Outdoor Air Node;    !- Node or NodeList Name 1
+
+OUTDOORAIR:NODELIST,
+    VRF Outdoor Unit_BR4 Outdoor Air Node;    !- Node or NodeList Name 1
 
 OUTDOORAIR:NODELIST,
     VRF Outdoor Unit_DinnerRoom Outdoor Air Node;    !- Node or NodeList Name 1
 
 OUTDOORAIR:NODELIST,
-    VRF Outdoor Unit_BR4 Outdoor Air Node;    !- Node or NodeList Name 1
+    VRF Outdoor Unit_LivingRoom Outdoor Air Node;    !- Node or NodeList Name 1
+
+OUTDOORAIR:NODELIST,
+    VRF Outdoor Unit_BR5 Outdoor Air Node;    !- Node or NodeList Name 1
 
 ENERGYMANAGEMENTSYSTEM:SENSOR,
     RMOT,                     !- Name
@@ -7450,7 +7460,7 @@ ENERGYMANAGEMENTSYSTEM:PROGRAMCALLINGMANAGER,
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetComfTemp,              !- Name
     if ComfStand == 99,       !- Program Line 1
-    set ComfTemp = PMOT*m+n,    !- Program Line 2
+    set ComfTemp = PMOT*0+0,    !- Program Line 2
     elseif ComfStand == 1,    !- Program Line 3
     set ComfTemp = RMOT*0.33+18.8,    !- Program Line 4
     elseif ComfStand == 2,    !- Program Line 5
@@ -8122,10 +8132,10 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetAppLimits,             !- Name
     if ComfStand == 99,       !- Program Line 1
-    set ACSTaul = 33.5,       !- Program Line 2
-    set ACSTall = 10,         !- Program Line 3
-    set AHSTaul = 33.5,       !- Program Line 4
-    set AHSTall = 10,         !- Program Line 5
+    set ACSTaul = 0,          !- Program Line 2
+    set ACSTall = 0,          !- Program Line 3
+    set AHSTaul = 0,          !- Program Line 4
+    set AHSTall = 0,          !- Program Line 5
     elseif ComfStand == 1,    !- Program Line 6
     set ACSTaul = 30,         !- Program Line 7
     set ACSTall = 10,         !- Program Line 8
@@ -8263,8 +8273,8 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
     set CATcoolOffset = 0,    !- Program Line 1
     set CATheatOffset = 0,    !- Program Line 2
     if ComfStand == 99,       !- Program Line 3
-    set ACSToffset = 3.5+CATcoolOffset,    !- Program Line 4
-    set AHSToffset = -3.5+CATheatOffset,    !- Program Line 5
+    set ACSToffset = 0 + 0,    !- Program Line 4
+    set AHSToffset = 0 + 0,    !- Program Line 5
     elseif (ComfStand == 1 ),    !- Program Line 6
     if (CAT == 1),            !- Program Line 7
     set ACSToffset = 2+CATcoolOffset,    !- Program Line 8
@@ -8424,8 +8434,8 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetAST,                   !- Name
     set SetpointAcc = 10000,    !- Program Line 1
-    set m = 0.31,             !- Program Line 2
-    set n = 17.8,             !- Program Line 3
+    set m = 0,                !- Program Line 2
+    set n = 0,                !- Program Line 3
     if CoolSeasonEnd > CoolSeasonStart,    !- Program Line 4
     if (DayOfYear >= CoolSeasonStart) && (DayOfYear < CoolSeasonEnd),    !- Program Line 5
     set CoolingSeason = 1,    !- Program Line 6
@@ -10923,16 +10933,16 @@ ENERGYMANAGEMENTSYSTEM:PROGRAM,
 
 ENERGYMANAGEMENTSYSTEM:PROGRAM,
     SetInputData,             !- Name
-    set ComfStand = 1,        !- Program Line 1
-    set CAT = 1,              !- Program Line 2
-    set ComfMod = 2,          !- Program Line 3
+    set ComfStand = 99,       !- Program Line 1
+    set CAT = 80,             !- Program Line 2
+    set ComfMod = 3,          !- Program Line 3
     set HVACmode = 2,         !- Program Line 4
     set VentCtrl = 0,         !- Program Line 5
     set VSToffset = 0,        !- Program Line 6
-    set MinOToffset = 7,      !- Program Line 7
-    set MaxWindSpeed = 6,     !- Program Line 8
-    set ACSTtol = -0.25,      !- Program Line 9
-    set AHSTtol = 0.25,       !- Program Line 10
+    set MinOToffset = 50,     !- Program Line 7
+    set MaxWindSpeed = 50,    !- Program Line 8
+    set ACSTtol = -0.1,       !- Program Line 9
+    set AHSTtol = 0.1,        !- Program Line 10
     set CoolSeasonStart = 121,    !- Program Line 11
     set CoolSeasonEnd = 274;    !- Program Line 12
 
@@ -13570,110 +13580,20 @@ Output:VariableDictionary,
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Adaptive Cooling Setpoint Temperature,    !- Variable Name
-    Hourly,                   !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Adaptive Heating Setpoint Temperature,    !- Variable Name
-    Hourly,                   !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Adaptive Cooling Setpoint Temperature_No Tolerance,    !- Variable Name
-    Hourly,                   !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Adaptive Heating Setpoint Temperature_No Tolerance,    !- Variable Name
-    Hourly,                   !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Ventilation Setpoint Temperature,    !- Variable Name
-    Hourly,                   !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Zone Thermostat Operative Temperature,    !- Variable Name
-    Hourly,                   !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
     Zone Operative Temperature,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature,    !- Variable Name
+    Cooling Coil Total Cooling Rate,    !- Variable Name
     Hourly,                   !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:VARIABLE,
     *,                        !- Key Value
-    Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature,    !- Variable Name
+    Heating Coil Heating Rate,    !- Variable Name
     Hourly,                   !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Adaptive Cooling Setpoint Temperature,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Adaptive Heating Setpoint Temperature,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Adaptive Cooling Setpoint Temperature_No Tolerance,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Adaptive Heating Setpoint Temperature_No Tolerance,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Ventilation Setpoint Temperature,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Zone Thermostat Operative Temperature,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Zone Operative Temperature,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
-    ;                         !- Schedule Name
-
-OUTPUT:VARIABLE,
-    *,                        !- Key Value
-    Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature,    !- Variable Name
-    Monthly,                  !- Reporting Frequency
     ;                         !- Schedule Name
 
 OUTPUT:METER,
@@ -13681,16 +13601,8 @@ OUTPUT:METER,
     hourly;                   !- Reporting Frequency
 
 OUTPUT:METER,
-    Heating:Electricity,      !- Key Name
-    monthly;                  !- Reporting Frequency
-
-OUTPUT:METER,
     Cooling:Electricity,      !- Key Name
     hourly;                   !- Reporting Frequency
-
-OUTPUT:METER,
-    Cooling:Electricity,      !- Key Name
-    monthly;                  !- Reporting Frequency
 
 OutputControl:Files,
     Yes,                      !- Output CSV

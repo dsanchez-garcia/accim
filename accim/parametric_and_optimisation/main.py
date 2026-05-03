@@ -436,6 +436,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.building.savecopy('temp_reduced_runtime.idf')
             building_for_testsim = get_building('temp_reduced_runtime.idf')
             reduce_runtime(idf_object=building_for_testsim, maximum_figures_in_shadow_overlap_calculations=200, timesteps=2)
+            # Agregar período de sizing si no existe (requerido para autosizing de equipos como VRF)
+            sizing_periods = building_for_testsim.idfobjects.get('SIZINGPERIOD:WEATHERFILEDAYS', [])
+            if len(sizing_periods) == 0:
+                # Crear un período de sizing que coincida con el runperiod
+                runperiod = building_for_testsim.idfobjects['Runperiod'][0]
+                building_for_testsim.newidfobject(
+                    'SIZINGPERIOD:WEATHERFILEDAYS',
+                    Name='SizingPeriod',
+                    Begin_Month=int(runperiod.Begin_Month),
+                    Begin_Day_of_Month=int(runperiod.Begin_Day_of_Month),
+                    End_Month=int(runperiod.End_Month),
+                    End_Day_of_Month=int(runperiod.End_Day_of_Month),
+                    Day_of_Week_for_Start_Day='Sunday',
+                    Use_Weather_File_Daylight_Saving_Period='Yes',
+                    Use_Weather_File_Rain_and_Snow_Indicators='Yes'
+                )
         available_outputs = print_available_outputs_mod(building_for_testsim)
         if reduce_sim_time:
             from os import remove
@@ -2078,11 +2094,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 csv_path = self._resolve_simulation_file_path(row=first_row, file_source='csv')
                 if os.path.exists(csv_path):
                     _dt_raw = pd.read_csv(csv_path, usecols=['Date/Time'], nrows=1)['Date/Time'].iloc[0]
-                    _dt_clean = _dt_raw.strip()
-                    (_month_day, _time) = _dt_clean.split()
-                    (_month, _day) = _month_day.split('/')
-                    _hour = int(_time.split(':')[0])
-                    start_date = f'2024-{int(_month):02d}-{int(_day):02d} {_hour:02d}'
+                    if isinstance(_dt_raw, str):
+                        _dt_clean = _dt_raw.strip()
+                        (_month_day, _time) = _dt_clean.split()
+                        (_month, _day) = _month_day.split('/')
+                        _hour = int(_time.split(':')[0])
+                        start_date = f'2024-{int(_month):02d}-{int(_day):02d} {_hour:02d}'
             except Exception:
                 pass
             if start_date is None:
@@ -2315,3 +2332,4 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         super().__init__(buildings=buildings, epws=epws, parameters_type='accim predefined model', output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging)
         for b in self.buildings:
             accis.modifyAccis(idf=b, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)
+

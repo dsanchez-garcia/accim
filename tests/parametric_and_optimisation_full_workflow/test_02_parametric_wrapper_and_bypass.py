@@ -34,6 +34,7 @@ OUT_DIR_NONE     = 'test_02_none_results'
 
 IDF_B = 'SF_Detached_B_min_North.idf'
 IDF_D = 'SF_Detached_D_min_North.idf'
+IDF_OSM = 'OSM_TestResidentialUnit_v01_onlygeometry_SchNatVent_v2520.idf'
 EPW_SEV = 'seville_2024.epw'
 EPW_MAD = 'madrid_2024.epw'
 
@@ -49,6 +50,19 @@ accim.utils.reduce_runtime(
     runperiod_begin_day_of_month=1,
     runperiod_end_month=7,
     runperiod_end_day_of_month=31,
+)
+
+# Agregar período de sizing para VRF autosizing (requerido por EnergyPlus)
+building_b.newidfobject(
+    'SIZINGPERIOD:WEATHERFILEDAYS',
+    Name='SummerSizing',
+    Begin_Month=6,
+    Begin_Day_of_Month=1,
+    End_Month=7,
+    End_Day_of_Month=31,
+    Day_of_Week_for_Start_Day='Sunday',
+    Use_Weather_File_Daylight_Saving_Period='Yes',
+    Use_Weather_File_Rain_and_Snow_Indicators='Yes'
 )
 
 wrapper_sim = AccimPredefModelsParamSim(
@@ -112,26 +126,39 @@ wrapper_sim.plot_categorical_boxplots(
 # ---------------------------------------------------------------------------
 print("\n=== PARTE B: bypass_addAccis=True ===")
 
-# Aplicar addAccis manualmente al IDF_D antes de pasar a ParametricSimulation
-building_d = ef.get_building(IDF_D)
+# Aplicar addAccis manualmente al IDF_OSM antes de pasar a ParametricSimulation
+building_osm = ef.get_building(IDF_OSM)
+building_osm.newidfobject(
+    'SIZINGPERIOD:WEATHERFILEDAYS',
+    Name='SummerSizing',
+    Begin_Month=6,
+    Begin_Day_of_Month=1,
+    End_Month=7,
+    End_Day_of_Month=31,
+    Day_of_Week_for_Start_Day='Sunday',
+    Use_Weather_File_Daylight_Saving_Period='Yes',
+    Use_Weather_File_Rain_and_Snow_Indicators='Yes'
+)
+
 accim.utils.reduce_runtime(
-    idf_object=building_d,
+    idf_object=building_osm,
     runperiod_begin_month=6,
     runperiod_begin_day_of_month=1,
     runperiod_end_month=7,
     runperiod_end_day_of_month=31,
 )
 accis_funcs.addAccis(
-    idf=building_d,
+    idf=building_osm,
     ScriptType='vrf_mm',
     Output_type='simplified',
     Output_freqs=['hourly'],
     TempCtrl='temperature',
+    SupplyAirTempInputMethod='temperature difference',
     verboseMode=False,
 )
 
 bypass_sim = ParametricSimulation(
-    buildings=[building_d],
+    buildings=[building_osm],
     epws=[EPW_SEV, EPW_MAD],
     parameters_type='accim predefined model',
     output_type='simplified',
@@ -151,7 +178,7 @@ bypass_sim.sampling_full_set()
 bypass_sim.set_problem()
 
 # set_building_floor_area mode='list' — usar primer zone del IDF
-zones = [z.Name for z in building_d.idfobjects['ZONE']]
+zones = [z.Name for z in building_osm.idfobjects['ZONE']]
 area_list = bypass_sim.set_building_floor_area(mode='list', zones_list=zones[:1])
 print(f"  Área (mode='list', zones={zones[:1]}): {area_list}")
 
@@ -185,6 +212,19 @@ accim.utils.reduce_runtime(
     runperiod_begin_day_of_month=1,
     runperiod_end_month=7,
     runperiod_end_day_of_month=31,
+)
+
+# Agregar período de sizing para cualquier equipo que requiera autosizing
+building_none.newidfobject(
+    'SIZINGPERIOD:WEATHERFILEDAYS',
+    Name='SummerSizing',
+    Begin_Month=6,
+    Begin_Day_of_Month=1,
+    End_Month=7,
+    End_Day_of_Month=31,
+    Day_of_Week_for_Start_Day='Sunday',
+    Use_Weather_File_Daylight_Saving_Period='Yes',
+    Use_Weather_File_Rain_and_Snow_Indicators='Yes'
 )
 
 none_sim = ParametricSimulation(
