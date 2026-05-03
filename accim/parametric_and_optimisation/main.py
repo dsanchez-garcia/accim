@@ -225,8 +225,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         # modified IDF (with EMS scripts and outputs already injected) is always
         # recoverable, even if run_parametric_simulation / run_optimisation are not called yet.
         self.idf_backup_path: str = None
-        if parameters_type is not None and not bypass_addAccis:
-            self._save_idf_backup(label='post_setup')
+        # NOTE: IDF backup is deferred until run_parametric_simulation /
+        # run_optimisation are called, so the backup is always written to the
+        # results folder (out_dir) rather than creating a separate
+        # 'accim_idf_backups' directory in the working directory.
 
     # ------------------------------------------------------------------
     # IDF backup helpers
@@ -238,15 +240,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         the path in ``self.idf_backup_path``.
 
         :param label: optional suffix to embed in the filename.
-        :param out_dir: optional directory where the backup should be saved.
+        :param out_dir: directory where the backup should be saved.  Must be
+            provided; backups are always written inside the simulation results
+            folder so that no extra ``accim_idf_backups`` directory is created
+            in the working directory.
         :return: absolute path to the saved IDF.
         """
         import datetime
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         if out_dir is None:
-            backup_dir = os.path.join(os.getcwd(), 'accim_idf_backups')
-        else:
-            backup_dir = out_dir
+            raise ValueError(
+                "'out_dir' must be specified when saving an IDF backup. "
+                "Pass the simulation results directory (e.g. 'param_results' "
+                "or 'optim_results') so the backup lands there instead of "
+                "creating a separate 'accim_idf_backups' folder."
+            )
+        backup_dir = out_dir
         os.makedirs(backup_dir, exist_ok=True)
         suffix = f'_{label}' if label else ''
         self.idf_backup_path = []
@@ -1409,6 +1418,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         full_outputs_dict = {}
         evaluators = {}
         os.makedirs(out_dir, exist_ok=True)
+        # Save an IDF backup into the results folder before starting
+        self._save_idf_backup(label='pre_optimisation', out_dir=out_dir)
         from besos.evaluator import AbstractEvaluator
         if not hasattr(AbstractEvaluator, '_original_to_platypus'):
             AbstractEvaluator._original_to_platypus = AbstractEvaluator.to_platypus
@@ -2248,7 +2259,7 @@ class ParametricSimulation(SimulationBase):
         self.outputs_param_simulation_filepath = None
 
 
-class OptimizationSimulation(SimulationBase):
+class OptimisationSimulation(SimulationBase):
     """
     Specialization of SimulationBase for multi-objective optimization.
 
@@ -2277,7 +2288,7 @@ class OptimizationSimulation(SimulationBase):
     """
 
     def __init__(self, *args, **kwargs):
-        """Initialize OptimizationSimulation instance."""
+        """Initialize OptimisationSimulation instance."""
         super().__init__(*args, **kwargs)
         # Optimization-specific attributes
         self.outputs_optimisation = None

@@ -6,7 +6,7 @@ optimization on EnergyPlus building energy models with adaptive thermal comfort 
 
 Main Classes:
 - ParametricSimulation: For parameter sampling and multi-run simulations
-- OptimizationSimulation: For multi-objective optimization
+- OptimisationSimulation: For multi-objective optimization
 - OptimParamSimulation: Backward-compatibility alias (deprecated, use ParametricSimulation)
 - AccimPredefModelsParamSim: Convenience wrapper for ACCIM predefined models
 
@@ -25,9 +25,9 @@ Usage Examples:
     results = parametric.run_parametric_simulation()
 
     # Multi-objective optimization
-    from accim.parametric_and_optimisation.main import OptimizationSimulation
+    from accim.parametric_and_optimisation.main import OptimisationSimulation
 
-    optim = OptimizationSimulation(
+    optim = OptimisationSimulation(
         building=my_idf,
         epws=['weather.epw'],
         parameters_type='accim custom model'
@@ -37,13 +37,13 @@ Usage Examples:
     results = optim.run_optimisation(algorithm='NSGAII', evaluations=50)
 
 .. versionadded:: 0.8.0
-    Split OptimParamSimulation into ParametricSimulation and OptimizationSimulation
+    Split OptimParamSimulation into ParametricSimulation and OptimisationSimulation
     for improved code organization and clarity.
 """
 
 from .main import (
     ParametricSimulation,
-    OptimizationSimulation,
+    OptimisationSimulation,
     OptimParamSimulation,  # Backward compatibility
     AccimPredefModelsParamSim,
     SimulationBase,
@@ -51,7 +51,7 @@ from .main import (
 
 __all__ = [
     'ParametricSimulation',
-    'OptimizationSimulation',
+    'OptimisationSimulation',
     'OptimParamSimulation',
     'AccimPredefModelsParamSim',
     'SimulationBase',
