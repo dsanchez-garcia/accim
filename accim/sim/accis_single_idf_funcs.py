@@ -685,6 +685,12 @@ def modifyAccis(
     SetAST.Program_Line_1 = 'set SetpointAcc = ' + str(SetpointAcc)
     SetAST.Program_Line_2 = 'set m = ' + str(CustAST_m)
     SetAST.Program_Line_3 = 'set n = ' + str(CustAST_n)
+    while len(SetAST.obj) > 18:
+        SetAST.obj.pop()
+    from accim.sim.setAST_models import get_SetAST_lines
+    dynamic_lines = get_SetAST_lines(ComfStand, ComfMod)
+    for dline in dynamic_lines:
+        SetAST.obj.append(dline)
 
     SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + str(MaxTempDiffVOF)
     SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + str(MinTempDiffVOF)

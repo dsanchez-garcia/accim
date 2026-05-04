@@ -3178,6 +3178,9 @@ def addEMSPCMBase(self, verboseMode: bool = True):
                 for pcm
                 in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager']])
 
+    priority_programs = ['SetInputData', 'SetVOFinputData', 'SetAppLimits', 'ApplyCAT']
+    programlist = sorted(programlist, key=lambda x: priority_programs.index(x) if x in priority_programs else len(priority_programs))
+
     for i in programlist:
         if i in pcmlist:
             if verboseMode:

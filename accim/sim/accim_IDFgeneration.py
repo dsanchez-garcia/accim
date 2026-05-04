@@ -15,6 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """Generate IDFs."""
+from accim.sim.setAST_models import get_SetAST_lines
 
 
 def inputData(self, ScriptType: str = None):
@@ -1368,6 +1369,11 @@ def genIDF(self,
                                         print(outputname)
                                         # time.sleep(0.1)
                                         # pbar.update(1)
+                                    while len(SetAST[0].obj) > 18:
+                                        SetAST[0].obj.pop()
+                                    dynamic_lines = get_SetAST_lines(ComfStand_value, ComfMod_value)
+                                    for dline in dynamic_lines:
+                                        SetAST[0].obj.append(dline)
                                     idf1.savecopy(outputname)
                                     self.output_idf_dict.update({outputname: idf1})
                             else:
@@ -1414,6 +1420,11 @@ def genIDF(self,
                                                         print(outputname)
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
+                                                    while len(SetAST[0].obj) > 18:
+                                                        SetAST[0].obj.pop()
+                                                    dynamic_lines = get_SetAST_lines(ComfStand_value, ComfMod_value)
+                                                    for dline in dynamic_lines:
+                                                        SetAST[0].obj.append(dline)
                                                     idf1.savecopy(outputname)
                                                     self.output_idf_dict.update({outputname: idf1})
                     elif ComfStand_value in [1, 4, 5, 22]:
@@ -1462,6 +1473,11 @@ def genIDF(self,
                                                         print(outputname)
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
+                                                    while len(SetAST[0].obj) > 18:
+                                                        SetAST[0].obj.pop()
+                                                    dynamic_lines = get_SetAST_lines(ComfStand_value, ComfMod_value)
+                                                    for dline in dynamic_lines:
+                                                        SetAST[0].obj.append(dline)
                                                     idf1.savecopy(outputname)
                                                     self.output_idf_dict.update({outputname: idf1})
                                             else:
@@ -1511,6 +1527,11 @@ def genIDF(self,
                                                                         print(outputname)
                                                                         # time.sleep(0.1)
                                                                         # pbar.update(1)
+                                                                    while len(SetAST[0].obj) > 18:
+                                                                        SetAST[0].obj.pop()
+                                                                    dynamic_lines = get_SetAST_lines(ComfStand_value, ComfMod_value)
+                                                                    for idx, dline in enumerate(dynamic_lines, start=17):
+                                                                        SetAST[0].__setattr__(f'Program_Line_{idx}', dline)
                                                                     idf1.savecopy(outputname)
                                                                     self.output_idf_dict.update({outputname: idf1})
                     elif ComfStand_value in [2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 99]:
@@ -1571,6 +1592,11 @@ def genIDF(self,
                                                         print(outputname)
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
+                                                    while len(SetAST[0].obj) > 18:
+                                                        SetAST[0].obj.pop()
+                                                    dynamic_lines = get_SetAST_lines(ComfStand_value, ComfMod_value)
+                                                    for dline in dynamic_lines:
+                                                        SetAST[0].obj.append(dline)
                                                     idf1.savecopy(outputname)
                                                     self.output_idf_dict.update({outputname: idf1})
                                             else:
@@ -1628,6 +1654,11 @@ def genIDF(self,
                                                                         print(outputname)
                                                                         # time.sleep(0.1)
                                                                         # pbar.update(1)
+                                                                    while len(SetAST[0].obj) > 18:
+                                                                        SetAST[0].obj.pop()
+                                                                    dynamic_lines = get_SetAST_lines(ComfStand_value, ComfMod_value)
+                                                                    for idx, dline in enumerate(dynamic_lines, start=17):
+                                                                        SetAST[0].__setattr__(f'Program_Line_{idx}', dline)
                                                                     idf1.savecopy(outputname)
                                                                     self.output_idf_dict.update({outputname: idf1})
             elif TempCtrl.lower() == 'pmv':
@@ -1650,6 +1681,11 @@ def genIDF(self,
                     print(outputname)
                     # time.sleep(0.1)
                     # pbar.update(1)
+                while len(SetAST[0].obj) > 18:
+                    SetAST[0].obj.pop()
+                dynamic_lines = get_SetAST_lines(ComfStand_value, ComfMod_value)
+                for idx, dline in enumerate(dynamic_lines, start=17):
+                    SetAST[0].__setattr__(f'Program_Line_{idx}', dline)
                 idf1.savecopy(outputname)
                 self.output_idf_dict.update({outputname: idf1})
         # pbar.close()

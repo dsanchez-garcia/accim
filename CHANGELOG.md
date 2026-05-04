@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.8] - 2026-04-18
 
-### Added
+### Changed
+- **SetAST EMS Program Refactoring**: Extracted the monolithic 2200-line `SetAST` conditional block into a modular injection system. The internal `get_SetAST_lines` function now resolves model-specific comfort logic dynamically during IDF generation, achieving a ~98% reduction in the size of the generated EnergyPlus `SetAST` EMS program block (from ~2200 lines to ~38 lines per IDF), dramatically speeding up simulations and reducing file footprint.
+
+### Fixed
+- **DualSetPointWithDeadBand Fatal Error**: Resolved a deep-seated initialization bug causing EnergyPlus to crash during warmup when processing certain IDFs. The bug was caused by a sequential misalignment of EMS Calling Managers where `SetAST` was evaluated before foundational variables (`ComfStand`, `ACSToffset`, `ACSTtol`) were initialized by `SetInputData` and `ApplyCAT`. We implemented a robust dependency-sorting system within `accim_Base_EMS.py` to correctly sequence the Calling Managers (`priority_programs`), ensuring all offsets and limits are populated successfully prior to setpoint prediction sequences.
 - **Categorical Energy Boxplots**: Introduced the `OptimParamSimulation.plot_categorical_boxplots()` method to effortlessly visualize simulation energy distributions (Heating and Cooling electricity) within FacetGrid boxplots. This method natively aggregates dual energy scales into a shared plot space using `pd.melt()`. It fully supports dimensional breakdowns across plot rows (`row`), columns (`col`), and colors (`hue`) based on robust category mapping rules. Includes native support to toggle Y-axis sharing (`sharey`) and underlying data point overlays (`show_points`).
 - **Boxplot Highlight Overlays**: Integrated `highlight_dict` capabilities directly into `plot_categorical_boxplots()` allowing users to accurately overlay distinct, marker-styled simulations (like Specific historical `met` datasets or `tmy` weather models) directly on top of grouped Seaborn distributions without layout displacement.
 - **Multi-IDF Parametric Validation Script**: Added `check_parametric_multiple_idfs.py` to exercise `OptimParamSimulation` with multiple IDFs and per-row EPW assignments without modifying the original IDF files.
