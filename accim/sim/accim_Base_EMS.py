@@ -15,6 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """Add EMS objects in common to both ExistingHVAC and VRFsystem."""
+import warnings
 
 
 def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
@@ -1828,6 +1829,33 @@ def addOutputVariablesStandard(
                 )
                 if verboseMode:
                     print('Added - ' + zonename + ' VRF Indoor Unit DX Heating Coil'+' Reporting Frequency '+freq.capitalize()+' Output:Variable data')
+
+    meter_objects = [
+        'EnergyTransfer:HVAC',
+        'Electricity:HVAC',
+        'DistrictHeating:Electricity',
+        'DistrictCooling:Electricity',
+    ]
+
+    for freq in Outputs_freq:
+        # Get existing meters for this frequency to avoid duplicates
+        # Note: Key_Name is the field for the meter name
+        current_meters = [
+            m.Key_Name for m in self.idf1.idfobjects['Output:Meter']
+            if m.Reporting_Frequency.upper() == freq.upper()
+        ]
+
+        for meter in meter_objects:
+            if meter not in current_meters:
+                self.idf1.newidfobject(
+                    'Output:Meter',
+                    Key_Name=meter,
+                    Reporting_Frequency=freq.capitalize()
+                )
+                if verboseMode:
+                    print(f"Added Output:Meter for {meter} ({freq})")
+            else:
+                warnings.warn(f"Output:Meter '{meter}' ({freq}) already exists. Skipping.")
 
     del EMSoutputvariablenamelist, outputnamelist, addittionaloutputs,
 
