@@ -1833,8 +1833,8 @@ def addOutputVariablesStandard(
     meter_objects = [
         'EnergyTransfer:HVAC',
         'Electricity:HVAC',
-        'DistrictHeating:Electricity',
-        'DistrictCooling:Electricity',
+        'DistrictHeating:Facility',
+        'DistrictCooling:Facility',
     ]
 
     for freq in Outputs_freq:
