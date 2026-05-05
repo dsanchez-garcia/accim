@@ -1231,23 +1231,8 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('endif')
     if (ComfStand == 15) or (ComfStand == 16):
         if (ComfMod == 0):
-            lines.append('if (CAT==80)')
-            lines.append('if PMOT < 20')
-            lines.append('set ACST = 23.5+ACSTtol')
-            lines.append('set AHST = 21+ACSTtol')
-            lines.append('else')
-            lines.append('set ACST = 25.5+ACSTtol')
-            lines.append('set AHST = 22.5+ACSTtol')
-            lines.append('endif')
-            lines.append('elseif (CAT==90)')
-            lines.append('if PMOT < 20')
-            lines.append('set ACST = 23+ACSTtol')
-            lines.append('set AHST = 21.5+ACSTtol')
-            lines.append('else')
             lines.append('set ACST = 25+ACSTtol')
-            lines.append('set AHST = 23+ACSTtol')
-            lines.append('endif')
-            lines.append('endif')
+            lines.append('set AHST = 20+AHSTtol')
     if (ComfStand == 15) and (ComfMod == 1):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.56+12.74+ACSToffset+ACSTtol')
@@ -2049,3 +2034,138 @@ def get_SetAST_lines(ComfStand, ComfMod):
     lines.append('set roundedAHST = roundedAHSTx2 / SetpointAcc')
     lines.append('endif')
     return lines
+
+def get_SetAST_Master_program():
+    """
+    Generate the SetAST_Master EMS program that routes to ComfStand-specific
+    SetAST subprograms via EMS ``run`` calls.
+
+    Each subprogram is named ``SetAST_CS{N}`` (e.g. ``SetAST_CS1``, ``SetAST_CS99``)
+    and internally handles all ComfMod logic for that standard.
+
+    Returns a list of EMS program lines for the master controller.
+    """
+    # All valid ComfStand values
+    all_cs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+              11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 99]
+
+    lines = []
+    lines.append('! SetAST_Master - Evaluates Season and Routes to ComfStand-specific SetAST subprograms')
+    lines.append('! Season calculation logic')
+    lines.append('if CoolSeasonEnd > CoolSeasonStart')
+    lines.append('if (DayOfYear >= CoolSeasonStart) && (DayOfYear < CoolSeasonEnd)')
+    lines.append('set CoolingSeason = 1')
+    lines.append('else')
+    lines.append('set CoolingSeason = 0')
+    lines.append('endif')
+    lines.append('elseif CoolSeasonStart > CoolSeasonEnd')
+    lines.append('if (DayOfYear >= CoolSeasonStart) || (DayOfYear < CoolSeasonEnd)')
+    lines.append('set CoolingSeason = 1')
+    lines.append('else')
+    lines.append('set CoolingSeason = 0')
+    lines.append('endif')
+    lines.append('endif')
+    
+    valid_combinations = get_valid_combinations()
+    
+    for cs, mods in valid_combinations.items():
+        lines.append(f'if (ComfStand == {cs})')
+        # Split comfmods into chunks of 3 to match the subprograms
+        chunk_size = 3
+        chunks = [mods[i:i + chunk_size] for i in range(0, len(mods), chunk_size)]
+        for chunk_idx in range(len(chunks)):
+            lines.append(f'run SetAST_CS{cs}_{chunk_idx}')
+        lines.append('endif')
+        
+    return lines
+
+
+def get_SetAST_subprogram_chunk(comf_stand, chunk_idx, chunk_comf_mods):
+    """
+    Build the lines for a single per-ComfStand subprogram chunk.
+    """
+    program_name = f'SetAST_CS{comf_stand}_{chunk_idx}'
+
+    lines = []
+    lines.append(f'! {program_name}')
+    lines.append(f'! SetAST subprogram for ComfStand == {comf_stand}, Chunk {chunk_idx}')
+    lines.append(f'! ComfMod is resolved internally via if/elseif blocks')
+
+    first = True
+    for cm in chunk_comf_mods:
+        keyword = 'if' if first else 'elseif'
+        # ComfMod values may be float (e.g. 0.1) for CS 13/14 – keep exact repr
+        cm_str = str(int(cm)) if cm == int(cm) else str(cm)
+        lines.append(f'{keyword} (ComfMod == {cm_str})')
+        core_lines = get_SetAST_lines(comf_stand, cm)
+        for l in core_lines:
+            lines.append(l)
+        first = False
+
+    if chunk_comf_mods:
+        lines.append('endif')
+
+    return {
+        'name': program_name,
+        'lines': lines,
+    }
+
+def get_valid_combinations():
+    return {
+        0:  [0],
+        1:  [0, 1, 2, 3],
+        2:  [0, 1, 2, 3],
+        3:  [0, 1, 2, 3],
+        4:  [3],
+        5:  [3],
+        6:  [2, 3],
+        7:  [0, 1, 2, 3],
+        8:  [1, 2, 3],
+        9:  [1, 2, 3],
+        10: [1, 2, 3],
+        11: [1, 2, 3],
+        12: [0, 1, 2, 3],
+        13: [0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5, 2, 3],
+        14: [0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5, 2, 3],
+        15: [0, 1, 2, 3],
+        16: [1, 2, 3],
+        17: [0, 1, 2, 3],
+        18: [1, 2, 3],
+        19: [1, 2, 3],
+        20: [1, 2, 3],
+        21: [2, 3],
+        22: [0],
+        99: [3],
+    }
+
+def get_all_SetAST_modular_programs():
+    """
+    Generate all valid SetAST subprograms (split into chunks to avoid E+ 500 lines limit)
+    and the master controller that calls them.
+
+    Returns a dict with:
+
+    - ``'master'``: list of lines for ``SetAST_Master``
+    - ``'modular'``: dict keyed by (ComfStand, chunk_idx), each value a dict with
+      ``'name'`` and ``'lines'``
+    """
+    valid_combinations = get_valid_combinations()
+
+    result = {
+        'master': get_SetAST_Master_program(),
+        'modular': {},
+    }
+
+    result = {
+        'master': get_SetAST_Master_program(),
+        'modular': {},
+    }
+
+    for cs, mods in valid_combinations.items():
+        chunk_size = 3
+        chunks = [mods[i:i + chunk_size] for i in range(0, len(mods), chunk_size)]
+        for chunk_idx, chunk_comf_mods in enumerate(chunks):
+            result['modular'][(cs, chunk_idx)] = get_SetAST_subprogram_chunk(cs, chunk_idx, chunk_comf_mods)
+
+    return result
+

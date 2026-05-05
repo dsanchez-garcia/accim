@@ -685,12 +685,51 @@ def modifyAccis(
     SetAST.Program_Line_1 = 'set SetpointAcc = ' + str(SetpointAcc)
     SetAST.Program_Line_2 = 'set m = ' + str(CustAST_m)
     SetAST.Program_Line_3 = 'set n = ' + str(CustAST_n)
-    while len(SetAST.obj) > 18:
+
+    # Clear existing dynamic lines (keeping the first 3 lines)
+    while len(SetAST.obj) > 3:
         SetAST.obj.pop()
-    from accim.sim.setAST_models import get_SetAST_lines
-    dynamic_lines = get_SetAST_lines(ComfStand, ComfMod)
-    for dline in dynamic_lines:
-        SetAST.obj.append(dline)
+
+    # Add call to SetAST_Master program
+    SetAST.obj.append('run SetAST_Master')
+
+    # Import modular SetAST functions
+    from accim.sim.setAST_models import get_SetAST_Master_program, get_all_SetAST_modular_programs
+
+    # Add SetAST_Master program if it doesn't exist
+    master_program_name = 'SetAST_Master'
+    existing_master = [p for p in idf.idfobjects['EnergyManagementSystem:Program'] if p.Name == master_program_name]
+
+    if not existing_master:
+        # Create the master program
+        master_lines = get_SetAST_Master_program()
+        idf.newidfobject(
+            'EnergyManagementSystem:Program',
+            Name=master_program_name,
+        )
+        master_program = [p for p in idf.idfobjects['EnergyManagementSystem:Program'] if p.Name == master_program_name][0]
+
+        # Add master program lines
+        for i, line in enumerate(master_lines, 1):
+            setattr(master_program, f'Program_Line_{i}', line)
+
+    # Add all modular SetAST programs if they don't exist
+    all_programs = get_all_SetAST_modular_programs()
+    for program_key, program_dict in all_programs['modular'].items():
+        program_name = program_dict['name']
+        existing_program = [p for p in idf.idfobjects['EnergyManagementSystem:Program'] if p.Name == program_name]
+
+        if not existing_program:
+            # Create the modular program
+            idf.newidfobject(
+                'EnergyManagementSystem:Program',
+                Name=program_name,
+            )
+            modular_program = [p for p in idf.idfobjects['EnergyManagementSystem:Program'] if p.Name == program_name][0]
+
+            # Add program lines
+            for i, line in enumerate(program_dict['lines'], 1):
+                setattr(modular_program, f'Program_Line_{i}', line)
 
     SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + str(MaxTempDiffVOF)
     SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + str(MinTempDiffVOF)
