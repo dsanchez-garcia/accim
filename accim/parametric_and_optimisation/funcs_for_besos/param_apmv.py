@@ -15,6 +15,30 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import besos
+
+
+def _get_apmv_program_targets(idf: besos.IDF_class):
+    """Return EMS target suffixes based on existing set_zone_input_data programs."""
+    prefix = 'set_zone_input_data_'
+    targets = []
+    for program in idf.idfobjects['EnergyManagementSystem:Program']:
+        name = getattr(program, 'Name', '')
+        if name.lower().startswith(prefix):
+            targets.append(name[len(prefix):])
+    return targets
+
+
+def _get_apmv_input_programs_by_target(idf: besos.IDF_class):
+    """Return mapping {suffix: EMS Program} for set_zone_input_data programs."""
+    prefix = 'set_zone_input_data_'
+    programs = {}
+    for program in idf.idfobjects['EnergyManagementSystem:Program']:
+        name = getattr(program, 'Name', '')
+        if name.lower().startswith(prefix):
+            programs[name[len(prefix):]] = program
+    return programs
+
+
 def change_adaptive_coeff_all_zones(idf: besos.IDF_class, value: float):
     """
     Modifies the adap_coeff_cooling and adap_coeff_heating arguments for all zones to match the entered value.
@@ -23,15 +47,13 @@ def change_adaptive_coeff_all_zones(idf: besos.IDF_class, value: float):
     :param value: The value to be applied in the argument.
     :return:
     """
-    ppl_temp = [people.Zone_or_ZoneList_Name.replace(':', '_') for people in idf.idfobjects['People']]
+    ppl_temp = _get_apmv_program_targets(idf)
+    programs_by_target = _get_apmv_input_programs_by_target(idf)
 
     for zonename in ppl_temp:
-        program = [p
-                   for p
-                   in idf.idfobjects['EnergyManagementSystem:Program']
-                   if 'set_zone_input_data' in p.Name
-                   and zonename.lower() in p.Name.lower()
-                   ][0]
+        program = programs_by_target.get(zonename)
+        if program is None:
+            continue
         program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
         program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
         # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'
@@ -50,15 +72,13 @@ def change_adaptive_coeff_cooling_all_zones(idf: besos.IDF_class, value: float):
     :param value: The value to be applied in the argument.
     :return:
     """
-    ppl_temp = [people.Zone_or_ZoneList_Name.replace(':', '_') for people in idf.idfobjects['People']]
+    ppl_temp = _get_apmv_program_targets(idf)
+    programs_by_target = _get_apmv_input_programs_by_target(idf)
 
     for zonename in ppl_temp:
-        program = [p
-                   for p
-                   in idf.idfobjects['EnergyManagementSystem:Program']
-                   if 'set_zone_input_data' in p.Name
-                   and zonename.lower() in p.Name.lower()
-                   ][0]
+        program = programs_by_target.get(zonename)
+        if program is None:
+            continue
         program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
         # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
         # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'
@@ -77,15 +97,13 @@ def change_adaptive_coeff_heating_all_zones(idf: besos.IDF_class, value: float):
     :param value: The value to be applied in the argument.
     :return:
     """
-    ppl_temp = [people.Zone_or_ZoneList_Name.replace(':', '_') for people in idf.idfobjects['People']]
+    ppl_temp = _get_apmv_program_targets(idf)
+    programs_by_target = _get_apmv_input_programs_by_target(idf)
 
     for zonename in ppl_temp:
-        program = [p
-                   for p
-                   in idf.idfobjects['EnergyManagementSystem:Program']
-                   if 'set_zone_input_data' in p.Name
-                   and zonename.lower() in p.Name.lower()
-                   ][0]
+        program = programs_by_target.get(zonename)
+        if program is None:
+            continue
         # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
         program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
         # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'
@@ -105,15 +123,13 @@ def change_pmv_setpoint_all_zones(idf: besos.IDF_class, value: float):
     :param value: The value to be applied in the argument.
     :return:
     """
-    ppl_temp = [people.Zone_or_ZoneList_Name.replace(':', '_') for people in idf.idfobjects['People']]
+    ppl_temp = _get_apmv_program_targets(idf)
+    programs_by_target = _get_apmv_input_programs_by_target(idf)
 
     for zonename in ppl_temp:
-        program = [p
-                   for p
-                   in idf.idfobjects['EnergyManagementSystem:Program']
-                   if 'set_zone_input_data' in p.Name
-                   and zonename.lower() in p.Name.lower()
-                   ][0]
+        program = programs_by_target.get(zonename)
+        if program is None:
+            continue
         # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
         # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
         program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'
@@ -132,15 +148,13 @@ def change_pmv_cooling_setpoint_all_zones(idf: besos.IDF_class, value: float):
     :param value: The value to be applied in the argument.
     :return:
     """
-    ppl_temp = [people.Zone_or_ZoneList_Name.replace(':', '_') for people in idf.idfobjects['People']]
+    ppl_temp = _get_apmv_program_targets(idf)
+    programs_by_target = _get_apmv_input_programs_by_target(idf)
 
     for zonename in ppl_temp:
-        program = [p
-                   for p
-                   in idf.idfobjects['EnergyManagementSystem:Program']
-                   if 'set_zone_input_data' in p.Name
-                   and zonename.lower() in p.Name.lower()
-                   ][0]
+        program = programs_by_target.get(zonename)
+        if program is None:
+            continue
         # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
         # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
         program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'
@@ -159,15 +173,13 @@ def change_pmv_heating_setpoint_all_zones(idf: besos.IDF_class, value: float):
     :param value: The value to be applied in the argument.
     :return:
     """
-    ppl_temp = [people.Zone_or_ZoneList_Name.replace(':', '_') for people in idf.idfobjects['People']]
+    ppl_temp = _get_apmv_program_targets(idf)
+    programs_by_target = _get_apmv_input_programs_by_target(idf)
 
     for zonename in ppl_temp:
-        program = [p
-                   for p
-                   in idf.idfobjects['EnergyManagementSystem:Program']
-                   if 'set_zone_input_data' in p.Name
-                   and zonename.lower() in p.Name.lower()
-                   ][0]
+        program = programs_by_target.get(zonename)
+        if program is None:
+            continue
         # program.Program_Line_1 = f'set adap_coeff_cooling_{zonename} = {value}'
         # program.Program_Line_2 = f'set adap_coeff_heating_{zonename} = {value}'
         # program.Program_Line_3 = f'set pmv_cooling_sp_{zonename} = {value}'

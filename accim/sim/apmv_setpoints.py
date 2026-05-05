@@ -533,13 +533,22 @@ def _ensure_infrastructure(building: IDF, unique_zones: List[str], verbose_mode:
             # Warning is issued regardless of verbose_mode
             warnings.warn(f"Thermal Comfort Thermostat already exists for zone '{zone}'. Updating configuration.")
 
+            # Ensure the control type schedule exists and is linked correctly.
+            sch_name = _ensure_tc_control_schedule(building, zone, verbose_mode)
+            tc_t.Thermal_Comfort_Control_Type_Schedule_Name = sch_name
+
             # Ensure the control type is Fanger DualSetpoint
             if tc_t.Thermal_Comfort_Control_1_Object_Type != 'ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint':
                 tc_t.Thermal_Comfort_Control_1_Object_Type = 'ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint'
-                tc_t.Thermal_Comfort_Control_1_Name = f'Fanger Setpoint {zone}'
+
+            # Reuse the currently referenced Fanger object when present.
+            # Some input files use names like "<Zone> Dual Comfort Setpoint",
+            # and updating a different object would leave active control unchanged.
+            fanger_name = getattr(tc_t, 'Thermal_Comfort_Control_1_Name', '') or f'Fanger Setpoint {zone}'
+            tc_t.Thermal_Comfort_Control_1_Name = fanger_name
 
             # Update the referenced Fanger object
-            _update_fanger_object(building, f'Fanger Setpoint {zone}', zone, verbose_mode)
+            _update_fanger_object(building, fanger_name, zone, verbose_mode)
 
 
 def _create_tc_thermostat(building: IDF, zone: str, verbose_mode: bool):
@@ -551,18 +560,7 @@ def _create_tc_thermostat(building: IDF, zone: str, verbose_mode: bool):
     :param verbose_mode: If True, prints success messages.
     """
     # 1. Create the Control Type Schedule (Type 4 = Thermal Comfort)
-    sch_name = f'Thermal Comfort Control Type Schedule Name {zone}'
-    if not any(s.Name == sch_name for s in building.idfobjects['Schedule:Compact']):
-        building.newidfobject(
-            'Schedule:Compact',
-            Name=sch_name,
-            Schedule_Type_Limits_Name="Any Number",
-            Field_1='Through: 12/31',
-            Field_2='For: AllDays',
-            Field_3='Until: 24:00,4'  # 4 maps to 'Thermal Comfort' control type in E+
-        )
-        if verbose_mode:
-            print(f"Added Control Type Schedule: {sch_name}")
+    sch_name = _ensure_tc_control_schedule(building, zone, verbose_mode)
 
     # 2. Create the Thermostat Object linking the zone to the Fanger object
     building.newidfobject(
@@ -578,6 +576,23 @@ def _create_tc_thermostat(building: IDF, zone: str, verbose_mode: bool):
 
     # 3. Create the Fanger Setpoint object
     _update_fanger_object(building, f'Fanger Setpoint {zone}', zone, verbose_mode)
+
+
+def _ensure_tc_control_schedule(building: IDF, zone: str, verbose_mode: bool) -> str:
+    """Ensure thermal comfort control schedule exists for a zone and return its name."""
+    sch_name = f'Thermal Comfort Control Type Schedule Name {zone}'
+    if not any(s.Name == sch_name for s in building.idfobjects['Schedule:Compact']):
+        building.newidfobject(
+            'Schedule:Compact',
+            Name=sch_name,
+            Schedule_Type_Limits_Name="Any Number",
+            Field_1='Through: 12/31',
+            Field_2='For: AllDays',
+            Field_3='Until: 24:00,4'  # 4 maps to 'Thermal Comfort' control type in E+
+        )
+        if verbose_mode:
+            print(f"Added Control Type Schedule: {sch_name}")
+    return sch_name
 
 
 def _update_fanger_object(building: IDF, obj_name: str, zone: str, verbose_mode: bool):
