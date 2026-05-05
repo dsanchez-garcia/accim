@@ -6,7 +6,43 @@ class GlobalAllCapsDict(dict):
 
     def __getitem__(self, key):
         return super().__getitem__(key.upper())
+def _ensure_run_energyplus_copies_in_idf():
+    """
+    Monkey-patch BESOS so each simulation keeps the executed in.idf.
+
+    BESOS usually runs EnergyPlus with a temporary input file (often named
+    ``in.idf`` under ``.besos_*``). This patch copies that exact file into the
+    simulation output directory, so each result folder contains the final IDF
+    used for that run.
+    """
+    import shutil
+    import besos.eplus_funcs as eplus_funcs
+
+    if getattr(eplus_funcs, '_accim_copy_in_idf_patched', False):
+        return
+
+    original_run_energyplus = eplus_funcs.run_energyplus
+
+    def _patched_run_energyplus(building_path, weather_path=None, out_dir=None, **kwargs):
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+            src = os.fspath(building_path)
+            dst = os.path.join(out_dir, 'in.idf')
+            try:
+                shutil.copy2(src, dst)
+            except Exception:
+                # Never fail the simulation because of a copy issue.
+                pass
+
+        if weather_path is not None:
+            return original_run_energyplus(building_path, weather_path, out_dir=out_dir, **kwargs)
+        return original_run_energyplus(building_path, out_dir=out_dir, **kwargs)
+
+    eplus_funcs.run_energyplus = _patched_run_energyplus
+    eplus_funcs._accim_copy_in_idf_patched = True
+
 def _patched_eval_func(evaluator, all_outputs):
+    _ensure_run_energyplus_copies_in_idf()
     if getattr(evaluator, 'out_dir', None) is not None:
         if not hasattr(evaluator, '_out_dir_patched'):
             evaluator.out_dir = f'{evaluator.out_dir}_{os.getpid()}'

@@ -25,7 +25,7 @@ import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
 import accim.parametric_and_optimisation.parameters as params
 from accim.parametric_and_optimisation.analysis import AnalysisMixin
 from accim.parametric_and_optimisation.plotting import PlottingMixin
-from accim.parametric_and_optimisation.patches import GlobalAllCapsDict, _patched_eval_func, _patched_to_platypus
+from accim.parametric_and_optimisation.patches import GlobalAllCapsDict, _patched_eval_func, _patched_to_platypus, _ensure_run_energyplus_copies_in_idf
 import accim.parametric_and_optimisation.params_dicts as params_dicts
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
 
@@ -91,7 +91,9 @@ def _run_single_evaluation_worker(
     from besos.evaluator import EvaluatorEP
     from besos.problem import EPProblem
     from besos.parameters import Parameter
-    
+
+    _ensure_run_energyplus_copies_in_idf()
+
     print(f"[WORKER] Loading IDF: {idf_path}")
     from accim.utils import get_building
     try:
@@ -101,6 +103,15 @@ def _run_single_evaluation_worker(
         import traceback
         traceback.print_exc()
         raise
+
+    # Ensure each sampled value is really written into the IDF/EMS before the run.
+    # In multiprocessing mode we reconstruct a lightweight EPProblem in the worker;
+    # applying setters here guarantees custom ACCIS parameters are not lost.
+    available_setters = {k.lower(): v for (k, v) in params_dicts.all_params.items()}
+    for (param_name, param_value) in row_dict.items():
+        setter = available_setters.get(str(param_name).lower())
+        if setter is not None:
+            setter(b, param_value)
         
     dummy_inputs = [Parameter(name=n) for n in problem_names_inputs]
     prob = EPProblem(inputs=dummy_inputs, outputs=problem_names_outputs)
@@ -615,6 +626,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     print('Default values will be set for these parameters. The default values are:')
                     for p in parameters_to_be_defined:
                         print(f'{p}: {dflt_values[p]}')
+                    if 'm' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_m(self.building, dflt_values['m'])
+                    if 'n' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_n(self.building, dflt_values['n'])
+                    if 'ACSToffset' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSToffset(self.building, dflt_values['ACSToffset'])
+                    if 'AHSToffset' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSToffset(self.building, dflt_values['AHSToffset'])
+                    if 'ACSTaul' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSTaul(self.building, dflt_values['ACSTaul'])
+                    if 'ACSTall' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSTall(self.building, dflt_values['ACSTall'])
+                    if 'AHSTaul' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSTaul(self.building, dflt_values['AHSTaul'])
+                    if 'AHSTall' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSTall(self.building, dflt_values['AHSTall'])
                 else:
                     print('If you want, default values can be set for these parameters. The default values are:')
                     for p in parameters_to_be_defined:
