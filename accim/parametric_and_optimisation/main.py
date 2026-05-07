@@ -5,6 +5,7 @@ import glob as pyglob
 from typing import Literal, List, Union, Optional, Any
 import warnings
 import functools
+import difflib
 import accim
 import numpy as np
 import pandas as pd
@@ -676,6 +677,410 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             pass
 
         return (df_outputmeters, df_outputvariables)
+
+    # ------------------------------------------------------------------
+    # Outputs preflight (discover → select → clear → apply)
+    # ------------------------------------------------------------------
+
+    def discover_available_outputs(
+        self,
+        reduce_sim_time: bool = True,
+        prefer: Literal['testsimeplus', 'rdd_mdd'] = 'testsimeplus',
+        refresh: bool = False,
+    ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+        """
+        Discovers which outputs are actually available for this model.
+
+        This is intended as a preflight step before choosing outputs.
+
+        :param reduce_sim_time: when using EnergyPlus test-sim discovery, reduce runtime.
+        :param prefer: 'testsimeplus' (default) uses a lightweight EnergyPlus run via
+            ``get_outputs_df_from_testsim``; 'rdd_mdd' reads `available_outputs/eplusout.rdd`
+            and `available_outputs/eplusout.mdd` if present.
+        :param refresh: when False, reuse cached results in ``self.available_outputs_``.
+        :return: (df_meters, df_vars, meta)
+        """
+        if not refresh and hasattr(self, 'available_outputs_') and isinstance(getattr(self, 'available_outputs_'), dict):
+            cached = self.available_outputs_
+            if 'df_meters' in cached and 'df_vars' in cached and 'meta' in cached:
+                return cached['df_meters'].copy(), cached['df_vars'].copy(), dict(cached['meta'])
+
+        meta: dict = {'prefer': prefer, 'reduce_sim_time': reduce_sim_time}
+
+        if prefer == 'rdd_mdd':
+            rdd_path = os.path.join('available_outputs', 'eplusout.rdd')
+            mdd_path = os.path.join('available_outputs', 'eplusout.mdd')
+            if os.path.exists(rdd_path) and os.path.exists(mdd_path):
+                df_rdd = get_rdd_file_as_df()
+                df_mdd = get_mdd_file_as_df()
+
+                df_vars = df_rdd.rename(
+                    columns={'key_value': 'key_value', 'variable_name': 'variable_name', 'frequency': 'frequency'}
+                )[['key_value', 'variable_name', 'frequency']].copy()
+                df_meters = df_mdd.rename(columns={'meter_name': 'key_name', 'frequency': 'frequency'})[
+                    ['key_name', 'frequency']
+                ].copy()
+                meta.update({'source': 'rdd_mdd', 'paths': {'rdd': rdd_path, 'mdd': mdd_path}})
+            else:
+                # Fallback to test-sim discovery.
+                prefer = 'testsimeplus'
+                meta['prefer_fallback'] = 'testsimeplus'
+
+        if prefer == 'testsimeplus':
+            df_meters, df_vars = self.get_outputs_df_from_testsim(reduce_sim_time=reduce_sim_time)
+            meta.update({'source': 'testsimeplus', 'out_dir': 'available_outputs'})
+
+        # Normalize column dtypes minimally
+        for df, cols in ((df_meters, ['key_name', 'frequency']), (df_vars, ['key_value', 'variable_name', 'frequency'])):
+            for c in cols:
+                if c in df.columns:
+                    df[c] = df[c].astype(str)
+
+        self.available_outputs_ = {'df_meters': df_meters.copy(), 'df_vars': df_vars.copy(), 'meta': dict(meta)}
+        return df_meters, df_vars, meta
+
+    def select_outputs(
+        self,
+        meters: Optional[list[str]] = None,
+        variables: Optional[Union[list[tuple[str, str]], list[str]]] = None,
+        from_df_vars: Optional[pd.DataFrame] = None,
+        from_df_meters: Optional[pd.DataFrame] = None,
+        match: Literal['exact', 'case_insensitive', 'contains', 'regex'] = 'case_insensitive',
+        on_missing: Literal['raise', 'warn', 'ignore'] = 'warn',
+        suggest: bool = True,
+        reduce_sim_time: bool = True,
+    ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+        """
+        Validates and builds output selection DataFrames from a simple wishlist and/or DataFrames.
+
+        This method requires that available outputs are known. If not cached, it will
+        run discovery (EnergyPlus test-sim by default).
+
+        Returns DataFrames compatible with ``set_output_var_df_to_idf`` and
+        ``set_output_met_objects_to_idf``.
+        """
+        if meters is None:
+            meters = []
+        if variables is None:
+            variables = []
+
+        df_meters_av, df_vars_av, meta = self.discover_available_outputs(
+            reduce_sim_time=reduce_sim_time, prefer='testsimeplus', refresh=False
+        )
+
+        report: dict = {
+            'meta': meta,
+            'missing': {'meters': [], 'variables': []},
+            'suggestions': {'meters': {}, 'variables': {}},
+            'selected_counts': {'meters': 0, 'variables': 0},
+        }
+
+        def _norm(s: Any) -> str:
+            return ('' if s is None else str(s)).strip()
+
+        def _norm_ci(s: Any) -> str:
+            return _norm(s).upper()
+
+        def _match_series(needle: str, series: pd.Series) -> pd.Series:
+            n = _norm(needle)
+            if match == 'exact':
+                return series.astype(str) == n
+            if match == 'case_insensitive':
+                return series.astype(str).str.upper() == _norm_ci(n)
+            if match == 'contains':
+                return series.astype(str).str.upper().str.contains(_norm_ci(n), na=False)
+            if match == 'regex':
+                try:
+                    return series.astype(str).str.contains(n, regex=True, na=False)
+                except re.error:
+                    # Treat invalid regex as no match.
+                    return series.astype(str).isin([])
+            raise ValueError(f"Unknown match mode: {match}")
+
+        # ---------------------------
+        # Select meters
+        # ---------------------------
+        meters_requested: list[str] = []
+        meters_requested += [_norm(m) for m in meters if _norm(m)]
+        if from_df_meters is not None and not from_df_meters.empty:
+            if 'key_name' not in from_df_meters.columns:
+                raise ValueError("from_df_meters must contain a 'key_name' column.")
+            meters_requested += [_norm(v) for v in from_df_meters['key_name'].tolist() if _norm(v)]
+
+        meters_requested_ci = [_norm_ci(m) for m in meters_requested if _norm_ci(m)]
+        meters_requested_ci = list(dict.fromkeys(meters_requested_ci))  # dedupe, preserve order
+
+        df_meters_sel = pd.DataFrame(columns=['key_name', 'frequency'])
+        if len(meters_requested_ci) > 0 and not df_meters_av.empty:
+            av_key = df_meters_av['key_name'].astype(str)
+            av_key_ci = av_key.str.upper()
+            selected_rows = []
+            missing_m = []
+            for req_ci in meters_requested_ci:
+                mask = _match_series(req_ci, av_key_ci if match != 'regex' else av_key)
+                if mask.any():
+                    selected_rows.append(df_meters_av.loc[mask].copy())
+                else:
+                    missing_m.append(req_ci)
+                    if suggest:
+                        choices = sorted(set(av_key.tolist()))
+                        report['suggestions']['meters'][req_ci] = difflib.get_close_matches(req_ci, [c.upper() for c in choices], n=5, cutoff=0.6)
+
+            if selected_rows:
+                df_meters_sel = pd.concat(selected_rows, ignore_index=True)
+                df_meters_sel = df_meters_sel.drop_duplicates(subset=['key_name', 'frequency']).reset_index(drop=True)
+
+            report['missing']['meters'] = missing_m
+            if missing_m:
+                msg = f"Missing meters: {missing_m}"
+                if on_missing == 'raise':
+                    raise ValueError(msg)
+                if on_missing == 'warn':
+                    warnings.warn(msg)
+
+        # ---------------------------
+        # Select variables
+        # ---------------------------
+        # Variables can be:
+        # - list[tuple[key_value, variable_name]] (exact-ish)
+        # - list[str] meaning variable_name wishlist/patterns
+        vars_requested_pairs: list[tuple[str, str]] = []
+        vars_requested_names: list[str] = []
+
+        if isinstance(variables, list) and len(variables) > 0:
+            if all(isinstance(v, (tuple, list)) and len(v) == 2 for v in variables):
+                vars_requested_pairs = [(_norm(v[0]), _norm(v[1])) for v in variables if _norm(v[1])]
+            else:
+                vars_requested_names = [_norm(v) for v in variables if _norm(v)]
+
+        if from_df_vars is not None and not from_df_vars.empty:
+            if 'variable_name' not in from_df_vars.columns:
+                raise ValueError("from_df_vars must contain a 'variable_name' column.")
+            if 'key_value' in from_df_vars.columns:
+                vars_requested_pairs += [
+                    (_norm(kv), _norm(vn))
+                    for (kv, vn) in zip(from_df_vars['key_value'].tolist(), from_df_vars['variable_name'].tolist())
+                    if _norm(vn)
+                ]
+            else:
+                vars_requested_names += [_norm(vn) for vn in from_df_vars['variable_name'].tolist() if _norm(vn)]
+
+        df_vars_sel = pd.DataFrame(columns=['key_value', 'variable_name', 'frequency', 'schedule_name'])
+
+        if not df_vars_av.empty and (vars_requested_pairs or vars_requested_names):
+            av_kv = df_vars_av['key_value'].astype(str)
+            av_vn = df_vars_av['variable_name'].astype(str)
+            selected_rows_v = []
+            missing_v = []
+
+            # Pair selection
+            for (kv_req, vn_req) in vars_requested_pairs:
+                kv_mask = _match_series(kv_req, av_kv.str.upper() if match != 'regex' else av_kv)
+                vn_mask = _match_series(vn_req, av_vn.str.upper() if match != 'regex' else av_vn)
+                mask = kv_mask & vn_mask
+                if mask.any():
+                    selected_rows_v.append(df_vars_av.loc[mask].copy())
+                else:
+                    missing_v.append((kv_req, vn_req))
+                    if suggest:
+                        report['suggestions']['variables'][f'{kv_req}|{vn_req}'] = difflib.get_close_matches(
+                            _norm_ci(vn_req),
+                            sorted(set(av_vn.str.upper().tolist())),
+                            n=5,
+                            cutoff=0.6,
+                        )
+
+            # Name-only selection (match variable_name)
+            for vn_req in vars_requested_names:
+                mask = _match_series(vn_req, av_vn.str.upper() if match != 'regex' else av_vn)
+                if mask.any():
+                    selected_rows_v.append(df_vars_av.loc[mask].copy())
+                else:
+                    missing_v.append(('ANY', vn_req))
+                    if suggest:
+                        report['suggestions']['variables'][f'ANY|{vn_req}'] = difflib.get_close_matches(
+                            _norm_ci(vn_req),
+                            sorted(set(av_vn.str.upper().tolist())),
+                            n=5,
+                            cutoff=0.6,
+                        )
+
+            if selected_rows_v:
+                df_vars_sel = pd.concat(selected_rows_v, ignore_index=True)
+                df_vars_sel = df_vars_sel.drop_duplicates(subset=['key_value', 'variable_name', 'frequency']).reset_index(drop=True)
+
+            report['missing']['variables'] = missing_v
+            if missing_v:
+                msg = f"Missing variables: {missing_v}"
+                if on_missing == 'raise':
+                    raise ValueError(msg)
+                if on_missing == 'warn':
+                    warnings.warn(msg)
+
+        # Ensure compatibility with set_output_var_df_to_idf (non-ACCIM expects schedule_name)
+        if 'schedule_name' not in df_vars_sel.columns:
+            df_vars_sel['schedule_name'] = ''
+        else:
+            df_vars_sel['schedule_name'] = df_vars_sel['schedule_name'].fillna('').astype(str)
+
+        report['selected_counts']['meters'] = len(df_meters_sel)
+        report['selected_counts']['variables'] = len(df_vars_sel)
+        return df_meters_sel, df_vars_sel, report
+
+    def clear_outputs(
+        self,
+        mode: Literal['meters_vars', 'all'] = 'all',
+        dry_run: bool = False,
+    ) -> dict:
+        """
+        Removes existing output-related objects from the IDF(s) prior to simulation.
+
+        :param mode: 'meters_vars' removes only Output:Variable and Output:Meter; 'all' removes
+            all object types starting with Output:* and OutputControl:* (and a few common diagnostics).
+        :param dry_run: when True, do not modify the IDFs; only return what would be removed.
+        :return: report dict with counts by building and object type.
+        """
+        report: dict = {'mode': mode, 'dry_run': dry_run, 'buildings': {}}
+
+        def _should_remove(obj_key: str) -> bool:
+            k = str(obj_key).strip().upper()
+            # OUTPUTCONTROL:FILES must never be removed (user requirement).
+            if k == 'OUTPUTCONTROL:FILES':
+                return False
+            if mode == 'meters_vars':
+                return k in {'OUTPUT:VARIABLE', 'OUTPUT:METER'}
+            # mode == 'all'
+            if k.startswith('OUTPUT:') or k.startswith('OUTPUTCONTROL:'):
+                return True
+            # Some output-adjacent keys are not prefixed consistently across versions
+            if k in {'OUTPUTCONTROL:REPORTINGTOLERANCES'}:
+                return True
+            return False
+
+        for (idx, b) in enumerate(self.buildings):
+            idf_id = self._get_idf_identifier(b, idx)
+            removed_counts: dict[str, int] = {}
+
+            # eppy uses b.idfobjects dict keyed by object type (case-sensitive access supported)
+            available_keys = list(getattr(b, 'idfobjects', {}).keys())
+            keys_to_remove = [k for k in available_keys if _should_remove(k)]
+
+            for k in keys_to_remove:
+                objs = list(b.idfobjects.get(k, []))
+                removed_counts[str(k)] = len(objs)
+                if not dry_run and len(objs) > 0:
+                    for obj in objs:
+                        try:
+                            b.removeidfobject(obj)
+                        except Exception:
+                            # Best-effort removal; continue.
+                            pass
+
+            report['buildings'][idf_id] = {'removed': removed_counts, 'keys': keys_to_remove}
+
+        return report
+
+    def apply_outputs_preflight(
+        self,
+        df_vars_sel: Optional[pd.DataFrame] = None,
+        df_meters_sel: Optional[pd.DataFrame] = None,
+        clean_mode: Literal['none', 'meters_vars', 'all'] = 'all',
+        validate_before_apply: bool = True,
+        validate_after_apply: bool = True,
+        on_missing: Literal['raise', 'warn', 'ignore'] = 'warn',
+        reduce_sim_time: bool = True,
+    ) -> dict:
+        """
+        Orchestrates a complete outputs preflight:
+        - (optional) discover/validate available outputs
+        - (optional) clear existing output objects in the IDF(s)
+        - apply selected Output:Variable and Output:Meter
+        - (optional) verify IDF state matches selection
+        """
+        report: dict = {
+            'clean_mode': clean_mode,
+            'validate_before_apply': validate_before_apply,
+            'validate_after_apply': validate_after_apply,
+            'cleared': None,
+            'applied': {'variables': 0, 'meters': 0},
+            'verification': {},
+        }
+
+        if validate_before_apply:
+            self.discover_available_outputs(reduce_sim_time=reduce_sim_time, prefer='testsimeplus', refresh=False)
+
+        if clean_mode in {'meters_vars', 'all'}:
+            report['cleared'] = self.clear_outputs(mode='all' if clean_mode == 'all' else 'meters_vars', dry_run=False)
+
+        # Apply variables
+        if df_vars_sel is not None:
+            df_vars_apply = df_vars_sel.copy()
+            # Minimal normalization for downstream method
+            if 'frequency' in df_vars_apply.columns:
+                df_vars_apply['frequency'] = df_vars_apply['frequency'].astype(str)
+            if 'schedule_name' not in df_vars_apply.columns:
+                df_vars_apply['schedule_name'] = ''
+            self.set_output_var_df_to_idf(outputs_df=df_vars_apply)
+            report['applied']['variables'] = len(df_vars_apply)
+
+        # Apply meters
+        if df_meters_sel is not None:
+            if 'key_name' not in df_meters_sel.columns:
+                raise ValueError("df_meters_sel must contain a 'key_name' column.")
+            meters_list = [str(v) for v in df_meters_sel['key_name'].dropna().tolist()]
+            self.set_output_met_objects_to_idf(
+                output_meters=meters_list,
+                validate=validate_before_apply,
+                on_missing=on_missing,
+                auto_filter=True,
+                reduce_sim_time=reduce_sim_time,
+            )
+            report['applied']['meters'] = len(meters_list)
+
+        if validate_after_apply:
+            # Verify meters & variables present in IDF match selection (best-effort).
+            df_vars_idf = self.get_output_var_df_from_idf()
+            df_meters_idf = self.get_output_meter_df_from_idf()
+
+            def _keyify_vars(df: pd.DataFrame) -> set[tuple[str, str, str]]:
+                cols = df.columns
+                if not {'key_value', 'variable_name', 'frequency'}.issubset(set(cols)):
+                    return set()
+                return {
+                    (str(r['key_value']).strip().upper(), str(r['variable_name']).strip().upper(), str(r['frequency']).strip().upper())
+                    for (_, r) in df[['key_value', 'variable_name', 'frequency']].dropna().iterrows()
+                }
+
+            def _keyify_meters(df: pd.DataFrame) -> set[tuple[str, str]]:
+                cols = df.columns
+                if not {'key_name', 'frequency'}.issubset(set(cols)):
+                    return set()
+                return {
+                    (str(r['key_name']).strip().upper(), str(r['frequency']).strip().upper())
+                    for (_, r) in df[['key_name', 'frequency']].dropna().iterrows()
+                }
+
+            vars_expected = _keyify_vars(df_vars_sel) if df_vars_sel is not None else set()
+            meters_expected = _keyify_meters(df_meters_sel) if df_meters_sel is not None else set()
+            vars_actual = _keyify_vars(df_vars_idf)
+            meters_actual = _keyify_meters(df_meters_idf)
+
+            report['verification'] = {
+                'vars': {
+                    'expected': len(vars_expected),
+                    'actual': len(vars_actual),
+                    'missing_in_idf': sorted(list(vars_expected - vars_actual))[:50],
+                    'extra_in_idf': sorted(list(vars_actual - vars_expected))[:50],
+                },
+                'meters': {
+                    'expected': len(meters_expected),
+                    'actual': len(meters_actual),
+                    'missing_in_idf': sorted(list(meters_expected - meters_actual))[:50],
+                    'extra_in_idf': sorted(list(meters_actual - meters_expected))[:50],
+                },
+            }
+
+        return report
 
     def set_outputs_for_simulation(self, df_output_variable: pd.DataFrame=None, df_output_meter: pd.DataFrame=None):
         """

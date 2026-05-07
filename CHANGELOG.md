@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The patch is idempotent, so it is only applied once per process and remains safe under multiprocessing contexts.
   - Coverage now includes both execution paths: top-level parametric workers and optimisation evaluations routed through the Platypus bridge.
   - This improves reproducibility/auditability by allowing direct inspection of the exact EMS/program state tied to each simulation output folder.
+- **Outputs Preflight Workflow (`parametric_and_optimisation`)**: Added a new pre-simulation workflow to discover real outputs, validate user selections, clean stale output objects, and apply verified output requests before running simulations.
+  - Added `discover_available_outputs(...)` to discover outputs via lightweight test simulation (`get_outputs_df_from_testsim`) with optional fallback to `available_outputs/eplusout.rdd|mdd`.
+  - Added `select_outputs(...)` to support both wishlist-first and dataframe-first selection, including strict validation, missing-output handling (`raise|warn|ignore`), and close-match suggestions.
+  - Added `clear_outputs(...)` and `apply_outputs_preflight(...)` to provide explicit preflight cleaning and orchestration, with post-apply verification against current IDF output objects.
+  - `clear_outputs(mode='all')` now preserves `OUTPUTCONTROL:FILES` by design and never removes it.
 
 ### Fixed
 - **aPMV Parametric Setters in E+ 25.2 (`People` field compatibility)**: Fixed `BadEPFieldError: unable to find field Zone_or_ZoneList_Name` in `parametric_and_optimisation` setters by adding compatibility with both legacy and modern `People` schemas (`Zone_or_ZoneList_Name` and `Zone_or_ZoneList_or_Space_or_SpaceList_Name`).
