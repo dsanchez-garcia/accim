@@ -419,16 +419,78 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 for i in outputs_df.index:
                     b.newidfobject('Output:Variable', Key_Value=outputs_df.loc[i, 'key_value'], Variable_Name=outputs_df.loc[i, 'variable_name'], Reporting_Frequency=outputs_df.loc[i, 'frequency'].capitalize(), Schedule_Name=outputs_df.loc[i, 'schedule_name'])
 
-    def set_output_met_objects_to_idf(self, output_meters: list):
+    def set_output_met_objects_to_idf(
+            self,
+            output_meters: list,
+            validate: bool = True,
+            on_missing: Literal['warn', 'raise', 'ignore'] = 'warn',
+            auto_filter: bool = True,
+            reduce_sim_time: bool = True,
+    ):
         """
         Adds the Output:Meter objects from the output_meters argument.
 
         :type output_meters: list
         :param output_meters: a list containing Output:Meter objects to be added
+        :param validate: when True, runs a lightweight test simulation to detect which meters
+            are actually available in the model, preventing silent typos/invalid meters.
+        :param on_missing: behaviour when some requested meters are not available.
+        :param auto_filter: when True and validate=True, skip missing meters instead of adding
+            them to the IDF (avoids EnergyPlus warnings like "invalid Key Name - not found").
+        :param reduce_sim_time: when validate=True, reduce runtime for the availability test.
         :return:
         """
+        if output_meters is None:
+            output_meters = []
+
+        def _norm_meter(value: Any) -> str:
+            return ('' if value is None else str(value)).strip().upper()
+
         for b in self.buildings:
-            for meter in output_meters:
+            requested = [_norm_meter(m) for m in output_meters if _norm_meter(m)]
+            requested_set = set(requested)
+
+            available_set: set[str] = set()
+            if validate and len(requested_set) > 0:
+                building_for_testsim = b
+                temp_path = None
+                try:
+                    if reduce_sim_time:
+                        from besos.eppy_funcs import get_building
+                        temp_path = 'temp_reduced_runtime_meters.idf'
+                        b.savecopy(temp_path)
+                        building_for_testsim = get_building(temp_path)
+                        reduce_runtime(
+                            idf_object=building_for_testsim,
+                            maximum_figures_in_shadow_overlap_calculations=200,
+                            timesteps=2,
+                        )
+                    available_outputs = print_available_outputs_mod(building_for_testsim)
+                    available_set = {_norm_meter(k) for (k, _freq) in available_outputs.meterreaderlist if _norm_meter(k)}
+                finally:
+                    if temp_path is not None:
+                        try:
+                            from os import remove
+                            remove(temp_path)
+                        except Exception:
+                            pass
+
+                missing = sorted(requested_set - available_set)
+                if missing:
+                    msg = (
+                        "Some requested Output:Meter Key_Name values are not available in this model "
+                        f"(and will be ignored={auto_filter}): {missing}"
+                    )
+                    if on_missing == 'raise':
+                        raise ValueError(msg)
+                    if on_missing == 'warn':
+                        warnings.warn(msg)
+
+            meters_to_add = requested
+            if validate and auto_filter and available_set:
+                meters_to_add = [m for m in requested if m in available_set]
+
+            for meter in meters_to_add:
                 for freq in self.output_freqs:
                     b.newidfobject(key='OUTPUT:METER', Key_Name=meter, Reporting_Frequency=freq)
 
@@ -469,6 +531,150 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             remove('temp_reduced_runtime.idf')
         df_outputmeters = pd.DataFrame(available_outputs.meterreaderlist, columns=['key_name', 'frequency'])
         df_outputvariables = pd.DataFrame(available_outputs.variablereaderlist, columns=['key_value', 'variable_name', 'frequency'])
+
+        # --------------------------------------------------------------
+        # Add an "object" column to ease filtering/grouping.
+        #
+        # Rules:
+        # - People-instance outputs: map instance key (e.g. "Floor_1 PeopleName")
+        #   to the underlying Space (or Zone-derived Space) using the IDF hierarchy.
+        # - EMS outputs: try to infer the related Zone/Space from variable_name.
+        # - Everything else: default to key_value/key_name.
+        # --------------------------------------------------------------
+        def _norm_token(value: Any) -> str:
+            s = '' if value is None else str(value)
+            return s.upper().replace(':', '_').replace(' ', '_')
+
+        # Build candidates from IDF names.
+        # If the model defines Spaces, prefer Spaces only (avoid zone/ems substrings);
+        # otherwise fall back to Zones.
+        space_candidates: list[str] = []
+        zone_candidates: list[str] = []
+        try:
+            for obj in building_for_testsim.idfobjects.get('SPACE', []):
+                name = getattr(obj, 'Name', None)
+                if name:
+                    space_candidates.append(str(name))
+        except Exception:
+            pass
+        try:
+            for obj in building_for_testsim.idfobjects.get('ZONE', []):
+                name = getattr(obj, 'Name', None)
+                if name:
+                    zone_candidates.append(str(name))
+        except Exception:
+            pass
+
+        candidates: list[str] = space_candidates if len(space_candidates) > 0 else zone_candidates
+
+        # Deduplicate while preserving order
+        seen = set()
+        candidates = [c for c in candidates if not (c.upper() in seen or seen.add(c.upper()))]
+        candidates_norm = sorted({_norm_token(c) for c in candidates if c}, key=len, reverse=True)
+        candidates_norm_to_original = { _norm_token(c): c for c in candidates if c }
+
+        # Build mapping of People instance key_value -> Space name using IDF hierarchy
+        try:
+            from accim.utils import get_people_hierarchy, get_people_names_for_ems
+            people_hierarchy = get_people_hierarchy(building_for_testsim)
+            people_instances = get_people_names_for_ems(building_for_testsim, output_format='dict')
+            instance_to_space: dict[str, str] = {}
+            for (people_name, _instances) in people_instances.items():
+                affected_spaces = people_hierarchy.get(people_name, {}).get('affected_spaces', [])
+                for space in affected_spaces:
+                    generated = f"{str(space).strip()} {str(people_name).strip()}"
+                    instance_to_space[_norm_token(generated)] = str(space)
+        except Exception:
+            people_hierarchy = {}
+            instance_to_space = {}
+
+        # Output:Variable -> object
+        if not df_outputvariables.empty:
+            objects_out: list[str] = []
+            for (_, r) in df_outputvariables.iterrows():
+                key_value = r.get('key_value', None)
+                var_name = r.get('variable_name', None)
+                kv_norm = _norm_token(key_value)
+
+                # People instance: map to Space
+                if kv_norm in instance_to_space:
+                    objects_out.append(instance_to_space[kv_norm])
+                    continue
+
+                # EMS: infer from variable_name if possible
+                if kv_norm == 'EMS':
+                    vn_norm = _norm_token(var_name)
+                    matched = None
+                    for cand_norm in candidates_norm:
+                        if cand_norm and cand_norm in vn_norm:
+                            matched = cand_norm
+                            break
+                    if matched is not None:
+                        # Recover original casing if possible
+                        original = candidates_norm_to_original.get(matched, str(key_value))
+                        objects_out.append(original)
+                    else:
+                        objects_out.append(str(key_value))
+                    continue
+
+                # Other objects:
+                # If the model defines Spaces, prefer returning ONLY Space names by
+                # extracting a Space substring from key_value when present.
+                # If no Spaces exist, do the same with Zones.
+                if len(space_candidates) > 0:
+                    matched = None
+                    for cand_norm in candidates_norm:
+                        if cand_norm and cand_norm in kv_norm:
+                            matched = cand_norm
+                            break
+                    if matched is not None:
+                        objects_out.append(candidates_norm_to_original.get(matched, str(key_value)))
+                    else:
+                        objects_out.append(str(key_value))
+                else:
+                    # No Spaces in the model → fallback to Zones (already in candidates)
+                    matched = None
+                    for cand_norm in candidates_norm:
+                        if cand_norm and cand_norm in kv_norm:
+                            matched = cand_norm
+                            break
+                    if matched is not None:
+                        objects_out.append(candidates_norm_to_original.get(matched, str(key_value)))
+                    else:
+                        objects_out.append(str(key_value))
+
+            df_outputvariables['object'] = objects_out
+
+        # Output:Meter -> object
+        if not df_outputmeters.empty:
+            meter_objects: list[str] = []
+            for (_, r) in df_outputmeters.iterrows():
+                key_name = r.get('key_name', None)
+                kn_norm = _norm_token(key_name)
+                matched = None
+                for cand_norm in candidates_norm:
+                    if cand_norm and cand_norm in kn_norm:
+                        matched = cand_norm
+                        break
+                if matched is not None:
+                    original = next((c for c in candidates if _norm_token(c) == matched), str(key_name))
+                    meter_objects.append(original)
+                else:
+                    meter_objects.append(str(key_name))
+            df_outputmeters['object'] = meter_objects
+
+        # Light validation: object should not be a People name nor a People instance key
+        try:
+            people_names_upper = {str(k).upper() for k in (people_hierarchy or {}).keys()}
+            if not df_outputvariables.empty and people_names_upper:
+                _obj_upper = df_outputvariables['object'].astype(str).str.upper()
+                # Avoid false positives by only checking exact equality
+                if _obj_upper.isin(people_names_upper).any():
+                    raise ValueError("Detected People object name(s) in df_outputvariables['object']; expected only Space/Zone or non-People objects.")
+        except Exception:
+            # Do not fail output discovery if validation can't be performed
+            pass
+
         return (df_outputmeters, df_outputvariables)
 
     def set_outputs_for_simulation(self, df_output_variable: pd.DataFrame=None, df_output_meter: pd.DataFrame=None):
