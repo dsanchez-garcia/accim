@@ -104,6 +104,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Problem Setup Overwrite Bug**: Resolved a severe flaw where `load_outputs_optimisation` and `load_outputs_parametric` forcefully overwrote pre-configured, valid `besos.problem.EPProblem` instances with static `MockProblem` stubs. Users can now securely load legacy results into pre-defined simulation architectures to launch new executions (e.g. `run_robustness_analysis` or Morris sensitivity analysis).
 - **Session Context Persistence (`epws`)**: Fixed an omission where the original climate files list (`epws`) was not passed down into the dataframe serialization properties. Metadata payloads (JSON/Pickle) now safely persist this array, preventing `NameError` exceptions downstream when post-processing scripts attempt to re-access the initial EPW context list organically.
 - **Normalization Plotting Artifacts**: Fixed an `UnboundLocalError` linked to the variable `divisor` during normalization conversions and a `NoneType` attribute error when parsing `parameters_type` inside `plot_pareto_front` visualization executions.
+- **Parametric Multiprocessing Output Readers (time-series support)**: Fixed a bug in `run_parametric_simulation` where worker processes reconstructed the `EPProblem` using only output names (strings), losing the original `MeterReader`/`VariableReader` configuration.
+  - Workers now receive a serialized specification of the original readers, preserving their type (`meter` vs `variable`), frequency, and aggregation function (`func` / `_process`).
+  - This ensures that advanced reducers like `return_time_series` continue to return full time-series in multiprocessing mode instead of silently collapsing to scalar aggregates.
 
 ## [0.7.7] - 2026-04-11
 

@@ -83,6 +83,7 @@ def _run_single_evaluation_worker(
     out_dir: str,
     problem_names_inputs: list,
     problem_names_outputs: list,
+    output_specs: list | None,
     row_dict: dict,
     keep_dirs: bool,
     keep_input: bool
@@ -92,6 +93,7 @@ def _run_single_evaluation_worker(
     from besos.evaluator import EvaluatorEP
     from besos.problem import EPProblem
     from besos.parameters import Parameter
+    from besos.objectives import MeterReader, VariableReader
 
     _ensure_run_energyplus_copies_in_idf()
 
@@ -115,7 +117,37 @@ def _run_single_evaluation_worker(
             setter(b, param_value)
         
     dummy_inputs = [Parameter(name=n) for n in problem_names_inputs]
-    prob = EPProblem(inputs=dummy_inputs, outputs=problem_names_outputs)
+    if output_specs:
+        outputs_objs = []
+        for spec in output_specs:
+            kind = str(spec.get('kind', '')).lower()
+            output_name = spec.get('output_name')
+            output_func = spec.get('func')
+            if kind == 'meter':
+                kwargs = {
+                    'key_name': spec.get('key_name'),
+                    'frequency': spec.get('frequency'),
+                    'name': output_name,
+                }
+                if output_func is not None:
+                    kwargs['func'] = output_func
+                outputs_objs.append(MeterReader(**kwargs))
+            elif kind == 'variable':
+                kwargs = {
+                    'key_value': spec.get('key_value'),
+                    'variable_name': spec.get('variable_name'),
+                    'frequency': spec.get('frequency'),
+                    'name': output_name,
+                }
+                if output_func is not None:
+                    kwargs['func'] = output_func
+                outputs_objs.append(VariableReader(**kwargs))
+            else:
+                # Fallback for unexpected entries
+                outputs_objs.append(spec.get('output_name'))
+        prob = EPProblem(inputs=dummy_inputs, outputs=outputs_objs)
+    else:
+        prob = EPProblem(inputs=dummy_inputs, outputs=problem_names_outputs)
     
     evaluator = EvaluatorEP(problem=prob, building=b, epw=epw, out_dir=out_dir)
     row_values = [row_dict[n] for n in problem_names_inputs]
@@ -1799,6 +1831,51 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             rows.append(result_dict)
         return pd.DataFrame(rows)
 
+    def _serialize_problem_outputs(self) -> list[dict]:
+        """
+        Serialize outputs/readers so worker processes can reconstruct MeterReader/
+        VariableReader objects instead of losing type information.
+        """
+        specs: list[dict] = []
+        output_names = self.problem.names('outputs') if hasattr(self, 'problem') and hasattr(self.problem, 'names') else []
+        sim_outputs = getattr(self, 'sim_outputs', None)
+        if not isinstance(sim_outputs, list) or len(sim_outputs) == 0:
+            return specs
+
+        for idx, obj in enumerate(sim_outputs):
+            output_name = output_names[idx] if idx < len(output_names) else getattr(obj, 'name', None)
+            # BESOS EPReader stores the reducer in `_process` (not `func`).
+            # Keep fallbacks for compatibility with any custom reader wrappers.
+            func_attr = getattr(obj, '_process', None)
+            if func_attr is None:
+                func_attr = getattr(obj, 'func', None)
+            if func_attr is None and hasattr(obj, '_func'):
+                func_attr = getattr(obj, '_func')
+
+            if hasattr(obj, 'key_name'):
+                specs.append({
+                    'kind': 'meter',
+                    'key_name': getattr(obj, 'key_name', None),
+                    'frequency': getattr(obj, 'frequency', None),
+                    'output_name': output_name,
+                    'func': func_attr,
+                })
+            elif hasattr(obj, 'key_value') and hasattr(obj, 'variable_name'):
+                specs.append({
+                    'kind': 'variable',
+                    'key_value': getattr(obj, 'key_value', None),
+                    'variable_name': getattr(obj, 'variable_name', None),
+                    'frequency': getattr(obj, 'frequency', None),
+                    'output_name': output_name,
+                    'func': func_attr,
+                })
+            else:
+                specs.append({
+                    'kind': 'unknown',
+                    'output_name': output_name,
+                })
+        return specs
+
     def run_parametric_simulation(self, epws: list = None, out_dir: str = 'param_results', df: pd.DataFrame = None, processes: int=2, keep_input: bool=True, keep_dirs: bool=True) -> pd.DataFrame:
         """
         Runs the parametric simulation.
@@ -1828,6 +1905,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         
         problem_names_inputs = self._get_problem_input_names()
         problem_names_outputs = self.problem.names('outputs') if hasattr(self, 'problem') and hasattr(self.problem, 'names') else getattr(self, 'outputs_names', [])
+        output_specs = self._serialize_problem_outputs()
         
         tasks = []
         # Ensure idf_backup_path is iterable even if it's a single string
@@ -1868,6 +1946,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         out_dir,
                         problem_names_inputs,
                         problem_names_outputs,
+                        output_specs,
                         row.to_dict(),
                         keep_dirs,
                         keep_input
