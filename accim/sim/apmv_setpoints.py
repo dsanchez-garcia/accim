@@ -1001,6 +1001,10 @@ def _add_apmv_outputs(building: IDF, outputs_freq: List[str], other_PMV_related_
         # 3. Add Output:Meter objects
         meter_objects = [
             'EnergyTransfer:HVAC',
+            'Heating:EnergyTransfer',
+            'Cooling:EnergyTransfer',
+            'Heating:Electricity',
+            'Cooling:Electricity',
             'Electricity:HVAC',
             'DistrictHeating:Facility',
             'DistrictCooling:Facility'

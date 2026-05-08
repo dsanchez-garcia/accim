@@ -1835,6 +1835,10 @@ def addOutputVariablesStandard(
         'Electricity:HVAC',
         'DistrictHeating:Facility',
         'DistrictCooling:Facility',
+        'Heating:EnergyTransfer',
+        'Cooling:EnergyTransfer',
+        'Heating:Electricity',
+        'Cooling:Electricity',
     ]
 
     for freq in Outputs_freq:
