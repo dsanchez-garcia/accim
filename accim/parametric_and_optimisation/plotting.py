@@ -403,7 +403,7 @@ class PlottingMixin:
             plt.close('all')
             print(f'  Pairwise scatter matrix saved: {fname_pair}')
 
-    def plot_categorical_boxplots(self, df_source: str='parametric', y_vars: list=None, col: str=None, row: str=None, hue: str=None, highlight_dict: dict=None, out_dir: str='.', normalize_per_m2: bool=False, sharey: bool=True, show_points: bool=True):
+    def plot_categorical_boxplots(self, df_source: str='parametric', y_vars: list=None, col: str=None, row: str=None, hue: str=None, highlight_dict: dict=None, out_dir: str='.', normalize_per_m2: bool=False, sharey: bool=True, show_points: bool=True, height: float=4, aspect: float=1.2, figsize: tuple=None):
         """
         Generates categorical boxplots from simulation results, automatically melting
         specified energy columns (or detecting Heating/Cooling by default) so they share
@@ -422,6 +422,13 @@ class PlottingMixin:
         :param normalize_per_m2: If True, values will be divided by building floor area.
         :param sharey: If True, all subplots will share the same Y-axis scale.
         :param show_points: If True, overlays all underlying simulation data points on the boxplots.
+        :param height: Height (in inches) of each individual facet subplot. Default 4.
+        :param aspect: Width/height ratio of each facet. The subplot width is
+            height * aspect. Default 1.2.
+        :param figsize: Optional (width, height) tuple (in inches) to override the
+            figure size calculated from height and aspect. Applied after the
+            FacetGrid is built, so it always takes precedence.
+            Example: figsize=(20, 8).
         """
         import os
         import pandas as pd
@@ -516,9 +523,13 @@ class PlottingMixin:
             sharex=True,
             sharey=sharey,
             palette='Set2',
-            height=4,
-            aspect=1.2
+            height=height,
+            aspect=aspect
         )
+
+        # Apply explicit figsize override if requested
+        if figsize is not None:
+            g.fig.set_size_inches(figsize)
         
         # Overlay all points if requested
         if show_points:
@@ -596,10 +607,42 @@ class PlottingMixin:
                                 legend=False
                             )
             
-            # Add custom legend for highlighted points
+            # Merge highlight handles into the FacetGrid's figure-level legend
             if legend_handles and g.axes.size > 0:
-                ax_for_legend = g.axes[0][0]
-                ax_for_legend.legend(handles=legend_handles, title='Highlights', loc='best')
+                from matplotlib.patches import Patch
+                existing_handles, existing_labels, legend_title = [], [], (hue or '')
+                _fg_legend = getattr(g, '_legend', None)
+                if _fg_legend is not None:
+                    existing_handles = list(_fg_legend.legend_handles)
+                    existing_labels = [t.get_text() for t in _fg_legend.get_texts()]
+                    legend_title = _fg_legend.get_title().get_text()
+                    # Remove the seaborn-placed legend before rebuilding it
+                    _fg_legend.remove()
+                    g._legend = None
+                # Blank patch used as a visual section separator
+                blank = Patch(visible=False, label='')
+                divider = Patch(visible=False, label='― Highlights ―')
+                combined_handles = existing_handles + [blank, divider] + legend_handles
+                combined_labels = (
+                    existing_labels
+                    + ['', '― Highlights ―']
+                    + [h.get_label() for h in legend_handles]
+                )
+                new_legend = g.fig.legend(
+                    handles=combined_handles,
+                    labels=combined_labels,
+                    title=legend_title,
+                    loc='center right',
+                    bbox_to_anchor=(1.0, 0.5),
+                    frameon=True,
+                    fontsize='small',
+                    title_fontsize='small',
+                )
+                # Bold the section-divider text
+                for text in new_legend.get_texts():
+                    if text.get_text().startswith('―'):
+                        text.set_fontweight('bold')
+                g._legend = new_legend
 
         g.set_axis_labels('Energy Type', f'Energy ({unit_str})')
         g.fig.subplots_adjust(top=0.9)

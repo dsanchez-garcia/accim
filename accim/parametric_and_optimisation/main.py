@@ -1619,6 +1619,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         Columns are inserted immediately after the ``epw`` or ``idf`` column they derive from.
         If a category column already exists it is overwritten with a warning.
 
+        .. note::
+            If an EPW category and an IDF category share the same name (e.g. both called
+            ``'type'``), the EPW category is automatically renamed to ``'epw_<name>'``
+            (e.g. ``'epw_type'``) to prevent the IDF values from silently overwriting the
+            EPW values.  A ``UserWarning`` is emitted in that case.
+
         :param df_types: list of strings specifying which DataFrames to process.
             Valid values: ``'parametric'``, ``'parametric_hourly'``, ``'parametric_monthly'``,
             ``'optimisation'``, ``'optimisation_hourly'``, ``'optimisation_monthly'``.
@@ -1644,6 +1650,25 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             'optimisation_monthly':  'outputs_optimisation_monthly',
         }
 
+        # Detect name collisions between EPW and IDF categories and build a
+        # safe rename map for EPW categories that conflict with IDF ones.
+        epw_idf_collisions = set(epw_rules.keys()) & set(idf_rules.keys())
+        if epw_idf_collisions:
+            warnings.warn(
+                f"[apply_category_mapping] The following category name(s) are used for "
+                f"BOTH EPW and IDF mappings: {sorted(epw_idf_collisions)}. "
+                f"The EPW categories will be automatically renamed with an 'epw_' prefix "
+                f"(e.g. 'type' → 'epw_type') to avoid silent data loss. "
+                f"Update your highlight_dict / col / row / hue arguments accordingly.",
+                UserWarning,
+                stacklevel=2,
+            )
+        # Build the effective EPW rules dict with collision-safe names
+        safe_epw_rules = {
+            (f'epw_{cat}' if cat in epw_idf_collisions else cat): rules
+            for cat, rules in epw_rules.items()
+        }
+
         for df_key in df_types:
             attr = df_attr_map.get(df_key)
             if not attr:
@@ -1653,9 +1678,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 continue
 
             # ---- EPW categories ----
-            if epw_rules and 'epw' in df.columns:
+            if safe_epw_rules and 'epw' in df.columns:
                 epw_insert_pos = df.columns.get_loc('epw') + 1
-                for category, rules in epw_rules.items():
+                for category, rules in safe_epw_rules.items():
                     col_values = df['epw'].apply(
                         lambda v: self._resolve_category_for_value(str(v), rules)
                     )
@@ -1687,7 +1712,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         idf_insert_pos += 1
 
             setattr(self, attr, df)
-            n_new = len(epw_rules) + len(idf_rules)
+            n_new = len(safe_epw_rules) + len(idf_rules)
             print(f'  [info] apply_category_mapping: added/updated {n_new} category column(s) in {attr}.')
 
             # --- Persist mapping rules in DataFrame.attrs so they survive pickle/load ---
