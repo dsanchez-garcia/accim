@@ -2691,52 +2691,74 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     def merge(
         self,
-        other: 'SimulationBase',
+        other: 'Union[SimulationBase, List[SimulationBase]]',
         inplace: bool = False,
     ) -> 'SimulationBase':
         """
-        Merges two simulation instances by concatenating their result DataFrames,
-        allowing you to combine two separate work sessions and analyse the full
-        dataset together.
+        Merges one or more simulation instances into this one by concatenating
+        their result DataFrames, allowing you to combine multiple separate work
+        sessions and analyse the full dataset together.
 
         The resulting instance inherits **all** metadata from ``self``
         (``building_floor_area``, ``epw_mapping_rules``, ``epw_suffix_categories``,
         etc.).  Scalar/dict metadata from ``other`` is merged only when
         ``self`` does not already have a value for that attribute.
 
-        Example::
+        ``other`` can be a **single instance** or a **list of instances**;
+        in the list case they are merged sequentially into ``self``.
 
-            sim_a = ParametricSimulation()
-            sim_a.load_outputs_parametric(pickle_path='session_a.pkl')
+        For merging from a standalone list (without a pre-existing base instance)
+        see the :meth:`merge_all` classmethod.
 
-            sim_b = ParametricSimulation()
-            sim_b.load_outputs_parametric(pickle_path='session_b.pkl')
+        Examples::
 
-            # New merged instance (leaves sim_a and sim_b unchanged):
+            # Two instances:
             sim_total = sim_a.merge(sim_b)
 
-            # Or merge in-place into sim_a:
-            sim_a.merge(sim_b, inplace=True)
+            # Many instances at once — all appended to sim_a:
+            sim_total = sim_a.merge([sim_b, sim_c, sim_d])
 
-            print(len(sim_total.outputs_param_simulation))
-            # → len(sim_a) + len(sim_b)
+            # In-place (mutates sim_a):
+            sim_a.merge([sim_b, sim_c], inplace=True)
 
-        :param other: Another :class:`SimulationBase` instance (or subclass) whose
-            data will be appended.
+        :param other: A single :class:`SimulationBase` instance **or** a list of
+            them whose data will be appended in order.
         :param inplace: If ``False`` (default), returns a **new** instance leaving
-            both originals unchanged.  If ``True``, modifies ``self`` in-place and
+            all originals unchanged.  If ``True``, modifies ``self`` in-place and
             returns ``self``.
         :return: The merged simulation instance.
         """
         import copy
         import warnings
 
+        # ── Handle list input — reduce sequentially ────────────────────────────
+        if isinstance(other, list):
+            if not other:
+                return self if inplace else copy.deepcopy(self)
+            for item in other:
+                if not isinstance(item, SimulationBase):
+                    raise TypeError(
+                        f'merge() list elements must be SimulationBase instances, '
+                        f'got {type(item).__name__}.'
+                    )
+            target = self if inplace else copy.deepcopy(self)
+            for item in other:
+                target._merge_one(item)
+            return target
+
+        # ── Single instance ────────────────────────────────────────────────────
         if not isinstance(other, SimulationBase):
             raise TypeError(
-                f'merge() expects a SimulationBase instance, got {type(other).__name__}.'
+                f'merge() expects a SimulationBase instance or list, '
+                f'got {type(other).__name__}.'
             )
-
         target = self if inplace else copy.deepcopy(self)
+        target._merge_one(other)
+        return target
+
+    def _merge_one(self, other: 'SimulationBase') -> None:
+        """Internal helper: merges a single ``other`` instance into ``self`` in-place."""
+        import warnings
 
         # ── DataFrames to concatenate ──────────────────────────────────────────
         df_attrs = [
@@ -2749,8 +2771,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         ]
 
         for attr in df_attrs:
-            self_df  = getattr(target, attr, None)
-            other_df = getattr(other,  attr, None)
+            self_df  = getattr(self,  attr, None)
+            other_df = getattr(other, attr, None)
 
             # Normalise: treat empty DataFrames the same as None
             if self_df  is not None and hasattr(self_df,  'empty') and self_df.empty:
@@ -2761,65 +2783,109 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if self_df is None and other_df is None:
                 continue
             elif self_df is None:
-                setattr(target, attr, other_df.copy())
+                setattr(self, attr, other_df.copy())
             elif other_df is None:
                 pass  # keep self_df as-is
             else:
                 merged_df = pd.concat([self_df, other_df], ignore_index=True)
-                # Preserve attrs from self (source of truth)
-                merged_df.attrs.update(self_df.attrs)
-                setattr(target, attr, merged_df)
+                merged_df.attrs.update(self_df.attrs)   # self attrs win
+                setattr(self, attr, merged_df)
 
         # ── Merge scalar / dict metadata ───────────────────────────────────────
-        # epws: union without duplicates, preserving order
-        self_epws  = list(getattr(target, 'epws', []) or [])
-        other_epws = list(getattr(other,  'epws', []) or [])
-        merged_epws = self_epws + [e for e in other_epws if e not in self_epws]
-        target.epws = merged_epws
+        # epws: ordered union without duplicates
+        self_epws  = list(getattr(self,  'epws', []) or [])
+        other_epws = list(getattr(other, 'epws', []) or [])
+        self.epws  = self_epws + [e for e in other_epws if e not in self_epws]
 
-        # building_floor_area: merge dicts; warn on scalar conflicts
-        self_area  = getattr(target, 'building_floor_area', None)
-        other_area = getattr(other,  'building_floor_area', None)
+        # building_floor_area: merge dicts; warn on incompatible scalars
+        self_area  = getattr(self,  'building_floor_area', None)
+        other_area = getattr(other, 'building_floor_area', None)
         if self_area is None and other_area is not None:
-            target.building_floor_area = other_area
+            self.building_floor_area = other_area
         elif isinstance(self_area, dict) and isinstance(other_area, dict):
-            # other values fill in missing keys only
-            target.building_floor_area = {**other_area, **self_area}
+            self.building_floor_area = {**other_area, **self_area}   # self wins
         elif self_area is not None and other_area is not None and self_area != other_area:
             warnings.warn(
                 f'[merge] building_floor_area differs between instances '
                 f'(self={self_area!r}, other={other_area!r}). '
                 f'Keeping self value.',
                 UserWarning,
-                stacklevel=2,
+                stacklevel=3,
             )
 
         # epw_mapping_rules / idf_mapping_rules: self wins; warn if different
         for rule_attr in ('epw_mapping_rules', 'idf_mapping_rules'):
-            self_rule  = getattr(target, rule_attr, {})
-            other_rule = getattr(other,  rule_attr, {})
+            self_rule  = getattr(self,  rule_attr, {})
+            other_rule = getattr(other, rule_attr, {})
             if not self_rule and other_rule:
-                setattr(target, rule_attr, other_rule)
+                setattr(self, rule_attr, other_rule)
             elif self_rule and other_rule and self_rule != other_rule:
                 warnings.warn(
                     f'[merge] {rule_attr} differs between instances. '
                     f'Keeping self value.',
                     UserWarning,
-                    stacklevel=2,
+                    stacklevel=3,
                 )
 
         # epw_suffix_categories: merge dicts; self keys take priority
-        self_sc  = dict(getattr(target, 'epw_suffix_categories', {}) or {})
-        other_sc = dict(getattr(other,  'epw_suffix_categories', {}) or {})
-        target.epw_suffix_categories = {**other_sc, **self_sc}
+        self_sc  = dict(getattr(self,  'epw_suffix_categories', {}) or {})
+        other_sc = dict(getattr(other, 'epw_suffix_categories', {}) or {})
+        self.epw_suffix_categories = {**other_sc, **self_sc}
 
         n_self  = len(getattr(self,  'outputs_param_simulation', None) or [])
         n_other = len(getattr(other, 'outputs_param_simulation', None) or [])
         print(
-            f'  [info] merge: combined {n_self} + {n_other} '
-            f'= {n_self + n_other} parametric rows.'
+            f'  [info] merge: now {n_self} parametric rows '
+            f'(+{n_other} from other).'
         )
-        return target
+
+    @classmethod
+    def merge_all(
+        cls,
+        instances: 'List[SimulationBase]',
+        inplace: bool = False,
+    ) -> 'SimulationBase':
+        """
+        Merges a **list** of simulation instances into a single one by
+        concatenating all result DataFrames in order.
+
+        The first element of the list is used as the base (its metadata takes
+        priority).  This is equivalent to ``instances[0].merge(instances[1:])``.
+
+        Example::
+
+            sims = []
+            for pkl in ['session_a.pkl', 'session_b.pkl', 'session_c.pkl']:
+                s = ParametricSimulation()
+                s.load_outputs_parametric(pickle_path=pkl)
+                sims.append(s)
+
+            sim_total = ParametricSimulation.merge_all(sims)
+            print(len(sim_total.outputs_param_simulation))
+            # → sum of all rows across all sessions
+
+        :param instances: Non-empty list of :class:`SimulationBase` instances
+            (or subclasses) to merge in order.
+        :param inplace: If ``True``, modifies ``instances[0]`` in-place instead
+            of creating a deep copy as the base.
+        :return: The merged simulation instance.
+        :raises ValueError: If ``instances`` is empty.
+        :raises TypeError: If any element is not a :class:`SimulationBase`.
+        """
+        import copy
+
+        if not instances:
+            raise ValueError('merge_all() requires a non-empty list of instances.')
+        for i, item in enumerate(instances):
+            if not isinstance(item, SimulationBase):
+                raise TypeError(
+                    f'merge_all() element at index {i} must be a SimulationBase '
+                    f'instance, got {type(item).__name__}.'
+                )
+        base = instances[0] if inplace else copy.deepcopy(instances[0])
+        for other in instances[1:]:
+            base._merge_one(other)
+        return base
 
     def get_hourly_df(self, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
         """
