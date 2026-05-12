@@ -1731,6 +1731,123 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         except Exception as _e:
                             print(f'  [!] Could not update {pkl_path}: {_e}')
 
+    def add_epw_suffix_category(
+        self,
+        col_name: str,
+        suffix_map: dict,
+        fallback: str = 'historical',
+        df_types: list = None,
+    ) -> None:
+        """
+        Adds a new category column derived from the last ``'_'``-separated suffix
+        of each EPW value and persists the rule in ``DataFrame.attrs`` so it is
+        automatically re-applied every time results are loaded from a pickle.
+
+        This is the recommended way to create EPW-based derived categories that are
+        **not** covered by the keyword rules of :meth:`set_category_mapping` (e.g.
+        distinguishing TMY/MET/historical based on a filename suffix).
+
+        The rule is stored both on the instance (``self.epw_suffix_categories``) and
+        inside ``df.attrs['epw_suffix_categories']``, which survives ``DataFrame.to_pickle``
+        / ``pd.read_pickle`` round-trips.  When :meth:`load_outputs_parametric` or
+        :meth:`load_outputs_optimisation` loads a pickle that contains these attrs, it
+        automatically re-derives the columns without requiring any manual intervention.
+
+        Example::
+
+            # Call once after loading results:
+            sim.add_epw_suffix_category(
+                col_name='weather_type',
+                suffix_map={'tmy': 'tmy', 'met': 'met'},
+                fallback='historical',
+            )
+            # From now on, every sim.load_outputs_parametric(...) will automatically
+            # recreate the 'weather_type' column.
+
+        :param col_name: Name of the new column to create / overwrite.
+        :param suffix_map: Mapping from EPW filename suffix (the last ``'_'``-delimited
+            token) to the desired category label.
+            Example: ``{'tmy': 'tmy', 'met': 'met'}``.
+        :param fallback: Label assigned when the suffix is not found in ``suffix_map``.
+            Default ``'historical'``.
+        :param df_types: List of DataFrame keys to process.  Same values accepted as
+            in :meth:`apply_category_mapping`.  ``None`` processes all available DFs.
+        """
+        if not hasattr(self, 'epw_suffix_categories'):
+            self.epw_suffix_categories = {}
+        self.epw_suffix_categories[col_name] = {
+            'suffix_map': suffix_map,
+            'fallback': fallback,
+        }
+
+        if df_types is None:
+            df_types = [
+                'parametric', 'parametric_hourly', 'parametric_monthly',
+                'optimisation', 'optimisation_hourly', 'optimisation_monthly',
+            ]
+
+        df_attr_map = {
+            'parametric':            'outputs_param_simulation',
+            'parametric_hourly':     'outputs_param_simulation_hourly',
+            'parametric_monthly':    'outputs_param_simulation_monthly',
+            'optimisation':          'outputs_optimisation',
+            'optimisation_hourly':   'outputs_optimisation_hourly',
+            'optimisation_monthly':  'outputs_optimisation_monthly',
+        }
+
+        def _resolve(epw_value: str) -> str:
+            suffix = str(epw_value).rsplit('_', 1)[-1]
+            return suffix_map.get(suffix, fallback)
+
+        for df_key in df_types:
+            attr = df_attr_map.get(df_key)
+            if not attr:
+                continue
+            df = getattr(self, attr, None)
+            if df is None or (hasattr(df, 'empty') and df.empty):
+                continue
+            if 'epw' not in df.columns:
+                continue
+
+            df[col_name] = df['epw'].apply(_resolve)
+
+            # Persist rule in DataFrame.attrs so it survives pickle/load
+            if 'epw_suffix_categories' not in df.attrs:
+                df.attrs['epw_suffix_categories'] = {}
+            df.attrs['epw_suffix_categories'][col_name] = {
+                'suffix_map': suffix_map,
+                'fallback': fallback,
+            }
+            setattr(self, attr, df)
+            print(
+                f'  [info] add_epw_suffix_category: column "{col_name}" added to {attr} '
+                f'({df[col_name].value_counts().to_dict()}).'
+            )
+
+        # Overwrite the last saved .pkl on disk so the rule persists there too
+        for pkl_attr in ('outputs_param_simulation_filepath', 'outputs_optimisation_filepath'):
+            last_path = getattr(self, pkl_attr, None)
+            if not last_path:
+                continue
+            pkl_path = (
+                last_path.replace('.csv', '.pkl')
+                if last_path.endswith('.csv')
+                else last_path
+            )
+            if pkl_path.endswith('.pkl') and os.path.isfile(pkl_path):
+                df_attr = (
+                    'outputs_param_simulation'
+                    if 'param' in pkl_attr
+                    else 'outputs_optimisation'
+                )
+                _df = getattr(self, df_attr, None)
+                if _df is not None:
+                    try:
+                        _df.to_pickle(pkl_path)
+                        print(f'  [info] epw_suffix_categories persisted to {pkl_path}')
+                    except Exception as _e:
+                        print(f'  [!] Could not update {pkl_path}: {_e}')
+
     def preview_category_mapping(self) -> dict:
         """
         Returns a dictionary containing DataFrames showing the category labels that would be assigned to each
@@ -2106,6 +2223,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         # Re-apply category mapping if rules are already set on this instance
         if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
             self.apply_category_mapping(df_types=['parametric'])
+        # Re-apply epw_suffix_categories stored in attrs at add_epw_suffix_category time
+        _suffix_cats = self.outputs_param_simulation.attrs.get('epw_suffix_categories', {})
+        if _suffix_cats:
+            self.epw_suffix_categories = _suffix_cats
+            if 'epw' in self.outputs_param_simulation.columns:
+                for _col, _rule in _suffix_cats.items():
+                    _smap = _rule['suffix_map']
+                    _fb   = _rule.get('fallback', 'historical')
+                    self.outputs_param_simulation[_col] = (
+                        self.outputs_param_simulation['epw'].apply(
+                            lambda v: _smap.get(str(v).rsplit('_', 1)[-1], _fb)
+                        )
+                    )
+            print(f'  [info] epw_suffix_categories restored: {list(_suffix_cats.keys())}')
         return self.outputs_param_simulation
 
     def estimate_optimisation_sims(self, evaluations: int, population_size: int, epws: list) -> int:
@@ -2542,7 +2673,153 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         # Re-apply category mapping if rules are already set on this instance
         if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
             self.apply_category_mapping(df_types=['optimisation'])
+        # Re-apply epw_suffix_categories stored in attrs at add_epw_suffix_category time
+        _suffix_cats = self.outputs_optimisation.attrs.get('epw_suffix_categories', {})
+        if _suffix_cats:
+            self.epw_suffix_categories = _suffix_cats
+            if 'epw' in self.outputs_optimisation.columns:
+                for _col, _rule in _suffix_cats.items():
+                    _smap = _rule['suffix_map']
+                    _fb   = _rule.get('fallback', 'historical')
+                    self.outputs_optimisation[_col] = (
+                        self.outputs_optimisation['epw'].apply(
+                            lambda v: _smap.get(str(v).rsplit('_', 1)[-1], _fb)
+                        )
+                    )
+            print(f'  [info] epw_suffix_categories restored: {list(_suffix_cats.keys())}')
         return self.outputs_optimisation
+
+    def merge(
+        self,
+        other: 'SimulationBase',
+        inplace: bool = False,
+    ) -> 'SimulationBase':
+        """
+        Merges two simulation instances by concatenating their result DataFrames,
+        allowing you to combine two separate work sessions and analyse the full
+        dataset together.
+
+        The resulting instance inherits **all** metadata from ``self``
+        (``building_floor_area``, ``epw_mapping_rules``, ``epw_suffix_categories``,
+        etc.).  Scalar/dict metadata from ``other`` is merged only when
+        ``self`` does not already have a value for that attribute.
+
+        Example::
+
+            sim_a = ParametricSimulation()
+            sim_a.load_outputs_parametric(pickle_path='session_a.pkl')
+
+            sim_b = ParametricSimulation()
+            sim_b.load_outputs_parametric(pickle_path='session_b.pkl')
+
+            # New merged instance (leaves sim_a and sim_b unchanged):
+            sim_total = sim_a.merge(sim_b)
+
+            # Or merge in-place into sim_a:
+            sim_a.merge(sim_b, inplace=True)
+
+            print(len(sim_total.outputs_param_simulation))
+            # → len(sim_a) + len(sim_b)
+
+        :param other: Another :class:`SimulationBase` instance (or subclass) whose
+            data will be appended.
+        :param inplace: If ``False`` (default), returns a **new** instance leaving
+            both originals unchanged.  If ``True``, modifies ``self`` in-place and
+            returns ``self``.
+        :return: The merged simulation instance.
+        """
+        import copy
+        import warnings
+
+        if not isinstance(other, SimulationBase):
+            raise TypeError(
+                f'merge() expects a SimulationBase instance, got {type(other).__name__}.'
+            )
+
+        target = self if inplace else copy.deepcopy(self)
+
+        # ── DataFrames to concatenate ──────────────────────────────────────────
+        df_attrs = [
+            'outputs_param_simulation',
+            'outputs_param_simulation_hourly',
+            'outputs_param_simulation_monthly',
+            'outputs_optimisation',
+            'outputs_optimisation_hourly',
+            'outputs_optimisation_monthly',
+        ]
+
+        for attr in df_attrs:
+            self_df  = getattr(target, attr, None)
+            other_df = getattr(other,  attr, None)
+
+            # Normalise: treat empty DataFrames the same as None
+            if self_df  is not None and hasattr(self_df,  'empty') and self_df.empty:
+                self_df = None
+            if other_df is not None and hasattr(other_df, 'empty') and other_df.empty:
+                other_df = None
+
+            if self_df is None and other_df is None:
+                continue
+            elif self_df is None:
+                setattr(target, attr, other_df.copy())
+            elif other_df is None:
+                pass  # keep self_df as-is
+            else:
+                merged_df = pd.concat([self_df, other_df], ignore_index=True)
+                # Preserve attrs from self (source of truth)
+                merged_df.attrs.update(self_df.attrs)
+                setattr(target, attr, merged_df)
+
+        # ── Merge scalar / dict metadata ───────────────────────────────────────
+        # epws: union without duplicates, preserving order
+        self_epws  = list(getattr(target, 'epws', []) or [])
+        other_epws = list(getattr(other,  'epws', []) or [])
+        merged_epws = self_epws + [e for e in other_epws if e not in self_epws]
+        target.epws = merged_epws
+
+        # building_floor_area: merge dicts; warn on scalar conflicts
+        self_area  = getattr(target, 'building_floor_area', None)
+        other_area = getattr(other,  'building_floor_area', None)
+        if self_area is None and other_area is not None:
+            target.building_floor_area = other_area
+        elif isinstance(self_area, dict) and isinstance(other_area, dict):
+            # other values fill in missing keys only
+            target.building_floor_area = {**other_area, **self_area}
+        elif self_area is not None and other_area is not None and self_area != other_area:
+            warnings.warn(
+                f'[merge] building_floor_area differs between instances '
+                f'(self={self_area!r}, other={other_area!r}). '
+                f'Keeping self value.',
+                UserWarning,
+                stacklevel=2,
+            )
+
+        # epw_mapping_rules / idf_mapping_rules: self wins; warn if different
+        for rule_attr in ('epw_mapping_rules', 'idf_mapping_rules'):
+            self_rule  = getattr(target, rule_attr, {})
+            other_rule = getattr(other,  rule_attr, {})
+            if not self_rule and other_rule:
+                setattr(target, rule_attr, other_rule)
+            elif self_rule and other_rule and self_rule != other_rule:
+                warnings.warn(
+                    f'[merge] {rule_attr} differs between instances. '
+                    f'Keeping self value.',
+                    UserWarning,
+                    stacklevel=2,
+                )
+
+        # epw_suffix_categories: merge dicts; self keys take priority
+        self_sc  = dict(getattr(target, 'epw_suffix_categories', {}) or {})
+        other_sc = dict(getattr(other,  'epw_suffix_categories', {}) or {})
+        target.epw_suffix_categories = {**other_sc, **self_sc}
+
+        n_self  = len(getattr(self,  'outputs_param_simulation', None) or [])
+        n_other = len(getattr(other, 'outputs_param_simulation', None) or [])
+        print(
+            f'  [info] merge: combined {n_self} + {n_other} '
+            f'= {n_self + n_other} parametric rows.'
+        )
+        return target
 
     def get_hourly_df(self, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
         """
