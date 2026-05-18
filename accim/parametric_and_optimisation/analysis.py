@@ -5,140 +5,382 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import Literal
+from typing import Any, Dict, Literal, Union
 
 class AnalysisMixin:
 
-    def set_building_floor_area(self, mode: Literal['all', 'occupied', 'custom', 'list']='all', zones_list: list=None, custom_area: float=None) -> float:
-        """
-        Calculates or sets the floor area to be used for normalizing energy results (kWh/m2).
-        
-        # TODO: Recordatorio para parametrización geométrica.
-        # Si se utiliza parametrización de geometría en el futuro (áreas variables entre simulaciones
-        # o distintos IDFs base), este cálculo estático aquí no servirá. Debería evaluarse
-        # el área en cada variante iterativamente leyendo sus respectivos .bnd o archivos generados.
-        
-        :param mode: 'all' to use all Floor surfaces in the IDF.
-                     'occupied' to use Floor surfaces in zones that have a People object.
-                     'custom' to use the value provided in `custom_area`.
-                     'list' to use Floor surfaces only in the zones specified in `zones_list`.
-        :param zones_list: List of zone names for mode 'list'.
-        :param custom_area: Float value for the area in mode 'custom'.
-        :return: the calculated or assigned floor area.
-        """
-        if mode == 'custom':
-            if custom_area is None:
-                raise ValueError("custom_area must be provided when mode='custom'")
-            self.building_floor_area = float(custom_area)
-            return self.building_floor_area
+    @staticmethod
+    def _normalise_floor_area_idf_name(name: str) -> str:
+        import re
 
-        buildings = getattr(self, 'buildings', [])
-        if not buildings:
-            idf = getattr(self, 'building', None)
-            if idf is None:
-                # When loaded from JSON/pickle without an IDF, try to reload from the backup.
-                # idf_backup_path may be a string (single IDF) or a list (multi-IDF)
-                backup_path = getattr(self, 'idf_backup_path', None)
-                backup_list = backup_path if isinstance(backup_path, list) else ([backup_path] if backup_path else [])
-                valid_backups = [p for p in backup_list if p and os.path.isfile(p)]
-                if not valid_backups:
-                    raise AttributeError(
-                        "self.building is None and no valid idf_backup_path is available. "
-                        "Either provide mode='custom' with a custom_area value, or load the "
-                        "session with an IDF object (building= argument)."
-                    )
-                from accim.utils import get_building
-                loaded = [get_building(p) for p in valid_backups]
-                self.buildings = loaded
-                buildings = loaded
-                print(f'  [info] {len(loaded)} IDF(s) auto-loaded from backup paths.')
-            else:
-                buildings = [idf]
-            
-        areas = {}
-        for idx, idf in enumerate(buildings):
-            if hasattr(self, '_get_idf_identifier'):
-                raw_name = self._get_idf_identifier(idf, idx)
-                # Strip the accim backup prefix/suffix so the key matches the 'idf' column
-                # e.g. 'accim_idf_backup_SF_Detached_A_max_South_pre_parametric_20260501_102536'
-                # → 'SF_Detached_A_max_South'
-                import re as _re
-                stripped = _re.sub(r'^accim_idf_backup_', '', raw_name)
-                stripped = _re.sub(r'_pre_(?:parametric|optimisation)_\d{8}_\d{6}$', '', stripped)
-                idf_name = stripped if stripped else raw_name
-            else:
-                idf_name = getattr(idf, 'idfname', f'unknown_idf_{idx}')
-                if idf_name:
-                    idf_name = os.path.basename(idf_name).replace('.idf', '')
-            
+        normalised = os.path.basename(str(name)) if name is not None else ''
+        if normalised.lower().endswith('.idf'):
+            normalised = os.path.splitext(normalised)[0]
+        normalised = re.sub(r'^accim_idf_backup_', '', normalised)
+        normalised = re.sub(
+            r'_(?:pre|post)_(?:setup|parametric|optimisation)_\d{8}_\d{6}$',
+            '',
+            normalised,
+        )
+        return normalised
+
+    def _get_floor_area_idf_name(self, idf: Any, idx: int) -> str:
+        if hasattr(self, '_get_idf_identifier'):
+            raw_name = self._get_idf_identifier(idf, idx)
+        else:
+            raw_name = getattr(idf, 'idfname', f'unknown_idf_{idx}')
+        idf_name = self._normalise_floor_area_idf_name(raw_name)
+        return idf_name if idf_name else f'unknown_idf_{idx}'
+
+    @staticmethod
+    def _idf_objects(idf: Any, object_key: str) -> list:
+        idfobjects = getattr(idf, 'idfobjects', {})
+        for key in (object_key, object_key.upper(), object_key.lower()):
             try:
-                surfaces = idf.idfobjects['BuildingSurface:Detailed']
-            except KeyError:
-                surfaces = []
-            floors = [s for s in surfaces if s.Surface_Type.lower() == 'floor']
-            if mode == 'all':
-                total_area = sum((f.area for f in floors))
-            elif mode == 'occupied':
-                occupied_names = set()
-                try:
-                    people_objs = idf.idfobjects['PEOPLE']
-                except KeyError:
-                    people_objs = []
-                for p in people_objs:
-                    name = getattr(p, 'Zone_or_ZoneList_or_Space_or_SpaceList_Name', getattr(p, 'Zone_or_ZoneList_Name', None))
-                    if name:
-                        occupied_names.add(name.upper())
-                try:
-                    for zl in idf.idfobjects['ZONELIST']:
-                        if zl.Name.upper() in occupied_names:
-                            for i in range(1, 500):
-                                z_name = getattr(zl, f'Zone_{i}_Name', getattr(zl, f'Zone_Name_{i}', None))
-                                if z_name:
-                                    occupied_names.add(z_name.upper())
-                except KeyError:
-                    pass
-                try:
-                    for sl in idf.idfobjects['SPACELIST']:
-                        if sl.Name.upper() in occupied_names:
-                            for i in range(1, 500):
-                                s_name = getattr(sl, f'Space_{i}_Name', getattr(sl, f'Space_Name_{i}', None))
-                                if s_name:
-                                    occupied_names.add(s_name.upper())
-                except KeyError:
-                    pass
-                try:
-                    for s in idf.idfobjects['SPACE']:
-                        if s.Name.upper() in occupied_names:
-                            z_name = getattr(s, 'Zone_Name', getattr(s, 'Zone_or_ZoneList_Name', None))
-                            if z_name:
-                                occupied_names.add(z_name.upper())
-                except KeyError:
-                    pass
-                total_area = 0.0
-                for f in floors:
-                    z_name = getattr(f, 'Zone_Name', '').upper()
-                    s_name = getattr(f, 'Space_Name', '').upper()
-                    if z_name in occupied_names or s_name in occupied_names:
-                        total_area += f.area
-            elif mode == 'list':
-                if not zones_list:
-                    raise ValueError("zones_list must be provided when mode='list'")
-                upper_zones = [z.upper() for z in zones_list]
-                total_area = sum((f.area for f in floors if getattr(f, 'Zone_Name', '').upper() in upper_zones or getattr(f, 'Space_Name', '').upper() in upper_zones))
-            else:
-                raise ValueError(f'Unknown mode: {mode}')
-            
-            areas[idf_name] = total_area
+                return idfobjects[key]
+            except (KeyError, TypeError):
+                pass
+        try:
+            for key in idfobjects.keys():
+                if str(key).upper() == object_key.upper():
+                    return idfobjects[key]
+        except AttributeError:
+            pass
+        return []
 
+    @staticmethod
+    def _idf_object_items(idf: Any):
+        idfobjects = getattr(idf, 'idfobjects', {})
+        try:
+            keys = list(idfobjects.keys())
+        except AttributeError:
+            return
+        for key in keys:
+            try:
+                yield str(key), idfobjects[key]
+            except KeyError:
+                continue
+
+    @staticmethod
+    def _first_existing_attr(obj: Any, attrs: list):
+        for attr in attrs:
+            value = getattr(obj, attr, None)
+            if value not in (None, ''):
+                return value
+        return None
+
+    @staticmethod
+    def _iter_list_object_values(obj: Any, prefix: str):
+        seen = set()
+        fieldnames = getattr(obj, 'fieldnames', [])
+        for field in fieldnames:
+            if field == 'Name':
+                continue
+            if prefix.lower() in field.lower() and field.lower().endswith('name'):
+                value = getattr(obj, field, None)
+                if value not in (None, '') and value not in seen:
+                    seen.add(value)
+                    yield value
+        for i in range(1, 500):
+            for attr in (f'{prefix}_{i}_Name', f'{prefix}_Name_{i}'):
+                value = getattr(obj, attr, None)
+                if value not in (None, '') and value not in seen:
+                    seen.add(value)
+                    yield value
+
+    def _get_zone_lookup(self, idf: Any) -> Dict[str, str]:
+        return {
+            z.Name.upper(): z.Name
+            for z in self._idf_objects(idf, 'ZONE')
+            if getattr(z, 'Name', None)
+        }
+
+    def _get_space_to_zone_lookup(self, idf: Any) -> Dict[str, str]:
+        lookup = {}
+        for space in self._idf_objects(idf, 'SPACE'):
+            space_name = getattr(space, 'Name', None)
+            zone_name = self._first_existing_attr(space, ['Zone_Name', 'Zone_or_ZoneList_Name'])
+            if space_name and zone_name:
+                lookup[space_name.upper()] = zone_name.upper()
+        return lookup
+
+    def _get_zonelist_lookup(self, idf: Any) -> Dict[str, set]:
+        lookup = {}
+        for zonelist in self._idf_objects(idf, 'ZONELIST'):
+            name = getattr(zonelist, 'Name', None)
+            if name:
+                lookup[name.upper()] = {z.upper() for z in self._iter_list_object_values(zonelist, 'Zone')}
+        return lookup
+
+    def _get_spacelist_lookup(self, idf: Any) -> Dict[str, set]:
+        space_to_zone = self._get_space_to_zone_lookup(idf)
+        lookup = {}
+        for spacelist in self._idf_objects(idf, 'SPACELIST'):
+            name = getattr(spacelist, 'Name', None)
+            if not name:
+                continue
+            zones = set()
+            for space_name in self._iter_list_object_values(spacelist, 'Space'):
+                zone_name = space_to_zone.get(space_name.upper())
+                if zone_name:
+                    zones.add(zone_name)
+            lookup[name.upper()] = zones
+        return lookup
+
+    def _resolve_zone_like_names(self, idf: Any, names: list) -> set:
+        zone_lookup = self._get_zone_lookup(idf)
+        space_to_zone = self._get_space_to_zone_lookup(idf)
+        zonelist_lookup = self._get_zonelist_lookup(idf)
+        spacelist_lookup = self._get_spacelist_lookup(idf)
+        resolved = set()
+
+        for name in names:
+            if name in (None, ''):
+                continue
+            upper_name = str(name).upper()
+            if upper_name in zone_lookup:
+                resolved.add(upper_name)
+            if upper_name in space_to_zone:
+                resolved.add(space_to_zone[upper_name])
+            if upper_name in zonelist_lookup:
+                resolved.update(zonelist_lookup[upper_name])
+            if upper_name in spacelist_lookup:
+                resolved.update(spacelist_lookup[upper_name])
+
+        return resolved
+
+    def _resolve_occupied_zone_names(self, idf: Any) -> set:
+        targets = []
+        people_target_fields = [
+            'Zone_or_ZoneList_or_Space_or_SpaceList_Name',
+            'Zone_or_ZoneList_Name',
+            'Zone_Name',
+        ]
+        for people in self._idf_objects(idf, 'PEOPLE'):
+            target = self._first_existing_attr(people, people_target_fields)
+            if target:
+                targets.append(target)
+        return self._resolve_zone_like_names(idf, targets)
+
+    @staticmethod
+    def _is_air_conditioning_object_class(class_name: str) -> bool:
+        upper_class = class_name.upper()
+        return (
+            upper_class == 'ZONEHVAC:EQUIPMENTCONNECTIONS'
+            or upper_class.startswith('ZONECONTROL:')
+            or upper_class.startswith('ZONEHVAC:')
+            or upper_class.startswith('HVACTEMPLATE:ZONE:')
+            or upper_class.startswith('AIRTERMINAL:')
+        )
+
+    @staticmethod
+    def _is_conditioned_zone_field(field_name: str) -> bool:
+        field = field_name.lower()
+        exact_zone_fields = {
+            'zone_name',
+            'zone_or_zonelist_name',
+            'zone_or_zonelist_or_space_or_spacelist_name',
+            'control_zone_name',
+            'controlled_zone_name',
+            'controlling_zone_name',
+            'controlling_zone_or_thermostat_location',
+        }
+        if field in exact_zone_fields:
+            return True
+        if field.endswith('_zone_name'):
+            skipped_terms = ('node', 'equipment', 'supply', 'return', 'inlet', 'outlet', 'exhaust')
+            return not any(term in field for term in skipped_terms)
+        return False
+
+    def _iter_conditioned_zone_targets(self, obj: Any):
+        explicit_fields = [
+            'Zone_Name',
+            'Zone_or_ZoneList_Name',
+            'Zone_or_ZoneList_or_Space_or_SpaceList_Name',
+            'Control_Zone_Name',
+            'Controlled_Zone_Name',
+            'Controlling_Zone_Name',
+            'Controlling_Zone_or_Thermostat_Location',
+        ]
+        seen = set()
+        for field in explicit_fields:
+            value = getattr(obj, field, None)
+            if value not in (None, '') and value not in seen:
+                seen.add(value)
+                yield value
+        for field in getattr(obj, 'fieldnames', []):
+            if self._is_conditioned_zone_field(field):
+                value = getattr(obj, field, None)
+                if value not in (None, '') and value not in seen:
+                    seen.add(value)
+                    yield value
+
+    def _resolve_air_conditioned_zone_names(self, idf: Any) -> set:
+        targets = []
+        for object_class, objects in self._idf_object_items(idf):
+            if not self._is_air_conditioning_object_class(object_class):
+                continue
+            for obj in objects:
+                targets.extend(self._iter_conditioned_zone_targets(obj))
+        return self._resolve_zone_like_names(idf, targets)
+
+    def _sum_floor_area(self, idf: Any, floors: list, zone_names: set = None) -> float:
+        if zone_names is None:
+            return sum((getattr(f, 'area', 0.0) for f in floors))
+
+        space_to_zone = self._get_space_to_zone_lookup(idf)
+        total_area = 0.0
+        for floor in floors:
+            floor_zone_name = getattr(floor, 'Zone_Name', '')
+            floor_space_name = getattr(floor, 'Space_Name', '')
+            floor_zone_upper = str(floor_zone_name).upper() if floor_zone_name else ''
+            floor_space_upper = str(floor_space_name).upper() if floor_space_name else ''
+            floor_space_zone = space_to_zone.get(floor_space_upper, '')
+            if floor_zone_upper in zone_names or floor_space_zone in zone_names:
+                total_area += getattr(floor, 'area', 0.0)
+        return total_area
+
+    def _resolve_floor_area_config(self, config: Any, idf_name: str, idf_names: list, argument_name: str):
+        if not isinstance(config, dict):
+            return config
+
+        normalised_config = {}
+        for key, value in config.items():
+            normalised_key = self._normalise_floor_area_idf_name(key)
+            if normalised_key in normalised_config:
+                raise ValueError(f"Duplicate IDF key for {argument_name}: {key!r}")
+            normalised_config[normalised_key] = value
+
+        expected = set(idf_names)
+        provided = set(normalised_config)
+        missing = sorted(expected - provided)
+        unknown = sorted(provided - expected)
+        if missing or unknown:
+            msg = []
+            if missing:
+                msg.append(f'missing IDF keys: {missing}')
+            if unknown:
+                msg.append(f'unknown IDF keys: {unknown}')
+            raise ValueError(f"Invalid {argument_name} dictionary ({'; '.join(msg)}).")
+
+        return normalised_config[idf_name]
+
+    @staticmethod
+    def _coerce_custom_floor_area(value: Union[str, float, int]) -> float:
+        if isinstance(value, str):
+            value = value.strip().replace(',', '.')
+        return float(value)
+
+    def _coerce_zones_list(self, idf: Any, zones_list: Any, idf_name: str) -> set:
+        if zones_list in (None, ''):
+            raise ValueError("zones_list must be provided when mode='list'")
+        if isinstance(zones_list, str):
+            zone_values = [zones_list]
+        else:
+            zone_values = list(zones_list)
+        if not zone_values:
+            raise ValueError("zones_list must be provided when mode='list'")
+
+        resolved = self._resolve_zone_like_names(idf, zone_values)
+        unknown = [z for z in zone_values if not self._resolve_zone_like_names(idf, [z])]
+        if unknown:
+            raise ValueError(f"zones_list includes unknown zones/lists for IDF '{idf_name}': {unknown}")
+        return resolved
+
+    def _get_floor_area_buildings(self) -> list:
+        buildings = getattr(self, 'buildings', [])
+        if buildings:
+            return buildings
+
+        idf = getattr(self, 'building', None)
+        if idf is not None:
+            return [idf]
+
+        backup_path = getattr(self, 'idf_backup_path', None)
+        backup_list = backup_path if isinstance(backup_path, list) else ([backup_path] if backup_path else [])
+        valid_backups = [p for p in backup_list if p and os.path.isfile(p)]
+        if not valid_backups:
+            raise AttributeError(
+                "self.building is None and no valid idf_backup_path is available. "
+                "Either provide mode='custom' with a custom_area value, or load the "
+                "session with an IDF object (building= argument)."
+            )
+        from accim.utils import get_building
+        loaded = [get_building(p) for p in valid_backups]
+        self.buildings = loaded
+        print(f'  [info] {len(loaded)} IDF(s) auto-loaded from backup paths.')
+        return loaded
+
+    def _set_and_return_building_floor_area(self, areas: Dict[str, float]):
         if len(areas) == 1:
             self.building_floor_area = list(areas.values())[0]
             print(f'  [info] Building floor area: {self.building_floor_area:.2f} m² (single IDF)')
             return self.building_floor_area
-        else:
-            self.building_floor_area = areas
-            for idf_name, area in areas.items():
-                print(f'  [info] Building floor area [{idf_name}]: {area:.2f} m²')
-            return areas
+
+        self.building_floor_area = areas
+        for idf_name, area in areas.items():
+            print(f'  [info] Building floor area [{idf_name}]: {area:.2f} m²')
+        return areas
+
+    def set_building_floor_area(
+            self,
+            mode: Literal['all', 'occupied', 'air-conditioned', 'air-condicioned', 'custom', 'list']='all',
+            zones_list: Union[list, Dict[str, list]]=None,
+            custom_area: Union[str, float, Dict[str, Union[str, float]]]=None
+    ) -> Union[float, Dict[str, float]]:
+        """
+        Calculates or sets the floor area to be used for normalizing energy results (kWh/m2).
+
+        :param mode: 'all' to use all Floor surfaces in the IDF.
+                     'occupied' to use Floor surfaces in zones that have a People object.
+                     'air-conditioned' to use Floor surfaces in zones served or controlled by HVAC objects.
+                     'custom' to use the value provided in `custom_area`.
+                     'list' to use Floor surfaces only in the zones specified in `zones_list`.
+        :param zones_list: List of zone names for mode 'list', or a dict mapping each IDF to its list.
+        :param custom_area: Float/string value for mode 'custom', or a dict mapping each IDF to its value.
+        :return: the calculated or assigned floor area.
+        """
+        normalised_mode = str(mode).lower().replace('_', '-').strip()
+        if normalised_mode == 'air-condicioned':
+            normalised_mode = 'air-conditioned'
+
+        if normalised_mode == 'custom':
+            if custom_area is None:
+                raise ValueError("custom_area must be provided when mode='custom'")
+            if not isinstance(custom_area, dict):
+                self.building_floor_area = self._coerce_custom_floor_area(custom_area)
+                return self.building_floor_area
+
+        buildings = self._get_floor_area_buildings()
+        idf_names = [self._get_floor_area_idf_name(idf, idx) for idx, idf in enumerate(buildings)]
+
+        areas = {}
+        for idx, idf in enumerate(buildings):
+            idf_name = idf_names[idx]
+            surfaces = self._idf_objects(idf, 'BuildingSurface:Detailed')
+            floors = [s for s in surfaces if getattr(s, 'Surface_Type', '').lower() == 'floor']
+
+            if normalised_mode == 'custom':
+                custom_value = self._resolve_floor_area_config(custom_area, idf_name, idf_names, 'custom_area')
+                total_area = self._coerce_custom_floor_area(custom_value)
+            elif normalised_mode == 'all':
+                total_area = self._sum_floor_area(idf, floors)
+            elif normalised_mode == 'occupied':
+                zone_names = self._resolve_occupied_zone_names(idf)
+                total_area = self._sum_floor_area(idf, floors, zone_names)
+            elif normalised_mode == 'air-conditioned':
+                zone_names = self._resolve_air_conditioned_zone_names(idf)
+                total_area = self._sum_floor_area(idf, floors, zone_names)
+            elif normalised_mode == 'list':
+                idf_zones_list = self._resolve_floor_area_config(zones_list, idf_name, idf_names, 'zones_list')
+                zone_names = self._coerce_zones_list(idf, idf_zones_list, idf_name)
+                total_area = self._sum_floor_area(idf, floors, zone_names)
+            else:
+                raise ValueError(f'Unknown mode: {mode}')
+
+            areas[idf_name] = total_area
+
+        return self._set_and_return_building_floor_area(areas)
 
     def normalize_outputs(self, df_types: list=None):
         """
