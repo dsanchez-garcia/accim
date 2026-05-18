@@ -313,20 +313,38 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.idf_backup_path = self.idf_backup_path[0]
         return self.idf_backup_path
 
-    def get_output_var_df_from_idf(self) -> pd.DataFrame:
+    def get_output_var_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
         """
         Gets a pandas DataFrame which contains the Output:Variable objects from the idf.
         Therefore, it may contain wildcards such as '*', which means the variable is requested
         for all zones.
 
+        :param idf_scope: which IDFs to read. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to read fewer IDFs.
         :return: a pandas DataFrame which contains the Output:Variable objects from the idf
         """
-        if self.is_accim_custom_model or self.is_accim_predef_model:
-            output_variable_df = accis.gen_outputs_df(idf=self.building, ScriptType=self.ScriptType, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, verboseMode=False)
-        else:
-            output_var_dict = {'key_value': [i.Key_Value for i in self.building.idfobjects['Output:Variable']], 'variable_name': [i.Variable_Name for i in self.building.idfobjects['Output:Variable']], 'frequency': [i.Reporting_Frequency for i in self.building.idfobjects['Output:Variable']], 'schedule_name': [i.Schedule_Name for i in self.building.idfobjects['Output:Variable']]}
-            output_variable_df = pd.DataFrame.from_dict(output_var_dict)
-        return output_variable_df
+        scoped_buildings = self._resolve_idf_scope(idf_scope)
+        output_dfs = []
+        include_idf = len(scoped_buildings) > 1
+
+        for idx, building in scoped_buildings:
+            if self.is_accim_custom_model or self.is_accim_predef_model:
+                output_variable_df = accis.gen_outputs_df(idf=building, ScriptType=self.ScriptType, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, verboseMode=False)
+            else:
+                output_var_dict = {
+                    'key_value': [i.Key_Value for i in building.idfobjects['Output:Variable']],
+                    'variable_name': [i.Variable_Name for i in building.idfobjects['Output:Variable']],
+                    'frequency': [i.Reporting_Frequency for i in building.idfobjects['Output:Variable']],
+                    'schedule_name': [i.Schedule_Name for i in building.idfobjects['Output:Variable']],
+                }
+                output_variable_df = pd.DataFrame.from_dict(output_var_dict)
+            if include_idf:
+                output_variable_df.insert(0, 'idf', self._get_idf_identifier(building, idx))
+            output_dfs.append(output_variable_df)
+
+        if output_dfs:
+            return pd.concat(output_dfs, ignore_index=True)
+        return pd.DataFrame(columns=['key_value', 'variable_name', 'frequency', 'schedule_name'])
 
     def _get_idf_identifier(self, building: Any, index: int = None) -> str:
         if hasattr(building, 'idfname') and building.idfname:
@@ -334,6 +352,82 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if index is not None:
             return f'unknown_idf_{index}'
         return 'unknown_idf'
+
+    def _resolve_idf_scope(self, idf_scope: Any = 'all') -> list[tuple[int, Any]]:
+        """
+        Resolve an IDF scope into ``(index, building)`` pairs.
+
+        Accepted values:
+        - 'all' (default): every IDF in ``self.buildings``.
+        - 'first': only the first IDF.
+        - int: zero-based IDF index.
+        - str: IDF identifier, file stem, or file name.
+        - list/tuple/set: any mix of the previous selectors.
+        """
+        if not getattr(self, 'buildings', None):
+            return []
+
+        indexed_buildings = list(enumerate(self.buildings))
+        if idf_scope is None:
+            idf_scope = 'all'
+
+        if isinstance(idf_scope, str):
+            scope_norm = idf_scope.strip().lower()
+            if scope_norm in {'all', '*'}:
+                return indexed_buildings
+            if scope_norm in {'first', 'one', 'single', 'reference'}:
+                return [indexed_buildings[0]]
+
+        selectors = idf_scope if isinstance(idf_scope, (list, tuple, set)) else [idf_scope]
+
+        names_to_buildings: dict[str, tuple[int, Any]] = {}
+        for idx, building in indexed_buildings:
+            names = {self._get_idf_identifier(building, idx)}
+            idfname = getattr(building, 'idfname', None)
+            if idfname:
+                basename = os.path.basename(str(idfname))
+                names.add(basename)
+                names.add(os.path.splitext(basename)[0])
+            for name in names:
+                names_to_buildings.setdefault(str(name).strip().lower(), (idx, building))
+
+        selected: list[tuple[int, Any]] = []
+        seen_indices: set[int] = set()
+        for selector in selectors:
+            if isinstance(selector, int):
+                if selector < 0 or selector >= len(indexed_buildings):
+                    raise IndexError(f'idf_scope index out of range: {selector}')
+                pair = indexed_buildings[selector]
+            else:
+                selector_key = str(selector).strip().lower()
+                if selector_key in {'all', '*'}:
+                    for pair in indexed_buildings:
+                        if pair[0] not in seen_indices:
+                            selected.append(pair)
+                            seen_indices.add(pair[0])
+                    continue
+                if selector_key in {'first', 'one', 'single', 'reference'}:
+                    pair = indexed_buildings[0]
+                elif selector_key in names_to_buildings:
+                    pair = names_to_buildings[selector_key]
+                else:
+                    available = [self._get_idf_identifier(b, i) for (i, b) in indexed_buildings]
+                    raise ValueError(
+                        f'Unknown idf_scope selector: {selector}. '
+                        f'Available IDFs: {available}'
+                    )
+
+            if pair[0] not in seen_indices:
+                selected.append(pair)
+                seen_indices.add(pair[0])
+
+        return selected
+
+    def _idf_scope_label(self, idf_scope: Any = 'all') -> str:
+        return '|'.join(
+            self._get_idf_identifier(building, idx)
+            for (idx, building) in self._resolve_idf_scope(idf_scope)
+        )
 
     def _get_buildings_by_idf(self) -> dict:
         buildings_by_idf = {}
@@ -421,17 +515,33 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         return grouped
 
-    def get_output_meter_df_from_idf(self) -> pd.DataFrame:
+    def get_output_meter_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
         """
         Gets a pandas DataFrame which contains the Output:Meter objects from the idf.
 
+        :param idf_scope: which IDFs to read. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to read fewer IDFs.
         :return: a pandas DataFrame which contains the Output:Meter objects from the idf
         """
-        output_meter_dict = {'key_name': [i.Key_Name for i in self.building.idfobjects['Output:Meter']], 'frequency': [i.Reporting_Frequency for i in self.building.idfobjects['Output:Meter']]}
-        output_meter_df = pd.DataFrame.from_dict(output_meter_dict)
-        return output_meter_df
+        scoped_buildings = self._resolve_idf_scope(idf_scope)
+        output_dfs = []
+        include_idf = len(scoped_buildings) > 1
 
-    def set_output_var_df_to_idf(self, outputs_df: pd.DataFrame=None):
+        for idx, building in scoped_buildings:
+            output_meter_dict = {
+                'key_name': [i.Key_Name for i in building.idfobjects['Output:Meter']],
+                'frequency': [i.Reporting_Frequency for i in building.idfobjects['Output:Meter']],
+            }
+            output_meter_df = pd.DataFrame.from_dict(output_meter_dict)
+            if include_idf:
+                output_meter_df.insert(0, 'idf', self._get_idf_identifier(building, idx))
+            output_dfs.append(output_meter_df)
+
+        if output_dfs:
+            return pd.concat(output_dfs, ignore_index=True)
+        return pd.DataFrame(columns=['key_name', 'frequency'])
+
+    def set_output_var_df_to_idf(self, outputs_df: pd.DataFrame=None, idf_scope: Any = 'all'):
         """
         Keeps the Output:Variable objects contained in the input pandas DataFrame and removes
         all others. This is important to save space if thousands of simulations with heavy outputs
@@ -439,18 +549,213 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         :type outputs_df: pd.DataFrame
         :param outputs_df: the DataFrame containing Output:Variable objects to be kept
+        :param idf_scope: IDFs to modify. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to modify fewer IDFs.
         :return:
         """
+        scoped_buildings = self._resolve_idf_scope(idf_scope)
         if self.is_accim_custom_model or self.is_accim_predef_model:
-            for b in self.buildings:
-                accis.addAccis(idf=b, ScriptType=self.ScriptType, SupplyAirTempInputMethod=self.SupplyAirTempInputMethod, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_take_dataframe=outputs_df, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, make_averages=self.make_averages, verboseMode=False)
+            for idx, b in scoped_buildings:
+                outputs_for_building = outputs_df
+                if outputs_df is not None and 'idf' in outputs_df.columns:
+                    idf_id = self._get_idf_identifier(b, idx)
+                    outputs_for_building = outputs_df[outputs_df['idf'].astype(str) == idf_id].drop(columns=['idf'])
+                accis.addAccis(idf=b, ScriptType=self.ScriptType, SupplyAirTempInputMethod=self.SupplyAirTempInputMethod, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_take_dataframe=outputs_for_building, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, make_averages=self.make_averages, verboseMode=False)
         else:
-            for b in self.buildings:
+            for idx, b in scoped_buildings:
+                outputs_for_building = outputs_df
+                if outputs_df is not None and 'idf' in outputs_df.columns:
+                    idf_id = self._get_idf_identifier(b, idx)
+                    outputs_for_building = outputs_df[outputs_df['idf'].astype(str) == idf_id].drop(columns=['idf'])
                 alloutputs = [output for output in b.idfobjects['Output:Variable']]
                 for i in alloutputs:
                     b.removeidfobject(i)
-                for i in outputs_df.index:
-                    b.newidfobject('Output:Variable', Key_Value=outputs_df.loc[i, 'key_value'], Variable_Name=outputs_df.loc[i, 'variable_name'], Reporting_Frequency=outputs_df.loc[i, 'frequency'].capitalize(), Schedule_Name=outputs_df.loc[i, 'schedule_name'])
+                for i in outputs_for_building.index:
+                    b.newidfobject('Output:Variable', Key_Value=outputs_for_building.loc[i, 'key_value'], Variable_Name=outputs_for_building.loc[i, 'variable_name'], Reporting_Frequency=outputs_for_building.loc[i, 'frequency'].capitalize(), Schedule_Name=outputs_for_building.loc[i, 'schedule_name'])
+
+    def keep_only_outputs_in_idfs(
+            self,
+            df_output_variable: Optional[pd.DataFrame] = None,
+            df_output_meter: Optional[pd.DataFrame] = None,
+            output_variables: Optional[Union[list[str], list[tuple[str, str]], list[dict]]] = None,
+            output_meters: Optional[list[Union[str, dict]]] = None,
+            match: Literal['exact', 'case_insensitive', 'contains', 'regex'] = 'case_insensitive',
+            idf_scope: Any = 'all',
+            dry_run: bool = False,
+    ) -> dict:
+        """
+        Remove Output:Meter and/or Output:Variable objects not matching the requested selection.
+
+        This method edits existing IDF output objects only; it does not run EnergyPlus and it does
+        not add missing outputs. ``None`` means "do not filter this output type"; an empty list or
+        empty DataFrame means "remove all objects of this output type".
+
+        :param df_output_variable: optional DataFrame with columns such as key_value,
+            variable_name, frequency and schedule_name.
+        :param df_output_meter: optional DataFrame with key_name and optionally frequency.
+        :param output_variables: variable wishlist. Items can be variable names, (key_value,
+            variable_name) tuples, or dictionaries with key_value, variable_name and frequency.
+        :param output_meters: meter wishlist. Items can be key names or dictionaries with key_name
+            and frequency.
+        :param match: matching mode for text fields.
+        :param idf_scope: IDFs to filter. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to filter fewer IDFs.
+        :param dry_run: when True, return the report without modifying the IDFs.
+        :return: report dict with kept/removed counts per IDF.
+        """
+        filter_meters = df_output_meter is not None or output_meters is not None
+        filter_variables = df_output_variable is not None or output_variables is not None
+
+        if not filter_meters and not filter_variables:
+            raise ValueError(
+                'At least one output selection must be provided. '
+                'Use an empty list/DataFrame to remove all objects of a type.'
+            )
+
+        def _clean(value: Any) -> str:
+            try:
+                if pd.isna(value):
+                    return ''
+            except (TypeError, ValueError):
+                pass
+            return str(value).strip()
+
+        def _field_matches(actual: Any, expected: Any) -> bool:
+            expected_clean = _clean(expected)
+            if expected_clean == '':
+                return True
+            actual_clean = _clean(actual)
+            if match == 'exact':
+                return actual_clean == expected_clean
+            if match == 'case_insensitive':
+                return actual_clean.upper() == expected_clean.upper()
+            if match == 'contains':
+                return expected_clean.upper() in actual_clean.upper()
+            if match == 'regex':
+                return re.search(expected_clean, actual_clean) is not None
+            raise ValueError(f"Unknown match mode: {match}")
+
+        def _spec_matches(fields: dict[str, Any], specs: list[dict[str, Any]]) -> bool:
+            if not specs:
+                return False
+            for spec in specs:
+                if all(_field_matches(fields.get(key, ''), value) for key, value in spec.items()):
+                    return True
+            return False
+
+        def _meter_specs(idf_id: Optional[str] = None) -> list[dict[str, Any]]:
+            specs: list[dict[str, Any]] = []
+            if df_output_meter is not None:
+                if 'key_name' not in df_output_meter.columns and len(df_output_meter) > 0:
+                    raise ValueError("df_output_meter must contain a 'key_name' column.")
+                df_source = df_output_meter
+                if idf_id is not None and 'idf' in df_output_meter.columns:
+                    df_source = df_output_meter[df_output_meter['idf'].astype(str) == idf_id]
+                for _, row in df_source.iterrows():
+                    spec = {'key_name': row.get('key_name', '')}
+                    if 'frequency' in df_output_meter.columns:
+                        spec['frequency'] = row.get('frequency', '')
+                    specs.append(spec)
+            if output_meters is not None:
+                for meter in output_meters:
+                    if isinstance(meter, dict):
+                        spec = {'key_name': meter.get('key_name', meter.get('Key_Name', ''))}
+                        if 'frequency' in meter:
+                            spec['frequency'] = meter.get('frequency', '')
+                        elif 'Reporting_Frequency' in meter:
+                            spec['frequency'] = meter.get('Reporting_Frequency', '')
+                    else:
+                        spec = {'key_name': meter}
+                    specs.append(spec)
+            return specs
+
+        def _variable_specs(idf_id: Optional[str] = None) -> list[dict[str, Any]]:
+            specs: list[dict[str, Any]] = []
+            if df_output_variable is not None:
+                if 'variable_name' not in df_output_variable.columns and len(df_output_variable) > 0:
+                    raise ValueError("df_output_variable must contain a 'variable_name' column.")
+                df_source = df_output_variable
+                if idf_id is not None and 'idf' in df_output_variable.columns:
+                    df_source = df_output_variable[df_output_variable['idf'].astype(str) == idf_id]
+                for _, row in df_source.iterrows():
+                    spec = {'variable_name': row.get('variable_name', '')}
+                    if 'key_value' in df_output_variable.columns:
+                        spec['key_value'] = row.get('key_value', '')
+                    if 'frequency' in df_output_variable.columns:
+                        spec['frequency'] = row.get('frequency', '')
+                    if 'schedule_name' in df_output_variable.columns:
+                        spec['schedule_name'] = row.get('schedule_name', '')
+                    specs.append(spec)
+            if output_variables is not None:
+                for variable in output_variables:
+                    if isinstance(variable, dict):
+                        spec = {'variable_name': variable.get('variable_name', variable.get('Variable_Name', ''))}
+                        if 'key_value' in variable:
+                            spec['key_value'] = variable.get('key_value', '')
+                        elif 'Key_Value' in variable:
+                            spec['key_value'] = variable.get('Key_Value', '')
+                        if 'frequency' in variable:
+                            spec['frequency'] = variable.get('frequency', '')
+                        elif 'Reporting_Frequency' in variable:
+                            spec['frequency'] = variable.get('Reporting_Frequency', '')
+                    elif isinstance(variable, (tuple, list)) and len(variable) == 2:
+                        spec = {'key_value': variable[0], 'variable_name': variable[1]}
+                    else:
+                        spec = {'variable_name': variable}
+                    specs.append(spec)
+            return specs
+
+        report: dict = {
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'dry_run': dry_run,
+            'buildings': {},
+        }
+
+        for idx, building in self._resolve_idf_scope(idf_scope):
+            idf_id = self._get_idf_identifier(building, idx)
+            building_report = {}
+            meter_specs = _meter_specs(idf_id)
+            variable_specs = _variable_specs(idf_id)
+
+            if filter_meters:
+                meter_objects = list(building.idfobjects.get('Output:Meter', []))
+                removed = 0
+                kept = 0
+                for obj in meter_objects:
+                    fields = {
+                        'key_name': getattr(obj, 'Key_Name', ''),
+                        'frequency': getattr(obj, 'Reporting_Frequency', ''),
+                    }
+                    if _spec_matches(fields, meter_specs):
+                        kept += 1
+                    else:
+                        removed += 1
+                        if not dry_run:
+                            building.removeidfobject(obj)
+                building_report['meters'] = {'kept': kept, 'removed': removed}
+
+            if filter_variables:
+                variable_objects = list(building.idfobjects.get('Output:Variable', []))
+                removed = 0
+                kept = 0
+                for obj in variable_objects:
+                    fields = {
+                        'key_value': getattr(obj, 'Key_Value', ''),
+                        'variable_name': getattr(obj, 'Variable_Name', ''),
+                        'frequency': getattr(obj, 'Reporting_Frequency', ''),
+                        'schedule_name': getattr(obj, 'Schedule_Name', ''),
+                    }
+                    if _spec_matches(fields, variable_specs):
+                        kept += 1
+                    else:
+                        removed += 1
+                        if not dry_run:
+                            building.removeidfobject(obj)
+                building_report['variables'] = {'kept': kept, 'removed': removed}
+
+            report['buildings'][idf_id] = building_report
+
+        return report
 
     def set_output_met_objects_to_idf(
             self,
@@ -459,6 +764,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             on_missing: Literal['warn', 'raise', 'ignore'] = 'warn',
             auto_filter: bool = True,
             reduce_sim_time: bool = True,
+            idf_scope: Any = 'all',
+            validation_idf_scope: Any = None,
     ):
         """
         Adds the Output:Meter objects from the output_meters argument.
@@ -471,6 +778,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param auto_filter: when True and validate=True, skip missing meters instead of adding
             them to the IDF (avoids EnergyPlus warnings like "invalid Key Name - not found").
         :param reduce_sim_time: when validate=True, reduce runtime for the availability test.
+        :param idf_scope: IDFs to modify. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to modify fewer IDFs.
+        :param validation_idf_scope: IDFs to use for the validation test simulation. Defaults
+            to idf_scope. Use 'first' to validate once while applying to all IDFs.
         :return:
         """
         if output_meters is None:
@@ -479,19 +790,56 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         def _norm_meter(value: Any) -> str:
             return ('' if value is None else str(value)).strip().upper()
 
-        for b in self.buildings:
-            requested = [_norm_meter(m) for m in output_meters if _norm_meter(m)]
-            requested_set = set(requested)
+        scoped_buildings = self._resolve_idf_scope(idf_scope)
+        validation_scope = idf_scope if validation_idf_scope is None else validation_idf_scope
+        validation_buildings = self._resolve_idf_scope(validation_scope)
+        requested = [_norm_meter(m) for m in output_meters if _norm_meter(m)]
+        requested_set = set(requested)
 
-            available_set: set[str] = set()
-            if validate and len(requested_set) > 0:
-                building_for_testsim = b
+        available_by_idx: dict[int, set[str]] = {}
+        if validate and len(requested_set) > 0:
+            cached = getattr(self, 'available_outputs_', None)
+            validation_scope_label = self._idf_scope_label(validation_scope)
+            if isinstance(cached, dict) and 'df_meters' in cached and 'meta' in cached:
+                cached_meta = dict(cached.get('meta', {}))
+                if cached_meta.get('idf_scope') == validation_scope_label:
+                    cached_meters = cached.get('df_meters', pd.DataFrame())
+                    if isinstance(cached_meters, pd.DataFrame) and 'key_name' in cached_meters.columns:
+                        if 'idf' in cached_meters.columns:
+                            idx_by_idf = {
+                                self._get_idf_identifier(b, i): i
+                                for (i, b) in validation_buildings
+                            }
+                            for idf_id, subset in cached_meters.groupby('idf', sort=False):
+                                idx = idx_by_idf.get(str(idf_id))
+                                if idx is not None:
+                                    available_by_idx[idx] = {
+                                        _norm_meter(k)
+                                        for k in subset['key_name'].tolist()
+                                        if _norm_meter(k)
+                                    }
+                        else:
+                            cached_set = {
+                                _norm_meter(k)
+                                for k in cached_meters['key_name'].tolist()
+                                if _norm_meter(k)
+                            }
+                            for val_idx, _ in validation_buildings:
+                                available_by_idx[val_idx] = set(cached_set)
+
+        if validate and len(requested_set) > 0:
+            for val_idx, val_building in validation_buildings:
+                if val_idx in available_by_idx:
+                    continue
+                building_for_testsim = val_building
                 temp_path = None
                 try:
                     if reduce_sim_time:
                         from besos.eppy_funcs import get_building
-                        temp_path = 'temp_reduced_runtime_meters.idf'
-                        b.savecopy(temp_path)
+                        idf_id = self._get_idf_identifier(val_building, val_idx)
+                        safe_idf_id = re.sub(r'[^A-Za-z0-9_.-]+', '_', idf_id)
+                        temp_path = f'temp_reduced_runtime_meters_{val_idx}_{safe_idf_id}.idf'
+                        val_building.savecopy(temp_path)
                         building_for_testsim = get_building(temp_path)
                         reduce_runtime(
                             idf_object=building_for_testsim,
@@ -499,7 +847,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             timesteps=2,
                         )
                     available_outputs = print_available_outputs_mod(building_for_testsim)
-                    available_set = {_norm_meter(k) for (k, _freq) in available_outputs.meterreaderlist if _norm_meter(k)}
+                    available_by_idx[val_idx] = {
+                        _norm_meter(k)
+                        for (k, _freq) in available_outputs.meterreaderlist
+                        if _norm_meter(k)
+                    }
                 finally:
                     if temp_path is not None:
                         try:
@@ -508,11 +860,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         except Exception:
                             pass
 
+        fallback_available_set: set[str] = set()
+        if len(available_by_idx) == 1:
+            fallback_available_set = next(iter(available_by_idx.values()))
+        elif len(available_by_idx) > 1:
+            fallback_available_set = set.intersection(*available_by_idx.values())
+
+        for idx, b in scoped_buildings:
+            available_set = available_by_idx.get(idx, fallback_available_set)
+            has_validation_result = validate and len(requested_set) > 0 and len(available_by_idx) > 0
+            if has_validation_result:
                 missing = sorted(requested_set - available_set)
                 if missing:
+                    idf_id = self._get_idf_identifier(b, idx)
                     msg = (
                         "Some requested Output:Meter Key_Name values are not available in this model "
-                        f"(and will be ignored={auto_filter}): {missing}"
+                        f"for IDF '{idf_id}' (and will be ignored={auto_filter}): {missing}"
                     )
                     if on_missing == 'raise':
                         raise ValueError(msg)
@@ -520,27 +883,59 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         warnings.warn(msg)
 
             meters_to_add = requested
-            if validate and auto_filter and available_set:
+            if has_validation_result and auto_filter:
                 meters_to_add = [m for m in requested if m in available_set]
 
             for meter in meters_to_add:
                 for freq in self.output_freqs:
                     b.newidfobject(key='OUTPUT:METER', Key_Name=meter, Reporting_Frequency=freq)
 
-    def get_outputs_df_from_testsim(self, reduce_sim_time: bool=True) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def get_outputs_df_from_testsim(self, reduce_sim_time: bool=True, idf_scope: Any = 'all') -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.
         Therefore, it won't contain wildcards such as '*'.
 
         :param reduce_sim_time: True to reduce the simulation runtime
+        :param idf_scope: IDFs to test. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to run fewer test simulations.
 
         :return: a tuple containing the DataFrames containing Output:Variable and Output:Meter
         """
-        building_for_testsim = self.building
+        scoped_buildings = self._resolve_idf_scope(idf_scope)
+        if len(scoped_buildings) > 1:
+            meter_dfs = []
+            variable_dfs = []
+            for idx, building in scoped_buildings:
+                df_meters, df_vars = self.get_outputs_df_from_testsim(
+                    reduce_sim_time=reduce_sim_time,
+                    idf_scope=idx,
+                )
+                idf_id = self._get_idf_identifier(building, idx)
+                df_meters.insert(0, 'idf', idf_id)
+                df_vars.insert(0, 'idf', idf_id)
+                meter_dfs.append(df_meters)
+                variable_dfs.append(df_vars)
+            return (
+                pd.concat(meter_dfs, ignore_index=True) if meter_dfs else pd.DataFrame(columns=['key_name', 'frequency']),
+                pd.concat(variable_dfs, ignore_index=True) if variable_dfs else pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
+            )
+
+        if len(scoped_buildings) == 0:
+            return (
+                pd.DataFrame(columns=['key_name', 'frequency']),
+                pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
+            )
+
+        selected_idx, selected_building = scoped_buildings[0]
+        building_for_testsim = selected_building
+        temp_path = None
         if reduce_sim_time:
             from besos.eppy_funcs import get_building
-            self.building.savecopy('temp_reduced_runtime.idf')
-            building_for_testsim = get_building('temp_reduced_runtime.idf')
+            idf_id = self._get_idf_identifier(selected_building, selected_idx)
+            safe_idf_id = re.sub(r'[^A-Za-z0-9_.-]+', '_', idf_id)
+            temp_path = f'temp_reduced_runtime_{selected_idx}_{safe_idf_id}.idf'
+            selected_building.savecopy(temp_path)
+            building_for_testsim = get_building(temp_path)
             reduce_runtime(idf_object=building_for_testsim, maximum_figures_in_shadow_overlap_calculations=200, timesteps=2)
             # Agregar período de sizing si no existe (requerido para autosizing de equipos como VRF)
             sizing_periods = building_for_testsim.idfobjects.get('SIZINGPERIOD:WEATHERFILEDAYS', [])
@@ -559,9 +954,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     Use_Weather_File_Rain_and_Snow_Indicators='Yes'
                 )
         available_outputs = print_available_outputs_mod(building_for_testsim)
-        if reduce_sim_time:
+        if temp_path is not None:
             from os import remove
-            remove('temp_reduced_runtime.idf')
+            remove(temp_path)
         df_outputmeters = pd.DataFrame(available_outputs.meterreaderlist, columns=['key_name', 'frequency'])
         df_outputvariables = pd.DataFrame(available_outputs.variablereaderlist, columns=['key_value', 'variable_name', 'frequency'])
 
@@ -719,6 +1114,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         reduce_sim_time: bool = True,
         prefer: Literal['testsimeplus', 'rdd_mdd'] = 'testsimeplus',
         refresh: bool = False,
+        idf_scope: Any = 'all',
     ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
         """
         Discovers which outputs are actually available for this model.
@@ -730,14 +1126,30 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             ``get_outputs_df_from_testsim``; 'rdd_mdd' reads `available_outputs/eplusout.rdd`
             and `available_outputs/eplusout.mdd` if present.
         :param refresh: when False, reuse cached results in ``self.available_outputs_``.
+        :param idf_scope: IDFs to discover. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to run fewer test simulations.
         :return: (df_meters, df_vars, meta)
         """
+        requested_prefer = prefer
+        scope_label = self._idf_scope_label(idf_scope)
         if not refresh and hasattr(self, 'available_outputs_') and isinstance(getattr(self, 'available_outputs_'), dict):
             cached = self.available_outputs_
             if 'df_meters' in cached and 'df_vars' in cached and 'meta' in cached:
-                return cached['df_meters'].copy(), cached['df_vars'].copy(), dict(cached['meta'])
+                cached_meta = dict(cached['meta'])
+                cached_prefer = cached_meta.get('requested_prefer', cached_meta.get('prefer'))
+                if (
+                    cached_meta.get('idf_scope') == scope_label
+                    and cached_prefer == requested_prefer
+                    and cached_meta.get('reduce_sim_time') == reduce_sim_time
+                ):
+                    return cached['df_meters'].copy(), cached['df_vars'].copy(), cached_meta
 
-        meta: dict = {'prefer': prefer, 'reduce_sim_time': reduce_sim_time}
+        meta: dict = {
+            'prefer': prefer,
+            'requested_prefer': requested_prefer,
+            'reduce_sim_time': reduce_sim_time,
+            'idf_scope': scope_label,
+        }
 
         if prefer == 'rdd_mdd':
             rdd_path = os.path.join('available_outputs', 'eplusout.rdd')
@@ -759,7 +1171,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 meta['prefer_fallback'] = 'testsimeplus'
 
         if prefer == 'testsimeplus':
-            df_meters, df_vars = self.get_outputs_df_from_testsim(reduce_sim_time=reduce_sim_time)
+            df_meters, df_vars = self.get_outputs_df_from_testsim(
+                reduce_sim_time=reduce_sim_time,
+                idf_scope=idf_scope,
+            )
             meta.update({'source': 'testsimeplus', 'out_dir': 'available_outputs'})
 
         # Normalize column dtypes minimally
@@ -781,6 +1196,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         on_missing: Literal['raise', 'warn', 'ignore'] = 'warn',
         suggest: bool = True,
         reduce_sim_time: bool = True,
+        idf_scope: Any = 'all',
     ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
         """
         Validates and builds output selection DataFrames from a simple wishlist and/or DataFrames.
@@ -790,6 +1206,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         Returns DataFrames compatible with ``set_output_var_df_to_idf`` and
         ``set_output_met_objects_to_idf``.
+
+        :param idf_scope: IDFs used for discovery/validation. Defaults to 'all'. Use
+            'first' when you know all IDFs expose the same outputs.
         """
         if meters is None:
             meters = []
@@ -797,7 +1216,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             variables = []
 
         df_meters_av, df_vars_av, meta = self.discover_available_outputs(
-            reduce_sim_time=reduce_sim_time, prefer='testsimeplus', refresh=False
+            reduce_sim_time=reduce_sim_time, prefer='testsimeplus', refresh=False, idf_scope=idf_scope
         )
 
         report: dict = {
@@ -963,6 +1382,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self,
         mode: Literal['meters_vars', 'all'] = 'all',
         dry_run: bool = False,
+        idf_scope: Any = 'all',
     ) -> dict:
         """
         Removes existing output-related objects from the IDF(s) prior to simulation.
@@ -970,9 +1390,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param mode: 'meters_vars' removes only Output:Variable and Output:Meter; 'all' removes
             all object types starting with Output:* and OutputControl:* (and a few common diagnostics).
         :param dry_run: when True, do not modify the IDFs; only return what would be removed.
+        :param idf_scope: IDFs to clean. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to clean fewer IDFs.
         :return: report dict with counts by building and object type.
         """
-        report: dict = {'mode': mode, 'dry_run': dry_run, 'buildings': {}}
+        report: dict = {'mode': mode, 'dry_run': dry_run, 'idf_scope': self._idf_scope_label(idf_scope), 'buildings': {}}
 
         def _should_remove(obj_key: str) -> bool:
             k = str(obj_key).strip().upper()
@@ -989,7 +1411,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 return True
             return False
 
-        for (idx, b) in enumerate(self.buildings):
+        for (idx, b) in self._resolve_idf_scope(idf_scope):
             idf_id = self._get_idf_identifier(b, idx)
             removed_counts: dict[str, int] = {}
 
@@ -1021,6 +1443,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         validate_after_apply: bool = True,
         on_missing: Literal['raise', 'warn', 'ignore'] = 'warn',
         reduce_sim_time: bool = True,
+        idf_scope: Any = 'all',
+        validation_idf_scope: Any = None,
     ) -> dict:
         """
         Orchestrates a complete outputs preflight:
@@ -1028,21 +1452,37 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         - (optional) clear existing output objects in the IDF(s)
         - apply selected Output:Variable and Output:Meter
         - (optional) verify IDF state matches selection
+
+        ``idf_scope`` controls which IDFs are cleaned/applied/verified. ``validation_idf_scope``
+        controls which IDFs are used for EnergyPlus test-sim validation; set it to 'first'
+        when all IDFs are known to expose the same outputs.
         """
+        validation_scope = idf_scope if validation_idf_scope is None else validation_idf_scope
         report: dict = {
             'clean_mode': clean_mode,
             'validate_before_apply': validate_before_apply,
             'validate_after_apply': validate_after_apply,
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'validation_idf_scope': self._idf_scope_label(validation_scope),
             'cleared': None,
             'applied': {'variables': 0, 'meters': 0},
             'verification': {},
         }
 
         if validate_before_apply:
-            self.discover_available_outputs(reduce_sim_time=reduce_sim_time, prefer='testsimeplus', refresh=False)
+            self.discover_available_outputs(
+                reduce_sim_time=reduce_sim_time,
+                prefer='testsimeplus',
+                refresh=False,
+                idf_scope=validation_scope,
+            )
 
         if clean_mode in {'meters_vars', 'all'}:
-            report['cleared'] = self.clear_outputs(mode='all' if clean_mode == 'all' else 'meters_vars', dry_run=False)
+            report['cleared'] = self.clear_outputs(
+                mode='all' if clean_mode == 'all' else 'meters_vars',
+                dry_run=False,
+                idf_scope=idf_scope,
+            )
 
         # Apply variables
         if df_vars_sel is not None:
@@ -1052,7 +1492,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 df_vars_apply['frequency'] = df_vars_apply['frequency'].astype(str)
             if 'schedule_name' not in df_vars_apply.columns:
                 df_vars_apply['schedule_name'] = ''
-            self.set_output_var_df_to_idf(outputs_df=df_vars_apply)
+            self.set_output_var_df_to_idf(outputs_df=df_vars_apply, idf_scope=idf_scope)
             report['applied']['variables'] = len(df_vars_apply)
 
         # Apply meters
@@ -1066,13 +1506,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 on_missing=on_missing,
                 auto_filter=True,
                 reduce_sim_time=reduce_sim_time,
+                idf_scope=idf_scope,
+                validation_idf_scope=validation_scope,
             )
             report['applied']['meters'] = len(meters_list)
 
         if validate_after_apply:
             # Verify meters & variables present in IDF match selection (best-effort).
-            df_vars_idf = self.get_output_var_df_from_idf()
-            df_meters_idf = self.get_output_meter_df_from_idf()
+            df_vars_idf = self.get_output_var_df_from_idf(idf_scope=idf_scope)
+            df_meters_idf = self.get_output_meter_df_from_idf(idf_scope=idf_scope)
 
             def _keyify_vars(df: pd.DataFrame) -> set[tuple[str, str, str]]:
                 cols = df.columns
@@ -1097,18 +1539,33 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             vars_actual = _keyify_vars(df_vars_idf)
             meters_actual = _keyify_meters(df_meters_idf)
 
+            def _by_idf(df: pd.DataFrame, expected: set, keyify_func) -> dict:
+                if 'idf' not in df.columns:
+                    return {}
+                out = {}
+                for idf_id, subset in df.groupby('idf', sort=False):
+                    actual = keyify_func(subset)
+                    out[str(idf_id)] = {
+                        'actual': len(actual),
+                        'missing_in_idf': sorted(list(expected - actual))[:50],
+                        'extra_in_idf': sorted(list(actual - expected))[:50],
+                    }
+                return out
+
             report['verification'] = {
                 'vars': {
                     'expected': len(vars_expected),
                     'actual': len(vars_actual),
                     'missing_in_idf': sorted(list(vars_expected - vars_actual))[:50],
                     'extra_in_idf': sorted(list(vars_actual - vars_expected))[:50],
+                    'by_idf': _by_idf(df_vars_idf, vars_expected, _keyify_vars),
                 },
                 'meters': {
                     'expected': len(meters_expected),
                     'actual': len(meters_actual),
                     'missing_in_idf': sorted(list(meters_expected - meters_actual))[:50],
                     'extra_in_idf': sorted(list(meters_actual - meters_expected))[:50],
+                    'by_idf': _by_idf(df_meters_idf, meters_expected, _keyify_meters),
                 },
             }
 

@@ -99,3 +99,70 @@ def test_apply_outputs_preflight_cleans_all_and_applies_selection():
     assert report['verification']['meters']['missing_in_idf'] == []
     assert report['verification']['vars']['missing_in_idf'] == []
 
+
+def test_keep_only_outputs_in_idfs_filters_all_buildings():
+    ts.print_section("TEST: Outputs preflight - keep only selected outputs in all IDFs")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['medium']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['medium']['epws'][:1],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    sim.clear_outputs(mode='meters_vars', idf_scope='all')
+    for building in buildings:
+        building.newidfobject(
+            'OUTPUT:VARIABLE',
+            Key_Value='*',
+            Variable_Name='Zone Air Temperature',
+            Reporting_Frequency='Hourly',
+            Schedule_Name='',
+        )
+        building.newidfobject(
+            'OUTPUT:VARIABLE',
+            Key_Value='*',
+            Variable_Name='Site Outdoor Air Drybulb Temperature',
+            Reporting_Frequency='Hourly',
+            Schedule_Name='',
+        )
+        building.newidfobject('OUTPUT:METER', Key_Name='Heating:Electricity', Reporting_Frequency='Hourly')
+        building.newidfobject('OUTPUT:METER', Key_Name='Cooling:Electricity', Reporting_Frequency='Hourly')
+
+    report = sim.keep_only_outputs_in_idfs(
+        output_meters=['Heating:Electricity'],
+        output_variables=[('*', 'Zone Air Temperature')],
+        idf_scope='all',
+    )
+
+    assert len(report['buildings']) == 2
+    for building in buildings:
+        meters = [obj.Key_Name for obj in building.idfobjects['Output:Meter']]
+        variables = [obj.Variable_Name for obj in building.idfobjects['Output:Variable']]
+        assert meters == ['Heating:Electricity']
+        assert variables == ['Zone Air Temperature']
+
+
+def test_output_scope_first_modifies_only_first_idf():
+    ts.print_section("TEST: Outputs preflight - idf_scope='first'")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['medium']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['medium']['epws'][:1],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    sim.clear_outputs(mode='meters_vars', idf_scope='all')
+    for building in buildings:
+        building.newidfobject('OUTPUT:METER', Key_Name='Heating:Electricity', Reporting_Frequency='Hourly')
+
+    sim.clear_outputs(mode='meters_vars', idf_scope='first')
+
+    assert len(buildings[0].idfobjects['Output:Meter']) == 0
+    assert len(buildings[1].idfobjects['Output:Meter']) == 1
+
