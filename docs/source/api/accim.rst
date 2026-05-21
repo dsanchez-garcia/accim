@@ -20,21 +20,21 @@ accim.lists module
 
 .. automodule:: accim.lists
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 accim.utils module
 ------------------
 
 .. automodule:: accim.utils
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: accim
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

@@ -17,21 +17,21 @@ accim.data.morphing module
 
 .. automodule:: accim.data.morphing
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 accim.data.preprocessing module
 -------------------------------
 
 .. automodule:: accim.data.preprocessing
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: accim.data
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

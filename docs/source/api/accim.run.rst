@@ -9,13 +9,13 @@ accim.run.run module
 
 .. automodule:: accim.run.run
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: accim.run
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
