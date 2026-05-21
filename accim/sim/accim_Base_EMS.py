@@ -1508,6 +1508,10 @@ def takeOutputDataFrame(
     """
     import pandas as pd
 
+    if df_outputs_in is not None:
+        if 'reporting_frequency' not in df_outputs_in.columns and 'frequency' in df_outputs_in.columns:
+            df_outputs_in = df_outputs_in.rename(columns={'frequency': 'reporting_frequency'})
+
     if not singleidf:
         df_outputs_in = df_outputs_in[
             df_outputs_in['file'].str.contains(idf_filename)

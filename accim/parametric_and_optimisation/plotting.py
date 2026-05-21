@@ -381,7 +381,10 @@ class PlottingMixin:
                 print(f'  [!] Skipping PairGrid for {epw_tag}: fewer than 2 Pareto-optimal points.')
                 continue
             norm_e = Normalize(pareto_epw['Total_Energy'].min(), pareto_epw['Total_Energy'].max())
-            cmap_e = cm.get_cmap('coolwarm')
+            try:
+                cmap_e = plt.colormaps['coolwarm']
+            except AttributeError:
+                cmap_e = cm.get_cmap('coolwarm')
 
             def _pairplot_scatter(x, y, **kwargs):
                 ax_pg = plt.gca()

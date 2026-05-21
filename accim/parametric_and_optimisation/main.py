@@ -83,7 +83,7 @@ def _run_single_evaluation_worker(
     out_dir: str,
     problem_names_inputs: list,
     problem_names_outputs: list,
-    output_specs: list | None,
+    output_specs: Optional[list],
     row_dict: dict,
     keep_dirs: bool,
     keep_input: bool
@@ -2758,8 +2758,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         sims_per_epw = population_size * math.ceil(evaluations / population_size)
         total = sims_per_epw * len(epws)
         print(f"Estimated simulations\n  evaluations    : {evaluations}\n  population_size: {population_size}\n  EPWs           : {len(epws)} ({', '.join(epws)})\n  sims per EPW   : {sims_per_epw}  ({math.ceil(evaluations / population_size)} generation(s) × {population_size})\n  TOTAL          : {total}")
-        self.epws = self.outputs_param_simulation.attrs.get('epws', [])
-        self.last_run_type = 'parametric'
+        self.epws = epws
+        self.last_run_type = 'optimisation'
         return total
 
     def run_optimisation(

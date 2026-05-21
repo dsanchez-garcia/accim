@@ -187,7 +187,7 @@ def drop_invalid_param_combinations(samples_df):
         except KeyError:
             continue
         try:
-            if samples_df.loc[i, 'MinTempDiffVOF'] >= samples_df.loc[i, 'MaxTempDiffVOF'] <= 0:
+            if samples_df.loc[i, 'MinTempDiffVOF'] >= samples_df.loc[i, 'MaxTempDiffVOF']:
                 samples_df.loc[i, 'valid'] = False
         except KeyError:
             continue

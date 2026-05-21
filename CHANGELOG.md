@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Explicit Parametric and Optimisation API Signatures**: Replaced public `*args`/`**kwargs` signatures in `parametric_and_optimisation` classes and methods with named arguments and expanded docstrings for clearer IDE hover help, while preserving the legacy `building` alias and routing algorithm-specific options through `algorithm_options`.
 
 ### Fixed
+- **Python 3.9 Type Union Syntax in `_run_single_evaluation_worker`**: Replaced `list | None` (Python 3.10+ syntax) with `Optional[list]` in `main.py` to restore Python 3.9 compatibility.
+- **Matplotlib 3.9+ `cm.get_cmap()` Removal**: Replaced the removed `cm.get_cmap('coolwarm')` call in `plotting.py` with `plt.colormaps['coolwarm']` and a safe fallback for older Matplotlib versions.
+- **`estimate_optimisation_sims()` Copy-Paste Bug**: The method erroneously accessed `self.outputs_param_simulation` (only set after a parametric run) and set `last_run_type` to `'parametric'`. Fixed to use the `epws` argument directly and set `last_run_type = 'optimisation'`.
+- **Chained Comparison Logic Bug in `drop_invalid_param_combinations`**: The condition `MinTempDiffVOF >= MaxTempDiffVOF <= 0` in `param_accis.py` was always False (since `MaxTempDiffVOF` is validated to be positive), silently skipping invalid parameter combinations. Simplified to `MinTempDiffVOF >= MaxTempDiffVOF`.
+- **`KeyError: 'reporting_frequency'` in `takeOutputDataFrame`**: The new `select_outputs()` / `apply_outputs_preflight()` workflow produces DataFrames with a `'frequency'` column, while `takeOutputDataFrame` in `accim_Base_EMS.py` expected `'reporting_frequency'`. Added an automatic column rename for backward compatibility.
 - **aPMV Parametric Setters in E+ 25.2**: Added compatibility with modern `People` schemas that use `Zone_or_ZoneList_or_Space_or_SpaceList_Name`.
 - **aPMV Parametric Worker `IndexError` in OSM/Space-based Models**: Replaced fragile `People`-derived name matching with robust discovery of real EMS targets.
 - **Thermal Comfort Thermostat Wiring for Existing OSM Controls**: Existing thermal comfort thermostats now update the actively referenced Fanger setpoint object and guarantee a valid thermal comfort control type schedule.
