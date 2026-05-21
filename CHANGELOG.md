@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Unified Object Identification**: Centralized hierarchy resolution for `People`, `Space`, `SpaceList`, and `ZoneList` objects through `accim.sim.utils.scan_zones`.
 - **Optimisation Plotting and Clustering**: Improved Pareto-front plotting aesthetics and persisted `Cluster_ID` back into optimisation outputs for downstream plots.
 - **File Naming and Timestamping**: Standardized output dataframe, JSON state, and IDF backup names with chronological `YYYYMMDD_HHMMSS` timestamps.
+- **Explicit Parametric and Optimisation API Signatures**: Replaced public `*args`/`**kwargs` signatures in `parametric_and_optimisation` classes and methods with named arguments and expanded docstrings for clearer IDE hover help, while preserving the legacy `building` alias and routing algorithm-specific options through `algorithm_options`.
 
 ### Fixed
 - **aPMV Parametric Setters in E+ 25.2**: Added compatibility with modern `People` schemas that use `Zone_or_ZoneList_or_Space_or_SpaceList_Name`.

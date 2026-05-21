@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import Any, Dict, Literal, Union
+from typing import Any, Dict, Literal, Optional, Union
 
 class AnalysisMixin:
 
@@ -477,12 +477,34 @@ class AnalysisMixin:
             
         self.outputs_normalized = True
 
-    def run_sensitivity_analysis(self, method: Literal['sobol', 'morris']='sobol', **kwargs) -> dict:
+    def run_sensitivity_analysis(
+            self,
+            method: Literal['sobol', 'morris'] = 'sobol',
+            calc_second_order: bool = True,
+            num_resamples: int = 100,
+            conf_level: float = 0.95,
+            print_to_console: bool = False,
+            parallel: bool = False,
+            n_processors: Optional[int] = None,
+            keep_resamples: bool = False,
+            seed: Optional[int] = None,
+            scaled: bool = False,
+            num_levels: int = 4,
+    ) -> dict:
         """
         Runs Sensitivity Analysis on the results of a parametric simulation using SALib.
         
         :param method: 'sobol' or 'morris'. Must match the sampling method used.
-        :param kwargs: additional arguments to pass to SALib.analyze.sobol or SALib.analyze.morris.
+        :param calc_second_order: Sobol only. Calculate second-order sensitivities.
+        :param num_resamples: number of resamples used for confidence intervals.
+        :param conf_level: confidence interval level.
+        :param print_to_console: print SALib results directly to console.
+        :param parallel: Sobol only. Perform analysis in parallel.
+        :param n_processors: Sobol only. Number of parallel processes when parallel=True.
+        :param keep_resamples: Sobol only. Store intermediate resampling results.
+        :param seed: random seed used by SALib.
+        :param scaled: Morris only. Scale elementary effects by X/Y standard deviation.
+        :param num_levels: Morris only. Number of grid levels used by sampling_morris.
         :return: a dictionary mapping each output name to its SALib analysis results.
         """
         if getattr(self, 'last_run_type', None) != 'parametric':
@@ -504,12 +526,33 @@ class AnalysisMixin:
             Y = df[output_name].values.astype(float)
             if method == 'sobol':
                 try:
-                    res = sobol.analyze(problem, Y, **kwargs)
+                    res = sobol.analyze(
+                        problem,
+                        Y,
+                        calc_second_order=calc_second_order,
+                        num_resamples=num_resamples,
+                        conf_level=conf_level,
+                        print_to_console=print_to_console,
+                        parallel=parallel,
+                        n_processors=n_processors,
+                        keep_resamples=keep_resamples,
+                        seed=seed,
+                    )
                 except ValueError as e:
                     raise ValueError(f'Error analyzing with Sobol. Make sure you generated samples with sampling_sobol(). Details: {e}')
             elif method == 'morris':
                 try:
-                    res = morris.analyze(problem, df[problem['names']].values.astype(float), Y, **kwargs)
+                    res = morris.analyze(
+                        problem,
+                        df[problem['names']].values.astype(float),
+                        Y,
+                        num_resamples=num_resamples,
+                        conf_level=conf_level,
+                        scaled=scaled,
+                        print_to_console=print_to_console,
+                        num_levels=num_levels,
+                        seed=seed,
+                    )
                 except ValueError as e:
                     raise ValueError(f'Error analyzing with Morris. Make sure you generated samples with sampling_morris(). Details: {e}')
             else:
@@ -586,7 +629,21 @@ class AnalysisMixin:
         else:
             raise ValueError(f'Unknown MCDM method: {method}')
 
-    def run_sensitivity_analysis_by_epw(self, method: Literal['sobol', 'morris']='morris', out_dir: str='.', **kwargs) -> dict:
+    def run_sensitivity_analysis_by_epw(
+            self,
+            method: Literal['sobol', 'morris'] = 'morris',
+            out_dir: str = '.',
+            calc_second_order: bool = True,
+            num_resamples: int = 100,
+            conf_level: float = 0.95,
+            print_to_console: bool = False,
+            parallel: bool = False,
+            n_processors: Optional[int] = None,
+            keep_resamples: bool = False,
+            seed: Optional[int] = None,
+            scaled: bool = False,
+            num_levels: int = 4,
+    ) -> dict:
         """
         Runs Sensitivity Analysis separately for each EPW found in
         ``outputs_param_simulation``, saves a CSV and a bar-chart PNG per EPW,
@@ -603,8 +660,16 @@ class AnalysisMixin:
         :param method: ``'sobol'`` or ``'morris'``. Must match the sampling
             method used before calling ``run_parametric_simulation``.
         :param out_dir: directory where CSV and PNG files will be saved.
-        :param kwargs: additional keyword arguments forwarded to
-            ``run_sensitivity_analysis``.
+        :param calc_second_order: Sobol only. Forwarded to ``run_sensitivity_analysis``.
+        :param num_resamples: forwarded to ``run_sensitivity_analysis``.
+        :param conf_level: forwarded to ``run_sensitivity_analysis``.
+        :param print_to_console: forwarded to ``run_sensitivity_analysis``.
+        :param parallel: Sobol only. Forwarded to ``run_sensitivity_analysis``.
+        :param n_processors: Sobol only. Forwarded to ``run_sensitivity_analysis``.
+        :param keep_resamples: Sobol only. Forwarded to ``run_sensitivity_analysis``.
+        :param seed: forwarded to ``run_sensitivity_analysis``.
+        :param scaled: Morris only. Forwarded to ``run_sensitivity_analysis``.
+        :param num_levels: Morris only. Forwarded to ``run_sensitivity_analysis``.
         :return: nested dict ``{epw_label: {output_name: SALib_result}}``.
         """
         if getattr(self, 'last_run_type', None) != 'parametric':
@@ -620,7 +685,19 @@ class AnalysisMixin:
         for epw_label in epw_labels:
             epw_tag = str(epw_label).replace(' ', '_')
             self.outputs_param_simulation = original_df[original_df['epw'] == epw_label].copy()
-            sa_results = self.run_sensitivity_analysis(method=method, **kwargs)
+            sa_results = self.run_sensitivity_analysis(
+                method=method,
+                calc_second_order=calc_second_order,
+                num_resamples=num_resamples,
+                conf_level=conf_level,
+                print_to_console=print_to_console,
+                parallel=parallel,
+                n_processors=n_processors,
+                keep_resamples=keep_resamples,
+                seed=seed,
+                scaled=scaled,
+                num_levels=num_levels,
+            )
             results_by_epw[epw_label] = sa_results
             self.outputs_param_simulation = original_df
             rows = []

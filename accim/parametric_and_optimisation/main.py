@@ -183,7 +183,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         Split from OptimParamSimulation for better code organization and reduced cognitive load.
     """
 
-    def __init__(self, buildings: Union[Any, List]=None, epws: list=None, parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None]=None, output_type: Literal['standard', 'custom', 'detailed', 'simplified']='standard', output_keep_existing: bool=False, output_freqs: List[allowed_output_freqs]=['hourly'], ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac']='vrf_mm', SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature']='temperature difference', make_averages: bool=False, debugging: bool=False, verbosemode: bool=True, bypass_addAccis: bool=False, **kwargs):
+    def __init__(
+            self,
+            buildings: Union[Any, List] = None,
+            epws: list = None,
+            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
+            output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
+            output_keep_existing: bool = False,
+            output_freqs: List[allowed_output_freqs] = ['hourly'],
+            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            make_averages: bool = False,
+            debugging: bool = False,
+            verbosemode: bool = True,
+            bypass_addAccis: bool = False,
+            building: Any = None,
+    ):
         """
         Initialize the simulation base instance.
 
@@ -197,10 +212,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param SupplyAirTempInputMethod: supply air temperature input method
         :param make_averages: to make average outputs
         :param debugging: True to generate the .EDD file
+        :param verbosemode: True to print addAccis progress messages
         :param bypass_addAccis: True to skip the internal addAccis execution
+        :param building: legacy alias for buildings, accepted for backward compatibility
         """
-        if buildings is None and 'building' in kwargs:
-            buildings = kwargs['building']
+        if buildings is None and building is not None:
+            buildings = building
             
         is_accim_predef_model = False
         is_accim_custom_model = False
@@ -1798,7 +1815,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.descriptors_has_options = descriptors_has_options
         self.descriptors_has_range = descriptors_has_range
 
-    def set_problem(self, minimize_outputs: list=None, constraints: list=None, constraint_bounds: list=None, **kwargs):
+    def set_problem(
+            self,
+            minimize_outputs: list = None,
+            constraints: list = None,
+            constraint_bounds: list = None,
+            add_outputs: Union[int, list] = None,
+            converters: dict = None,
+    ):
         """
         Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters
         method, and for outputs, those set using the set_outputs_for_simulation method.
@@ -1809,8 +1833,18 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             a list containing the Output:Meter key names to be considered as constraints
         :param constraint_bounds: only used in optimisation;
             a list containing the logical expressions for the constraints
+        :param add_outputs: BESOS outputs that should be reported but not optimized
+        :param converters: BESOS converters for outputs and constraints
         """
-        problem = EPProblem(inputs=self.parameters_list, outputs=self.sim_outputs, minimize_outputs=minimize_outputs, constraints=constraints, constraint_bounds=constraint_bounds, **kwargs)
+        problem = EPProblem(
+            inputs=self.parameters_list,
+            outputs=self.sim_outputs,
+            minimize_outputs=minimize_outputs,
+            constraints=constraints,
+            constraint_bounds=constraint_bounds,
+            add_outputs=add_outputs,
+            converters=converters,
+        )
         self.problem = problem
 
     def sampling_full_set(self):
@@ -2728,7 +2762,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.last_run_type = 'parametric'
         return total
 
-    def run_optimisation(self, epws: list = None, out_dir: str = 'optim_results', evaluations: int = 2, population_size: int = 2, algorithm: str='NSGAII', processes: int=1, keep_sim_files: Literal['all', 'non-dominated', 'none']='all', keep_sim_files_batch_size: int=50, keep_df: Literal['all', 'non-dominated']='all', **kwargs) -> pd.DataFrame:
+    def run_optimisation(
+            self,
+            epws: list = None,
+            out_dir: str = 'optim_results',
+            evaluations: int = 2,
+            population_size: int = 2,
+            algorithm: str = 'NSGAII',
+            processes: int = 1,
+            keep_sim_files: Literal['all', 'non-dominated', 'none'] = 'all',
+            keep_sim_files_batch_size: int = 50,
+            keep_df: Literal['all', 'non-dominated'] = 'all',
+            algorithm_options: dict = None,
+    ) -> pd.DataFrame:
         """
         Runs the optimisation.
 
@@ -2752,8 +2798,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param keep_sim_files_batch_size: number of evaluations per worker to wait before running the local pareto batch cleanup.
         :param keep_df: specifies which evaluations to keep in the outputs_optimisation DataFrame:
             'all' (keeps dominated and non-dominated) or 'non-dominated'.
+        :param algorithm_options: optional dictionary with BESOS/Platypus algorithm-specific
+            keyword arguments. For example, use ``{'variator': my_variator}`` for algorithms
+            that accept a custom variator.
         :return: a pandas DataFrame
         """
+        algorithm_options = {} if algorithm_options is None else dict(algorithm_options)
         if epws is None:
             epws = getattr(self, 'epws', [])
         if not epws:
@@ -2795,37 +2845,37 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 if processes > 1 and hasattr(evaluator, '_building') and hasattr(evaluator._building, 'idfobjects'):
                     evaluator._building.idfobjects = GlobalAllCapsDict(evaluator._building.idfobjects)
                 if algorithm == 'GeneticAlgorithm':
-                    outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'EvolutionaryStrategy':
-                    outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'NSGAII':
-                    outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'EpsMOEA':
-                    outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'GDE3':
-                    outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'SPEA2':
-                    outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'MOEAD':
-                    outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'NSGAIII':
-                    outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'ParticleSwarm':
-                    outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'OMOPSO':
-                    outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'SMPSO':
-                    outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'CMAES':
-                    outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'IBEA':
-                    outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'PAES':
-                    outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'PESA2':
-                    outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 elif algorithm == 'EpsNSGAII':
-                    outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
+                    outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                 else:
                     raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
                 outputs_optimisation['epw'] = epwname
@@ -3692,7 +3742,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 self.normalize_outputs(df_types=['optimisation_hourly'])
                 self.outputs_normalized = False # Revert to False because we only normalized the hourly df
 
-    def get_monthly_df_optimisation(self, agg_funcs: dict = None, **kwargs):
+    def get_monthly_df_optimisation(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+    ):
         """
         Transforms the hourly values of outputs_optimisation to a new pandas DataFrame with monthly aggregated values,
         saved in the internal variable named outputs_optimisation_monthly.
@@ -3700,10 +3764,32 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param agg_funcs: a dictionary mapping column names to aggregation functions 
             (e.g. {'DistrictHeating:Facility': 'sum', 'Zone Mean Air Temperature': 'mean'}).
             Defaults to 'mean' for temperature, PMV, PPD, rate, and coefficient, and 'sum' for everything else.
-        :param kwargs: arguments passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        :param only_pareto_optimal: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        :param epw_filter: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        :param simulation_indices: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        :param output_columns: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        :param include_summary_columns: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        :param file_source: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        :param eplus_install_dir: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        :param only_run_period: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        :param start_date: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        :param skip_confirmation: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        :param normalize_per_m2: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
         """
         if getattr(self, 'outputs_optimisation_hourly', None) is None:
-            self.get_hourly_df_optimisation(**kwargs)
+            self.get_hourly_df_optimisation(
+                only_pareto_optimal=only_pareto_optimal,
+                epw_filter=epw_filter,
+                simulation_indices=simulation_indices,
+                output_columns=output_columns,
+                include_summary_columns=include_summary_columns,
+                file_source=file_source,
+                eplus_install_dir=eplus_install_dir,
+                only_run_period=only_run_period,
+                start_date=start_date,
+                skip_confirmation=skip_confirmation,
+                normalize_per_m2=normalize_per_m2,
+            )
             
         if getattr(self, 'outputs_optimisation_hourly', None) is None:
             raise ValueError('Failed to generate hourly dataframe for optimisation.')
@@ -3808,9 +3894,55 @@ class ParametricSimulation(SimulationBase):
         Extracted from OptimParamSimulation for better separation of concerns.
     """
 
-    def __init__(self, *args, **kwargs):
-        """Initialize ParametricSimulation instance."""
-        super().__init__(*args, **kwargs)
+    def __init__(
+            self,
+            buildings: Union[Any, List] = None,
+            epws: list = None,
+            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
+            output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
+            output_keep_existing: bool = False,
+            output_freqs: List[allowed_output_freqs] = ['hourly'],
+            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            make_averages: bool = False,
+            debugging: bool = False,
+            verbosemode: bool = True,
+            bypass_addAccis: bool = False,
+            building: Any = None,
+    ):
+        """
+        Initialize a parametric simulation.
+
+        :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
+        :param epws: one EPW filename or a list of EPW filenames.
+        :param parameters_type: parameter workflow to prepare: accim custom model,
+            accim predefined model, apmv setpoints, or None.
+        :param output_type: output selection preset used by addAccis.
+        :param output_keep_existing: keep existing IDF output objects when addAccis runs.
+        :param output_freqs: output frequencies requested from EnergyPlus.
+        :param ScriptType: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
+        :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
+        :param make_averages: create average outputs in addAccis.
+        :param debugging: create EnergyPlus EDD debugging output.
+        :param verbosemode: print addAccis progress messages.
+        :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
+        :param building: legacy alias for buildings, accepted for backward compatibility.
+        """
+        super().__init__(
+            buildings=buildings,
+            epws=epws,
+            parameters_type=parameters_type,
+            output_type=output_type,
+            output_keep_existing=output_keep_existing,
+            output_freqs=output_freqs,
+            ScriptType=ScriptType,
+            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+            make_averages=make_averages,
+            debugging=debugging,
+            verbosemode=verbosemode,
+            bypass_addAccis=bypass_addAccis,
+            building=building,
+        )
         # Parametric-specific attributes
         self.outputs_param_simulation = None
         self.outputs_param_simulation_hourly = None
@@ -3846,9 +3978,55 @@ class OptimisationSimulation(SimulationBase):
         Extracted from OptimParamSimulation for better separation of concerns.
     """
 
-    def __init__(self, *args, **kwargs):
-        """Initialize OptimisationSimulation instance."""
-        super().__init__(*args, **kwargs)
+    def __init__(
+            self,
+            buildings: Union[Any, List] = None,
+            epws: list = None,
+            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
+            output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
+            output_keep_existing: bool = False,
+            output_freqs: List[allowed_output_freqs] = ['hourly'],
+            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            make_averages: bool = False,
+            debugging: bool = False,
+            verbosemode: bool = True,
+            bypass_addAccis: bool = False,
+            building: Any = None,
+    ):
+        """
+        Initialize an optimisation simulation.
+
+        :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
+        :param epws: one EPW filename or a list of EPW filenames.
+        :param parameters_type: parameter workflow to prepare: accim custom model,
+            accim predefined model, apmv setpoints, or None.
+        :param output_type: output selection preset used by addAccis.
+        :param output_keep_existing: keep existing IDF output objects when addAccis runs.
+        :param output_freqs: output frequencies requested from EnergyPlus.
+        :param ScriptType: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
+        :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
+        :param make_averages: create average outputs in addAccis.
+        :param debugging: create EnergyPlus EDD debugging output.
+        :param verbosemode: print addAccis progress messages.
+        :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
+        :param building: legacy alias for buildings, accepted for backward compatibility.
+        """
+        super().__init__(
+            buildings=buildings,
+            epws=epws,
+            parameters_type=parameters_type,
+            output_type=output_type,
+            output_keep_existing=output_keep_existing,
+            output_freqs=output_freqs,
+            ScriptType=ScriptType,
+            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+            make_averages=make_averages,
+            debugging=debugging,
+            verbosemode=verbosemode,
+            bypass_addAccis=bypass_addAccis,
+            building=building,
+        )
         # Optimization-specific attributes
         self.outputs_optimisation = None
         self.outputs_optimisation_filepath = None
@@ -3868,9 +4046,33 @@ OptimParamSimulation = ParametricSimulation
 
 class AccimPredefModelsParamSim(ParametricSimulation):
 
-    def __init__(self, buildings: Union[Any, List]=None, epws: list=None, output_type: str='standard', output_keep_existing: bool=False, output_freqs: list=['hourly'], ScriptType: str='vrf_mm', SupplyAirTempInputMethod: str='temperature difference', debugging: bool=False, **kwargs):
-        if buildings is None and 'building' in kwargs:
-            buildings = kwargs['building']
+    def __init__(
+            self,
+            buildings: Union[Any, List] = None,
+            epws: list = None,
+            output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
+            output_keep_existing: bool = False,
+            output_freqs: List[allowed_output_freqs] = ['hourly'],
+            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            debugging: bool = False,
+            building: Any = None,
+    ):
+        """
+        Initialize the predefined-model parametric wrapper.
+
+        :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
+        :param epws: one EPW filename or a list of EPW filenames.
+        :param output_type: output selection preset used by addAccis.
+        :param output_keep_existing: keep existing IDF output objects when addAccis runs.
+        :param output_freqs: output frequencies requested from EnergyPlus.
+        :param ScriptType: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
+        :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
+        :param debugging: create EnergyPlus EDD debugging output.
+        :param building: legacy alias for buildings, accepted for backward compatibility.
+        """
+        if buildings is None and building is not None:
+            buildings = building
         super().__init__(buildings=buildings, epws=epws, parameters_type='accim predefined model', output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging)
         for b in self.buildings:
             accis.modifyAccis(idf=b, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)
