@@ -345,16 +345,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         include_idf = len(scoped_buildings) > 1
 
         for idx, building in scoped_buildings:
-            if self.is_accim_custom_model or self.is_accim_predef_model:
-                output_variable_df = accis.gen_outputs_df(idf=building, ScriptType=self.ScriptType, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, verboseMode=False)
-            else:
-                output_var_dict = {
-                    'key_value': [i.Key_Value for i in building.idfobjects['Output:Variable']],
-                    'variable_name': [i.Variable_Name for i in building.idfobjects['Output:Variable']],
-                    'frequency': [i.Reporting_Frequency for i in building.idfobjects['Output:Variable']],
-                    'schedule_name': [i.Schedule_Name for i in building.idfobjects['Output:Variable']],
-                }
-                output_variable_df = pd.DataFrame.from_dict(output_var_dict)
+            # Read current Output:Variable objects directly from the IDF.
+            # This method must be side-effect free (no output regeneration).
+            output_var_dict = {
+                'key_value': [i.Key_Value for i in building.idfobjects['Output:Variable']],
+                'variable_name': [i.Variable_Name for i in building.idfobjects['Output:Variable']],
+                'frequency': [i.Reporting_Frequency for i in building.idfobjects['Output:Variable']],
+                'schedule_name': [i.Schedule_Name for i in building.idfobjects['Output:Variable']],
+            }
+            output_variable_df = pd.DataFrame.from_dict(output_var_dict)
             if include_idf:
                 output_variable_df.insert(0, 'idf', self._get_idf_identifier(building, idx))
             output_dfs.append(output_variable_df)
@@ -1535,11 +1534,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
             def _keyify_vars(df: pd.DataFrame) -> set[tuple[str, str, str]]:
                 cols = df.columns
-                if not {'key_value', 'variable_name', 'frequency'}.issubset(set(cols)):
+                if not {'key_value', 'variable_name'}.issubset(set(cols)):
+                    return set()
+                freq_col = 'frequency' if 'frequency' in cols else ('reporting_frequency' if 'reporting_frequency' in cols else None)
+                if freq_col is None:
                     return set()
                 return {
-                    (str(r['key_value']).strip().upper(), str(r['variable_name']).strip().upper(), str(r['frequency']).strip().upper())
-                    for (_, r) in df[['key_value', 'variable_name', 'frequency']].dropna().iterrows()
+                    (str(r['key_value']).strip().upper(), str(r['variable_name']).strip().upper(), str(r[freq_col]).strip().upper())
+                    for (_, r) in df[['key_value', 'variable_name', freq_col]].dropna().iterrows()
                 }
 
             def _keyify_meters(df: pd.DataFrame) -> set[tuple[str, str]]:

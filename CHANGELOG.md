@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Explicit Parametric and Optimisation API Signatures**: Replaced public `*args`/`**kwargs` signatures in `parametric_and_optimisation` classes and methods with named arguments and expanded docstrings for clearer IDE hover help, while preserving the legacy `building` alias and routing algorithm-specific options through `algorithm_options`.
 
 ### Fixed
+- **Output Preflight Variable Verification in ACCIM Models**: `get_output_var_df_from_idf` now reads `Output:Variable` objects directly from the current IDF state (side-effect free), preventing false `missing_in_idf` reports after `apply_outputs_preflight(...)`.
+- **`run_optimisation()` Return Value**: Restored the method return so it consistently returns the full optimisation `DataFrame` (`self.outputs_optimisation`) instead of `None`, fixing downstream errors like `TypeError: object of type 'NoneType' has no len()`.
 - **Python 3.9 Type Union Syntax in `_run_single_evaluation_worker`**: Replaced `list | None` (Python 3.10+ syntax) with `Optional[list]` in `main.py` to restore Python 3.9 compatibility.
 - **Matplotlib 3.9+ `cm.get_cmap()` Removal**: Replaced the removed `cm.get_cmap('coolwarm')` call in `plotting.py` with `plt.colormaps['coolwarm']` and a safe fallback for older Matplotlib versions.
 - **`estimate_optimisation_sims()` Copy-Paste Bug**: The method erroneously accessed `self.outputs_param_simulation` (only set after a parametric run) and set `last_run_type` to `'parametric'`. Fixed to use the `epws` argument directly and set `last_run_type = 'optimisation'`.
