@@ -189,7 +189,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             epws: list = None,
             parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
-            output_keep_existing: bool = False,
+            output_keep_existing: bool = True,
             output_freqs: List[allowed_output_freqs] = ['hourly'],
             ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
             SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
@@ -218,6 +218,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         """
         if buildings is None and building is not None:
             buildings = building
+
+        self.building = buildings[0] if isinstance(buildings, list) and len(buildings) > 0 else buildings
+        self.buildings = buildings if isinstance(buildings, list) else ([buildings] if buildings is not None else [])
+        self.epws = epws if isinstance(epws, list) else ([epws] if epws is not None else [])
+        self.output_freqs = output_freqs
+        self.parameters_type = parameters_type
+        self.outputs_inventory_initial_ = self.scan_output_objects(idf_scope='all') if len(self.buildings) > 0 else {}
+        self.outputs_duplicates_initial_ = self.autocorrect_output_duplicates(idf_scope='all', warn=True) if len(self.buildings) > 0 else {}
             
         is_accim_predef_model = False
         is_accim_custom_model = False
@@ -251,12 +259,18 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.output_keep_existing = output_keep_existing
             self.output_type = output_type
             self.make_averages = make_averages
+            keep_existing_on_init = True
+            if output_keep_existing is False:
+                warnings.warn(
+                    'During class initialization, existing output objects are preserved by design. '
+                    'Use clear_outputs(...) later if you want to remove them explicitly.'
+                )
             if not bypass_addAccis:
                 if isinstance(buildings, list):
                     for b in buildings:
-                        accis.addAccis(idf=b, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=output_keep_existing, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
+                        accis.addAccis(idf=b, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=keep_existing_on_init, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
                 else:
-                    accis.addAccis(idf=buildings, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=output_keep_existing, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
+                    accis.addAccis(idf=buildings, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=keep_existing_on_init, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
         elif is_apmv_setpoints:
             if not bypass_addAccis:
                 if isinstance(buildings, list):
@@ -272,15 +286,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.output_keep_existing = None
             self.output_type = None
             self.make_averages = None
-        self.building = buildings[0] if isinstance(buildings, list) and len(buildings) > 0 else buildings
-        self.buildings = buildings if isinstance(buildings, list) else ([buildings] if buildings is not None else [])
-        self.epws = epws if isinstance(epws, list) else ([epws] if epws is not None else [])
-        self.output_freqs = output_freqs
-        self.parameters_type = parameters_type
         self.is_accim_custom_model = is_accim_custom_model
         self.is_accim_predef_model = is_accim_predef_model
         self.is_apmv_setpoints = is_apmv_setpoints
         self.bypass_addAccis = bypass_addAccis
+        self.outputs_inventory_after_injection_ = self.scan_output_objects(idf_scope='all') if len(self.buildings) > 0 else {}
+        self.outputs_duplicates_after_injection_ = self.autocorrect_output_duplicates(idf_scope='all', warn=True) if len(self.buildings) > 0 else {}
         self.last_run_type = None
         # Save an initial IDF backup right after addAccis/apply_apmv_setpoints so the
         # modified IDF (with EMS scripts and outputs already injected) is always
@@ -445,6 +456,125 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             for (idx, building) in self._resolve_idf_scope(idf_scope)
         )
 
+    @staticmethod
+    def _idfobjects_get_case(building: Any, key: str) -> list:
+        objs = list(getattr(building, 'idfobjects', {}).get(key, []))
+        if len(objs) == 0:
+            objs = list(getattr(building, 'idfobjects', {}).get(str(key).upper(), []))
+        if len(objs) == 0:
+            objs = list(getattr(building, 'idfobjects', {}).get(str(key).title(), []))
+        return objs
+
+    @staticmethod
+    def _norm_output_token(value: Any) -> str:
+        try:
+            if pd.isna(value):
+                return ''
+        except Exception:
+            pass
+        return str(value).strip().upper()
+
+    def _variable_key_from_obj(self, obj: Any) -> tuple[str, str, str, str]:
+        return (
+            self._norm_output_token(getattr(obj, 'Key_Value', '')),
+            self._norm_output_token(getattr(obj, 'Variable_Name', '')),
+            self._norm_output_token(getattr(obj, 'Reporting_Frequency', '')),
+            self._norm_output_token(getattr(obj, 'Schedule_Name', '')),
+        )
+
+    def _meter_key_from_obj(self, obj: Any) -> tuple[str, str]:
+        return (
+            self._norm_output_token(getattr(obj, 'Key_Name', '')),
+            self._norm_output_token(getattr(obj, 'Reporting_Frequency', '')),
+        )
+
+    def scan_output_objects(self, idf_scope: Any = 'all') -> dict:
+        """Return current output objects plus duplicate counts without modifying IDFs."""
+        df_vars = self.get_output_var_df_from_idf(idf_scope=idf_scope)
+        df_meters = self.get_output_meter_df_from_idf(idf_scope=idf_scope)
+
+        vars_work = df_vars.copy()
+        meters_work = df_meters.copy()
+
+        for col in ['key_value', 'variable_name', 'frequency', 'schedule_name']:
+            if col not in vars_work.columns:
+                vars_work[col] = ''
+            vars_work[col] = vars_work[col].map(self._norm_output_token)
+
+        for col in ['key_name', 'frequency']:
+            if col not in meters_work.columns:
+                meters_work[col] = ''
+            meters_work[col] = meters_work[col].map(self._norm_output_token)
+
+        subset_vars = ['key_value', 'variable_name', 'frequency', 'schedule_name']
+        subset_meters = ['key_name', 'frequency']
+        if 'idf' in vars_work.columns:
+            subset_vars = ['idf'] + subset_vars
+        if 'idf' in meters_work.columns:
+            subset_meters = ['idf'] + subset_meters
+
+        dup_vars = vars_work[vars_work.duplicated(subset=subset_vars, keep=False)]
+        dup_meters = meters_work[meters_work.duplicated(subset=subset_meters, keep=False)]
+
+        return {
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'variables_total': len(df_vars),
+            'meters_total': len(df_meters),
+            'variables_duplicate_rows': len(dup_vars),
+            'meters_duplicate_rows': len(dup_meters),
+            'variables': df_vars,
+            'meters': df_meters,
+            'duplicates_variables': dup_vars,
+            'duplicates_meters': dup_meters,
+        }
+
+    def autocorrect_output_duplicates(self, idf_scope: Any = 'all', warn: bool = True) -> dict:
+        """Remove duplicate Output:Variable/Output:Meter objects and optionally warn."""
+        report = {
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'buildings': {},
+            'removed_variables': 0,
+            'removed_meters': 0,
+        }
+
+        for idx, building in self._resolve_idf_scope(idf_scope):
+            idf_id = self._get_idf_identifier(building, idx)
+            removed_vars = 0
+            removed_meters = 0
+
+            seen_var_keys: set[tuple[str, str, str, str]] = set()
+            for obj in self._idfobjects_get_case(building, 'Output:Variable'):
+                key = self._variable_key_from_obj(obj)
+                if key in seen_var_keys:
+                    building.removeidfobject(obj)
+                    removed_vars += 1
+                else:
+                    seen_var_keys.add(key)
+
+            seen_meter_keys: set[tuple[str, str]] = set()
+            for obj in self._idfobjects_get_case(building, 'Output:Meter'):
+                key = self._meter_key_from_obj(obj)
+                if key in seen_meter_keys:
+                    building.removeidfobject(obj)
+                    removed_meters += 1
+                else:
+                    seen_meter_keys.add(key)
+
+            report['buildings'][idf_id] = {
+                'removed_variables': removed_vars,
+                'removed_meters': removed_meters,
+            }
+            report['removed_variables'] += removed_vars
+            report['removed_meters'] += removed_meters
+
+            if warn and (removed_vars > 0 or removed_meters > 0):
+                warnings.warn(
+                    f"Detected and removed duplicated output objects in IDF '{idf_id}': "
+                    f"Output:Variable={removed_vars}, Output:Meter={removed_meters}"
+                )
+
+        return report
+
     def _get_buildings_by_idf(self) -> dict:
         buildings_by_idf = {}
         for (idx, building) in enumerate(self.buildings):
@@ -557,37 +687,153 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             return pd.concat(output_dfs, ignore_index=True)
         return pd.DataFrame(columns=['key_name', 'frequency'])
 
-    def set_output_var_df_to_idf(self, outputs_df: pd.DataFrame=None, idf_scope: Any = 'all'):
-        """
-        Keeps the Output:Variable objects contained in the input pandas DataFrame and removes
-        all others. This is important to save space if thousands of simulations with heavy outputs
-        are run.
+    def get_output_variables_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
+        """Alias consistente de get_output_var_df_from_idf."""
+        return self.get_output_var_df_from_idf(idf_scope=idf_scope)
 
-        :type outputs_df: pd.DataFrame
-        :param outputs_df: the DataFrame containing Output:Variable objects to be kept
+    def get_output_meters_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
+        """Alias consistente de get_output_meter_df_from_idf."""
+        return self.get_output_meter_df_from_idf(idf_scope=idf_scope)
+
+    def set_output_variables_to_idf(
+            self,
+            df_output_variable: Optional[pd.DataFrame] = None,
+            output_variables: Optional[list[Union[str, tuple, dict]]] = None,
+            idf_scope: Any = 'all',
+            mode: Literal['append', 'replace'] = 'append',
+    ):
+        """
+        Adds Output:Variable objects from a DataFrame.
+
+        - ``mode='append'`` (default): keep existing objects and add only missing ones.
+        - ``mode='replace'``: remove all existing Output:Variable objects first, then add rows.
+
+        :param df_output_variable: DataFrame de variables con columnas key_value,
+            variable_name, frequency y opcionalmente schedule_name.
+        :param output_variables: lista alternativa para definir variables. Soporta:
+            - str: variable_name (con key_value='*' y frecuencias self.output_freqs)
+            - tuple/list de 2 elementos: (key_value, variable_name)
+            - dict: variable_name (+ opcionales key_value, frequency, schedule_name)
         :param idf_scope: IDFs to modify. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to modify fewer IDFs.
+        :param mode: 'append' or 'replace'.
         :return:
         """
+        if mode not in {'append', 'replace'}:
+            raise ValueError("mode must be 'append' or 'replace'.")
+
+        outputs_df = pd.DataFrame(columns=['key_value', 'variable_name', 'frequency', 'schedule_name'])
+        if df_output_variable is not None and len(df_output_variable) > 0:
+            outputs_df = pd.concat([outputs_df, df_output_variable.copy()], ignore_index=True)
+
+        if output_variables is not None:
+            variable_rows = []
+            for item in output_variables:
+                if isinstance(item, dict):
+                    variable_name = item.get('variable_name', item.get('Variable_Name', ''))
+                    key_value = item.get('key_value', item.get('Key_Value', '*'))
+                    schedule_name = item.get('schedule_name', item.get('Schedule_Name', ''))
+                    if 'frequency' in item:
+                        freqs = [item.get('frequency')]
+                    elif 'Reporting_Frequency' in item:
+                        freqs = [item.get('Reporting_Frequency')]
+                    else:
+                        freqs = list(self.output_freqs)
+                elif isinstance(item, (tuple, list)) and len(item) == 2:
+                    key_value, variable_name = item
+                    schedule_name = ''
+                    freqs = list(self.output_freqs)
+                else:
+                    key_value = '*'
+                    variable_name = item
+                    schedule_name = ''
+                    freqs = list(self.output_freqs)
+
+                for freq in freqs:
+                    variable_rows.append({
+                        'key_value': key_value,
+                        'variable_name': variable_name,
+                        'frequency': freq,
+                        'schedule_name': schedule_name,
+                    })
+
+            if len(variable_rows) > 0:
+                outputs_df = pd.concat([outputs_df, pd.DataFrame(variable_rows)], ignore_index=True)
+
+        if len(outputs_df) == 0:
+            return
+
+        required_cols = {'key_value', 'variable_name', 'frequency'}
+        missing_cols = [col for col in required_cols if col not in outputs_df.columns]
+        if missing_cols:
+            raise ValueError(f"outputs_df must contain columns: {sorted(required_cols)}. Missing: {missing_cols}")
+
         scoped_buildings = self._resolve_idf_scope(idf_scope)
-        if self.is_accim_custom_model or self.is_accim_predef_model:
-            for idx, b in scoped_buildings:
-                outputs_for_building = outputs_df
-                if outputs_df is not None and 'idf' in outputs_df.columns:
-                    idf_id = self._get_idf_identifier(b, idx)
-                    outputs_for_building = outputs_df[outputs_df['idf'].astype(str) == idf_id].drop(columns=['idf'])
-                accis.addAccis(idf=b, ScriptType=self.ScriptType, SupplyAirTempInputMethod=self.SupplyAirTempInputMethod, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_take_dataframe=outputs_for_building, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, make_averages=self.make_averages, verboseMode=False)
-        else:
-            for idx, b in scoped_buildings:
-                outputs_for_building = outputs_df
-                if outputs_df is not None and 'idf' in outputs_df.columns:
-                    idf_id = self._get_idf_identifier(b, idx)
-                    outputs_for_building = outputs_df[outputs_df['idf'].astype(str) == idf_id].drop(columns=['idf'])
+        for idx, b in scoped_buildings:
+            outputs_for_building = outputs_df
+            if 'idf' in outputs_df.columns:
+                idf_id = self._get_idf_identifier(b, idx)
+                outputs_for_building = outputs_df[outputs_df['idf'].astype(str) == idf_id].drop(columns=['idf'])
+            if len(outputs_for_building) == 0:
+                continue
+
+            outputs_for_building = outputs_for_building.copy()
+            if 'schedule_name' not in outputs_for_building.columns:
+                outputs_for_building['schedule_name'] = ''
+
+            outputs_for_building = outputs_for_building.fillna('')
+            outputs_for_building['frequency'] = outputs_for_building['frequency'].astype(str)
+            outputs_for_building = outputs_for_building.drop_duplicates(
+                subset=['key_value', 'variable_name', 'frequency', 'schedule_name'],
+                keep='first',
+            )
+
+            if mode == 'replace':
                 alloutputs = [output for output in b.idfobjects['Output:Variable']]
-                for i in alloutputs:
-                    b.removeidfobject(i)
-                for i in outputs_for_building.index:
-                    b.newidfobject('Output:Variable', Key_Value=outputs_for_building.loc[i, 'key_value'], Variable_Name=outputs_for_building.loc[i, 'variable_name'], Reporting_Frequency=outputs_for_building.loc[i, 'frequency'].capitalize(), Schedule_Name=outputs_for_building.loc[i, 'schedule_name'])
+                for existing in alloutputs:
+                    b.removeidfobject(existing)
+
+            existing_keys = {
+                self._variable_key_from_obj(existing)
+                for existing in self._idfobjects_get_case(b, 'Output:Variable')
+            }
+            for _, row in outputs_for_building.iterrows():
+                key = (
+                    self._norm_output_token(row.get('key_value', '')),
+                    self._norm_output_token(row.get('variable_name', '')),
+                    self._norm_output_token(str(row.get('frequency', ''))),
+                    self._norm_output_token(row.get('schedule_name', '')),
+                )
+                if key in existing_keys:
+                    continue
+                b.newidfobject(
+                    'Output:Variable',
+                    Key_Value=row.get('key_value', ''),
+                    Variable_Name=row.get('variable_name', ''),
+                    Reporting_Frequency=str(row.get('frequency', '')).capitalize(),
+                    Schedule_Name=row.get('schedule_name', ''),
+                )
+                existing_keys.add(key)
+
+    def set_output_var_df_to_idf(
+            self,
+            outputs_df: pd.DataFrame = None,
+            idf_scope: Any = 'all',
+            mode: Literal['append', 'replace'] = 'append',
+    ):
+        """Legacy wrapper. Use set_output_variables_to_idf instead."""
+        warnings.warn(
+            "set_output_var_df_to_idf is deprecated and will be removed in a future version. "
+            "Use set_output_variables_to_idf(df_output_variable=..., output_variables=..., ...) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.set_output_variables_to_idf(
+            df_output_variable=outputs_df,
+            output_variables=None,
+            idf_scope=idf_scope,
+            mode=mode,
+        )
 
     def keep_only_outputs_in_idfs(
             self,
@@ -773,9 +1019,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         return report
 
-    def set_output_met_objects_to_idf(
+    def set_output_meters_to_idf(
             self,
-            output_meters: list,
+            df_output_meter: Optional[pd.DataFrame] = None,
+            output_meters: Optional[list[Union[str, dict]]] = None,
             validate: bool = True,
             on_missing: Literal['warn', 'raise', 'ignore'] = 'warn',
             auto_filter: bool = True,
@@ -785,10 +1032,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             keep_available_outputs: bool = False,
     ):
         """
-        Adds the Output:Meter objects from the output_meters argument.
+        Adds Output:Meter objects from DataFrame and/or list.
 
-        :type output_meters: list
-        :param output_meters: a list containing Output:Meter objects to be added
+        :param df_output_meter: DataFrame opcional con columnas key_name y opcionalmente
+            frequency. Si frequency no está, se usan las frecuencias de self.output_freqs.
+        :param output_meters: lista opcional de medidores. Cada item puede ser:
+            - str: key_name (frecuencias desde self.output_freqs)
+            - dict: key_name (+ opcional frequency o Reporting_Frequency)
         :param validate: when True, runs a lightweight test simulation to detect which meters
             are actually available in the model, preventing silent typos/invalid meters.
         :param on_missing: behaviour when some requested meters are not available.
@@ -801,16 +1051,57 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             to idf_scope. Use 'first' to validate once while applying to all IDFs.
         :return:
         """
-        if output_meters is None:
-            output_meters = []
+        meter_input_df = pd.DataFrame(columns=['key_name', 'frequency'])
+        if df_output_meter is not None and len(df_output_meter) > 0:
+            meter_input_df = pd.concat([meter_input_df, df_output_meter.copy()], ignore_index=True)
+
+        if output_meters is not None:
+            meter_rows = []
+            for item in output_meters:
+                if isinstance(item, dict):
+                    key_name = item.get('key_name', item.get('Key_Name', ''))
+                    if 'frequency' in item:
+                        freqs = [item.get('frequency')]
+                    elif 'Reporting_Frequency' in item:
+                        freqs = [item.get('Reporting_Frequency')]
+                    else:
+                        freqs = list(self.output_freqs)
+                else:
+                    key_name = item
+                    freqs = list(self.output_freqs)
+
+                for freq in freqs:
+                    meter_rows.append({'key_name': key_name, 'frequency': freq})
+
+            if len(meter_rows) > 0:
+                meter_input_df = pd.concat([meter_input_df, pd.DataFrame(meter_rows)], ignore_index=True)
+
+        if len(meter_input_df) == 0:
+            return
+
+        if 'key_name' not in meter_input_df.columns:
+            raise ValueError("df_output_meter must contain a 'key_name' column.")
 
         def _norm_meter(value: Any) -> str:
             return ('' if value is None else str(value)).strip().upper()
 
+        def _norm_freq(value: Any) -> str:
+            return '' if value is None else str(value).strip()
+
+        meter_input_df = meter_input_df.copy().fillna('')
+        if 'frequency' not in meter_input_df.columns:
+            meter_input_df['frequency'] = ''
+        meter_input_df['key_name'] = meter_input_df['key_name'].map(_norm_meter)
+        meter_input_df['frequency'] = meter_input_df['frequency'].map(_norm_freq)
+        meter_input_df = meter_input_df[meter_input_df['key_name'] != '']
+        meter_input_df = meter_input_df.drop_duplicates(subset=['key_name', 'frequency'], keep='first').reset_index(drop=True)
+        if len(meter_input_df) == 0:
+            return
+
         scoped_buildings = self._resolve_idf_scope(idf_scope)
         validation_scope = idf_scope if validation_idf_scope is None else validation_idf_scope
         validation_buildings = self._resolve_idf_scope(validation_scope)
-        requested = [_norm_meter(m) for m in output_meters if _norm_meter(m)]
+        requested = sorted(set(meter_input_df['key_name'].tolist()))
         requested_set = set(requested)
 
         available_by_idx: dict[int, set[str]] = {}
@@ -907,9 +1198,59 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if has_validation_result and auto_filter:
                 meters_to_add = [m for m in requested if m in available_set]
 
+            meter_rows_for_building = meter_input_df[meter_input_df['key_name'].isin(meters_to_add)]
+
+            def _freqs_for_meter(meter_name: str) -> list[str]:
+                subset = meter_rows_for_building[meter_rows_for_building['key_name'] == meter_name]
+                explicit = [str(v).strip() for v in subset['frequency'].tolist() if str(v).strip() != '']
+                if len(explicit) > 0:
+                    return explicit
+                return [str(v) for v in self.output_freqs]
+
+            existing_meter_keys = {
+                self._meter_key_from_obj(existing)
+                for existing in self._idfobjects_get_case(b, 'Output:Meter')
+            }
             for meter in meters_to_add:
-                for freq in self.output_freqs:
+                for freq in _freqs_for_meter(meter):
+                    key = (
+                        self._norm_output_token(meter),
+                        self._norm_output_token(freq),
+                    )
+                    if key in existing_meter_keys:
+                        continue
                     b.newidfobject(key='OUTPUT:METER', Key_Name=meter, Reporting_Frequency=freq)
+                    existing_meter_keys.add(key)
+
+    def set_output_met_objects_to_idf(
+            self,
+            output_meters: list,
+            validate: bool = True,
+            on_missing: Literal['warn', 'raise', 'ignore'] = 'warn',
+            auto_filter: bool = True,
+            reduce_sim_time: bool = True,
+            idf_scope: Any = 'all',
+            validation_idf_scope: Any = None,
+            keep_available_outputs: bool = False,
+    ):
+        """Legacy wrapper. Use set_output_meters_to_idf instead."""
+        warnings.warn(
+            "set_output_met_objects_to_idf is deprecated and will be removed in a future version. "
+            "Use set_output_meters_to_idf(df_output_meter=..., output_meters=..., ...) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.set_output_meters_to_idf(
+            df_output_meter=None,
+            output_meters=output_meters,
+            validate=validate,
+            on_missing=on_missing,
+            auto_filter=auto_filter,
+            reduce_sim_time=reduce_sim_time,
+            idf_scope=idf_scope,
+            validation_idf_scope=validation_idf_scope,
+            keep_available_outputs=keep_available_outputs,
+        )
 
     def get_outputs_df_from_testsim(
         self,
@@ -1480,7 +1821,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self,
         df_vars_sel: Optional[pd.DataFrame] = None,
         df_meters_sel: Optional[pd.DataFrame] = None,
-        clean_mode: Literal['none', 'meters_vars', 'all'] = 'all',
+        clean_mode: Literal['none', 'meters_vars', 'all'] = 'none',
         validate_before_apply: bool = True,
         validate_after_apply: bool = True,
         on_missing: Literal['raise', 'warn', 'ignore'] = 'warn',
@@ -1534,7 +1875,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 df_vars_apply['frequency'] = df_vars_apply['frequency'].astype(str)
             if 'schedule_name' not in df_vars_apply.columns:
                 df_vars_apply['schedule_name'] = ''
-            self.set_output_var_df_to_idf(outputs_df=df_vars_apply, idf_scope=idf_scope)
+            self.set_output_variables_to_idf(df_output_variable=df_vars_apply, idf_scope=idf_scope)
             report['applied']['variables'] = len(df_vars_apply)
 
         # Apply meters
@@ -1542,7 +1883,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if 'key_name' not in df_meters_sel.columns:
                 raise ValueError("df_meters_sel must contain a 'key_name' column.")
             meters_list = [str(v) for v in df_meters_sel['key_name'].dropna().tolist()]
-            self.set_output_met_objects_to_idf(
+            self.set_output_meters_to_idf(
                 output_meters=meters_list,
                 validate=validate_before_apply,
                 on_missing=on_missing,

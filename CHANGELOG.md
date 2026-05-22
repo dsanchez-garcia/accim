@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Data Extraction and Persistence**: Added monthly aggregation methods, automatic hourly CSV fallback, optimisation hourly column discovery, hourly optimisation expansion controls, `.pkl`/`.json` session persistence, enhanced load methods, IDF backups, and session merging.
 - **Optimisation and Analysis Tools**: Added optimisation run estimation, parallel optimisation evaluation via `processes`, Morris/Sobol sensitivity analysis integration, and MCDM compromise-solution helpers.
 - **Model Utilities and Runtime Support**: Added `AccimSimulationVerifier`, `set_operative_temp_control`, `update_idf_version`, scheduled natural ventilation support, scheduled ventilation output variables, and automatic standard autosizing constraint initialization.
+- **Consistent Output Management API (`parametric_and_optimisation`)**: Added `set_output_variables_to_idf(...)` and `set_output_meters_to_idf(...)` with aligned signatures and behavior.
+  - Variables now accept both DataFrame (`df_output_variable`) and list (`output_variables`) inputs.
+  - Meters now accept both list (`output_meters`) and DataFrame (`df_output_meter`) inputs, including per-row `frequency` overrides when present.
+  - Added symmetric read aliases: `get_output_variables_df_from_idf(...)` and `get_output_meters_df_from_idf(...)`.
 
 ### Changed
 - **Floor Area Mode Semantics**: `mode='occupied'` remains strictly tied to `People` objects and their referenced `ZoneList`, `SpaceList`, or `Space` hierarchy. Use `mode='air-conditioned'` when normalisation should include all conditioned zones instead of only occupied zones.
@@ -34,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Optimisation Plotting and Clustering**: Improved Pareto-front plotting aesthetics and persisted `Cluster_ID` back into optimisation outputs for downstream plots.
 - **File Naming and Timestamping**: Standardized output dataframe, JSON state, and IDF backup names with chronological `YYYYMMDD_HHMMSS` timestamps.
 - **Explicit Parametric and Optimisation API Signatures**: Replaced public `*args`/`**kwargs` signatures in `parametric_and_optimisation` classes and methods with named arguments and expanded docstrings for clearer IDE hover help, while preserving the legacy `building` alias and routing algorithm-specific options through `algorithm_options`.
+- **Output Workflow Defaults and Migration Path**:
+  - `apply_outputs_preflight(...)` now defaults to `clean_mode='none'` to preserve user-defined `Output:*` objects unless cleanup is explicitly requested.
+  - Legacy methods `set_output_var_df_to_idf(...)` and `set_output_met_objects_to_idf(...)` are preserved as wrappers and now emit `DeprecationWarning` messages that point to the new consistent methods.
+  - Updated `tools/output_workflow_notebook_style.py` to use the new API and include the advanced meter DataFrame frequency path.
 
 ### Fixed
 - **Output Preflight Variable Verification in ACCIM Models**: `get_output_var_df_from_idf` now reads `Output:Variable` objects directly from the current IDF state (side-effect free), preventing false `missing_in_idf` reports after `apply_outputs_preflight(...)`.
@@ -69,6 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Session Context Persistence (`epws`)**: Original EPW lists are now persisted in JSON/Pickle metadata.
 - **Normalization Plotting Artifacts**: Fixed divisor handling and `parameters_type` parsing errors in normalization-aware plotting.
 - **Parametric Multiprocessing Output Readers**: Workers now preserve serialized meter/variable reader specifications, including frequency and aggregation behavior.
+- **Output Deduplication Across IDF Key Casing**: Output scanning/insertion now resolves `Output:*` object keys robustly across casing variants (for example, `Output:Meter` vs `OUTPUT:METER`), preventing missed duplicate detection in mixed IDD environments.
+- **aPMV Output Re-application Duplicates**: `_add_apmv_outputs(...)` now checks full `Output:Variable` keys (`Key_Value`, `Variable_Name`, `Reporting_Frequency`) before insertion, including `Schedule Value` rows.
 
 ## [0.7.7] - 2026-04-11
 

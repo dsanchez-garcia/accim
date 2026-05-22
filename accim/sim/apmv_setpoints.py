@@ -972,31 +972,53 @@ def _add_apmv_outputs(building: IDF, outputs_freq: List[str], other_PMV_related_
             else:
                 warnings.warn(f"EMS Output Variable '{out_name}' already exists. Skipping.")
 
+    def _norm(value: Any) -> str:
+        return '' if value is None else str(value).strip().upper()
+
+    def _var_key(key_value: Any, variable_name: Any, frequency: Any) -> tuple[str, str, str]:
+        return (_norm(key_value), _norm(variable_name), _norm(frequency))
+
     # 2. Add Standard Output:Variables for reporting
     for freq in outputs_freq:
-        current_outputs = [o.Variable_Name for o in building.idfobjects['Output:Variable'] if o.Reporting_Frequency == freq.capitalize()]
+        freq_cap = str(freq).capitalize()
+        existing_output_keys = {
+            _var_key(getattr(o, 'Key_Value', ''), getattr(o, 'Variable_Name', ''), getattr(o, 'Reporting_Frequency', ''))
+            for o in building.idfobjects['Output:Variable']
+        }
 
         # Add all EMS variables created above
         for outvar in [v.Name for v in building.idfobjects['EnergyManagementSystem:OutputVariable']]:
-            if outvar not in current_outputs and not outvar.startswith("WIP"):
-                building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=outvar, Reporting_Frequency=freq.capitalize())
+            key = _var_key('*', outvar, freq_cap)
+            if key not in existing_output_keys and not outvar.startswith("WIP"):
+                building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=outvar, Reporting_Frequency=freq_cap)
+                existing_output_keys.add(key)
                 if verbose_mode: print(f"Added Output:Variable for {outvar} ({freq})")
+            elif key in existing_output_keys:
+                warnings.warn(f"Output:Variable already exists for '{outvar}' ({freq_cap}). Skipping.")
 
         # Add Schedule Values (using RAW zone names)
-        sanitized_zones = {z: _sanitize_ems_name(z) for z in unique_zones}
         for i in ['PMV_H_SP', 'PMV_C_SP']:
             for zone in unique_zones:
                 sch_name = f'{i}_{zone}'
-                building.newidfobject('Output:Variable', Key_Value=sch_name, Variable_Name='Schedule Value', Reporting_Frequency=freq.capitalize())
-                if verbose_mode: print(f"Added Output:Variable for Schedule {sch_name} ({freq})")
+                key = _var_key(sch_name, 'Schedule Value', freq_cap)
+                if key not in existing_output_keys:
+                    building.newidfobject('Output:Variable', Key_Value=sch_name, Variable_Name='Schedule Value', Reporting_Frequency=freq_cap)
+                    existing_output_keys.add(key)
+                    if verbose_mode: print(f"Added Output:Variable for Schedule {sch_name} ({freq})")
+                else:
+                    warnings.warn(f"Output:Variable already exists for Schedule '{sch_name}' ({freq_cap}). Skipping.")
 
         # Add additional comfort outputs if requested
         if other_PMV_related_outputs:
             additional = ['Zone Operative Temperature', 'Zone Thermal Comfort Fanger Model PMV', 'Zone Thermal Comfort Fanger Model PPD', 'Zone Mean Air Temperature']
             for item in additional:
-                if item not in current_outputs:
-                    building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=item, Reporting_Frequency=freq.capitalize())
+                key = _var_key('*', item, freq_cap)
+                if key not in existing_output_keys:
+                    building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=item, Reporting_Frequency=freq_cap)
+                    existing_output_keys.add(key)
                     if verbose_mode: print(f"Added Output:Variable for {item} ({freq})")
+                else:
+                    warnings.warn(f"Output:Variable already exists for '{item}' ({freq_cap}). Skipping.")
 
         # 3. Add Output:Meter objects
         meter_objects = [
