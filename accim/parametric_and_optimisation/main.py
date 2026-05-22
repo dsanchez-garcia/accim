@@ -30,23 +30,23 @@ from accim.parametric_and_optimisation.patches import GlobalAllCapsDict, _patche
 import accim.parametric_and_optimisation.params_dicts as params_dicts
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
 
-def get_rdd_file_as_df():
+def get_rdd_file_as_df(out_dir: str = 'available_outputs'):
     """
     Returns the .rdd file from the test simulation as a pandas DataFrame
 
     :return: a pandas DataFrame containing the .rdd file from the test simulation
     """
-    rdd_df = pd.read_csv(filepath_or_buffer='available_outputs/eplusout.rdd', sep=',|;', skiprows=2, names=['object', 'key_value', 'variable_name', 'frequency', 'units'], engine='python')
+    rdd_df = pd.read_csv(filepath_or_buffer=os.path.join(out_dir, 'eplusout.rdd'), sep=',|;', skiprows=2, names=['object', 'key_value', 'variable_name', 'frequency', 'units'], engine='python')
     return rdd_df
 
-def parse_mtd_file() -> list[Union[dict[str, Union[str, None, list[str]]], dict[str, Union[str, None, list[str]]]]]:
+def parse_mtd_file(out_dir: str = 'available_outputs') -> list[Union[dict[str, Union[str, None, list[str]]], dict[str, Union[str, None, list[str]]]]]:
     """
     Returns a list of the objects in the .mtd file from the test simulation.
 
     :return: a list of the objects in the .mtd file from the test simulation
     """
     meter_list = []
-    with open('available_outputs/eplusout.mtd', 'r') as file:
+    with open(os.path.join(out_dir, 'eplusout.mtd'), 'r') as file:
         lines = file.readlines()
     (meter_id, description) = (None, None)
     on_meters = []
@@ -66,13 +66,13 @@ def parse_mtd_file() -> list[Union[dict[str, Union[str, None, list[str]]], dict[
         meter_list.append({'meter_id': meter_id, 'description': description, 'on_meters': on_meters})
     return meter_list
 
-def get_mdd_file_as_df():
+def get_mdd_file_as_df(out_dir: str = 'available_outputs'):
     """
     Returns the .mdd file from the test simulation as a pandas DataFrame
 
     :return: a pandas DataFrame containing the .mdd file from the test simulation
     """
-    mdd_df = pd.read_csv(filepath_or_buffer='available_outputs/eplusout.mdd', sep=',|;', skiprows=2, names=['object', 'meter_name', 'frequency', 'units'], engine='python')
+    mdd_df = pd.read_csv(filepath_or_buffer=os.path.join(out_dir, 'eplusout.mdd'), sep=',|;', skiprows=2, names=['object', 'meter_name', 'frequency', 'units'], engine='python')
     return mdd_df
 
 def _run_single_evaluation_worker(
@@ -782,6 +782,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             reduce_sim_time: bool = True,
             idf_scope: Any = 'all',
             validation_idf_scope: Any = None,
+            keep_available_outputs: bool = False,
     ):
         """
         Adds the Output:Meter objects from the output_meters argument.
@@ -862,7 +863,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             maximum_figures_in_shadow_overlap_calculations=200,
                             timesteps=2,
                         )
-                    available_outputs = print_available_outputs_mod(building_for_testsim)
+                    available_outputs = print_available_outputs_mod(
+                        building_for_testsim,
+                        out_dir='available_outputs',
+                        keep_out_dir=keep_available_outputs,
+                    )
                     available_by_idx[val_idx] = {
                         _norm_meter(k)
                         for (k, _freq) in available_outputs.meterreaderlist
@@ -906,7 +911,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 for freq in self.output_freqs:
                     b.newidfobject(key='OUTPUT:METER', Key_Name=meter, Reporting_Frequency=freq)
 
-    def get_outputs_df_from_testsim(self, reduce_sim_time: bool=True, idf_scope: Any = 'all') -> tuple[pd.DataFrame, pd.DataFrame]:
+    def get_outputs_df_from_testsim(
+        self,
+        reduce_sim_time: bool = True,
+        idf_scope: Any = 'all',
+        keep_available_outputs: bool = False,
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """
         Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.
         Therefore, it won't contain wildcards such as '*'.
@@ -925,6 +935,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 df_meters, df_vars = self.get_outputs_df_from_testsim(
                     reduce_sim_time=reduce_sim_time,
                     idf_scope=idx,
+                    keep_available_outputs=keep_available_outputs,
                 )
                 idf_id = self._get_idf_identifier(building, idx)
                 df_meters.insert(0, 'idf', idf_id)
@@ -969,7 +980,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     Use_Weather_File_Daylight_Saving_Period='Yes',
                     Use_Weather_File_Rain_and_Snow_Indicators='Yes'
                 )
-        available_outputs = print_available_outputs_mod(building_for_testsim)
+        available_outputs = print_available_outputs_mod(
+            building_for_testsim,
+            out_dir='available_outputs',
+            keep_out_dir=keep_available_outputs,
+        )
         if temp_path is not None:
             from os import remove
             remove(temp_path)
@@ -1131,6 +1146,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         prefer: Literal['testsimeplus', 'rdd_mdd'] = 'testsimeplus',
         refresh: bool = False,
         idf_scope: Any = 'all',
+        keep_available_outputs: bool = False,
     ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
         """
         Discovers which outputs are actually available for this model.
@@ -1144,6 +1160,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param refresh: when False, reuse cached results in ``self.available_outputs_``.
         :param idf_scope: IDFs to discover. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to run fewer test simulations.
+        :param keep_available_outputs: when False (default), removes the temporary
+            ``available_outputs`` directory once discovery is done.
         :return: (df_meters, df_vars, meta)
         """
         requested_prefer = prefer
@@ -1157,6 +1175,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     cached_meta.get('idf_scope') == scope_label
                     and cached_prefer == requested_prefer
                     and cached_meta.get('reduce_sim_time') == reduce_sim_time
+                    and cached_meta.get('keep_available_outputs', False) == keep_available_outputs
                 ):
                     return cached['df_meters'].copy(), cached['df_vars'].copy(), cached_meta
 
@@ -1165,14 +1184,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             'requested_prefer': requested_prefer,
             'reduce_sim_time': reduce_sim_time,
             'idf_scope': scope_label,
+            'keep_available_outputs': keep_available_outputs,
         }
 
         if prefer == 'rdd_mdd':
             rdd_path = os.path.join('available_outputs', 'eplusout.rdd')
             mdd_path = os.path.join('available_outputs', 'eplusout.mdd')
             if os.path.exists(rdd_path) and os.path.exists(mdd_path):
-                df_rdd = get_rdd_file_as_df()
-                df_mdd = get_mdd_file_as_df()
+                df_rdd = get_rdd_file_as_df(out_dir='available_outputs')
+                df_mdd = get_mdd_file_as_df(out_dir='available_outputs')
 
                 df_vars = df_rdd.rename(
                     columns={'key_value': 'key_value', 'variable_name': 'variable_name', 'frequency': 'frequency'}
@@ -1190,6 +1210,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             df_meters, df_vars = self.get_outputs_df_from_testsim(
                 reduce_sim_time=reduce_sim_time,
                 idf_scope=idf_scope,
+                keep_available_outputs=keep_available_outputs,
             )
             meta.update({'source': 'testsimeplus', 'out_dir': 'available_outputs'})
 
@@ -1213,6 +1234,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         suggest: bool = True,
         reduce_sim_time: bool = True,
         idf_scope: Any = 'all',
+        keep_available_outputs: bool = False,
     ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
         """
         Validates and builds output selection DataFrames from a simple wishlist and/or DataFrames.
@@ -1232,7 +1254,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             variables = []
 
         df_meters_av, df_vars_av, meta = self.discover_available_outputs(
-            reduce_sim_time=reduce_sim_time, prefer='testsimeplus', refresh=False, idf_scope=idf_scope
+            reduce_sim_time=reduce_sim_time,
+            prefer='testsimeplus',
+            refresh=False,
+            idf_scope=idf_scope,
+            keep_available_outputs=keep_available_outputs,
         )
 
         report: dict = {
@@ -2942,6 +2968,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         # Auto-apply category mapping if rules were previously set
         if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
             self.apply_category_mapping(df_types=['optimisation'])
+
+        return self.outputs_optimisation
 
     def _build_full_optimisation_outputs_df(self, evaluator: EvaluatorEP, epwname: str) -> pd.DataFrame:
         records = getattr(evaluator, '_optimisation_eval_records', [])

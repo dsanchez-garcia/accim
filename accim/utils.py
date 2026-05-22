@@ -210,6 +210,8 @@ class print_available_outputs_mod:
             version=None,
             name=None,
             frequency=None,
+            out_dir: str = 'available_outputs',
+            keep_out_dir: bool = False,
     ):
         """
         A modified version of besos' print_available_outputs function.
@@ -232,7 +234,7 @@ class print_available_outputs_mod:
             name = name.lower()
         if frequency is not None:
             frequency = frequency.lower()
-        results = run_building(building, stdout_mode="Verbose", out_dir='available_outputs')
+        results = run_building(building, stdout_mode="Verbose", out_dir=out_dir)
         outputlist = []
         for key in results.keys():
             if name is not None:
@@ -258,6 +260,13 @@ class print_available_outputs_mod:
                 self.variablereaderlist.append(outputlist[i])
             else:
                 self.meterreaderlist.append(outputlist[i])
+
+        # Cleanup by default to avoid leaving transient discovery folders.
+        if not keep_out_dir:
+            try:
+                shutil.rmtree(out_dir, ignore_errors=True)
+            except Exception:
+                pass
         # return outputlist, self.meterreaderlist, self.variablereaderlist
 
 
