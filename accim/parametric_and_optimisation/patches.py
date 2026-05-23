@@ -58,6 +58,42 @@ def _patched_eval_func(evaluator, all_outputs):
     else:
         eval_record['results'] = tuple(results)
         eval_record['sim_dir'] = None
+
+    # In multiprocessing, BESOS stores add_outputs in each worker-local problem.
+    # Capture the latest computed add_outputs values into the evaluation record.
+    def _normalize_add_output_value(value):
+        # Prefer raw numeric sequences for dataframe/pickle/json portability.
+        try:
+            data = getattr(value, 'data', None)
+            if data is not None:
+                if hasattr(data, 'columns') and 'Value' in getattr(data, 'columns', []):
+                    return data['Value'].tolist()
+                if hasattr(data, 'squeeze'):
+                    squeezed = data.squeeze()
+                    if hasattr(squeezed, 'tolist'):
+                        return squeezed.tolist()
+                if hasattr(data, 'tolist'):
+                    return data.tolist()
+        except Exception:
+            pass
+        if hasattr(value, 'tolist'):
+            try:
+                return value.tolist()
+            except Exception:
+                pass
+        return value
+
+    add_outputs_values = []
+    try:
+        add_outputs_list = getattr(evaluator.problem, 'add_outputs_list', None)
+        if add_outputs_list:
+            last_record = add_outputs_list[-1]
+            n_inputs = len(all_outputs)
+            add_outputs_values = [_normalize_add_output_value(v) for v in list(last_record[n_inputs:])]
+    except Exception:
+        add_outputs_values = []
+    eval_record['add_outputs_values'] = tuple(add_outputs_values)
+
     evaluator._optimisation_eval_records.append(eval_record)
     log_base = getattr(evaluator, '_optimisation_log_base', None)
     if log_base is not None:
@@ -77,7 +113,12 @@ def _patched_eval_func(evaluator, all_outputs):
             if isinstance(value, (str, int, float, bool)) or value is None:
                 return value
             return str(value)
-        log_payload = {'inputs': _json_safe(list(eval_record['inputs'])), 'results': _json_safe(list(eval_record['results'])), 'sim_dir': _json_safe(eval_record['sim_dir'])}
+        log_payload = {
+            'inputs': _json_safe(list(eval_record['inputs'])),
+            'results': _json_safe(list(eval_record['results'])),
+            'sim_dir': _json_safe(eval_record['sim_dir']),
+            'add_outputs_values': _json_safe(list(eval_record.get('add_outputs_values', ()))),
+        }
         log_path = f'{log_base}_{os.getpid()}.jsonl'
         with open(log_path, 'a', encoding='utf-8') as logfile:
             logfile.write(json.dumps(log_payload) + '\n')

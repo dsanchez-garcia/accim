@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Importable Custom Output Reducers in Multiprocessing**: `set_outputs_for_simulation(...)` now accepts `func` values as callables or import-path strings (`"module.submodule:callable_name"`).
   - Reader reducer functions are serialized/resolved for worker processes so custom aggregation logic can be reused with `processes > 1` in parametric simulations.
   - Added user warnings when a reducer cannot be serialized as an importable path and may fail under Windows `spawn` multiprocessing.
+- **XLSX Result Exports**: Parametric and optimisation result tables are now also saved as `.xlsx` files alongside existing `.csv`, `.pkl`, and `.json` exports.
+- **Legacy Parametric Output Alias**: Added `outputs_param_sim` as a backward-compatible alias of `outputs_param_simulation`.
 
 ### Changed
 - **Floor Area Mode Semantics**: `mode='occupied'` remains strictly tied to `People` objects and their referenced `ZoneList`, `SpaceList`, or `Space` hierarchy. Use `mode='air-conditioned'` when normalisation should include all conditioned zones instead of only occupied zones.
@@ -82,6 +84,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Parametric Multiprocessing Output Readers**: Workers now preserve serialized meter/variable reader specifications, including frequency and aggregation behavior.
 - **Output Deduplication Across IDF Key Casing**: Output scanning/insertion now resolves `Output:*` object keys robustly across casing variants (for example, `Output:Meter` vs `OUTPUT:METER`), preventing missed duplicate detection in mixed IDD environments.
 - **aPMV Output Re-application Duplicates**: `_add_apmv_outputs(...)` now checks full `Output:Variable` keys (`Key_Value`, `Variable_Name`, `Reporting_Frequency`) before insertion, including `Schedule Value` rows.
+- **Parametric `add_outputs` Visibility in Multiprocessing**: `run_parametric_simulation(...)` now reconstructs and evaluates BESOS `add_outputs` readers in worker processes, so callable-derived columns are persisted in `outputs_param_simulation`/`outputs_param_sim`.
+- **Optimisation `add_outputs` Persistence in Worker Logs**: Patched BESOS evaluation records now include `add_outputs_values` in JSONL logs, improving reconstruction of full optimisation histories.
 
 ## [0.7.7] - 2026-04-11
 

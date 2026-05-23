@@ -122,6 +122,8 @@ def _run_single_evaluation_worker(
     problem_names_inputs: list,
     problem_names_outputs: list,
     output_specs: Optional[list],
+    add_output_specs: Optional[list],
+    add_output_names: list,
     row_dict: dict,
     keep_dirs: bool,
     keep_input: bool
@@ -155,7 +157,7 @@ def _run_single_evaluation_worker(
             setter(b, param_value)
         
     dummy_inputs = [Parameter(name=n) for n in problem_names_inputs]
-    if output_specs:
+    if output_specs or add_output_specs:
         outputs_objs = []
         for spec in output_specs:
             kind = str(spec.get('kind', '')).lower()
@@ -185,7 +187,38 @@ def _run_single_evaluation_worker(
             else:
                 # Fallback for unexpected entries
                 outputs_objs.append(spec.get('output_name'))
-        prob = EPProblem(inputs=dummy_inputs, outputs=outputs_objs)
+        add_outputs_objs = []
+        for spec in (add_output_specs or []):
+            kind = str(spec.get('kind', '')).lower()
+            output_name = spec.get('output_name')
+            output_func = spec.get('func')
+            if output_func is not None:
+                output_func = _resolve_output_func(output_func)
+            if kind == 'meter':
+                kwargs = {
+                    'key_name': spec.get('key_name'),
+                    'frequency': spec.get('frequency'),
+                    'name': output_name,
+                }
+                if output_func is not None:
+                    kwargs['func'] = output_func
+                add_outputs_objs.append(MeterReader(**kwargs))
+            elif kind == 'variable':
+                kwargs = {
+                    'key_value': spec.get('key_value'),
+                    'variable_name': spec.get('variable_name'),
+                    'frequency': spec.get('frequency'),
+                    'name': output_name,
+                }
+                if output_func is not None:
+                    kwargs['func'] = output_func
+                add_outputs_objs.append(VariableReader(**kwargs))
+
+        prob = EPProblem(
+            inputs=dummy_inputs,
+            outputs=outputs_objs if output_specs else problem_names_outputs,
+            add_outputs=add_outputs_objs if len(add_outputs_objs) > 0 else None,
+        )
     else:
         prob = EPProblem(inputs=dummy_inputs, outputs=problem_names_outputs)
     
@@ -200,8 +233,13 @@ def _run_single_evaluation_worker(
         problem_names_outputs[idx]: result[idx]
         for idx in range(len(problem_names_outputs))
     }
+
+    n_main_outputs = len(problem_names_outputs)
+    n_add_outputs = len(add_output_names)
+    for idx, add_output_name in enumerate(add_output_names):
+        result_dict[add_output_name] = result[n_main_outputs + idx] if (n_main_outputs + idx) < len(result) else pd.NA
     
-    if keep_dirs and len(result) > len(problem_names_outputs):
+    if keep_dirs and len(result) > (n_main_outputs + n_add_outputs):
         result_dict['output_dir'] = result[-1]
         
     if keep_input:
@@ -2886,13 +2924,33 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         Serialize outputs/readers so worker processes can reconstruct MeterReader/
         VariableReader objects instead of losing type information.
         """
-        specs: list[dict] = []
         output_names = self.problem.names('outputs') if hasattr(self, 'problem') and hasattr(self.problem, 'names') else []
         sim_outputs = getattr(self, 'sim_outputs', None)
-        if not isinstance(sim_outputs, list) or len(sim_outputs) == 0:
+        return self._serialize_output_readers(sim_outputs, output_names)
+
+    def _serialize_problem_add_outputs(self) -> list[dict]:
+        add_outputs = getattr(getattr(self, 'problem', None), 'add_outputs', None)
+        add_output_names = self._get_problem_add_output_names()
+        return self._serialize_output_readers(add_outputs, add_output_names)
+
+    def _get_problem_add_output_names(self) -> list:
+        add_outputs = getattr(getattr(self, 'problem', None), 'add_outputs', None)
+        if not isinstance(add_outputs, list):
+            return []
+        names = []
+        for obj in add_outputs:
+            names.append(getattr(obj, 'name', None))
+        return names
+
+    @staticmethod
+    def _serialize_output_readers(readers: Any, output_names: Optional[list] = None) -> list[dict]:
+        specs: list[dict] = []
+        if output_names is None:
+            output_names = []
+        if not isinstance(readers, list) or len(readers) == 0:
             return specs
 
-        for idx, obj in enumerate(sim_outputs):
+        for idx, obj in enumerate(readers):
             output_name = output_names[idx] if idx < len(output_names) else getattr(obj, 'name', None)
             # BESOS EPReader stores the reducer in `_process` (not `func`).
             # Keep fallbacks for compatibility with any custom reader wrappers.
@@ -2958,9 +3016,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         problem_names_inputs = self._get_problem_input_names()
         problem_names_outputs = self.problem.names('outputs') if hasattr(self, 'problem') and hasattr(self.problem, 'names') else getattr(self, 'outputs_names', [])
         output_specs = self._serialize_problem_outputs()
+        add_output_specs = self._serialize_problem_add_outputs()
+        add_output_names = self._get_problem_add_output_names()
         if processes > 1:
             unresolved_funcs = [
-                spec.get('func') for spec in output_specs
+                spec.get('func') for spec in (output_specs + add_output_specs)
                 if spec.get('func') is not None and callable(spec.get('func'))
             ]
             if unresolved_funcs:
@@ -3012,6 +3072,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         problem_names_inputs,
                         problem_names_outputs,
                         output_specs,
+                        add_output_specs,
+                        add_output_names,
                         row.to_dict(),
                         keep_dirs,
                         keep_input
@@ -3055,6 +3117,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         
         _base = os.path.join(out_dir, f'outputs_param_simulation_{timestamp}')
         self.outputs_param_simulation.to_csv(f'{_base}.csv', index=False)
+        self.outputs_param_simulation.to_excel(f'{_base}.xlsx', index=False)
         self.outputs_param_simulation.to_pickle(f'{_base}.pkl')
         
         import json as _json
@@ -3385,10 +3448,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     with open(log_file, 'r', encoding='utf-8') as logfile:
                         for line in logfile:
                             payload = json.loads(line)
-                            records.append({'inputs': tuple(payload['inputs']), 'results': tuple(payload['results']), 'sim_dir': payload['sim_dir']})
+                            records.append({
+                                'inputs': tuple(payload['inputs']),
+                                'results': tuple(payload['results']),
+                                'sim_dir': payload['sim_dir'],
+                                'add_outputs_values': tuple(payload.get('add_outputs_values', [])),
+                            })
         input_names = evaluator.problem.names('inputs')
         output_names = evaluator.problem.names('outputs')
         constraint_names = evaluator.problem.names('constraints')
+        add_output_names = [obj.name for obj in getattr(evaluator.problem, 'add_outputs', [])]
         rows = []
         for record in records:
             row = {}
@@ -3398,6 +3467,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 row[output_name] = record['results'][idx]
             for (idx, constraint_name) in enumerate(constraint_names):
                 row[constraint_name] = record['results'][len(output_names) + idx]
+            add_values = list(record.get('add_outputs_values', ()))
+            for (idx, add_output_name) in enumerate(add_output_names):
+                row[add_output_name] = add_values[idx] if idx < len(add_values) else pd.NA
             if record['sim_dir'] is not None:
                 row['simulation_directory'] = record['sim_dir']
                 row['simulation_output_csv_path'] = os.path.join(record['sim_dir'], 'eplusout.csv')
@@ -3411,6 +3483,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         for col in required_columns:
             if col not in full_df.columns:
                 full_df[col] = pd.Series(dtype=object)
+
+        # Backward-compatible fallback for single-process paths where BESOS has
+        # add_outputs_list available in-memory but eval records do not include them.
+        try:
+            if add_output_names and any(name not in full_df.columns for name in add_output_names) and getattr(evaluator.problem, 'add_outputs_list', None) is not None:
+                full_df = evaluator.problem.overwrite_df(full_df)
+        except Exception:
+            # Never fail optimisation post-processing because add_outputs merge failed.
+            pass
         return full_df
 
     @staticmethod
@@ -3532,6 +3613,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         full_results_filename = f'outputs_optimisation_{timestamp}'
         full_results_path = os.path.join(out_dir, f'{full_results_filename}.csv')
         self.outputs_optimisation.to_csv(full_results_path, index=False)
+        self.outputs_optimisation.to_excel(os.path.join(out_dir, f'{full_results_filename}.xlsx'), index=False)
         self.outputs_optimisation.to_pickle(os.path.join(out_dir, f'{full_results_filename}.pkl'))
         json_payload = {
             'attrs': self.outputs_optimisation.attrs,
@@ -4382,6 +4464,15 @@ class ParametricSimulation(SimulationBase):
         self.outputs_param_simulation_hourly = None
         self.outputs_param_simulation_monthly = None
         self.outputs_param_simulation_filepath = None
+
+    @property
+    def outputs_param_sim(self):
+        """Backward-compatible alias for outputs_param_simulation."""
+        return self.outputs_param_simulation
+
+    @outputs_param_sim.setter
+    def outputs_param_sim(self, value):
+        self.outputs_param_simulation = value
 
 
 class OptimisationSimulation(SimulationBase):
