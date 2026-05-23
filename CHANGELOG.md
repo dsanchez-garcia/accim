@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Variables now accept both DataFrame (`df_output_variable`) and list (`output_variables`) inputs.
   - Meters now accept both list (`output_meters`) and DataFrame (`df_output_meter`) inputs, including per-row `frequency` overrides when present.
   - Added symmetric read aliases: `get_output_variables_df_from_idf(...)` and `get_output_meters_df_from_idf(...)`.
+- **Importable Custom Output Reducers in Multiprocessing**: `set_outputs_for_simulation(...)` now accepts `func` values as callables or import-path strings (`"module.submodule:callable_name"`).
+  - Reader reducer functions are serialized/resolved for worker processes so custom aggregation logic can be reused with `processes > 1` in parametric simulations.
+  - Added user warnings when a reducer cannot be serialized as an importable path and may fail under Windows `spawn` multiprocessing.
 
 ### Changed
 - **Floor Area Mode Semantics**: `mode='occupied'` remains strictly tied to `People` objects and their referenced `ZoneList`, `SpaceList`, or `Space` hierarchy. Use `mode='air-conditioned'` when normalisation should include all conditioned zones instead of only occupied zones.

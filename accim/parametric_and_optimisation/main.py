@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import importlib
 import glob as pyglob
 from typing import Literal, List, Union, Optional, Any
 import warnings
@@ -75,6 +76,43 @@ def get_mdd_file_as_df(out_dir: str = 'available_outputs'):
     mdd_df = pd.read_csv(filepath_or_buffer=os.path.join(out_dir, 'eplusout.mdd'), sep=',|;', skiprows=2, names=['object', 'meter_name', 'frequency', 'units'], engine='python')
     return mdd_df
 
+def _serialize_output_func(func_spec: Any):
+    """Serialize output reducer functions so they can be safely sent to workers."""
+    if func_spec is None:
+        return None
+    if isinstance(func_spec, str):
+        return func_spec
+    if not callable(func_spec):
+        return func_spec
+
+    module_name = getattr(func_spec, '__module__', None)
+    qualname = getattr(func_spec, '__qualname__', None)
+    if module_name and qualname and '<locals>' not in qualname and module_name != '__main__':
+        return f"{module_name}:{qualname}"
+    return func_spec
+
+
+def _resolve_output_func(func_spec: Any):
+    """Resolve reducer specs to callables; supports 'module.submodule:callable_name'."""
+    if func_spec is None or callable(func_spec):
+        return func_spec
+    if not isinstance(func_spec, str):
+        return func_spec
+    if ':' not in func_spec:
+        raise ValueError(
+            "Invalid function spec for output reducer. Use 'module.submodule:callable_name'."
+        )
+
+    (module_name, attr_path) = func_spec.split(':', 1)
+    module = importlib.import_module(module_name)
+    resolved = module
+    for attr in attr_path.split('.'):
+        resolved = getattr(resolved, attr)
+    if not callable(resolved):
+        raise TypeError(f"Resolved output reducer '{func_spec}' is not callable.")
+    return resolved
+
+
 def _run_single_evaluation_worker(
     idf_path: str,
     epw: str,
@@ -123,6 +161,8 @@ def _run_single_evaluation_worker(
             kind = str(spec.get('kind', '')).lower()
             output_name = spec.get('output_name')
             output_func = spec.get('func')
+            if output_func is not None:
+                output_func = _resolve_output_func(output_func)
             if kind == 'meter':
                 kwargs = {
                     'key_name': spec.get('key_name'),
@@ -1964,6 +2004,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         and the aggregation function (see the 'func' argument of MeterReader and VariableReader classes in besos),
         respectively named 'name' and 'func'. If no 'name' and/or 'func' columns are provided,
         the names will be the variable and meter names, and the hourly values will be summed.
+        The 'func' value can be either a callable or an import path string with format
+        'module.submodule:callable_name'.
 
         :param df_output_variable: a pandas DataFrame containing the Output:Variable objects, similar to that one
             returned from method get_outputs_df_from_testsim()
@@ -1985,15 +2027,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         objs_meters = []
         if df_output_meter is not None:
             for i in df_output_meter.index:
+                output_func = None
                 if 'func' in [c for c in df_output_meter.columns]:
-                    objs_meters.append(MeterReader(key_name=df_output_meter.loc[i, 'key_name'], frequency=df_output_meter.loc[i, 'frequency'], name=df_output_meter.loc[i, 'output_name'], func=df_output_meter.loc[i, 'func']))
+                    output_func = _resolve_output_func(df_output_meter.loc[i, 'func'])
+                if output_func is not None:
+                    objs_meters.append(MeterReader(key_name=df_output_meter.loc[i, 'key_name'], frequency=df_output_meter.loc[i, 'frequency'], name=df_output_meter.loc[i, 'output_name'], func=output_func))
                 else:
                     objs_meters.append(MeterReader(key_name=df_output_meter.loc[i, 'key_name'], frequency=df_output_meter.loc[i, 'frequency'], name=df_output_meter.loc[i, 'output_name']))
         objs_variables = []
         if df_output_variable is not None:
             for i in df_output_variable.index:
+                output_func = None
                 if 'func' in [c for c in df_output_variable.columns]:
-                    objs_variables.append(VariableReader(key_value=df_output_variable.loc[i, 'key_value'], variable_name=df_output_variable.loc[i, 'variable_name'], frequency=df_output_variable.loc[i, 'frequency'], name=df_output_variable.loc[i, 'output_name'], func=df_output_variable.loc[i, 'func']))
+                    output_func = _resolve_output_func(df_output_variable.loc[i, 'func'])
+                if output_func is not None:
+                    objs_variables.append(VariableReader(key_value=df_output_variable.loc[i, 'key_value'], variable_name=df_output_variable.loc[i, 'variable_name'], frequency=df_output_variable.loc[i, 'frequency'], name=df_output_variable.loc[i, 'output_name'], func=output_func))
                 else:
                     objs_variables.append(VariableReader(key_value=df_output_variable.loc[i, 'key_value'], variable_name=df_output_variable.loc[i, 'variable_name'], frequency=df_output_variable.loc[i, 'frequency'], name=df_output_variable.loc[i, 'output_name']))
         self.sim_outputs = objs_meters + objs_variables
@@ -2854,13 +2902,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if func_attr is None and hasattr(obj, '_func'):
                 func_attr = getattr(obj, '_func')
 
+            serialized_func = _serialize_output_func(func_attr)
+
             if hasattr(obj, 'key_name'):
                 specs.append({
                     'kind': 'meter',
                     'key_name': getattr(obj, 'key_name', None),
                     'frequency': getattr(obj, 'frequency', None),
                     'output_name': output_name,
-                    'func': func_attr,
+                    'func': serialized_func,
                 })
             elif hasattr(obj, 'key_value') and hasattr(obj, 'variable_name'):
                 specs.append({
@@ -2869,7 +2919,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     'variable_name': getattr(obj, 'variable_name', None),
                     'frequency': getattr(obj, 'frequency', None),
                     'output_name': output_name,
-                    'func': func_attr,
+                    'func': serialized_func,
                 })
             else:
                 specs.append({
@@ -2908,6 +2958,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         problem_names_inputs = self._get_problem_input_names()
         problem_names_outputs = self.problem.names('outputs') if hasattr(self, 'problem') and hasattr(self.problem, 'names') else getattr(self, 'outputs_names', [])
         output_specs = self._serialize_problem_outputs()
+        if processes > 1:
+            unresolved_funcs = [
+                spec.get('func') for spec in output_specs
+                if spec.get('func') is not None and callable(spec.get('func'))
+            ]
+            if unresolved_funcs:
+                warnings.warn(
+                    "Some output reducer functions are not importable by path. "
+                    "With processes > 1 on Windows this may fail. "
+                    "Define reducers at module top-level and/or pass them as "
+                    "'module.submodule:callable_name'.",
+                    UserWarning,
+                )
         
         tasks = []
         # Ensure idf_backup_path is iterable even if it's a single string
