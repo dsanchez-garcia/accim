@@ -1,6 +1,7 @@
 import os
 import glob
 import shutil
+import re
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -578,19 +579,20 @@ class AnalysisMixin:
         if pareto_df.empty:
             raise ValueError('No Pareto optimal solutions found in outputs_optimisation.')
         output_names = self.problem.names('outputs')
+        resolved_output_names = self._resolve_output_columns(output_names, list(pareto_df.columns))
         minimize_outputs = getattr(self.problem, 'minimize_outputs', None)
         if minimize_outputs is None:
-            minimize_flags = [True] * len(output_names)
+            minimize_flags = [True] * len(resolved_output_names)
         else:
             minimize_flags = [m if m is not None else True for m in minimize_outputs]
-        obj_values = pareto_df[output_names].values.astype(float)
+        obj_values = pareto_df[resolved_output_names].values.astype(float)
         mins = obj_values.min(axis=0)
         maxs = obj_values.max(axis=0)
         ranges = maxs - mins
         ranges[ranges == 0] = 1.0
         norm_values = (obj_values - mins) / ranges
         if method == 'knee_point':
-            utopia = np.zeros(len(output_names))
+            utopia = np.zeros(len(resolved_output_names))
             for (i, minimize) in enumerate(minimize_flags):
                 if not minimize:
                     utopia[i] = 1.0
@@ -600,17 +602,17 @@ class AnalysisMixin:
             return pareto_df.iloc[[best_idx]].copy()
         elif method == 'topsis':
             if weights is None:
-                weights = np.ones(len(output_names)) / len(output_names)
+                weights = np.ones(len(resolved_output_names)) / len(resolved_output_names)
             else:
-                if len(weights) != len(output_names):
-                    raise ValueError(f'Length of weights ({len(weights)}) must match number of outputs ({len(output_names)}).')
+                if len(weights) != len(resolved_output_names):
+                    raise ValueError(f'Length of weights ({len(weights)}) must match number of outputs ({len(resolved_output_names)}).')
                 weights = np.array(weights) / np.sum(weights)
             sq_sum = np.sqrt(np.sum(obj_values ** 2, axis=0))
             sq_sum[sq_sum == 0] = 1.0
             topsis_norm = obj_values / sq_sum
             weighted_norm = topsis_norm * weights
-            ideal_best = np.zeros(len(output_names))
-            ideal_worst = np.zeros(len(output_names))
+            ideal_best = np.zeros(len(resolved_output_names))
+            ideal_worst = np.zeros(len(resolved_output_names))
             for (i, minimize) in enumerate(minimize_flags):
                 if minimize:
                     ideal_best[i] = np.min(weighted_norm[:, i])
@@ -683,7 +685,10 @@ class AnalysisMixin:
         results_by_epw = {}
         original_df = self.outputs_param_simulation
         for epw_label in epw_labels:
-            epw_tag = str(epw_label).replace(' ', '_')
+            raw_tag = str(epw_label).strip()
+            if raw_tag.lower().endswith('.epw'):
+                raw_tag = os.path.splitext(os.path.basename(raw_tag))[0]
+            epw_tag = re.sub(r'[^A-Za-z0-9_.-]+', '_', raw_tag).strip('_') or 'unknown_epw'
             self.outputs_param_simulation = original_df[original_df['epw'] == epw_label].copy()
             sa_results = self.run_sensitivity_analysis(
                 method=method,

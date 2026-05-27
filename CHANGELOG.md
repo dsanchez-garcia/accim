@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added user warnings when a reducer cannot be serialized as an importable path and may fail under Windows `spawn` multiprocessing.
 - **XLSX Result Exports**: Parametric and optimisation result tables are now also saved as `.xlsx` files alongside existing `.csv`, `.pkl`, and `.json` exports.
 - **Legacy Parametric Output Alias**: Added `outputs_param_sim` as a backward-compatible alias of `outputs_param_simulation`.
+- **Workspace Artifact Cleanup Utility**: Added `WorkspaceArtifactCleaner` in `accim.utils` to snapshot workspace files, detect generated artifacts, preview deletion plans (`dry_run`), and safely remove selected outputs with allow/deny glob patterns.
 
 ### Changed
 - **Floor Area Mode Semantics**: `mode='occupied'` remains strictly tied to `People` objects and their referenced `ZoneList`, `SpaceList`, or `Space` hierarchy. Use `mode='air-conditioned'` when normalisation should include all conditioned zones instead of only occupied zones.
@@ -86,6 +87,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **aPMV Output Re-application Duplicates**: `_add_apmv_outputs(...)` now checks full `Output:Variable` keys (`Key_Value`, `Variable_Name`, `Reporting_Frequency`) before insertion, including `Schedule Value` rows.
 - **Parametric `add_outputs` Visibility in Multiprocessing**: `run_parametric_simulation(...)` now reconstructs and evaluates BESOS `add_outputs` readers in worker processes, so callable-derived columns are persisted in `outputs_param_simulation`/`outputs_param_sim`.
 - **Optimisation `add_outputs` Persistence in Worker Logs**: Patched BESOS evaluation records now include `add_outputs_values` in JSONL logs, improving reconstruction of full optimisation histories.
+- **MCDM Output-Column Resolution in Optimisation Analysis**: `get_best_compromise_solution()` now resolves output columns against available dataframe names before indexing, avoiding `KeyError` when stored column labels differ from canonical output names.
+- **EPW-Specific Sensitivity Output Paths**: `run_sensitivity_analysis_by_epw()` now sanitizes EPW labels (including full paths and `.epw` suffixes) before using them in directory/file names, preventing invalid path errors during result export.
 
 ## [0.7.7] - 2026-04-11
 
