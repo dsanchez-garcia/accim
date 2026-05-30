@@ -243,9 +243,9 @@ class AddAccis:
         vof_max_temp_diff: float = 6,
         vof_min_temp_diff: float = 1,
         vof_multiplier: float = 0.25,
-        vent_setpoint_offset: any = [0],
-        min_outdoor_temp_offset: any = [50],
-        max_wind_speed: any = [50],
+        vent_setpoint_offset: any = None,
+        min_outdoor_temp_offset: any = None,
+        max_wind_speed: any = None,
         ast_tol_start: float = 0.1,
         ast_tol_end: float = 0.1,
         ast_tol_steps: float = 0.1,
@@ -261,6 +261,13 @@ class AddAccis:
         """
         Constructor method.
         """
+        # Avoid mutable default arguments (lists): normalise to the historical defaults.
+        if vent_setpoint_offset is None:
+            vent_setpoint_offset = [0]
+        if min_outdoor_temp_offset is None:
+            min_outdoor_temp_offset = [50]
+        if max_wind_speed is None:
+            max_wind_speed = [50]
 
         import accim.sim.engine as accim_Main
 
