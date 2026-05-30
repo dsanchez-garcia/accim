@@ -1225,7 +1225,7 @@ def add_vrf_system(
     """
     EnergyPlus_version = f'{building.idd_version[0]}.{building.idd_version[1]}'
 
-    z = accim_Main.accimJob(
+    z = accim_Main.AccimJob(
         idf_class_instance=building,
         ScriptType='vrf_ac',
         EnergyPlus_version=EnergyPlus_version,
@@ -1233,13 +1233,13 @@ def add_vrf_system(
         verboseMode=verbose_mode
     )
 
-    z.setComfFieldsPeople(EnergyPlus_version=EnergyPlus_version, TempCtrl='pmv', verboseMode=verbose_mode)
-    z.setPMVsetpoint(verboseMode=verbose_mode)
-    z.addBaseSchedules(verboseMode=verbose_mode)
-    z.setAvailSchOn(verboseMode=verbose_mode)
-    z.addVRFsystemSch(verboseMode=verbose_mode)
-    z.addCurveObj(verboseMode=verbose_mode)
-    z.addDetHVACobj(
+    z.set_comfort_fields_people(EnergyPlus_version=EnergyPlus_version, TempCtrl='pmv', verboseMode=verbose_mode)
+    z.set_pmv_setpoint(verboseMode=verbose_mode)
+    z.add_base_schedules(verboseMode=verbose_mode)
+    z.set_availability_schedule_on(verboseMode=verbose_mode)
+    z.add_vrf_system_schedule(verboseMode=verbose_mode)
+    z.add_curve_objects(verboseMode=verbose_mode)
+    z.add_detailed_hvac_objects(
         EnergyPlus_version=EnergyPlus_version,
         verboseMode=verbose_mode,
         SupplyAirTempInputMethod=SupplyAirTempInputMethod,
@@ -1247,7 +1247,7 @@ def add_vrf_system(
         cop=cop,
         VRFschedule=VRFschedule
     )
-    z.addForscriptSchVRFsystem(verboseMode=verbose_mode)
+    z.add_forscript_schedule_vrf(verboseMode=verbose_mode)
 
 
 def change_adaptive_coeff(building: IDF, df_arguments: pd.DataFrame):

@@ -16,7 +16,7 @@
 
 """In-memory (single-IDF) entry point for the ACCIS engine.
 
-This module used to carry a full standalone copy of ``accimJob.__init__`` that
+This module used to carry a full standalone copy of ``AccimJob.__init__`` that
 had drifted behind the batch one in ``accim.sim.accim_Main`` (it lacked the
 scheduled-ventilation detection, the ``ems_zonenames`` matching and the
 SPACE-fallback guard, which caused an ``IndexError`` on existing-HVAC models
@@ -28,10 +28,10 @@ the single (in-memory) path behaves exactly like the batch path. All injection
 methods are inherited from the engine class.
 """
 
-from accim.sim.engine import accimJob as _AccimJob
+from accim.sim.engine import AccimJob as _AccimJob
 
 
-class accimJob(_AccimJob):
+class AccimJob(_AccimJob):
     """In-memory variant of the ACCIS engine.
 
     Takes an already-loaded eppy/besos IDF object instead of a filename and runs

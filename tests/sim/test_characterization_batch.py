@@ -65,7 +65,7 @@ CONFIGS = [
          Output_type="standard", Output_freqs=["hourly"],
          ComfStand=[2], CAT=[80], ComfMod=[3]),
     # NOTA: el camino LOTE con TempCtrl='pmv' esta ROTO en el codigo actual
-    # (UnboundLocalError 'ComfStand_value' en accim_IDFgeneration.genIDF:1686, la
+    # (UnboundLocalError 'ComfStand_value' en accim_IDFgeneration.generate_idfs:1686, la
     # rama PMV reutiliza la variable de bucle de la rama 'temp'). Documentado en
     # test_known_bugs.py; se anadira aqui como golden cuando se corrija.
     _cfg("vrf_mm_temp_v940", VRF940, "9.4", ScriptType="vrf_mm", TempCtrl="temperature",
@@ -98,8 +98,8 @@ def _run_batch(workdir, source_idf, kwargs):
     prev = os.getcwd()
     os.chdir(str(workdir))
     try:
-        from accim.sim import batch as accis
-        accis.addAccis(**kwargs)
+        from accim.sim import batch
+        batch.AddAccis(**kwargs)
     finally:
         os.chdir(prev)
     outputs = {}

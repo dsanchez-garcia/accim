@@ -276,7 +276,7 @@ class addAccis:
             # print(idf)
 
 
-        z = accim_Main.accimJob(
+        z = accim_Main.AccimJob(
             idf_class_instance=idf,
             ScriptType=ScriptType,
             EnergyPlus_version=EnergyPlus_version,
@@ -291,18 +291,18 @@ class addAccis:
             self.windows_and_doors = z.windownamelist
             self.windows_and_doors_original_name = z.windownamelist_orig
 
-        z.setComfFieldsPeople(EnergyPlus_version=EnergyPlus_version, TempCtrl=TempCtrl, verboseMode=verboseMode)
+        z.set_comfort_fields_people(EnergyPlus_version=EnergyPlus_version, TempCtrl=TempCtrl, verboseMode=verboseMode)
 
         if 'vrf' in ScriptType.lower():
             if TempCtrl.lower() == 'temperature' or TempCtrl.lower() == 'temp':
-                z.addOpTempTherm(verboseMode=verboseMode)
+                z.add_operative_temp_thermostat(verboseMode=verboseMode)
             elif TempCtrl.lower() == 'pmv':
-                z.setPMVsetpoint(verboseMode=verboseMode)
-            z.addBaseSchedules(verboseMode=verboseMode)
-            z.setAvailSchOn(verboseMode=verboseMode)
-            z.addVRFsystemSch(verboseMode=verboseMode)
-            z.addCurveObj(verboseMode=verboseMode)
-            z.addDetHVACobj(
+                z.set_pmv_setpoint(verboseMode=verboseMode)
+            z.add_base_schedules(verboseMode=verboseMode)
+            z.set_availability_schedule_on(verboseMode=verboseMode)
+            z.add_vrf_system_schedule(verboseMode=verboseMode)
+            z.add_curve_objects(verboseMode=verboseMode)
+            z.add_detailed_hvac_objects(
                 EnergyPlus_version=EnergyPlus_version,
                 verboseMode=verboseMode,
                 SupplyAirTempInputMethod=SupplyAirTempInputMethod,
@@ -311,29 +311,29 @@ class addAccis:
                 VRFschedule=VRFschedule
             )
             if ScriptType.lower() == 'vrf_mm':
-                z.checkVentIsOn(verboseMode=verboseMode)
-            z.addForscriptSchVRFsystem(verboseMode=verboseMode)
+                z.check_ventilation_is_on(verboseMode=verboseMode)
+            z.add_forscript_schedule_vrf(verboseMode=verboseMode)
         elif 'ex' in ScriptType.lower():
             # todo check if PMV can work with ex_ac
-            z.addForscriptSchExistHVAC(verboseMode=verboseMode)
+            z.add_forscript_schedule_existing_hvac(verboseMode=verboseMode)
 
-        z.addEMSProgramsBase(ScriptType=ScriptType, verboseMode=verboseMode)
-        z.addEMSOutputVariableBase(ScriptType=ScriptType, verboseMode=verboseMode)
-        z.addGlobVarList(ScriptType=ScriptType, verboseMode=verboseMode)
-        z.addIntVarList(verboseMode=verboseMode)
-        z.addEMSSensorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
-        z.addEMSActuatorsBase(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.add_ems_programs(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.add_ems_output_variables(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.add_global_variables(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.add_internal_variables(verboseMode=verboseMode)
+        z.add_ems_sensors(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.add_ems_actuators(ScriptType=ScriptType, verboseMode=verboseMode)
 
         if 'vrf' in ScriptType.lower():
-            z.addEMSSensorsVRFsystem(ScriptType=ScriptType, verboseMode=verboseMode)
+            z.add_ems_sensors_vrf(ScriptType=ScriptType, verboseMode=verboseMode)
         elif ScriptType.lower() == 'ex_mm':
-            z.addEMSSensorsExisHVAC(verboseMode=verboseMode)
-            z.addEMSInitExisHVAC(verboseMode=verboseMode)
+            z.add_ems_sensors_existing_hvac(verboseMode=verboseMode)
+            z.add_ems_init_existing_hvac(verboseMode=verboseMode)
 
-        z.addEMSPCMBase(verboseMode=verboseMode)
+        z.add_ems_pcm(verboseMode=verboseMode)
 
         if make_averages:
-            z.makeAverages(verboseMode=verboseMode)
+            z.make_averages(verboseMode=verboseMode)
 
         if Output_keep_existing == 'true':
             Output_keep_existing = True
@@ -342,55 +342,55 @@ class addAccis:
         if Output_keep_existing is True:
             pass
         else:
-            z.removeExistingOutputVariables()
+            z.remove_existing_output_variables()
 
         if Output_type.lower() == 'simplified':
-            z.addOutputVariablesSimplified(
+            z.add_output_variables_simplified(
                 Outputs_freq=Output_freqs,
                 TempCtrl=TempCtrl,
                 verboseMode=verboseMode
             )
         elif Output_type.lower() == 'standard':
-            z.addOutputVariablesStandard(
+            z.add_output_variables_standard(
                 Outputs_freq=Output_freqs,
                 ScriptType=ScriptType,
                 TempCtrl=TempCtrl,
                 verboseMode=verboseMode
             )
         elif Output_type.lower() == 'detailed' or Output_type.lower() == 'custom':
-            z.addOutputVariablesStandard(
+            z.add_output_variables_standard(
                 Outputs_freq=Output_freqs,
                 ScriptType=ScriptType,
                 TempCtrl=TempCtrl,
                 verboseMode=verboseMode
             )
-            z.addOutputVariablesDetailed(
+            z.add_output_variables_detailed(
                 Outputs_freq=Output_freqs,
                 verboseMode=verboseMode
             )
             if Output_type.lower() == 'custom':
                 Output_gen_dataframe = False
-                z.outputsSpecified()
+                z.apply_specified_outputs()
 
         if Output_take_dataframe is not None:
-            z.takeOutputDataFrame(
+            z.take_output_dataframe(
                 idf_filename=idf.idfname.split('.idf')[0],
                 df_outputs_in=Output_take_dataframe,
                 verboseMode=verboseMode
             )
 
-        z.removeDuplicatedOutputVariables()
+        z.remove_duplicated_output_variables()
 
         if Output_gen_dataframe:
-            z.genOutputDataframe(idf_filename=idf.idfname.split('.idf')[0])
+            z.gen_output_dataframe(idf_filename=idf.idfname.split('.idf')[0])
             self.df_outputs = z.df_outputs_temp
 
-        z.addControlFilesObjects(verboseMode=verboseMode)
+        z.add_control_files_objects(verboseMode=verboseMode)
 
-        z.addOutputVariableDictionaryObject(verboseMode=verboseMode)
+        z.add_output_variable_dictionary(verboseMode=verboseMode)
 
         if debugging:
-            z.addOutputEnergyManagementSystem(verboseMode=verboseMode)
+            z.add_output_ems(verboseMode=verboseMode)
 
         if verboseMode:
             print('''\n=======================END OF OUTPUT IDF FILE GENERATION PROCESS=======================\n''')

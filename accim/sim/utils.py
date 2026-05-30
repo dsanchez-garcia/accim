@@ -56,14 +56,14 @@ def add_vrf_system(
         VRFschedule
 ):
     if TempCtrl.lower() == 'temperature' or TempCtrl.lower() == 'temp':
-        z.addOpTempTherm(verboseMode=verboseMode)
+        z.add_operative_temp_thermostat(verboseMode=verboseMode)
     elif TempCtrl.lower() == 'pmv':
-        z.setPMVsetpoint(verboseMode=verboseMode)
-    z.addBaseSchedules(verboseMode=verboseMode)
-    z.setAvailSchOn(verboseMode=verboseMode)
-    z.addVRFsystemSch(verboseMode=verboseMode)
-    z.addCurveObj(verboseMode=verboseMode)
-    z.addDetHVACobj(
+        z.set_pmv_setpoint(verboseMode=verboseMode)
+    z.add_base_schedules(verboseMode=verboseMode)
+    z.set_availability_schedule_on(verboseMode=verboseMode)
+    z.add_vrf_system_schedule(verboseMode=verboseMode)
+    z.add_curve_objects(verboseMode=verboseMode)
+    z.add_detailed_hvac_objects(
         EnergyPlus_version=EnergyPlus_version,
         verboseMode=verboseMode,
         SupplyAirTempInputMethod=SupplyAirTempInputMethod,

@@ -19,7 +19,7 @@ from accim.utils import get_idd_path_from_ep_version
 from accim.sim.hvac.resolver import resolve_hvac_zone_map
 
 
-class accimJob():
+class AccimJob():
     """Class to start the process to add the class ``accim.sim.accis.addAccis``.
 
     :param filename_temp: the filename of the idf
@@ -33,52 +33,52 @@ class accimJob():
     import numpy
 
     from accim.sim.idf_generation import \
-        inputData,\
-        genIDF
+        input_data,\
+        generate_idfs
     from accim.sim.hvac.base import \
-        setComfFieldsPeople, \
-        saveaccim, \
-        setPMVsetpoint, \
-        addControlFilesObjects, \
-        addOutputVariableDictionaryObject, \
-        addOutputEnergyManagementSystem, \
-        setSimulationControlSizing
+        set_comfort_fields_people, \
+        save, \
+        set_pmv_setpoint, \
+        add_control_files_objects, \
+        add_output_variable_dictionary, \
+        add_output_ems, \
+        set_simulation_control_sizing
     from accim.sim.ems.programs import \
-        addEMSActuatorsBase, \
-        addEMSOutputVariableBase, \
-        addEMSPCMBase, \
-        addEMSProgramsBase, \
-        addEMSSensorsBase, \
-        addGlobVarList, \
-        addIntVarList, \
-        addOutputVariablesStandard, \
-        addOutputVariablesSimplified, \
-        addOutputVariablesDetailed, \
-        removeExistingOutputVariables, \
-        removeDuplicatedOutputVariables, \
-        outputsSpecified, \
-        genOutputDataframe, \
-        takeOutputDataFrame, \
-        makeAverages
+        add_ems_actuators, \
+        add_ems_output_variables, \
+        add_ems_pcm, \
+        add_ems_programs, \
+        add_ems_sensors, \
+        add_global_variables, \
+        add_internal_variables, \
+        add_output_variables_standard, \
+        add_output_variables_simplified, \
+        add_output_variables_detailed, \
+        remove_existing_output_variables, \
+        remove_duplicated_output_variables, \
+        apply_specified_outputs, \
+        gen_output_dataframe, \
+        take_output_dataframe, \
+        make_averages
 
     from accim.sim.hvac.existing import \
-        addForscriptSchExistHVAC
+        add_forscript_schedule_existing_hvac
     from accim.sim.hvac.existing_ems import \
-        addEMSSensorsExisHVAC, \
-        addEMSInitExisHVAC
+        add_ems_sensors_existing_hvac, \
+        add_ems_init_existing_hvac
     from accim.sim.hvac.resolver import \
         resolve_hvac_zone_map
     from accim.sim.hvac.vrf import \
-        addBaseSchedules, \
-        addCurveObj, \
-        addDetHVACobj, \
-        addForscriptSchVRFsystem, \
-        addOpTempTherm, \
-        addVRFsystemSch, \
-        checkVentIsOn, \
-        setAvailSchOn
+        add_base_schedules, \
+        add_curve_objects, \
+        add_detailed_hvac_objects, \
+        add_forscript_schedule_vrf, \
+        add_operative_temp_thermostat, \
+        add_vrf_system_schedule, \
+        check_ventilation_is_on, \
+        set_availability_schedule_on
     from accim.sim.hvac.vrf_ems import \
-        addEMSSensorsVRFsystem
+        add_ems_sensors_vrf
 
     from accim.utils import amend_idf_version_from_dsb, get_idd_path_from_ep_version
     from accim.sim.utils import scan_zones

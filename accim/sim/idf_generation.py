@@ -18,10 +18,10 @@
 from accim.sim.ems.setast_models import get_SetAST_lines
 
 
-def inputData(self, ScriptType: str = None):
+def input_data(self, ScriptType: str = None):
     """Input data for IDF generation.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
+    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
     :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``
     """
     CS_CA_CM_list_dict = {
@@ -867,7 +867,7 @@ def inputData(self, ScriptType: str = None):
     }
 
 
-def genIDF(self,
+def generate_idfs(self,
     ScriptType: str = None,
     TempCtrl: str = None,
     ComfStand: list = None,
@@ -904,7 +904,7 @@ def genIDF(self,
 ):
     """Generate IDFs.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
+    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
     :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``
     :param TempCtrl: Inherited from class ``accim.sim.accis.addAccis``
     :param ComfStand: Inherited from class ``accim.sim.accis.addAccis``

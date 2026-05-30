@@ -22,7 +22,7 @@ VRF960 = SAMPLE_IDF_DIR / "TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V9
 
 @pytest.mark.xfail(
     reason="Camino LOTE con TempCtrl='pmv' roto: UnboundLocalError 'ComfStand_value' "
-           "en accim_IDFgeneration.genIDF (la rama PMV del bucle de generacion usa la "
+           "en accim_IDFgeneration.generate_idfs (la rama PMV del bucle de generacion usa la "
            "variable de bucle de la rama 'temp').",
     strict=True,
     raises=UnboundLocalError,
@@ -38,8 +38,8 @@ def test_batch_pmv_currently_broken(tmp_path):
     prev = os.getcwd()
     os.chdir(str(tmp_path))
     try:
-        from accim.sim import batch as accis
-        accis.addAccis(
+        from accim.sim import batch
+        batch.AddAccis(
             ScriptType="vrf_mm",
             SupplyAirTempInputMethod="supply air temperature",
             TempCtrl="pmv",

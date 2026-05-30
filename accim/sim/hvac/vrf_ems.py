@@ -17,10 +17,10 @@
 """Add EMS objects only for VRFsystem."""
 
 
-def addEMSSensorsVRFsystem(self, ScriptType: str = None, verboseMode: bool = True):
+def add_ems_sensors_vrf(self, ScriptType: str = None, verboseMode: bool = True):
     """Add EMS sensors for VRF system accim.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
+    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
     :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``
     :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
     """

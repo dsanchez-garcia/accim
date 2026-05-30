@@ -17,11 +17,11 @@
 """Module for EMS functions and models with existing HVAC systems"""
 
 
-def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
+def add_ems_sensors_existing_hvac(self, verboseMode : bool = True):
     """
     Adds the EMS sensors for models with existing HVAC system.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
+    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
     :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
     """
     sensorlist = ([sensor.Name for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor']])
@@ -113,14 +113,14 @@ def addEMSSensorsExisHVAC(self, verboseMode : bool = True):
     del sensorlist
 
 
-def addEMSInitExisHVAC(self, verboseMode: bool = True):
+def add_ems_init_existing_hvac(self, verboseMode: bool = True):
     """
     Adds an EMS Program and ProgramCallingManager with BeginNewEnvironment calling
     point to initialize all coil sensor variables to 0. This prevents EnergyPlus from
     raising a fatal "variable not initialized" error at the very first timestep, before
     the HVAC system has produced any output values.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.accimJob``
+    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
     :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
     """
     programlist = [p.Name for p in self.idf1.idfobjects['EnergyManagementSystem:Program']]

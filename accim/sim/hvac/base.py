@@ -17,7 +17,7 @@
 """Add EnergyPlus objects in common to both ExistingHVAC and VRFsystem."""
 from accim.lists import epvers_space_objs
 
-def setComfFieldsPeople(
+def set_comfort_fields_people(
         self,
         EnergyPlus_version: str = None,
         TempCtrl: str = None,
@@ -181,7 +181,7 @@ def setComfFieldsPeople(
     del ppl, firstpeopleobject
 
 
-def saveaccim(self, verboseMode: bool = True):
+def save(self, verboseMode: bool = True):
     """Save IDF.
 
     :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
@@ -191,7 +191,7 @@ def saveaccim(self, verboseMode: bool = True):
         print('IDF has been saved')
 
 
-def setPMVsetpoint(self, verboseMode: bool = True):
+def set_pmv_setpoint(self, verboseMode: bool = True):
     """Sets PMV setpoints for temperature control.
 
     :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
@@ -255,7 +255,7 @@ def setPMVsetpoint(self, verboseMode: bool = True):
             if verboseMode:
                 print(f'{zone} Dual Comfort Setpoint ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint has been added')
 
-def addControlFilesObjects(self, verboseMode: bool = True):
+def add_control_files_objects(self, verboseMode: bool = True):
     """
     Adds an OutputControl:Files object to request the generation of CSV, MRT and ESO files.
 
@@ -279,7 +279,7 @@ def addControlFilesObjects(self, verboseMode: bool = True):
         if verboseMode:
             print(f'Not added - OutputControl:Files object - Output CSV, MTR and ESO fields set to Yes')
 
-def addOutputVariableDictionaryObject(self, verboseMode: bool = True):
+def add_output_variable_dictionary(self, verboseMode: bool = True):
     """
     Adds an Output:VariableDictionary object to request the generation of the RDD file.
 
@@ -301,7 +301,7 @@ def addOutputVariableDictionaryObject(self, verboseMode: bool = True):
             print(f'Not added - Output:VariableDictionary object - Output CSV, MTR and ESO fields set to Yes')
 
 
-def addOutputEnergyManagementSystem(self, verboseMode: bool = True):
+def add_output_ems(self, verboseMode: bool = True):
 
     outputEMSobj = [i for i in self.idf1.idfobjects['Output:EnergyManagementSystem']]
 
@@ -318,7 +318,7 @@ def addOutputEnergyManagementSystem(self, verboseMode: bool = True):
         if verboseMode:
             print(f'Not added - Output:EnergyManagementSystem object')
 
-def setSimulationControlSizing(self, verboseMode: bool = True):
+def set_simulation_control_sizing(self, verboseMode: bool = True):
     """
     Checks if a SimulationControl object exists and modifies it to enable
     Do_Zone_Sizing_Calculation, Do_System_Sizing_Calculation, and
