@@ -601,3 +601,30 @@ class AccimJob():
                         print(*self.ExisHVAC[i][2], sep='\n')
                         print(f'And the windows related to these {self.ExisHVAC[i][0]} objects are:')
                         print(*self.ExisHVAC[i][4], sep='\n')
+
+
+class AccimJobInMemory(AccimJob):
+    """In-memory variant of the ACCIS engine.
+
+    Takes an already-loaded eppy/besos IDF object instead of a filename and runs
+    the same scanning/zone-setup as the batch (disk) path, without touching disk.
+    Used by the single-IDF entry point (``accim.sim.single``) and by the aPMV
+    path. All injection methods are inherited from :class:`AccimJob`.
+    """
+
+    def __init__(self,
+                 idf_class_instance,
+                 script_type: str = None,
+                 energyplus_version: str = None,
+                 temp_control: str = None,
+                 verbose: bool = True,
+                 hvac_zone_map: dict = None):
+        self.accimNotWorking = False
+        self.idf1 = idf_class_instance
+        self.output_idf_dict = {}
+        self._scan_and_setup_zones(
+            script_type=script_type,
+            verbose=verbose,
+            hvac_zone_map=hvac_zone_map,
+            model_label=getattr(idf_class_instance, 'idfname', '') or 'in-memory IDF',
+        )

@@ -20,7 +20,7 @@ from besos.IDF_class import IDF
 import besos.objectives
 import eppy
 from accim.utils import transform_ddmm_to_int
-import accim.sim.accim_Main_single_idf as accim_Main
+import accim.sim.engine as accim_Main
 
 # ==============================================================================
 # MONKEY PATCH FOR BESOS (Suppress Errors Only)
@@ -1225,7 +1225,7 @@ def add_vrf_system(
     """
     energyplus_version = f'{building.idd_version[0]}.{building.idd_version[1]}'
 
-    z = accim_Main.AccimJob(
+    z = accim_Main.AccimJobInMemory(
         idf_class_instance=building,
         script_type='vrf_ac',
         energyplus_version=energyplus_version,

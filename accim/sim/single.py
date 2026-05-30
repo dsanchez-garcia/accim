@@ -111,8 +111,7 @@ def add_accis(
     """
 
 
-    # import accim.sim.accim_Main_single_idf as accim_Main
-    import accim.sim.accim_Main_single_idf as accim_Main
+    import accim.sim.engine as accim_Main
 
     import besos
     from besos.errors import InstallationError
@@ -275,7 +274,7 @@ def add_accis(
         # print(idf)
 
 
-    z = accim_Main.AccimJob(
+    z = accim_Main.AccimJobInMemory(
         idf_class_instance=idf,
         script_type=script_type,
         energyplus_version=energyplus_version,
