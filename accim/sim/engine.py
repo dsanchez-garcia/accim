@@ -33,8 +33,9 @@ class AccimJob():
     import numpy
 
     from accim.sim.idf_generation import \
-        input_data,\
         generate_idfs
+    from accim.sim.prompts import \
+        collect_comfort_inputs
     from accim.sim.hvac.base import \
         set_comfort_fields_people, \
         save, \

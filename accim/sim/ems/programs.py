@@ -1426,8 +1426,8 @@ def apply_specified_outputs(
             print(f'\nThe current existing outputs for {freq} Frequency are:')
             print(*alloutputsnames, sep='\n')
             if remove_or_keep is None:
-                remove_or_keep = input('Do you want to remove some input or keep it and remove all others? Please enter remove or keep:')
-                custom_outputs = list(str(output) for output in input('Please enter these outputs (which must be contained in the list above) separated by semicolon (;): ').split(';'))
+                from accim.sim.prompts import prompt_custom_outputs
+                remove_or_keep, custom_outputs = prompt_custom_outputs()
                 if remove_or_keep.lower() == 'remove':
                     outputs_to_delete = [i for i in alloutputs if any([i.Variable_Name == j for j in custom_outputs])]
                 elif remove_or_keep.lower() == 'keep':

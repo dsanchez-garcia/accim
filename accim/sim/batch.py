@@ -24,6 +24,14 @@ by adding the Adaptive Comfort Control Implementation Script (ACCIS)
 import pandas as pd
 from accim import __version__
 from accim import lists
+from accim.sim.prompts import (
+    collect_basic_inputs,
+    fullScriptTypeList,
+    SupplyAirTempInputMethodList,
+    fullOutputsTypeList,
+    fullOutputsFreqList,
+    fullTempCtrllist,
+)
 
 
 class AddAccis:
@@ -301,50 +309,6 @@ class AddAccis:
             temp_control is not None,
         )
 
-        fullScriptTypeList = [
-            'vrf_ac',
-            'vrf_mm',
-            'ex_mm',
-            'ex_ac',
-        ]
-
-        SupplyAirTempInputMethodList = [
-            'supply air temperature',
-            'temperature difference'
-        ]
-
-        fullOutputsTypeList = [
-            'Standard',
-            'standard',
-            'Simplified',
-            'simplified',
-            'Detailed',
-            'detailed',
-            'Custom',
-            'custom',
-            # 'Show outputs',
-            # 'show outputs'
-        ]
-
-        fullOutputsFreqList = [
-            'Timestep',
-            'timestep',
-            'Hourly',
-            'hourly',
-            'Daily',
-            'daily',
-            'Monthly',
-            'monthly',
-            'Runperiod',
-            'runperiod'
-        ]
-
-        fullTempCtrllist = [
-            'temperature',
-            'temp',
-            'pmv'
-        ]
-
         print(
             '\n--------------------------------------------------------'
             f'\nAdaptive-Comfort-Control-Implemented Model (ACCIM) v{__version__}'
@@ -370,71 +334,15 @@ class AddAccis:
         if all(objArgsDef):
             pass
         else:
-            print(
-                '\nNow, you are going to be asked to enter some information for different arguments '
-                'to generate the output IDFs with adaptive setpoint temperatures. '
-                '\nIf you are not sure about how to use these parameters, please take a look at the documentation in the following link: '
-                #todo change url in all places
-                '\nhttps://accim.readthedocs.io/en/master/4_detailed%20use.html'
-                '\n\nPlease, enter the following information:'
-            )
-            script_type = input("\nEnter the ScriptType (\n"
-                               "for VRFsystem with full air-conditioning mode: vrf_ac;\n"
-                               "for VRFsystem with mixed-mode: vrf_mm;\n"
-                               "for ExistingHVAC with mixed mode: ex_mm;\n"
-                               "for ExistingHVAC with full air-conditioning mode: ex_ac\n"
-                               "): ")
-            while script_type not in fullScriptTypeList:
-                script_type = input("    ScriptType was not correct. "
-                                   "    Enter the ScriptType (\n"
-                                   "    for VRFsystem with full air-conditioning mode: vrf_ac;\n"
-                                   "    for VRFsystem with mixed-mode: vrf_mm;\n"
-                                   "    for ExistingHVAC with mixed mode: ex_mm;\n"
-                                   "    for ExistingHVAC with full air-conditioning mode: ex_ac\n"
-                                   "    ): ")
-            if 'vrf' in script_type.lower():
-                supply_air_temp_method = input("\nEnter the SupplyAirTempInputMethod (\n"
-                                   "for Supply Air Temperature: supply air temperature;\n"
-                                   "for Temperature Difference: temperature difference;\n"
-                                   "): ")
-                while supply_air_temp_method not in SupplyAirTempInputMethodList:
-                    supply_air_temp_method = input(
-                        "    SupplyAirTempInputMethod was not correct. "
-                        "    Enter the SupplyAirTempInputMethod (\n"
-                                   "for Supply Air Temperature: supply air temperature;\n"
-                                   "for Temperature Difference: temperature difference;\n"
-                                   "): ")
-            output_keep_existing = input('\nDo you want to keep the existing outputs (true or false)?: ')
-            while output_keep_existing.lower() not in ['true', 'false']:
-                output_keep_existing = input('The answer you entered is not valid. '
-                                              'Do you want to keep the existing outputs (true or false)?: ')
-            output_type = input("\nEnter the Output type (standard, simplified, detailed or custom): ")
-            while output_type not in fullOutputsTypeList:
-                output_type = input("   Output type was not correct. "
-                                "Please, enter the Output type (standard, simplified, detailed or custom): ")
-            output_freqs = list(freq for freq in input(
-                "\nEnter the Output frequencies separated by space (timestep, hourly, daily, monthly, runperiod): ").split())
-            while (not(all(elem in fullOutputsFreqList for elem in output_freqs))):
-                output_freqs = list(freq for freq in input(
-                    "Some of the Output frequencies are not correct. "
-                    "Please, enter the Output frequencies again separated by space "
-                    "(timestep, hourly, daily, monthly, runperiod): ").split())
-            output_gen_dataframe = input('\nDo you want to generate a dataframe to see all outputs? (true or false): ')
-            while output_gen_dataframe.lower() not in ['true', 'false']:
-                output_gen_dataframe = input('The answer you entered is not valid. '
-                                              'Do you want to generate a dataframe to see all outputs? (true or false):')
-            if output_gen_dataframe.lower() == 'true':
-                output_gen_dataframe = True
-            elif output_gen_dataframe.lower() == 'false':
-                output_gen_dataframe = False
-            energyplus_version = input("\nEnter the EnergyPlus version (9.1 to 25.1, or auto): ")
-            while energyplus_version not in lists.fullEPversionsList:
-                energyplus_version = input("    EnergyPlus version was not correct. "
-                                           "Please, enter the EnergyPlus version (9.1 to 25.1, or auto): ")
-            temp_control = input('\nEnter the Temperature Control method (temperature or pmv): ')
-            while temp_control not in fullTempCtrllist:
-                temp_control = input("  Temperature Control method was not correct. "
-                                 "Please, enter the Temperature Control method (temperature or pmv): ")
+            _basic = collect_basic_inputs()
+            script_type = _basic['script_type']
+            supply_air_temp_method = _basic['supply_air_temp_method']
+            output_keep_existing = _basic['output_keep_existing']
+            output_type = _basic['output_type']
+            output_freqs = _basic['output_freqs']
+            output_gen_dataframe = _basic['output_gen_dataframe']
+            energyplus_version = _basic['energyplus_version']
+            temp_control = _basic['temp_control']
 
         if verbose:
             print('Basic input data:')
@@ -680,7 +588,7 @@ class AddAccis:
                     }
                 )
             else:
-                z.input_data(
+                z.collect_comfort_inputs(
                     script_type=script_type,
                 )
                 self.arguments.update(z.user_input_arguments)
@@ -770,7 +678,7 @@ class AddAccis:
                     }
                 )
             else:
-                z.input_data(
+                z.collect_comfort_inputs(
                     script_type=script_type,
                 )
                 self.arguments.update(z.user_input_arguments)
