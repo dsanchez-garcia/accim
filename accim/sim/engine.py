@@ -86,10 +86,10 @@ class AccimJob():
 
     def __init__(self,
                  filename_temp,
-                 ScriptType: str = None,
-                 EnergyPlus_version: str = 'auto',
-                 TempCtrl: str = None,
-                 verboseMode: bool = True,
+                 script_type: str = None,
+                 energyplus_version: str = 'auto',
+                 temp_control: str = None,
+                 verbose: bool = True,
                  accimNotWorking: bool = False,
                  hvac_zone_map: dict = None):
         """
@@ -114,8 +114,8 @@ class AccimJob():
 
         idf_created = False
 
-        if EnergyPlus_version.lower() != 'auto':
-            iddfile = get_idd_path_from_ep_version(EnergyPlus_version=EnergyPlus_version)
+        if energyplus_version.lower() != 'auto':
+            iddfile = get_idd_path_from_ep_version(energyplus_version=energyplus_version)
             # if EnergyPlus_version.lower() == '9.1':
             #     iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
             # elif EnergyPlus_version.lower() == '9.2':
@@ -146,7 +146,7 @@ class AccimJob():
             if iddfile == 'not-supported':
                 raise ValueError("""EnergyPlus version not supported.\n
                                          Only works for versions between EnergyPlus 9.1 (enter 9.1) and EnergyPlus 25.1 (enter 25.1)""")
-            if verboseMode:
+            if verbose:
                 print('IDD location is: '+iddfile)
             IDF.setiddname(iddfile)
             self.idf0 = IDF(fname1)
@@ -154,8 +154,8 @@ class AccimJob():
 
         else:
             self.idf0 = get_building(fname1)
-            EnergyPlus_version = '.'.join([str(i) for i in self.idf0.idd_version[:2]])
-            if verboseMode:
+            energyplus_version = '.'.join([str(i) for i in self.idf0.idd_version[:2]])
+            if verbose:
                 print('IDD location is: '+self.idf0.iddname)
             idf_from_eppy = False
 
@@ -176,13 +176,13 @@ class AccimJob():
         self.output_idf_dict = {}
 
         self._scan_and_setup_zones(
-            ScriptType=ScriptType,
-            verboseMode=verboseMode,
+            script_type=script_type,
+            verbose=verbose,
             hvac_zone_map=hvac_zone_map,
             model_label=filename_temp,
         )
 
-    def _scan_and_setup_zones(self, ScriptType, verboseMode=True, hvac_zone_map=None, model_label=''):
+    def _scan_and_setup_zones(self, script_type, verbose=True, hvac_zone_map=None, model_label=''):
         """Common, I/O-free scanning and zone/HVAC setup shared by the batch and
         single (in-memory) entry points.
 
@@ -270,16 +270,16 @@ class AccimJob():
         #     self.ems_zonenames = self.occupiedZones_orig
         #     self.ems_zonenames_underscore = self.occupiedZones_orig
 
-        if verboseMode:
+        if verbose:
             print(f'The occupied zones in the model {model_label} are:')
             print(*self.occupiedZones_orig, sep="\n")
 
         self.ismixedmode = False
 
-        if (ScriptType.lower() == 'vrfsystem_mm' or
-            ScriptType.lower() == 'vrf_mm' or
-            ScriptType.lower() == 'existinghvac_mm' or
-            ScriptType.lower() == 'ex_mm'
+        if (script_type.lower() == 'vrfsystem_mm' or
+            script_type.lower() == 'vrf_mm' or
+            script_type.lower() == 'existinghvac_mm' or
+            script_type.lower() == 'ex_mm'
         ):
             self.ismixedmode = True
             self.windownamelist_orig = []
@@ -358,18 +358,18 @@ class AccimJob():
                                 self.windownamelist_orig_split.append([k, 'Win'])
                                 self.scheduled_ventilation_dict[virtual_window_name] = sch_name
 
-            if verboseMode:
+            if verbose:
                 print(f'The windows and doors in the model {model_label} are:')
                 print(*self.windownamelist, sep="\n")
 
-        if 'vrf' in ScriptType.lower():
+        if 'vrf' in script_type.lower():
             self.zonenames = self.occupiedZones
             self.zonenames_orig = self.occupiedZones_orig
-            if verboseMode:
+            if verbose:
                 print(f'The zones in the model {model_label} are:')
                 print(*self.zonenames, sep="\n")
 
-        elif 'ex' in ScriptType.lower():
+        elif 'ex' in script_type.lower():
             TSPtypes = [
                 'ThermostatSetpoint:SingleHeating',
                 'ThermostatSetpoint:SingleCooling',
@@ -408,7 +408,7 @@ class AccimJob():
                 self.HVACzonelist.append([TSPtypes[i], temp1, temp2, temp3])
             del temp1, temp2, temp3
 
-            if verboseMode:
+            if verbose:
                 for i in range(len(self.HVACzonelist)):
                     if len(self.HVACzonelist[i][3]) == 0:
                         print(f'There are no {self.HVACzonelist[i][0]} objects in the model')
@@ -434,7 +434,7 @@ class AccimJob():
             else:
                 self.zonenames = [i.replace(' ', '_') for i in self.zonenames_orig]
 
-            if ScriptType.lower() == 'existinghvac_mm' or ScriptType.lower() == 'ex_mm':
+            if script_type.lower() == 'existinghvac_mm' or script_type.lower() == 'ex_mm':
 
                 self.HVACdict = {
                     # todo if there is a Coil:Heating:Whatever and another Coil:Heating:DifferentWhatever
@@ -536,7 +536,7 @@ class AccimJob():
                     try:
                         hvac_objs = self.idf1.idfobjects[hvac_type]
                     except KeyError:
-                        if verboseMode:
+                        if verbose:
                             print(f'{hvac_type} HVAC SYSTEM IS NOT SUPPORTED')
                         continue
 
@@ -551,7 +551,7 @@ class AccimJob():
                         hvac_type=hvac_type,
                         hvac_obj_names=obj_names,
                         user_map=hvac_zone_map,
-                        verboseMode=verboseMode,
+                        verbose=verbose,
                     )
 
                     # Build flat parallel lists, expanding coils that serve
@@ -583,7 +583,7 @@ class AccimJob():
                 for i in range(len(self.ExisHVAC)):
                     for j in range(len(self.ExisHVAC[i][2])):
                         if self.ExisHVAC[i][2][j] not in self.zonenames_orig:
-                            if verboseMode:
+                            if verbose:
                                 print(
                                     f'"{self.ExisHVAC[i][2][j]}" is not a valid zone. \n'
                                     f'The HVAC object "{self.ExisHVAC[i][1][j]}" ({self.ExisHVAC[i][0]}) '
@@ -593,7 +593,7 @@ class AccimJob():
                                 )
                             self.accimNotWorking = True
 
-                if verboseMode:
+                if verbose:
                     for i in range(len(self.ExisHVAC)):
                         print(f'The names of the existing {self.ExisHVAC[i][0]} objects are:')
                         print(*self.ExisHVAC[i][1], sep="\n")

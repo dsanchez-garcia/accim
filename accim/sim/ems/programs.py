@@ -18,7 +18,7 @@
 import warnings
 
 
-def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
+def add_ems_programs(self, script_type: str = None, verbose: bool = True):
     """
     Add EMS programs for Base accim.
     Checks if some programs objects are already
@@ -34,7 +34,7 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
                     in self.idf1.idfobjects['EnergyManagementSystem:Program']])
 
     if 'SetComfTemp' in programlist:
-        if verboseMode:
+        if verbose:
             print('Not added - SetComfTemp Program')
     else:
         self.idf1.newidfobject(
@@ -102,13 +102,13 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
             Program_Line_60='set ComfTemp = PMOT*0.678+13.51',
             Program_Line_61='endif',
         )
-        if verboseMode:
+        if verbose:
             print('Added - SetComfTemp Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetComfTemp'])
 
     for zonename in self.ems_objs_name:
         if 'CountHours_'+zonename in programlist:
-            if verboseMode:
+            if verbose:
                 print('Not added - CountHours_'+zonename+' Program')
         else:
             self.idf1.newidfobject(
@@ -188,12 +188,12 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
                 Program_Line_72='endif',
                 Program_Line_73='endif',
             )
-            if verboseMode:
+            if verbose:
                 print('Added - CountHours_'+zonename+' Program')
     #        print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'CountHours_'+zonename])
 
     if 'SetAppLimits' in programlist:
-        if verboseMode:
+        if verbose:
             print('Not added - SetAppLimits Program')
     else:
         self.idf1.newidfobject(
@@ -336,12 +336,12 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
             Program_Line_135='set AHSTall = 50',
             Program_Line_136='endif',
         )
-        if verboseMode:
+        if verbose:
             print('Added - SetAppLimits Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetAppLimits'])
 
     if 'ApplyCAT' in programlist:
-        if verboseMode:
+        if verbose:
             print('Not added - ApplyCAT Program')
     else:
         self.idf1.newidfobject(
@@ -508,7 +508,7 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
             Program_Line_159='endif',
             Program_Line_160='endif',
         )
-        if verboseMode:
+        if verbose:
             print('Added - ApplyCAT Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'ApplyCAT'])
     
@@ -518,7 +518,7 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
     # so the total EMS program count is kept small (23 subprograms + 1 master).
 
     if 'SetAST_Master' in programlist:
-        if verboseMode:
+        if verbose:
             print('Not added - SetAST_Master Program (already exists)')
     else:
         # Import modular SetAST functions
@@ -542,7 +542,7 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
                     master_program.obj.append('')
                 setattr(master_program, field_name, line)
 
-            if verboseMode:
+            if verbose:
                 print(f'Added - SetAST_Master Program with {len(master_lines)} lines')
 
             # Get all per-ComfStand SetAST subprograms.
@@ -578,7 +578,7 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
 
                     programs_added += 1
 
-            if verboseMode:
+            if verbose:
                 print(f'Added - {programs_added} per-ComfStand SetAST subprograms')
             
             # Create base SetAST program for backward compatibility
@@ -596,16 +596,16 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
                     # Call the SetAST_Master program
                     Program_Line_4='run SetAST_Master',
                 )
-                if verboseMode:
+                if verbose:
                     print('Added - SetAST Program (base program that calls SetAST_Master)')
         
         except Exception as e:
-            if verboseMode:
+            if verbose:
                 print(f'ERROR in modular SetAST initialization: {e}')
             raise
     
     if 'SetASTnoTol' in programlist:
-        if verboseMode:
+        if verbose:
             print('Not added - SetASTnoTol Program')
     else:
         self.idf1.newidfobject(
@@ -614,13 +614,13 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
             Program_Line_1='set ACSTnoTol = ACST-ACSTtol',
             Program_Line_2='set AHSTnoTol = AHST-AHSTtol'
             )
-        if verboseMode:
+        if verbose:
             print('Added - SetASTnoTol Program')
     #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetASTnoTol'])
 
     for zonename in self.ems_objs_name:
         if 'CountHoursNoApp_'+zonename in programlist:
-            if verboseMode:
+            if verbose:
                 print('Not added - CountHoursNoApp_'+zonename+' Program')
         else:
             self.idf1.newidfobject(
@@ -655,12 +655,12 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
                 Program_Line_27='set OccHours_' + zonename + ' = 0',
                 Program_Line_28='endif',
             )
-            if verboseMode:
+            if verbose:
                 print('Added - CountHoursNoApp_'+zonename+' Program')
     #        print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'CountHoursNoApp_'+zonename])
 
         if 'SetGeoVar'+zonename in programlist:
-            if verboseMode:
+            if verbose:
                 print('Not added - SetGeoVar'+zonename+' Program')
         else:
             self.idf1.newidfobject(
@@ -669,12 +669,12 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
                 Program_Line_1='set ZoneFloorArea_' + zonename + ' = ZFA_' + zonename + '/2',
                 Program_Line_2='set ZoneAirVolume_' + zonename + ' = ZAV_' + zonename + '/2'
             )
-            if verboseMode:
+            if verbose:
                 print('Added - SetGeoVar'+zonename+' Program')
     #        print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetGeoVar'+zonename])
 
     if 'SetInputData' in programlist:
-        if verboseMode:
+        if verbose:
             print('Not added - SetInputData Program')
     else:
         self.idf1.newidfobject(
@@ -698,14 +698,14 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
             # Program_Line_11='set SetpointAcc = 10000',
 
         )
-        if verboseMode:
+        if verbose:
             print('Added - SetInputData Program')
     
-    if (ScriptType.lower() == 'vrf_mm' or
-        ScriptType.lower() == 'ex_mm'):
+    if (script_type.lower() == 'vrf_mm' or
+        script_type.lower() == 'ex_mm'):
 
         if 'SetVOFinputData' in programlist:
-            if verboseMode:
+            if verbose:
                 print('Not added - SetVOFinputData Program')
         else:
             self.idf1.newidfobject(
@@ -715,11 +715,11 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
                 Program_Line_2='set MinTempDiffVOF = 1',
                 Program_Line_3='set MultiplierVOF = 0.25',
             )
-            if verboseMode:
+            if verbose:
                 print('Added - SetVOFinputData Program')
 
         if 'SetVST' in programlist:
-            if verboseMode:
+            if verbose:
                 print('Not added - SetVST Program')
         else:
             self.idf1.newidfobject(
@@ -760,13 +760,13 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
                 Program_Line_33='set VST = roundedAHST+VSToffset',
                 Program_Line_34='endif',
             )
-            if verboseMode:
+            if verbose:
                 print('Added - SetVST Program')
         #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetVST'])
 
         for zonename in self.ems_objs_name:
             if 'ApplyAST_'+zonename in programlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - ApplyAST_'+zonename+' Program')
             else:
                 self.idf1.newidfobject(
@@ -879,13 +879,13 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
                     Program_Line_102='endif',
                     Program_Line_103='endif',
                 )
-                if verboseMode:
+                if verbose:
                     print('Added - ApplyAST_'+zonename+' Program')
             #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'ApplyAST_'+windowname])
 
         for windowname in self.windownamelist:
             if 'SetMyVOF_'+windowname in programlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - SetMyVOF_'+windowname+' Program')
             else:
                 self.idf1.newidfobject(
@@ -909,12 +909,12 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
                     Program_Line_16='endif',
                     Program_Line_17='endif',
                 )
-                if verboseMode:
+                if verbose:
                     print('Added - SetMyVOF_'+windowname+' Program')
             #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetMyVOF_'+windowname])
 
             if 'SetWindowOperation_'+windowname in programlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - SetWindowOperation_'+windowname+' Program')
             else:
                 self.idf1.newidfobject(
@@ -1019,13 +1019,13 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
                     Program_Line_94='endif',
                     Program_Line_95='endif',
                 )
-                if verboseMode:
+                if verbose:
                     print('Added - SetWindowOperation_'+windowname+' Program')
             #    print([program for program in self.idf1.idfobjects['EnergyManagementSystem:Program'] if program.Name == 'SetWindowOperation_'+windowname])
-    elif ScriptType.lower() == 'ex_ac' or ScriptType.lower() == 'vrf_ac':
+    elif script_type.lower() == 'ex_ac' or script_type.lower() == 'vrf_ac':
         for zonename in self.ems_objs_name:
             if 'ApplyAST_'+zonename in programlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - ApplyAST_'+zonename+' Program')
             else:
                 self.idf1.newidfobject(
@@ -1038,7 +1038,7 @@ def add_ems_programs(self, ScriptType: str = None, verboseMode: bool = True):
     del programlist
 
 
-def add_ems_pcm(self, verboseMode: bool = True):
+def add_ems_pcm(self, verbose: bool = True):
     """
     Add EMS program calling managers for Base accim.
     Checks if some EMS program calling manager objects are already
@@ -1069,7 +1069,7 @@ def add_ems_pcm(self, verboseMode: bool = True):
 
     for i in top_level_programs:
         if i in pcmlist:
-            if verboseMode:
+            if verbose:
                 print('Not added - '+i+' Program Calling Manager')
         else:
             self.idf1.newidfobject(
@@ -1078,14 +1078,14 @@ def add_ems_pcm(self, verboseMode: bool = True):
                 EnergyPlus_Model_Calling_Point="BeginTimestepBeforePredictor",
                 Program_Name_1=i
                 )
-            if verboseMode:
+            if verbose:
                 print('Added - '+i+' Program Calling Manager')
     #        print([program for program in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager'] if program.Name == i])
 
     del programlist, pcmlist, subroutine_programs, top_level_programs
 
 # todo add argument for mm outputvariables
-def add_ems_output_variables(self, ScriptType: str = None, verboseMode: bool = True):
+def add_ems_output_variables(self, script_type: str = None, verbose: bool = True):
     """Add EMS output variables for Base accim.
     Checks if some EMS output variables objects are already
     in the model, and otherwise adds them.
@@ -1123,7 +1123,7 @@ def add_ems_output_variables(self, ScriptType: str = None, verboseMode: bool = T
         'Maximum Outdoor Temperature Difference for ventilation': ['MaxTempDiffVOF', 'C'],
         'Multiplier for Ventilation Opening Factor': ['MultiplierVOF', ''],
     }
-    if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
+    if script_type.lower() == 'vrf_mm' or script_type.lower() == 'ex_mm':
         EMSOutputVariableAvg_dict.update(EMSOutputVariableAvgMM_dict)
 
     outputvariablelist = ([outvar.Name
@@ -1132,7 +1132,7 @@ def add_ems_output_variables(self, ScriptType: str = None, verboseMode: bool = T
 
     for i in EMSOutputVariableAvg_dict:
         if i in outputvariablelist:
-            if verboseMode:
+            if verbose:
                 print('Not added - '+i+' Output Variable')
         else:
             self.idf1.newidfobject(
@@ -1144,7 +1144,7 @@ def add_ems_output_variables(self, ScriptType: str = None, verboseMode: bool = T
                 EMS_Program_or_Subroutine_Name='',
                 Units=EMSOutputVariableAvg_dict[i][1]
                 )
-            if verboseMode:
+            if verbose:
                 print('Added - '+i+' Output Variable')
             # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i])
 
@@ -1165,7 +1165,7 @@ def add_ems_output_variables(self, ScriptType: str = None, verboseMode: bool = T
     for i in EMSOutputVariableZone_dict:
         for zonename in self.ems_objs_name:
             if i+'_'+zonename in outputvariablelist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+i+'_'
                           + zonename + ' Output Variable')
             else:
@@ -1178,12 +1178,12 @@ def add_ems_output_variables(self, ScriptType: str = None, verboseMode: bool = T
                     EMS_Program_or_Subroutine_Name='',
                     Units=EMSOutputVariableZone_dict[i][1]
                     )
-                if verboseMode:
+                if verbose:
                     print('Added - '+i+'_'
                           + zonename + ' Output Variable')
             # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i+'_'+zonename'])
 
-    if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
+    if script_type.lower() == 'vrf_mm' or script_type.lower() == 'ex_mm':
         EMSOutputVariableIDFzones_dict = {
             'Ventilation Hours': 'VentHours'
             }
@@ -1191,7 +1191,7 @@ def add_ems_output_variables(self, ScriptType: str = None, verboseMode: bool = T
         for i in EMSOutputVariableIDFzones_dict:
             for zonename in self.ems_objs_name:
                 if i+'_'+zonename in outputvariablelist:
-                    if verboseMode:
+                    if verbose:
                         print('Not added - '+i+'_'
                               + zonename + ' Output Variable')
                 else:
@@ -1205,7 +1205,7 @@ def add_ems_output_variables(self, ScriptType: str = None, verboseMode: bool = T
                         EMS_Program_or_Subroutine_Name='',
                         Units='H'
                         )
-                    if verboseMode:
+                    if verbose:
                         print('Added - '+i+'_'
                               + zonename + ' Output Variable')
                     # print([outputvariable for outputvariable in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable'] if outputvariable.Name == i+'_'+zonename'])
@@ -1213,7 +1213,7 @@ def add_ems_output_variables(self, ScriptType: str = None, verboseMode: bool = T
     del outputvariablelist
 
 
-def add_global_variables(self, ScriptType: str = None, verboseMode: bool = True):
+def add_global_variables(self, script_type: str = None, verbose: bool = True):
     """Remove existing Global Variable objects and add correct Global Variable objects for accim.
 
     :param self: Used as a method for :class:``accim.sim.accim_Main.AccimJob``
@@ -1272,7 +1272,7 @@ def add_global_variables(self, ScriptType: str = None, verboseMode: bool = True)
             # Erl_Variable_11_Name='VentHours_' + zonename
         )
 
-    if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
+    if script_type.lower() == 'vrf_mm' or script_type.lower() == 'ex_mm':
         self.idf1.newidfobject(
             'EnergyManagementSystem:GlobalVariable',
             Erl_Variable_1_Name='VST',
@@ -1299,10 +1299,10 @@ def add_global_variables(self, ScriptType: str = None, verboseMode: bool = True)
             )
 
 
-    if verboseMode:
+    if verbose:
         print("Global variables objects have been added")
 
-def add_internal_variables(self, verboseMode: bool = True):
+def add_internal_variables(self, verbose: bool = True):
     """Add Internal variables objects for accim.
 
     :param self: Used as a method for :class:``accim.sim.accim_Main.AccimJob``
@@ -1329,7 +1329,7 @@ def add_internal_variables(self, verboseMode: bool = True):
                 Internal_Data_Index_Key_Name=self.ems_zonenames[i],
                 Internal_Data_Type=intvardict[j]
             )
-    if verboseMode:
+    if verbose:
         print("Internal variables objects have been added")
 
 def remove_existing_output_variables(self):
@@ -1495,7 +1495,7 @@ def take_output_dataframe(
         self,
         idf_filename,
         df_outputs_in,
-        verboseMode,
+        verbose,
         singleidf=False,
 ):
     """
@@ -1534,14 +1534,14 @@ def take_output_dataframe(
             Reporting_Frequency=df_outputs_in.loc[i, 'reporting_frequency'].capitalize(),
             Schedule_Name=df_outputs_in.loc[i, 'schedule_name']
             )
-        if verboseMode:
+        if verbose:
             print('Added - '+df_outputs_in.loc[i, 'key_value']+ ' '+df_outputs_in.loc[i, 'variable_name']+' Output:Variable data')
 
 def add_output_variables_simplified(
         self,
-        Outputs_freq: any = None,
-        TempCtrl: str = None,
-        verboseMode: bool = True
+        output_freqs: any = None,
+        temp_control: str = None,
+        verbose: bool = True
 ):
     """
     Add simplified Output:Variable objects for accim.
@@ -1562,13 +1562,13 @@ def add_output_variables_simplified(
         'Heating Coil Heating Rate',
     ]
 
-    if TempCtrl.lower() == 'pmv':
+    if temp_control.lower() == 'pmv':
         additionaloutputs.extend([
             'Zone Thermal Comfort Fanger Model PMV',
             'Zone Thermal Comfort Fanger Model PPD'
         ])
 
-    for freq in Outputs_freq:
+    for freq in output_freqs:
         for addittionaloutput in additionaloutputs:
             self.idf1.newidfobject(
                 'Output:Variable',
@@ -1577,7 +1577,7 @@ def add_output_variables_simplified(
                 Reporting_Frequency=freq.capitalize(),
                 Schedule_Name=''
                 )
-            if verboseMode:
+            if verbose:
                 print('Added - '+addittionaloutput+' Output:Variable data')
 
     del additionaloutputs
@@ -1585,10 +1585,10 @@ def add_output_variables_simplified(
 
 def add_output_variables_standard(
         self,
-        Outputs_freq: any = None,
-        ScriptType: str = None,
-        TempCtrl: str = None,
-        verboseMode: bool = True
+        output_freqs: any = None,
+        script_type: str = None,
+        temp_control: str = None,
+        verbose: bool = True
 ):
     """Add Output:Variable objects for accim.
 
@@ -1620,13 +1620,13 @@ def add_output_variables_standard(
         'AFN Zone Ventilation Volume',
         'Zone Ventilation Standard Density Air Change Rate',
     ]
-    if TempCtrl.lower() == 'pmv':
+    if temp_control.lower() == 'pmv':
         addittionaloutputs.extend([
             'Zone Thermal Comfort Fanger Model PMV',
             'Zone Thermal Comfort Fanger Model PPD'
         ])
 
-    for freq in Outputs_freq:
+    for freq in output_freqs:
         outputnamelist = (
             [
                 output.Variable_Name
@@ -1637,13 +1637,13 @@ def add_output_variables_standard(
         )
         for outputvariable in EMSoutputvariablenamelist:
             if outputvariable in outputnamelist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+outputvariable+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
             elif outputvariable.startswith("WIP"):
-                if verboseMode:
+                if verbose:
                     print('Not added - '+outputvariable+' Output:Variable data because its WIP')
             elif outputvariable.startswith('Adaptive Thermal Comfort Cost Index'):
-                if verboseMode:
+                if verbose:
                     print('Not added - '+outputvariable+' Output:Variable data because its ATCCI')
             else:
                 self.idf1.newidfobject(
@@ -1653,13 +1653,13 @@ def add_output_variables_standard(
                     Reporting_Frequency=freq.capitalize(),
                     Schedule_Name=''
                     )
-                if verboseMode:
+                if verbose:
                     print('Added - '+outputvariable+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
         #        print([output for output in self.idf1.idfobjects['Output:Variable'] if output.Variable_Name == outputvariable])
 
         for addittionaloutput in addittionaloutputs:
             if addittionaloutput in outputnamelist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
             else:
                 self.idf1.newidfobject(
@@ -1669,7 +1669,7 @@ def add_output_variables_standard(
                     Reporting_Frequency=freq.capitalize(),
                     Schedule_Name=''
                     )
-                if verboseMode:
+                if verbose:
                     print('Added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
 
         outputlist = (
@@ -1733,7 +1733,7 @@ def add_output_variables_standard(
 
         for addittionaloutput in siteAddOutputs:
             if addittionaloutput in outputnamelist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
             else:
                 self.idf1.newidfobject(
@@ -1743,7 +1743,7 @@ def add_output_variables_standard(
                     Reporting_Frequency=freq.capitalize(),
                     Schedule_Name=''
                     )
-                if verboseMode:
+                if verbose:
                     print('Added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
 
         for zonename in self.ems_objs_name:
@@ -1754,7 +1754,7 @@ def add_output_variables_standard(
                 Reporting_Frequency=freq.capitalize(),
                 Schedule_Name=''
                 )
-            if verboseMode:
+            if verbose:
                 print('Added - AHST_Sch_'+zonename+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
 
             self.idf1.newidfobject(
@@ -1764,7 +1764,7 @@ def add_output_variables_standard(
                 Reporting_Frequency=freq.capitalize(),
                 Schedule_Name=''
                 )
-            if verboseMode:
+            if verbose:
                 print('Added - ACST_Sch_'+zonename+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
 
         if hasattr(self, 'natural_ventilation_type') and self.natural_ventilation_type == 'Scheduled':
@@ -1782,7 +1782,7 @@ def add_output_variables_standard(
                         Reporting_Frequency=freq.capitalize(),
                         Schedule_Name=''
                     )
-                    if verboseMode:
+                    if verbose:
                         print('Added - Schedule Value for ' + sch_name + ' Reporting Frequency' + freq.capitalize() + ' Output:Variable data')
 
         # for zonename in self.zonenames_orig:
@@ -1796,7 +1796,7 @@ def add_output_variables_standard(
         #     if verboseMode:
         #         print('Added - '+zonename+' Reporting Frequency'+freq.capitalize()+' Zone Operative Temperature Output:Variable data')
 
-        if 'vrf' in ScriptType.lower():
+        if 'vrf' in script_type.lower():
             VRFoutputs = [
                 'VRF Heat Pump Cooling Electricity Energy',
                 'VRF Heat Pump Heating Electricity Energy',
@@ -1810,7 +1810,7 @@ def add_output_variables_standard(
                     Reporting_Frequency=freq.capitalize(),
                     Schedule_Name=''
                 )
-                if verboseMode:
+                if verbose:
                     print('Added - ' + addittionaloutput +' Reporting Frequency'+freq.capitalize() + ' Output:Variable data')
 
             for zonename in self.zonenames:
@@ -1821,7 +1821,7 @@ def add_output_variables_standard(
                     Reporting_Frequency=freq.capitalize(),
                     Schedule_Name=''
                 )
-                if verboseMode:
+                if verbose:
                     print('Added - ' + zonename + ' VRF Indoor Unit DX Cooling Coil'+' Reporting Frequency'+freq.capitalize() + ' Output:Variable data')
 
                 self.idf1.newidfobject(
@@ -1831,7 +1831,7 @@ def add_output_variables_standard(
                     Reporting_Frequency=freq.capitalize(),
                     Schedule_Name=''
                 )
-                if verboseMode:
+                if verbose:
                     print('Added - ' + zonename + ' VRF Indoor Unit DX Heating Coil'+' Reporting Frequency '+freq.capitalize()+' Output:Variable data')
 
     meter_objects = [
@@ -1845,7 +1845,7 @@ def add_output_variables_standard(
         'Cooling:Electricity',
     ]
 
-    for freq in Outputs_freq:
+    for freq in output_freqs:
         # Get existing meters for this frequency to avoid duplicates
         # Note: Key_Name is the field for the meter name
         current_meters = [
@@ -1860,7 +1860,7 @@ def add_output_variables_standard(
                     Key_Name=meter,
                     Reporting_Frequency=freq.capitalize()
                 )
-                if verboseMode:
+                if verbose:
                     print(f"Added Output:Meter for {meter} ({freq})")
             else:
                 warnings.warn(f"Output:Meter '{meter}' ({freq}) already exists. Skipping.")
@@ -1870,8 +1870,8 @@ def add_output_variables_standard(
 
 def add_output_variables_detailed(
         self,
-        Outputs_freq: any = None,
-        verboseMode: bool = True
+        output_freqs: any = None,
+        verbose: bool = True
 ):
     """Add Output:Variable objects for accim.
 
@@ -1885,7 +1885,7 @@ def add_output_variables_detailed(
         'Zone Ventilation Standard Density Air Change Rate',
     ]
 
-    for freq in Outputs_freq:
+    for freq in output_freqs:
         outputnamelist = (
             [
                 output.Variable_Name
@@ -1897,7 +1897,7 @@ def add_output_variables_detailed(
 
         for addittionaloutput in addittionaloutputs:
             if addittionaloutput in outputnamelist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
             else:
                 self.idf1.newidfobject(
@@ -1907,7 +1907,7 @@ def add_output_variables_detailed(
                     Reporting_Frequency=freq.capitalize(),
                     Schedule_Name=''
                     )
-                if verboseMode:
+                if verbose:
                     print('Added - '+addittionaloutput+' Reporting Frequency'+freq.capitalize()+' Output:Variable data')
 
         # Add outputs for scheduled ventilation opening fractions
@@ -1926,10 +1926,10 @@ def add_output_variables_detailed(
                         Reporting_Frequency=freq.capitalize(),
                         Schedule_Name=''
                     )
-                    if verboseMode:
+                    if verbose:
                         print('Added - Schedule Value for ' + sch_name + ' Reporting Frequency' + freq.capitalize() + ' Output:Variable data')
 
-def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
+def add_ems_sensors(self, script_type: str = None, verbose: bool = True):
     """Add EMS sensors for accim.
 
     :param self: Used as a method for :class:``accim.sim.accim_Main.AccimJob``
@@ -1943,7 +1943,7 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
     # spacelist = [i for i in self.idf1.idfobjects['spacelist']]
 
     if 'RMOT' in sensorlist:
-        if verboseMode:
+        if verbose:
             print('Not added - RMOT Sensor')
     else:
         self.idf1.newidfobject(
@@ -1953,12 +1953,12 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
             OutputVariable_or_OutputMeter_Index_Key_Name=ppl_key_name,
             OutputVariable_or_OutputMeter_Name='Zone Thermal Comfort CEN 15251 Adaptive Model Running Average Outdoor Air Temperature'
             )
-        if verboseMode:
+        if verbose:
             print('Added - RMOT Sensor')
     #    print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name=='RMOT'])
 
     if 'PMOT' in sensorlist:
-        if verboseMode:
+        if verbose:
             print('Not added - PMOT Sensor')
     else:
         self.idf1.newidfobject(
@@ -1967,7 +1967,7 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
             OutputVariable_or_OutputMeter_Index_Key_Name=ppl_key_name,
             OutputVariable_or_OutputMeter_Name='Zone Thermal Comfort ASHRAE 55 Adaptive Model Running Average Outdoor Air Temperature'
             )
-        if verboseMode:
+        if verbose:
             print('Added - PMOT Sensor')
     #    print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name=='PMOT'])
 
@@ -1992,7 +1992,7 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
 
     for i in range(len(self.ems_objs_name)):
         if f'Occ_count_{self.ems_objs_name[i]}' in sensorlist:
-            if verboseMode:
+            if verbose:
                 print(f'Not added - Occ_count_{self.ems_objs_name[i]} Sensor')
         else:
             self.idf1.newidfobject(
@@ -2001,13 +2001,13 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
                 OutputVariable_or_OutputMeter_Index_Key_Name=occ_count_keys[i],
                 OutputVariable_or_OutputMeter_Name='People Occupant Count'
             )
-            if verboseMode:
+            if verbose:
                 print(f'Added - Occ_count_{self.ems_objs_name[i]} Sensor')
 
 
     for i in range(len(self.ems_objs_name)):
         if self.ems_objs_name[i]+'_OpT' in sensorlist:
-            if verboseMode:
+            if verbose:
                 print('Not added - '+self.ems_objs_name[i]+'_OpT Sensor')
         else:
             self.idf1.newidfobject(
@@ -2016,15 +2016,15 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
                 OutputVariable_or_OutputMeter_Index_Key_Name=self.ems_zonenames[i],
                 OutputVariable_or_OutputMeter_Name='Zone Operative Temperature'
                 )
-            if verboseMode:
+            if verbose:
                 print('Added - '+self.ems_objs_name[i]+'_OpT Sensor')
     #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_OpT'])
 
 
         
-        if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
+        if script_type.lower() == 'vrf_mm' or script_type.lower() == 'ex_mm':
             if self.ems_objs_name[i]+'_WindSpeed' in sensorlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+self.ems_objs_name[i]+'_WindSpeed Sensor')
             else:
                 self.idf1.newidfobject(
@@ -2033,11 +2033,11 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
                     OutputVariable_or_OutputMeter_Index_Key_Name=self.ems_zonenames[i],
                     OutputVariable_or_OutputMeter_Name='Zone Outdoor Air Wind Speed'
                     )
-                if verboseMode:
+                if verbose:
                     print('Added - '+self.ems_objs_name[i]+'_WindSpeed Sensor')
         #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_WindSpeed'])
             if self.ems_objs_name[i]+'_OutT' in sensorlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+self.ems_objs_name[i]+'_OutT Sensor')
             else:
                 self.idf1.newidfobject(
@@ -2046,14 +2046,14 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
                     OutputVariable_or_OutputMeter_Index_Key_Name=self.ems_zonenames[i],
                     OutputVariable_or_OutputMeter_Name='Zone Outdoor Air Drybulb Temperature'
                     )
-                if verboseMode:
+                if verbose:
                     print('Added - '+self.ems_objs_name[i]+'_OutT Sensor')
         #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.zonenames[i]+'_OutT']
 
-    if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
+    if script_type.lower() == 'vrf_mm' or script_type.lower() == 'ex_mm':
         for i in range(len(self.windownamelist)):
             if self.windownamelist[i]+'_OpT' in sensorlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+self.windownamelist[i]+'_OpT Sensor')
             else:
                 self.idf1.newidfobject(
@@ -2062,11 +2062,11 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
                     OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0],
                     OutputVariable_or_OutputMeter_Name='Zone Operative Temperature'
                 )
-                if verboseMode:
+                if verbose:
                     print('Added - '+self.windownamelist[i]+'_OpT Sensor')
 
             if self.windownamelist[i]+'_WindSpeed' in sensorlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+self.windownamelist[i]+'_WindSpeed Sensor')
             else:
                 self.idf1.newidfobject(
@@ -2075,11 +2075,11 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
                     OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0],
                     OutputVariable_or_OutputMeter_Name='Zone Outdoor Air Wind Speed'
                     )
-                if verboseMode:
+                if verbose:
                     print('Added - '+self.windownamelist[i]+'_WindSpeed Sensor')
 
             if self.windownamelist[i]+'_OutT' in sensorlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+self.windownamelist[i]+'_WindSpeed Sensor')
             else:
                 self.idf1.newidfobject(
@@ -2088,11 +2088,11 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
                     OutputVariable_or_OutputMeter_Index_Key_Name=self.windownamelist_orig_split[i][0],
                     OutputVariable_or_OutputMeter_Name='Zone Outdoor Air Drybulb Temperature'
                     )
-                if verboseMode:
+                if verbose:
                     print('Added - '+self.windownamelist[i]+'_OutT Sensor')
 
             if self.windownamelist[i]+'_Occ_count' in sensorlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+self.windownamelist[i]+'_Occ_count Sensor')
             else:
                 correct_key = 'People '+self.windownamelist_orig_split[i][0]
@@ -2107,11 +2107,11 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
                     OutputVariable_or_OutputMeter_Index_Key_Name=correct_key,
                     OutputVariable_or_OutputMeter_Name='People Occupant Count'
                     )
-                if verboseMode:
+                if verbose:
                     print('Added - '+self.windownamelist[i]+'_Occ_count Sensor')
 
     if 'OutT' in sensorlist:
-        if verboseMode:
+        if verbose:
             print('Not added - OutT Sensor')
     else:
         self.idf1.newidfobject(
@@ -2120,7 +2120,7 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
             OutputVariable_or_OutputMeter_Index_Key_Name='Environment',
             OutputVariable_or_OutputMeter_Name='Site Outdoor Air Drybulb Temperature'
             )
-        if verboseMode:
+        if verbose:
             print('Added - OutT Sensor')
 
     # if 'HVACConsump' in sensorlist:
@@ -2139,7 +2139,7 @@ def add_ems_sensors(self, ScriptType: str = None, verboseMode: bool = True):
     del sensorlist
 
 
-def add_ems_actuators(self, ScriptType: str = None, verboseMode: bool = True):
+def add_ems_actuators(self, script_type: str = None, verbose: bool = True):
     """Add EMS actuators for accim.
 
     :param self: Used as a method for :class:``accim.sim.accim_Main.AccimJob``
@@ -2150,7 +2150,7 @@ def add_ems_actuators(self, ScriptType: str = None, verboseMode: bool = True):
 
     for i in range(len(self.ems_objs_name)):
         if 'AHST_Act_'+self.ems_objs_name[i] in actuatorlist:
-            if verboseMode:
+            if verbose:
                 print('Not added - AHST_Act_'+self.ems_objs_name[i]+' Actuator')
         else:
             self.idf1.newidfobject(
@@ -2160,12 +2160,12 @@ def add_ems_actuators(self, ScriptType: str = None, verboseMode: bool = True):
                 Actuated_Component_Type='Schedule:Compact',
                 Actuated_Component_Control_Type='Schedule Value'
                 )
-            if verboseMode:
+            if verbose:
                 print('Added - AHST_Act_'+self.ems_objs_name[i]+' Actuator')
         #    print([actuator for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator'] if actuator.Name=='AHST_Act_'+zonename])
 
         if 'ACST_Act_'+self.ems_objs_name[i] in actuatorlist:
-            if verboseMode:
+            if verbose:
                 print('Not added - ACST_Act_'+self.ems_objs_name[i]+' Actuator')
         else:
             self.idf1.newidfobject(
@@ -2175,14 +2175,14 @@ def add_ems_actuators(self, ScriptType: str = None, verboseMode: bool = True):
                 Actuated_Component_Type='Schedule:Compact',
                 Actuated_Component_Control_Type='Schedule Value'
                 )
-            if verboseMode:
+            if verbose:
                 print('Added - ACST_Act_'+self.ems_zonenames[i]+' Actuator')
         #    print([actuator for actuator in self.idf1.idfobjects['EnergyManagementSystem:Actuator'] if actuator.Name=='ACST_Act_'+zonename])
 
-    if ScriptType.lower() == 'vrf_mm' or ScriptType.lower() == 'ex_mm':
+    if script_type.lower() == 'vrf_mm' or script_type.lower() == 'ex_mm':
         for i in range(len(self.windownamelist)):
             if self.windownamelist[i]+'_VentOpenFact' in actuatorlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+self.windownamelist[i]+'_OpT Actuator')
             else:
                 if hasattr(self, 'natural_ventilation_type') and self.natural_ventilation_type == 'Scheduled':
@@ -2201,12 +2201,12 @@ def add_ems_actuators(self, ScriptType: str = None, verboseMode: bool = True):
                         Actuated_Component_Type='AirFlow Network Window/Door Opening',
                         Actuated_Component_Control_Type='Venting Opening Factor'
                         )
-                if verboseMode:
+                if verbose:
                     print('Added - '+self.windownamelist[i]+'_VentOpenFact Actuator')
     del actuatorlist
 
 
-def make_averages(self, verboseMode):
+def make_averages(self, verbose):
     """
     Makes averages for some variables.
 
@@ -2251,18 +2251,18 @@ def make_averages(self, verboseMode):
     for i, key in enumerate(vars_to_avg.keys()):
 
         if f'{key}BuildAvg' in gvs_all:
-            if verboseMode:
+            if verbose:
                 print(f'Not added - Make{key}BuildAvg GlobalVariable')
         else:
             self.idf1.newidfobject(
                 key='EnergyManagementSystem:GlobalVariable',
                 Erl_Variable_1_Name=f'{key}BuildAvg'
             )
-            if verboseMode:
+            if verbose:
                 print(f'Added - {key}BuildAvg GlobalVariable')
 
         if f'Make{key}BuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager']]:
-            if verboseMode:
+            if verbose:
                 print(f'Not added - Make{key}BuildAvg ProgramCallingManager')
         else:
             self.idf1.newidfobject(
@@ -2271,11 +2271,11 @@ def make_averages(self, verboseMode):
                 EnergyPlus_Model_Calling_Point='BeginTimestepBeforePredictor',
                 Program_Name_1=f'Make{key}BuildAvg',
             )
-            if verboseMode:
+            if verbose:
                 print(f'Added - Make{key}BuildAvg ProgramCallingManager')
 
         if f'Make{key}BuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:Program']]:
-            if verboseMode:
+            if verbose:
                 print(f'Not added - Make{key}BuildAvg Program')
         else:
             self.idf1.newidfobject(
@@ -2285,14 +2285,14 @@ def make_averages(self, verboseMode):
                 Program_Line_2=f'set {key}BuildAvgDen = ' + str(len(vars_to_avg[key]['gvs'])),
                 Program_Line_3=f'set {key}BuildAvg = {key}BuildAvgNum/{key}BuildAvgDen'
             )
-            if verboseMode:
+            if verbose:
                 print(f'Added - Make{key}BuildAvg Program')
 
         for j, output in enumerate(EMSOutputVariableZone_dict.keys()):
             if EMSOutputVariableZone_dict[output][0].lower() == key.lower():
 
                 if f'{output}_Building_Average' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']]:
-                    if verboseMode:
+                    if verbose:
                         print(f'Not added - {output}_Building_Average EMS OutputVariable')
                 else:
                     self.idf1.newidfobject(
@@ -2303,7 +2303,7 @@ def make_averages(self, verboseMode):
                         Update_Frequency='ZoneTimestep',
                         Units='H'
                     )
-                    if verboseMode:
+                    if verbose:
                         print(f'Added - {output}_Building_Average EMS OutputVariable')
 
                 # self.idf1.newidfobject(
@@ -2346,7 +2346,7 @@ def make_averages(self, verboseMode):
         for i, zone in enumerate(self.zonenames_orig):
             sensorname = self.zonenames[i]+'_'+output_vars[k]['sensor_name']
             if sensorname in sensorlist:
-                if verboseMode:
+                if verbose:
                     print('Not added - '+sensorname+' Sensor')
             else:
                 self.idf1.newidfobject(
@@ -2355,7 +2355,7 @@ def make_averages(self, verboseMode):
                     OutputVariable_or_OutputMeter_Index_Key_Name=zone,
                     OutputVariable_or_OutputMeter_Name=k
                 )
-                if verboseMode:
+                if verbose:
                     print('Added - '+sensorname+' Sensor')
 
         sensorlist = [
@@ -2367,18 +2367,18 @@ def make_averages(self, verboseMode):
 
         key = output_vars[k]['short_name']
         if f'{key}BuildAvg' in gvs_all:
-            if verboseMode:
+            if verbose:
                 print(f'Not added - Make{key}BuildAvg GlobalVariable')
         else:
             self.idf1.newidfobject(
                 key='EnergyManagementSystem:GlobalVariable',
                 Erl_Variable_1_Name=f'{key}BuildAvg'
             )
-            if verboseMode:
+            if verbose:
                 print(f'Added - {key}BuildAvg GlobalVariable')
 
         if f'Make{key}BuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager']]:
-            if verboseMode:
+            if verbose:
                 print(f'Not added - Make{key}BuildAvg ProgramCallingManager')
         else:
             self.idf1.newidfobject(
@@ -2387,11 +2387,11 @@ def make_averages(self, verboseMode):
                 EnergyPlus_Model_Calling_Point='BeginTimestepBeforePredictor',
                 Program_Name_1=f'Make{key}BuildAvg',
             )
-            if verboseMode:
+            if verbose:
                 print(f'Added - Make{key}BuildAvg ProgramCallingManager')
 
         if f'Make{key}BuildAvg' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:Program']]:
-            if verboseMode:
+            if verbose:
                 print(f'Not added - Make{key}BuildAvg Program')
         else:
             self.idf1.newidfobject(
@@ -2401,12 +2401,12 @@ def make_averages(self, verboseMode):
                 Program_Line_2=f'set {key}BuildAvgDen = ' + str(len(sensorlist)),
                 Program_Line_3=f'set {key}BuildAvg = {key}BuildAvgNum/{key}BuildAvgDen'
             )
-            if verboseMode:
+            if verbose:
                 print(f'Added - Make{key}BuildAvg Program')
 
 
         if f'{k}_Building_Average' in [i.Name for i in self.idf1.idfobjects['EnergyManagementSystem:OutputVariable']]:
-            if verboseMode:
+            if verbose:
                 print(f'Not added - {k}_Building_Average EMS OutputVariable')
         else:
             self.idf1.newidfobject(
@@ -2417,6 +2417,6 @@ def make_averages(self, verboseMode):
                 Update_Frequency='ZoneTimestep',
                 Units=output_vars[k]['units']
             )
-            if verboseMode:
+            if verbose:
                 print(f'Added - {k}_Building_Average EMS OutputVariable')
 

@@ -1,8 +1,8 @@
 # accim - Adaptive-Comfort-Control-Implemented Model
 # Auto-generated setAST logic
-def get_SetAST_lines(ComfStand, ComfMod):
+def get_SetAST_lines(comfort_standard, comfort_mode):
     lines = []
-    if (ComfStand == 99) and (ComfMod == 3):
+    if (comfort_standard == 99) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*m+n+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -10,7 +10,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*m+n+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 99) and (ComfMod == 3):
+    if (comfort_standard == 99) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*m+n+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -18,7 +18,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*m+n+AHSToffset+AHSTtol')
         lines.append('endif')
-    if ComfStand == 0:
+    if comfort_standard == 0:
         lines.append('if (ComfStand == 0) && (CurrentTime < 8)')
         lines.append('set ACST = 27+ACSTtol')
         lines.append('set AHST = 17+AHSTtol')
@@ -32,7 +32,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 27+ACSTtol')
         lines.append('set AHST = 17+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 1) and (ComfMod == 0):
+    if (comfort_standard == 1) and (comfort_mode == 0):
         lines.append('if CoolingSeason == 1')
         lines.append('if (CAT==1)')
         lines.append('set ACST = 25.5+ACSTtol')
@@ -50,7 +50,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 25+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 1) and (ComfMod == 0):
+    if (comfort_standard == 1) and (comfort_mode == 0):
         lines.append('if CoolingSeason == 1')
         lines.append('if (CAT==1)')
         lines.append('set AHST = 23.5+AHSTtol')
@@ -68,7 +68,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 18+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 1) and (ComfMod == 1):
+    if (comfort_standard == 1) and (comfort_mode == 1):
         lines.append('if (RMOT >= ACSTall) && (RMOT <= ACSTaul)')
         lines.append('set ACST = RMOT*0.33+18.8+ACSToffset+ACSTtol')
         lines.append('elseif CurrentTime < 7')
@@ -80,7 +80,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif CurrentTime < 24')
         lines.append('set ACST = 27+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 1) and (ComfMod == 1):
+    if (comfort_standard == 1) and (comfort_mode == 1):
         lines.append('if (RMOT >= AHSTall) && (RMOT <= AHSTaul)')
         lines.append('set AHST = RMOT*0.33+18.8+AHSToffset+AHSTtol')
         lines.append('elseif CurrentTime < 7')
@@ -90,7 +90,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif CurrentTime < 24')
         lines.append('set AHST = 17+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 1) and (ComfMod == 2):
+    if (comfort_standard == 1) and (comfort_mode == 2):
         lines.append('if (RMOT >= ACSTall) && (RMOT <= ACSTaul)')
         lines.append('set ACST = RMOT*0.33+18.8+ACSToffset+ACSTtol')
         lines.append('elseif (RMOT < ACSTall) && (CAT==1)')
@@ -106,7 +106,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif (RMOT > ACSTaul) && (CAT==3)')
         lines.append('set ACST = 27+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 1) and (ComfMod == 2):
+    if (comfort_standard == 1) and (comfort_mode == 2):
         lines.append('if (RMOT >= AHSTall) && (RMOT <= AHSTaul)')
         lines.append('set AHST = RMOT*0.33+18.8+AHSToffset+AHSTtol')
         lines.append('elseif (RMOT < AHSTall) && (CAT==1)')
@@ -122,7 +122,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif (RMOT > AHSTaul) && (CAT==3)')
         lines.append('set AHST = 22+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 1) and (ComfMod == 3):
+    if (comfort_standard == 1) and (comfort_mode == 3):
         lines.append('if (RMOT >= ACSTall) && (RMOT <= ACSTaul)')
         lines.append('set ACST = RMOT*0.33+18.8+ACSToffset+ACSTtol')
         lines.append('elseif RMOT < ACSTall')
@@ -130,7 +130,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif RMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.33+18.8+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 1) and (ComfMod == 3):
+    if (comfort_standard == 1) and (comfort_mode == 3):
         lines.append('if (RMOT >= AHSTall) && (RMOT <= AHSTaul)')
         lines.append('set AHST = RMOT*0.33+18.8+AHSToffset+AHSTtol')
         lines.append('elseif RMOT < AHSTall')
@@ -138,7 +138,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif RMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.33+18.8+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 2) and (ComfMod == 0):
+    if (comfort_standard == 2) and (comfort_mode == 0):
         lines.append('if CoolingSeason == 1')
         lines.append('if (CAT==80)')
         lines.append('set ACST = 27+ACSTtol')
@@ -152,7 +152,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 24+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 2) and (ComfMod == 0):
+    if (comfort_standard == 2) and (comfort_mode == 0):
         lines.append('if CoolingSeason == 1')
         lines.append('if (CAT==80)')
         lines.append('set AHST = 22+AHSTtol')
@@ -166,7 +166,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 20+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 2) and (ComfMod == 1):
+    if (comfort_standard == 2) and (comfort_mode == 1):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.31+17.8+ACSToffset+ACSTtol')
         lines.append('elseif CurrentTime < 7')
@@ -178,7 +178,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif CurrentTime < 24')
         lines.append('set ACST = 27+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 2) and (ComfMod == 1):
+    if (comfort_standard == 2) and (comfort_mode == 1):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.31+17.8+AHSToffset+AHSTtol')
         lines.append('elseif CurrentTime < 7')
@@ -188,7 +188,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif CurrentTime < 24')
         lines.append('set AHST = 17+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 2) and (ComfMod == 2):
+    if (comfort_standard == 2) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.31+17.8+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -204,7 +204,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 2) and (ComfMod == 2):
+    if (comfort_standard == 2) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.31+17.8+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -220,7 +220,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 2) and (ComfMod == 3):
+    if (comfort_standard == 2) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.31+17.8+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -228,7 +228,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.31+17.8+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 2) and (ComfMod == 3):
+    if (comfort_standard == 2) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.31+17.8+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -236,19 +236,19 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.31+17.8+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 3) and (ComfMod == 0):
+    if (comfort_standard == 3) and (comfort_mode == 0):
         lines.append('if (CAT==80)')
         lines.append('set ACST = 28+ACSTtol')
         lines.append('elseif (CAT==90)')
         lines.append('set ACST = 27+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 3) and (ComfMod == 0):
+    if (comfort_standard == 3) and (comfort_mode == 0):
         lines.append('if (CAT==80)')
         lines.append('set AHST = 18+AHSTtol')
         lines.append('elseif (CAT==90)')
         lines.append('set AHST = 19+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 3) and (ComfMod == 1):
+    if (comfort_standard == 3) and (comfort_mode == 1):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.48+14.4+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -264,7 +264,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 27+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 3) and (ComfMod == 1):
+    if (comfort_standard == 3) and (comfort_mode == 1):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.48+14.4+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -280,7 +280,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 19+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 3) and (ComfMod == 2):
+    if (comfort_standard == 3) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.48+14.4+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -296,7 +296,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 3) and (ComfMod == 2):
+    if (comfort_standard == 3) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.48+14.4+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -312,7 +312,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 3) and (ComfMod == 3):
+    if (comfort_standard == 3) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.48+14.4+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -320,7 +320,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.48+14.4+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 3) and (ComfMod == 3):
+    if (comfort_standard == 3) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.48+14.4+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -328,7 +328,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.48+14.4+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 4) and (ComfMod == 3):
+    if (comfort_standard == 4) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('if CAT == 1')
         lines.append('set ACST = PMOT*0.77+12.04+ACSTtol')
@@ -348,7 +348,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = ACSTaul*0.73+15.28+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 4) and (ComfMod == 3):
+    if (comfort_standard == 4) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('if CAT == 1')
         lines.append('set AHST = PMOT*0.87+2.76+AHSTtol')
@@ -368,7 +368,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = AHSTaul*0.91-0.48+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 5) and (ComfMod == 3):
+    if (comfort_standard == 5) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('if CAT == 1')
         lines.append('set ACST = PMOT*0.77+9.34+ACSTtol')
@@ -388,7 +388,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = ACSTaul*0.73+12.72+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 5) and (ComfMod == 3):
+    if (comfort_standard == 5) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('if CAT == 1')
         lines.append('set AHST = PMOT*0.87-0.31+AHSTtol')
@@ -408,7 +408,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = AHSTaul*0.91-3.69+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 6) and (ComfMod == 2):
+    if (comfort_standard == 6) and (comfort_mode == 2):
         lines.append('if CAT==80')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.30+25.9+ACSTtol')
@@ -426,7 +426,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 6) and (ComfMod == 2):
+    if (comfort_standard == 6) and (comfort_mode == 2):
         lines.append('if CAT==80')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.30+25.9+AHSTtol')
@@ -444,7 +444,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 6) and (ComfMod == 3):
+    if (comfort_standard == 6) and (comfort_mode == 3):
         lines.append('if CAT == 80')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.30+25.9+ACSTtol')
@@ -462,7 +462,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = ACSTaul*0.30+23.6+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 6) and (ComfMod == 3):
+    if (comfort_standard == 6) and (comfort_mode == 3):
         lines.append('if CAT == 80')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.32+14.88+AHSTtol')
@@ -480,8 +480,8 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = AHSTaul*0.31+17.14+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if ComfStand == 7 or ComfStand == 8 or ComfStand == 9 or ComfStand == 10:
-        if (ComfMod == 0):
+    if comfort_standard == 7 or comfort_standard == 8 or comfort_standard == 9 or comfort_standard == 10:
+        if (comfort_mode == 0):
             lines.append('if CAT==80')
             lines.append('set ACST = PMOT*0.078+23.25+2.72+ACSTtol')
             lines.append('elseif CAT==85')
@@ -489,8 +489,8 @@ def get_SetAST_lines(ComfStand, ComfMod):
             lines.append('elseif CAT==90')
             lines.append('set ACST = PMOT*0.078+23.25+1.5+ACSTtol')
             lines.append('endif')
-    if ComfStand == 7 or ComfStand == 8 or ComfStand == 9 or ComfStand == 10:
-        if (ComfMod == 0):
+    if comfort_standard == 7 or comfort_standard == 8 or comfort_standard == 9 or comfort_standard == 10:
+        if (comfort_mode == 0):
             lines.append('if CAT==80')
             lines.append('set AHST = PMOT*0.078+23.25-2.72+AHSTtol')
             lines.append('elseif CAT==85')
@@ -498,7 +498,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
             lines.append('elseif CAT==90')
             lines.append('set AHST = PMOT*0.078+23.25-1.5+AHSTtol')
             lines.append('endif')
-    if (ComfStand == 7) and (ComfMod == 1):
+    if (comfort_standard == 7) and (comfort_mode == 1):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.54+12.83+ACSToffset+ACSTtol')
         lines.append('else')
@@ -510,7 +510,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = PMOT*0.078+23.25+1.5+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 7) and (ComfMod == 1):
+    if (comfort_standard == 7) and (comfort_mode == 1):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.54+12.83+AHSToffset+AHSTtol')
         lines.append('else')
@@ -522,7 +522,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = PMOT*0.078+23.25-1.5+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 7) and (ComfMod == 2):
+    if (comfort_standard == 7) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.54+12.83+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -544,7 +544,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 7) and (ComfMod == 2):
+    if (comfort_standard == 7) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.54+12.83+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -566,7 +566,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 7) and (ComfMod == 3):
+    if (comfort_standard == 7) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.54+12.83+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -574,7 +574,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.54+12.83+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 7) and (ComfMod == 3):
+    if (comfort_standard == 7) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.54+12.83+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -582,7 +582,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.54+12.83+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 8) and (ComfMod == 1):
+    if (comfort_standard == 8) and (comfort_mode == 1):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.28+17.87+ACSToffset+ACSTtol')
         lines.append('else')
@@ -594,7 +594,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = PMOT*0.078+23.25+1.5+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 8) and (ComfMod == 1):
+    if (comfort_standard == 8) and (comfort_mode == 1):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.28+17.87+AHSToffset+AHSTtol')
         lines.append('else')
@@ -606,7 +606,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = PMOT*0.078+23.25-1.5+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 8) and (ComfMod == 2):
+    if (comfort_standard == 8) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.28+17.87+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -628,7 +628,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 8) and (ComfMod == 2):
+    if (comfort_standard == 8) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.28+17.87+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -650,7 +650,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 8) and (ComfMod == 3):
+    if (comfort_standard == 8) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.28+17.87+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -658,7 +658,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.28+17.87+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 8) and (ComfMod == 3):
+    if (comfort_standard == 8) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.28+17.87+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -666,7 +666,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.28+17.87+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 9) and (ComfMod == 1):
+    if (comfort_standard == 9) and (comfort_mode == 1):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.39+18.42+ACSToffset+ACSTtol')
         lines.append('else')
@@ -676,7 +676,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = PMOT*0.078+23.25+1.5+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 9) and (ComfMod == 1):
+    if (comfort_standard == 9) and (comfort_mode == 1):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.39+18.42+AHSToffset+AHSTtol')
         lines.append('else')
@@ -686,7 +686,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = PMOT*0.078+23.25+1.5+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 9) and (ComfMod == 2):
+    if (comfort_standard == 9) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.39+18.42+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -702,7 +702,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 9) and (ComfMod == 2):
+    if (comfort_standard == 9) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.39+18.42+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -718,7 +718,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 9) and (ComfMod == 3):
+    if (comfort_standard == 9) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.39+18.42+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -726,7 +726,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.39+18.42+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 9) and (ComfMod == 3):
+    if (comfort_standard == 9) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.39+18.42+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -734,7 +734,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.39+18.42+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 10) and (ComfMod == 1):
+    if (comfort_standard == 10) and (comfort_mode == 1):
         lines.append('if (RMOT >= ACSTall) && (RMOT <= ACSTaul)')
         lines.append('set ACST = RMOT*0.42+17.6+ACSToffset+ACSTtol')
         lines.append('else')
@@ -744,7 +744,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = RMOT*0.078+23.25+1.5+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 10) and (ComfMod == 1):
+    if (comfort_standard == 10) and (comfort_mode == 1):
         lines.append('if (RMOT >= AHSTall) && (RMOT <= AHSTaul)')
         lines.append('set AHST = RMOT*0.42+17.6+AHSToffset+AHSTtol')
         lines.append('else')
@@ -754,7 +754,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = RMOT*0.078+23.25-1.5+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 10) and (ComfMod == 2):
+    if (comfort_standard == 10) and (comfort_mode == 2):
         lines.append('if (RMOT >= ACSTall) && (RMOT <= ACSTaul)')
         lines.append('set ACST = RMOT*0.42+17.6+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -770,7 +770,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 10) and (ComfMod == 2):
+    if (comfort_standard == 10) and (comfort_mode == 2):
         lines.append('if (RMOT >= AHSTall) && (RMOT <= AHSTaul)')
         lines.append('set AHST = RMOT*0.42+17.6+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -786,7 +786,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 10) and (ComfMod == 3):
+    if (comfort_standard == 10) and (comfort_mode == 3):
         lines.append('if (RMOT >= ACSTall) && (RMOT <= ACSTaul)')
         lines.append('set ACST = RMOT*0.42+17.6+ACSToffset+ACSTtol')
         lines.append('elseif RMOT < ACSTall')
@@ -794,7 +794,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif RMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.42+17.6+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 10) and (ComfMod == 3):
+    if (comfort_standard == 10) and (comfort_mode == 3):
         lines.append('if (RMOT >= AHSTall) && (RMOT <= AHSTaul)')
         lines.append('set AHST = RMOT*0.42+17.6+AHSToffset+AHSTtol')
         lines.append('elseif RMOT < AHSTall')
@@ -802,7 +802,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif RMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.42+17.6+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 11) and (ComfMod == 1):
+    if (comfort_standard == 11) and (comfort_mode == 1):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.75+5.37+ACSToffset+ACSTtol')
         lines.append('else')
@@ -812,7 +812,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = PMOT*0.078+23.25+1.5+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 11) and (ComfMod == 1):
+    if (comfort_standard == 11) and (comfort_mode == 1):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.75+5.37+AHSToffset+AHSTtol')
         lines.append('else')
@@ -822,7 +822,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = PMOT*0.078+23.25-1.5+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 11) and (ComfMod == 2):
+    if (comfort_standard == 11) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.75+5.37+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -838,7 +838,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 11) and (ComfMod == 2):
+    if (comfort_standard == 11) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.75+5.37+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -854,7 +854,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 11) and (ComfMod == 3):
+    if (comfort_standard == 11) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.75+5.37+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -862,7 +862,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.75+5.37+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 11) and (ComfMod == 3):
+    if (comfort_standard == 11) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.75+5.37+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -870,19 +870,19 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.75+5.37+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 12) and (ComfMod == 0):
+    if (comfort_standard == 12) and (comfort_mode == 0):
         lines.append('if (CAT==80)')
         lines.append('set ACST = 27+ACSTtol')
         lines.append('elseif (CAT==90)')
         lines.append('set ACST = 25.5+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 12) and (ComfMod == 0):
+    if (comfort_standard == 12) and (comfort_mode == 0):
         lines.append('if (CAT==80)')
         lines.append('set AHST = 20+AHSTtol')
         lines.append('elseif (CAT==90)')
         lines.append('set AHST = 21.5+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 12) and (ComfMod == 1):
+    if (comfort_standard == 12) and (comfort_mode == 1):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.25+19.7+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -898,7 +898,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 25.5+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 12) and (ComfMod == 1):
+    if (comfort_standard == 12) and (comfort_mode == 1):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.25+19.7+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -914,7 +914,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 21.5+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 12) and (ComfMod == 2):
+    if (comfort_standard == 12) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.25+19.7+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -930,7 +930,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 12) and (ComfMod == 2):
+    if (comfort_standard == 12) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.25+19.7+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -946,7 +946,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 12) and (ComfMod == 3):
+    if (comfort_standard == 12) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.25+19.7+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -954,7 +954,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.25+19.7+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 12) and (ComfMod == 3):
+    if (comfort_standard == 12) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.25+19.7+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -962,40 +962,40 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.25+19.7+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 13) or (ComfStand == 14):
+    if (comfort_standard == 13) or (comfort_standard == 14):
         lines.append('if (CAT==80)')
         lines.append('if (CurrentTime > 6) && (CurrentTime < 23)')
-        if (ComfMod == 0.1):
+        if (comfort_mode == 0.1):
             lines.append('set ACST = 27+ACSTtol')
-        elif (ComfMod == 0.2):
+        elif (comfort_mode == 0.2):
             lines.append('set ACST = 26+ACSTtol')
-        elif (ComfMod == 0.3):
+        elif (comfort_mode == 0.3):
             lines.append('set ACST = 25+ACSTtol')
-        elif (ComfMod == 0.4):
+        elif (comfort_mode == 0.4):
             lines.append('set ACST = 24+ACSTtol')
-        elif (ComfMod == 0.5):
+        elif (comfort_mode == 0.5):
             lines.append('set ACST = 23+ACSTtol')
         lines.append('else')
         lines.append('set ACST = 24+ACSTtol')
         lines.append('endif')
         lines.append('elseif (CAT==90)')
         lines.append('if (CurrentTime > 6) && (CurrentTime < 23)')
-        if (ComfMod == 0.1):
+        if (comfort_mode == 0.1):
             lines.append('set ACST = 26+ACSTtol')
-        elif (ComfMod == 0.2):
+        elif (comfort_mode == 0.2):
             lines.append('set ACST = 25+ACSTtol')
-        elif (ComfMod == 0.3):
+        elif (comfort_mode == 0.3):
             lines.append('set ACST = 24+ACSTtol')
-        elif (ComfMod == 0.4):
+        elif (comfort_mode == 0.4):
             lines.append('set ACST = 23+ACSTtol')
-        elif (ComfMod == 0.5):
+        elif (comfort_mode == 0.5):
             lines.append('set ACST = 22+ACSTtol')
         lines.append('else')
         lines.append('set ACST = 23+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 13) or (ComfStand == 14):
-        if (ComfMod == 0.1) or (ComfMod == 0.2) or (ComfMod == 0.3) or (ComfMod == 0.4) or (ComfMod == 0.5):
+    if (comfort_standard == 13) or (comfort_standard == 14):
+        if (comfort_mode == 0.1) or (comfort_mode == 0.2) or (comfort_mode == 0.3) or (comfort_mode == 0.4) or (comfort_mode == 0.5):
             lines.append('if (CAT==80)')
             lines.append('if (CurrentTime >6) && (CurrentTime < 12)')
             lines.append('set AHST = 20+AHSTtol')
@@ -1009,8 +1009,8 @@ def get_SetAST_lines(ComfStand, ComfMod):
             lines.append('set AHST = 19+AHSTtol')
             lines.append('endif')
             lines.append('endif')
-    if (ComfStand == 13):
-        if (ComfMod == 1.1) or (ComfMod == 1.2) or (ComfMod == 1.3) or (ComfMod == 1.4) or (ComfMod == 1.5):
+    if (comfort_standard == 13):
+        if (comfort_mode == 1.1) or (comfort_mode == 1.2) or (comfort_mode == 1.3) or (comfort_mode == 1.4) or (comfort_mode == 1.5):
             lines.append('if CAT == 80')
             lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
             lines.append('set ACST = PMOT*0.26+15.9+ACSToffset+ACSTtol')
@@ -1048,8 +1048,8 @@ def get_SetAST_lines(ComfStand, ComfMod):
             lines.append('endif')
             lines.append('endif')
             lines.append('endif')
-    if (ComfStand == 13):
-        if (ComfMod == 1.1) or (ComfMod == 1.2) or (ComfMod == 1.3) or (ComfMod == 1.4) or (ComfMod == 1.5):
+    if (comfort_standard == 13):
+        if (comfort_mode == 1.1) or (comfort_mode == 1.2) or (comfort_mode == 1.3) or (comfort_mode == 1.4) or (comfort_mode == 1.5):
             lines.append('if CAT == 80')
             lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
             lines.append('set AHST = PMOT*0.26+15.9+AHSToffset+AHSTtol')
@@ -1071,7 +1071,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
             lines.append('endif')
             lines.append('endif')
             lines.append('endif')
-    if (ComfStand == 13) and (ComfMod == 2):
+    if (comfort_standard == 13) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.26+15.9+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -1087,7 +1087,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 13) and (ComfMod == 2):
+    if (comfort_standard == 13) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.26+15.9+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -1103,7 +1103,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 13) and (ComfMod == 3):
+    if (comfort_standard == 13) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.26+15.9+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -1111,7 +1111,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.26+15.9+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 13) and (ComfMod == 3):
+    if (comfort_standard == 13) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.26+15.9+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -1119,8 +1119,8 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.26+15.9+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 14):
-        if (ComfMod == 1.1) or (ComfMod == 1.2) or (ComfMod == 1.3) or (ComfMod == 1.4) or (ComfMod == 1.5):
+    if (comfort_standard == 14):
+        if (comfort_mode == 1.1) or (comfort_mode == 1.2) or (comfort_mode == 1.3) or (comfort_mode == 1.4) or (comfort_mode == 1.5):
             lines.append('if CAT == 80')
             lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
             lines.append('set ACST = PMOT*0.26+16.75+ACSToffset+ACSTtol')
@@ -1158,8 +1158,8 @@ def get_SetAST_lines(ComfStand, ComfMod):
             lines.append('endif')
             lines.append('endif')
             lines.append('endif')
-    if (ComfStand == 14):
-        if (ComfMod == 1.1) or (ComfMod == 1.2) or (ComfMod == 1.3) or (ComfMod == 1.4) or (ComfMod == 1.5):
+    if (comfort_standard == 14):
+        if (comfort_mode == 1.1) or (comfort_mode == 1.2) or (comfort_mode == 1.3) or (comfort_mode == 1.4) or (comfort_mode == 1.5):
             lines.append('if CAT == 80')
             lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
             lines.append('set AHST = PMOT*0.26+16.75+AHSToffset+AHSTtol')
@@ -1181,7 +1181,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
             lines.append('endif')
             lines.append('endif')
             lines.append('endif')
-    if (ComfStand == 14) and (ComfMod == 2):
+    if (comfort_standard == 14) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.26+16.75+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -1197,7 +1197,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 14) and (ComfMod == 2):
+    if (comfort_standard == 14) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.26+16.75+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -1213,7 +1213,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 14) and (ComfMod == 3):
+    if (comfort_standard == 14) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.26+16.75+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -1221,7 +1221,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.26+16.75+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 14) and (ComfMod == 3):
+    if (comfort_standard == 14) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.26+16.75+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -1229,11 +1229,11 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.26+16.75+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 15) or (ComfStand == 16):
-        if (ComfMod == 0):
+    if (comfort_standard == 15) or (comfort_standard == 16):
+        if (comfort_mode == 0):
             lines.append('set ACST = 25+ACSTtol')
             lines.append('set AHST = 20+AHSTtol')
-    if (ComfStand == 15) and (ComfMod == 1):
+    if (comfort_standard == 15) and (comfort_mode == 1):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.56+12.74+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -1249,7 +1249,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 25+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 15) and (ComfMod == 1):
+    if (comfort_standard == 15) and (comfort_mode == 1):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.56+12.74+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -1265,7 +1265,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 15) and (ComfMod == 2):
+    if (comfort_standard == 15) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.56+12.74+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -1281,7 +1281,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 15) and (ComfMod == 2):
+    if (comfort_standard == 15) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.56+12.74+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -1297,7 +1297,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 15) and (ComfMod == 3):
+    if (comfort_standard == 15) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.56+12.74+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -1305,7 +1305,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.56+12.74+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 15) and (ComfMod == 3):
+    if (comfort_standard == 15) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.56+12.74+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -1313,7 +1313,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.56+12.74+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 16) and (ComfMod == 1):
+    if (comfort_standard == 16) and (comfort_mode == 1):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.09+22.32+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -1329,7 +1329,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 25+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 16) and (ComfMod == 1):
+    if (comfort_standard == 16) and (comfort_mode == 1):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.09+22.32+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -1345,7 +1345,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 16) and (ComfMod == 2):
+    if (comfort_standard == 16) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.09+22.32+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -1361,7 +1361,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 16) and (ComfMod == 2):
+    if (comfort_standard == 16) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.09+22.32+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -1377,7 +1377,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 16) and (ComfMod == 3):
+    if (comfort_standard == 16) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.09+22.32+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -1385,7 +1385,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.09+22.32+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 16) and (ComfMod == 3):
+    if (comfort_standard == 16) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.09+22.32+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -1393,11 +1393,11 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.09+22.32+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 17) or (ComfStand == 18) or (ComfStand == 19) or (ComfStand == 20):
-        if ComfMod == 0:
+    if (comfort_standard == 17) or (comfort_standard == 18) or (comfort_standard == 19) or (comfort_standard == 20):
+        if comfort_mode == 0:
             lines.append('set ACST = 25+ACSTtol')
             lines.append('set AHST = 20+AHSTtol')
-    if (ComfStand == 17) and (ComfMod == 1):
+    if (comfort_standard == 17) and (comfort_mode == 1):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.48+13.9+ACSToffset+ACSTtol')
@@ -1411,7 +1411,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 25+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 17) and (ComfMod == 1):
+    if (comfort_standard == 17) and (comfort_mode == 1):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.48+13.9+AHSToffset+AHSTtol')
@@ -1425,7 +1425,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 20+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 17) and (ComfMod == 2):
+    if (comfort_standard == 17) and (comfort_mode == 2):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.48+13.9+ACSToffset+ACSTtol')
@@ -1459,7 +1459,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('endif')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 17) and (ComfMod == 2):
+    if (comfort_standard == 17) and (comfort_mode == 2):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.48+13.9+AHSToffset+AHSTtol')
@@ -1493,7 +1493,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('endif')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 17) and (ComfMod == 3):
+    if (comfort_standard == 17) and (comfort_mode == 3):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.48+13.9+ACSToffset+ACSTtol')
@@ -1511,7 +1511,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = ACSTaul*0.59+9.6+ACSToffset+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 17) and (ComfMod == 3):
+    if (comfort_standard == 17) and (comfort_mode == 3):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.48+13.9+AHSToffset+AHSTtol')
@@ -1529,7 +1529,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = AHSTaul*0.59+9.6+AHSToffset+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 18) and (ComfMod == 1):
+    if (comfort_standard == 18) and (comfort_mode == 1):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.84+5.3+ACSToffset+ACSTtol')
@@ -1543,7 +1543,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 25+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 18) and (ComfMod == 1):
+    if (comfort_standard == 18) and (comfort_mode == 1):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.84+5.3+AHSToffset+AHSTtol')
@@ -1557,7 +1557,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 20+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 18) and (ComfMod == 2):
+    if (comfort_standard == 18) and (comfort_mode == 2):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.84+5.3+ACSToffset+ACSTtol')
@@ -1591,7 +1591,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('endif')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 18) and (ComfMod == 2):
+    if (comfort_standard == 18) and (comfort_mode == 2):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.84+5.3+AHSToffset+AHSTtol')
@@ -1625,7 +1625,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('endif')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 18) and (ComfMod == 3):
+    if (comfort_standard == 18) and (comfort_mode == 3):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.84+5.3+ACSToffset+ACSTtol')
@@ -1643,7 +1643,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = ACSTaul*0.96-3.6+ACSToffset+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 18) and (ComfMod == 3):
+    if (comfort_standard == 18) and (comfort_mode == 3):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.84+5.3+AHSToffset+AHSTtol')
@@ -1661,7 +1661,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = AHSTaul*0.96-3.6+AHSToffset+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 19) and (ComfMod == 1):
+    if (comfort_standard == 19) and (comfort_mode == 1):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.27+17.9+ACSToffset+ACSTtol')
@@ -1675,7 +1675,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 25+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 19) and (ComfMod == 1):
+    if (comfort_standard == 19) and (comfort_mode == 1):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.27+17.9+AHSToffset+AHSTtol')
@@ -1689,7 +1689,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 20+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 19) and (ComfMod == 2):
+    if (comfort_standard == 19) and (comfort_mode == 2):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.27+17.9+ACSToffset+ACSTtol')
@@ -1723,7 +1723,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('endif')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 19) and (ComfMod == 2):
+    if (comfort_standard == 19) and (comfort_mode == 2):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.27+17.9+AHSToffset+AHSTtol')
@@ -1757,7 +1757,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('endif')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 19) and (ComfMod == 3):
+    if (comfort_standard == 19) and (comfort_mode == 3):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.27+17.9+ACSToffset+ACSTtol')
@@ -1775,7 +1775,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = ACSTaul*0.53+10.3+ACSToffset+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 19) and (ComfMod == 3):
+    if (comfort_standard == 19) and (comfort_mode == 3):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.27+17.9+AHSToffset+AHSTtol')
@@ -1793,7 +1793,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = AHSTaul*0.53+10.3+AHSToffset+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 20) and (ComfMod == 1):
+    if (comfort_standard == 20) and (comfort_mode == 1):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.38+15.7+ACSToffset+ACSTtol')
@@ -1807,7 +1807,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 25+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 20) and (ComfMod == 1):
+    if (comfort_standard == 20) and (comfort_mode == 1):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.38+15.7+AHSToffset+AHSTtol')
@@ -1821,7 +1821,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 20+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 20) and (ComfMod == 2):
+    if (comfort_standard == 20) and (comfort_mode == 2):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.38+15.7+ACSToffset+ACSTtol')
@@ -1855,7 +1855,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('endif')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 20) and (ComfMod == 2):
+    if (comfort_standard == 20) and (comfort_mode == 2):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.38+15.7+AHSToffset+AHSTtol')
@@ -1889,7 +1889,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('endif')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 20) and (ComfMod == 3):
+    if (comfort_standard == 20) and (comfort_mode == 3):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.38+15.7+ACSToffset+ACSTtol')
@@ -1907,7 +1907,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = ACSTaul*0.47+9.07+ACSToffset+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 20) and (ComfMod == 3):
+    if (comfort_standard == 20) and (comfort_mode == 3):
         lines.append('if (DayOfYear <= 121) || (DayOfYear > 295)')
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.38+15.7+AHSToffset+AHSTtol')
@@ -1925,7 +1925,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = AHSTaul*0.47+9.07+AHSToffset+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 21) and (ComfMod == 2):
+    if (comfort_standard == 21) and (comfort_mode == 2):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.678+13.51+ACSToffset+ACSTtol')
         lines.append('elseif CAT==80')
@@ -1941,7 +1941,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 26+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 21) and (ComfMod == 2):
+    if (comfort_standard == 21) and (comfort_mode == 2):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.678+13.51+AHSToffset+AHSTtol')
         lines.append('elseif CAT==80')
@@ -1957,7 +1957,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set AHST = 23+AHSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 21) and (ComfMod == 3):
+    if (comfort_standard == 21) and (comfort_mode == 3):
         lines.append('if (PMOT >= ACSTall) && (PMOT <= ACSTaul)')
         lines.append('set ACST = PMOT*0.678+13.51+ACSToffset+ACSTtol')
         lines.append('elseif PMOT < ACSTall')
@@ -1965,7 +1965,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > ACSTaul')
         lines.append('set ACST = ACSTaul*0.678+13.51+ACSToffset+ACSTtol')
         lines.append('endif')
-    if (ComfStand == 21) and (ComfMod == 3):
+    if (comfort_standard == 21) and (comfort_mode == 3):
         lines.append('if (PMOT >= AHSTall) && (PMOT <= AHSTaul)')
         lines.append('set AHST = PMOT*0.678+13.51+AHSToffset+AHSTtol')
         lines.append('elseif PMOT < AHSTall')
@@ -1973,7 +1973,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('elseif PMOT > AHSTaul')
         lines.append('set AHST = AHSTaul*0.678+13.51+AHSToffset+AHSTtol')
         lines.append('endif')
-    if (ComfStand == 22):
+    if (comfort_standard == 22):
         lines.append('if CoolingSeason == 1')
         lines.append('if (CAT==3)')
         lines.append('set ACST = 24.5+2.5+ACSTtol')
@@ -1991,7 +1991,7 @@ def get_SetAST_lines(ComfStand, ComfMod):
         lines.append('set ACST = 22+1+ACSTtol')
         lines.append('endif')
         lines.append('endif')
-    if (ComfStand == 22):
+    if (comfort_standard == 22):
         lines.append('if CoolingSeason == 1')
         lines.append('if (CAT==3)')
         lines.append('set AHST = 24.5-2.5+AHSTtol')

@@ -427,7 +427,7 @@ def resolve_hvac_zone_map(
     hvac_type: str,
     hvac_obj_names: List[str],
     user_map: Optional[Dict] = None,
-    verboseMode: bool = True,
+    verbose: bool = True,
 ) -> Dict[str, List[str]]:
     """
     Map each HVAC object name in *hvac_obj_names* to one or more zone names.
@@ -498,7 +498,7 @@ def resolve_hvac_zone_map(
             zones = _strategy_d(obj_name)
             strategy_label = 'D (legacy name-parsing fallback)'
 
-        if verboseMode:
+        if verbose:
             print(
                 f"  ExistingHVAC resolver: '{obj_name}' "
                 f"-> {zones}  [Strategy {strategy_label}]"

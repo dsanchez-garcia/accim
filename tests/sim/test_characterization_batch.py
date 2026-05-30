@@ -40,12 +40,12 @@ SF = TEST_DATA_DIR / "SF_Detached_B_min_North.idf"
 
 # Argumentos comunes a todas las configuraciones.
 COMMON = dict(
-    SupplyAirTempInputMethod="supply air temperature",  # ignorado por ex_*
-    Output_keep_existing=False,
-    Output_gen_dataframe=False,
-    EnergyPlus_version="auto",
-    confirmGen=True,
-    verboseMode=False,
+    supply_air_temp_method="supply air temperature",  # ignorado por ex_*
+    output_keep_existing=False,
+    output_gen_dataframe=False,
+    energyplus_version="auto",
+    confirm_generation=True,
+    verbose=False,
 )
 
 
@@ -58,28 +58,28 @@ def _cfg(id, source, version, **kwargs):
 # Matriz representativa: 4 ScriptTypes, standard/detailed/simplified, 3 versiones de
 # EnergyPlus, varios ComfStand/CAT/ComfMod, VentCtrl 0/1/2.
 CONFIGS = [
-    _cfg("vrf_mm_temp_v960", VRF960, "9.6", ScriptType="vrf_mm", TempCtrl="temperature",
-         Output_type="standard", Output_freqs=["hourly"],
-         ComfStand=[2], CAT=[80], ComfMod=[3], HVACmode=[2], VentCtrl=[0]),
-    _cfg("vrf_ac_temp_v960", VRF960, "9.6", ScriptType="vrf_ac", TempCtrl="temperature",
-         Output_type="standard", Output_freqs=["hourly"],
-         ComfStand=[2], CAT=[80], ComfMod=[3]),
+    _cfg("vrf_mm_temp_v960", VRF960, "9.6", script_type="vrf_mm", temp_control="temperature",
+         output_type="standard", output_freqs=["hourly"],
+         comfort_standard=[2], category=[80], comfort_mode=[3], hvac_mode=[2], vent_control=[0]),
+    _cfg("vrf_ac_temp_v960", VRF960, "9.6", script_type="vrf_ac", temp_control="temperature",
+         output_type="standard", output_freqs=["hourly"],
+         comfort_standard=[2], category=[80], comfort_mode=[3]),
     # NOTA: el camino LOTE con TempCtrl='pmv' esta ROTO en el codigo actual
     # (UnboundLocalError 'ComfStand_value' en accim_IDFgeneration.generate_idfs:1686, la
     # rama PMV reutiliza la variable de bucle de la rama 'temp'). Documentado en
     # test_known_bugs.py; se anadira aqui como golden cuando se corrija.
-    _cfg("vrf_mm_temp_v940", VRF940, "9.4", ScriptType="vrf_mm", TempCtrl="temperature",
-         Output_type="standard", Output_freqs=["hourly"],
-         ComfStand=[1], CAT=[3], ComfMod=[1], HVACmode=[2], VentCtrl=[1]),
-    _cfg("vrf_mm_temp_v2510", VRF2510, "25.1", ScriptType="vrf_mm", TempCtrl="temperature",
-         Output_type="detailed", Output_freqs=["hourly"],
-         ComfStand=[3], CAT=[80], ComfMod=[3], HVACmode=[2], VentCtrl=[2]),
-    _cfg("ex_mm_temp_v960", SF, "9.6", ScriptType="ex_mm", TempCtrl="temperature",
-         Output_type="standard", Output_freqs=["hourly"],
-         ComfStand=[2], CAT=[80], ComfMod=[3], HVACmode=[2], VentCtrl=[0]),
-    _cfg("ex_ac_temp_v960", SF, "9.6", ScriptType="ex_ac", TempCtrl="temperature",
-         Output_type="simplified", Output_freqs=["hourly"],
-         ComfStand=[2], CAT=[80], ComfMod=[3]),
+    _cfg("vrf_mm_temp_v940", VRF940, "9.4", script_type="vrf_mm", temp_control="temperature",
+         output_type="standard", output_freqs=["hourly"],
+         comfort_standard=[1], category=[3], comfort_mode=[1], hvac_mode=[2], vent_control=[1]),
+    _cfg("vrf_mm_temp_v2510", VRF2510, "25.1", script_type="vrf_mm", temp_control="temperature",
+         output_type="detailed", output_freqs=["hourly"],
+         comfort_standard=[3], category=[80], comfort_mode=[3], hvac_mode=[2], vent_control=[2]),
+    _cfg("ex_mm_temp_v960", SF, "9.6", script_type="ex_mm", temp_control="temperature",
+         output_type="standard", output_freqs=["hourly"],
+         comfort_standard=[2], category=[80], comfort_mode=[3], hvac_mode=[2], vent_control=[0]),
+    _cfg("ex_ac_temp_v960", SF, "9.6", script_type="ex_ac", temp_control="temperature",
+         output_type="simplified", output_freqs=["hourly"],
+         comfort_standard=[2], category=[80], comfort_mode=[3]),
 ]
 
 

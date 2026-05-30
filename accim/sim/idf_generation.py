@@ -18,7 +18,7 @@
 from accim.sim.ems.setast_models import get_SetAST_lines
 
 
-def input_data(self, ScriptType: str = None):
+def input_data(self, script_type: str = None):
     """Input data for IDF generation.
 
     :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
@@ -420,57 +420,57 @@ def input_data(self, ScriptType: str = None):
     if 99 in self.ComfStand_List:
         print('\nYou have requested the use of a custom comfort model. Please enter the following data necessary to build the custom comfort model:')
 
-        self.CustAST_m = float(input('\nEnter the m coefficient (slope) of comfort model linear regression (mx+n) (any number greater than 0): '))
-        while self.CustAST_m < 0:
-            print(f'          The number you entered for CustAST_m is {self.CustAST_m}, which is smaller than 0, and that is not allowed. ')
-            self.CustAST_m = float(input('          Enter the m coefficient (slope) of comfort model linear regression (mx+n) (any number greater than 0): '))
+        self.custom_ast_m = float(input('\nEnter the m coefficient (slope) of comfort model linear regression (mx+n) (any number greater than 0): '))
+        while self.custom_ast_m < 0:
+            print(f'          The number you entered for CustAST_m is {self.custom_ast_m}, which is smaller than 0, and that is not allowed. ')
+            self.custom_ast_m = float(input('          Enter the m coefficient (slope) of comfort model linear regression (mx+n) (any number greater than 0): '))
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CustAST_m = float(input('          Enter the m coefficient (slope) of comfort model linear regression (mx+n) (any number greater than 0): '))
+            self.custom_ast_m = float(input('          Enter the m coefficient (slope) of comfort model linear regression (mx+n) (any number greater than 0): '))
 
-        self.CustAST_n = float(input('\nEnter the n coefficient of comfort model linear regression (mx+n): '))
+        self.custom_ast_n = float(input('\nEnter the n coefficient of comfort model linear regression (mx+n): '))
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CustAST_n = float(input('          Enter the n coefficient of comfort model linear regression (mx+n): '))
+            self.custom_ast_n = float(input('          Enter the n coefficient of comfort model linear regression (mx+n): '))
 
-        self.CustAST_AHSToffset = float(input('\nEnter the offset from neutral temperature for the heating setpoint (value will be summed, therefore, it should be negative): '))
-        while self.CustAST_AHSToffset > 0:
-            print(f'          The number you entered for CustAST_AHSToffset is {self.CustAST_AHSToffset}, which is larger than 0, and that is not allowed. ')
-            self.CustAST_AHSToffset = float(input('          Enter the offset from neutral temperature for the heating setpoint (value will be summed, therefore, it should be negative): '))
+        self.custom_ast_ahst_offset = float(input('\nEnter the offset from neutral temperature for the heating setpoint (value will be summed, therefore, it should be negative): '))
+        while self.custom_ast_ahst_offset > 0:
+            print(f'          The number you entered for CustAST_AHSToffset is {self.custom_ast_ahst_offset}, which is larger than 0, and that is not allowed. ')
+            self.custom_ast_ahst_offset = float(input('          Enter the offset from neutral temperature for the heating setpoint (value will be summed, therefore, it should be negative): '))
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CustAST_AHSToffset = float(input('          Enter the offset from neutral temperature for the heating setpoint (value will be summed, therefore, it should be negative): '))
+            self.custom_ast_ahst_offset = float(input('          Enter the offset from neutral temperature for the heating setpoint (value will be summed, therefore, it should be negative): '))
 
-        self.CustAST_ACSToffset = float(input('\nEnter the offset from neutral temperature for the cooling setpoint (value will be summed, therefore, it should be positive): '))
-        while self.CustAST_ACSToffset < 0:
-            print(f'          The number you entered for CustAST_ACSToffset is {self.CustAST_ACSToffset}, which is smaller than 0, and that is not allowed. ')
-            self.CustAST_ACSToffset = float(input('          Enter the offset from neutral temperature for the cooling setpoint (value will be summed, therefore, it should be positive): '))
+        self.custom_ast_acst_offset = float(input('\nEnter the offset from neutral temperature for the cooling setpoint (value will be summed, therefore, it should be positive): '))
+        while self.custom_ast_acst_offset < 0:
+            print(f'          The number you entered for CustAST_ACSToffset is {self.custom_ast_acst_offset}, which is smaller than 0, and that is not allowed. ')
+            self.custom_ast_acst_offset = float(input('          Enter the offset from neutral temperature for the cooling setpoint (value will be summed, therefore, it should be positive): '))
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CustAST_ACSToffset = float(input('          Enter the offset from neutral temperature for the cooling setpoint (value will be summed, therefore, it should be positive): '))
+            self.custom_ast_acst_offset = float(input('          Enter the offset from neutral temperature for the cooling setpoint (value will be summed, therefore, it should be positive): '))
 
-        self.CustAST_ACSTall = float(input('\nEnter the value for the cooling setpoint applicability lower limit (ACSTall): '))
+        self.custom_ast_acst_all = float(input('\nEnter the value for the cooling setpoint applicability lower limit (ACSTall): '))
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CustAST_ACSTall = float(input('          Enter the value for the cooling setpoint applicability lower limit (ACSTall): '))
+            self.custom_ast_acst_all = float(input('          Enter the value for the cooling setpoint applicability lower limit (ACSTall): '))
 
-        self.CustAST_ACSTaul = float(input('\nEnter the value for the cooling setpoint applicability upper limit (ACSTaul): '))
+        self.custom_ast_acst_aul = float(input('\nEnter the value for the cooling setpoint applicability upper limit (ACSTaul): '))
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CustAST_ACSTaul = float(input('          Enter the value for the cooling setpoint applicability upper limit (ACSTaul): '))
+            self.custom_ast_acst_aul = float(input('          Enter the value for the cooling setpoint applicability upper limit (ACSTaul): '))
 
-        self.CustAST_AHSTall = float(
+        self.custom_ast_ahst_all = float(
             input('\nEnter the value for the heating setpoint applicability lower limit (ACSTall): '))
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CustAST_AHSTall = float(input('          Enter the value for the heating setpoint applicability lower limit (AHSTall): '))
+            self.custom_ast_ahst_all = float(input('          Enter the value for the heating setpoint applicability lower limit (AHSTall): '))
 
-        self.CustAST_AHSTaul = float(
+        self.custom_ast_ahst_aul = float(
             input('\nEnter the value for the heating setpoint applicability upper limit (ACSTall): '))
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CustAST_AHSTaul = float(input('          Enter the value for the heating setpoint applicability upper limit (AHSTaul): '))
+            self.custom_ast_ahst_aul = float(input('          Enter the value for the heating setpoint applicability upper limit (AHSTaul): '))
     else:
-        self.CustAST_m = 0
-        self.CustAST_n = 0
-        self.CustAST_AHSToffset = 0
-        self.CustAST_ACSToffset = 0
-        self.CustAST_ACSTall = 0
-        self.CustAST_ACSTaul = 0
-        self.CustAST_AHSTall = 0
-        self.CustAST_AHSTaul = 0
+        self.custom_ast_m = 0
+        self.custom_ast_n = 0
+        self.custom_ast_ahst_offset = 0
+        self.custom_ast_acst_offset = 0
+        self.custom_ast_acst_all = 0
+        self.custom_ast_acst_aul = 0
+        self.custom_ast_ahst_all = 0
+        self.custom_ast_ahst_aul = 0
 
     print('\n')
     for i in self.ComfStand_List:
@@ -530,143 +530,143 @@ def input_data(self, ScriptType: str = None):
             self.ComfMod_List = list(
                 float(num) for num in input("     Enter the Comfort Mode numbers separated by space: ").split())
     try:
-        self.SetpointAcc = float(input('\nEnter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
+        self.setpoint_accuracy = float(input('\nEnter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
     except ValueError:
-        self.SetpointAcc = 100
-    while self.SetpointAcc < 0:
+        self.setpoint_accuracy = 100
+    while self.setpoint_accuracy < 0:
         print('          The setpoint accuracy number is not correct. It must be a number greater than 0. Please enter the number again.')
-        self.SetpointAcc = float(input('         Enter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
+        self.setpoint_accuracy = float(input('         Enter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
     while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
         try:
-            self.SetpointAcc = float(input('      Enter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
+            self.setpoint_accuracy = float(input('      Enter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
         except ValueError:
-            self.SetpointAcc = 100
-        while self.SetpointAcc < 0:
+            self.setpoint_accuracy = 100
+        while self.setpoint_accuracy < 0:
             print('          The setpoint accuracy number is not correct. It must be a number greater than 0. Please enter the number again.')
             try:
-                self.SetpointAcc = float(input('      Enter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
+                self.setpoint_accuracy = float(input('      Enter the setpoint accuracy number (any number greater than 0, if omitted will be 100): '))
             except ValueError:
-                self.SetpointAcc = 100
+                self.setpoint_accuracy = 100
     try:
-        self.CATcoolOffset = float(input('\nEnter the number for the CAT cooling offset modifier (value will be summed to the ACST, if omitted will be 0): '))
+        self.category_cool_offset = float(input('\nEnter the number for the CAT cooling offset modifier (value will be summed to the ACST, if omitted will be 0): '))
     except ValueError:
-        self.CATcoolOffset = 0.0
+        self.category_cool_offset = 0.0
     while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
         try:
-            self.CATcoolOffset = float(input('\n        Enter the number for the CAT cooling offset modifier (value will be summed to the ACST, if omitted will be 0): '))
+            self.category_cool_offset = float(input('\n        Enter the number for the CAT cooling offset modifier (value will be summed to the ACST, if omitted will be 0): '))
         except ValueError:
-            self.CATcoolOffset = 0.0
+            self.category_cool_offset = 0.0
 
     try:
-        self.CATheatOffset = float(input('\nEnter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
+        self.category_heat_offset = float(input('\nEnter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
     except ValueError:
-        self.CATheatOffset = 0.0
+        self.category_heat_offset = 0.0
     while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
         try:
-            self.CATheatOffset = float(input('\n        Enter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
+            self.category_heat_offset = float(input('\n        Enter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
         except ValueError:
-            self.CATheatOffset = 0.0
-    while self.CATheatOffset > self.CATcoolOffset:
-        print(f'          You have entered a CATheatOffset ({self.CATheatOffset}) larger than the CATcoolOffset ({self.CATcoolOffset}), '
+            self.category_heat_offset = 0.0
+    while self.category_heat_offset > self.category_cool_offset:
+        print(f'          You have entered a CATheatOffset ({self.category_heat_offset}) larger than the CATcoolOffset ({self.category_cool_offset}), '
               f'which will probably lead to an error in the EnergyPlus simulation.')
         try:
-            self.CATheatOffset = float(input('\n        Enter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
+            self.category_heat_offset = float(input('\n        Enter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
         except ValueError:
-            self.CATheatOffset = 0.0
+            self.category_heat_offset = 0.0
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
             try:
-                self.CATheatOffset = float(input('\n        Enter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
+                self.category_heat_offset = float(input('\n        Enter the number for the CAT heating offset modifier (value will be summed to the AHST, if omitted will be 0): '))
             except ValueError:
-                self.CATheatOffset = 0.0
+                self.category_heat_offset = 0.0
         # self.CATheatOffset = float(input('\nEnter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
         # while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
         #     self.CATheatOffset = float(input('      Enter the number for the CAT heating offset modifier (value will be summed to the AHST): '))
 
     if (any(i in [1, 2] for i in self.ComfStand_List) and 0 in self.ComfMod_List) or 22 in self.ComfStand_List:
-        self.CoolSeasonStart = list(
+        self.cooling_season_start = list(
             int(num)
             for num
             in input("\nEnter the start of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
         )
-        if len(self.CoolSeasonStart) == 1:
-            day_of_year = self.CoolSeasonStart[0]
-        elif len(self.CoolSeasonStart) == 2:
+        if len(self.cooling_season_start) == 1:
+            day_of_year = self.cooling_season_start[0]
+        elif len(self.cooling_season_start) == 2:
             from datetime import date
-            day_of_year = date(2007, self.CoolSeasonStart[1], self.CoolSeasonStart[0]).timetuple().tm_yday
+            day_of_year = date(2007, self.cooling_season_start[1], self.cooling_season_start[0]).timetuple().tm_yday
         while day_of_year < 1 or day_of_year > 365:
             print('          The start for cooling season is not correct. It must be a numeric date format dd/mm or the day of the year. Please enter the value again.')
-            self.CoolSeasonStart = list(
+            self.cooling_season_start = list(
                 int(num)
                 for num
                 in input("Enter the start of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
             )
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CoolSeasonStart = list(
+            self.cooling_season_start = list(
                 int(num)
                 for num
                 in input("Enter the start of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
             )
-            if len(self.CoolSeasonStart) == 1:
-                day_of_year = self.CoolSeasonStart[0]
-            elif len(self.CoolSeasonStart) == 2:
-                day_of_year = date(2007, self.CoolSeasonStart[1], self.CoolSeasonStart[0]).timetuple().tm_yday
+            if len(self.cooling_season_start) == 1:
+                day_of_year = self.cooling_season_start[0]
+            elif len(self.cooling_season_start) == 2:
+                day_of_year = date(2007, self.cooling_season_start[1], self.cooling_season_start[0]).timetuple().tm_yday
             while day_of_year < 1 or day_of_year > 365:
                 print('          The start for cooling season is not correct. It must be a numeric date format dd/mm or the day of the year. Please enter the value again.')
-                self.CoolSeasonStart = list(
+                self.cooling_season_start = list(
                     int(num)
                     for num
                     in input("Enter the start of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
                 )
-                if len(self.CoolSeasonStart) == 1:
-                    day_of_year = self.CoolSeasonStart[0]
-                elif len(self.CoolSeasonStart) == 2:
-                    day_of_year = date(2007, self.CoolSeasonStart[1], self.CoolSeasonStart[0]).timetuple().tm_yday
-        self.CoolSeasonStart = day_of_year
+                if len(self.cooling_season_start) == 1:
+                    day_of_year = self.cooling_season_start[0]
+                elif len(self.cooling_season_start) == 2:
+                    day_of_year = date(2007, self.cooling_season_start[1], self.cooling_season_start[0]).timetuple().tm_yday
+        self.cooling_season_start = day_of_year
 
-        self.CoolSeasonEnd = list(
+        self.cooling_season_end = list(
             int(num)
             for num
             in input("\nEnter the end of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
         )
-        if len(self.CoolSeasonEnd) == 1:
-            day_of_year = self.CoolSeasonEnd[0]
-        elif len(self.CoolSeasonEnd) == 2:
+        if len(self.cooling_season_end) == 1:
+            day_of_year = self.cooling_season_end[0]
+        elif len(self.cooling_season_end) == 2:
             from datetime import date
-            day_of_year = date(2007, self.CoolSeasonEnd[1], self.CoolSeasonEnd[0]).timetuple().tm_yday
+            day_of_year = date(2007, self.cooling_season_end[1], self.cooling_season_end[0]).timetuple().tm_yday
         while day_of_year < 1 or day_of_year > 365:
             print('          The end for cooling season is not correct. It must be a numeric date format dd/mm or the day of the year. Please enter the value again.')
-            self.CoolSeasonEnd = list(
+            self.cooling_season_end = list(
                 int(num)
                 for num
                 in input("Enter the end of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
             )
         while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-            self.CoolSeasonEnd = list(
+            self.cooling_season_end = list(
                 int(num)
                 for num
                 in input("Enter the end of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
             )
-            if len(self.CoolSeasonEnd) == 1:
-                day_of_year = self.CoolSeasonEnd[0]
-            elif len(self.CoolSeasonEnd) == 2:
-                day_of_year = date(2007, self.CoolSeasonEnd[1], self.CoolSeasonEnd[0]).timetuple().tm_yday
+            if len(self.cooling_season_end) == 1:
+                day_of_year = self.cooling_season_end[0]
+            elif len(self.cooling_season_end) == 2:
+                day_of_year = date(2007, self.cooling_season_end[1], self.cooling_season_end[0]).timetuple().tm_yday
             while day_of_year < 1 or day_of_year > 365:
                 print('          The end for cooling season is not correct. It must be a numeric date format dd/mm or the day of the year. Please enter the value again.')
-                self.CoolSeasonEnd = list(
+                self.cooling_season_end = list(
                     int(num)
                     for num
                     in input("Enter the end of the cooling season in numeric date format dd/mm or the day of the year: ").split('/')
                 )
-                if len(self.CoolSeasonEnd) == 1:
-                    day_of_year = self.CoolSeasonEnd[0]
-                elif len(self.CoolSeasonEnd) == 2:
-                    day_of_year = date(2007, self.CoolSeasonEnd[1], self.CoolSeasonEnd[0]).timetuple().tm_yday
-        self.CoolSeasonEnd = day_of_year
+                if len(self.cooling_season_end) == 1:
+                    day_of_year = self.cooling_season_end[0]
+                elif len(self.cooling_season_end) == 2:
+                    day_of_year = date(2007, self.cooling_season_end[1], self.cooling_season_end[0]).timetuple().tm_yday
+        self.cooling_season_end = day_of_year
     else:
-        self.CoolSeasonStart = 121
-        self.CoolSeasonEnd = 274
+        self.cooling_season_start = 121
+        self.cooling_season_end = 274
 
-    if 'mm' in ScriptType.lower():
+    if 'mm' in script_type.lower():
         fullHVACmodeList = [0, 1, 2]
         self.HVACmode_List = list(int(num) for num in input(
             "\nEnter the HVAC Mode numbers separated by space (\n"
@@ -711,61 +711,61 @@ def input_data(self, ScriptType: str = None):
                     "     Enter the Ventilation Control numbers separated by space: ").split())
 
         if any([i in self.VentCtrl_List for i in [2, 3]]):
-            self.MaxTempDiffVOF = float(input('Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
-            while self.MaxTempDiffVOF <= 0:
+            self.vof_max_temp_diff = float(input('Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+            while self.vof_max_temp_diff <= 0:
                 print('          The maximum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
-                self.MaxTempDiffVOF = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                self.vof_max_temp_diff = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
             while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-                self.MaxTempDiffVOF = float(input('      Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
-                while self.MaxTempDiffVOF <= 0:
+                self.vof_max_temp_diff = float(input('      Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                while self.vof_max_temp_diff <= 0:
                     print('          The maximum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
-                    self.MaxTempDiffVOF = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                    self.vof_max_temp_diff = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
 
-            self.MinTempDiffVOF = float(input('Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
-            while self.MinTempDiffVOF <= 0:
+            self.vof_min_temp_diff = float(input('Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
+            while self.vof_min_temp_diff <= 0:
                 print('          The minimum temperature difference number is not correct. It must be a number larger than 0 and smaller than the maximum temperature difference number. Please enter the number again.')
-                self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
+                self.vof_min_temp_diff = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
             while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-                self.MinTempDiffVOF = float(input('      Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
-                while self.MinTempDiffVOF <= 0:
+                self.vof_min_temp_diff = float(input('      Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
+                while self.vof_min_temp_diff <= 0:
                     print('          The minimum temperature difference number is not correct. It must be a number larger than 0 and smaller than the maximum temperature difference number. Please enter the number again.')
-                    self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
+                    self.vof_min_temp_diff = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
 
-            while self.MinTempDiffVOF >= self.MaxTempDiffVOF:
+            while self.vof_min_temp_diff >= self.vof_max_temp_diff:
                 print('The minimum temperature difference number you entered is larger than or equal to the maximum temperature difference number. Please enter both maximum and minimum temperature difference numbers again.')
-                self.MaxTempDiffVOF = float(input('Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
-                while self.MaxTempDiffVOF <= 0:
+                self.vof_max_temp_diff = float(input('Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                while self.vof_max_temp_diff <= 0:
                     print('          The maximum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
-                    self.MaxTempDiffVOF = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                    self.vof_max_temp_diff = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
                 while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-                    self.MaxTempDiffVOF = float(input('      Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
-                    while self.MaxTempDiffVOF <= 0:
+                    self.vof_max_temp_diff = float(input('      Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                    while self.vof_max_temp_diff <= 0:
                         print('          The maximum temperature difference number is not correct. It must be a number larger than 0. Please enter the number again.')
-                        self.MaxTempDiffVOF = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
+                        self.vof_max_temp_diff = float(input('         Enter the maximum temperature difference number for Ventilation Opening Factor (any number larger than 0): '))
 
-                self.MinTempDiffVOF = float(input('Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
-                while self.MinTempDiffVOF <= 0:
+                self.vof_min_temp_diff = float(input('Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
+                while self.vof_min_temp_diff <= 0:
                     print('          The minimum temperature difference number is not correct. It must be a number larger than 0 and smaller than the maximum temperature difference number. Please enter the number again.')
-                    self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
+                    self.vof_min_temp_diff = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
                 while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-                    self.MinTempDiffVOF = float(input('      Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
-                    while self.MinTempDiffVOF <= 0:
+                    self.vof_min_temp_diff = float(input('      Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
+                    while self.vof_min_temp_diff <= 0:
                         print('          The minimum temperature difference number is not correct. It must be a number larger than 0 and smaller than the maximum temperature difference number. Please enter the number again.')
-                        self.MinTempDiffVOF = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
+                        self.vof_min_temp_diff = float(input('         Enter the minimum temperature difference number for Ventilation Opening Factor (any number larger than 0 and smaller than the maximum temperature difference number): '))
 
-            self.MultiplierVOF = float(input('Enter the multiplier number for Ventilation Opening Factor (any number between 0 and 1): '))
-            while self.MultiplierVOF < 0 or self.MultiplierVOF > 1:
+            self.vof_multiplier = float(input('Enter the multiplier number for Ventilation Opening Factor (any number between 0 and 1): '))
+            while self.vof_multiplier < 0 or self.vof_multiplier > 1:
                 print('          The multiplier number is not correct. It must be a number between 0 and 1. Please enter the number again.')
-                self.MultiplierVOF = float(input('         Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
+                self.vof_multiplier = float(input('         Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
             while input('          Are you sure the number is correct? [y or [] / n]: ') == 'n':
-                self.MultiplierVOF = float(input('      Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
-                while self.MultiplierVOF < 0 or self.MultiplierVOF > 1:
+                self.vof_multiplier = float(input('      Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
+                while self.vof_multiplier < 0 or self.vof_multiplier > 1:
                     print('          The multiplier number is not correct. It must be a number between 0 and 1. Please enter the number again.')
-                    self.MultiplierVOF = float(input('         Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
+                    self.vof_multiplier = float(input('         Enter the multiplier number for modulating the Ventilation Opening Factor (any number between 0 and 1): '))
         else:
-            self.MaxTempDiffVOF = 6
-            self.MinTempDiffVOF = 1
-            self.MultiplierVOF = 0.25
+            self.vof_max_temp_diff = 6
+            self.vof_min_temp_diff = 1
+            self.vof_multiplier = 0.25
 
         self.VSToffset_List = list(float(num) for num in input(
             "\nEnter the VSToffset numbers separated by space (if omitted, will be 0): ").split())
@@ -796,12 +796,12 @@ def input_data(self, ScriptType: str = None):
                 "     Enter the MaxWindSpeed numbers separated by space (if omitted, will be 50): ").split())
             if len(self.MaxWindSpeed_List) == 0:
                 self.MaxWindSpeed_List = [float(50)]
-    elif 'ac' in ScriptType.lower():
+    elif 'ac' in script_type.lower():
         self.HVACmode_List = [0]
         self.VentCtrl_List = [0]
-        self.MaxTempDiffVOF = 1
-        self.MinTempDiffVOF = 0
-        self.MultiplierVOF = 0
+        self.vof_max_temp_diff = 1
+        self.vof_min_temp_diff = 0
+        self.vof_multiplier = 0
         self.VSToffset_List = [0]
         self.MinOToffset_List = [0]
         self.MaxWindSpeed_List = [0]
@@ -839,25 +839,25 @@ def input_data(self, ScriptType: str = None):
     self.user_input_arguments = {
         'ComfStand': self.ComfStand_List,
         'CAT': self.CAT_List,
-        'CATcoolOffset': self.CATcoolOffset,
-        'CATheatOffset': self.CATheatOffset,
+        'CATcoolOffset': self.category_cool_offset,
+        'CATheatOffset': self.category_heat_offset,
         'ComfMod': self.ComfMod_List,
-        'SetpointAcc': self.SetpointAcc,
-        'CustAST_ACSTaul': self.CustAST_ACSTaul,
-        'CustAST_ACSTall': self.CustAST_ACSTall,
-        'CustAST_AHSTaul': self.CustAST_AHSTaul,
-        'CustAST_AHSTall': self.CustAST_AHSTall,
-        'CustAST_m': self.CustAST_m,
-        'CustAST_n': self.CustAST_n,
-        'CustAST_ACSToffset': self.CustAST_ACSToffset,
-        'CustAST_AHSToffset': self.CustAST_AHSToffset,
-        'CoolSeasonStart': self.CoolSeasonStart,
-        'CoolSeasonEnd': self.CoolSeasonEnd,
+        'SetpointAcc': self.setpoint_accuracy,
+        'CustAST_ACSTaul': self.custom_ast_acst_aul,
+        'CustAST_ACSTall': self.custom_ast_acst_all,
+        'CustAST_AHSTaul': self.custom_ast_ahst_aul,
+        'CustAST_AHSTall': self.custom_ast_ahst_all,
+        'CustAST_m': self.custom_ast_m,
+        'CustAST_n': self.custom_ast_n,
+        'CustAST_ACSToffset': self.custom_ast_acst_offset,
+        'CustAST_AHSToffset': self.custom_ast_ahst_offset,
+        'CoolSeasonStart': self.cooling_season_start,
+        'CoolSeasonEnd': self.cooling_season_end,
         'HVACmode': self.HVACmode_List,
         'VentCtrl': self.VentCtrl_List,
-        'MaxTempDiffVOF': self.MaxTempDiffVOF,
-        'MinTempDiffVOF': self.MinTempDiffVOF,
-        'MultiplierVOF': self.MultiplierVOF,
+        'MaxTempDiffVOF': self.vof_max_temp_diff,
+        'MinTempDiffVOF': self.vof_min_temp_diff,
+        'MultiplierVOF': self.vof_multiplier,
         'VSToffset': self.VSToffset_List,
         'MinOToffset': self.MinOToffset_List,
         'MaxWindSpeed': self.MaxWindSpeed_List,
@@ -868,38 +868,38 @@ def input_data(self, ScriptType: str = None):
 
 
 def generate_idfs(self,
-    ScriptType: str = None,
-    TempCtrl: str = None,
-    ComfStand: list = None,
-    CAT: list = None,
-    CATcoolOffset: float = 0,
-    CATheatOffset: float = 0,
-    ComfMod: list = None,
-    SetpointAcc: float = 10000,
-    CustAST_ACSTaul: float = 0,
-    CustAST_ACSTall: float = 0,
-    CustAST_AHSTaul: float = 0,
-    CustAST_AHSTall: float = 0,
-    CustAST_m: float = 0,
-    CustAST_n: float = 0,
-    CustAST_ACSToffset: float = 0,
-    CustAST_AHSToffset: float = 0,
-    CoolSeasonStart=121,
-    CoolSeasonEnd=274,
-    HVACmode: list = None,
-    VentCtrl: list = None,
-    MaxTempDiffVOF: float = 6,
-    MinTempDiffVOF: float = 1,
-    MultiplierVOF: float = 0.25,
-    VSToffset: list = [0],
-    MinOToffset: list = [50],
-    MaxWindSpeed: list = [50],
-    ASTtol_start: float = 0.1,
-    ASTtol_end_input: float = 0.1,
-    ASTtol_steps: float = 0.1,
-    NameSuffix: str = '',
-    verboseMode: bool = True,
-    confirmGen: bool = None,
+    script_type: str = None,
+    temp_control: str = None,
+    comfort_standard: list = None,
+    category: list = None,
+    category_cool_offset: float = 0,
+    category_heat_offset: float = 0,
+    comfort_mode: list = None,
+    setpoint_accuracy: float = 10000,
+    custom_ast_acst_aul: float = 0,
+    custom_ast_acst_all: float = 0,
+    custom_ast_ahst_aul: float = 0,
+    custom_ast_ahst_all: float = 0,
+    custom_ast_m: float = 0,
+    custom_ast_n: float = 0,
+    custom_ast_acst_offset: float = 0,
+    custom_ast_ahst_offset: float = 0,
+    cooling_season_start=121,
+    cooling_season_end=274,
+    hvac_mode: list = None,
+    vent_control: list = None,
+    vof_max_temp_diff: float = 6,
+    vof_min_temp_diff: float = 1,
+    vof_multiplier: float = 0.25,
+    vent_setpoint_offset: list = [0],
+    min_outdoor_temp_offset: list = [50],
+    max_wind_speed: list = [50],
+    ast_tol_start: float = 0.1,
+    ast_tol_end: float = 0.1,
+    ast_tol_steps: float = 0.1,
+    name_suffix: str = '',
+    verbose: bool = True,
+    confirm_generation: bool = None,
     filelist_pymod: list = None
 ):
     """Generate IDFs.
@@ -947,66 +947,66 @@ def generate_idfs(self,
     # import time
     # from tqdm import tqdm
 
-    arguments = (ComfStand is None,
-                 CAT is None,
-                 CATcoolOffset == 0,
-                 CATheatOffset == 0,
-                 ComfMod is None,
-                 SetpointAcc == 10000,
-                 CustAST_ACSTaul == 0,
-                 CustAST_ACSTall == 0,
-                 CustAST_AHSTaul == 0,
-                 CustAST_AHSTall == 0,
-                 CustAST_m == 0,
-                 CustAST_n == 0,
-                 CustAST_ACSToffset == 0,
-                 CustAST_AHSToffset == 0,
-                 CoolSeasonStart == 121,
-                 CoolSeasonEnd == 274,
-                 HVACmode is None,
-                 VentCtrl is None,
-                 MaxTempDiffVOF == 6,
-                 MinTempDiffVOF == 1,
-                 MultiplierVOF == 0.25,
-                 VSToffset == [0],
-                 MinOToffset == [50],
-                 MaxWindSpeed == [50],
-                 ASTtol_start == 0.1,
-                 ASTtol_end_input == 0.1,
-                 ASTtol_steps == 0.1)
+    arguments = (comfort_standard is None,
+                 category is None,
+                 category_cool_offset == 0,
+                 category_heat_offset == 0,
+                 comfort_mode is None,
+                 setpoint_accuracy == 10000,
+                 custom_ast_acst_aul == 0,
+                 custom_ast_acst_all == 0,
+                 custom_ast_ahst_aul == 0,
+                 custom_ast_ahst_all == 0,
+                 custom_ast_m == 0,
+                 custom_ast_n == 0,
+                 custom_ast_acst_offset == 0,
+                 custom_ast_ahst_offset == 0,
+                 cooling_season_start == 121,
+                 cooling_season_end == 274,
+                 hvac_mode is None,
+                 vent_control is None,
+                 vof_max_temp_diff == 6,
+                 vof_min_temp_diff == 1,
+                 vof_multiplier == 0.25,
+                 vent_setpoint_offset == [0],
+                 min_outdoor_temp_offset == [50],
+                 max_wind_speed == [50],
+                 ast_tol_start == 0.1,
+                 ast_tol_end == 0.1,
+                 ast_tol_steps == 0.1)
     if all(arguments):
         self.ASTtol_value_to = self.ASTtol_value_to_input + self.ASTtol_value_steps
     else:
-        ASTtol_end = ASTtol_end_input + ASTtol_steps
+        ASTtol_end = ast_tol_end + ast_tol_steps
 
     if all(arguments):
         self.ASTtol_value_from = round(self.ASTtol_value_from, 2)
         self.ASTtol_value_to = round(self.ASTtol_value_to, 2)
         self.ASTtol_value_steps = round(self.ASTtol_value_steps, 2)
     else:
-        self.ComfStand_List = ComfStand
-        self.CAT_List = CAT
-        self.ComfMod_List = ComfMod
-        self.SetpointAcc = SetpointAcc
-        self.CATcoolOffset = CATcoolOffset
-        self.CATheatOffset = CATheatOffset
-        self.CustAST_ACSTaul = CustAST_ACSTaul
-        self.CustAST_ACSTall = CustAST_ACSTall
-        self.CustAST_AHSTaul = CustAST_AHSTaul
-        self.CustAST_AHSTall = CustAST_AHSTall
-        self.CustAST_m = CustAST_m
-        self.CustAST_n = CustAST_n
-        self.CustAST_ACSToffset = CustAST_ACSToffset
-        self.CustAST_AHSToffset = CustAST_AHSToffset
+        self.ComfStand_List = comfort_standard
+        self.CAT_List = category
+        self.ComfMod_List = comfort_mode
+        self.setpoint_accuracy = setpoint_accuracy
+        self.category_cool_offset = category_cool_offset
+        self.category_heat_offset = category_heat_offset
+        self.custom_ast_acst_aul = custom_ast_acst_aul
+        self.custom_ast_acst_all = custom_ast_acst_all
+        self.custom_ast_ahst_aul = custom_ast_ahst_aul
+        self.custom_ast_ahst_all = custom_ast_ahst_all
+        self.custom_ast_m = custom_ast_m
+        self.custom_ast_n = custom_ast_n
+        self.custom_ast_acst_offset = custom_ast_acst_offset
+        self.custom_ast_ahst_offset = custom_ast_ahst_offset
 
         
-        if type(CoolSeasonStart) is str:
-            CoolSeasonStart = list(int(num) for num in CoolSeasonStart.split('/'))
+        if type(cooling_season_start) is str:
+            cooling_season_start = list(int(num) for num in cooling_season_start.split('/'))
             from datetime import date
-            day_of_year = date(2007, CoolSeasonStart[1], CoolSeasonStart[0]).timetuple().tm_yday
-        elif type(CoolSeasonStart) is int:
-            day_of_year = CoolSeasonStart
-        self.CoolSeasonStart = day_of_year
+            day_of_year = date(2007, cooling_season_start[1], cooling_season_start[0]).timetuple().tm_yday
+        elif type(cooling_season_start) is int:
+            day_of_year = cooling_season_start
+        self.cooling_season_start = day_of_year
         
         # CoolSeasonEnd = list(int(num) for num in CoolSeasonEnd.split('/'))
         # if len(CoolSeasonEnd) == 1:
@@ -1015,53 +1015,53 @@ def generate_idfs(self,
         #     from datetime import date
         #     day_of_year = date(2007, CoolSeasonEnd[1], CoolSeasonEnd[0]).timetuple().tm_yday
         # self.CoolSeasonEnd = day_of_year
-        if type(CoolSeasonEnd) is str:
-            CoolSeasonEnd = list(int(num) for num in CoolSeasonEnd.split('/'))
+        if type(cooling_season_end) is str:
+            cooling_season_end = list(int(num) for num in cooling_season_end.split('/'))
             from datetime import date
-            day_of_year = date(2007, CoolSeasonEnd[1], CoolSeasonEnd[0]).timetuple().tm_yday
-        elif type(CoolSeasonEnd) is int:
-            day_of_year = CoolSeasonEnd
-        self.CoolSeasonEnd = day_of_year
+            day_of_year = date(2007, cooling_season_end[1], cooling_season_end[0]).timetuple().tm_yday
+        elif type(cooling_season_end) is int:
+            day_of_year = cooling_season_end
+        self.cooling_season_end = day_of_year
 
         
-        self.HVACmode_List = HVACmode
-        self.VentCtrl_List = VentCtrl
-        self.MaxTempDiffVOF = MaxTempDiffVOF,
-        self.MinTempDiffVOF = MinTempDiffVOF,
-        self.MultiplierVOF = MultiplierVOF,
-        self.VSToffset_List = VSToffset
-        self.MinOToffset_List = MinOToffset
-        self.MaxWindSpeed_List = MaxWindSpeed
-        self.ASTtol_value_from = round(ASTtol_start, 2)
+        self.HVACmode_List = hvac_mode
+        self.VentCtrl_List = vent_control
+        self.vof_max_temp_diff = vof_max_temp_diff,
+        self.vof_min_temp_diff = vof_min_temp_diff,
+        self.vof_multiplier = vof_multiplier,
+        self.VSToffset_List = vent_setpoint_offset
+        self.MinOToffset_List = min_outdoor_temp_offset
+        self.MaxWindSpeed_List = max_wind_speed
+        self.ASTtol_value_from = round(ast_tol_start, 2)
         self.ASTtol_value_to = round(ASTtol_end, 2)
-        self.ASTtol_value_steps = round(ASTtol_steps, 2)
+        self.ASTtol_value_steps = round(ast_tol_steps, 2)
 
-    if 'ac' in ScriptType.lower():
+    if 'ac' in script_type.lower():
         self.HVACmode_List = [0]
         self.VentCtrl_List = [0]
-        self.MaxTempDiffVOF = 1,
-        self.MinTempDiffVOF = 0,
-        self.MultiplierVOF = 0,
+        self.vof_max_temp_diff = 1,
+        self.vof_min_temp_diff = 0,
+        self.vof_multiplier = 0,
         self.VSToffset_List = [0]
         self.MinOToffset_List = [0]
         self.MaxWindSpeed_List = [0]
 
     if any([i in self.VentCtrl_List for i in [2, 3]]):
-        if type(self.MaxTempDiffVOF) is tuple:
-            self.MaxTempDiffVOF = self.MaxTempDiffVOF[0]
-        if type(self.MinTempDiffVOF) is tuple:
-            self.MinTempDiffVOF = self.MinTempDiffVOF[0]
-        if type(self.MultiplierVOF) is tuple:
-            self.MultiplierVOF = self.MultiplierVOF[0]
+        if type(self.vof_max_temp_diff) is tuple:
+            self.vof_max_temp_diff = self.vof_max_temp_diff[0]
+        if type(self.vof_min_temp_diff) is tuple:
+            self.vof_min_temp_diff = self.vof_min_temp_diff[0]
+        if type(self.vof_multiplier) is tuple:
+            self.vof_multiplier = self.vof_multiplier[0]
 
     self.VSToffset_List = [float(i) for i in self.VSToffset_List]
     self.MinOToffset_List = [float(i) for i in self.MinOToffset_List]
     self.MaxWindSpeed_List = [float(i) for i in self.MaxWindSpeed_List]
 
-    if NameSuffix == '':
+    if name_suffix == '':
         suffix = '[NS_X'
     else:
-        suffix = '[NS_' + NameSuffix
+        suffix = '[NS_' + name_suffix
 
     if filelist_pymod is None:
         filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])
@@ -1101,7 +1101,7 @@ def generate_idfs(self,
     outputlist = []
     for file in filelist_pymod:
         filename = file.replace('_pymod', '')
-        if TempCtrl.lower() == 'temp' or TempCtrl.lower() == 'temperature':
+        if temp_control.lower() == 'temp' or temp_control.lower() == 'temperature':
             for ComfStand_value in self.ComfStand_List:
                 if ComfStand_value == 0:
                     for HVACmode_value in self.HVACmode_List:
@@ -1274,7 +1274,7 @@ def generate_idfs(self,
                                                                             + '.idf'
                                                                     )
                                                                     outputlist.append(outputname)
-        elif TempCtrl.lower() == 'pmv':
+        elif temp_control.lower() == 'pmv':
             outputname = (
                     filename
                     + '[CS_PMV'
@@ -1291,20 +1291,20 @@ def generate_idfs(self,
             )
             outputlist.append(outputname)
 
-    if verboseMode:
+    if verbose:
         print('The list of output IDFs is going to be:')
         print(*outputlist, sep="\n")
         print(f'And the total number of output IDFs is going to be {len(outputlist)}')
 
-    if confirmGen is None:
-        confirmGen = input('Do you still want to run ACCIS? [y/n]: ')
-        if confirmGen == 'y':
-            confirmGen = True
+    if confirm_generation is None:
+        confirm_generation = input('Do you still want to run ACCIS? [y/n]: ')
+        if confirm_generation == 'y':
+            confirm_generation = True
         else:
-            confirmGen = False
+            confirm_generation = False
 
-    if confirmGen == True:
-        if verboseMode:
+    if confirm_generation == True:
+        if verbose:
             print('Generating the following output IDF files:')
         # pbar = tqdm(total=len(outputlist))
         # self.output_idf_dict = {}
@@ -1333,7 +1333,7 @@ def generate_idfs(self,
                        program.Name == 'SetComfTemp'])
             SetAppLimits= ([program for program in idf1.idfobjects['EnergyManagementSystem:Program'] if
                        program.Name == 'SetAppLimits'])
-            if TempCtrl.lower() == 'temp' or TempCtrl.lower() == 'temperature':
+            if temp_control.lower() == 'temp' or temp_control.lower() == 'temperature':
                 for ComfStand_value in self.ComfStand_List:
                     SetInputData[0].Program_Line_1 = 'set ComfStand = ' + str(ComfStand_value)
                     if ComfStand_value == 0:
@@ -1346,11 +1346,11 @@ def generate_idfs(self,
                                                                  self.ASTtol_value_steps):
                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
-                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
-                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
-                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
-                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
-                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
+                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.cooling_season_start)
+                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.cooling_season_end)
+                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.category_cool_offset)
+                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.category_heat_offset)
+                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.setpoint_accuracy)
                                     outputname = (
                                             filename
                                             + ComfStand_dict[ComfStand_value]
@@ -1365,7 +1365,7 @@ def generate_idfs(self,
                                             + suffix
                                             + '.idf'
                                     )
-                                    if verboseMode:
+                                    if verbose:
                                         print(outputname)
                                         # time.sleep(0.1)
                                         # pbar.update(1)
@@ -1381,9 +1381,9 @@ def generate_idfs(self,
                                     SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + str(VentCtrl_value)
                                     if HVACmode_value == 2:
                                         if VentCtrl_value == 2 or VentCtrl_value == 3:
-                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + str(self.MaxTempDiffVOF)
-                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + str(self.MinTempDiffVOF)
-                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + str(self.MultiplierVOF)
+                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + str(self.vof_max_temp_diff)
+                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + str(self.vof_min_temp_diff)
+                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + str(self.vof_multiplier)
                                     for VSToffset_value in self.VSToffset_List:
                                         SetInputData[0].Program_Line_6 = 'set VSToffset = ' + str(VSToffset_value)
                                         for MinOToffset_value in self.MinOToffset_List:
@@ -1397,11 +1397,11 @@ def generate_idfs(self,
                                                                                  self.ASTtol_value_steps):
                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
-                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
-                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
-                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
-                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
-                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
+                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.cooling_season_start)
+                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.cooling_season_end)
+                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.category_cool_offset)
+                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.category_heat_offset)
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.setpoint_accuracy)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
@@ -1416,7 +1416,7 @@ def generate_idfs(self,
                                                             + suffix
                                                             + '.idf'
                                                     )
-                                                    if verboseMode:
+                                                    if verbose:
                                                         print(outputname)
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
@@ -1450,11 +1450,11 @@ def generate_idfs(self,
                                                                                  self.ASTtol_value_steps):
                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
-                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
-                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
-                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
-                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
-                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
+                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.cooling_season_start)
+                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.cooling_season_end)
+                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.category_cool_offset)
+                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.category_heat_offset)
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.setpoint_accuracy)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
@@ -1469,7 +1469,7 @@ def generate_idfs(self,
                                                             + suffix
                                                             + '.idf'
                                                     )
-                                                    if verboseMode:
+                                                    if verbose:
                                                         print(outputname)
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
@@ -1485,9 +1485,9 @@ def generate_idfs(self,
                                                     SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + str(VentCtrl_value)
                                                     if HVACmode_value == 2:
                                                         if VentCtrl_value == 2 or VentCtrl_value == 3:
-                                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + str(self.MaxTempDiffVOF)
-                                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + str(self.MinTempDiffVOF)
-                                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + str(self.MultiplierVOF)
+                                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + str(self.vof_max_temp_diff)
+                                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + str(self.vof_min_temp_diff)
+                                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + str(self.vof_multiplier)
                                                     for VSToffset_value in self.VSToffset_List:
                                                         SetInputData[0].Program_Line_6 = 'set VSToffset = ' + str(
                                                             VSToffset_value)
@@ -1503,12 +1503,12 @@ def generate_idfs(self,
                                                                                                  self.ASTtol_value_steps):
                                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
                                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
-                                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
-                                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
-                                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
-                                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
+                                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.cooling_season_start)
+                                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.cooling_season_end)
+                                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.category_cool_offset)
+                                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.category_heat_offset)
 
-                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
+                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.setpoint_accuracy)
                                                                     outputname = (
                                                                             filename
                                                                             + ComfStand_dict[ComfStand_value]
@@ -1523,7 +1523,7 @@ def generate_idfs(self,
                                                                             + suffix
                                                                             + '.idf'
                                                                     )
-                                                                    if verboseMode:
+                                                                    if verbose:
                                                                         print(outputname)
                                                                         # time.sleep(0.1)
                                                                         # pbar.update(1)
@@ -1560,20 +1560,20 @@ def generate_idfs(self,
                                                                                  self.ASTtol_value_steps):
                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
-                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
-                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
+                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.cooling_season_start)
+                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.cooling_season_end)
                                                     # SetComfTemp[0].Program_Line_2 = f'set ComfTemp = PMOT*{str(self.CustAST_m)}+{str(self.CustAST_n)}'
-                                                    SetAppLimits[0].Program_Line_2 = f'set ACSTaul = {str(self.CustAST_ACSTaul)}'
-                                                    SetAppLimits[0].Program_Line_3 = f'set ACSTall = {str(self.CustAST_ACSTall)}'
-                                                    SetAppLimits[0].Program_Line_4 = f'set AHSTaul = {str(self.CustAST_AHSTaul)}'
-                                                    SetAppLimits[0].Program_Line_5 = f'set AHSTall = {str(self.CustAST_AHSTall)}'
-                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
-                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
-                                                    ApplyCAT[0].Program_Line_4 = f'set ACSToffset = {str(self.CustAST_ACSToffset)} + {str(self.CATcoolOffset)}'
-                                                    ApplyCAT[0].Program_Line_5 = f'set AHSToffset = {str(self.CustAST_AHSToffset)} + {str(self.CATheatOffset)}'
-                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
-                                                    SetAST[0].Program_Line_2 = 'set m = ' + str(self.CustAST_m)
-                                                    SetAST[0].Program_Line_3 = 'set n = ' + str(self.CustAST_n)
+                                                    SetAppLimits[0].Program_Line_2 = f'set ACSTaul = {str(self.custom_ast_acst_aul)}'
+                                                    SetAppLimits[0].Program_Line_3 = f'set ACSTall = {str(self.custom_ast_acst_all)}'
+                                                    SetAppLimits[0].Program_Line_4 = f'set AHSTaul = {str(self.custom_ast_ahst_aul)}'
+                                                    SetAppLimits[0].Program_Line_5 = f'set AHSTall = {str(self.custom_ast_ahst_all)}'
+                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.category_cool_offset)
+                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.category_heat_offset)
+                                                    ApplyCAT[0].Program_Line_4 = f'set ACSToffset = {str(self.custom_ast_acst_offset)} + {str(self.category_cool_offset)}'
+                                                    ApplyCAT[0].Program_Line_5 = f'set AHSToffset = {str(self.custom_ast_ahst_offset)} + {str(self.category_heat_offset)}'
+                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.setpoint_accuracy)
+                                                    SetAST[0].Program_Line_2 = 'set m = ' + str(self.custom_ast_m)
+                                                    SetAST[0].Program_Line_3 = 'set n = ' + str(self.custom_ast_n)
                                                     outputname = (
                                                             filename
                                                             + ComfStand_dict[ComfStand_value]
@@ -1588,7 +1588,7 @@ def generate_idfs(self,
                                                             + suffix
                                                             + '.idf'
                                                     )
-                                                    if verboseMode:
+                                                    if verbose:
                                                         print(outputname)
                                                         # time.sleep(0.1)
                                                         # pbar.update(1)
@@ -1604,9 +1604,9 @@ def generate_idfs(self,
                                                     SetInputData[0].Program_Line_5 = 'set VentCtrl = ' + str(VentCtrl_value)
                                                     if HVACmode_value == 2:
                                                         if VentCtrl_value == 2 or VentCtrl_value == 3:
-                                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + str(self.MaxTempDiffVOF)
-                                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + str(self.MinTempDiffVOF)
-                                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + str(self.MultiplierVOF)
+                                                            SetVOFinputData[0].Program_Line_1 = 'set MaxTempDiffVOF = ' + str(self.vof_max_temp_diff)
+                                                            SetVOFinputData[0].Program_Line_2 = 'set MinTempDiffVOF = ' + str(self.vof_min_temp_diff)
+                                                            SetVOFinputData[0].Program_Line_3 = 'set MultiplierVOF = ' + str(self.vof_multiplier)
                                                     for VSToffset_value in self.VSToffset_List:
                                                         SetInputData[0].Program_Line_6 = 'set VSToffset = ' + str(
                                                             VSToffset_value)
@@ -1620,21 +1620,21 @@ def generate_idfs(self,
                                                                                                  self.ASTtol_value_steps):
                                                                     SetInputData[0].Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol_value)
                                                                     SetInputData[0].Program_Line_10 = 'set AHSTtol = ' + str(ASTtol_value)
-                                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.CoolSeasonStart)
-                                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.CoolSeasonEnd)
+                                                                    SetInputData[0].Program_Line_11 = 'set CoolSeasonStart = ' + str(self.cooling_season_start)
+                                                                    SetInputData[0].Program_Line_12 = 'set CoolSeasonEnd = ' + str(self.cooling_season_end)
                                                                     # SetComfTemp[0].Program_Line_2 = f'set ComfTemp = PMOT*{str(self.CustAST_m)}+{str(self.CustAST_n)}'
-                                                                    SetAppLimits[0].Program_Line_2 = f'set ACSTaul = {str(self.CustAST_ACSTaul)}'
-                                                                    SetAppLimits[0].Program_Line_3 = f'set ACSTall = {str(self.CustAST_ACSTall)}'
-                                                                    SetAppLimits[0].Program_Line_4 = f'set AHSTaul = {str(self.CustAST_AHSTaul)}'
-                                                                    SetAppLimits[0].Program_Line_5 = f'set AHSTall = {str(self.CustAST_AHSTall)}'
+                                                                    SetAppLimits[0].Program_Line_2 = f'set ACSTaul = {str(self.custom_ast_acst_aul)}'
+                                                                    SetAppLimits[0].Program_Line_3 = f'set ACSTall = {str(self.custom_ast_acst_all)}'
+                                                                    SetAppLimits[0].Program_Line_4 = f'set AHSTaul = {str(self.custom_ast_ahst_aul)}'
+                                                                    SetAppLimits[0].Program_Line_5 = f'set AHSTall = {str(self.custom_ast_ahst_all)}'
 
-                                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.CATcoolOffset)
-                                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.CATheatOffset)
-                                                                    ApplyCAT[0].Program_Line_4 = f'set ACSToffset = {str(self.CustAST_ACSToffset)} + {str(self.CATcoolOffset)}'
-                                                                    ApplyCAT[0].Program_Line_5 = f'set AHSToffset = {str(self.CustAST_AHSToffset)} + {str(self.CATheatOffset)}'
-                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.SetpointAcc)
-                                                                    SetAST[0].Program_Line_2 = 'set m = ' + str(self.CustAST_m)
-                                                                    SetAST[0].Program_Line_3 = 'set n = ' + str(self.CustAST_n)
+                                                                    ApplyCAT[0].Program_Line_1 = 'set CATcoolOffset = ' + str(self.category_cool_offset)
+                                                                    ApplyCAT[0].Program_Line_2 = 'set CATheatOffset = ' + str(self.category_heat_offset)
+                                                                    ApplyCAT[0].Program_Line_4 = f'set ACSToffset = {str(self.custom_ast_acst_offset)} + {str(self.category_cool_offset)}'
+                                                                    ApplyCAT[0].Program_Line_5 = f'set AHSToffset = {str(self.custom_ast_ahst_offset)} + {str(self.category_heat_offset)}'
+                                                                    SetAST[0].Program_Line_1 = 'set SetpointAcc = ' + str(self.setpoint_accuracy)
+                                                                    SetAST[0].Program_Line_2 = 'set m = ' + str(self.custom_ast_m)
+                                                                    SetAST[0].Program_Line_3 = 'set n = ' + str(self.custom_ast_n)
 
                                                                     outputname = (
                                                                             filename
@@ -1650,7 +1650,7 @@ def generate_idfs(self,
                                                                             + suffix
                                                                             + '.idf'
                                                                     )
-                                                                    if verboseMode:
+                                                                    if verbose:
                                                                         print(outputname)
                                                                         # time.sleep(0.1)
                                                                         # pbar.update(1)
@@ -1661,7 +1661,7 @@ def generate_idfs(self,
                                                                         SetAST[0].__setattr__(f'Program_Line_{idx}', dline)
                                                                     idf1.savecopy(outputname)
                                                                     self.output_idf_dict.update({outputname: idf1})
-            elif TempCtrl.lower() == 'pmv':
+            elif temp_control.lower() == 'pmv':
                 SetInputData[0].Program_Line_4 = 'set HVACmode = 0'
                 outputname = (
                         filename
@@ -1677,7 +1677,7 @@ def generate_idfs(self,
                         + suffix
                         + '.idf'
                 )
-                if verboseMode:
+                if verbose:
                     print(outputname)
                     # time.sleep(0.1)
                     # pbar.update(1)
@@ -1689,8 +1689,8 @@ def generate_idfs(self,
                 idf1.savecopy(outputname)
                 self.output_idf_dict.update({outputname: idf1})
         # pbar.close()
-    elif confirmGen == False:
-        if verboseMode:
+    elif confirm_generation == False:
+        if verbose:
             print('IDF generation has been shut down')
 
     filelist_pymod = ([file for file in listdir() if file.endswith('_pymod.idf')])

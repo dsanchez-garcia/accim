@@ -30,9 +30,9 @@ VRF2510 = SAMPLE_IDF_DIR / "TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V
 SF = TEST_DATA_DIR / "SF_Detached_B_min_North.idf"
 
 COMMON = dict(
-    SupplyAirTempInputMethod="supply air temperature",
-    Output_keep_existing=False,
-    verboseMode=False,
+    supply_air_temp_method="supply air temperature",
+    output_keep_existing=False,
+    verbose=False,
 )
 
 
@@ -40,21 +40,21 @@ def _cfg(id, source, version, **kwargs):
     merged = dict(COMMON)
     merged.update(kwargs)
     # El camino unico no admite 'auto': hay que pasar la version explicita.
-    merged["EnergyPlus_version"] = version
+    merged["energyplus_version"] = version
     return {"id": id, "source": source, "version": version, "kwargs": merged}
 
 
 CONFIGS = [
-    _cfg("single_vrf_mm_temp_v960", VRF960, "9.6", ScriptType="vrf_mm",
-         TempCtrl="temperature", Output_type="standard", Output_freqs=["hourly"]),
-    _cfg("single_vrf_ac_temp_v960", VRF960, "9.6", ScriptType="vrf_ac",
-         TempCtrl="temperature", Output_type="standard", Output_freqs=["hourly"]),
-    _cfg("single_vrf_mm_temp_v2510", VRF2510, "25.1", ScriptType="vrf_mm",
-         TempCtrl="temperature", Output_type="detailed", Output_freqs=["hourly"]),
+    _cfg("single_vrf_mm_temp_v960", VRF960, "9.6", script_type="vrf_mm",
+         temp_control="temperature", output_type="standard", output_freqs=["hourly"]),
+    _cfg("single_vrf_ac_temp_v960", VRF960, "9.6", script_type="vrf_ac",
+         temp_control="temperature", output_type="standard", output_freqs=["hourly"]),
+    _cfg("single_vrf_mm_temp_v2510", VRF2510, "25.1", script_type="vrf_mm",
+         temp_control="temperature", output_type="detailed", output_freqs=["hourly"]),
     # ex_* en el camino unico ya funciona tras converger al motor del lote
     # (Fase 1): hereda el resolver de HVAC y el guard del fallback SPACE.
-    _cfg("single_ex_mm_temp_v960", SF, "9.6", ScriptType="ex_mm",
-         TempCtrl="temperature", Output_type="standard", Output_freqs=["hourly"]),
+    _cfg("single_ex_mm_temp_v960", SF, "9.6", script_type="ex_mm",
+         temp_control="temperature", output_type="standard", output_freqs=["hourly"]),
 ]
 
 
@@ -104,27 +104,27 @@ def test_single_characterization(cfg, tmp_path, update_golden):
 # --------------------------------------------------------------------------- #
 def _base_addaccis(version):
     return dict(
-        ScriptType="vrf_mm",
-        SupplyAirTempInputMethod="supply air temperature",
-        TempCtrl="temperature",
-        Output_type="standard",
-        Output_freqs=["hourly"],
-        Output_keep_existing=False,
-        EnergyPlus_version=version,
-        verboseMode=False,
+        script_type="vrf_mm",
+        supply_air_temp_method="supply air temperature",
+        temp_control="temperature",
+        output_type="standard",
+        output_freqs=["hourly"],
+        output_keep_existing=False,
+        energyplus_version=version,
+        verbose=False,
     )
 
 
 MODIFY_CONFIGS = [
     # id, source, version, modify_kwargs
     ("single_modify_cs2_v960", VRF960, "9.6",
-     dict(ComfStand=2, CAT=80, ComfMod=3, HVACmode=2, VentCtrl=0)),
+     dict(comfort_standard=2, category=80, comfort_mode=3, hvac_mode=2, vent_control=0)),
     # ComfStand=99 (modelo custom) es exactamente lo que aplica el wrapper
     # AccimPredefModelsParamSim (main.py:4603).
     ("single_modify_cs99_v960", VRF960, "9.6",
-     dict(ComfStand=99, CAT=80, ComfMod=3, HVACmode=2, VentCtrl=0)),
+     dict(comfort_standard=99, category=80, comfort_mode=3, hvac_mode=2, vent_control=0)),
     ("single_modify_cs1_v940", VRF940, "9.4",
-     dict(ComfStand=1, CAT=3, ComfMod=1, HVACmode=2, VentCtrl=1)),
+     dict(comfort_standard=1, category=3, comfort_mode=1, hvac_mode=2, vent_control=1)),
 ]
 
 

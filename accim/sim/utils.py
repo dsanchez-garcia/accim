@@ -47,27 +47,27 @@ def scan_zones(self):
 
 def add_vrf_system(
         z,
-        TempCtrl,
-        verboseMode,
-        EnergyPlus_version,
-        SupplyAirTempInputMethod,
+        temp_control,
+        verbose,
+        energyplus_version,
+        supply_air_temp_method,
         eer,
         cop,
-        VRFschedule
+        vrf_schedule
 ):
-    if TempCtrl.lower() == 'temperature' or TempCtrl.lower() == 'temp':
-        z.add_operative_temp_thermostat(verboseMode=verboseMode)
-    elif TempCtrl.lower() == 'pmv':
-        z.set_pmv_setpoint(verboseMode=verboseMode)
-    z.add_base_schedules(verboseMode=verboseMode)
-    z.set_availability_schedule_on(verboseMode=verboseMode)
-    z.add_vrf_system_schedule(verboseMode=verboseMode)
-    z.add_curve_objects(verboseMode=verboseMode)
+    if temp_control.lower() == 'temperature' or temp_control.lower() == 'temp':
+        z.add_operative_temp_thermostat(verbose=verbose)
+    elif temp_control.lower() == 'pmv':
+        z.set_pmv_setpoint(verbose=verbose)
+    z.add_base_schedules(verbose=verbose)
+    z.set_availability_schedule_on(verbose=verbose)
+    z.add_vrf_system_schedule(verbose=verbose)
+    z.add_curve_objects(verbose=verbose)
     z.add_detailed_hvac_objects(
-        EnergyPlus_version=EnergyPlus_version,
-        verboseMode=verboseMode,
-        SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+        energyplus_version=energyplus_version,
+        verbose=verbose,
+        supply_air_temp_method=supply_air_temp_method,
         eer=eer,
         cop=cop,
-        VRFschedule=VRFschedule
+        vrf_schedule=vrf_schedule
     )

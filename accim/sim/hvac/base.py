@@ -19,9 +19,9 @@ from accim.lists import epvers_space_objs
 
 def set_comfort_fields_people(
         self,
-        EnergyPlus_version: str = None,
-        TempCtrl: str = None,
-        verboseMode: bool = True
+        energyplus_version: str = None,
+        temp_control: str = None,
+        verbose: bool = True
 ):
     """
     Amend PEOPLE objects so that accim can work.
@@ -38,7 +38,7 @@ def set_comfort_fields_people(
     # epversionslist = ['9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1']
 
     for i in range(len(ppl)):
-        if TempCtrl == 'pmv':
+        if temp_control == 'pmv':
             if 'Zone_or_ZoneList_or_Space_or_SpaceList_Name' in ppl[i].fieldnames:
                 self.idf1.newidfobject(
                     'PEOPLE',
@@ -175,23 +175,23 @@ def set_comfort_fields_people(
 
     ppl = ([people for people in self.idf1.idfobjects['PEOPLE']])
 
-    if verboseMode:
+    if verbose:
         print('The people objects in the model have been amended.')
         # print(*peoplelist,sep="\n")
     del ppl, firstpeopleobject
 
 
-def save(self, verboseMode: bool = True):
+def save(self, verbose: bool = True):
     """Save IDF.
 
     :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
     """
     self.idf1.save()
-    if verboseMode:
+    if verbose:
         print('IDF has been saved')
 
 
-def set_pmv_setpoint(self, verboseMode: bool = True):
+def set_pmv_setpoint(self, verbose: bool = True):
     """Sets PMV setpoints for temperature control.
 
     :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
@@ -209,7 +209,7 @@ def set_pmv_setpoint(self, verboseMode: bool = True):
     }
     for i in fangerdict:
         if i in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
-            if verboseMode:
+            if verbose:
                 print(f"{i} Schedule already was in the model")
         else:
             self.idf1.newidfobject(
@@ -220,12 +220,12 @@ def set_pmv_setpoint(self, verboseMode: bool = True):
                 Field_2='For: AllDays',
                 Field_3='Until: 24:00,' + fangerdict[i]
                 )
-            if verboseMode:
+            if verbose:
                 print(f"{i} Schedule has been added")
 
     for zone in self.zonenames_orig:
         if f'{zone} Comfort Control' in [i.Name for i in self.idf1.idfobjects['ZoneControl:Thermostat:ThermalComfort']]:
-            if verboseMode:
+            if verbose:
                 print(f'{zone} Comfort Control ZoneControl:Thermostat:ThermalComfort already was in the model')
         else:
             self.idf1.newidfobject(
@@ -239,11 +239,11 @@ def set_pmv_setpoint(self, verboseMode: bool = True):
                 Thermal_Comfort_Control_1_Object_Type='ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint',
                 Thermal_Comfort_Control_1_Name=f'{zone} Dual Comfort Setpoint'
             )
-            if verboseMode:
+            if verbose:
                 print(f'{zone} Comfort Control ZoneControl:Thermostat:ThermalComfort has been added')
 
         if f'{zone} Dual Comfort Setpoint' in [i.Name for i in self.idf1.idfobjects['ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint']]:
-            if verboseMode:
+            if verbose:
                 print(f'{zone} Dual Comfort Setpoint ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint already was in the model')
         else:
             self.idf1.newidfobject(
@@ -252,10 +252,10 @@ def set_pmv_setpoint(self, verboseMode: bool = True):
                 Fanger_Thermal_Comfort_Heating_Schedule_Name='Heating Fanger comfort setpoint: Always -0.5',
                 Fanger_Thermal_Comfort_Cooling_Schedule_Name='Cooling Fanger comfort setpoint: Always 0.5'
             )
-            if verboseMode:
+            if verbose:
                 print(f'{zone} Dual Comfort Setpoint ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint has been added')
 
-def add_control_files_objects(self, verboseMode: bool = True):
+def add_control_files_objects(self, verbose: bool = True):
     """
     Adds an OutputControl:Files object to request the generation of CSV, MRT and ESO files.
 
@@ -270,16 +270,16 @@ def add_control_files_objects(self, verboseMode: bool = True):
             Output_MTR='Yes',
             Output_ESO='Yes'
         )
-        if verboseMode:
+        if verbose:
             print(f'Added - OutputControl:Files object')
     else:
         outputcontrolfiles[0].Output_CSV = 'Yes'
         outputcontrolfiles[0].Output_MTR = 'Yes'
         outputcontrolfiles[0].Output_ESO = 'Yes'
-        if verboseMode:
+        if verbose:
             print(f'Not added - OutputControl:Files object - Output CSV, MTR and ESO fields set to Yes')
 
-def add_output_variable_dictionary(self, verboseMode: bool = True):
+def add_output_variable_dictionary(self, verbose: bool = True):
     """
     Adds an Output:VariableDictionary object to request the generation of the RDD file.
 
@@ -294,14 +294,14 @@ def add_output_variable_dictionary(self, verboseMode: bool = True):
             Key_Field='IDF',
             Sort_Option='Unsorted',
         )
-        if verboseMode:
+        if verbose:
             print(f'Added - Output:VariableDictionary object')
     else:
-        if verboseMode:
+        if verbose:
             print(f'Not added - Output:VariableDictionary object - Output CSV, MTR and ESO fields set to Yes')
 
 
-def add_output_ems(self, verboseMode: bool = True):
+def add_output_ems(self, verbose: bool = True):
 
     outputEMSobj = [i for i in self.idf1.idfobjects['Output:EnergyManagementSystem']]
 
@@ -312,13 +312,13 @@ def add_output_ems(self, verboseMode: bool = True):
             Internal_Variable_Availability_Dictionary_Reporting='Verbose',
             EMS_Runtime_Language_Debug_Output_Level='Verbose'
         )
-        if verboseMode:
+        if verbose:
             print(f'Added - Output:EnergyManagementSystem object')
     else:
-        if verboseMode:
+        if verbose:
             print(f'Not added - Output:EnergyManagementSystem object')
 
-def set_simulation_control_sizing(self, verboseMode: bool = True):
+def set_simulation_control_sizing(self, verbose: bool = True):
     """
     Checks if a SimulationControl object exists and modifies it to enable
     Do_Zone_Sizing_Calculation, Do_System_Sizing_Calculation, and
@@ -337,12 +337,12 @@ def set_simulation_control_sizing(self, verboseMode: bool = True):
             Run_Simulation_for_Sizing_Periods='Yes',
             Run_Simulation_for_Weather_File_Run_Periods='Yes'
         )
-        if verboseMode:
+        if verbose:
             print('Added - SimulationControl object with Sizing parameters enabled')
     else:
         sim_control = sim_controls[0]
         sim_control.Do_Zone_Sizing_Calculation = 'Yes'
         sim_control.Do_System_Sizing_Calculation = 'Yes'
         sim_control.Do_Plant_Sizing_Calculation = 'Yes'
-        if verboseMode:
+        if verbose:
             print('Modified - SimulationControl object: enabled Zone, System, and Plant Sizing Calculations')

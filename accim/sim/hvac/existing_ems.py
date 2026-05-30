@@ -17,7 +17,7 @@
 """Module for EMS functions and models with existing HVAC systems"""
 
 
-def add_ems_sensors_existing_hvac(self, verboseMode : bool = True):
+def add_ems_sensors_existing_hvac(self, verbose : bool = True):
     """
     Adds the EMS sensors for models with existing HVAC system.
 
@@ -39,7 +39,7 @@ def add_ems_sensors_existing_hvac(self, verboseMode : bool = True):
 
                 for ems_name in matching_ems_names:
                     if ems_name + '_CoolCoil' in sensorlist:
-                        if verboseMode:
+                        if verbose:
                             print('Not added - ' + ems_name + '_CoolCoil Sensor')
                     else:
                         self.idf1.newidfobject(
@@ -49,12 +49,12 @@ def add_ems_sensors_existing_hvac(self, verboseMode : bool = True):
                             OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
                         )
                         sensorlist.append(ems_name + '_CoolCoil')
-                        if verboseMode:
+                        if verbose:
                             print('Added - ' + ems_name + '_CoolCoil Sensor')
                 for k in range(len(self.ExisHVAC[i][4])):
                     if self.ExisHVAC[i][3][j].lower() in self.ExisHVAC[i][4][k].lower():
                         if self.ExisHVAC[i][4][k] + '_CoolCoil' in sensorlist:
-                            if verboseMode:
+                            if verbose:
                                 print('Not added - ' + self.ExisHVAC[i][4][k] + '_CoolCoil Sensor')
                         else:
                             self.idf1.newidfobject(
@@ -64,7 +64,7 @@ def add_ems_sensors_existing_hvac(self, verboseMode : bool = True):
                                 OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
                             )
                             sensorlist.append(self.ExisHVAC[i][4][k] + '_CoolCoil')
-                            if verboseMode:
+                            if verbose:
                                 print('Added - ' + self.ExisHVAC[i][4][k] + '_CoolCoil Sensor')
                 #        print([sensor for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor'] if sensor.Name==self.ExisHVAC[i][3][j]+'_CoolCoil'])
             if 'Heating' in self.ExisHVAC[i][1][j] or 'Heating' in self.HVACdict[self.ExisHVAC[i][0]]:
@@ -79,7 +79,7 @@ def add_ems_sensors_existing_hvac(self, verboseMode : bool = True):
 
                 for ems_name in matching_ems_names:
                     if ems_name + '_HeatCoil' in sensorlist:
-                        if verboseMode:
+                        if verbose:
                             print('Not added - ' + ems_name + '_HeatCoil Sensor')
                     else:
                         self.idf1.newidfobject(
@@ -89,13 +89,13 @@ def add_ems_sensors_existing_hvac(self, verboseMode : bool = True):
                             OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
                         )
                         sensorlist.append(ems_name + '_HeatCoil')
-                        if verboseMode:
+                        if verbose:
                             print('Added - ' + ems_name + '_HeatCoil Sensor')
                 # probando
                 for k in range(len(self.ExisHVAC[i][4])):
                     if self.ExisHVAC[i][3][j].lower() in self.ExisHVAC[i][4][k].lower():
                         if self.ExisHVAC[i][4][k] + '_HeatCoil' in sensorlist:
-                            if verboseMode:
+                            if verbose:
                                 print('Not added - ' + self.ExisHVAC[i][4][k] + '_HeatCoil Sensor')
                         else:
                             self.idf1.newidfobject(
@@ -105,7 +105,7 @@ def add_ems_sensors_existing_hvac(self, verboseMode : bool = True):
                                 OutputVariable_or_OutputMeter_Name=self.HVACdict[self.ExisHVAC[i][0]]
                             )
                             sensorlist.append(self.ExisHVAC[i][4][k] + '_HeatCoil')
-                            if verboseMode:
+                            if verbose:
                                 print('Added - ' + self.ExisHVAC[i][4][k] + '_HeatCoil Sensor')
 
     # Keep the list of coil sensors for the init program
@@ -113,7 +113,7 @@ def add_ems_sensors_existing_hvac(self, verboseMode : bool = True):
     del sensorlist
 
 
-def add_ems_init_existing_hvac(self, verboseMode: bool = True):
+def add_ems_init_existing_hvac(self, verbose: bool = True):
     """
     Adds an EMS Program and ProgramCallingManager with BeginNewEnvironment calling
     point to initialize all coil sensor variables to 0. This prevents EnergyPlus from
@@ -129,7 +129,7 @@ def add_ems_init_existing_hvac(self, verboseMode: bool = True):
     init_prog_name = 'InitExisHVACCoils'
 
     if init_prog_name in programlist:
-        if verboseMode:
+        if verbose:
             print(f'Not added - {init_prog_name} Program (already exists)')
         return
 
@@ -142,7 +142,7 @@ def add_ems_init_existing_hvac(self, verboseMode: bool = True):
             coil_sensors.append(name + '_HeatCoil')
 
     if not coil_sensors:
-        if verboseMode:
+        if verbose:
             print(f'No coil sensors found, skipping {init_prog_name}')
         return
 
@@ -152,7 +152,7 @@ def add_ems_init_existing_hvac(self, verboseMode: bool = True):
         prog_kwargs[f'Program_Line_{idx}'] = f'SET {sensor_name} = 0'
 
     self.idf1.newidfobject('EnergyManagementSystem:Program', **prog_kwargs)
-    if verboseMode:
+    if verbose:
         print(f'Added - {init_prog_name} Program ({len(coil_sensors)} coil variables initialised)')
 
     # Register the init program under BeginNewEnvironment so it runs before any ApplyAST
@@ -163,5 +163,5 @@ def add_ems_init_existing_hvac(self, verboseMode: bool = True):
             EnergyPlus_Model_Calling_Point='BeginNewEnvironment',
             Program_Name_1=init_prog_name
         )
-        if verboseMode:
+        if verbose:
             print(f'Added - {init_prog_name} ProgramCallingManager (BeginNewEnvironment)')

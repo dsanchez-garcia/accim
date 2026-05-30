@@ -40,17 +40,17 @@ def test_batch_pmv_currently_broken(tmp_path):
     try:
         from accim.sim import batch
         batch.AddAccis(
-            ScriptType="vrf_mm",
-            SupplyAirTempInputMethod="supply air temperature",
-            TempCtrl="pmv",
-            Output_keep_existing=False,
-            Output_gen_dataframe=False,
-            Output_type="standard",
-            Output_freqs=["hourly"],
-            EnergyPlus_version="auto",
-            ComfStand=[2], CAT=[80], ComfMod=[3], HVACmode=[2], VentCtrl=[0],
-            confirmGen=True,
-            verboseMode=False,
+            script_type="vrf_mm",
+            supply_air_temp_method="supply air temperature",
+            temp_control="pmv",
+            output_keep_existing=False,
+            output_gen_dataframe=False,
+            output_type="standard",
+            output_freqs=["hourly"],
+            energyplus_version="auto",
+            comfort_standard=[2], category=[80], comfort_mode=[3], hvac_mode=[2], vent_control=[0],
+            confirm_generation=True,
+            verbose=False,
         )
     finally:
         os.chdir(prev)

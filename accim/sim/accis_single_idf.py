@@ -92,21 +92,21 @@ class addAccis:
     def __init__(
         self,
         idf: besos.IDF_class = None,
-        ScriptType: str = None,
-        SupplyAirTempInputMethod: str = None,
-        Output_type: str = None,
-        Output_freqs: any = None,
-        Output_keep_existing: bool = None,
-        Output_gen_dataframe: bool = None,
-        Output_take_dataframe: pd.DataFrame = None,
-        EnergyPlus_version: str = None,
-        TempCtrl: str = None,
-        VRFschedule: str = 'On 24/7',
-        verboseMode: bool = True,
+        script_type: str = None,
+        supply_air_temp_method: str = None,
+        output_type: str = None,
+        output_freqs: any = None,
+        output_keep_existing: bool = None,
+        output_gen_dataframe: bool = None,
+        output_take_dataframe: pd.DataFrame = None,
+        energyplus_version: str = None,
+        temp_control: str = None,
+        vrf_schedule: str = 'On 24/7',
+        verbose: bool = True,
         eer: float = 2,
         cop: float = 2.1,
         make_averages: bool = False,
-        debugging: bool = False,
+        debug: bool = False,
         hvac_zone_map: dict = None,
     ):
         """
@@ -206,71 +206,71 @@ class addAccis:
 
 
 
-        if verboseMode:
+        if verbose:
             print('Basic input data:')
             # print(f'accim version: {accim.__version__}')
-            print('ScriptType is: '+ScriptType)
-        if ScriptType not in fullScriptTypeList:
+            print('ScriptType is: '+script_type)
+        if script_type not in fullScriptTypeList:
             print('Valid ScriptTypes: ')
             print(fullScriptTypeList)
-            raise ValueError(ScriptType + " is not a valid ScriptType. "
+            raise ValueError(script_type + " is not a valid ScriptType. "
                                           "You must choose a ScriptType from the list above.")
-        if 'vrf' in ScriptType.lower():
-            if verboseMode:
-                print('Supply Air Temperature Input Method is: '+SupplyAirTempInputMethod)
-            if SupplyAirTempInputMethod not in SupplyAirTempInputMethodList:
+        if 'vrf' in script_type.lower():
+            if verbose:
+                print('Supply Air Temperature Input Method is: '+supply_air_temp_method)
+            if supply_air_temp_method not in SupplyAirTempInputMethodList:
                 print('Valid Supply Air Temperature Input Methods: ')
-                print(SupplyAirTempInputMethod)
-                raise ValueError(SupplyAirTempInputMethod + " is not a valid Supply Air Temperature Input Method. "
+                print(supply_air_temp_method)
+                raise ValueError(supply_air_temp_method + " is not a valid Supply Air Temperature Input Method. "
                                               "You must choose a Supply Air Temperature Input Method from the list above.")
-        if verboseMode:
-            print('Output type is: ' + Output_type)
-        if Output_type not in fullOutputsTypeList:
+        if verbose:
+            print('Output type is: ' + output_type)
+        if output_type not in fullOutputsTypeList:
             print('Valid Output type: ')
             print(fullOutputsTypeList)
-            raise ValueError(Output_type + " is not a valid Output. "
+            raise ValueError(output_type + " is not a valid Output. "
                                        "You must choose a Output from the list above.")
-        if verboseMode:
+        if verbose:
             print('Output frequencies are: ')
-            print(Output_freqs)
-        if not (all(elem in fullOutputsFreqList for elem in Output_freqs)):
+            print(output_freqs)
+        if not (all(elem in fullOutputsFreqList for elem in output_freqs)):
             print('Valid Output freqs: ')
             print(fullOutputsFreqList)
-            raise ValueError('Some of the Output frequencies in '+Output_freqs + " is not a valid Output. "
+            raise ValueError('Some of the Output frequencies in '+output_freqs + " is not a valid Output. "
                                        "All Output frequencies must be included in the list above.")
-        if EnergyPlus_version is None:
-            EnergyPlus_version = f'{idf.idd_version[0]}.{idf.idd_version[1]}'
-        if verboseMode:
-            print('EnergyPlus version is: '+EnergyPlus_version)
+        if energyplus_version is None:
+            energyplus_version = f'{idf.idd_version[0]}.{idf.idd_version[1]}'
+        if verbose:
+            print('EnergyPlus version is: '+energyplus_version)
         # if EnergyPlus_version not in fullEPversionsList:
         #     print('Valid EnergyPlus_version: ')
         #     print(fullEPversionsList)
         #     raise ValueError(EnergyPlus_version + " is not a valid EnergyPlus_version. "
         #                                           "You must choose a EnergyPlus_version"
         #                                           "from the list above.")
-        if verboseMode:
-            print('Temperature Control method is: '+TempCtrl)
-        if TempCtrl not in fullTempCtrllist:
+        if verbose:
+            print('Temperature Control method is: '+temp_control)
+        if temp_control not in fullTempCtrllist:
             print('Valid Temperature Control methods: ')
             print(fullTempCtrllist)
-            raise ValueError(TempCtrl + " is not a valid Temperature Control method. "
+            raise ValueError(temp_control + " is not a valid Temperature Control method. "
                                                   "You must choose a Temperature Control method"
                                                   "from the list above.")
         self.arguments = {
-            'ScriptType': ScriptType,
-            'SupplyAirTempInputMethod': SupplyAirTempInputMethod,
-            'Output_type': Output_type,
-            'Output_freqs': Output_freqs,
-            'Output_keep_existing': Output_keep_existing,
-            'Output_gen_dataframe': Output_gen_dataframe,
-            'Output_take_dataframe': Output_take_dataframe,
-            'EnergyPlus_version': EnergyPlus_version,
-            'TempCtrl': TempCtrl,
-            'verboseMode': verboseMode
+            'ScriptType': script_type,
+            'SupplyAirTempInputMethod': supply_air_temp_method,
+            'Output_type': output_type,
+            'Output_freqs': output_freqs,
+            'Output_keep_existing': output_keep_existing,
+            'Output_gen_dataframe': output_gen_dataframe,
+            'Output_take_dataframe': output_take_dataframe,
+            'EnergyPlus_version': energyplus_version,
+            'TempCtrl': temp_control,
+            'verboseMode': verbose
         }
 
 
-        if verboseMode:
+        if verbose:
             print('''\n=======================START OF GENERIC IDF FILE GENERATION PROCESS=======================\n''')
             print('Starting with file:')
             # print(idf)
@@ -278,10 +278,10 @@ class addAccis:
 
         z = accim_Main.AccimJob(
             idf_class_instance=idf,
-            ScriptType=ScriptType,
-            EnergyPlus_version=EnergyPlus_version,
-            TempCtrl=TempCtrl,
-            verboseMode=verboseMode,
+            script_type=script_type,
+            energyplus_version=energyplus_version,
+            temp_control=temp_control,
+            verbose=verbose,
             hvac_zone_map=hvac_zone_map,
         )
 
@@ -291,108 +291,108 @@ class addAccis:
             self.windows_and_doors = z.windownamelist
             self.windows_and_doors_original_name = z.windownamelist_orig
 
-        z.set_comfort_fields_people(EnergyPlus_version=EnergyPlus_version, TempCtrl=TempCtrl, verboseMode=verboseMode)
+        z.set_comfort_fields_people(energyplus_version=energyplus_version, temp_control=temp_control, verbose=verbose)
 
-        if 'vrf' in ScriptType.lower():
-            if TempCtrl.lower() == 'temperature' or TempCtrl.lower() == 'temp':
-                z.add_operative_temp_thermostat(verboseMode=verboseMode)
-            elif TempCtrl.lower() == 'pmv':
-                z.set_pmv_setpoint(verboseMode=verboseMode)
-            z.add_base_schedules(verboseMode=verboseMode)
-            z.set_availability_schedule_on(verboseMode=verboseMode)
-            z.add_vrf_system_schedule(verboseMode=verboseMode)
-            z.add_curve_objects(verboseMode=verboseMode)
+        if 'vrf' in script_type.lower():
+            if temp_control.lower() == 'temperature' or temp_control.lower() == 'temp':
+                z.add_operative_temp_thermostat(verbose=verbose)
+            elif temp_control.lower() == 'pmv':
+                z.set_pmv_setpoint(verbose=verbose)
+            z.add_base_schedules(verbose=verbose)
+            z.set_availability_schedule_on(verbose=verbose)
+            z.add_vrf_system_schedule(verbose=verbose)
+            z.add_curve_objects(verbose=verbose)
             z.add_detailed_hvac_objects(
-                EnergyPlus_version=EnergyPlus_version,
-                verboseMode=verboseMode,
-                SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+                energyplus_version=energyplus_version,
+                verbose=verbose,
+                supply_air_temp_method=supply_air_temp_method,
                 eer=eer,
                 cop=cop,
-                VRFschedule=VRFschedule
+                vrf_schedule=vrf_schedule
             )
-            if ScriptType.lower() == 'vrf_mm':
-                z.check_ventilation_is_on(verboseMode=verboseMode)
-            z.add_forscript_schedule_vrf(verboseMode=verboseMode)
-        elif 'ex' in ScriptType.lower():
+            if script_type.lower() == 'vrf_mm':
+                z.check_ventilation_is_on(verbose=verbose)
+            z.add_forscript_schedule_vrf(verbose=verbose)
+        elif 'ex' in script_type.lower():
             # todo check if PMV can work with ex_ac
-            z.add_forscript_schedule_existing_hvac(verboseMode=verboseMode)
+            z.add_forscript_schedule_existing_hvac(verbose=verbose)
 
-        z.add_ems_programs(ScriptType=ScriptType, verboseMode=verboseMode)
-        z.add_ems_output_variables(ScriptType=ScriptType, verboseMode=verboseMode)
-        z.add_global_variables(ScriptType=ScriptType, verboseMode=verboseMode)
-        z.add_internal_variables(verboseMode=verboseMode)
-        z.add_ems_sensors(ScriptType=ScriptType, verboseMode=verboseMode)
-        z.add_ems_actuators(ScriptType=ScriptType, verboseMode=verboseMode)
+        z.add_ems_programs(script_type=script_type, verbose=verbose)
+        z.add_ems_output_variables(script_type=script_type, verbose=verbose)
+        z.add_global_variables(script_type=script_type, verbose=verbose)
+        z.add_internal_variables(verbose=verbose)
+        z.add_ems_sensors(script_type=script_type, verbose=verbose)
+        z.add_ems_actuators(script_type=script_type, verbose=verbose)
 
-        if 'vrf' in ScriptType.lower():
-            z.add_ems_sensors_vrf(ScriptType=ScriptType, verboseMode=verboseMode)
-        elif ScriptType.lower() == 'ex_mm':
-            z.add_ems_sensors_existing_hvac(verboseMode=verboseMode)
-            z.add_ems_init_existing_hvac(verboseMode=verboseMode)
+        if 'vrf' in script_type.lower():
+            z.add_ems_sensors_vrf(script_type=script_type, verbose=verbose)
+        elif script_type.lower() == 'ex_mm':
+            z.add_ems_sensors_existing_hvac(verbose=verbose)
+            z.add_ems_init_existing_hvac(verbose=verbose)
 
-        z.add_ems_pcm(verboseMode=verboseMode)
+        z.add_ems_pcm(verbose=verbose)
 
         if make_averages:
-            z.make_averages(verboseMode=verboseMode)
+            z.make_averages(verbose=verbose)
 
-        if Output_keep_existing == 'true':
-            Output_keep_existing = True
-        elif Output_keep_existing == 'false':
-            Output_keep_existing = False
-        if Output_keep_existing is True:
+        if output_keep_existing == 'true':
+            output_keep_existing = True
+        elif output_keep_existing == 'false':
+            output_keep_existing = False
+        if output_keep_existing is True:
             pass
         else:
             z.remove_existing_output_variables()
 
-        if Output_type.lower() == 'simplified':
+        if output_type.lower() == 'simplified':
             z.add_output_variables_simplified(
-                Outputs_freq=Output_freqs,
-                TempCtrl=TempCtrl,
-                verboseMode=verboseMode
+                output_freqs=output_freqs,
+                temp_control=temp_control,
+                verbose=verbose
             )
-        elif Output_type.lower() == 'standard':
+        elif output_type.lower() == 'standard':
             z.add_output_variables_standard(
-                Outputs_freq=Output_freqs,
-                ScriptType=ScriptType,
-                TempCtrl=TempCtrl,
-                verboseMode=verboseMode
+                output_freqs=output_freqs,
+                script_type=script_type,
+                temp_control=temp_control,
+                verbose=verbose
             )
-        elif Output_type.lower() == 'detailed' or Output_type.lower() == 'custom':
+        elif output_type.lower() == 'detailed' or output_type.lower() == 'custom':
             z.add_output_variables_standard(
-                Outputs_freq=Output_freqs,
-                ScriptType=ScriptType,
-                TempCtrl=TempCtrl,
-                verboseMode=verboseMode
+                output_freqs=output_freqs,
+                script_type=script_type,
+                temp_control=temp_control,
+                verbose=verbose
             )
             z.add_output_variables_detailed(
-                Outputs_freq=Output_freqs,
-                verboseMode=verboseMode
+                output_freqs=output_freqs,
+                verbose=verbose
             )
-            if Output_type.lower() == 'custom':
-                Output_gen_dataframe = False
+            if output_type.lower() == 'custom':
+                output_gen_dataframe = False
                 z.apply_specified_outputs()
 
-        if Output_take_dataframe is not None:
+        if output_take_dataframe is not None:
             z.take_output_dataframe(
                 idf_filename=idf.idfname.split('.idf')[0],
-                df_outputs_in=Output_take_dataframe,
-                verboseMode=verboseMode
+                df_outputs_in=output_take_dataframe,
+                verbose=verbose
             )
 
         z.remove_duplicated_output_variables()
 
-        if Output_gen_dataframe:
+        if output_gen_dataframe:
             z.gen_output_dataframe(idf_filename=idf.idfname.split('.idf')[0])
             self.df_outputs = z.df_outputs_temp
 
-        z.add_control_files_objects(verboseMode=verboseMode)
+        z.add_control_files_objects(verbose=verbose)
 
-        z.add_output_variable_dictionary(verboseMode=verboseMode)
+        z.add_output_variable_dictionary(verbose=verbose)
 
-        if debugging:
-            z.add_output_ems(verboseMode=verboseMode)
+        if debug:
+            z.add_output_ems(verbose=verbose)
 
-        if verboseMode:
+        if verbose:
             print('''\n=======================END OF OUTPUT IDF FILE GENERATION PROCESS=======================\n''')
 
         self.SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
@@ -414,31 +414,31 @@ class addAccis:
 
     def modifyAccis(
             self,
-            ComfStand: int = None,
-            CAT: int = None,
-            CATcoolOffset: float = 0,
-            CATheatOffset: float = 0,
-            ComfMod: float = None,
-            SetpointAcc: float = 10000,
-            CustAST_ACSTaul: float = 0,
-            CustAST_ACSTall: float = 0,
-            CustAST_AHSTaul: float = 0,
-            CustAST_AHSTall: float = 0,
-            CustAST_m: float = 0,
-            CustAST_n: float = 0,
-            CustAST_ACSToffset: float = 0,
-            CustAST_AHSToffset: float = 0,
-            CoolSeasonStart: any = 121,
-            CoolSeasonEnd: any = 274,
-            HVACmode: int = None,
-            VentCtrl: int = None,
-            MaxTempDiffVOF: float = 6,
-            MinTempDiffVOF: float = 1,
-            MultiplierVOF: float = 0.25,
-            VSToffset: int = 0,
-            MinOToffset: int = 50,
-            MaxWindSpeed: int = 50,
-            ASTtol: int = 0.1,
+            comfort_standard: int = None,
+            category: int = None,
+            category_cool_offset: float = 0,
+            category_heat_offset: float = 0,
+            comfort_mode: float = None,
+            setpoint_accuracy: float = 10000,
+            custom_ast_acst_aul: float = 0,
+            custom_ast_acst_all: float = 0,
+            custom_ast_ahst_aul: float = 0,
+            custom_ast_ahst_all: float = 0,
+            custom_ast_m: float = 0,
+            custom_ast_n: float = 0,
+            custom_ast_acst_offset: float = 0,
+            custom_ast_ahst_offset: float = 0,
+            cooling_season_start: any = 121,
+            cooling_season_end: any = 274,
+            hvac_mode: int = None,
+            vent_control: int = None,
+            vof_max_temp_diff: float = 6,
+            vof_min_temp_diff: float = 1,
+            vof_multiplier: float = 0.25,
+            vent_setpoint_offset: int = 0,
+            min_outdoor_temp_offset: int = 50,
+            max_wind_speed: int = 50,
+            ast_tol: int = 0.1,
 
     ):
         """
@@ -520,98 +520,98 @@ class addAccis:
         """
 
         self.arguments_accis = {
-            'ComfStand': ComfStand,
-            'CAT': CAT,
-            'CATcoolOffset': CATcoolOffset,
-            'CATheatOffset': CATheatOffset,
-            'ComfMod': ComfMod,
-            'SetpointAcc': SetpointAcc,
-            'CustAST_ACSTaul': CustAST_ACSTaul,
-            'CustAST_ACSTall': CustAST_ACSTall,
-            'CustAST_AHSTaul': CustAST_AHSTaul,
-            'CustAST_AHSTall': CustAST_AHSTall,
-            'CustAST_m': CustAST_m,
-            'CustAST_n': CustAST_n,
-            'CustAST_ACSToffset': CustAST_ACSToffset,
-            'CustAST_AHSToffset': CustAST_AHSToffset,
-            'CoolSeasonStart': CoolSeasonStart,
-            'CoolSeasonEnd': CoolSeasonEnd,
-            'HVACmode': HVACmode,
-            'VentCtrl': VentCtrl,
-            'MaxTempDiffVOF': MaxTempDiffVOF,
-            'MinTempDiffVOF': MinTempDiffVOF,
-            'MultiplierVOF': MultiplierVOF,
-            'VSToffset': VSToffset,
-            'MinOToffset': MinOToffset,
-            'MaxWindSpeed': MaxWindSpeed,
-            'ASTtol': ASTtol
+            'ComfStand': comfort_standard,
+            'CAT': category,
+            'CATcoolOffset': category_cool_offset,
+            'CATheatOffset': category_heat_offset,
+            'ComfMod': comfort_mode,
+            'SetpointAcc': setpoint_accuracy,
+            'CustAST_ACSTaul': custom_ast_acst_aul,
+            'CustAST_ACSTall': custom_ast_acst_all,
+            'CustAST_AHSTaul': custom_ast_ahst_aul,
+            'CustAST_AHSTall': custom_ast_ahst_all,
+            'CustAST_m': custom_ast_m,
+            'CustAST_n': custom_ast_n,
+            'CustAST_ACSToffset': custom_ast_acst_offset,
+            'CustAST_AHSToffset': custom_ast_ahst_offset,
+            'CoolSeasonStart': cooling_season_start,
+            'CoolSeasonEnd': cooling_season_end,
+            'HVACmode': hvac_mode,
+            'VentCtrl': vent_control,
+            'MaxTempDiffVOF': vof_max_temp_diff,
+            'MinTempDiffVOF': vof_min_temp_diff,
+            'MultiplierVOF': vof_multiplier,
+            'VSToffset': vent_setpoint_offset,
+            'MinOToffset': min_outdoor_temp_offset,
+            'MaxWindSpeed': max_wind_speed,
+            'ASTtol': ast_tol
         }
 
-        while SetpointAcc < 0:
+        while setpoint_accuracy < 0:
             raise ValueError('The value for SetpointAcc cannot be less than 0.')
         
-        if type(CoolSeasonStart) is int:
-            if CoolSeasonStart <= 365 and CoolSeasonStart > 0:
+        if type(cooling_season_start) is int:
+            if cooling_season_start <= 365 and cooling_season_start > 0:
                 pass
-        elif type(CoolSeasonStart) is str:
-            if len(CoolSeasonStart.split('/')) == 2:
-                day = int(CoolSeasonStart.split('/')[0])
-                month = int(CoolSeasonStart.split('/')[1])
+        elif type(cooling_season_start) is str:
+            if len(cooling_season_start.split('/')) == 2:
+                day = int(cooling_season_start.split('/')[0])
+                month = int(cooling_season_start.split('/')[1])
                 from datetime import date
                 day_of_year = date(year=2007, month=month, day=day).timetuple().tm_yday
-                CoolSeasonStart = day_of_year
+                cooling_season_start = day_of_year
 
-        if type(CoolSeasonEnd) is int:
-            if CoolSeasonEnd <= 365 and CoolSeasonEnd > 0:
+        if type(cooling_season_end) is int:
+            if cooling_season_end <= 365 and cooling_season_end > 0:
                 pass
-        elif type(CoolSeasonEnd) is str:
-            if len(CoolSeasonEnd.split('/')) == 2:
-                day = int(CoolSeasonEnd.split('/')[0])
-                month = int(CoolSeasonEnd.split('/')[1])
+        elif type(cooling_season_end) is str:
+            if len(cooling_season_end.split('/')) == 2:
+                day = int(cooling_season_end.split('/')[0])
+                month = int(cooling_season_end.split('/')[1])
                 from datetime import date
                 day_of_year = date(year=2007, month=month, day=day).timetuple().tm_yday
-                CoolSeasonEnd = day_of_year
+                cooling_season_end = day_of_year
 
 
 
-        self.SetInputData.Program_Line_1 = 'set ComfStand = ' + str(ComfStand)
-        self.SetInputData.Program_Line_2 = 'set CAT = ' + str(CAT)
-        self.SetInputData.Program_Line_3 = 'set ComfMod = ' + str(ComfMod)
-        self.SetInputData.Program_Line_4 = 'set HVACmode = ' + str(HVACmode)
-        self.SetInputData.Program_Line_5 = 'set VentCtrl = ' + str(VentCtrl)
-        self.SetInputData.Program_Line_6 = 'set VSToffset = ' + str(VSToffset)
-        self.SetInputData.Program_Line_7 = 'set MinOToffset = ' + str(MinOToffset)
-        self.SetInputData.Program_Line_8 = 'set MaxWindSpeed = ' + str(MaxWindSpeed)
-        self.SetInputData.Program_Line_9 = 'set ACSTtol = ' + str(-ASTtol)
-        self.SetInputData.Program_Line_10 = 'set AHSTtol = ' + str(ASTtol)
-        self.SetInputData.Program_Line_11 = 'set CoolSeasonStart = ' + str(CoolSeasonStart)
-        self.SetInputData.Program_Line_12 = 'set CoolSeasonEnd = ' + str(CoolSeasonEnd)
+        self.SetInputData.Program_Line_1 = 'set ComfStand = ' + str(comfort_standard)
+        self.SetInputData.Program_Line_2 = 'set CAT = ' + str(category)
+        self.SetInputData.Program_Line_3 = 'set ComfMod = ' + str(comfort_mode)
+        self.SetInputData.Program_Line_4 = 'set HVACmode = ' + str(hvac_mode)
+        self.SetInputData.Program_Line_5 = 'set VentCtrl = ' + str(vent_control)
+        self.SetInputData.Program_Line_6 = 'set VSToffset = ' + str(vent_setpoint_offset)
+        self.SetInputData.Program_Line_7 = 'set MinOToffset = ' + str(min_outdoor_temp_offset)
+        self.SetInputData.Program_Line_8 = 'set MaxWindSpeed = ' + str(max_wind_speed)
+        self.SetInputData.Program_Line_9 = 'set ACSTtol = ' + str(-ast_tol)
+        self.SetInputData.Program_Line_10 = 'set AHSTtol = ' + str(ast_tol)
+        self.SetInputData.Program_Line_11 = 'set CoolSeasonStart = ' + str(cooling_season_start)
+        self.SetInputData.Program_Line_12 = 'set CoolSeasonEnd = ' + str(cooling_season_end)
 
-        self.SetComfTemp.Program_Line_2 = f'set ComfTemp = PMOT*{str(CustAST_m)}+{str(CustAST_n)}'
+        self.SetComfTemp.Program_Line_2 = f'set ComfTemp = PMOT*{str(custom_ast_m)}+{str(custom_ast_n)}'
 
-        self.SetAppLimits.Program_Line_2 = f'set ACSTaul = {str(CustAST_ACSTaul)}'
-        self.SetAppLimits.Program_Line_3 = f'set ACSTall = {str(CustAST_ACSTall)}'
-        self.SetAppLimits.Program_Line_4 = f'set AHSTaul = {str(CustAST_AHSTaul)}'
-        self.SetAppLimits.Program_Line_5 = f'set AHSTall = {str(CustAST_AHSTall)}'
+        self.SetAppLimits.Program_Line_2 = f'set ACSTaul = {str(custom_ast_acst_aul)}'
+        self.SetAppLimits.Program_Line_3 = f'set ACSTall = {str(custom_ast_acst_all)}'
+        self.SetAppLimits.Program_Line_4 = f'set AHSTaul = {str(custom_ast_ahst_aul)}'
+        self.SetAppLimits.Program_Line_5 = f'set AHSTall = {str(custom_ast_ahst_all)}'
 
-        self.SetAST.Program_Line_1 = 'set SetpointAcc = ' + str(SetpointAcc)
-        self.SetAST.Program_Line_2 = 'set m = ' + str(CustAST_m)
-        self.SetAST.Program_Line_3 = 'set n = ' + str(CustAST_n)
+        self.SetAST.Program_Line_1 = 'set SetpointAcc = ' + str(setpoint_accuracy)
+        self.SetAST.Program_Line_2 = 'set m = ' + str(custom_ast_m)
+        self.SetAST.Program_Line_3 = 'set n = ' + str(custom_ast_n)
 
         # Dynamic injection: trim to the 16 base lines then append model-specific lines
         while len(self.SetAST.obj) > 18:
             self.SetAST.obj.pop()
         from accim.sim.ems.setast_models import get_SetAST_lines
-        dynamic_lines = get_SetAST_lines(ComfStand, ComfMod)
+        dynamic_lines = get_SetAST_lines(comfort_standard, comfort_mode)
         for dline in dynamic_lines:
             self.SetAST.obj.append(dline)
 
-        self.SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + str(MaxTempDiffVOF)
-        self.SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + str(MinTempDiffVOF)
-        self.SetVOFinputData.Program_Line_3 = 'set MultiplierVOF = ' + str(MultiplierVOF)
+        self.SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + str(vof_max_temp_diff)
+        self.SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + str(vof_min_temp_diff)
+        self.SetVOFinputData.Program_Line_3 = 'set MultiplierVOF = ' + str(vof_multiplier)
 
-        self.ApplyCAT.Program_Line_1 = 'set CATcoolOffset = ' + str(CATcoolOffset)
-        self.ApplyCAT.Program_Line_2 = 'set CATheatOffset = ' + str(CATheatOffset)
-        self.ApplyCAT.Program_Line_4 = f'set ACSToffset = {str(CustAST_ACSToffset)} + {str(CATcoolOffset)}'
-        self.ApplyCAT.Program_Line_5 = f'set AHSToffset = {str(CustAST_AHSToffset)} + {str(CATheatOffset)}'
+        self.ApplyCAT.Program_Line_1 = 'set CATcoolOffset = ' + str(category_cool_offset)
+        self.ApplyCAT.Program_Line_2 = 'set CATheatOffset = ' + str(category_heat_offset)
+        self.ApplyCAT.Program_Line_4 = f'set ACSToffset = {str(custom_ast_acst_offset)} + {str(category_cool_offset)}'
+        self.ApplyCAT.Program_Line_5 = f'set AHSToffset = {str(custom_ast_ahst_offset)} + {str(category_heat_offset)}'
 

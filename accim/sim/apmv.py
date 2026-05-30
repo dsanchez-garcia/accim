@@ -1206,10 +1206,10 @@ def set_zones_always_occupied(building: IDF, verbose_mode: bool = True):
 
 def add_vrf_system(
         building: IDF,
-        SupplyAirTempInputMethod: str = 'supply air temperature',
+        supply_air_temp_method: str = 'supply air temperature',
         eer: float = 2,
         cop: float = 2.1,
-        VRFschedule: str = 'On 24/7',
+        vrf_schedule: str = 'On 24/7',
         verbose_mode: bool = True,
 ):
     """
@@ -1223,31 +1223,31 @@ def add_vrf_system(
     :param VRFschedule: Name of the availability schedule for the VRF system.
     :param verbose_mode: If True, prints progress from the accim_Main job.
     """
-    EnergyPlus_version = f'{building.idd_version[0]}.{building.idd_version[1]}'
+    energyplus_version = f'{building.idd_version[0]}.{building.idd_version[1]}'
 
     z = accim_Main.AccimJob(
         idf_class_instance=building,
-        ScriptType='vrf_ac',
-        EnergyPlus_version=EnergyPlus_version,
-        TempCtrl='pmv',
-        verboseMode=verbose_mode
+        script_type='vrf_ac',
+        energyplus_version=energyplus_version,
+        temp_control='pmv',
+        verbose=verbose_mode
     )
 
-    z.set_comfort_fields_people(EnergyPlus_version=EnergyPlus_version, TempCtrl='pmv', verboseMode=verbose_mode)
-    z.set_pmv_setpoint(verboseMode=verbose_mode)
-    z.add_base_schedules(verboseMode=verbose_mode)
-    z.set_availability_schedule_on(verboseMode=verbose_mode)
-    z.add_vrf_system_schedule(verboseMode=verbose_mode)
-    z.add_curve_objects(verboseMode=verbose_mode)
+    z.set_comfort_fields_people(energyplus_version=energyplus_version, temp_control='pmv', verbose=verbose_mode)
+    z.set_pmv_setpoint(verbose=verbose_mode)
+    z.add_base_schedules(verbose=verbose_mode)
+    z.set_availability_schedule_on(verbose=verbose_mode)
+    z.add_vrf_system_schedule(verbose=verbose_mode)
+    z.add_curve_objects(verbose=verbose_mode)
     z.add_detailed_hvac_objects(
-        EnergyPlus_version=EnergyPlus_version,
-        verboseMode=verbose_mode,
-        SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+        energyplus_version=energyplus_version,
+        verbose=verbose_mode,
+        supply_air_temp_method=supply_air_temp_method,
         eer=eer,
         cop=cop,
-        VRFschedule=VRFschedule
+        vrf_schedule=vrf_schedule
     )
-    z.add_forscript_schedule_vrf(verboseMode=verbose_mode)
+    z.add_forscript_schedule_vrf(verbose=verbose_mode)
 
 
 def change_adaptive_coeff(building: IDF, df_arguments: pd.DataFrame):

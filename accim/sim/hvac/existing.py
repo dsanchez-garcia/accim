@@ -16,7 +16,7 @@
 
 """Module for function in EnergyPlus scope related to models with existing HVAC systems"""
 
-def add_forscript_schedule_existing_hvac(self, verboseMode: bool = True):
+def add_forscript_schedule_existing_hvac(self, verbose: bool = True):
     """Add Schedules for each zone in existing HVAC zones to override the existing setpoint temperatures.
 
     :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
@@ -31,7 +31,7 @@ def add_forscript_schedule_existing_hvac(self, verboseMode: bool = True):
                     if "AHST_Sch_" + self.HVACzonelist[i][2][j] in [sch.Name
                                                                      for sch
                                                                      in self.idf1.idfobjects['Schedule:Compact']]:
-                        if verboseMode:
+                        if verbose:
                             print('AHST_Sch_' + self.HVACzonelist[i][2][j] + ' Schedule already was in the model')
                     else:
                         self.idf1.newidfobject(
@@ -42,13 +42,13 @@ def add_forscript_schedule_existing_hvac(self, verboseMode: bool = True):
                             Field_2='For: AllDays',
                             Field_3='Until: 24:00,20'
                         )
-                        if verboseMode:
+                        if verbose:
                             print('AHST_Sch_' + self.HVACzonelist[i][2][j] + ' Schedule has been added')
 
                     if "ACST_Sch_" + self.HVACzonelist[i][2][j] in [sch.Name
                                                                      for sch
                                                                      in self.idf1.idfobjects['Schedule:Compact']]:
-                        if verboseMode:
+                        if verbose:
                             print('ACST_Sch_' + self.HVACzonelist[i][2][j] + ' Schedule already was in the model')
                     else:
                         self.idf1.newidfobject(
@@ -59,14 +59,14 @@ def add_forscript_schedule_existing_hvac(self, verboseMode: bool = True):
                             Field_2='For: AllDays',
                             Field_3='Until: 24:00,24'
                         )
-                        if verboseMode:
+                        if verbose:
                             print('ACST_Sch_' + self.HVACzonelist[i][2][j] + ' Schedule has been added')
             elif 'ThermostatSetpoint:SingleHeating' in self.HVACzonelist[i][0]:
                 for j in range(len(self.HVACzonelist[i][2])):
                     if "AHST_Sch_" + self.HVACzonelist[i][2][j] in [sch.Name
                                                                      for sch
                                                                      in self.idf1.idfobjects['Schedule:Compact']]:
-                        if verboseMode:
+                        if verbose:
                             print('AHST_Sch_' + self.HVACzonelist[i][2][j] + ' Schedule already was in the model')
                     else:
                         self.idf1.newidfobject(
@@ -77,13 +77,13 @@ def add_forscript_schedule_existing_hvac(self, verboseMode: bool = True):
                             Field_2='For: AllDays',
                             Field_3='Until: 24:00,20'
                         )
-                        if verboseMode:
+                        if verbose:
                             print('AHST_Sch_' + self.HVACzonelist[i][2][j] + ' Schedule has been added')
             elif 'ThermostatSetpoint:SingleCooling' in self.HVACzonelist[i][0]:
                 if "ACST_Sch_" + self.HVACzonelist[i][2][j] in [sch.Name
                                                                  for sch
                                                                  in self.idf1.idfobjects['Schedule:Compact']]:
-                    if verboseMode:
+                    if verbose:
                         print('ACST_Sch_' + self.HVACzonelist[i][2][j] + ' Schedule already was in the model')
                 else:
                     self.idf1.newidfobject(
@@ -94,7 +94,7 @@ def add_forscript_schedule_existing_hvac(self, verboseMode: bool = True):
                         Field_2='For: AllDays',
                         Field_3='Until: 24:00,24'
                     )
-                    if verboseMode:
+                    if verbose:
                         print('ACST_Sch_' + self.HVACzonelist[i][2][j] + ' Schedule has been added')
 
     for j in range(len(self.HVACzonelist)):

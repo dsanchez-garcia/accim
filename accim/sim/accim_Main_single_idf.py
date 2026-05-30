@@ -40,17 +40,17 @@ class AccimJob(_AccimJob):
 
     def __init__(self,
                  idf_class_instance,
-                 ScriptType: str = None,
-                 EnergyPlus_version: str = None,
-                 TempCtrl: str = None,
-                 verboseMode: bool = True,
+                 script_type: str = None,
+                 energyplus_version: str = None,
+                 temp_control: str = None,
+                 verbose: bool = True,
                  hvac_zone_map: dict = None):
         self.accimNotWorking = False
         self.idf1 = idf_class_instance
         self.output_idf_dict = {}
         self._scan_and_setup_zones(
-            ScriptType=ScriptType,
-            verboseMode=verboseMode,
+            script_type=script_type,
+            verbose=verbose,
             hvac_zone_map=hvac_zone_map,
             model_label=getattr(idf_class_instance, 'idfname', '') or 'in-memory IDF',
         )
