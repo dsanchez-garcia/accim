@@ -5,38 +5,38 @@ from besos.parameters import RangeParameter,  Parameter, GenericSelector
 from besos.problem import EPProblem
 from besos.objectives import VariableReader, MeterReader
 
-import accim.sim.accis_single_idf_funcs as accis
+import accim.sim.single as accis
 
 ##
 
 building = ef.get_building('TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940.idf')
 
-accis.addAccis(
+accis.add_accis(
     idf=building,
-    ScriptType='vrf_mm',
-    SupplyAirTempInputMethod='temperature difference',
-    Output_keep_existing=False,
-    Output_type='standard',
-    Output_freqs=['hourly'],
-    EnergyPlus_version='9.4',
-    TempCtrl='temperature',
-    Output_gen_dataframe=True,
+    script_type='vrf_mm',
+    supply_air_temp_method='temperature difference',
+    output_keep_existing=False,
+    output_type='standard',
+    output_freqs=['hourly'],
+    energyplus_version='9.4',
+    temp_control='temperature',
+    output_gen_dataframe=True,
 )
 
 ##
 
 def modify_accis(building, value):
-    accis.modifyAccis(
+    accis.modify_accis(
         idf=building,
-        ComfStand=1,
-        CAT=3,
-        ComfMod=3,
+        comfort_standard=1,
+        category=3,
+        comfort_mode=3,
         # SetpointAcc=1000,
-        HVACmode=2,
-        VentCtrl=0,
-        CoolSeasonStart='01/02',
-        CoolSeasonEnd='01/03',
-        VSToffset=value,
+        hvac_mode=2,
+        vent_control=0,
+        cooling_season_start='01/02',
+        cooling_season_end='01/03',
+        vent_setpoint_offset=value,
         # MinOToffset=50,
         # MaxWindSpeed=50
     )

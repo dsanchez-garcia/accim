@@ -1,13 +1,13 @@
-from accim.sim.accis import addAccis
+from accim.sim.batch import AddAccis
 
-x = addAccis(
-    ScriptType='vrf_mm',
-    SupplyAirTempInputMethod='supply air temperature',
-    Output_keep_existing=False,
-    Output_type='standard',
-    Output_freqs=['hourly'],
-    Output_gen_dataframe=False,
-    EnergyPlus_version='23.2',
-    TempCtrl='temp',
+x = AddAccis(
+    script_type='vrf_mm',
+    supply_air_temp_method='supply air temperature',
+    output_keep_existing=False,
+    output_type='standard',
+    output_freqs=['hourly'],
+    output_gen_dataframe=False,
+    energyplus_version='23.2',
+    temp_control='temp',
 
 )

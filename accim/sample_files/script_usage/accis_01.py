@@ -1,15 +1,15 @@
-from accim.sim import accis
-accis.addAccis(
-    ScriptType='ex_mm',
-    Output_keep_existing=False,
-    Output_type='standard',
-    Output_freqs=['hourly'],
-    EnergyPlus_version='9.5',
-    TempCtrl='temp',
-    ComfStand=[1],
-    CAT=[1, 2, 3],
-    ComfMod=[3],
-    HVACmode=[2],
-    VentCtrl=[0],
-    confirmGen=True
+from accim.sim import AddAccis
+AddAccis(
+    script_type='ex_mm',
+    output_keep_existing=False,
+    output_type='standard',
+    output_freqs=['hourly'],
+    energyplus_version='9.5',
+    temp_control='temp',
+    comfort_standard=[1],
+    category=[1, 2, 3],
+    comfort_mode=[3],
+    hvac_mode=[2],
+    vent_control=[0],
+    confirm_generation=True
 )

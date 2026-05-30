@@ -7,7 +7,7 @@ from besos.objectives import MeterReader
 
 import numpy as np
 
-import accim.sim.apmv_setpoints as apmv
+import accim.sim.apmv as apmv
 import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf
 
 

@@ -1,25 +1,25 @@
-from accim.sim import accis
+from accim.sim import AddAccis
 import os
 try:
-    accis.addAccis(
-        ScriptType='vrf_mm',
-        Output_keep_existing=False,
-        Output_type='detailed',
-        Output_freqs=['timestep', 'hourly'],
-        EnergyPlus_version='22.1',
-        TempCtrl='temp',
-        ComfStand=[15],
-        CAT=[80],
-        ComfMod=[3],
-        HVACmode=[2],
-        VentCtrl=[0],
-        VSToffset=[0],
-        MinOToffset=[50],
-        MaxWindSpeed=[50],
-        ASTtol_steps=0.1,
-        ASTtol_start=0.1,
-        ASTtol_end_input=0.1,
-        confirmGen=True
+    AddAccis(
+        script_type='vrf_mm',
+        output_keep_existing=False,
+        output_type='detailed',
+        output_freqs=['timestep', 'hourly'],
+        energyplus_version='22.1',
+        temp_control='temp',
+        comfort_standard=[15],
+        category=[80],
+        comfort_mode=[3],
+        hvac_mode=[2],
+        vent_control=[0],
+        vent_setpoint_offset=[0],
+        min_outdoor_temp_offset=[50],
+        max_wind_speed=[50],
+        ast_tol_steps=0.1,
+        ast_tol_start=0.1,
+        ast_tol_end=0.1,
+        confirm_generation=True
     )
 except KeyError:
     print('\nkey error')
