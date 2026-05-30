@@ -25,7 +25,9 @@ TEST_DATA_DIR = REPO_ROOT / "tests" / "test_data"
 GOLDEN_DIR = Path(__file__).parent / "golden" / "single"
 
 VRF960 = SAMPLE_IDF_DIR / "TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V960.idf"
+VRF940 = SAMPLE_IDF_DIR / "TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V940.idf"
 VRF2510 = SAMPLE_IDF_DIR / "TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2510.idf"
+SF = TEST_DATA_DIR / "SF_Detached_B_min_North.idf"
 
 COMMON = dict(
     SupplyAirTempInputMethod="supply air temperature",
@@ -92,3 +94,105 @@ def test_single_characterization(cfg, tmp_path, update_golden):
     err = assert_or_write_golden(golden_file, actual, update_golden, dump_suffix=".actual.idf")
     if err:
         pytest.fail(f"idf.idfstr() cambio para '{cfg['id']}'.\n{err}")
+
+
+# --------------------------------------------------------------------------- #
+# Flujo real del subpaquete parametric_and_optimisation: addAccis + modifyAccis
+# (modifyAccis fija una variante concreta reescribiendo lineas de los programas
+# EMS SetInputData/ApplyCAT/SetAST, incl. get_SetAST_lines). Es el objetivo del
+# refactor de Fase 4, por lo que conviene caracterizarlo aqui.
+# --------------------------------------------------------------------------- #
+def _base_addaccis(version):
+    return dict(
+        ScriptType="vrf_mm",
+        SupplyAirTempInputMethod="supply air temperature",
+        TempCtrl="temperature",
+        Output_type="standard",
+        Output_freqs=["hourly"],
+        Output_keep_existing=False,
+        EnergyPlus_version=version,
+        verboseMode=False,
+    )
+
+
+MODIFY_CONFIGS = [
+    # id, source, version, modify_kwargs
+    ("single_modify_cs2_v960", VRF960, "9.6",
+     dict(ComfStand=2, CAT=80, ComfMod=3, HVACmode=2, VentCtrl=0)),
+    # ComfStand=99 (modelo custom) es exactamente lo que aplica el wrapper
+    # AccimPredefModelsParamSim (main.py:4603).
+    ("single_modify_cs99_v960", VRF960, "9.6",
+     dict(ComfStand=99, CAT=80, ComfMod=3, HVACmode=2, VentCtrl=0)),
+    ("single_modify_cs1_v940", VRF940, "9.4",
+     dict(ComfStand=1, CAT=3, ComfMod=1, HVACmode=2, VentCtrl=1)),
+]
+
+
+def _run_single_modify(workdir, source_idf, version, modify_kwargs):
+    from besos import eppy_funcs as ef
+    import accim.sim.accis_single_idf_funcs as accis
+
+    prev = os.getcwd()
+    os.chdir(str(workdir))
+    try:
+        building = ef.get_building(str(source_idf))
+        accis.addAccis(idf=building, **_base_addaccis(version))
+        accis.modifyAccis(idf=building, **modify_kwargs)
+    finally:
+        os.chdir(prev)
+    return building.idfstr()
+
+
+@pytest.mark.parametrize("cid,source,version,modify_kwargs", MODIFY_CONFIGS,
+                         ids=[c[0] for c in MODIFY_CONFIGS])
+def test_single_modify_characterization(cid, source, version, modify_kwargs, tmp_path, update_golden):
+    if not Path(source).exists():
+        pytest.skip(f"IDF de muestra ausente: {source}")
+    _require_energyplus(version)
+
+    text = _run_single_modify(tmp_path, source, version, modify_kwargs)
+    actual = canonicalize_idf_text(text)
+    assert actual.strip(), "idfstr() vacio tras addAccis+modifyAccis"
+
+    golden_file = GOLDEN_DIR / (cid + ".idf.gz")
+    err = assert_or_write_golden(golden_file, actual, update_golden, dump_suffix=".actual.idf")
+    if err:
+        pytest.fail(f"addAccis+modifyAccis cambio para '{cid}'.\n{err}")
+
+
+# --------------------------------------------------------------------------- #
+# Via aPMV: apply_apmv_setpoints (la usa parametric con parameters_type='apmv
+# setpoints'). Convierte termostatos DualSetpoint a confort Fanger e inyecta EMS.
+# --------------------------------------------------------------------------- #
+def _run_apmv(workdir, source_idf):
+    from besos import eppy_funcs as ef
+    from accim.sim import apmv_setpoints
+
+    prev = os.getcwd()
+    os.chdir(str(workdir))
+    try:
+        building = ef.get_building(str(source_idf))
+        apmv_setpoints.apply_apmv_setpoints(
+            building=building, outputs_freq=["hourly"], verbose_mode=False
+        )
+    finally:
+        os.chdir(prev)
+    return building.idfstr()
+
+
+@pytest.mark.parametrize("cid,source,version", [
+    ("single_apmv_sf_v960", SF, "9.6"),
+], ids=["single_apmv_sf_v960"])
+def test_single_apmv_characterization(cid, source, version, tmp_path, update_golden):
+    if not Path(source).exists():
+        pytest.skip(f"IDF de muestra ausente: {source}")
+    _require_energyplus(version)
+
+    text = _run_apmv(tmp_path, source)
+    actual = canonicalize_idf_text(text)
+    assert actual.strip(), "idfstr() vacio tras apply_apmv_setpoints"
+
+    golden_file = GOLDEN_DIR / (cid + ".idf.gz")
+    err = assert_or_write_golden(golden_file, actual, update_golden, dump_suffix=".actual.idf")
+    if err:
+        pytest.fail(f"apply_apmv_setpoints cambio para '{cid}'.\n{err}")
