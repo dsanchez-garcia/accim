@@ -67,7 +67,7 @@ def _require_energyplus(version):
 def _run_single(workdir, source_idf, kwargs):
     """Carga el IDF, aplica el ACCIS generico in-memory y devuelve el idfstr."""
     from besos import eppy_funcs as ef
-    import accim.sim.accis_single_idf_funcs as accis
+    import accim.sim.single as accis
 
     prev = os.getcwd()
     os.chdir(str(workdir))  # por si el codigo escribiese algun fichero auxiliar
@@ -130,7 +130,7 @@ MODIFY_CONFIGS = [
 
 def _run_single_modify(workdir, source_idf, version, modify_kwargs):
     from besos import eppy_funcs as ef
-    import accim.sim.accis_single_idf_funcs as accis
+    import accim.sim.single as accis
 
     prev = os.getcwd()
     os.chdir(str(workdir))
@@ -166,7 +166,7 @@ def test_single_modify_characterization(cid, source, version, modify_kwargs, tmp
 # --------------------------------------------------------------------------- #
 def _run_apmv(workdir, source_idf):
     from besos import eppy_funcs as ef
-    from accim.sim import apmv_setpoints
+    from accim.sim import apmv as apmv_setpoints
 
     prev = os.getcwd()
     os.chdir(str(workdir))

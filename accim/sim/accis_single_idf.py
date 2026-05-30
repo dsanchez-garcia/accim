@@ -601,7 +601,7 @@ class addAccis:
         # Dynamic injection: trim to the 16 base lines then append model-specific lines
         while len(self.SetAST.obj) > 18:
             self.SetAST.obj.pop()
-        from accim.sim.setAST_models import get_SetAST_lines
+        from accim.sim.ems.setast_models import get_SetAST_lines
         dynamic_lines = get_SetAST_lines(ComfStand, ComfMod)
         for dline in dynamic_lines:
             self.SetAST.obj.append(dline)

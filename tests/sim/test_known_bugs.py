@@ -38,7 +38,7 @@ def test_batch_pmv_currently_broken(tmp_path):
     prev = os.getcwd()
     os.chdir(str(tmp_path))
     try:
-        from accim.sim import accis
+        from accim.sim import batch as accis
         accis.addAccis(
             ScriptType="vrf_mm",
             SupplyAirTempInputMethod="supply air temperature",

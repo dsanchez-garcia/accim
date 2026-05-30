@@ -522,7 +522,7 @@ def addEMSProgramsBase(self, ScriptType: str = None, verboseMode: bool = True):
             print('Not added - SetAST_Master Program (already exists)')
     else:
         # Import modular SetAST functions
-        from accim.sim.setAST_models import get_SetAST_Master_program, get_all_SetAST_modular_programs
+        from accim.sim.ems.setast_models import get_SetAST_Master_program, get_all_SetAST_modular_programs
 
         try:
             # Create the SetAST_Master program (routes to per-ComfStand subprograms)

@@ -694,7 +694,7 @@ def modifyAccis(
     SetAST.obj.append('run SetAST_Master')
 
     # Import modular SetAST functions
-    from accim.sim.setAST_models import get_SetAST_Master_program, get_all_SetAST_modular_programs
+    from accim.sim.ems.setast_models import get_SetAST_Master_program, get_all_SetAST_modular_programs
 
     # Add SetAST_Master program if it doesn't exist
     master_program_name = 'SetAST_Master'

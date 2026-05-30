@@ -28,7 +28,7 @@ the single (in-memory) path behaves exactly like the batch path. All injection
 methods are inherited from the engine class.
 """
 
-from accim.sim.accim_Main import accimJob as _AccimJob
+from accim.sim.engine import accimJob as _AccimJob
 
 
 class accimJob(_AccimJob):

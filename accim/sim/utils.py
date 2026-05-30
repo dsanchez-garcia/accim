@@ -19,7 +19,7 @@ def scan_zones(self):
     Used to scan the occupied zones in an idf.
 
     """
-    from accim.sim.apmv_setpoints import _resolve_targets
+    from accim.sim.apmv import _resolve_targets
 
     target_data = _resolve_targets(self.idf1)
 

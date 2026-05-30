@@ -262,8 +262,7 @@ class addAccis:
         Constructor method.
         """
 
-        # import accim.sim.accim_Main as accim_Main
-        import accim.sim.accim_Main as accim_Main
+        import accim.sim.engine as accim_Main
 
         from os import listdir, remove
         import accim

@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 """Generate IDFs."""
-from accim.sim.setAST_models import get_SetAST_lines
+from accim.sim.ems.setast_models import get_SetAST_lines
 
 
 def inputData(self, ScriptType: str = None):

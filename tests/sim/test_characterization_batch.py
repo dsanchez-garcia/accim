@@ -98,7 +98,7 @@ def _run_batch(workdir, source_idf, kwargs):
     prev = os.getcwd()
     os.chdir(str(workdir))
     try:
-        from accim.sim import accis
+        from accim.sim import batch as accis
         accis.addAccis(**kwargs)
     finally:
         os.chdir(prev)

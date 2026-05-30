@@ -20,8 +20,8 @@ from besos.objectives import VariableReader, MeterReader
 from besos import IDF_class
 from accim.utils import print_available_outputs_mod, modify_timesteps, set_occupancy_to_always, remove_accents_in_idf, reduce_runtime, read_eso_using_readvarseso
 from accim.parametric_and_optimisation.utils import expand_to_hourly_dataframe, identify_hourly_columns
-import accim.sim.accis_single_idf_funcs as accis
-import accim.sim.apmv_setpoints as apmv
+import accim.sim.single as accis
+import accim.sim.apmv as apmv
 import accim.parametric_and_optimisation.funcs_for_besos.param_accis as bf_accim
 import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
 import accim.parametric_and_optimisation.parameters as params

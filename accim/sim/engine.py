@@ -16,7 +16,7 @@
 
 """Class for accim."""
 from accim.utils import get_idd_path_from_ep_version
-from accim.sim.accim_ExistingHVAC_resolver import resolve_hvac_zone_map
+from accim.sim.hvac.resolver import resolve_hvac_zone_map
 
 
 class accimJob():
@@ -32,10 +32,10 @@ class accimJob():
     from os import listdir
     import numpy
 
-    from accim.sim.accim_IDFgeneration import \
+    from accim.sim.idf_generation import \
         inputData,\
         genIDF
-    from accim.sim.accim_Base import \
+    from accim.sim.hvac.base import \
         setComfFieldsPeople, \
         saveaccim, \
         setPMVsetpoint, \
@@ -43,7 +43,7 @@ class accimJob():
         addOutputVariableDictionaryObject, \
         addOutputEnergyManagementSystem, \
         setSimulationControlSizing
-    from accim.sim.accim_Base_EMS import \
+    from accim.sim.ems.programs import \
         addEMSActuatorsBase, \
         addEMSOutputVariableBase, \
         addEMSPCMBase, \
@@ -61,14 +61,14 @@ class accimJob():
         takeOutputDataFrame, \
         makeAverages
 
-    from accim.sim.accim_ExistingHVAC import \
+    from accim.sim.hvac.existing import \
         addForscriptSchExistHVAC
-    from accim.sim.accim_ExistingHVAC_EMS import \
+    from accim.sim.hvac.existing_ems import \
         addEMSSensorsExisHVAC, \
         addEMSInitExisHVAC
-    from accim.sim.accim_ExistingHVAC_resolver import \
+    from accim.sim.hvac.resolver import \
         resolve_hvac_zone_map
-    from accim.sim.accim_VRFsystem import \
+    from accim.sim.hvac.vrf import \
         addBaseSchedules, \
         addCurveObj, \
         addDetHVACobj, \
@@ -77,7 +77,7 @@ class accimJob():
         addVRFsystemSch, \
         checkVentIsOn, \
         setAvailSchOn
-    from accim.sim.accim_VRFsystem_EMS import \
+    from accim.sim.hvac.vrf_ems import \
         addEMSSensorsVRFsystem
 
     from accim.utils import amend_idf_version_from_dsb, get_idd_path_from_ep_version
