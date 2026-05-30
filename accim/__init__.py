@@ -1,4 +1,4 @@
-__version__ = "0.7.8"
+__version__ = "1.0.0"
 
 import sys
 if sys.version_info >= (3, 12):
