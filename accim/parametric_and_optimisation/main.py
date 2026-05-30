@@ -346,9 +346,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if not bypass_addAccis:
                 if isinstance(buildings, list):
                     for b in buildings:
-                        accis.addAccis(idf=b, script_type=ScriptType, supply_air_temp_method=SupplyAirTempInputMethod, output_keep_existing=keep_existing_on_init, output_type=output_type, output_freqs=output_freqs, temp_control=temp_ctrl, make_averages=make_averages, debug=debugging, verbose=verbosemode)
+                        accis.AddAccisToIdf(idf=b, script_type=ScriptType, supply_air_temp_method=SupplyAirTempInputMethod, output_keep_existing=keep_existing_on_init, output_type=output_type, output_freqs=output_freqs, temp_control=temp_ctrl, make_averages=make_averages, debug=debugging, verbose=verbosemode)
                 else:
-                    accis.addAccis(idf=buildings, script_type=ScriptType, supply_air_temp_method=SupplyAirTempInputMethod, output_keep_existing=keep_existing_on_init, output_type=output_type, output_freqs=output_freqs, temp_control=temp_ctrl, make_averages=make_averages, debug=debugging, verbose=verbosemode)
+                    accis.AddAccisToIdf(idf=buildings, script_type=ScriptType, supply_air_temp_method=SupplyAirTempInputMethod, output_keep_existing=keep_existing_on_init, output_type=output_type, output_freqs=output_freqs, temp_control=temp_ctrl, make_averages=make_averages, debug=debugging, verbose=verbosemode)
         elif is_apmv_setpoints:
             if not bypass_addAccis:
                 if isinstance(buildings, list):
@@ -4600,5 +4600,5 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             buildings = building
         super().__init__(buildings=buildings, epws=epws, parameters_type='accim predefined model', output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging)
         for b in self.buildings:
-            accis.modifyAccis(idf=b, comfort_standard=99, comfort_mode=3, category=80, hvac_mode=2, vent_control=0)
+            accis.modify_accis(idf=b, comfort_standard=99, comfort_mode=3, category=80, hvac_mode=2, vent_control=0)
 

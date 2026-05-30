@@ -73,11 +73,10 @@ def _run_single(workdir, source_idf, kwargs):
     os.chdir(str(workdir))  # por si el codigo escribiese algun fichero auxiliar
     try:
         building = ef.get_building(str(source_idf))
-        result = accis.addAccis(idf=building, **kwargs)
+        accis.AddAccisToIdf(idf=building, **kwargs)
     finally:
         os.chdir(prev)
-    idf_out = result if result is not None else building
-    return idf_out.idfstr()
+    return building.idfstr()
 
 
 @pytest.mark.parametrize("cfg", CONFIGS, ids=[c["id"] for c in CONFIGS])
@@ -136,8 +135,8 @@ def _run_single_modify(workdir, source_idf, version, modify_kwargs):
     os.chdir(str(workdir))
     try:
         building = ef.get_building(str(source_idf))
-        accis.addAccis(idf=building, **_base_addaccis(version))
-        accis.modifyAccis(idf=building, **modify_kwargs)
+        accis.AddAccisToIdf(idf=building, **_base_addaccis(version))
+        accis.modify_accis(idf=building, **modify_kwargs)
     finally:
         os.chdir(prev)
     return building.idfstr()

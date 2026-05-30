@@ -26,7 +26,7 @@ import pandas as pd
 import besos.IDF_class
 from accim import __version__
 
-def addAccis(
+def add_accis(
     idf: besos.IDF_class = None,
     script_type: str = None,
     supply_air_temp_method: str = None,
@@ -391,7 +391,54 @@ def addAccis(
         print('''\n=======================END OF OUTPUT IDF FILE GENERATION PROCESS=======================\n''')
 
 
-    # self.idf = idf
+class AddAccisToIdf:
+    """Class entry point to apply the ACCIS to a single in-memory IDF object.
+
+    Thin wrapper over :func:`add_accis` that keeps the inputs and the resulting
+    IDF as inspectable attributes (``self.idf``, ``self.arguments``). The IDF is
+    modified in place; ``self.idf`` references the same object.
+    """
+
+    def __init__(
+        self,
+        idf: besos.IDF_class = None,
+        script_type: str = None,
+        supply_air_temp_method: str = None,
+        output_type: str = None,
+        output_freqs: any = None,
+        output_keep_existing: bool = None,
+        output_take_dataframe: pd.DataFrame = None,
+        energyplus_version: str = None,
+        temp_control: str = None,
+        vrf_schedule: str = 'On 24/7',
+        verbose: bool = True,
+        eer: float = 2,
+        cop: float = 2.1,
+        make_averages: bool = False,
+        debug: bool = False,
+        hvac_zone_map: dict = None,
+    ):
+        self.arguments = dict(
+            script_type=script_type, supply_air_temp_method=supply_air_temp_method,
+            output_type=output_type, output_freqs=output_freqs,
+            output_keep_existing=output_keep_existing,
+            output_take_dataframe=output_take_dataframe,
+            energyplus_version=energyplus_version, temp_control=temp_control,
+            vrf_schedule=vrf_schedule, verbose=verbose, eer=eer, cop=cop,
+            make_averages=make_averages, debug=debug, hvac_zone_map=hvac_zone_map,
+        )
+        add_accis(
+            idf=idf, script_type=script_type,
+            supply_air_temp_method=supply_air_temp_method,
+            output_type=output_type, output_freqs=output_freqs,
+            output_keep_existing=output_keep_existing,
+            output_take_dataframe=output_take_dataframe,
+            energyplus_version=energyplus_version, temp_control=temp_control,
+            vrf_schedule=vrf_schedule, verbose=verbose, eer=eer, cop=cop,
+            make_averages=make_averages, debug=debug, hvac_zone_map=hvac_zone_map,
+        )
+        self.idf = idf
+
 
 def gen_outputs_df(
         idf: besos.IDF_class = None,
@@ -432,7 +479,7 @@ def gen_outputs_df(
     :type verboseMode: bool
     :return: pandas.Dataframe instance which contains the Output:Variable objects in the idf
     """
-    addAccis(
+    add_accis(
         idf=idf,
         script_type=script_type,
         output_type=output_type,
@@ -463,7 +510,7 @@ def gen_outputs_df(
 
 
 
-def modifyAccis(
+def modify_accis(
         idf,
         comfort_standard: int = None,
         category: int = None,
