@@ -499,6 +499,124 @@ class AccimJob():
                         print(f'And the windows related to these {self.ExisHVAC[i][0]} objects are:')
                         print(*self.ExisHVAC[i][4], sep='\n')
 
+    def apply_accis(
+        self,
+        script_type,
+        supply_air_temp_method=None,
+        temp_control=None,
+        output_type=None,
+        output_freqs=None,
+        output_keep_existing=None,
+        output_take_dataframe=None,
+        output_gen_dataframe=False,
+        make_averages=False,
+        debug=False,
+        eer=2,
+        cop=2.1,
+        vrf_schedule='On 24/7',
+        energyplus_version=None,
+        verbose=True,
+        take_dataframe_filename=None,
+        single_idf=False,
+    ):
+        """Run the full ordered ACCIS injection sequence on ``self.idf1``.
+
+        Single source of truth for the injection sequence, shared by the batch
+        (disk) and single (in-memory) entry points. Returns the possibly-updated
+        ``output_gen_dataframe`` flag (output type 'custom' disables it). Disk-only
+        steps (set_simulation_control_sizing, save, gen_output_dataframe) are
+        handled by the batch caller, not here.
+        """
+        self.set_comfort_fields_people(
+            energyplus_version=energyplus_version, temp_control=temp_control, verbose=verbose)
+
+        if 'vrf' in script_type.lower():
+            if temp_control.lower() == 'temperature' or temp_control.lower() == 'temp':
+                self.add_operative_temp_thermostat(verbose=verbose)
+            elif temp_control.lower() == 'pmv':
+                self.set_pmv_setpoint(verbose=verbose)
+            self.add_base_schedules(verbose=verbose)
+            self.set_availability_schedule_on(verbose=verbose)
+            self.add_vrf_system_schedule(verbose=verbose)
+            self.add_curve_objects(verbose=verbose)
+            self.add_detailed_hvac_objects(
+                energyplus_version=energyplus_version,
+                verbose=verbose,
+                supply_air_temp_method=supply_air_temp_method,
+                eer=eer,
+                cop=cop,
+                vrf_schedule=vrf_schedule,
+            )
+            if script_type.lower() == 'vrf_mm':
+                self.check_ventilation_is_on(verbose=verbose)
+            self.add_forscript_schedule_vrf(verbose=verbose)
+        elif 'ex' in script_type.lower():
+            # todo check if PMV can work with ex_ac
+            self.add_forscript_schedule_existing_hvac(verbose=verbose)
+
+        self.add_ems_programs(script_type=script_type, verbose=verbose)
+        self.add_ems_output_variables(script_type=script_type, verbose=verbose)
+        self.add_global_variables(script_type=script_type, verbose=verbose)
+        self.add_internal_variables(verbose=verbose)
+        self.add_ems_sensors(script_type=script_type, verbose=verbose)
+        self.add_ems_actuators(script_type=script_type, verbose=verbose)
+
+        if 'vrf' in script_type.lower():
+            self.add_ems_sensors_vrf(script_type=script_type, verbose=verbose)
+        elif script_type.lower() == 'ex_mm':
+            self.add_ems_sensors_existing_hvac(verbose=verbose)
+            self.add_ems_init_existing_hvac(verbose=verbose)
+
+        self.add_ems_pcm(verbose=verbose)
+
+        if make_averages:
+            self.make_averages(verbose=verbose)
+
+        if output_keep_existing == 'true':
+            output_keep_existing = True
+        elif output_keep_existing == 'false':
+            output_keep_existing = False
+        if output_keep_existing is True:
+            pass
+        else:
+            self.remove_existing_output_variables()
+
+        if output_type.lower() == 'simplified':
+            self.add_output_variables_simplified(
+                output_freqs=output_freqs, temp_control=temp_control, verbose=verbose)
+        elif output_type.lower() == 'standard':
+            self.add_output_variables_standard(
+                output_freqs=output_freqs, script_type=script_type,
+                temp_control=temp_control, verbose=verbose)
+        elif output_type.lower() == 'detailed' or output_type.lower() == 'custom':
+            self.add_output_variables_standard(
+                output_freqs=output_freqs, script_type=script_type,
+                temp_control=temp_control, verbose=verbose)
+            self.add_output_variables_detailed(output_freqs=output_freqs, verbose=verbose)
+            if output_type.lower() == 'custom':
+                output_gen_dataframe = False
+                self.apply_specified_outputs()
+
+        if output_take_dataframe is not None:
+            if single_idf:
+                self.take_output_dataframe(
+                    idf_filename=take_dataframe_filename,
+                    df_outputs_in=output_take_dataframe, verbose=verbose, singleidf=True)
+            else:
+                self.take_output_dataframe(
+                    idf_filename=take_dataframe_filename,
+                    df_outputs_in=output_take_dataframe, verbose=verbose)
+
+        self.remove_duplicated_output_variables()
+
+        self.add_control_files_objects(verbose=verbose)
+        self.add_output_variable_dictionary(verbose=verbose)
+
+        if debug:
+            self.add_output_ems(verbose=verbose)
+
+        return output_gen_dataframe
+
 
 class AccimJobInMemory(AccimJob):
     """In-memory variant of the ACCIS engine.

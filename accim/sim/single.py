@@ -288,103 +288,25 @@ def add_accis(
     # self.windows_and_doors = z.windownamelist
     # self.windows_and_doors_original_name = z.windownamelist_orig
 
-    z.set_comfort_fields_people(energyplus_version=energyplus_version, temp_control=temp_control, verbose=verbose)
-
-    if 'vrf' in script_type.lower():
-        if temp_control.lower() == 'temperature' or temp_control.lower() == 'temp':
-            z.add_operative_temp_thermostat(verbose=verbose)
-        elif temp_control.lower() == 'pmv':
-            z.set_pmv_setpoint(verbose=verbose)
-        z.add_base_schedules(verbose=verbose)
-        z.set_availability_schedule_on(verbose=verbose)
-        z.add_vrf_system_schedule(verbose=verbose)
-        z.add_curve_objects(verbose=verbose)
-        z.add_detailed_hvac_objects(
-            energyplus_version=energyplus_version,
-            verbose=verbose,
-            supply_air_temp_method=supply_air_temp_method,
-            eer=eer,
-            cop=cop,
-            vrf_schedule=vrf_schedule
-        )
-        if script_type.lower() == 'vrf_mm':
-            z.check_ventilation_is_on(verbose=verbose)
-        z.add_forscript_schedule_vrf(verbose=verbose)
-    elif 'ex' in script_type.lower():
-        # todo check if PMV can work with ex_ac
-        z.add_forscript_schedule_existing_hvac(verbose=verbose)
-
-    z.add_ems_programs(script_type=script_type, verbose=verbose)
-    z.add_ems_output_variables(script_type=script_type, verbose=verbose)
-    z.add_global_variables(script_type=script_type, verbose=verbose)
-    z.add_internal_variables(verbose=verbose)
-    z.add_ems_sensors(script_type=script_type, verbose=verbose)
-    z.add_ems_actuators(script_type=script_type, verbose=verbose)
-
-    if 'vrf' in script_type.lower():
-        z.add_ems_sensors_vrf(script_type=script_type, verbose=verbose)
-    elif script_type.lower() == 'ex_mm':
-        z.add_ems_sensors_existing_hvac(verbose=verbose)
-        z.add_ems_init_existing_hvac(verbose=verbose)
-
-    z.add_ems_pcm(verbose=verbose)
-
-    if make_averages:
-        z.make_averages(verbose=verbose)
-
-    if output_keep_existing == 'true':
-        output_keep_existing = True
-    elif output_keep_existing == 'false':
-        output_keep_existing = False
-    if output_keep_existing is True:
-        pass
-    else:
-        z.remove_existing_output_variables()
-
-    if output_type.lower() == 'simplified':
-        z.add_output_variables_simplified(
-            output_freqs=output_freqs,
-            temp_control=temp_control,
-            verbose=verbose
-        )
-    elif output_type.lower() == 'standard':
-        z.add_output_variables_standard(
-            output_freqs=output_freqs,
-            script_type=script_type,
-            temp_control=temp_control,
-            verbose=verbose
-        )
-    elif output_type.lower() == 'detailed' or output_type.lower() == 'custom':
-        z.add_output_variables_standard(
-            output_freqs=output_freqs,
-            script_type=script_type,
-            temp_control=temp_control,
-            verbose=verbose
-        )
-        z.add_output_variables_detailed(
-            output_freqs=output_freqs,
-            verbose=verbose
-        )
-        if output_type.lower() == 'custom':
-            output_gen_dataframe = False
-            z.apply_specified_outputs()
-
-    if output_take_dataframe is not None:
-        z.take_output_dataframe(
-            idf_filename=idf.idfname.split('.idf')[0],
-            df_outputs_in=output_take_dataframe,
-            verbose=verbose,
-            singleidf=True,
-        )
-
-    z.remove_duplicated_output_variables()
-
-    z.add_control_files_objects(verbose=verbose)
-
-    z.add_output_variable_dictionary(verbose=verbose)
-
-    if debug:
-        z.add_output_ems(verbose=verbose)
+    z.apply_accis(
+        script_type=script_type,
+        supply_air_temp_method=supply_air_temp_method,
+        temp_control=temp_control,
+        output_type=output_type,
+        output_freqs=output_freqs,
+        output_keep_existing=output_keep_existing,
+        output_take_dataframe=output_take_dataframe,
+        output_gen_dataframe=False,
+        make_averages=make_averages,
+        debug=debug,
+        eer=eer,
+        cop=cop,
+        vrf_schedule=vrf_schedule,
+        energyplus_version=energyplus_version,
+        verbose=verbose,
+        take_dataframe_filename=(idf.idfname.split('.idf')[0] if getattr(idf, 'idfname', None) else None),
+        single_idf=True,
+    )
 
     if verbose:
         print('''\n=======================END OF OUTPUT IDF FILE GENERATION PROCESS=======================\n''')
