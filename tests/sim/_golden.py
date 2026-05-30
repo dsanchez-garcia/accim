@@ -61,7 +61,9 @@ def assert_or_write_golden(golden_file, actual, update, dump_suffix=".actual.txt
     golden_file = Path(golden_file)
     if update or not golden_file.exists():
         golden_file.parent.mkdir(parents=True, exist_ok=True)
-        golden_file.write_bytes(gzip.compress(actual))
+        # mtime=0 -> gzip determinista (sin timestamp), para no generar diffs
+        # espurios en git al regenerar goldens cuyo contenido no cambia.
+        golden_file.write_bytes(gzip.compress(actual, mtime=0))
         return None
     expected = gzip.decompress(golden_file.read_bytes())
     if actual == expected:
