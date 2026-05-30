@@ -175,7 +175,22 @@ class accimJob():
 
         self.output_idf_dict = {}
 
-        # print(self.filename)
+        self._scan_and_setup_zones(
+            ScriptType=ScriptType,
+            verboseMode=verboseMode,
+            hvac_zone_map=hvac_zone_map,
+            model_label=filename_temp,
+        )
+
+    def _scan_and_setup_zones(self, ScriptType, verboseMode=True, hvac_zone_map=None, model_label=''):
+        """Common, I/O-free scanning and zone/HVAC setup shared by the batch and
+        single (in-memory) entry points.
+
+        Operates on ``self.idf1`` (already loaded in memory) and populates the
+        occupied-zone / window / HVAC attributes consumed by the injection methods.
+        This is the single source of truth for both paths; the batch path reaches it
+        after its disk I/O, the single path right after assigning ``self.idf1``.
+        """
         # Scanning occupied zones using function
         self.scan_zones()
         # Scanning occupied zones
@@ -256,7 +271,7 @@ class accimJob():
         #     self.ems_zonenames_underscore = self.occupiedZones_orig
 
         if verboseMode:
-            print(f'The occupied zones in the model {filename_temp} are:')
+            print(f'The occupied zones in the model {model_label} are:')
             print(*self.occupiedZones_orig, sep="\n")
 
         self.ismixedmode = False
@@ -344,14 +359,14 @@ class accimJob():
                                 self.scheduled_ventilation_dict[virtual_window_name] = sch_name
 
             if verboseMode:
-                print(f'The windows and doors in the model {filename_temp} are:')
+                print(f'The windows and doors in the model {model_label} are:')
                 print(*self.windownamelist, sep="\n")
 
         if 'vrf' in ScriptType.lower():
             self.zonenames = self.occupiedZones
             self.zonenames_orig = self.occupiedZones_orig
             if verboseMode:
-                print(f'The zones in the model {filename_temp} are:')
+                print(f'The zones in the model {model_label} are:')
                 print(*self.zonenames, sep="\n")
 
         elif 'ex' in ScriptType.lower():

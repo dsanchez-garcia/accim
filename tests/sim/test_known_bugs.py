@@ -17,9 +17,7 @@ import accim.utils
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SAMPLE_IDF_DIR = REPO_ROOT / "accim" / "sample_files" / "sample IDFs" / "input_IDFs"
-TEST_DATA_DIR = REPO_ROOT / "tests" / "test_data"
 VRF960 = SAMPLE_IDF_DIR / "TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V960.idf"
-SF = TEST_DATA_DIR / "SF_Detached_B_min_North.idf"
 
 
 @pytest.mark.xfail(
@@ -58,37 +56,7 @@ def test_batch_pmv_currently_broken(tmp_path):
         os.chdir(prev)
 
 
-@pytest.mark.xfail(
-    reason="Camino UNICO con ex_* falla en IDFs sin objetos SPACE casados 1:1 con las "
-           "zonas del termostato: IndexError en accim_Main_single_idf.py:247. El camino "
-           "LOTE (que usa accim_ExistingHVAC_resolver) si funciona con el mismo IDF.",
-    strict=True,
-    raises=IndexError,
-)
-def test_single_ex_currently_fragile(tmp_path):
-    idd = accim.utils.get_idd_path_from_ep_version("9.6")
-    if idd == "not-supported" or not os.path.exists(idd):
-        pytest.skip("EnergyPlus 9.6 no instalado")
-    if not SF.exists():
-        pytest.skip(f"IDF de muestra ausente: {SF}")
-
-    from besos import eppy_funcs as ef
-    import accim.sim.accis_single_idf_funcs as accis
-
-    prev = os.getcwd()
-    os.chdir(str(tmp_path))
-    try:
-        building = ef.get_building(str(SF))
-        accis.addAccis(
-            idf=building,
-            ScriptType="ex_mm",
-            SupplyAirTempInputMethod="supply air temperature",
-            TempCtrl="temperature",
-            Output_keep_existing=False,
-            Output_type="standard",
-            Output_freqs=["hourly"],
-            EnergyPlus_version="9.6",
-            verboseMode=False,
-        )
-    finally:
-        os.chdir(prev)
+# NOTA: el bug del camino UNICO con ex_* (IndexError en accim_Main_single_idf.py:247)
+# quedo CORREGIDO en la Fase 1 al converger el camino unico al motor del lote. Su
+# caracterizacion vive ahora como golden real en test_characterization_single.py
+# (config 'single_ex_mm_temp_v960').

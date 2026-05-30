@@ -51,10 +51,10 @@ CONFIGS = [
          TempCtrl="temperature", Output_type="standard", Output_freqs=["hourly"]),
     _cfg("single_vrf_mm_temp_v2510", VRF2510, "25.1", ScriptType="vrf_mm",
          TempCtrl="temperature", Output_type="detailed", Output_freqs=["hourly"]),
-    # NOTA: el camino UNICO con ex_* sobre un IDF sin objetos SPACE casados 1:1 con
-    # las zonas del termostato falla (IndexError en accim_Main_single_idf.py:247).
-    # El mismo IDF si funciona en el camino LOTE (que usa el resolver de HVAC).
-    # Documentado en test_known_bugs.py.
+    # ex_* en el camino unico ya funciona tras converger al motor del lote
+    # (Fase 1): hereda el resolver de HVAC y el guard del fallback SPACE.
+    _cfg("single_ex_mm_temp_v960", SF, "9.6", ScriptType="ex_mm",
+         TempCtrl="temperature", Output_type="standard", Output_freqs=["hourly"]),
 ]
 
 
