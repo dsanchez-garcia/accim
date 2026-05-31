@@ -7,10 +7,52 @@ without re-resolving the IDD path (so IDF.setiddname received 'not-supported').
 """
 
 import builtins
+import os
+import types
 
 import pytest
 
 import accim.run.run as runmod
+
+
+# --------------------------------------------------------------------------- #
+# make_eplaunch_options
+# --------------------------------------------------------------------------- #
+def _stub_idf(version="9.6.0", idfname="model.idf"):
+    ver = types.SimpleNamespace(Version_Identifier=version)
+    return types.SimpleNamespace(idfobjects={"version": [ver]}, idfname=idfname)
+
+
+def test_make_eplaunch_options_basic():
+    idf = _stub_idf(version="9.6.0", idfname="model.idf")
+    opts = runmod.make_eplaunch_options(idf, "weather.epw")
+    assert opts["ep_version"] == "9-6-0"
+    assert opts["output_suffix"] == "C"
+    assert opts["readvars"] is True
+    assert opts["expandobjects"] is True
+    # output_prefix = basename(idfname + '_' + epw_stem).split('.idf')[0] + '[' + epw_stem
+    assert opts["output_prefix"] == "model[weather"
+
+
+def test_make_eplaunch_options_pads_two_part_version():
+    idf = _stub_idf(version="23.1", idfname="m.idf")
+    opts = runmod.make_eplaunch_options(idf, "city.epw")
+    assert opts["ep_version"] == "23-1-0"  # padded to three parts
+
+
+# --------------------------------------------------------------------------- #
+# removefiles
+# --------------------------------------------------------------------------- #
+def test_removefiles_keeps_and_deletes(tmp_path, monkeypatch):
+    keep = ["a.py", "b.idf", "c.epw", "d.csv", "e.eso"]
+    delete = ["f.txt", "g.html", "h.err", "iTable.csv", "jMeter.csv", "kZsz.csv"]
+    for name in keep + delete:
+        (tmp_path / name).write_text("x")
+    monkeypatch.chdir(tmp_path)
+    runmod.removefiles()
+    remaining = set(os.listdir(tmp_path))
+    # plain .csv kept, but the Table/Meter/Zsz.csv ones are deleted in the 2nd pass
+    assert remaining == {"a.py", "b.idf", "c.epw", "d.csv", "e.eso"}
 
 
 def test_run_ep_reprompts_and_reresolves_idd(monkeypatch):
