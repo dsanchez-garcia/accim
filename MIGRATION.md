@@ -140,3 +140,34 @@ If you imported internal modules directly:
 
 The engine class `accimJob` is now `AccimJob` (file/disk based) with
 `AccimJobInMemory` for already-loaded IDF objects.
+
+## 5. `accim.run` (run_ep)
+
+```python
+# 0.7.x
+from accim.run import run
+run.runEp(runOnlyAccim=True, confirmRun=True, num_CPUs=2, EnergyPlus_version='24.2')
+
+# 1.0
+from accim.run import run
+run.run_ep(run_only_accim=True, confirm_run=True, num_cpus=2, energyplus_version='24.2')
+```
+
+| 0.7.x | 1.0 |
+|---|---|
+| `run.runEp` | `run.run_ep` |
+| `runOnlyAccim` | `run_only_accim` |
+| `confirmRun` | `confirm_run` |
+| `num_CPUs` | `num_cpus` |
+| `EnergyPlus_version` | `energyplus_version` |
+
+## 6. `accim.data` (postprocessing.Table)
+
+The public API of `Table` is unchanged, but note:
+
+- `Table(..., idf_path=...)` is now **required** to resolve the building zones.
+  Passing `idf_path=None` previously raised a cryptic
+  `AttributeError: 'dict' object has no attribute 'idfobjects'`; it now raises a
+  clear `ValueError`.
+- A bug in `wrangled_table(reshaping='pivot')` (which passed `index=None` to
+  `pivot_table`) was fixed. The `unstack` reshaping is the recommended path.
