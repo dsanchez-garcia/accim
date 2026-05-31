@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-05-31
+
+This is a **clean-break** major release. The `accim.sim` subpackage was
+reorganised and its entire public API was renamed to follow PEP 8. There are
+**no backward-compatible aliases** — see [`MIGRATION.md`](MIGRATION.md) for the
+full old→new name map. The behaviour of the generated EnergyPlus models is
+unchanged.
+
 ### Added
+- **`accim` 1.0 clean-break release** with a full migration guide
+  ([`MIGRATION.md`](MIGRATION.md)).
+- **Characterization & regression test suite** (`tests/sim`, `tests/data`,
+  `tests/run`, `tests/utils`): order-insensitive golden-file tests freezing the
+  generated IDF for the batch and in-memory ACCIS paths, plus unit/integration
+  tests for `Table` (incl. all four plotting entry points), morphing,
+  preprocessing geocoding, `run_ep`, and the `accim.utils` helpers. A few
+  pre-existing bugs are documented as `xfail`.
+- **`accim.sim.prompts`**: every interactive `input()` prompt is isolated into a
+  single module, so the rest of `accim.sim` is free of interactive I/O and is
+  fully usable from scripts/Jupyter/pipelines. The interactive mode is preserved
+  (entry points still prompt when arguments are omitted).
+- **Public API re-exports from `accim.sim`**: `AddAccis`, `AddAccisToIdf`,
+  `add_accis`, `modify_accis`, `gen_outputs_df`, `apply_apmv_setpoints`.
 - **Area Normalization and Floor Area Configuration**: Extended `set_building_floor_area` and related normalisation workflows for multi-IDF studies.
   - Added `mode='air-conditioned'` to calculate floor area from zones served or controlled by HVAC-related IDF objects such as `ZoneControl:*`, `ZoneHVAC:*`, `ZoneHVAC:EquipmentConnections`, `HVACTemplate:Zone:*`, and `AirTerminal:*`. The alias `mode='air-condicioned'` is also accepted.
   - `zones_list` can now be either a global list applied to every IDF or a dictionary mapping each IDF to its own list of zones.
@@ -35,6 +57,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Workspace Artifact Cleanup Utility**: Added `WorkspaceArtifactCleaner` in `accim.utils` to snapshot workspace files, detect generated artifacts, preview deletion plans (`dry_run`), and safely remove selected outputs with allow/deny glob patterns.
 
 ### Changed
+- **BREAKING — `accim.sim` 1.0 API (no aliases).** The subpackage was reorganised
+  into `engine`, `batch`, `single`, `idf_generation`, `apmv`, `constants` plus
+  `ems/` (`programs`, `setast_models`) and `hvac/` (`base`, `vrf`, `vrf_ems`,
+  `existing`, `existing_ems`, `resolver`) subpackages, and every public name was
+  renamed to PEP 8. Examples: `accis.addAccis` → `AddAccis`;
+  `accis_single_idf_funcs.addAccis` → `AddAccisToIdf` (class) / `add_accis`
+  (function); `modifyAccis` → `modify_accis`; the engine class `accimJob` →
+  `AccimJob` (+ `AccimJobInMemory`); arguments `ScriptType` → `script_type`,
+  `ComfStand` → `comfort_standard`, `CAT` → `category`, `ComfMod` →
+  `comfort_mode`, `HVACmode` → `hvac_mode`, `VentCtrl` → `vent_control`,
+  `TempCtrl` → `temp_control`, `verboseMode` → `verbose`, etc. (full table in
+  `MIGRATION.md`). The generated EnergyPlus model is byte-for-byte unchanged.
+- **Unified ACCIS engine**: the previously duplicated batch (disk) and in-memory
+  (single-IDF) code paths were merged onto one maintained engine; the ordered
+  injection sequence lives in a single `AccimJob.apply_accis()`, and the stale
+  in-memory fork was removed.
+- **BREAKING — `accim.run`**: `runEp` → `run_ep`; `runOnlyAccim` →
+  `run_only_accim`, `confirmRun` → `confirm_run`, `num_CPUs` → `num_cpus`,
+  `EnergyPlus_version` → `energyplus_version`. Dead code removed and the
+  interactive prompts isolated into helper functions.
+- **Version bumped to 1.0.0.**
 - **Floor Area Mode Semantics**: `mode='occupied'` remains strictly tied to `People` objects and their referenced `ZoneList`, `SpaceList`, or `Space` hierarchy. Use `mode='air-conditioned'` when normalisation should include all conditioned zones instead of only occupied zones.
 - **SetAST EMS Program Refactoring**: Extracted the monolithic `SetAST` conditional block into a modular injection system. Generated EnergyPlus `SetAST` EMS program blocks are now much smaller and resolve model-specific comfort logic dynamically during IDF generation.
 - **BESOS-style Parametric Flexibility**: `OptimParamSimulation` can now run without ACCIM-specific parameters, allowing generic BESOS parameters or zero internal parameters.
@@ -50,6 +93,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `tools/output_workflow_notebook_style.py` to use the new API and include the advanced meter DataFrame frequency path.
 
 ### Fixed
+- **`Table` unusable without `idf_path`**: `Table(..., idf_path=None)` raised a
+  cryptic `AttributeError: 'dict' object has no attribute 'idfobjects'`; it now
+  raises a clear `ValueError` explaining that the per-zone IDF is required.
+- **`Table.wrangled_table(reshaping='pivot')`**: passed `index=None` to
+  `pivot_table` because `list.remove()` returns `None`; replaced with a list
+  comprehension that excludes `'col_to_pivot'` without mutating `self.indexcols`.
+- **`Table` plotting on modern matplotlib**: `scatter_plot`, `time_plot`, and
+  `scatter_plot_with_baseline` used `Axes.get_shared_y_axes().join()` (removed in
+  matplotlib ≥ 3.6) and `Legend.legendHandles` (renamed to `legend_handles` in
+  matplotlib ≥ 3.7); replaced with `Axes.sharey()` (guarded against self-sharing)
+  and a version-robust `legend_handles` fallback.
+- **`morph_epws` `NameError`**: `parent_folder_path` was only defined inside the
+  inner (scenario) loop but used afterwards to move the original EPW, crashing
+  when the morphing produced no scenario EPWs; it is now computed once per EPW.
+- **`run_ep` IDD re-resolution**: when an unsupported EnergyPlus version was
+  entered it was re-prompted but the IDD path was not re-resolved, so
+  `IDF.setiddname('not-supported')` was called; the IDD is now re-resolved inside
+  the retry loop.
+- **`WorkspaceArtifactCleaner` with an empty workspace**: an initially-empty
+  workspace was indistinguishable from "state not captured" (both an empty set),
+  raising `RuntimeError`; the baseline now uses `None`/`is None`.
+- **Single in-memory `ex_*` path**: now inherits the maintained batch engine,
+  fixing an `IndexError` on existing-HVAC models without a 1:1 Space/zone mapping.
+- **`using_Table.py` example**: fixed two stale references that error against the
+  current code — `scatter_plot_adap_vs_stat` → `scatter_plot_with_baseline` (the
+  method was renamed) and the `'Category'` gather column → `'CAT'`.
 - **Output Preflight Variable Verification in ACCIM Models**: `get_output_var_df_from_idf` now reads `Output:Variable` objects directly from the current IDF state (side-effect free), preventing false `missing_in_idf` reports after `apply_outputs_preflight(...)`.
 - **`run_optimisation()` Return Value**: Restored the method return so it consistently returns the full optimisation `DataFrame` (`self.outputs_optimisation`) instead of `None`, fixing downstream errors like `TypeError: object of type 'NoneType' has no len()`.
 - **Consistent Simulation Returns**: `run_parametric_simulation()` and `run_optimisation()` now consistently return their result DataFrames (`self.outputs_param_simulation` and `self.outputs_optimisation`) so downstream code can safely use `len(...)` and chaining without receiving `None`.
@@ -158,7 +227,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 A detailed changelog for versions prior to 0.7.5 was not formally maintained in this file.
 
 ---
-[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v0.7.7...HEAD
+[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/dsanchez-garcia/accim/compare/v0.7.7...v1.0.0
 [0.7.7]: https://github.com/dsanchez-garcia/accim/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/dsanchez-garcia/accim/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/dsanchez-garcia/accim/releases/tag/v0.7.5
