@@ -204,7 +204,7 @@ dataset_hourly.df
 print(*dataset_hourly.df.columns, sep='\n')
 ##
 dataset_hourly.generate_fig_data(
-    vars_to_gather_rows=['ComfMod', 'Category'], # variables to gather in rows of subplots
+    vars_to_gather_rows=['ComfMod', 'CAT'], # variables to gather in rows of subplots
     vars_to_gather_cols=['EPW_City_or_subcountry'],# variables to gather in columns of subplots
     detailed_rows=['CM_0[CA_3', 'CM_3[CA_3'], #we only want to see those combinations
     data_on_x_axis='BLOCK1:ZONE2_EN16798-1 Running mean outdoor temperature (°C)', #column name (string) for the data on x axis
@@ -277,14 +277,14 @@ dataset_hourly.scatter_plot(
 
 # ### 3.2 Adaptive vs Static data scatter plot:
 
-# A very specific type of scatter plot can be done to show the relationship between data related to adaptive and static setpoint temperatures. In this case, you would need to use the following arguments in generate_fig_data: data_on_y_axis_baseline_plot, baseline and colorlist_baseline_plot_data; finally, you would need to use the scatter_plot_adap_vs_stat() function.
+# A very specific type of scatter plot can be done to show the relationship between data related to adaptive and static setpoint temperatures. In this case, you would need to use the following arguments in generate_fig_data: data_on_y_axis_baseline_plot, baseline and colorlist_baseline_plot_data; finally, you would need to use the scatter_plot_with_baseline() function.
 
 # In[17]:
 
 
 dataset_hourly.generate_fig_data(
     vars_to_gather_rows=['EPW_City_or_subcountry'], #you can enter multiple variables, for example: ['EPW_City_or_subcountry', 'EPW_Scenario-Year']
-    vars_to_gather_cols=['ComfMod', 'Category'], #you can enter multiple variables
+    vars_to_gather_cols=['ComfMod', 'CAT'], #you can enter multiple variables
     data_on_y_axis_baseline_plot=[ # in this case, you only need to specify a list which includes the data columns you want to plot
         'Building_Total_Cooling Energy Demand (kWh/m2) (summed)',
         'Building_Total_Heating Energy Demand (kWh/m2) (summed)',
@@ -296,7 +296,7 @@ dataset_hourly.generate_fig_data(
     ]
 )
 
-dataset_hourly.scatter_plot_adap_vs_stat(
+dataset_hourly.scatter_plot_with_baseline(
     supxlabel='Static Energy Demand (kWh/m2)',
     supylabel='Adaptive Energy Demand (kWh/m2)',
     figname='WIP_scatterplot_adap_vs_stat',
@@ -352,7 +352,7 @@ dataset_monthly.format_table(
 
 dataset_monthly.wrangled_table(
     reshaping='unstack', #can be 'unstack' or 'pivot'
-    vars_to_gather=['ComfMod', 'Category'],
+    vars_to_gather=['ComfMod', 'CAT'],
     baseline='CM_0[CA_1',
     comparison_mode='baseline compared to others', #can be 'baseline compared to others' or 'others compared to baseline'
     comparison_cols=['relative', 'absolute'] #'relative' to show the difference as a percentage, 'absolute' to show the difference by subtracting
@@ -400,7 +400,7 @@ dataset_runperiod.format_table(
 
 dataset_runperiod.wrangled_table(
     reshaping='pivot',
-    vars_to_gather=['ComfMod', 'Category'],
+    vars_to_gather=['ComfMod', 'CAT'],
     baseline='CM_0[CA_1',
     comparison_mode='baseline compared to others',
     comparison_cols=['relative', 'absolute']
@@ -419,7 +419,7 @@ dataset_runperiod.wrangled_df_pivoted
 
 
 dataset_runperiod.df = dataset_runperiod.df[
-    dataset_runperiod.df['Category'].isin(['CA_3'])
+    dataset_runperiod.df['CAT'].isin(['CA_3'])
 ]
 
 

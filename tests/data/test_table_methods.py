@@ -154,3 +154,25 @@ def test_concatenated_csv_round_trip(tmp_path):
     finally:
         os.chdir(prev)
     assert t2.df.shape[0] == 4  # 4 input CSVs aggregated to runperiod
+
+
+def test_gather_vars_query_runs(tmp_path, capsys):
+    _require()
+    t = _build(tmp_path, "runperiod")
+    # Query method: prints the available gathered-variable options; must not raise.
+    assert hasattr(t, "suggested_vars_dict")
+    result = t.gather_vars_query(vars_to_gather=["ComfMod"])
+    assert result is None  # it only prints
+    out = capsys.readouterr().out
+    assert "CM_0" in out and "CM_3" in out
+
+
+def test_custom_order_sets_ordered_categorical(tmp_path):
+    _require()
+    import pandas as pd
+    t = _build(tmp_path, "runperiod")
+    t.custom_order(ordered_list=["CM_3", "CM_0"], column_to_order="ComfMod")
+    dtype = t.df["ComfMod"].dtype
+    assert isinstance(dtype, pd.CategoricalDtype)
+    assert dtype.ordered is True
+    assert list(dtype.categories) == ["CM_3", "CM_0"]
