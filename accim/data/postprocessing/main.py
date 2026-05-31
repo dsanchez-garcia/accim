@@ -685,8 +685,13 @@ class Table:
         #Step: scanning occupied zones
         block_list = []
 
+        if idf_path is None:
+            raise ValueError(
+                "Table needs 'idf_path' (the path to one of the IDFs the CSVs were "
+                "simulated from) to resolve the building's zones from the model. "
+                "Please pass idf_path='path/to/model.idf'."
+            )
         building = get_building(idf_path)
-        # building = get_building('OSM_SmallOffice_exHVAC.idf')
 
         allzones = [i.Name for i in building.idfobjects['ZONE']]
 
@@ -1775,7 +1780,7 @@ class Table:
 
 
             wrangled_df_pivoted = wrangled_df_pivoted.pivot_table(
-                index=self.indexcols.remove('col_to_pivot'),
+                index=[c for c in self.indexcols if c != 'col_to_pivot'],
                 columns='col_to_pivot',
                 values=self.val_cols,
                 # if aggfunc is omitted, performs the average
