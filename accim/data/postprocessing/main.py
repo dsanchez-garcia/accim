@@ -2853,7 +2853,8 @@ class Table:
             for i in range(len(rows)):
                 for j in range(len(cols)):
                     for k in range(len(self.y_list_sec[i][j])):
-                        sec_y_axis[0][0][k].get_shared_y_axes().join(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
+                        if sec_y_axis[0][0][k] is not sec_y_axis[i][j][k]:
+                            sec_y_axis[i][j][k].sharey(sec_y_axis[0][0][k])
                         if len(self.data_on_y_sec_axis) > 1:
                             if len(self.y_list_sec[i][j]) >= 1:
                                 if j < (len(cols) - 1):
@@ -2990,8 +2991,11 @@ class Table:
             else:
                 bbox_extra_artists_tuple = (leg, supx, supy)
 
-            for i in range(len(leg.legendHandles)):
-                leg.legendHandles[i]._sizes = [30]
+            _leg_handles = getattr(leg, 'legend_handles', None)
+            if _leg_handles is None:  # matplotlib < 3.7
+                _leg_handles = leg.legendHandles
+            for _h in _leg_handles:
+                _h._sizes = [30]
 
             # plt.subplots_adjust(bottom=0.2)
             # plt.tight_layout()
@@ -3605,8 +3609,11 @@ class Table:
                 # borderaxespad=0.1,
             )
 
-            for i in range(len(leg.legendHandles)):
-                leg.legendHandles[i]._sizes = [30]
+            _leg_handles = getattr(leg, 'legend_handles', None)
+            if _leg_handles is None:  # matplotlib < 3.7
+                _leg_handles = leg.legendHandles
+            for _h in _leg_handles:
+                _h._sizes = [30]
 
             # plt.subplots_adjust(
             #     # bottom=0.2,
@@ -3880,7 +3887,8 @@ class Table:
             for i in range(len(self.rows)):
                 for j in range(len(self.cols)):
                     for k in range(len(self.y_list_sec[i][j])):
-                        sec_y_axis[0][0][k].get_shared_y_axes().join(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
+                        if sec_y_axis[0][0][k] is not sec_y_axis[i][j][k]:
+                            sec_y_axis[i][j][k].sharey(sec_y_axis[0][0][k])
                         if len(self.data_on_y_sec_axis) > 1:
                             if len(self.y_list_sec[i][j]) >= 1:
                                 if j < (len(self.cols) - 1):
@@ -4002,8 +4010,11 @@ class Table:
             else:
                 bbox_extra_artists_tuple = (leg, supx, supy)
 
-            for i in range(len(leg.legendHandles)):
-                leg.legendHandles[i]._sizes = [30]
+            _leg_handles = getattr(leg, 'legend_handles', None)
+            if _leg_handles is None:  # matplotlib < 3.7
+                _leg_handles = leg.legendHandles
+            for _h in _leg_handles:
+                _h._sizes = [30]
 
             # plt.subplots_adjust(bottom=0.2)
             # plt.tight_layout()
