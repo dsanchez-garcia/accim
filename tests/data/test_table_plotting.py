@@ -125,3 +125,31 @@ def test_scatter_plot_produces_figure(tmp_path):
     finally:
         os.chdir(prev)
     assert any("scatter_test" in f for f in figs), f"no figure produced: {figs}"
+
+
+def test_time_plot_produces_figure(tmp_path):
+    _require()
+    t = _build_hourly(tmp_path)
+    c = _cols(t)
+    row_vals = [f"{cm}[{cat}" for cm in sorted(set(t.df["ComfMod"]))
+                for cat in sorted(set(t.df["CAT"]))]
+    col_vals = sorted(set(t.df["EPW_City_or_subcountry"]))
+    prev = os.getcwd()
+    os.chdir(str(tmp_path))
+    try:
+        t.time_plot(
+            vars_to_gather_rows=["ComfMod", "CAT"],
+            vars_to_gather_cols=["EPW_City_or_subcountry"],
+            detailed_rows=[], detailed_cols=[],
+            data_on_y_main_axis=[["Top (C)", [c["cool_sp"], c["op_temp"]]]],
+            colorlist_y_main_axis=[["Top (C)", ["b", "r"]]],
+            data_on_y_sec_axis=[["Energy", [c["cool_dem"]]]],
+            colorlist_y_sec_axis=[["Energy", ["g"]]],
+            rows_renaming_dict={r: r for r in row_vals},
+            cols_renaming_dict={cv: cv for cv in col_vals},
+            figname="time_test", figsize=4, confirm_graph=True,
+        )
+        figs = [f for f in os.listdir(tmp_path) if f.endswith(".png")]
+    finally:
+        os.chdir(prev)
+    assert any("time_test" in f for f in figs), f"no figure produced: {figs}"
