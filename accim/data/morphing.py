@@ -84,8 +84,6 @@ def morph_epws(
             print(f"Moved {epw_file} to folder {folder_name}")
 
     for folder_name, epw_name, folder_path, epw_path in [i for i in directory_file_paths]:
-        # directory = os.path.dirname(epw)
-        # directory = r'D:\OneDrive - ZER0CEM\Python\testing_morphing_python'
         subprocess.run(f'java -cp '
                        f'"{fwg_path}" '
                        f'futureweathergenerator.Morph "{epw_path}" '
@@ -103,6 +101,10 @@ def morph_epws(
                         'ssp585_2050', 'ssp585_2080']
 
     for folder_name, epw_name, folder_path, epw_path in [i for i in directory_file_paths]:
+        # Parent of the per-EPW folder (i.e. the working directory). Defined here
+        # so it is always available, even if the morphing produced no scenario
+        # EPWs (otherwise the move of the original EPW below raised NameError).
+        parent_folder_path = os.path.dirname(folder_path)
         # List files in the folder path
         files_in_folder = [ i for i in os.listdir(folder_path) if i.endswith('.epw')]
 

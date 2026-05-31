@@ -299,7 +299,6 @@ class rename_epw_files:
 
         checkpoint = checkpoint + 1
 
-        # path = r'C:\Users\user\PycharmProjects\accim'
         path = os.getcwd()
         new_list = []
         for file in epw_files_to_rename:
@@ -496,29 +495,6 @@ class rename_epw_files:
                     epw_df.loc[i, 'EPW_country'] = capitalize_words(country)
 
         checkpoint = checkpoint + 1
-
-        # for i in range(len(epw_df['EPW_mod_filtered'])):
-        #     try:
-        #         if type(epw_df.loc[i, 'EPW_city_or_subcountry']) is float:
-        #             osm_address = give_address(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
-        #             # location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
-        #             try:
-        #                 epw_df.loc[i, 'EPW_city_or_subcountry'] = str(osm_address.address['city'].replace(' ', '-')).capitalize()
-        #                 # epw_df.loc[i, 'EPW_city_or_subcountry'] = str(location.raw['address'].get('city').replace(' ', '-')).capitalize()
-        #             except AttributeError:
-        #                 epw_df.loc[i, 'EPW_city_or_subcountry'] = str(osm_address.address['city']).capitalize()
-        #                 # epw_df.loc[i, 'EPW_city_or_subcountry'] = str(location.raw['address'].get('city')).capitalize()
-        #         if type(epw_df.loc[i, 'EPW_country']) is float:
-        #             osm_address = give_address(epw_df.loc[i, 'EPW_latitude'], epw_df.loc[i, 'EPW_longitude'])
-        #             # location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])
-        #             try:
-        #                 epw_df.loc[i, 'EPW_country'] = osm_address.address['country'].replace(' ', '-').capitalize()
-        #                 # epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').replace(' ', '-').capitalize()
-        #             except AttributeError:
-        #                 epw_df.loc[i, 'EPW_country'] = osm_address.address['country'].capitalize()
-        #                 # epw_df.loc[i, 'EPW_country'] = location.raw['address'].get('country').capitalize()
-        #     except KeyError:
-        #         continue
 
         for col in ['EPW_country', 'EPW_city_or_subcountry', 'EPW_scenario_year']:
             for row in range(len(epw_df)):
