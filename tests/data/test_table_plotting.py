@@ -66,6 +66,7 @@ def _cols(t):
         "cool_sp": find("Adaptive Cooling Setpoint Temperature_No Tolerance"),
         "op_temp": find("Building_Total_Zone Operative Temperature"),
         "cool_dem": find("Building_Total_Cooling Energy Demand"),
+        "heat_dem": find("Building_Total_Heating Energy Demand"),
     }
 
 
@@ -153,3 +154,36 @@ def test_time_plot_produces_figure(tmp_path):
     finally:
         os.chdir(prev)
     assert any("time_test" in f for f in figs), f"no figure produced: {figs}"
+
+
+def test_scatter_plot_with_baseline_produces_figure(tmp_path):
+    _require()
+    t = _build_hourly(tmp_path)
+    c = _cols(t)
+    city_vals = sorted(set(t.df["EPW_City_or_subcountry"]))
+    cmcat_vals = [f"{cm}[{cat}" for cm in sorted(set(t.df["ComfMod"]))
+                  for cat in sorted(set(t.df["CAT"]))]
+    baseline = cmcat_vals[0]
+    non_baseline = [cv for cv in cmcat_vals if cv != baseline]
+    prev = os.getcwd()
+    os.chdir(str(tmp_path))
+    try:
+        t.scatter_plot_with_baseline(
+            vars_to_gather_rows=["EPW_City_or_subcountry"],
+            vars_to_gather_cols=["ComfMod", "CAT"],
+            detailed_rows=[], detailed_cols=[],
+            data_on_y_axis_baseline_plot=[c["cool_dem"], c["heat_dem"]],
+            baseline=baseline,
+            colorlist_baseline_plot_data=["b", "r"],
+            best_fit_deg=[1, 1],
+            rows_renaming_dict={cv: cv for cv in city_vals},
+            # the baseline column is shown on the x-axis and removed from the
+            # column set, so it must NOT be in cols_renaming_dict.
+            cols_renaming_dict={cv: cv for cv in non_baseline},
+            supxlabel="Static", supylabel="Adaptive",
+            figname="baseline_test", figsize=3, confirm_graph=True,
+        )
+        figs = [f for f in os.listdir(tmp_path) if f.endswith(".png")]
+    finally:
+        os.chdir(prev)
+    assert any("baseline_test" in f for f in figs), f"no figure produced: {figs}"
