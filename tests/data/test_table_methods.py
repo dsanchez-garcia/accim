@@ -79,3 +79,78 @@ def test_format_table_custom_empty_raises(tmp_path):
     t = _build(tmp_path, "runperiod")
     with pytest.raises(ValueError):
         t.format_table(type_of_table="custom", custom_cols=["__no_such_column__"])
+
+
+def test_level_block_produces_block_columns(tmp_path):
+    _require()
+    for f in glob.glob(str(SAMPLE_CSV_DIR / "*.csv")):
+        shutil.copy(f, str(tmp_path))
+    prev = os.getcwd()
+    os.chdir(str(tmp_path))
+    try:
+        from accim.data.postprocessing.main import Table
+        t = Table(
+            source_frequency="hourly", frequency="runperiod",
+            frequency_agg_func="sum", standard_outputs=True,
+            level=["block"], level_agg_func=["sum"],
+            level_excluded_zones=[], split_epw_names=True,
+            idf_path=str(SAMPLE_IDF),
+        )
+    finally:
+        os.chdir(prev)
+    # The sample model's zones are Block1:Zone1/Zone2, so block-level aggregation
+    # must create at least one 'Block1_...' column.
+    assert any(str(c).startswith("BLOCK1") or "Block1" in str(c) for c in t.df.columns)
+
+
+def test_unnormalised_units_smoke(tmp_path):
+    _require()
+    for f in glob.glob(str(SAMPLE_CSV_DIR / "*.csv")):
+        shutil.copy(f, str(tmp_path))
+    prev = os.getcwd()
+    os.chdir(str(tmp_path))
+    try:
+        from accim.data.postprocessing.main import Table
+        t = Table(
+            source_frequency="hourly", frequency="runperiod",
+            frequency_agg_func="sum", standard_outputs=True,
+            level=["building"], level_agg_func=["sum", "mean"],
+            level_excluded_zones=[], split_epw_names=True,
+            normalised_energy_units=False, energy_units_in_kwh=False,
+            idf_path=str(SAMPLE_IDF),
+        )
+    finally:
+        os.chdir(prev)
+    assert t.df.shape[0] == 4 and t.df.shape[1] > 50
+
+
+def test_concatenated_csv_round_trip(tmp_path):
+    _require()
+    for f in glob.glob(str(SAMPLE_CSV_DIR / "*.csv")):
+        shutil.copy(f, str(tmp_path))
+    prev = os.getcwd()
+    os.chdir(str(tmp_path))
+    try:
+        from accim.data.postprocessing.main import Table
+        # Building with concatenated_csv_name saves the concatenated CSV and
+        # returns early (by design) — such an instance has no .df.
+        Table(
+            source_frequency="hourly", frequency="runperiod",
+            frequency_agg_func="sum", standard_outputs=True,
+            level=["building"], level_agg_func=["sum", "mean"],
+            level_excluded_zones=[], split_epw_names=True,
+            idf_path=str(SAMPLE_IDF), concatenated_csv_name="roundtrip",
+        )
+        saved = [f for f in os.listdir() if f.endswith("CSVconcatenated.csv")]
+        assert len(saved) == 1, f"concatenated CSV not saved: {os.listdir()}"
+
+        # Re-loading the saved concatenated CSV reconstructs the DataFrame.
+        t2 = Table(
+            source_concatenated_csv_filepath=saved[0],
+            level=["building"], level_agg_func=["sum", "mean"],
+            level_excluded_zones=[], split_epw_names=True,
+            idf_path=str(SAMPLE_IDF),
+        )
+    finally:
+        os.chdir(prev)
+    assert t2.df.shape[0] == 4  # 4 input CSVs aggregated to runperiod
