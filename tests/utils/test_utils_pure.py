@@ -6,6 +6,8 @@ from accim.utils import (
     get_idd_path_from_ep_version,
     transform_ddmm_to_int,
     remove_accents,
+    amend_idf_version_from_dsb,
+    remove_accents_in_idf,
 )
 
 
@@ -38,3 +40,22 @@ def test_transform_ddmm_to_int(ddmm, expected):
 ])
 def test_remove_accents(text, expected):
     assert remove_accents(text) == expected
+
+
+def test_amend_idf_version_from_dsb(tmp_path):
+    # DesignBuilder 7.x exports 'Version, 9.4.0.002' which eppy/EnergyPlus reject.
+    p = tmp_path / "model.idf"
+    p.write_text("Version, 9.4.0.002;\nBuilding, X;\n", encoding="utf-8")
+    amend_idf_version_from_dsb(str(p))
+    content = p.read_text(encoding="utf-8")
+    assert "Version, 9.4;" in content
+    assert "9.4.0.002" not in content
+
+
+def test_remove_accents_in_idf(tmp_path):
+    p = tmp_path / "model.idf"
+    p.write_text("Zone, Salón;\nZone, Almacén;\n", encoding="utf-8")
+    remove_accents_in_idf(str(p))
+    content = p.read_text(encoding="utf-8")
+    assert "Salon" in content and "Almacen" in content
+    assert "ó" not in content and "é" not in content

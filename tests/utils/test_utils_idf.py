@@ -59,3 +59,34 @@ def test_set_occupancy_to_always_adds_schedule():
     accim.utils.set_occupancy_to_always(b)
     sched_names = [s.Name for s in b.idfobjects["Schedule:Compact"]]
     assert "On 24/7" in sched_names
+
+
+def test_get_people_hierarchy_and_names():
+    b = _building()
+    hierarchy = accim.utils.get_people_hierarchy(b)
+    assert len(hierarchy) == 2
+    for data in hierarchy.values():
+        assert "affected_spaces" in data and "target_ref" in data
+
+    names = accim.utils.get_people_names_for_ems(b, output_format="list")
+    assert isinstance(names, list)
+    names_dict = accim.utils.get_people_names_for_ems(b, output_format="dict")
+    assert set(names_dict.keys()) == set(hierarchy.keys())
+
+
+def test_reduce_runtime():
+    b = _building()
+    accim.utils.reduce_runtime(
+        b,
+        minimal_shadowing=True,
+        timesteps=4,
+        runperiod_begin_month=6, runperiod_begin_day_of_month=1,
+        runperiod_end_month=7, runperiod_end_day_of_month=31,
+    )
+    assert b.idfobjects["Building"][0].Solar_Distribution == "MinimalShadowing"
+    rp = b.idfobjects["Runperiod"][0]
+    assert int(rp.Begin_Month) == 6 and int(rp.End_Month) == 7
+    assert int(b.idfobjects["Timestep"][0].Number_of_Timesteps_per_Hour) == 4
+
+    with pytest.raises(ValueError):
+        accim.utils.reduce_runtime(b, timesteps=1)  # below allowed range
