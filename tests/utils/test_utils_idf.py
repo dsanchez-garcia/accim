@@ -90,3 +90,34 @@ def test_reduce_runtime():
 
     with pytest.raises(ValueError):
         accim.utils.reduce_runtime(b, timesteps=1)  # below allowed range
+
+
+def test_get_accim_args_roundtrip(tmp_path):
+    b = _building()
+    import accim.sim.single as accis
+    prev = os.getcwd()
+    os.chdir(str(tmp_path))
+    try:
+        accis.AddAccisToIdf(
+            idf=b, script_type="vrf_mm",
+            supply_air_temp_method="supply air temperature",
+            output_type="standard", output_freqs=["hourly"],
+            output_keep_existing=False, energyplus_version="9.6",
+            temp_control="temperature", verbose=False,
+        )
+        accis.modify_accis(idf=b, comfort_standard=2, category=80, comfort_mode=3,
+                           hvac_mode=2, vent_control=0)
+    finally:
+        os.chdir(prev)
+
+    # get_accim_args reads back the values written into the EMS programs.
+    args = accim.utils.get_accim_args(b)
+    sid = args["SetInputData"]
+    assert sid["ComfStand"] == 2
+    assert sid["CAT"] == 80
+    assert sid["ComfMod"] == 3
+    assert sid["HVACmode"] == 2
+    assert sid["VentCtrl"] == 0
+
+    flat = accim.utils.get_accim_args_flattened(b)
+    assert flat["ComfStand"] == 2 and flat["CAT"] == 80
