@@ -371,6 +371,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.outputs_inventory_after_injection_ = self.scan_output_objects(idf_scope='all') if len(self.buildings) > 0 else {}
         self.outputs_duplicates_after_injection_ = self.autocorrect_output_duplicates(idf_scope='all', warn=True) if len(self.buildings) > 0 else {}
         self.last_run_type = None
+        # Outputs for the besos EPProblem, populated by set_outputs_for_simulation().
+        # Initialised here so set_problem() works even when it is not called: a None
+        # value yields an EPProblem with no objectives, which is valid for a pure
+        # parametric sweep (run_parametric_simulation). Optimisation runs still need
+        # objectives, so set_outputs_for_simulation() must be called for those.
+        self.sim_outputs = None
         # Save an initial IDF backup right after addAccis/apply_apmv_setpoints so the
         # modified IDF (with EMS scripts and outputs already injected) is always
         # recoverable, even if run_parametric_simulation / run_optimisation are not called yet.
@@ -2281,6 +2287,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         """
         Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters
         method, and for outputs, those set using the set_outputs_for_simulation method.
+
+        If set_outputs_for_simulation() has not been called, the problem is built with no
+        objectives (sim_outputs is None). This is valid for a parametric sweep, but an
+        optimisation run requires objectives, so call set_outputs_for_simulation() first
+        in that case.
 
         :param minimize_outputs: only used in optimisation; a list containing booleans to specify if the outputs must
             be minimized (True), maximized (False), or just show the output (None).
