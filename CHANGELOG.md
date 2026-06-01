@@ -78,6 +78,11 @@ unchanged.
   `EnergyPlus_version` → `energyplus_version`. Dead code removed and the
   interactive prompts isolated into helper functions.
 - **Version bumped to 1.0.0.**
+- **Documentation updated to the 1.0 API**: the `accim.sim` docstrings, the Sphinx
+  API reference (`docs/source/api/accim.sim.rst`), the tutorials (quick tutorial,
+  detailed use, troubleshooting) and the sample notebooks now use the new
+  module/class/argument names. The parametric notebooks are unchanged, since the
+  `parametric_and_optimisation` argument names did not change.
 - **Floor Area Mode Semantics**: `mode='occupied'` remains strictly tied to `People` objects and their referenced `ZoneList`, `SpaceList`, or `Space` hierarchy. Use `mode='air-conditioned'` when normalisation should include all conditioned zones instead of only occupied zones.
 - **SetAST EMS Program Refactoring**: Extracted the monolithic `SetAST` conditional block into a modular injection system. Generated EnergyPlus `SetAST` EMS program blocks are now much smaller and resolve model-specific comfort logic dynamically during IDF generation.
 - **BESOS-style Parametric Flexibility**: `OptimParamSimulation` can now run without ACCIM-specific parameters, allowing generic BESOS parameters or zero internal parameters.
@@ -93,6 +98,11 @@ unchanged.
   - Updated `tools/output_workflow_notebook_style.py` to use the new API and include the advanced meter DataFrame frequency path.
 
 ### Fixed
+- **Parametric `set_problem()` without configured outputs**: `SimulationBase.set_problem()`
+  read `self.sim_outputs`, which only existed after `set_outputs_for_simulation()` had
+  been called, otherwise raising a cryptic `AttributeError`. `sim_outputs` now defaults
+  to `None` (an `EPProblem` with no objectives, valid for a parametric sweep);
+  optimisation runs still require `set_outputs_for_simulation()` to define objectives.
 - **`Table` unusable without `idf_path`**: `Table(..., idf_path=None)` raised a
   cryptic `AttributeError: 'dict' object has no attribute 'idfobjects'`; it now
   raises a clear `ValueError` explaining that the per-zone IDF is required.
