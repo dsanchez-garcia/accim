@@ -51,42 +51,42 @@ def add_accis(
 
     :param idf: The besos or eppy IDF class instance.
     :type idf: besos.IDF_class
-    :param ScriptType: The default is None.
+    :param script_type: The default is None.
         'vrf_ac' for VRF system with full air-conditioning mode,
         'vrf_mm' for VRF system with mixed-mode,
         'ex_ac' for existing HVAC only with full air-conditioning mode,
         'ex_mm' for existing HVAC with mixed-mode.
-    :type ScriptType: str
-    :param SupplyAirTempInputMethod: The default is None.
+    :type script_type: str
+    :param supply_air_temp_method: The default is None.
         'supply air temperature' or 'temperature difference' to use such
         supply air temperature input method in the VRF system.
         Only used if vrf_ac or vrf_mm are used.
-    :type SupplyAirTempInputMethod: str
-    :param Output_type: The default is None.
+    :type supply_air_temp_method: str
+    :param output_type: The default is None.
         Can be 'standard', 'simplified', 'detailed' or 'custom'.
-    :type Output_type: str
-    :param Output_freqs: The default is None.
+    :type output_type: str
+    :param output_freqs: The default is None.
          A list containing the following strings:
          ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
-    :type Output_freqs: list
-    :param Output_keep_existing: The default is None.
+    :type output_freqs: list
+    :param output_keep_existing: The default is None.
         It is a boolean (True or False) to keep the existing Output:Variable objects or not.
-    :type Output_keep_existing: bool
-    :param Output_gen_dataframe: The default is None.
+    :type output_keep_existing: bool
+    :param output_gen_dataframe: The default is None.
         It is a boolean (True or False) to generate a pandas DataFrame instance
         containing all Output:Variable objects.
-    :type Output_gen_dataframe: bool
-    :param Output_take_dataframe: It takes the pandas DataFrame previously generated
+    :type output_gen_dataframe: bool
+    :param output_take_dataframe: It takes the pandas DataFrame previously generated
         with Output_gen_dataframe, which the user has filtered to keep only the rows
         related to the Output:Variable objects that need to be kept in the model.
-    :type Output_take_dataframe: bool
-    :param EnergyPlus_version: The default is None.
+    :type output_take_dataframe: bool
+    :param energyplus_version: The default is None.
         Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1' or 'auto'.
-    :type EnergyPlus_version: str
-    :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
-    :type TempCtrl: str
-    :param verboseMode: True to print the process on screen. Default is True.
-    :type verboseMode: bool
+    :type energyplus_version: str
+    :param temp_control: The default is None. Can be 'temp' or 'pmv'.
+    :type temp_control: str
+    :param verbose: True to print the process on screen. Default is True.
+    :type verbose: bool
     :param eer: The energy efficiency ratio of the VRF system for each zone,
     added when using ScriptType vrf_mm or vrf_ac
     :type: eer: int
@@ -95,9 +95,9 @@ def add_accis(
     :type: cop: int
     :param make_averages: Used to make averages of hour-counting variables.
     :type make_averages: bool
-    :param debugging: If True, an Output:EnergyManagementSystem object is used
+    :param debug: If True, an Output:EnergyManagementSystem object is used
         to generate the EDD file.
-    :type debugging: bool
+    :type debug: bool
     :param hvac_zone_map: Optional. Manual mapping of existing HVAC object names to
         zone names.  Used only when ScriptType is ``'ex_mm'`` or ``'ex_ac'``.
         Format: ``{'HVAC Object Name': 'Zone Name'}``.
@@ -376,28 +376,28 @@ def gen_outputs_df(
 
     :param idf: The besos or eppy IDF class instance.
     :type idf: besos.IDF_class
-    :param ScriptType: The default is None.
+    :param script_type: The default is None.
         'vrf_ac' for VRF system with full air-conditioning mode,
         'vrf_mm' for VRF system with mixed-mode,
         'ex_ac' for existing HVAC only with full air-conditioning mode,
         'ex_mm' for existing HVAC with mixed-mode.
-    :type ScriptType: str
-    :param Output_type: The default is None.
+    :type script_type: str
+    :param output_type: The default is None.
         Can be 'standard', 'simplified', 'detailed' or 'custom'.
-    :type Output_type: str
-    :param Output_freqs: The default is None.
+    :type output_type: str
+    :param output_freqs: The default is None.
          A list containing the following strings:
          ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
-    :type Output_freqs: list
-    :param Output_keep_existing: The default is None.
+    :type output_freqs: list
+    :param output_keep_existing: The default is None.
         It is a boolean (True or False) to keep the existing Output:Variable objects or not.
-    :type Output_keep_existing: bool
-    :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
-    :type TempCtrl: str
+    :type output_keep_existing: bool
+    :param temp_control: The default is None. Can be 'temp' or 'pmv'.
+    :type temp_control: str
     :param make_averages: Used to make averages of hour-counting variables.
     :type make_averages: bool
-    :param verboseMode: True to print the process on screen. Default is True.
-    :type verboseMode: bool
+    :param verbose: True to print the process on screen. Default is True.
+    :type verbose: bool
     :return: pandas.Dataframe instance which contains the Output:Variable objects in the idf
     """
     add_accis(
@@ -460,7 +460,7 @@ def modify_accis(
         ast_tol: int = 0.1,
 ):
     """
-    :param ComfStand: The default is None.
+    :param comfort_standard: The default is None.
         '0 = ESP CTE;
         '1 = INT EN16798;
         '2 = INT ASHRAE55;
@@ -484,54 +484,54 @@ def modify_accis(
         '20 = MEX Oropeza HumTropic;
         '21 = CHL Perez-Fargallo;
         '22 = INT ISO7730
-    :type ComfStand: int
-    :param CustAST_m: The m coefficient (slope) of custom model linear regression (mx+n)
-    :type CustAST_m: float
-    :param CustAST_n: The n coefficient of custom model linear regression (mx+n)
-    :type CustAST_n: float
-    :param CustAST_AHSToffset: The offset for heating setpoint from neutral temperature
+    :type comfort_standard: int
+    :param custom_ast_m: The m coefficient (slope) of custom model linear regression (mx+n)
+    :type custom_ast_m: float
+    :param custom_ast_n: The n coefficient of custom model linear regression (mx+n)
+    :type custom_ast_n: float
+    :param custom_ast_ahst_offset: The offset for heating setpoint from neutral temperature
         for the custom model linear regression. This value will be summed, therefore, it must be negative.
-    :type CustAST_AHSToffset: float
-    :param CustAST_ACSToffset: The offset for cooling setpoint from neutral temperature
+    :type custom_ast_ahst_offset: float
+    :param custom_ast_acst_offset: The offset for cooling setpoint from neutral temperature
         for the custom model linear regression. This value will be summed, therefore, it must be positive.
-    :type CustAST_ACSToffset: float
-    :param CustAST_ACSTaul: The value for the cooling setpoint applicability upper limit (ACSTaul).
-    :type CustAST_ACSTaul: float
-    :param CustAST_ACSTall: The value for the cooling setpoint applicability lower limit (ACSTall).
-    :type CustAST_ACSTall: float
-    :param CustAST_AHSTaul: The value for the heating setpoint applicability upper limit (AHSTaul).
-    :type CustAST_AHSTaul: float
-    :param CustAST_AHSTall: The value for the heating setpoint applicability lower limit (AHSTall).
-    :type CustAST_AHSTall: float
-    :param CAT: The default is None.
+    :type custom_ast_acst_offset: float
+    :param custom_ast_acst_aul: The value for the cooling setpoint applicability upper limit (ACSTaul).
+    :type custom_ast_acst_aul: float
+    :param custom_ast_acst_all: The value for the cooling setpoint applicability lower limit (ACSTall).
+    :type custom_ast_acst_all: float
+    :param custom_ast_ahst_aul: The value for the heating setpoint applicability upper limit (AHSTaul).
+    :type custom_ast_ahst_aul: float
+    :param custom_ast_ahst_all: The value for the heating setpoint applicability lower limit (AHSTall).
+    :type custom_ast_ahst_all: float
+    :param category: The default is None.
         (1 = CAT I; 2 = CAT II; 3 = CAT III; 80 = 80% ACCEPT; 85 = 85% ACCEPT; 90 = 90% ACCEPT)
-    :type CAT: int
-    :param CATcoolOffset: An offset to modify comfort models.
+    :type category: int
+    :param category_cool_offset: An offset to modify comfort models.
         This value is summed to the predefined cooling setpoint offset for the CAT value.
-    :type CATcoolOffset: float
-    :param CATheatOffset: An offset to modify comfort models.
+    :type category_cool_offset: float
+    :param category_heat_offset: An offset to modify comfort models.
         This value is summed to the predefined heating setpoint offset for the CAT value.
-    :type CATheatOffset: float
-    :param ComfMod: The default is None.
+    :type category_heat_offset: float
+    :param comfort_mode: The default is None.
         (0/0.X = Static;
         1/1.X = Adaptive when applicable, otherwise relevant local static model;
         2 = Adaptive when applicable, otherwise relevant international static model
         3 = Adaptive when applicable, otherwise horizontal extention of adaptive setpoints)
-    :type ComfMod: float
-    :param SetpointAcc: A float. It is the number for the accuracy of the setpoint temperatures.
+    :type comfort_mode: float
+    :param setpoint_accuracy: A float. It is the number for the accuracy of the setpoint temperatures.
         For instance, if 2 was used, setpoints would be rounded to every half Celsius degree;
         if 10 was used, the setpoints would be rounded to the first decimal.
-    :type SetpointAcc: float
-    :param CoolSeasonStart: A date in format dd/mm, or the number of the day in the year.
+    :type setpoint_accuracy: float
+    :param cooling_season_start: A date in format dd/mm, or the number of the day in the year.
         Defines when start the cooling season, only used in some static setpoint temperatures.
-    :type CoolSeasonStart: any
-    :param CoolSeasonEnd: A date in format dd/mm, or the number of the day in the year.
+    :type cooling_season_start: any
+    :param cooling_season_end: A date in format dd/mm, or the number of the day in the year.
         Defines when ends the cooling season, only used in some static setpoint temperatures.
-    :type CoolSeasonEnd: any
-    :param HVACmode: The default is None.
+    :type cooling_season_end: any
+    :param hvac_mode: The default is None.
         (0 = Fully Air-conditioned; 1 = Naturally ventilated; 2 = Mixed Mode)
-    :type HVACmode: int
-    :param VentCtrl: The default is None.
+    :type hvac_mode: int
+    :param vent_control: The default is None.
         (if HVACmode = 1:
         0 = Ventilates above neutral temperature;
         1 = Ventilates above upper comfort limit;
@@ -541,24 +541,24 @@ def modify_accis(
         2 = Ventilates above neutral temperature and opens doors and windows based on the customised venting opening factor;
         3 = Ventilates above lower comfort limit and opens doors and windows based on the customised venting opening factor;
         )
-    :type VentCtrl: int
-    :param MaxTempDiffVOF: The maximum temperature difference for the Venting Opening Factor.
+    :type vent_control: int
+    :param vof_max_temp_diff: The maximum temperature difference for the Venting Opening Factor.
         Must be a number greater than 0.
-    :type MaxTempDiffVOF: float
-    :param MinTempDiffVOF: The minimum temperature difference for the Venting Opening Factor.
+    :type vof_max_temp_diff: float
+    :param vof_min_temp_diff: The minimum temperature difference for the Venting Opening Factor.
         Must be a number greater than 0 and smaller than the maximum temperature difference.
-    :type MinTempDiffVOF: float
-    :param MultiplierVOF: The multiplier for the modulation of the Venting Opening Factor.
+    :type vof_min_temp_diff: float
+    :param vof_multiplier: The multiplier for the modulation of the Venting Opening Factor.
         Must be a number between 0 and 1.
-    :type MultiplierVOF: float
-    :param VSToffset: The default is 0. Please refer to documentation.
-    :type VSToffset: float
-    :param MinOToffset: The default is 50. Please refer to documentation.
-    :type MinOToffset: float
-    :param MaxWindSpeed: The default is 50. Please refer to documentation.
-    :type MaxWindSpeed: float
-    :param ASTtol: The default is 0.1. Please refer to documentation.
-    :type ASTtol: float
+    :type vof_multiplier: float
+    :param vent_setpoint_offset: The default is 0. Please refer to documentation.
+    :type vent_setpoint_offset: float
+    :param min_outdoor_temp_offset: The default is 50. Please refer to documentation.
+    :type min_outdoor_temp_offset: float
+    :param max_wind_speed: The default is 50. Please refer to documentation.
+    :type max_wind_speed: float
+    :param ast_tol: The default is 0.1. Please refer to documentation.
+    :type ast_tol: float
     """
 
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if

@@ -23,8 +23,8 @@ def add_operative_temp_thermostat(self, verbose : bool = True):
     Amend ZoneControl:Thermostat:OperativeTemperature objects.
     Add ZoneControl:Thermostat:OperativeTemperature objects for each zone.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param verbose: Inherited from class ``accim.sim.AddAccis``
     """
     for zonename_orig in self.zonenames_orig:
         if zonename_orig+' Thermostat' in [thermostat.Thermostat_Name
@@ -51,8 +51,8 @@ def add_base_schedules(self, verbose : bool = True):
     Checks Schedule:Compact objects needed for accim,
     and add them in case these are not in the model
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param verbose: Inherited from class ``accim.sim.AddAccis``
     """
     if "On" in [schedule.Name for schedule in self.idf1.idfobjects['Schedule:Compact']]:
         if verbose:
@@ -93,8 +93,8 @@ def set_availability_schedule_on(self, verbose: bool = True):
     Assign On Compact:Schedule to heating and cooling availability
     schedule names.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param verbose: Inherited from class ``accim.sim.AddAccis``
     """
     for schedule in [i for i in self.idf1.idfobjects['ZoneHVAC:IdealLoadsAirSystem']]:
         schedule.Heating_Availability_Schedule_Name='On'
@@ -110,8 +110,8 @@ def add_vrf_system_schedule(self, verbose: bool = True):
     Add Schedule:Compact objects needed for VRFsystem to work,
     other than AHST_Sch and ACST_Sch Schedules.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param verbose: Inherited from class ``accim.sim.AddAccis``
     """
     addVRFsystemSch_dict = {
         'On 24/7': 'Until: 24:00,1',
@@ -167,8 +167,8 @@ def add_curve_objects(self, verbose: bool = True):
     """
     Add Curve Objects needed for VRFsystem to work.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param verbose: Inherited from class ``accim.sim.AddAccis``
     """
     # curvecubiclist=([i for i in self.idf1.idfobjects['Curve:Cubic']])
     # print(curvecubiclist)
@@ -941,10 +941,10 @@ def add_detailed_hvac_objects(
 ):
     """Add Detailed HVAC objects for VRFsystem to work.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param EnergyPlus_version: Inherited from class ``accim.sim.accis.addAccis``
-    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
-    :param SupplyAirTempInputMethod: Inherited from class ``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param energyplus_version: Inherited from class ``accim.sim.AddAccis``
+    :param verbose: Inherited from class ``accim.sim.AddAccis``
+    :param supply_air_temp_method: Inherited from class ``accim.sim.AddAccis``
     """
     for zn in self.zonenames_orig:
         if 'VRF Outdoor Unit_'+zn in [i.Heat_Pump_Name
@@ -1570,8 +1570,8 @@ def add_detailed_hvac_objects(
 def add_forscript_schedule_vrf(self, verbose: bool = True):
     """Add AST Schedules for each zone for VRFsystem.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param verbose: Inherited from :class:``accim.sim.AddAccis``
     """
     for zn in self.ems_objs_name:
         if "AHST_Sch_"+zn in [sch.Name
@@ -1636,8 +1636,8 @@ def add_forscript_schedule_vrf(self, verbose: bool = True):
 def check_ventilation_is_on(self, verbose: bool = True):
     """Check ventilation settings.
 
-    :param self: Used as a method for :class:``accim.sim.accim_Main.AccimJob``
-    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
+    :param self: Used as a method for :class:``accim.sim.engine.AccimJob``
+    :param verbose: Inherited from :class:``accim.sim.AddAccis``
     """
     if "Vent_SP_temp" in [sch.Name
                           for sch

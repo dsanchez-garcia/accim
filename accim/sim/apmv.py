@@ -1217,10 +1217,10 @@ def add_vrf_system(
     This is a helper wrapper to facilitate HVAC integration.
 
     :param building: The BESOS/eppy IDF object.
-    :param SupplyAirTempInputMethod: Method for supply air temperature ('supply air temperature' or 'temperature difference').
+    :param supply_air_temp_method: Method for supply air temperature ('supply air temperature' or 'temperature difference').
     :param eer: Energy Efficiency Ratio for cooling.
     :param cop: Coefficient of Performance for heating.
-    :param VRFschedule: Name of the availability schedule for the VRF system.
+    :param vrf_schedule: Name of the availability schedule for the VRF system.
     :param verbose_mode: If True, prints progress from the accim_Main job.
     """
     energyplus_version = f'{building.idd_version[0]}.{building.idd_version[1]}'

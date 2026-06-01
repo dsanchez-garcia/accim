@@ -21,8 +21,8 @@ def add_ems_sensors_existing_hvac(self, verbose : bool = True):
     """
     Adds the EMS sensors for models with existing HVAC system.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param verbose: Inherited from class ``accim.sim.AddAccis``
     """
     sensorlist = ([sensor.Name for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor']])
     for i in range(len(self.ExisHVAC)):
@@ -120,8 +120,8 @@ def add_ems_init_existing_hvac(self, verbose: bool = True):
     raising a fatal "variable not initialized" error at the very first timestep, before
     the HVAC system has produced any output values.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param verbose: Inherited from class ``accim.sim.AddAccis``
     """
     programlist = [p.Name for p in self.idf1.idfobjects['EnergyManagementSystem:Program']]
     pcmlist = [p.Name for p in self.idf1.idfobjects['EnergyManagementSystem:ProgramCallingManager']]

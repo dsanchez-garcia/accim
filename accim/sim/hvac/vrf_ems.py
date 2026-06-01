@@ -20,9 +20,9 @@
 def add_ems_sensors_vrf(self, script_type: str = None, verbose: bool = True):
     """Add EMS sensors for VRF system accim.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``
-    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param script_type: Inherited from class ``accim.sim.AddAccis``
+    :param verbose: Inherited from class ``accim.sim.AddAccis``
     """
     sensorlist = ([sensor.Name for sensor in self.idf1.idfobjects['EnergyManagementSystem:Sensor']])
     for i in range(len(self.ems_objs_name)):

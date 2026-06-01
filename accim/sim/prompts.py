@@ -136,8 +136,8 @@ def collect_basic_inputs():
 def collect_comfort_inputs(self, script_type: str = None):
     """Input data for IDF generation.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param script_type: Inherited from class ``accim.sim.AddAccis``
     """
     CS_CA_CM_list_dict = {
         '0 = ESP CTE': [['n/a'], ['n/a']],

@@ -29,9 +29,9 @@ def set_comfort_fields_people(
     to Thermal Comfort Model types 1 and 2 fields of the existing People
     objects.
 
-    :param EnergyPlus_version: Inherited from class `accim.sim.accis.addAccis`
-    :param TempCtrl: Inherited from class `accim.sim.accis.addAccis`
-    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
+    :param energyplus_version: Inherited from class `accim.sim.AddAccis`
+    :param temp_control: Inherited from class `accim.sim.AddAccis`
+    :param verbose: Inherited from class `accim.sim.AddAccis`
     """
     ppl = ([people for people in self.idf1.idfobjects['PEOPLE']])
 
@@ -184,7 +184,7 @@ def set_comfort_fields_people(
 def save(self, verbose: bool = True):
     """Save IDF.
 
-    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
+    :param verbose: Inherited from class `accim.sim.AddAccis`
     """
     self.idf1.save()
     if verbose:
@@ -194,7 +194,7 @@ def save(self, verbose: bool = True):
 def set_pmv_setpoint(self, verbose: bool = True):
     """Sets PMV setpoints for temperature control.
 
-    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
+    :param verbose: Inherited from class `accim.sim.AddAccis`
     """
     # previoustodo check again the difference between operative temp and fanger; see ZoneControl:Thermostat and where is it assigned
     optempthermlist = ([program for program in self.idf1.idfobjects['ZoneControl:Thermostat:OperativeTemperature']])
@@ -259,7 +259,7 @@ def add_control_files_objects(self, verbose: bool = True):
     """
     Adds an OutputControl:Files object to request the generation of CSV, MRT and ESO files.
 
-    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
+    :param verbose: Inherited from class `accim.sim.AddAccis`
     """
     outputcontrolfiles = [i for i in self.idf1.idfobjects['OutputControl:Files']]
 
@@ -284,7 +284,7 @@ def add_output_variable_dictionary(self, verbose: bool = True):
     Adds an Output:VariableDictionary object to request the generation of the RDD file.
 
 
-    :param verboseMode:
+    :param verbose:
     """
     variabledictionaryfile = [i for i in self.idf1.idfobjects['Output:VariableDictionary']]
 
@@ -324,7 +324,7 @@ def set_simulation_control_sizing(self, verbose: bool = True):
     Do_Zone_Sizing_Calculation, Do_System_Sizing_Calculation, and
     Do_Plant_Sizing_Calculation. If the object does not exist, it is created.
 
-    :param verboseMode: Inherited from class `accim.sim.accis.addAccis`
+    :param verbose: Inherited from class `accim.sim.AddAccis`
     """
     sim_controls = [i for i in self.idf1.idfobjects['SimulationControl']]
 

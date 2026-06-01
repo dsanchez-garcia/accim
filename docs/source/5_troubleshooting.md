@@ -2,7 +2,7 @@
 
 ## 5.1 Errors you might get
 
-Below you can see a few errors you might get when trying to run `addAccis()`:
+Below you can see a few errors you might get when trying to run `AddAccis()`:
 
 ---
 
@@ -30,11 +30,11 @@ this node -WINDOWPROPERTY:SHADINGCONTROL-is not present in base dictionary
 Traceback (most recent call last):
   File "<stdin>", line 1, in <module>
   File "C:\Users\sanga\AppData\Local\Programs\Python\Python39\lib\site-packages
-\accim\sim\accis.py", line 138, in addAccis
-    z = accim_Main.accimJob(filename_temp=file, ScriptType=ScriptType, EnergyPl
-us_version=EnergyPlus_version, verboseMode=verboseMode)
+\accim\sim\batch.py", line 426, in __init__
+    z = engine.AccimJob(filename_temp=file, script_type=script_type, energyplus
+_version=energyplus_version, verbose=verbose)
   File "C:\Users\sanga\AppData\Local\Programs\Python\Python39\lib\site-packages
-\accim\sim\accim_Main.py", line 66, in __init__
+\accim\sim\engine.py", line 66, in __init__
     self.idf0 = IDF(fname1)
   File "C:\Users\sanga\AppData\Local\Programs\Python\Python39\lib\site-packages
 \eppy\modeleditor.py", line 548, in __init__
@@ -57,7 +57,7 @@ us_version=EnergyPlus_version, verboseMode=verboseMode)
 TypeError: unsupported operand type(s) for //: 'int' and 'NoneType'
 ```
 
-If you get an error similar to the one above, you are probably trying to run `addAccis()` with an IDF whose EnergyPlus version is 8.9 or older. To solve this problem, you need to update the IDF’s EnergyPlus version up to some 9.X.X version. It is recommended to update up to the latest. To do so, you need to run EP-Launch, go to the Utilities tab, look for and select IDFversionUpdater; run IDFVersionUpdater; then choose the file to update, select the new version and finally update file.
+If you get an error similar to the one above, you are probably trying to run `AddAccis()` with an IDF whose EnergyPlus version is 8.9 or older. To solve this problem, you need to update the IDF’s EnergyPlus version up to some 9.X.X version. It is recommended to update up to the latest. To do so, you need to run EP-Launch, go to the Utilities tab, look for and select IDFversionUpdater; run IDFVersionUpdater; then choose the file to update, select the new version and finally update file.
 
 ![Troubleshooting_IDFversion_01](images/accim_troubleshooting_02_idf_version.png)
 
@@ -71,7 +71,7 @@ If you get an error similar to the one above, you are probably trying to run `ad
 
 ## 5.2 General recommendations
 
-If you are using only one version of Python in your computer, you should check on the option ‘Add to PATH’. Otherwise, the python interpreter won’t be able to find the accis package.
+If you are using only one version of Python in your computer, you should check on the option ‘Add to PATH’. Otherwise, the python interpreter won’t be able to find the accim package.
 
 ![Troubleshooting_Path](images/accim_troubleshooting_01_path.jpg)
 

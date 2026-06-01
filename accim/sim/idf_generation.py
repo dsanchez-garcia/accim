@@ -55,39 +55,39 @@ def generate_idfs(self,
 ):
     """Generate IDFs.
 
-    :param self: Used as a method for class ``accim.sim.accim_Main.AccimJob``
-    :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``
-    :param TempCtrl: Inherited from class ``accim.sim.accis.addAccis``
-    :param ComfStand: Inherited from class ``accim.sim.accis.addAccis``
-    :param CustAST_m: Inherited from class ``accim.sim.accis.addAccis``
-    :param CustAST_n: Inherited from class ``accim.sim.accis.addAccis``
-    :param CustAST_ACSToffset: Inherited from class ``accim.sim.accis.addAccis``
-    :param CustAST_AHSToffset: Inherited from class ``accim.sim.accis.addAccis``
-    :param CustAST_ACSTall: Inherited from class ``accim.sim.accis.addAccis``
-    :param CustAST_ACSTaul: Inherited from class ``accim.sim.accis.addAccis``
-    :param CustAST_AHSTall: Inherited from class ``accim.sim.accis.addAccis``
-    :param CustAST_AHSTaul: Inherited from class ``accim.sim.accis.addAccis``
-    :param CAT: Inherited from class ``accim.sim.accis.addAccis``
-    :param CATcoolOffset: Inherited from class ``accim.sim.accis.addAccis``
-    :param CATheatOffset: Inherited from class ``accim.sim.accis.addAccis``
-    :param ComfMod: Inherited from :class:``accim.sim.accis.addAccis``
-    :param SetpointAcc: Inherited from :class:``accim.sim.accis.addAccis``
-    :param CoolSeasonStart: Inherited from :class:``accim.sim.accis.addAccis``
-    :param CoolSeasonEnd: Inherited from :class:``accim.sim.accis.addAccis``
-    :param HVACmode: Inherited from :class:``accim.sim.accis.addAccis``
-    :param VentCtrl: Inherited from :class:``accim.sim.accis.addAccis``
-    :param MaxTempDiffVOF: Inherited from :class:``accim.sim.accis.addAccis``
-    :param MinTempDiffVOF: Inherited from :class:``accim.sim.accis.addAccis``
-    :param MultiplierVOF: Inherited from :class:``accim.sim.accis.addAccis``
-    :param VSToffset: Inherited from :class:``accim.sim.accis.addAccis``
-    :param MinOToffset: Inherited from :class:``accim.sim.accis.addAccis``
-    :param MaxWindSpeed: Inherited from :class:``accim.sim.accis.addAccis``
-    :param ASTtol_start: Inherited from :class:``accim.sim.accis.addAccis``
-    :param ASTtol_end_input: Inherited from :class:``accim.sim.accis.addAccis``
-    :param ASTtol_steps: Inherited from :class:``accim.sim.accis.addAccis``
-    :param NameSuffix: Inherited from :class:``accim.sim.accis.addAccis``
-    :param verboseMode: Inherited from :class:``accim.sim.accis.addAccis``
-    :param confirmGen: Inherited from :class:``accim.sim.accis.addAccis``
+    :param self: Used as a method for class ``accim.sim.engine.AccimJob``
+    :param script_type: Inherited from class ``accim.sim.AddAccis``
+    :param temp_control: Inherited from class ``accim.sim.AddAccis``
+    :param comfort_standard: Inherited from class ``accim.sim.AddAccis``
+    :param custom_ast_m: Inherited from class ``accim.sim.AddAccis``
+    :param custom_ast_n: Inherited from class ``accim.sim.AddAccis``
+    :param custom_ast_acst_offset: Inherited from class ``accim.sim.AddAccis``
+    :param custom_ast_ahst_offset: Inherited from class ``accim.sim.AddAccis``
+    :param custom_ast_acst_all: Inherited from class ``accim.sim.AddAccis``
+    :param custom_ast_acst_aul: Inherited from class ``accim.sim.AddAccis``
+    :param custom_ast_ahst_all: Inherited from class ``accim.sim.AddAccis``
+    :param custom_ast_ahst_aul: Inherited from class ``accim.sim.AddAccis``
+    :param category: Inherited from class ``accim.sim.AddAccis``
+    :param category_cool_offset: Inherited from class ``accim.sim.AddAccis``
+    :param category_heat_offset: Inherited from class ``accim.sim.AddAccis``
+    :param comfort_mode: Inherited from :class:``accim.sim.AddAccis``
+    :param setpoint_accuracy: Inherited from :class:``accim.sim.AddAccis``
+    :param cooling_season_start: Inherited from :class:``accim.sim.AddAccis``
+    :param cooling_season_end: Inherited from :class:``accim.sim.AddAccis``
+    :param hvac_mode: Inherited from :class:``accim.sim.AddAccis``
+    :param vent_control: Inherited from :class:``accim.sim.AddAccis``
+    :param vof_max_temp_diff: Inherited from :class:``accim.sim.AddAccis``
+    :param vof_min_temp_diff: Inherited from :class:``accim.sim.AddAccis``
+    :param vof_multiplier: Inherited from :class:``accim.sim.AddAccis``
+    :param vent_setpoint_offset: Inherited from :class:``accim.sim.AddAccis``
+    :param min_outdoor_temp_offset: Inherited from :class:``accim.sim.AddAccis``
+    :param max_wind_speed: Inherited from :class:``accim.sim.AddAccis``
+    :param ast_tol_start: Inherited from :class:``accim.sim.AddAccis``
+    :param ast_tol_end: Inherited from :class:``accim.sim.AddAccis``
+    :param ast_tol_steps: Inherited from :class:``accim.sim.AddAccis``
+    :param name_suffix: Inherited from :class:``accim.sim.AddAccis``
+    :param verbose: Inherited from :class:``accim.sim.AddAccis``
+    :param confirm_generation: Inherited from :class:``accim.sim.AddAccis``
     """
     import os
     from os import listdir

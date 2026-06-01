@@ -9,8 +9,8 @@ accim will take as input IDF files those located at the same path as the script.
 ### 3.1.1 Short version
 
 ```python
-from accim.sim import accis
-accis.addAccis()
+from accim.sim import AddAccis
+AddAccis()
 ```
 
 Once you run this code, you will be asked to enter some information at the terminal or python console to generate the output IDF files.
@@ -18,47 +18,47 @@ Once you run this code, you will be asked to enter some information at the termi
 ### 3.1.2 Long version
 
 ```python
-from accim.sim import accis
-accis.addAccis(
-     ScriptType=str, # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'. For instance: ScriptType='vrf_ac',
-     SupplyAirTempInputMethod=str, # SupplyAirTempInputMethod: 'supply air temperature', 'temperature difference'. For instance: SupplyAirTempInputMethod='supply air temperature',
-     Output_keep_existing=bool, # Output_keep_existing: True or False. For instance: Output_keep_existing=False,
-     Output_type=str, # Output_type: 'simplified', 'standard', 'detailed' or 'custom'. For instance: Output_type='standard',
-     Output_freqs=list, # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: Output_freqs=['hourly', 'runperiod'],
-     Output_gen_dataframe=bool, # Output_keep_existing: True or False. For instance: Output_keep_existing=False,
-     Output_take_dataframe=pandas Dataframe,
-     EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'. For instance: EnergyPlus_version='23.1',
-     TempCtrl=str, # TempCtrl: 'temperature' or 'temp', or 'pmv'. For instance: TempCtrl='temp',
-     ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 22, or 99. For instance: ComfStand=[0, 1, 2, 3],
-     CustAST_ACSTaul=float, # it is the value for the Adaptive Cooling Setpoint Temperature applicability upper limit, only used for ComfStand=[99]
-     CustAST_ACSTall=float, # it is the value for the Adaptive Cooling Setpoint Temperature applicability lower limit, only used for ComfStand=[99]
-     CustAST_AHSTaul=float, # it is the value for the Adaptive Heating Setpoint Temperature applicability upper limit, only used for ComfStand=[99]
-     CustAST_AHSTall=float, # it is the value for the Adaptive Heating Setpoint Temperature applicability lower limit, only used for ComfStand=[99]
-     CustAST_m=float, # it is the value for the slope or gradient of the custom adaptive model, only used for ComfStand=[99]
-     CustAST_n=float, # it is the value for the y-intercept of the custom adaptive model, only used for ComfStand=[99]
-     CustAST_ACSToffset=float, # it is the value for the upper limit offset from neutral, only used for ComfStand=[99]
-     CustAST_AHSToffset=float, # it is the value for the lower limit offset from neutral, only used for ComfStand=[99]
-     CAT=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: CAT=[3, 80],
-     CATcoolOffset=float, #it is an offset override for the CAT argument; the float is summed to the cooling offset,
-     CATcoolOffset=float, #it is an offset override for the CAT argument; the float is summed to the heating offset,
-     ComfMod=list, # it is Comfort Mode. Can be 0, 1, 2 or 3. For instance: ComfMod=[0, 3],
-     SetpointAcc=float, # it is the accuracy of the setpoint temperatures
-     CoolSeasonStart=dd/mm date in string format or integer to represent the day of the year, # it is the start date for the cooling season
-     CoolSeasonEnd=dd/mm date in string format or integer to represent the day of the year, # it is the end date for the cooling season
-     HVACmode=list, # it is the HVAC mode. 0 for Full AC, 1 for NV and 2 for MM. For instance: HVACmode=[0, 2],
-     VentCtrl=list, # it is the Ventilation Control. Can be 0 or 1. For instance: VentCtrl=[0, 1],
-     MaxTempDiffVOF=float, # When the difference of operative and outdoor temperature exceeds MaxTempDiffVOF, windows will be opened the fraction of MultiplierVOF. For instance: MaxTempDiffVOF=20,
-     MinTempDiffVOF=float, # When the difference of operative and outdoor temperature is smaller than MinTempDiffVOF, windows will be fully opened. Between min and max, windows will be linearly opened. For instance: MinTempDiffVOF=1,
-     MultiplierVOF=float, # Fraction of window to be opened when temperature difference exceeds MaxTempDiffVOF. For instance: Multiplier=0.2,
-     VSToffset=list, # it is the offset for the ventilation setpoint. Can be any number, float or int. For instance: VSToffset=[-1.5, -1, 0, 1, 1.5],
-     MinOToffset=list, # it is the offset for the minimum outdoor temperature to ventilate. Can be any positive number, float or int. For instance: MinOToffset=[0.5, 1, 2],
-     MaxWindSpeed=list, # it is the maximum wind speed allowed for ventilation. Can be any positive number, float or int. For instance: MinOToffset=[2.5, 5, 10],
-     ASTtol_start=float, # it is the start of the tolerance sequence. For instance: ASTtol_start=0,
-     ASTtol_end_input=float, # it is the end of the tolerance sequence. For instance: ASTtol_start=2,
-     ASTtol_steps=float, # these are the steps of the tolerance sequence. For instance: ASTtol_steps=0.25,
-     NameSuffix=str # NameSuffix: some text you might want to add at the end of the output IDF file name. For instance: NameSuffix='whatever',
-     verboseMode=bool # verboseMode: True to print all process in screen, False to not to print it. Default is True. For instance: verboseMode=True,
-     confirmGen=bool # True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. For instance: confirmGen=False,
+from accim.sim import AddAccis
+AddAccis(
+     script_type=str, # script_type: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'. For instance: script_type='vrf_ac',
+     supply_air_temp_method=str, # supply_air_temp_method: 'supply air temperature', 'temperature difference'. For instance: supply_air_temp_method='supply air temperature',
+     output_keep_existing=bool, # output_keep_existing: True or False. For instance: output_keep_existing=False,
+     output_type=str, # output_type: 'simplified', 'standard', 'detailed' or 'custom'. For instance: output_type='standard',
+     output_freqs=list, # output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: output_freqs=['hourly', 'runperiod'],
+     output_gen_dataframe=bool, # output_gen_dataframe: True or False. For instance: output_gen_dataframe=False,
+     output_take_dataframe=..., # a pandas DataFrame
+     energyplus_version=str, # energyplus_version: '9.1' to '25.1', or 'auto'. For instance: energyplus_version='23.1',
+     temp_control=str, # temp_control: 'temperature' or 'temp', or 'pmv'. For instance: temp_control='temp',
+     comfort_standard=list, # it is the Comfort Standard. Can be any integer from 0 to 22, or 99. For instance: comfort_standard=[0, 1, 2, 3],
+     custom_ast_acst_aul=float, # it is the value for the Adaptive Cooling Setpoint Temperature applicability upper limit, only used for comfort_standard=[99]
+     custom_ast_acst_all=float, # it is the value for the Adaptive Cooling Setpoint Temperature applicability lower limit, only used for comfort_standard=[99]
+     custom_ast_ahst_aul=float, # it is the value for the Adaptive Heating Setpoint Temperature applicability upper limit, only used for comfort_standard=[99]
+     custom_ast_ahst_all=float, # it is the value for the Adaptive Heating Setpoint Temperature applicability lower limit, only used for comfort_standard=[99]
+     custom_ast_m=float, # it is the value for the slope or gradient of the custom adaptive model, only used for comfort_standard=[99]
+     custom_ast_n=float, # it is the value for the y-intercept of the custom adaptive model, only used for comfort_standard=[99]
+     custom_ast_acst_offset=float, # it is the value for the upper limit offset from neutral, only used for comfort_standard=[99]
+     custom_ast_ahst_offset=float, # it is the value for the lower limit offset from neutral, only used for comfort_standard=[99]
+     category=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: category=[3, 80],
+     category_cool_offset=float, # it is an offset override for the category argument; the float is summed to the cooling offset,
+     category_heat_offset=float, # it is an offset override for the category argument; the float is summed to the heating offset,
+     comfort_mode=list, # it is Comfort Mode. Can be 0, 1, 2 or 3. For instance: comfort_mode=[0, 3],
+     setpoint_accuracy=float, # it is the accuracy of the setpoint temperatures
+     cooling_season_start=..., # dd/mm date in string format or integer to represent the day of the year; it is the start date for the cooling season
+     cooling_season_end=..., # dd/mm date in string format or integer to represent the day of the year; it is the end date for the cooling season
+     hvac_mode=list, # it is the HVAC mode. 0 for Full AC, 1 for NV and 2 for MM. For instance: hvac_mode=[0, 2],
+     vent_control=list, # it is the Ventilation Control. Can be 0 or 1. For instance: vent_control=[0, 1],
+     vof_max_temp_diff=float, # When the difference of operative and outdoor temperature exceeds vof_max_temp_diff, windows will be opened the fraction of vof_multiplier. For instance: vof_max_temp_diff=20,
+     vof_min_temp_diff=float, # When the difference of operative and outdoor temperature is smaller than vof_min_temp_diff, windows will be fully opened. Between min and max, windows will be linearly opened. For instance: vof_min_temp_diff=1,
+     vof_multiplier=float, # Fraction of window to be opened when temperature difference exceeds vof_max_temp_diff. For instance: vof_multiplier=0.2,
+     vent_setpoint_offset=list, # it is the offset for the ventilation setpoint. Can be any number, float or int. For instance: vent_setpoint_offset=[-1.5, -1, 0, 1, 1.5],
+     min_outdoor_temp_offset=list, # it is the offset for the minimum outdoor temperature to ventilate. Can be any positive number, float or int. For instance: min_outdoor_temp_offset=[0.5, 1, 2],
+     max_wind_speed=list, # it is the maximum wind speed allowed for ventilation. Can be any positive number, float or int. For instance: max_wind_speed=[2.5, 5, 10],
+     ast_tol_start=float, # it is the start of the tolerance sequence. For instance: ast_tol_start=0,
+     ast_tol_end=float, # it is the end of the tolerance sequence. For instance: ast_tol_end=2,
+     ast_tol_steps=float, # these are the steps of the tolerance sequence. For instance: ast_tol_steps=0.25,
+     name_suffix=str, # name_suffix: some text you might want to add at the end of the output IDF file name. For instance: name_suffix='whatever',
+     verbose=bool, # verbose: True to print all process in screen, False to not to print it. Default is True. For instance: verbose=True,
+     confirm_generation=bool, # True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. For instance: confirm_generation=False,
 )
 ```
 

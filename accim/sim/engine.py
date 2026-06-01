@@ -20,14 +20,14 @@ from accim.sim.hvac.resolver import resolve_hvac_zone_map
 
 
 class AccimJob():
-    """Class to start the process to add the class ``accim.sim.accis.addAccis``.
+    """Class to start the process to add the class ``accim.sim.AddAccis``.
 
     :param filename_temp: the filename of the idf
-    :param ScriptType: Inherited from class ``accim.sim.accis.addAccis``
-    :param EnergyPlus_version: Inherited from class ``accim.sim.accis.addAccis``
-    :param TempCtrl: Inherited from class ``accim.sim.accis.addAccis``
-    :param verboseMode: Inherited from class ``accim.sim.accis.addAccis``
-    :param accimNotWorking: True if problems detected in class ``accim.sim.accis.addAccis``
+    :param script_type: Inherited from class ``accim.sim.AddAccis``
+    :param energyplus_version: Inherited from class ``accim.sim.AddAccis``
+    :param temp_control: Inherited from class ``accim.sim.AddAccis``
+    :param verbose: Inherited from class ``accim.sim.AddAccis``
+    :param accimNotWorking: True if problems detected in class ``accim.sim.AddAccis``
     """
     from os import listdir
     import numpy
