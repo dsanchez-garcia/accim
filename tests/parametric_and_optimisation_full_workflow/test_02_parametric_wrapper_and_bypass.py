@@ -75,7 +75,8 @@ wrapper_sim = AccimPredefModelsParamSim(
 
 # Meters disponibles desde el IDF (el wrapper ya aplicó addAccis)
 wrapper_sim.set_output_met_objects_to_idf(['Heating:Electricity', 'Cooling:Electricity'])
-df_meters_ts, _ = wrapper_sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+outputs_from_testsim = wrapper_sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+df_meters_ts = outputs_from_testsim['meters']
 df_meters_problem = df_meters_ts[
     df_meters_ts['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])
 ].drop_duplicates(subset=['key_name'])
@@ -167,7 +168,8 @@ bypass_sim = ParametricSimulation(
 )
 
 bypass_sim.set_output_met_objects_to_idf(['Heating:Electricity', 'Cooling:Electricity'])
-df_meters_bp, _ = bypass_sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+outputs_from_testsim = bypass_sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+df_meters_bp = outputs_from_testsim['meters']
 df_meters_bp = df_meters_bp[
     df_meters_bp['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])
 ].drop_duplicates(subset=['key_name'])
@@ -236,7 +238,8 @@ none_sim = ParametricSimulation(
 
 # Añadir meters estándar directamente
 none_sim.set_output_met_objects_to_idf(['Heating:Electricity', 'Cooling:Electricity'])
-df_meters_none, _ = none_sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+outputs_from_testsim = none_sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+df_meters_none = outputs_from_testsim['meters']
 df_meters_none = df_meters_none[
     df_meters_none['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])
 ].drop_duplicates(subset=['key_name'])

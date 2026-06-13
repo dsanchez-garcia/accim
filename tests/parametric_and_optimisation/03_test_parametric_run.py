@@ -144,7 +144,9 @@ def test_parametric_with_custom_outputs():
     )
 
     # Get test sim outputs first
-    df_meters, df_vars = sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+    outputs_from_testsim = sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+    df_meters = outputs_from_testsim['meters']
+    df_vars = outputs_from_testsim['variables']
 
     # Filter metros
     df_meters_filtered = df_meters[df_meters['key_name'].str.contains('Heating|Cooling', na=False)]

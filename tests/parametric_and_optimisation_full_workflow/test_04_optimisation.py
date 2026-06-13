@@ -74,7 +74,8 @@ optim = OptimisationSimulation(
 # ---------------------------------------------------------------------------
 print("\n=== [3] Configurar outputs ===")
 optim.set_output_met_objects_to_idf(['Heating:Electricity', 'Cooling:Electricity'])
-df_meters_ts, _ = optim.get_outputs_df_from_testsim(reduce_sim_time=True)
+outputs_from_testsim = optim.get_outputs_df_from_testsim(reduce_sim_time=True)
+df_meters_ts = outputs_from_testsim['meters']
 df_meters_problem = df_meters_ts[
     df_meters_ts['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])
 ].drop_duplicates(subset=['key_name'])
@@ -379,7 +380,8 @@ optim2 = OptimisationSimulation(
     verbosemode=False,
 )
 optim2.set_output_met_objects_to_idf(['Heating:Electricity', 'Cooling:Electricity'])
-df_mt2, _ = optim2.get_outputs_df_from_testsim(reduce_sim_time=True)
+outputs_from_testsim = optim2.get_outputs_df_from_testsim(reduce_sim_time=True)
+df_mt2 = outputs_from_testsim['meters']
 df_mt2 = df_mt2[df_mt2['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])].drop_duplicates(subset=['key_name'])
 optim2.set_outputs_for_simulation(df_output_meter=df_mt2)
 optim2.set_parameters(accis_params_dict=ACCIS_PARAMS, use_dflt_values=True)
@@ -419,7 +421,8 @@ optim3 = OptimisationSimulation(
     verbosemode=False,
 )
 optim3.set_output_met_objects_to_idf(['Heating:Electricity', 'Cooling:Electricity'])
-df_mt3, _ = optim3.get_outputs_df_from_testsim(reduce_sim_time=True)
+outputs_from_testsim = optim3.get_outputs_df_from_testsim(reduce_sim_time=True)
+df_mt3 = outputs_from_testsim['meters']
 df_mt3 = df_mt3[df_mt3['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])].drop_duplicates(subset=['key_name'])
 optim3.set_outputs_for_simulation(df_output_meter=df_mt3)
 optim3.set_parameters(accis_params_dict=ACCIS_PARAMS, use_dflt_values=True)

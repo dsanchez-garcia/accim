@@ -97,7 +97,9 @@ parametric.set_output_met_objects_to_idf(
 # 4. Test simulation → obtener outputs disponibles
 # ---------------------------------------------------------------------------
 print("\n=== [4] Test simulation ===")
-df_meters_ts, df_vars_ts = parametric.get_outputs_df_from_testsim(reduce_sim_time=True)
+outputs_from_testsim = parametric.get_outputs_df_from_testsim(reduce_sim_time=True)
+df_meters_ts = outputs_from_testsim['meters']
+df_vars_ts = outputs_from_testsim['variables']
 print(f"  Meters disponibles: {len(df_meters_ts)}")
 print(f"  Variables disponibles: {len(df_vars_ts)}")
 

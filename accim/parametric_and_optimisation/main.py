@@ -250,6 +250,1965 @@ def _run_single_evaluation_worker(
     
     return result_dict
 
+
+def compare_simulation_instances(
+    left: Union[Any, pd.DataFrame, str, os.PathLike],
+    right: Union[Any, pd.DataFrame, str, os.PathLike],
+    input_columns: Optional[list[str]] = None,
+    output_columns: Optional[list[str]] = None,
+    ignore_columns: Optional[list[str]] = None,
+    compare_attrs: bool = True,
+    ignore_attr_keys: Optional[list[str]] = None,
+    inputs_mismatch_strategy: Literal['strict', 'auto', 'nearest', 'row_order'] = 'auto',
+    reference_columns: Optional[list[str]] = None,
+    reference_max_distance: Optional[float] = None,
+    equal_mode: Literal['strict', 'relaxed'] = 'strict',
+    numeric_atol: float = 1e-6,
+    numeric_rtol: float = 1e-5,
+    max_examples: int = 5,
+    prefer_pickle_from_instances: bool = True,
+) -> dict:
+    """
+    Compare two simulation-result sources and report if they are equivalent.
+
+    Supported sources for ``left`` and ``right``:
+    - ``ParametricSimulation`` / ``OptimisationSimulation`` instances
+    - ``pandas.DataFrame`` objects
+    - file paths to ``.pkl/.pickle``, ``.csv`` or ``.json`` outputs
+
+    The comparison is oriented to common workflows where both runs should contain
+    the same simulation battery (same input combinations) and equivalent results.
+    If possible, outputs are aligned by input columns before value comparison.
+
+    :param left: first source to compare.
+    :param right: second source to compare.
+    :param input_columns: explicit input columns used as comparison keys.
+        When ``None``, they are inferred from ``df.attrs['parameters_names']`` plus
+        ``epw``/``idf`` when present.
+    :param output_columns: explicit output columns to compare. When ``None``, they
+        are inferred from ``df.attrs['outputs_names']``.
+    :param ignore_columns: columns to drop before comparing.
+    :param compare_attrs: when ``True``, compare ``DataFrame.attrs`` metadata.
+    :param ignore_attr_keys: attr keys ignored when ``compare_attrs=True``.
+    :param inputs_mismatch_strategy: fallback strategy when input batteries differ.
+        - ``strict``: do not attempt fallback matching.
+        - ``auto``: prefer nearest matching by reference columns; fallback to row order.
+        - ``nearest``: nearest matching between non-common input rows.
+        - ``row_order``: pair non-common rows by deterministic order.
+    :param reference_columns: optional columns used by nearest/reference matching.
+        When ``None``, inferred from input columns (preferring non ``idf``/``epw``).
+    :param reference_max_distance: optional max normalized distance allowed for
+        nearest matches. Pairs above threshold are ignored.
+    :param equal_mode: how ``report['equal']`` is computed.
+        - ``strict`` (default): requires identical input sets.
+        - ``relaxed``: allows different input sets if fallback/reference matching
+          finds equivalent output behaviour.
+    :param numeric_atol: absolute tolerance for numeric value comparison.
+    :param numeric_rtol: relative tolerance for numeric value comparison.
+    :param max_examples: maximum number of mismatch examples to return.
+    :param prefer_pickle_from_instances: when ``True``, and an instance has a saved
+        file path, the corresponding pickle is loaded first to compare persisted data.
+    :return: dictionary report with schema, input-set and output-difference details.
+    """
+    from collections import Counter, defaultdict
+
+    def _derive_pickle_candidate(path: str) -> str:
+        root, ext = os.path.splitext(path)
+        if ext.lower() in {'.pkl', '.pickle'}:
+            return path
+        return f'{root}.pkl'
+
+    def _load_df_from_path(pathlike: Union[str, os.PathLike]) -> pd.DataFrame:
+        path = os.path.abspath(os.fspath(pathlike))
+        ext = os.path.splitext(path)[1].lower()
+        if ext in {'.pkl', '.pickle'}:
+            return pd.read_pickle(path)
+        if ext == '.csv':
+            return pd.read_csv(path)
+        if ext == '.json':
+            with open(path, 'r', encoding='utf-8') as f:
+                payload = json.load(f)
+            if isinstance(payload, dict) and 'data' in payload:
+                df = pd.DataFrame(payload['data'])
+                attrs = payload.get('attrs', {}) if isinstance(payload.get('attrs', {}), dict) else {}
+                for (k, v) in attrs.items():
+                    df.attrs[k] = v
+                return df
+            return pd.read_json(path)
+        raise ValueError(f'Unsupported file extension for comparison source: {path}')
+
+    def _infer_run_type(df: pd.DataFrame) -> str:
+        if 'pareto-optimal' in df.columns:
+            return 'optimisation'
+        if isinstance(df.attrs.get('minimize_outputs'), list):
+            return 'optimisation'
+        return 'parametric'
+
+    def _candidate_file_from_instance(instance: Any, run_type: str) -> Optional[str]:
+        if run_type == 'parametric':
+            raw = getattr(instance, 'outputs_param_simulation_filepath', None)
+        else:
+            raw = getattr(instance, 'outputs_optimisation_filepath', None)
+        if raw in (None, ''):
+            return None
+        raw_path = os.path.abspath(os.fspath(raw))
+        candidates = []
+        pkl_candidate = _derive_pickle_candidate(raw_path)
+        if prefer_pickle_from_instances and os.path.exists(pkl_candidate):
+            candidates.append(pkl_candidate)
+        if os.path.exists(raw_path):
+            candidates.append(raw_path)
+        if len(candidates) == 0:
+            return None
+        return candidates[0]
+
+    def _resolve_source(source: Union[Any, pd.DataFrame, str, os.PathLike]) -> tuple[pd.DataFrame, dict]:
+        if isinstance(source, pd.DataFrame):
+            return source.copy(), {
+                'source_type': 'dataframe',
+                'path': None,
+                'run_type': _infer_run_type(source),
+            }
+
+        if isinstance(source, (str, os.PathLike)):
+            df = _load_df_from_path(source)
+            return df, {
+                'source_type': 'file',
+                'path': os.path.abspath(os.fspath(source)),
+                'run_type': _infer_run_type(df),
+            }
+
+        has_param_attr = hasattr(source, 'outputs_param_simulation')
+        has_optim_attr = hasattr(source, 'outputs_optimisation')
+        if not (has_param_attr or has_optim_attr):
+            raise TypeError(
+                'Comparison source must be a simulation instance, DataFrame, or a valid file path.'
+            )
+
+        param_df = getattr(source, 'outputs_param_simulation', None)
+        optim_df = getattr(source, 'outputs_optimisation', None)
+        has_param_df = isinstance(param_df, pd.DataFrame)
+        has_optim_df = isinstance(optim_df, pd.DataFrame)
+        last_run_type = str(getattr(source, 'last_run_type', '')).strip().lower()
+
+        selected_run_type = None
+        selected_df = None
+
+        if has_param_df and has_optim_df:
+            if last_run_type in {'parametric', 'optimisation'}:
+                selected_run_type = last_run_type
+            else:
+                raise ValueError(
+                    'The instance has both parametric and optimisation outputs loaded. '
+                    'Set instance.last_run_type or pass an explicit results file path.'
+                )
+        elif has_param_df:
+            selected_run_type = 'parametric'
+            selected_df = param_df
+        elif has_optim_df:
+            selected_run_type = 'optimisation'
+            selected_df = optim_df
+
+        if selected_run_type is not None and selected_df is None:
+            selected_df = param_df if selected_run_type == 'parametric' else optim_df
+
+        if selected_run_type is not None and prefer_pickle_from_instances:
+            candidate_path = _candidate_file_from_instance(source, selected_run_type)
+            if candidate_path is not None:
+                df = _load_df_from_path(candidate_path)
+                return df, {
+                    'source_type': 'instance_file',
+                    'path': candidate_path,
+                    'run_type': selected_run_type,
+                }
+
+        if selected_df is not None:
+            return selected_df.copy(), {
+                'source_type': 'instance_memory',
+                'path': None,
+                'run_type': selected_run_type,
+            }
+
+        candidate_order = []
+        if last_run_type in {'parametric', 'optimisation'}:
+            candidate_order.append(last_run_type)
+        for kind in ('parametric', 'optimisation'):
+            if kind not in candidate_order:
+                candidate_order.append(kind)
+
+        for run_type in candidate_order:
+            candidate_path = _candidate_file_from_instance(source, run_type)
+            if candidate_path is not None:
+                df = _load_df_from_path(candidate_path)
+                return df, {
+                    'source_type': 'instance_file',
+                    'path': candidate_path,
+                    'run_type': run_type,
+                }
+
+        raise ValueError(
+            'The provided simulation instance has no loaded outputs and no readable output files.'
+        )
+
+    def _as_attr_list(value: Any) -> list[str]:
+        if isinstance(value, (list, tuple)):
+            return [str(i) for i in value]
+        return []
+
+    def _is_na(value: Any) -> bool:
+        try:
+            return bool(pd.isna(value))
+        except Exception:
+            return False
+
+    try:
+        if numeric_atol is None or float(numeric_atol) <= 0:
+            round_decimals = 10
+        else:
+            round_decimals = int(max(2, min(12, abs(np.floor(np.log10(float(numeric_atol)))) + 2)))
+    except Exception:
+        round_decimals = 10
+
+    def _normalise_scalar(value: Any) -> Any:
+        if isinstance(value, (bool, np.bool_)):
+            return bool(value)
+        if isinstance(value, (pd.Timestamp, np.datetime64)):
+            return str(pd.Timestamp(value))
+        if _is_na(value):
+            return '<NA>'
+        if isinstance(value, (np.integer, int)):
+            return int(value)
+        if isinstance(value, (np.floating, float)):
+            return round(float(value), round_decimals)
+        if isinstance(value, (list, tuple)):
+            return tuple(_normalise_scalar(v) for v in value)
+        if isinstance(value, dict):
+            return tuple(
+                (str(k), _normalise_scalar(v))
+                for (k, v) in sorted(value.items(), key=lambda item: str(item[0]))
+            )
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    def _normalise_attr_value(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                str(k): _normalise_attr_value(v)
+                for (k, v) in sorted(value.items(), key=lambda item: str(item[0]))
+            }
+        if isinstance(value, (list, tuple, set)):
+            return [_normalise_attr_value(v) for v in value]
+        if isinstance(value, np.ndarray):
+            return _normalise_attr_value(value.tolist())
+        if isinstance(value, (pd.Timestamp, np.datetime64)):
+            return str(pd.Timestamp(value))
+        if isinstance(value, (np.floating, float)):
+            try:
+                if np.isnan(float(value)):
+                    return '<NA>'
+            except Exception:
+                pass
+            return round(float(value), round_decimals)
+        return value
+
+    def _build_key_tuples(df: pd.DataFrame, columns: list[str]) -> list[tuple]:
+        if len(columns) == 0:
+            return [tuple() for _ in range(len(df))]
+        keys = []
+        for row in df[columns].itertuples(index=False, name=None):
+            keys.append(tuple(_normalise_scalar(v) for v in row))
+        return keys
+
+    def _tuples_to_examples(values: set[tuple], columns: list[str]) -> list[dict]:
+        if len(values) == 0:
+            return []
+        ordered = sorted(values, key=lambda item: repr(item))
+        examples = []
+        for row in ordered[:max_examples]:
+            examples.append({
+                col: row[idx] if idx < len(row) else None
+                for (idx, col) in enumerate(columns)
+            })
+        return examples
+
+    def _compare_series_values(left_series: pd.Series, right_series: pd.Series) -> tuple[pd.Series, Optional[float]]:
+        if not left_series.index.equals(right_series.index):
+            right_series = right_series.reindex(left_series.index)
+
+        left_na = left_series.isna()
+        right_na = right_series.isna()
+        both_na = left_na & right_na
+        eq_mask = pd.Series(False, index=left_series.index, dtype=bool)
+        eq_mask.loc[both_na] = True
+
+        left_num = pd.to_numeric(left_series, errors='coerce')
+        right_num = pd.to_numeric(right_series, errors='coerce')
+        numeric_mask = left_num.notna() & right_num.notna() & (~both_na)
+
+        max_abs_diff = None
+        if numeric_mask.any():
+            numeric_equal = np.isclose(
+                left_num.loc[numeric_mask].astype(float),
+                right_num.loc[numeric_mask].astype(float),
+                rtol=numeric_rtol,
+                atol=numeric_atol,
+                equal_nan=True,
+            )
+            eq_mask.loc[numeric_mask] = numeric_equal
+            diffs = (
+                left_num.loc[numeric_mask].astype(float)
+                - right_num.loc[numeric_mask].astype(float)
+            ).abs()
+            if len(diffs) > 0:
+                max_abs_diff = float(diffs.max())
+
+        text_mask = ~(both_na | numeric_mask)
+        if text_mask.any():
+            left_txt = left_series.loc[text_mask].map(lambda v: '' if _is_na(v) else str(v).strip())
+            right_txt = right_series.loc[text_mask].map(lambda v: '' if _is_na(v) else str(v).strip())
+            eq_mask.loc[text_mask] = left_txt == right_txt
+
+        return eq_mask, max_abs_diff
+
+    def _safe_float(value: Any) -> float:
+        coerced = pd.to_numeric(pd.Series([value]), errors='coerce').iloc[0]
+        if pd.isna(coerced):
+            return np.nan
+        return float(coerced)
+
+    def _split_reference_columns(
+        left_df_ref: pd.DataFrame,
+        right_df_ref: pd.DataFrame,
+        ref_cols: list[str],
+    ) -> tuple[list[str], list[str], dict[str, float]]:
+        numeric_cols: list[str] = []
+        categorical_cols: list[str] = []
+        numeric_ranges: dict[str, float] = {}
+
+        for col in ref_cols:
+            left_num = pd.to_numeric(left_df_ref[col], errors='coerce')
+            right_num = pd.to_numeric(right_df_ref[col], errors='coerce')
+            if left_num.notna().any() and right_num.notna().any():
+                numeric_cols.append(col)
+                combined = pd.concat([left_num, right_num], ignore_index=True)
+                try:
+                    range_value = float(combined.max() - combined.min())
+                except Exception:
+                    range_value = 0.0
+                numeric_ranges[col] = range_value if range_value > 0 else 1.0
+            else:
+                categorical_cols.append(col)
+
+        return numeric_cols, categorical_cols, numeric_ranges
+
+    def _reference_distance(
+        left_row: pd.Series,
+        right_row: pd.Series,
+        numeric_cols: list[str],
+        categorical_cols: list[str],
+        numeric_ranges: dict[str, float],
+    ) -> float:
+        terms: list[float] = []
+
+        for col in numeric_cols:
+            lv = _safe_float(left_row.get(col, pd.NA))
+            rv = _safe_float(right_row.get(col, pd.NA))
+            if np.isnan(lv) and np.isnan(rv):
+                terms.append(0.0)
+            elif np.isnan(lv) or np.isnan(rv):
+                terms.append(1.0)
+            else:
+                terms.append(abs(lv - rv) / float(numeric_ranges.get(col, 1.0)))
+
+        for col in categorical_cols:
+            lv = _normalise_scalar(left_row.get(col, pd.NA))
+            rv = _normalise_scalar(right_row.get(col, pd.NA))
+            terms.append(0.0 if lv == rv else 1.0)
+
+        if len(terms) == 0:
+            return 0.0
+        return float(sum(terms) / len(terms))
+
+    def _pair_rows_by_row_order(
+        left_df_ref: pd.DataFrame,
+        right_df_ref: pd.DataFrame,
+        ref_cols: list[str],
+    ) -> list[tuple[int, int, Optional[float]]]:
+        left_temp = left_df_ref.copy()
+        right_temp = right_df_ref.copy()
+
+        if len(ref_cols) > 0:
+            left_temp['__sort_key__'] = left_temp[ref_cols].astype(str).agg('|'.join, axis=1)
+            right_temp['__sort_key__'] = right_temp[ref_cols].astype(str).agg('|'.join, axis=1)
+        else:
+            left_temp['__sort_key__'] = left_temp['__input_key__'].map(repr)
+            right_temp['__sort_key__'] = right_temp['__input_key__'].map(repr)
+
+        left_order = left_temp.sort_values('__sort_key__').index.tolist()
+        right_order = right_temp.sort_values('__sort_key__').index.tolist()
+        pair_count = min(len(left_order), len(right_order))
+        return [(left_order[i], right_order[i], None) for i in range(pair_count)]
+
+    def _pair_rows_by_nearest_reference(
+        left_df_ref: pd.DataFrame,
+        right_df_ref: pd.DataFrame,
+        ref_cols: list[str],
+        max_distance: Optional[float],
+    ) -> list[tuple[int, int, Optional[float]]]:
+        if len(left_df_ref) == 0 or len(right_df_ref) == 0:
+            return []
+
+        numeric_cols, categorical_cols, numeric_ranges = _split_reference_columns(
+            left_df_ref=left_df_ref,
+            right_df_ref=right_df_ref,
+            ref_cols=ref_cols,
+        )
+
+        candidates: list[tuple[float, int, int]] = []
+        for left_idx in left_df_ref.index:
+            left_row = left_df_ref.loc[left_idx]
+            for right_idx in right_df_ref.index:
+                right_row = right_df_ref.loc[right_idx]
+                distance = _reference_distance(
+                    left_row=left_row,
+                    right_row=right_row,
+                    numeric_cols=numeric_cols,
+                    categorical_cols=categorical_cols,
+                    numeric_ranges=numeric_ranges,
+                )
+                if max_distance is None or distance <= float(max_distance):
+                    candidates.append((distance, left_idx, right_idx))
+
+        candidates.sort(key=lambda item: (item[0], item[1], item[2]))
+        pairs: list[tuple[int, int, Optional[float]]] = []
+        used_left: set[int] = set()
+        used_right: set[int] = set()
+
+        max_pairs = min(len(left_df_ref), len(right_df_ref))
+        for distance, left_idx, right_idx in candidates:
+            if left_idx in used_left or right_idx in used_right:
+                continue
+            pairs.append((left_idx, right_idx, float(distance)))
+            used_left.add(left_idx)
+            used_right.add(right_idx)
+            if len(pairs) >= max_pairs:
+                break
+
+        return pairs
+
+    def _evaluate_reference_pairs(
+        left_df_ref: pd.DataFrame,
+        right_df_ref: pd.DataFrame,
+        pairs: list[tuple[int, int, Optional[float]]],
+        output_cols: list[str],
+        input_cols: list[str],
+    ) -> dict:
+        evaluation = {
+            'pairs_compared': int(len(pairs)),
+            'column_mismatch_counts': {},
+            'max_abs_diff_by_column': {},
+            'mismatched_pairs_count': 0,
+            'mismatched_pairs_examples': [],
+            'all_pairs_equal': False,
+            'paired_left_indices': {left_idx for left_idx, _, _ in pairs},
+            'paired_right_indices': {right_idx for _, right_idx, _ in pairs},
+        }
+
+        if len(pairs) == 0:
+            return evaluation
+
+        left_pair_index = [left_idx for left_idx, _, _ in pairs]
+        right_pair_index = [right_idx for _, right_idx, _ in pairs]
+        left_pair_outputs = left_df_ref.loc[left_pair_index, output_cols].reset_index(drop=True)
+        right_pair_outputs = right_df_ref.loc[right_pair_index, output_cols].reset_index(drop=True)
+
+        pair_mismatch_mask = pd.Series(False, index=left_pair_outputs.index, dtype=bool)
+        for col in output_cols:
+            eq_mask, max_abs_diff = _compare_series_values(left_pair_outputs[col], right_pair_outputs[col])
+            mismatch_count = int((~eq_mask).sum())
+            evaluation['column_mismatch_counts'][col] = mismatch_count
+            if max_abs_diff is not None:
+                evaluation['max_abs_diff_by_column'][col] = max_abs_diff
+            pair_mismatch_mask = pair_mismatch_mask | (~eq_mask)
+
+        mismatched_positions = pair_mismatch_mask[pair_mismatch_mask].index.tolist()
+        evaluation['mismatched_pairs_count'] = int(len(mismatched_positions))
+
+        mismatch_examples = []
+        for pos in mismatched_positions[:max_examples]:
+            left_idx, right_idx, distance = pairs[pos]
+            row_example = {
+                'distance': distance,
+                'left_input': {
+                    col: left_df_ref.at[left_idx, col]
+                    for col in input_cols
+                    if col in left_df_ref.columns
+                },
+                'right_input': {
+                    col: right_df_ref.at[right_idx, col]
+                    for col in input_cols
+                    if col in right_df_ref.columns
+                },
+            }
+            for out_col in output_cols:
+                row_example[f'{out_col}_left'] = left_df_ref.at[left_idx, out_col]
+                row_example[f'{out_col}_right'] = right_df_ref.at[right_idx, out_col]
+            mismatch_examples.append(row_example)
+
+        evaluation['mismatched_pairs_examples'] = mismatch_examples
+        evaluation['all_pairs_equal'] = evaluation['mismatched_pairs_count'] == 0
+        return evaluation
+
+    left_df, left_info = _resolve_source(left)
+    right_df, right_info = _resolve_source(right)
+
+    if max_examples < 1:
+        max_examples = 1
+
+    valid_mismatch_strategies = {'strict', 'auto', 'nearest', 'row_order'}
+    if inputs_mismatch_strategy not in valid_mismatch_strategies:
+        raise ValueError(
+            f"inputs_mismatch_strategy must be one of {sorted(valid_mismatch_strategies)}."
+        )
+
+    valid_equal_modes = {'strict', 'relaxed'}
+    if equal_mode not in valid_equal_modes:
+        raise ValueError(f"equal_mode must be one of {sorted(valid_equal_modes)}.")
+
+    if ignore_columns is None:
+        ignore_columns = [
+            'simulation_output_csv_path',
+            'simulation_directory',
+            'output_dir',
+        ]
+    ignore_columns_set = {str(c) for c in ignore_columns}
+
+    left_work = left_df.drop(columns=[c for c in ignore_columns_set if c in left_df.columns], errors='ignore').copy()
+    right_work = right_df.drop(columns=[c for c in ignore_columns_set if c in right_df.columns], errors='ignore').copy()
+
+    left_columns = list(left_work.columns)
+    right_columns = list(right_work.columns)
+    common_columns = [c for c in left_columns if c in right_columns]
+    columns_only_left = [c for c in left_columns if c not in right_columns]
+    columns_only_right = [c for c in right_columns if c not in left_columns]
+
+    if len(common_columns) == 0:
+        raise ValueError('No common columns found between both sources after applying ignore_columns.')
+
+    left_attr_inputs = _as_attr_list(left_df.attrs.get('parameters_names'))
+    right_attr_inputs = _as_attr_list(right_df.attrs.get('parameters_names'))
+    left_attr_outputs = _as_attr_list(left_df.attrs.get('outputs_names'))
+    right_attr_outputs = _as_attr_list(right_df.attrs.get('outputs_names'))
+
+    if input_columns is None:
+        inferred_input_columns = list(dict.fromkeys(left_attr_inputs + right_attr_inputs))
+        for extra in ('epw', 'idf'):
+            if extra in common_columns and extra not in inferred_input_columns:
+                inferred_input_columns.append(extra)
+    else:
+        inferred_input_columns = [str(c) for c in input_columns]
+    input_columns_used = [
+        c for c in inferred_input_columns
+        if c in common_columns and c not in ignore_columns_set
+    ]
+
+    if output_columns is None:
+        inferred_output_columns = list(dict.fromkeys(left_attr_outputs + right_attr_outputs))
+    else:
+        inferred_output_columns = [str(c) for c in output_columns]
+    output_columns_used = [
+        c for c in inferred_output_columns
+        if c in common_columns and c not in ignore_columns_set
+    ]
+
+    if len(input_columns_used) == 0 and len(output_columns_used) == 0:
+        fallback_cols = [c for c in common_columns if c != 'pareto-optimal']
+        input_columns_used = fallback_cols
+
+    if len(input_columns_used) == 0:
+        input_columns_used = [
+            c for c in common_columns
+            if c not in output_columns_used and c != 'pareto-optimal'
+        ]
+    if len(input_columns_used) == 0:
+        input_columns_used = common_columns.copy()
+
+    if len(output_columns_used) == 0:
+        output_columns_used = [
+            c for c in common_columns
+            if c not in input_columns_used and c != 'pareto-optimal'
+        ]
+
+    left_input_keys = _build_key_tuples(left_work, input_columns_used)
+    right_input_keys = _build_key_tuples(right_work, input_columns_used)
+
+    left_input_key_set = set(left_input_keys)
+    right_input_key_set = set(right_input_keys)
+    missing_inputs_in_right = left_input_key_set - right_input_key_set
+    missing_inputs_in_left = right_input_key_set - left_input_key_set
+    same_input_set = len(missing_inputs_in_right) == 0 and len(missing_inputs_in_left) == 0
+
+    left_duplicate_input_rows = int(pd.Series(left_input_keys).duplicated(keep=False).sum())
+    right_duplicate_input_rows = int(pd.Series(right_input_keys).duplicated(keep=False).sum())
+
+    inputs_report = {
+        'columns_used': input_columns_used,
+        'left_rows': int(len(left_work)),
+        'right_rows': int(len(right_work)),
+        'left_unique_rows': int(len(left_input_key_set)),
+        'right_unique_rows': int(len(right_input_key_set)),
+        'same_input_set': same_input_set,
+        'missing_in_right_count': int(len(missing_inputs_in_right)),
+        'missing_in_left_count': int(len(missing_inputs_in_left)),
+        'missing_in_right_examples': _tuples_to_examples(missing_inputs_in_right, input_columns_used),
+        'missing_in_left_examples': _tuples_to_examples(missing_inputs_in_left, input_columns_used),
+        'duplicate_input_rows_left': left_duplicate_input_rows,
+        'duplicate_input_rows_right': right_duplicate_input_rows,
+    }
+
+    output_report = {
+        'columns_used': output_columns_used,
+        'compared': len(output_columns_used) > 0,
+        'comparison_mode': 'not_compared',
+        'rows_compared': 0,
+        'same_for_common_inputs': True,
+        'keys_missing_in_right_count': int(len(missing_inputs_in_right)),
+        'keys_missing_in_left_count': int(len(missing_inputs_in_left)),
+        'column_mismatch_counts': {},
+        'max_abs_diff_by_column': {},
+        'mismatched_rows_count': 0,
+        'mismatched_rows_examples': [],
+    }
+
+    common_input_keys = left_input_key_set & right_input_key_set
+    if len(output_columns_used) > 0:
+        if left_duplicate_input_rows == 0 and right_duplicate_input_rows == 0:
+            output_report['comparison_mode'] = 'unique_inputs'
+
+            left_outputs = left_work[output_columns_used].copy().reset_index(drop=True)
+            right_outputs = right_work[output_columns_used].copy().reset_index(drop=True)
+            left_outputs['__input_key__'] = left_input_keys
+            right_outputs['__input_key__'] = right_input_keys
+
+            left_outputs = left_outputs.drop_duplicates(subset=['__input_key__'], keep='first').set_index('__input_key__')
+            right_outputs = right_outputs.drop_duplicates(subset=['__input_key__'], keep='first').set_index('__input_key__')
+
+            ordered_common_keys = sorted(common_input_keys, key=lambda item: repr(item))
+            output_report['rows_compared'] = int(len(ordered_common_keys))
+
+            if len(ordered_common_keys) > 0:
+                left_aligned = left_outputs.loc[ordered_common_keys, output_columns_used]
+                right_aligned = right_outputs.loc[ordered_common_keys, output_columns_used]
+
+                row_mismatch_mask = pd.Series(False, index=left_aligned.index, dtype=bool)
+                for col in output_columns_used:
+                    eq_mask, max_abs_diff = _compare_series_values(left_aligned[col], right_aligned[col])
+                    mismatch_count = int((~eq_mask).sum())
+                    output_report['column_mismatch_counts'][col] = mismatch_count
+                    if max_abs_diff is not None:
+                        output_report['max_abs_diff_by_column'][col] = max_abs_diff
+                    row_mismatch_mask = row_mismatch_mask | (~eq_mask)
+
+                mismatched_keys = list(row_mismatch_mask[row_mismatch_mask].index)
+                output_report['mismatched_rows_count'] = int(len(mismatched_keys))
+
+                mismatch_examples = []
+                for key in mismatched_keys[:max_examples]:
+                    row = {
+                        col: key[idx] if idx < len(key) else None
+                        for (idx, col) in enumerate(input_columns_used)
+                    }
+                    for out_col in output_columns_used:
+                        row[f'{out_col}_left'] = left_aligned.at[key, out_col]
+                        row[f'{out_col}_right'] = right_aligned.at[key, out_col]
+                    mismatch_examples.append(row)
+                output_report['mismatched_rows_examples'] = mismatch_examples
+            output_report['same_for_common_inputs'] = (
+                len(missing_inputs_in_right) == 0
+                and len(missing_inputs_in_left) == 0
+                and output_report['mismatched_rows_count'] == 0
+            )
+        else:
+            output_report['comparison_mode'] = 'multiset_per_input'
+
+            left_output_tuples = _build_key_tuples(left_work, output_columns_used)
+            right_output_tuples = _build_key_tuples(right_work, output_columns_used)
+            left_grouped = defaultdict(Counter)
+            right_grouped = defaultdict(Counter)
+
+            for (key, out_tuple) in zip(left_input_keys, left_output_tuples):
+                left_grouped[key][out_tuple] += 1
+            for (key, out_tuple) in zip(right_input_keys, right_output_tuples):
+                right_grouped[key][out_tuple] += 1
+
+            mismatched_keys = []
+            for key in common_input_keys:
+                if left_grouped[key] != right_grouped[key]:
+                    mismatched_keys.append(key)
+
+            output_report['rows_compared'] = int(len(common_input_keys))
+            output_report['mismatched_rows_count'] = int(len(mismatched_keys))
+            output_report['same_for_common_inputs'] = (
+                len(missing_inputs_in_right) == 0
+                and len(missing_inputs_in_left) == 0
+                and len(mismatched_keys) == 0
+            )
+            output_report['mismatched_rows_examples'] = [
+                {
+                    **{
+                        col: key[idx] if idx < len(key) else None
+                        for (idx, col) in enumerate(input_columns_used)
+                    },
+                    'left_rows_for_input': int(sum(left_grouped[key].values())),
+                    'right_rows_for_input': int(sum(right_grouped[key].values())),
+                }
+                for key in sorted(mismatched_keys, key=lambda item: repr(item))[:max_examples]
+            ]
+
+    reference_report = {
+        'enabled': False,
+        'strategy_requested': inputs_mismatch_strategy,
+        'strategy_used': 'none',
+        'reference_columns_used': [],
+        'left_unmatched_rows': 0,
+        'right_unmatched_rows': 0,
+        'pairs_compared': 0,
+        'unpaired_left_count': 0,
+        'unpaired_right_count': 0,
+        'column_mismatch_counts': {},
+        'max_abs_diff_by_column': {},
+        'mismatched_pairs_count': 0,
+        'mismatched_pairs_examples': [],
+        'all_pairs_equal': None,
+        'notes': [],
+    }
+
+    if len(output_columns_used) == 0:
+        reference_report['notes'].append('Fallback matching skipped because no output columns are available.')
+    elif same_input_set:
+        reference_report['notes'].append('Fallback matching not needed because input sets are identical.')
+    elif inputs_mismatch_strategy == 'strict':
+        reference_report['notes'].append("Fallback matching disabled by inputs_mismatch_strategy='strict'.")
+    else:
+        left_with_key = left_work.copy()
+        right_with_key = right_work.copy()
+        left_with_key['__input_key__'] = left_input_keys
+        right_with_key['__input_key__'] = right_input_keys
+
+        left_unmatched = left_with_key[left_with_key['__input_key__'].isin(missing_inputs_in_right)].copy()
+        right_unmatched = right_with_key[right_with_key['__input_key__'].isin(missing_inputs_in_left)].copy()
+
+        reference_report['enabled'] = True
+        reference_report['left_unmatched_rows'] = int(len(left_unmatched))
+        reference_report['right_unmatched_rows'] = int(len(right_unmatched))
+
+        requested_reference_columns = [str(c) for c in (reference_columns or [])]
+        if len(requested_reference_columns) == 0:
+            requested_reference_columns = [
+                c for c in input_columns_used
+                if str(c).strip().lower() not in {'idf', 'epw'}
+            ]
+            if len(requested_reference_columns) == 0:
+                requested_reference_columns = list(input_columns_used)
+
+        reference_columns_used = [
+            c for c in requested_reference_columns
+            if c in left_unmatched.columns and c in right_unmatched.columns
+        ]
+        reference_report['reference_columns_used'] = reference_columns_used
+
+        strategy_candidates: list[str] = []
+        if inputs_mismatch_strategy == 'auto':
+            if len(reference_columns_used) > 0:
+                strategy_candidates.append('nearest')
+            strategy_candidates.append('row_order')
+        elif inputs_mismatch_strategy == 'nearest':
+            if len(reference_columns_used) == 0:
+                strategy_candidates.append('row_order')
+                reference_report['notes'].append(
+                    'No usable reference columns found for nearest matching; fallback to row_order.'
+                )
+            else:
+                strategy_candidates.append('nearest')
+        else:
+            strategy_candidates.append('row_order')
+
+        candidate_reports = []
+        for candidate_strategy in strategy_candidates:
+            if candidate_strategy == 'nearest':
+                candidate_pairs = _pair_rows_by_nearest_reference(
+                    left_df_ref=left_unmatched,
+                    right_df_ref=right_unmatched,
+                    ref_cols=reference_columns_used,
+                    max_distance=reference_max_distance,
+                )
+                if len(candidate_pairs) == 0 and len(left_unmatched) > 0 and len(right_unmatched) > 0:
+                    reference_report['notes'].append(
+                        'Nearest matching produced zero pairs for one candidate evaluation.'
+                    )
+            else:
+                candidate_pairs = _pair_rows_by_row_order(
+                    left_df_ref=left_unmatched,
+                    right_df_ref=right_unmatched,
+                    ref_cols=reference_columns_used,
+                )
+
+            candidate_eval = _evaluate_reference_pairs(
+                left_df_ref=left_unmatched,
+                right_df_ref=right_unmatched,
+                pairs=candidate_pairs,
+                output_cols=output_columns_used,
+                input_cols=input_columns_used,
+            )
+            unpaired_left = int(max(0, len(left_unmatched) - len(candidate_eval['paired_left_indices'])))
+            unpaired_right = int(max(0, len(right_unmatched) - len(candidate_eval['paired_right_indices'])))
+            candidate_reports.append(
+                {
+                    'strategy': candidate_strategy,
+                    'pairs': candidate_pairs,
+                    'evaluation': candidate_eval,
+                    'unpaired_left': unpaired_left,
+                    'unpaired_right': unpaired_right,
+                }
+            )
+
+        if len(candidate_reports) == 0:
+            reference_report['all_pairs_equal'] = False
+            reference_report['notes'].append('No fallback reference strategy could be evaluated.')
+        else:
+            # Pick the best candidate by mismatch quality, then coverage.
+            best = min(
+                candidate_reports,
+                key=lambda item: (
+                    item['evaluation']['mismatched_pairs_count'],
+                    item['unpaired_left'] + item['unpaired_right'],
+                    -item['evaluation']['pairs_compared'],
+                ),
+            )
+
+            strategy_used = best['strategy']
+            if inputs_mismatch_strategy == 'auto' and len(candidate_reports) > 1:
+                reference_report['notes'].append(
+                    f"Auto strategy selected '{strategy_used}' after evaluating fallback candidates."
+                )
+
+            reference_report['strategy_used'] = strategy_used
+            reference_report['pairs_compared'] = int(best['evaluation']['pairs_compared'])
+            reference_report['column_mismatch_counts'] = dict(best['evaluation']['column_mismatch_counts'])
+            reference_report['max_abs_diff_by_column'] = dict(best['evaluation']['max_abs_diff_by_column'])
+            reference_report['mismatched_pairs_count'] = int(best['evaluation']['mismatched_pairs_count'])
+            reference_report['mismatched_pairs_examples'] = list(best['evaluation']['mismatched_pairs_examples'])
+            reference_report['unpaired_left_count'] = int(best['unpaired_left'])
+            reference_report['unpaired_right_count'] = int(best['unpaired_right'])
+            reference_report['all_pairs_equal'] = (
+                best['evaluation']['all_pairs_equal']
+                and best['unpaired_left'] == 0
+                and best['unpaired_right'] == 0
+            )
+
+            if reference_report['pairs_compared'] == 0:
+                reference_report['notes'].append('No fallback reference pairs could be built.')
+
+    attrs_report = {
+        'compared': bool(compare_attrs),
+        'equal': True,
+        'keys_only_left': [],
+        'keys_only_right': [],
+        'different_values_count': 0,
+        'different_values_examples': [],
+    }
+    if compare_attrs:
+        if ignore_attr_keys is None:
+            ignore_attr_keys = ['idf_backup_path']
+        ignore_attr_keys_set = {str(k) for k in ignore_attr_keys}
+
+        left_attrs = {
+            str(k): v
+            for (k, v) in left_df.attrs.items()
+            if str(k) not in ignore_attr_keys_set
+        }
+        right_attrs = {
+            str(k): v
+            for (k, v) in right_df.attrs.items()
+            if str(k) not in ignore_attr_keys_set
+        }
+
+        left_attr_keys = set(left_attrs.keys())
+        right_attr_keys = set(right_attrs.keys())
+        keys_only_left = sorted(left_attr_keys - right_attr_keys)
+        keys_only_right = sorted(right_attr_keys - left_attr_keys)
+
+        different_values = []
+        for key in sorted(left_attr_keys & right_attr_keys):
+            left_value = _normalise_attr_value(left_attrs[key])
+            right_value = _normalise_attr_value(right_attrs[key])
+            if left_value != right_value:
+                different_values.append({
+                    'key': key,
+                    'left': left_value,
+                    'right': right_value,
+                })
+
+        attrs_report['keys_only_left'] = keys_only_left[:max_examples]
+        attrs_report['keys_only_right'] = keys_only_right[:max_examples]
+        attrs_report['different_values_count'] = int(len(different_values))
+        attrs_report['different_values_examples'] = different_values[:max_examples]
+        attrs_report['equal'] = (
+            len(keys_only_left) == 0
+            and len(keys_only_right) == 0
+            and len(different_values) == 0
+        )
+
+    messages = []
+    if len(columns_only_left) > 0 or len(columns_only_right) > 0:
+        messages.append(
+            'Schemas differ between sources (see schema.columns_only_left / columns_only_right).'
+        )
+    if len(output_columns_used) == 0:
+        messages.append(
+            'No output columns were inferred; only input-set consistency was checked.'
+        )
+    if left_duplicate_input_rows > 0 or right_duplicate_input_rows > 0:
+        messages.append(
+            'Duplicated input rows detected; output comparison used multiset-per-input mode.'
+        )
+
+    if reference_report.get('enabled'):
+        messages.append(
+            f"Fallback reference comparison executed using strategy '{reference_report.get('strategy_used')}'."
+        )
+
+    equal_strict = bool(
+        same_input_set
+        and output_report['same_for_common_inputs']
+        and (attrs_report['equal'] if compare_attrs else True)
+    )
+    equal_relaxed = bool(
+        output_report['mismatched_rows_count'] == 0
+        and (
+            same_input_set
+            or (
+                reference_report.get('enabled')
+                and reference_report.get('all_pairs_equal') is True
+            )
+        )
+        and (attrs_report['equal'] if compare_attrs else True)
+    )
+    equal = equal_relaxed if equal_mode == 'relaxed' else equal_strict
+
+    return {
+        'equal': equal,
+        'equal_mode': equal_mode,
+        'equal_strict': equal_strict,
+        'equal_relaxed': equal_relaxed,
+        'left': {
+            'source_type': left_info['source_type'],
+            'path': left_info['path'],
+            'run_type': left_info['run_type'],
+            'rows': int(len(left_df)),
+        },
+        'right': {
+            'source_type': right_info['source_type'],
+            'path': right_info['path'],
+            'run_type': right_info['run_type'],
+            'rows': int(len(right_df)),
+        },
+        'schema': {
+            'left_columns_count': int(len(left_columns)),
+            'right_columns_count': int(len(right_columns)),
+            'common_columns_count': int(len(common_columns)),
+            'columns_only_left': columns_only_left,
+            'columns_only_right': columns_only_right,
+            'same_columns': len(columns_only_left) == 0 and len(columns_only_right) == 0,
+        },
+        'inputs': inputs_report,
+        'outputs': output_report,
+        'reference': reference_report,
+        'attrs': attrs_report,
+        'messages': messages,
+        'settings': {
+            'inputs_mismatch_strategy': inputs_mismatch_strategy,
+            'reference_columns': [str(c) for c in (reference_columns or [])],
+            'reference_max_distance': reference_max_distance,
+            'equal_mode': equal_mode,
+            'numeric_atol': numeric_atol,
+            'numeric_rtol': numeric_rtol,
+            'max_examples': max_examples,
+            'prefer_pickle_from_instances': prefer_pickle_from_instances,
+            'ignore_columns': sorted(ignore_columns_set),
+            'compare_attrs': compare_attrs,
+        },
+    }
+
+
+def _collect_pickle_files(
+    pickle_sources: Optional[list[Union[str, os.PathLike]]] = None,
+    pickle_paths: Optional[list[Union[str, os.PathLike]]] = None,
+    directory: Union[str, os.PathLike, None] = None,
+    glob_pattern: str = '*.pkl',
+    recursive: bool = False,
+) -> list[str]:
+    """Collect pickle files from files, directories and/or glob patterns."""
+    collected: list[str] = []
+    valid_exts = {'.pkl', '.pickle'}
+
+    def _add_pickle_file(file_path: str):
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext not in valid_exts:
+            raise ValueError(f'File is not a pickle (.pkl/.pickle): {file_path}')
+        collected.append(file_path)
+
+    def _collect_from_directory(base_dir: str):
+        if not os.path.isdir(base_dir):
+            raise ValueError(f'Directory not found: {base_dir}')
+        pattern = os.path.join(base_dir, '**', glob_pattern) if recursive else os.path.join(base_dir, glob_pattern)
+        discovered = [
+            os.path.abspath(path)
+            for path in pyglob.glob(pattern, recursive=recursive)
+            if os.path.isfile(path) and os.path.splitext(path)[1].lower() in valid_exts
+        ]
+        collected.extend(discovered)
+
+    for raw_path in (pickle_paths or []):
+        file_path = os.path.abspath(os.fspath(raw_path))
+        if not os.path.isfile(file_path):
+            raise ValueError(f'Pickle file not found: {file_path}')
+        _add_pickle_file(file_path)
+
+    for source in (pickle_sources or []):
+        source_text = os.fspath(source)
+        source_abs = os.path.abspath(source_text)
+
+        if os.path.isfile(source_abs):
+            _add_pickle_file(source_abs)
+            continue
+
+        if os.path.isdir(source_abs):
+            _collect_from_directory(source_abs)
+            continue
+
+        # Treat unknown/non-existing entries as glob patterns.
+        matches = pyglob.glob(source_text, recursive=recursive)
+        if len(matches) == 0:
+            raise ValueError(
+                f'Pickle source did not match any files: {source_text}. '
+                'Use an existing file, directory, or a valid glob pattern.'
+            )
+        for match in matches:
+            match_abs = os.path.abspath(match)
+            if os.path.isfile(match_abs):
+                ext = os.path.splitext(match_abs)[1].lower()
+                if ext in valid_exts:
+                    collected.append(match_abs)
+
+    if directory is not None:
+        base_dir = os.path.abspath(os.fspath(directory))
+        _collect_from_directory(base_dir)
+
+    # Deduplicate while preserving order.
+    deduped = list(dict.fromkeys(collected))
+    if len(deduped) == 0:
+        raise ValueError(
+            'No pickle files were found. Provide valid pickle_sources/pickle_paths and/or directory.'
+        )
+    return deduped
+
+
+def _order_pickle_files(
+    pickle_files: list[str],
+    order_by: Literal['mtime', 'name'] = 'mtime',
+    descending: bool = True,
+) -> list[str]:
+    """Return ordered pickle files with deterministic tie-breaking."""
+    if order_by == 'mtime':
+        return sorted(
+            pickle_files,
+            key=lambda path: (os.path.getmtime(path), os.path.basename(path).lower()),
+            reverse=descending,
+        )
+    if order_by == 'name':
+        return sorted(
+            pickle_files,
+            key=lambda path: os.path.basename(path).lower(),
+            reverse=descending,
+        )
+    raise ValueError("order_by must be either 'mtime' or 'name'.")
+
+
+def _resolve_reference_pickle(
+    ordered_pickles: list[str],
+    reference: Optional[Union[int, str, os.PathLike]] = None,
+) -> tuple[str, int]:
+    """Resolve a reference pickle from index, path, or basename."""
+    if len(ordered_pickles) == 0:
+        raise ValueError('No pickle files available to resolve a reference.')
+
+    if reference is None:
+        return ordered_pickles[0], 0
+
+    if isinstance(reference, int):
+        if reference < 0 or reference >= len(ordered_pickles):
+            raise IndexError(
+                f'reference index out of range: {reference}. Valid range: 0..{len(ordered_pickles)-1}'
+            )
+        return ordered_pickles[reference], reference
+
+    reference_text = str(reference).strip()
+    reference_abs = os.path.abspath(os.fspath(reference))
+    normalized_ref = os.path.normcase(reference_abs)
+
+    for idx, file_path in enumerate(ordered_pickles):
+        if os.path.normcase(file_path) == normalized_ref:
+            return file_path, idx
+
+    basename = os.path.basename(reference_text).lower()
+    basename_matches = [
+        (idx, file_path)
+        for idx, file_path in enumerate(ordered_pickles)
+        if os.path.basename(file_path).lower() == basename
+    ]
+    if len(basename_matches) == 1:
+        idx, file_path = basename_matches[0]
+        return file_path, idx
+    if len(basename_matches) > 1:
+        raise ValueError(
+            f"reference '{reference}' is ambiguous by basename. Use full path or index."
+        )
+
+    raise ValueError(
+        f"reference '{reference}' was not found among selected pickle files."
+    )
+
+
+def compare_latest_pickles_in_folders(
+    left_dir: Union[str, os.PathLike],
+    right_dir: Union[str, os.PathLike],
+    glob_pattern: str = '*.pkl',
+    recursive: bool = False,
+    input_columns: Optional[list[str]] = None,
+    output_columns: Optional[list[str]] = None,
+    ignore_columns: Optional[list[str]] = None,
+    compare_attrs: bool = True,
+    ignore_attr_keys: Optional[list[str]] = None,
+    inputs_mismatch_strategy: Literal['strict', 'auto', 'nearest', 'row_order'] = 'auto',
+    reference_columns: Optional[list[str]] = None,
+    reference_max_distance: Optional[float] = None,
+    equal_mode: Literal['strict', 'relaxed'] = 'strict',
+    numeric_atol: float = 1e-6,
+    numeric_rtol: float = 1e-5,
+    max_examples: int = 5,
+) -> dict:
+    """
+    Compare the newest pickle in each directory.
+
+    This is useful when each simulation batch saves timestamped pickle files and you
+    want a quick comparison between the latest parametric/optimisation run outputs.
+
+    Flexible mismatch handling is delegated to :func:`compare_simulation_instances`
+    through ``inputs_mismatch_strategy``, ``reference_columns`` and ``equal_mode``.
+    """
+    left_pickles = _collect_pickle_files(directory=left_dir, glob_pattern=glob_pattern, recursive=recursive)
+    right_pickles = _collect_pickle_files(directory=right_dir, glob_pattern=glob_pattern, recursive=recursive)
+
+    left_latest = max(left_pickles, key=lambda path: os.path.getmtime(path))
+    right_latest = max(right_pickles, key=lambda path: os.path.getmtime(path))
+
+    comparison = compare_simulation_instances(
+        left=left_latest,
+        right=right_latest,
+        input_columns=input_columns,
+        output_columns=output_columns,
+        ignore_columns=ignore_columns,
+        compare_attrs=compare_attrs,
+        ignore_attr_keys=ignore_attr_keys,
+        inputs_mismatch_strategy=inputs_mismatch_strategy,
+        reference_columns=reference_columns,
+        reference_max_distance=reference_max_distance,
+        equal_mode=equal_mode,
+        numeric_atol=numeric_atol,
+        numeric_rtol=numeric_rtol,
+        max_examples=max_examples,
+    )
+
+    return {
+        'equal': bool(comparison.get('equal', False)),
+        'left_dir': os.path.abspath(os.fspath(left_dir)),
+        'right_dir': os.path.abspath(os.fspath(right_dir)),
+        'glob_pattern': glob_pattern,
+        'recursive': recursive,
+        'left_pickles_found': int(len(left_pickles)),
+        'right_pickles_found': int(len(right_pickles)),
+        'left_latest_pickle': left_latest,
+        'right_latest_pickle': right_latest,
+        'comparison': comparison,
+    }
+
+
+def compare_multiple_pickles_with_reference(
+    pickle_sources: Optional[list[Union[str, os.PathLike]]] = None,
+    pickle_paths: Optional[list[Union[str, os.PathLike]]] = None,
+    pickle_list: Optional[list[Union[str, os.PathLike]]] = None,
+    directory: Union[str, os.PathLike, None] = None,
+    glob_pattern: str = '*.pkl',
+    recursive: bool = False,
+    reference: Optional[Union[int, str, os.PathLike]] = None,
+    order_by: Literal['mtime', 'name'] = 'mtime',
+    descending: bool = True,
+    input_columns: Optional[list[str]] = None,
+    output_columns: Optional[list[str]] = None,
+    ignore_columns: Optional[list[str]] = None,
+    compare_attrs: bool = True,
+    ignore_attr_keys: Optional[list[str]] = None,
+    inputs_mismatch_strategy: Literal['strict', 'auto', 'nearest', 'row_order'] = 'auto',
+    reference_columns: Optional[list[str]] = None,
+    reference_max_distance: Optional[float] = None,
+    equal_mode: Literal['strict', 'relaxed'] = 'strict',
+    numeric_atol: float = 1e-6,
+    numeric_rtol: float = 1e-5,
+    max_examples: int = 5,
+) -> dict:
+    """
+    Compare multiple pickle files against one reference pickle.
+
+    ``reference`` can be:
+    - ``None``: first file in ordered list (default)
+    - ``int``: index in ordered list
+    - ``str/path``: absolute path or basename present in the ordered list
+
+    File selection options:
+    - ``pickle_sources``: mixed list of files, directories, and/or glob patterns.
+    - ``pickle_paths`` / ``pickle_list``: explicit file list (aliases).
+    - ``directory`` + ``glob_pattern``: directory scan.
+
+    Flexible mismatch/reference behaviour can be controlled with
+    ``inputs_mismatch_strategy``, ``reference_columns``, ``reference_max_distance``
+    and ``equal_mode``.
+    """
+    explicit_pickle_paths = list(pickle_paths or []) + list(pickle_list or [])
+    selected_pickles = _collect_pickle_files(
+        pickle_sources=pickle_sources,
+        pickle_paths=explicit_pickle_paths,
+        directory=directory,
+        glob_pattern=glob_pattern,
+        recursive=recursive,
+    )
+    ordered_pickles = _order_pickle_files(
+        pickle_files=selected_pickles,
+        order_by=order_by,
+        descending=descending,
+    )
+
+    reference_pickle, reference_index = _resolve_reference_pickle(
+        ordered_pickles=ordered_pickles,
+        reference=reference,
+    )
+
+    comparisons = []
+    for idx, candidate_pickle in enumerate(ordered_pickles):
+        if idx == reference_index:
+            continue
+        comparison = compare_simulation_instances(
+            left=reference_pickle,
+            right=candidate_pickle,
+            input_columns=input_columns,
+            output_columns=output_columns,
+            ignore_columns=ignore_columns,
+            compare_attrs=compare_attrs,
+            ignore_attr_keys=ignore_attr_keys,
+            inputs_mismatch_strategy=inputs_mismatch_strategy,
+            reference_columns=reference_columns,
+            reference_max_distance=reference_max_distance,
+            equal_mode=equal_mode,
+            numeric_atol=numeric_atol,
+            numeric_rtol=numeric_rtol,
+            max_examples=max_examples,
+        )
+        comparisons.append(
+            {
+                'index': idx,
+                'pickle': candidate_pickle,
+                'equal': bool(comparison.get('equal', False)),
+                'comparison': comparison,
+            }
+        )
+
+    equal_count = int(sum(1 for item in comparisons if item['equal']))
+    different_count = int(len(comparisons) - equal_count)
+
+    return {
+        'reference_pickle': reference_pickle,
+        'reference_index': int(reference_index),
+        'ordered_pickles': ordered_pickles,
+        'total_pickles': int(len(ordered_pickles)),
+        'compared_pickles_count': int(len(comparisons)),
+        'equal_count': equal_count,
+        'different_count': different_count,
+        'equal_all': different_count == 0,
+        'order_by': order_by,
+        'descending': descending,
+        'comparisons': comparisons,
+    }
+
+
+class SimulationComparisonSession:
+    """
+    Stateful helper to compare simulation outputs and inspect reports via attributes.
+
+    This class wraps the functional API and stores the latest comparison artifacts
+    (inputs, outputs, reference matching, attrs and full report) for quick inspection.
+    """
+
+    def __init__(
+        self,
+        input_columns: Optional[list[str]] = None,
+        output_columns: Optional[list[str]] = None,
+        ignore_columns: Optional[list[str]] = None,
+        compare_attrs: bool = True,
+        ignore_attr_keys: Optional[list[str]] = None,
+        inputs_mismatch_strategy: Literal['strict', 'auto', 'nearest', 'row_order'] = 'auto',
+        reference_columns: Optional[list[str]] = None,
+        reference_max_distance: Optional[float] = None,
+        equal_mode: Literal['strict', 'relaxed'] = 'strict',
+        numeric_atol: float = 1e-6,
+        numeric_rtol: float = 1e-5,
+        max_examples: int = 5,
+    ):
+        self.input_columns = input_columns
+        self.output_columns = output_columns
+        self.ignore_columns = ignore_columns
+        self.compare_attrs = compare_attrs
+        self.ignore_attr_keys = ignore_attr_keys
+        self.inputs_mismatch_strategy = inputs_mismatch_strategy
+        self.reference_columns = reference_columns
+        self.reference_max_distance = reference_max_distance
+        self.equal_mode = equal_mode
+        self.numeric_atol = numeric_atol
+        self.numeric_rtol = numeric_rtol
+        self.max_examples = max_examples
+
+        self.last_operation: Optional[str] = None
+        self.last_report: Optional[dict] = None
+        self.last_comparison: Optional[dict] = None
+        self.last_schema: Optional[dict] = None
+        self.last_inputs: Optional[dict] = None
+        self.last_outputs: Optional[dict] = None
+        self.last_reference: Optional[dict] = None
+        self.last_attrs: Optional[dict] = None
+        self.last_report_path: Optional[str] = None
+        self.last_left_source: Optional[str] = None
+        self.last_right_source: Optional[str] = None
+        self._last_left_input: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None
+        self._last_right_input: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None
+        self.last_output_changes: Optional[dict] = None
+        self.last_output_changes_by_case: Optional[pd.DataFrame] = None
+        self.last_output_changes_by_categories: Optional[pd.DataFrame] = None
+        self.history: list[dict] = []
+
+    def _effective_kwargs(self, **overrides) -> dict:
+        kwargs = {
+            'input_columns': self.input_columns,
+            'output_columns': self.output_columns,
+            'ignore_columns': self.ignore_columns,
+            'compare_attrs': self.compare_attrs,
+            'ignore_attr_keys': self.ignore_attr_keys,
+            'inputs_mismatch_strategy': self.inputs_mismatch_strategy,
+            'reference_columns': self.reference_columns,
+            'reference_max_distance': self.reference_max_distance,
+            'equal_mode': self.equal_mode,
+            'numeric_atol': self.numeric_atol,
+            'numeric_rtol': self.numeric_rtol,
+            'max_examples': self.max_examples,
+        }
+        for key, value in overrides.items():
+            if value is not None:
+                kwargs[key] = value
+        return kwargs
+
+    def _capture(self, operation: str, report: dict) -> dict:
+        self.last_operation = operation
+        self.last_report = report
+        self.last_report_path = None
+        self.last_output_changes = None
+        self.last_output_changes_by_case = None
+        self.last_output_changes_by_categories = None
+
+        comparison = report.get('comparison') if isinstance(report, dict) else None
+        if comparison is None and isinstance(report, dict) and 'equal' in report and 'inputs' in report:
+            comparison = report
+
+        if isinstance(comparison, dict):
+            self.last_comparison = comparison
+            self.last_schema = comparison.get('schema')
+            self.last_inputs = comparison.get('inputs')
+            self.last_outputs = comparison.get('outputs')
+            self.last_reference = comparison.get('reference')
+            self.last_attrs = comparison.get('attrs')
+            if isinstance(comparison.get('left'), dict):
+                self.last_left_source = comparison['left'].get('path')
+            if isinstance(comparison.get('right'), dict):
+                self.last_right_source = comparison['right'].get('path')
+        else:
+            self.last_comparison = None
+            self.last_schema = None
+            self.last_inputs = None
+            self.last_outputs = None
+            self.last_reference = None
+            self.last_attrs = None
+
+        self.history.append(
+            {
+                'operation': operation,
+                'equal': bool(comparison.get('equal')) if isinstance(comparison, dict) else None,
+                'report': report,
+            }
+        )
+        return report
+
+    def compare(
+        self,
+        left: Union[Any, pd.DataFrame, str, os.PathLike],
+        right: Union[Any, pd.DataFrame, str, os.PathLike],
+        prefer_pickle_from_instances: bool = True,
+        **overrides,
+    ) -> dict:
+        self._last_left_input = left
+        self._last_right_input = right
+        report = compare_simulation_instances(
+            left=left,
+            right=right,
+            prefer_pickle_from_instances=prefer_pickle_from_instances,
+            **self._effective_kwargs(**overrides),
+        )
+        return self._capture('compare', report)
+
+    def compare_latest_in_folders(
+        self,
+        left_dir: Union[str, os.PathLike],
+        right_dir: Union[str, os.PathLike],
+        glob_pattern: str = '*.pkl',
+        recursive: bool = False,
+        **overrides,
+    ) -> dict:
+        report = compare_latest_pickles_in_folders(
+            left_dir=left_dir,
+            right_dir=right_dir,
+            glob_pattern=glob_pattern,
+            recursive=recursive,
+            **self._effective_kwargs(**overrides),
+        )
+        self._last_left_input = report.get('left_latest_pickle')
+        self._last_right_input = report.get('right_latest_pickle')
+        return self._capture('compare_latest_in_folders', report)
+
+    def compare_latest_sources_in_folders(
+        self,
+        left_dir: Union[str, os.PathLike],
+        right_dir: Union[str, os.PathLike],
+        glob_pattern: str = '*.pkl',
+        recursive: bool = False,
+        preferred_name_tokens: Optional[list[str]] = None,
+        **overrides,
+    ) -> dict:
+        """
+        Compare latest files in two folders for any supported source pattern.
+
+        Unlike ``compare_latest_in_folders`` (pickle-focused), this method can
+        target ``*.csv``/``*.json``/``*.pkl`` and is useful for notebook-style
+        workflows with a single method call.
+        """
+
+        def _pick_latest_source(folder: Union[str, os.PathLike]) -> tuple[str, int, int]:
+            base_dir = os.path.abspath(os.fspath(folder))
+            if not os.path.isdir(base_dir):
+                raise ValueError(f'Directory not found: {base_dir}')
+
+            pattern = os.path.join(base_dir, '**', glob_pattern) if recursive else os.path.join(base_dir, glob_pattern)
+            candidates = [
+                os.path.abspath(path)
+                for path in pyglob.glob(pattern, recursive=recursive)
+                if os.path.isfile(path)
+            ]
+            if len(candidates) == 0:
+                raise ValueError(
+                    f"No files found in '{base_dir}' with pattern '{glob_pattern}'."
+                )
+
+            tokens = [str(t).strip().lower() for t in (preferred_name_tokens or []) if str(t).strip()]
+            preferred = []
+            if len(tokens) > 0:
+                preferred = [
+                    path for path in candidates
+                    if any(token in os.path.basename(path).lower() for token in tokens)
+                ]
+            pool = preferred if len(preferred) > 0 else candidates
+            latest = max(pool, key=lambda path: os.path.getmtime(path))
+            return latest, int(len(candidates)), int(len(preferred))
+
+        left_source, left_total, left_preferred = _pick_latest_source(left_dir)
+        right_source, right_total, right_preferred = _pick_latest_source(right_dir)
+
+        comparison = compare_simulation_instances(
+            left=left_source,
+            right=right_source,
+            **self._effective_kwargs(**overrides),
+        )
+
+        report = {
+            'equal': bool(comparison.get('equal', False)),
+            'left_dir': os.path.abspath(os.fspath(left_dir)),
+            'right_dir': os.path.abspath(os.fspath(right_dir)),
+            'glob_pattern': glob_pattern,
+            'recursive': recursive,
+            'preferred_name_tokens': list(preferred_name_tokens or []),
+            'left_sources_found': left_total,
+            'right_sources_found': right_total,
+            'left_preferred_matches': left_preferred,
+            'right_preferred_matches': right_preferred,
+            'left_source': left_source,
+            'right_source': right_source,
+            'comparison': comparison,
+        }
+        self._last_left_input = left_source
+        self._last_right_input = right_source
+        return self._capture('compare_latest_sources_in_folders', report)
+
+    @staticmethod
+    def _load_source_dataframe(
+        source: Union[Any, pd.DataFrame, str, os.PathLike],
+        prefer_pickle_from_instances: bool = True,
+    ) -> pd.DataFrame:
+        def _load_path(pathlike: Union[str, os.PathLike]) -> pd.DataFrame:
+            path = os.path.abspath(os.fspath(pathlike))
+            ext = os.path.splitext(path)[1].lower()
+            if ext in {'.pkl', '.pickle'}:
+                return pd.read_pickle(path)
+            if ext == '.csv':
+                return pd.read_csv(path)
+            if ext == '.json':
+                with open(path, 'r', encoding='utf-8') as f:
+                    payload = json.load(f)
+                if isinstance(payload, dict) and 'data' in payload:
+                    df = pd.DataFrame(payload['data'])
+                    attrs = payload.get('attrs') if isinstance(payload.get('attrs'), dict) else {}
+                    for key, value in attrs.items():
+                        df.attrs[key] = value
+                    return df
+                return pd.read_json(path)
+            raise ValueError(f'Unsupported source extension for output analysis: {path}')
+
+        def _candidate_paths(raw_path: Union[str, os.PathLike]) -> list[str]:
+            absolute = os.path.abspath(os.fspath(raw_path))
+            root, ext = os.path.splitext(absolute)
+            candidates = []
+            if prefer_pickle_from_instances and ext.lower() not in {'.pkl', '.pickle'}:
+                pickle_candidate = f'{root}.pkl'
+                if os.path.isfile(pickle_candidate):
+                    candidates.append(pickle_candidate)
+            if os.path.isfile(absolute):
+                candidates.append(absolute)
+            return candidates
+
+        if isinstance(source, pd.DataFrame):
+            return source.copy()
+
+        if isinstance(source, (str, os.PathLike)):
+            return _load_path(source)
+
+        has_param_attr = hasattr(source, 'outputs_param_simulation')
+        has_optim_attr = hasattr(source, 'outputs_optimisation')
+        if not (has_param_attr or has_optim_attr):
+            raise TypeError(
+                'Source must be a DataFrame, file path, or simulation instance-like object.'
+            )
+
+        param_df = getattr(source, 'outputs_param_simulation', None)
+        optim_df = getattr(source, 'outputs_optimisation', None)
+        has_param_df = isinstance(param_df, pd.DataFrame)
+        has_optim_df = isinstance(optim_df, pd.DataFrame)
+        last_run_type = str(getattr(source, 'last_run_type', '')).strip().lower()
+
+        if has_param_df and has_optim_df:
+            if last_run_type == 'parametric':
+                return param_df.copy()
+            if last_run_type == 'optimisation':
+                return optim_df.copy()
+            raise ValueError(
+                'Instance has both parametric and optimisation outputs loaded. '
+                'Set instance.last_run_type or pass an explicit source path/DataFrame.'
+            )
+        if has_param_df:
+            return param_df.copy()
+        if has_optim_df:
+            return optim_df.copy()
+
+        file_attrs = [
+            ('parametric', 'outputs_param_simulation_filepath'),
+            ('optimisation', 'outputs_optimisation_filepath'),
+        ]
+        if last_run_type in {'parametric', 'optimisation'}:
+            file_attrs = sorted(file_attrs, key=lambda item: 0 if item[0] == last_run_type else 1)
+
+        for _, attr_name in file_attrs:
+            raw_path = getattr(source, attr_name, None)
+            if raw_path in (None, ''):
+                continue
+            for candidate in _candidate_paths(raw_path):
+                return _load_path(candidate)
+
+        raise ValueError(
+            'Could not resolve data from instance. Load outputs in memory or provide a readable file path.'
+        )
+
+    @staticmethod
+    def _resolve_case_insensitive_column(df: pd.DataFrame, requested: str) -> str:
+        request = str(requested).strip()
+        if request in df.columns:
+            return request
+
+        matches = [col for col in df.columns if str(col).lower() == request.lower()]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ValueError(
+                f"Column '{requested}' is ambiguous (case-insensitive matches: {matches})."
+            )
+
+        suggestions = difflib.get_close_matches(request, [str(c) for c in df.columns], n=3, cutoff=0.55)
+        if len(suggestions) > 0:
+            raise ValueError(
+                f"Column '{requested}' was not found. Suggestions: {suggestions}."
+            )
+        raise ValueError(f"Column '{requested}' was not found.")
+
+    def _resolve_sources_for_output_analysis(
+        self,
+        left: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None,
+        right: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None,
+    ) -> tuple[Union[Any, pd.DataFrame, str, os.PathLike], Union[Any, pd.DataFrame, str, os.PathLike]]:
+        left_source = left
+        right_source = right
+
+        if left_source is None:
+            left_source = self._last_left_input
+        if right_source is None:
+            right_source = self._last_right_input
+
+        if left_source is None and isinstance(self.last_report, dict):
+            left_source = self.last_report.get('left_source') or self.last_report.get('left_latest_pickle')
+        if right_source is None and isinstance(self.last_report, dict):
+            right_source = self.last_report.get('right_source') or self.last_report.get('right_latest_pickle')
+
+        if left_source is None and isinstance(self.last_comparison, dict):
+            left_meta = self.last_comparison.get('left')
+            if isinstance(left_meta, dict):
+                left_source = left_meta.get('path')
+        if right_source is None and isinstance(self.last_comparison, dict):
+            right_meta = self.last_comparison.get('right')
+            if isinstance(right_meta, dict):
+                right_source = right_meta.get('path')
+
+        if left_source is None or right_source is None:
+            raise ValueError(
+                'Could not resolve left/right sources automatically. '
+                'Pass left=... and right=... or run a comparison first.'
+            )
+
+        return left_source, right_source
+
+    def compare_selected_outputs(
+        self,
+        outputs: list[str],
+        category_columns: Optional[list[str]] = None,
+        left: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None,
+        right: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None,
+        aggregate_metrics: Optional[list[str]] = None,
+        groupby_dropna: bool = False,
+        prefer_pickle_from_instances: bool = True,
+    ) -> dict:
+        """
+        Compare selected output columns and return case-level and category-level deltas.
+
+        The method is notebook-friendly: run one comparison first, then call this
+        method with only ``outputs=[...]`` to inspect how those outputs changed.
+
+        :param outputs: output names to compare (case-insensitive resolution).
+        :param category_columns: grouping columns. If ``None``, uses the latest
+            comparison input columns when available.
+        :param left: optional explicit left source (DataFrame/path/instance).
+        :param right: optional explicit right source (DataFrame/path/instance).
+        :param aggregate_metrics: metrics for aggregated deltas. Defaults to
+            ``['mean', 'sum', 'min', 'max']``.
+        :param groupby_dropna: forwarded to ``DataFrame.groupby(..., dropna=...)``.
+        :param prefer_pickle_from_instances: when ``True``, instance-backed sources
+            prefer sibling ``.pkl`` files if available.
+        :return: dictionary with ``changes_by_case`` and ``changes_by_categories``.
+        """
+        if not isinstance(outputs, (list, tuple)) or len(outputs) == 0:
+            raise ValueError("'outputs' must be a non-empty list of column names.")
+
+        left_source, right_source = self._resolve_sources_for_output_analysis(left=left, right=right)
+        left_df = self._load_source_dataframe(
+            source=left_source,
+            prefer_pickle_from_instances=prefer_pickle_from_instances,
+        )
+        right_df = self._load_source_dataframe(
+            source=right_source,
+            prefer_pickle_from_instances=prefer_pickle_from_instances,
+        )
+
+        output_mappings = []
+        output_aliases_used: set[str] = set()
+        for raw_output in outputs:
+            requested = str(raw_output).strip()
+            if requested == '':
+                continue
+            left_col = self._resolve_case_insensitive_column(left_df, requested)
+            right_col = self._resolve_case_insensitive_column(right_df, requested)
+
+            alias = requested
+            alias_i = 2
+            while alias in output_aliases_used:
+                alias = f'{requested} ({alias_i})'
+                alias_i += 1
+            output_aliases_used.add(alias)
+
+            output_mappings.append(
+                {
+                    'requested': requested,
+                    'left': left_col,
+                    'right': right_col,
+                    'alias': alias,
+                    'left_alias': f'{alias}_left',
+                    'right_alias': f'{alias}_right',
+                    'delta_alias': f'{alias}_delta',
+                    'changed_alias': f'{alias}_changed',
+                }
+            )
+
+        if len(output_mappings) == 0:
+            raise ValueError('No valid output columns were provided in outputs=[...].')
+
+        explicit_category_columns = category_columns is not None
+        if explicit_category_columns:
+            requested_categories = [str(c).strip() for c in category_columns if str(c).strip()]
+        else:
+            requested_categories = []
+            if isinstance(self.last_inputs, dict):
+                requested_categories = [
+                    str(c).strip()
+                    for c in (self.last_inputs.get('columns_used') or [])
+                    if str(c).strip()
+                ]
+            if len(requested_categories) == 0 and isinstance(self.last_comparison, dict):
+                last_inputs = self.last_comparison.get('inputs')
+                if isinstance(last_inputs, dict):
+                    requested_categories = [
+                        str(c).strip()
+                        for c in (last_inputs.get('columns_used') or [])
+                        if str(c).strip()
+                    ]
+            if len(requested_categories) == 0:
+                output_cols_lower = {
+                    str(mapping['left']).lower() for mapping in output_mappings
+                } | {
+                    str(mapping['right']).lower() for mapping in output_mappings
+                }
+                requested_categories = [
+                    str(col)
+                    for col in left_df.columns
+                    if str(col) in right_df.columns and str(col).lower() not in output_cols_lower
+                ]
+
+        requested_categories = list(dict.fromkeys(requested_categories))
+        category_mappings = []
+        category_aliases_used: set[str] = set()
+        for requested in requested_categories:
+            try:
+                left_col = self._resolve_case_insensitive_column(left_df, requested)
+                right_col = self._resolve_case_insensitive_column(right_df, requested)
+            except ValueError:
+                if explicit_category_columns:
+                    raise
+                continue
+
+            alias = requested
+            alias_i = 2
+            while alias in category_aliases_used:
+                alias = f'{requested} ({alias_i})'
+                alias_i += 1
+            category_aliases_used.add(alias)
+
+            category_mappings.append(
+                {
+                    'requested': requested,
+                    'left': left_col,
+                    'right': right_col,
+                    'alias': alias,
+                }
+            )
+
+        category_aliases = [mapping['alias'] for mapping in category_mappings]
+
+        left_case = pd.DataFrame(index=left_df.index)
+        right_case = pd.DataFrame(index=right_df.index)
+
+        for mapping in category_mappings:
+            left_case[mapping['alias']] = left_df[mapping['left']]
+            right_case[mapping['alias']] = right_df[mapping['right']]
+        for mapping in output_mappings:
+            left_case[mapping['left_alias']] = left_df[mapping['left']]
+            right_case[mapping['right_alias']] = right_df[mapping['right']]
+
+        if len(category_aliases) > 0:
+            left_case['__pair_order__'] = left_case.groupby(category_aliases, dropna=groupby_dropna).cumcount()
+            right_case['__pair_order__'] = right_case.groupby(category_aliases, dropna=groupby_dropna).cumcount()
+            merge_keys = category_aliases + ['__pair_order__']
+        else:
+            left_case['__pair_order__'] = np.arange(len(left_case), dtype=int)
+            right_case['__pair_order__'] = np.arange(len(right_case), dtype=int)
+            merge_keys = ['__pair_order__']
+
+        merged = left_case.merge(right_case, on=merge_keys, how='inner', sort=False)
+        left_unmatched_rows = int(max(0, len(left_case) - len(merged)))
+        right_unmatched_rows = int(max(0, len(right_case) - len(merged)))
+
+        changes_by_case = merged.copy().rename(columns={'__pair_order__': 'pair_order'})
+        for mapping in output_mappings:
+            left_values = pd.to_numeric(changes_by_case[mapping['left_alias']], errors='coerce')
+            right_values = pd.to_numeric(changes_by_case[mapping['right_alias']], errors='coerce')
+            changes_by_case[mapping['delta_alias']] = right_values - left_values
+            equal_mask = (
+                (changes_by_case[mapping['left_alias']] == changes_by_case[mapping['right_alias']])
+                | (
+                    changes_by_case[mapping['left_alias']].isna()
+                    & changes_by_case[mapping['right_alias']].isna()
+                )
+            )
+            changes_by_case[mapping['changed_alias']] = ~equal_mask
+
+        metrics_used = [str(metric).strip() for metric in (aggregate_metrics or ['mean', 'sum', 'min', 'max']) if str(metric).strip()]
+        if len(metrics_used) == 0:
+            raise ValueError('aggregate_metrics must contain at least one valid aggregation name.')
+
+        delta_columns = [mapping['delta_alias'] for mapping in output_mappings]
+        flat_agg_columns = [f'{delta_col}_{metric}' for delta_col in delta_columns for metric in metrics_used]
+        if len(changes_by_case) == 0:
+            category_cols_for_empty = list(category_aliases) if len(category_aliases) > 0 else []
+            changes_by_categories = pd.DataFrame(columns=category_cols_for_empty + flat_agg_columns)
+        else:
+            try:
+                if len(category_aliases) > 0:
+                    grouped = changes_by_case.groupby(category_aliases, dropna=groupby_dropna)[delta_columns].agg(metrics_used)
+                    grouped.columns = [f'{col}_{metric}' for col, metric in grouped.columns]
+                    changes_by_categories = grouped.reset_index()
+                else:
+                    aggregated = changes_by_case[delta_columns].agg(metrics_used)
+                    flat_values = {
+                        f'{delta_col}_{metric}': aggregated.loc[metric, delta_col]
+                        for delta_col in delta_columns
+                        for metric in metrics_used
+                    }
+                    changes_by_categories = pd.DataFrame([flat_values])
+            except Exception as exc:
+                raise ValueError(
+                    f'Invalid aggregate_metrics={metrics_used}. Use valid pandas agg names (e.g. mean, sum, min, max).'
+                ) from exc
+
+        left_source_path = None
+        right_source_path = None
+        if isinstance(left_source, (str, os.PathLike)):
+            left_source_path = os.path.abspath(os.fspath(left_source))
+        if isinstance(right_source, (str, os.PathLike)):
+            right_source_path = os.path.abspath(os.fspath(right_source))
+
+        report = {
+            'left_source': left_source_path,
+            'right_source': right_source_path,
+            'outputs_requested': [mapping['requested'] for mapping in output_mappings],
+            'output_columns': [
+                {
+                    'requested': mapping['requested'],
+                    'left': mapping['left'],
+                    'right': mapping['right'],
+                    'left_case_column': mapping['left_alias'],
+                    'right_case_column': mapping['right_alias'],
+                    'delta_column': mapping['delta_alias'],
+                    'changed_column': mapping['changed_alias'],
+                }
+                for mapping in output_mappings
+            ],
+            'category_columns_used': list(category_aliases),
+            'rows_left': int(len(left_case)),
+            'rows_right': int(len(right_case)),
+            'rows_compared': int(len(changes_by_case)),
+            'left_unmatched_rows': left_unmatched_rows,
+            'right_unmatched_rows': right_unmatched_rows,
+            'aggregate_metrics': list(metrics_used),
+            'groupby_dropna': bool(groupby_dropna),
+            'changes_by_case': changes_by_case,
+            'changes_by_categories': changes_by_categories,
+        }
+
+        self.last_output_changes = report
+        self.last_output_changes_by_case = changes_by_case
+        self.last_output_changes_by_categories = changes_by_categories
+        return report
+
+    def compare_multiple_with_reference(
+        self,
+        pickle_sources: Optional[list[Union[str, os.PathLike]]] = None,
+        pickle_paths: Optional[list[Union[str, os.PathLike]]] = None,
+        pickle_list: Optional[list[Union[str, os.PathLike]]] = None,
+        directory: Union[str, os.PathLike, None] = None,
+        glob_pattern: str = '*.pkl',
+        recursive: bool = False,
+        reference: Optional[Union[int, str, os.PathLike]] = None,
+        order_by: Literal['mtime', 'name'] = 'mtime',
+        descending: bool = True,
+        **overrides,
+    ) -> dict:
+        report = compare_multiple_pickles_with_reference(
+            pickle_sources=pickle_sources,
+            pickle_paths=pickle_paths,
+            pickle_list=pickle_list,
+            directory=directory,
+            glob_pattern=glob_pattern,
+            recursive=recursive,
+            reference=reference,
+            order_by=order_by,
+            descending=descending,
+            **self._effective_kwargs(**overrides),
+        )
+        return self._capture('compare_multiple_with_reference', report)
+
+    def save_last_report_json(self, output_path: Union[str, os.PathLike]) -> str:
+        if self.last_report is None:
+            raise ValueError('No report available. Run a comparison first.')
+        path = os.path.abspath(os.fspath(output_path))
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(self.last_report, f, indent=2, default=str)
+        self.last_report_path = path
+        return path
+
+    def get_last_summary(self) -> dict:
+        if not isinstance(self.last_comparison, dict):
+            return {
+                'operation': self.last_operation,
+                'equal': None,
+                'message': 'No comparison data captured yet.',
+            }
+        return {
+            'operation': self.last_operation,
+            'equal': self.last_comparison.get('equal'),
+            'equal_strict': self.last_comparison.get('equal_strict'),
+            'equal_relaxed': self.last_comparison.get('equal_relaxed'),
+            'equal_mode': self.last_comparison.get('equal_mode'),
+            'same_input_set': self.last_inputs.get('same_input_set') if isinstance(self.last_inputs, dict) else None,
+            'mismatched_rows_count': self.last_outputs.get('mismatched_rows_count') if isinstance(self.last_outputs, dict) else None,
+            'reference_strategy': self.last_reference.get('strategy_used') if isinstance(self.last_reference, dict) else None,
+        }
+
 class SimulationBase(AnalysisMixin, PlottingMixin):
     """
     Base class for parametric simulations and multi-objective optimization.
@@ -1335,7 +3294,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         reduce_sim_time: bool = True,
         idf_scope: Any = 'all',
         keep_available_outputs: bool = False,
-    ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> dict[str, pd.DataFrame]:
         """
         Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.
         Therefore, it won't contain wildcards such as '*'.
@@ -1344,33 +3303,35 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param idf_scope: IDFs to test. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to run fewer test simulations.
 
-        :return: a tuple containing the DataFrames containing Output:Variable and Output:Meter
+        :return: dictionary with ``meters`` and ``variables`` DataFrames.
         """
         scoped_buildings = self._resolve_idf_scope(idf_scope)
         if len(scoped_buildings) > 1:
             meter_dfs = []
             variable_dfs = []
             for idx, building in scoped_buildings:
-                df_meters, df_vars = self.get_outputs_df_from_testsim(
+                scoped_outputs = self.get_outputs_df_from_testsim(
                     reduce_sim_time=reduce_sim_time,
                     idf_scope=idx,
                     keep_available_outputs=keep_available_outputs,
                 )
+                df_meters = scoped_outputs['meters']
+                df_vars = scoped_outputs['variables']
                 idf_id = self._get_idf_identifier(building, idx)
                 df_meters.insert(0, 'idf', idf_id)
                 df_vars.insert(0, 'idf', idf_id)
                 meter_dfs.append(df_meters)
                 variable_dfs.append(df_vars)
-            return (
-                pd.concat(meter_dfs, ignore_index=True) if meter_dfs else pd.DataFrame(columns=['key_name', 'frequency']),
-                pd.concat(variable_dfs, ignore_index=True) if variable_dfs else pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
-            )
+            return {
+                'meters': pd.concat(meter_dfs, ignore_index=True) if meter_dfs else pd.DataFrame(columns=['key_name', 'frequency']),
+                'variables': pd.concat(variable_dfs, ignore_index=True) if variable_dfs else pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
+            }
 
         if len(scoped_buildings) == 0:
-            return (
-                pd.DataFrame(columns=['key_name', 'frequency']),
-                pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
-            )
+            return {
+                'meters': pd.DataFrame(columns=['key_name', 'frequency']),
+                'variables': pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
+            }
 
         selected_idx, selected_building = scoped_buildings[0]
         building_for_testsim = selected_building
@@ -1553,7 +3514,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             # Do not fail output discovery if validation can't be performed
             pass
 
-        return (df_outputmeters, df_outputvariables)
+        return {
+            'meters': df_outputmeters,
+            'variables': df_outputvariables,
+        }
 
     # ------------------------------------------------------------------
     # Outputs preflight (discover → select → clear → apply)
@@ -1566,7 +3530,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         refresh: bool = False,
         idf_scope: Any = 'all',
         keep_available_outputs: bool = False,
-    ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    ) -> dict[str, Any]:
         """
         Discovers which outputs are actually available for this model.
 
@@ -1581,7 +3545,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             an IDF name, or a list of selectors to run fewer test simulations.
         :param keep_available_outputs: when False (default), removes the temporary
             ``available_outputs`` directory once discovery is done.
-        :return: (df_meters, df_vars, meta)
+        :return: dictionary with keys ``meters``, ``variables`` and ``meta``.
         """
         requested_prefer = prefer
         scope_label = self._idf_scope_label(idf_scope)
@@ -1596,7 +3560,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     and cached_meta.get('reduce_sim_time') == reduce_sim_time
                     and cached_meta.get('keep_available_outputs', False) == keep_available_outputs
                 ):
-                    return cached['df_meters'].copy(), cached['df_vars'].copy(), cached_meta
+                    return {
+                        'meters': cached['df_meters'].copy(),
+                        'variables': cached['df_vars'].copy(),
+                        'meta': cached_meta,
+                    }
 
         meta: dict = {
             'prefer': prefer,
@@ -1626,11 +3594,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 meta['prefer_fallback'] = 'testsimeplus'
 
         if prefer == 'testsimeplus':
-            df_meters, df_vars = self.get_outputs_df_from_testsim(
+            outputs_from_testsim = self.get_outputs_df_from_testsim(
                 reduce_sim_time=reduce_sim_time,
                 idf_scope=idf_scope,
                 keep_available_outputs=keep_available_outputs,
             )
+            df_meters = outputs_from_testsim['meters']
+            df_vars = outputs_from_testsim['variables']
             meta.update({'source': 'testsimeplus', 'out_dir': 'available_outputs'})
 
         # Normalize column dtypes minimally
@@ -1640,7 +3610,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     df[c] = df[c].astype(str)
 
         self.available_outputs_ = {'df_meters': df_meters.copy(), 'df_vars': df_vars.copy(), 'meta': dict(meta)}
-        return df_meters, df_vars, meta
+        return {
+            'meters': df_meters,
+            'variables': df_vars,
+            'meta': meta,
+        }
 
     def select_outputs(
         self,
@@ -1654,7 +3628,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         reduce_sim_time: bool = True,
         idf_scope: Any = 'all',
         keep_available_outputs: bool = False,
-    ) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+    ) -> dict[str, Any]:
         """
         Validates and builds output selection DataFrames from a simple wishlist and/or DataFrames.
 
@@ -1672,13 +3646,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if variables is None:
             variables = []
 
-        df_meters_av, df_vars_av, meta = self.discover_available_outputs(
+        available_outputs = self.discover_available_outputs(
             reduce_sim_time=reduce_sim_time,
             prefer='testsimeplus',
             refresh=False,
             idf_scope=idf_scope,
             keep_available_outputs=keep_available_outputs,
         )
+        df_meters_av = available_outputs['meters']
+        df_vars_av = available_outputs['variables']
+        meta = available_outputs['meta']
 
         report: dict = {
             'meta': meta,
@@ -1837,7 +3814,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         report['selected_counts']['meters'] = len(df_meters_sel)
         report['selected_counts']['variables'] = len(df_vars_sel)
-        return df_meters_sel, df_vars_sel, report
+        return {
+            'meters': df_meters_sel,
+            'variables': df_vars_sel,
+            'report': report,
+        }
 
     def clear_outputs(
         self,
@@ -2046,9 +4027,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         'module.submodule:callable_name'.
 
         :param df_output_variable: a pandas DataFrame containing the Output:Variable objects, similar to that one
-            returned from method get_outputs_df_from_testsim()
+            returned in key ``variables`` from method get_outputs_df_from_testsim()
         :param df_output_meter: a pandas DataFrame containing the Output:Meter objects, similar to that one
-            returned from method get_outputs_df_from_testsim()
+            returned in key ``meters`` from method get_outputs_df_from_testsim()
         """
         if df_output_variable is not None:
             df_output_variable['output_name'] = 'temp'
@@ -3711,6 +5692,47 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     )
             print(f'  [info] epw_suffix_categories restored: {list(_suffix_cats.keys())}')
         return self.outputs_optimisation
+
+    def compare_with(
+        self,
+        other: Union[Any, pd.DataFrame, str, os.PathLike],
+        input_columns: Optional[list[str]] = None,
+        output_columns: Optional[list[str]] = None,
+        ignore_columns: Optional[list[str]] = None,
+        compare_attrs: bool = True,
+        ignore_attr_keys: Optional[list[str]] = None,
+        inputs_mismatch_strategy: Literal['strict', 'auto', 'nearest', 'row_order'] = 'auto',
+        reference_columns: Optional[list[str]] = None,
+        reference_max_distance: Optional[float] = None,
+        equal_mode: Literal['strict', 'relaxed'] = 'strict',
+        numeric_atol: float = 1e-6,
+        numeric_rtol: float = 1e-5,
+        max_examples: int = 5,
+        prefer_pickle_from_instances: bool = True,
+    ) -> dict:
+        """
+        Convenience wrapper around :func:`compare_simulation_instances`.
+
+        Useful for comparing this simulation against another simulation instance,
+        a DataFrame, or a persisted outputs file.
+        """
+        return compare_simulation_instances(
+            left=self,
+            right=other,
+            input_columns=input_columns,
+            output_columns=output_columns,
+            ignore_columns=ignore_columns,
+            compare_attrs=compare_attrs,
+            ignore_attr_keys=ignore_attr_keys,
+            inputs_mismatch_strategy=inputs_mismatch_strategy,
+            reference_columns=reference_columns,
+            reference_max_distance=reference_max_distance,
+            equal_mode=equal_mode,
+            numeric_atol=numeric_atol,
+            numeric_rtol=numeric_rtol,
+            max_examples=max_examples,
+            prefer_pickle_from_instances=prefer_pickle_from_instances,
+        )
 
     def merge(
         self,

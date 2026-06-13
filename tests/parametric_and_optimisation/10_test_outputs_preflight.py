@@ -23,7 +23,10 @@ def test_outputs_preflight_discover_and_select_with_suggestions():
         verbosemode=False,
     )
 
-    df_meters_av, df_vars_av, meta = sim.discover_available_outputs(reduce_sim_time=True, prefer='testsimeplus')
+    available_outputs = sim.discover_available_outputs(reduce_sim_time=True, prefer='testsimeplus')
+    df_meters_av = available_outputs['meters']
+    df_vars_av = available_outputs['variables']
+    meta = available_outputs['meta']
     assert meta.get('source') in {'testsimeplus', 'rdd_mdd'}
     assert 'key_name' in df_meters_av.columns
     assert 'variable_name' in df_vars_av.columns
@@ -32,13 +35,16 @@ def test_outputs_preflight_discover_and_select_with_suggestions():
     real_var_name = str(df_vars_av.iloc[0]['variable_name'])
 
     with pytest.warns(UserWarning):
-        df_meters_sel, df_vars_sel, report = sim.select_outputs(
+        selection = sim.select_outputs(
             meters=['Heating:Electricity', 'Heatng:Electricity'],  # typo on purpose
             variables=[real_var_name, 'Definitely Not A Real Variable Name'],
             on_missing='warn',
             suggest=True,
             reduce_sim_time=True,
         )
+        df_meters_sel = selection['meters']
+        df_vars_sel = selection['variables']
+        report = selection['report']
 
     assert isinstance(report, dict)
     assert 'missing' in report
@@ -63,16 +69,19 @@ def test_apply_outputs_preflight_cleans_all_and_applies_selection():
     )
 
     # Discover once to pick a known-valid variable name.
-    _, df_vars_av, _ = sim.discover_available_outputs(reduce_sim_time=True, prefer='testsimeplus')
+    available_outputs = sim.discover_available_outputs(reduce_sim_time=True, prefer='testsimeplus')
+    df_vars_av = available_outputs['variables']
     var_name = str(df_vars_av.iloc[0]['variable_name'])
 
-    df_meters_sel, df_vars_sel, _ = sim.select_outputs(
+    selection = sim.select_outputs(
         meters=['Heating:Electricity'],
         variables=[var_name],
         on_missing='raise',
         suggest=False,
         reduce_sim_time=True,
     )
+    df_meters_sel = selection['meters']
+    df_vars_sel = selection['variables']
 
     # Add extra output objects to ensure cleaning is effective.
     b = sim.building

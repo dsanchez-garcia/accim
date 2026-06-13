@@ -54,7 +54,8 @@ def build_custom_sim(out_freqs=None):
         verbosemode=False,
     )
     sim.set_output_met_objects_to_idf(['Heating:Electricity', 'Cooling:Electricity'])
-    df_meters_ts, _ = sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+    outputs_from_testsim = sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+    df_meters_ts = outputs_from_testsim['meters']
     df_meters_problem = df_meters_ts[
         df_meters_ts['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])
     ].drop_duplicates(subset=['key_name'])
