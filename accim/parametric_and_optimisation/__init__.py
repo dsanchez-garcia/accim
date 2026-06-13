@@ -47,6 +47,10 @@ from .main import (
     OptimParamSimulation,  # Backward compatibility
     AccimPredefModelsParamSim,
     SimulationBase,
+    SimulationComparisonSession,
+    compare_simulation_instances,
+    compare_latest_pickles_in_folders,
+    compare_multiple_pickles_with_reference,
 )
 
 __all__ = [
@@ -55,4 +59,8 @@ __all__ = [
     'OptimParamSimulation',
     'AccimPredefModelsParamSim',
     'SimulationBase',
+    'SimulationComparisonSession',
+    'compare_simulation_instances',
+    'compare_latest_pickles_in_folders',
+    'compare_multiple_pickles_with_reference',
 ]

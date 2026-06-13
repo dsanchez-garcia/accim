@@ -33,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **XLSX Result Exports**: Parametric and optimisation result tables are now also saved as `.xlsx` files alongside existing `.csv`, `.pkl`, and `.json` exports.
 - **Legacy Parametric Output Alias**: Added `outputs_param_sim` as a backward-compatible alias of `outputs_param_simulation`.
 - **Workspace Artifact Cleanup Utility**: Added `WorkspaceArtifactCleaner` in `accim.utils` to snapshot workspace files, detect generated artifacts, preview deletion plans (`dry_run`), and safely remove selected outputs with allow/deny glob patterns.
+- **Simulation Comparison Utilities**: Promoted simulation-result comparison helpers into the public `accim.parametric_and_optimisation` namespace.
+  - Added/Exported `SimulationComparisonSession`, `compare_simulation_instances(...)`, `compare_latest_pickles_in_folders(...)`, and `compare_multiple_pickles_with_reference(...)` for strict/relaxed parity checks across DataFrames, simulation instances, and persisted files.
+  - Added regression tests covering strict vs relaxed comparison modes, folder-latest pickle comparison, mixed source discovery, and session history/report persistence.
+- **Pickle Comparison Tutorial Docs**: Added `docs/source/9_pickle_comparison_tutorial.md` and linked it in the docs index for end-to-end guidance on validating simulation output equivalence.
+- **Project Tracking Workflow Files**: Added `DEVLOG.md`, `TODO.md`, and `ROADMAP.md` and documented the workflow in `README.md` to separate release notes, completed work logs, active tasks, and longer-term planning.
+- **Operations Tooling for Notebooks and Campaign Runs**: Added helper scripts under `tools/` for custom output reducers, robust custom-plan parametric execution, batch notebook execution, and reruns of failed notebooks.
 
 ### Changed
 - **Breaking API Change in Output Discovery/Selection Returns**: `get_outputs_df_from_testsim(...)`, `discover_available_outputs(...)`, and `select_outputs(...)` now return a single dictionary instead of tuples.

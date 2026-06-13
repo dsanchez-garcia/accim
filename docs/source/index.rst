@@ -15,6 +15,7 @@ Welcome to accim |version|'s documentation!
    3_quick tutorial.md
    4_detailed use.md
    5_troubleshooting.md
+   9_pickle_comparison_tutorial.md
    6_citation.md
    7_credits.md
 

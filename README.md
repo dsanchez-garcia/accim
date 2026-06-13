@@ -15,6 +15,17 @@ The figure below clearly explains the aim of adaptive setpoint temperatures: int
 
 ![Use of adaptive setpoint](https://github.com/dsanchez-garcia/accim/blob/master/docs/source/images/NV_vs_MM.png?raw=true)
 
+# 0. Development workflow files
+
+This repository uses the following Markdown files for project tracking:
+
+- `CHANGELOG.md`: user-facing release notes.
+- `DEVLOG.md`: internal log of completed technical work.
+- `TODO.md`: active short-term tasks and priorities.
+- `ROADMAP.md`: medium- and long-term initiatives.
+
+Recommended flow: track active work in `TODO.md`, move completed outcomes to `DEVLOG.md`, and promote user-facing changes to `CHANGELOG.md` during release preparation.
+
 # 1. Citation
 
 If you use this package, please cite us:
