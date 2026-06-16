@@ -1,4 +1,6 @@
 import os
+import re
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -7,6 +9,76 @@ from matplotlib.lines import Line2D
 import seaborn as sns
 
 class PlottingMixin:
+
+    @staticmethod
+    def _safe_plot_token(value: str) -> str:
+        token = re.sub(r'[^A-Za-z0-9_.-]+', '_', str(value).strip())
+        return token.strip('_') or 'unknown'
+
+    @staticmethod
+    def _is_energy_like_column(column_name: str) -> bool:
+        keywords = ('heating', 'cooling', 'energy', 'electricity', 'gas', 'facility')
+        lowered = str(column_name).lower()
+        return any(k in lowered for k in keywords)
+
+    def _get_plot_source_df(self, df_source: str = 'parametric') -> pd.DataFrame:
+        source_map = {
+            'parametric': 'outputs_param_simulation',
+            'optimisation': 'outputs_optimisation',
+        }
+        if df_source not in source_map:
+            raise ValueError("df_source must be 'parametric' or 'optimisation'")
+        df = getattr(self, source_map[df_source], None)
+        if df is None or df.empty:
+            raise ValueError(f'No results found for {df_source}. Please run the simulation first.')
+        return df.copy()
+
+    def _normalise_plot_columns(self, df: pd.DataFrame, columns: list, normalize_per_m2: bool = False) -> tuple[pd.DataFrame, dict]:
+        outputs_normalized = getattr(self, 'outputs_normalized', False)
+        area_attr = getattr(self, 'building_floor_area', None)
+
+        if outputs_normalized:
+            if normalize_per_m2:
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+            normalize_per_m2 = False
+            base_divisor = 1.0
+            energy_unit = 'kWh/m2'
+        else:
+            base_divisor = 3600000.0
+            energy_unit = 'kWh/m2' if normalize_per_m2 else 'kWh'
+            if normalize_per_m2 and not area_attr:
+                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                normalize_per_m2 = False
+                energy_unit = 'kWh'
+
+        unit_map = {}
+        for column in list(dict.fromkeys(columns)):
+            if column not in df.columns:
+                continue
+            if not pd.api.types.is_numeric_dtype(df[column]):
+                unit_map[column] = None
+                continue
+            if not self._is_energy_like_column(column):
+                unit_map[column] = None
+                continue
+
+            if outputs_normalized:
+                unit_map[column] = energy_unit
+                continue
+
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in df.columns:
+                    divisors = df['idf'].map(area_attr).fillna(1.0) * base_divisor
+                else:
+                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    divisors = base_divisor * area_val
+            else:
+                divisors = base_divisor
+
+            df[column] = df[column] / divisors
+            unit_map[column] = energy_unit
+
+        return (df, unit_map)
 
     def plot_best_compromise_solutions(self, out_dir: str='.', mcdm_configs: list=None, normalize_per_m2: bool=False) -> pd.DataFrame:
         """
@@ -660,3 +732,905 @@ class PlottingMixin:
         plt.close(g.fig)
         print(f'  Categorical boxplot saved: {fname_plot}')
         return g
+
+    def plot_parametric_scatter(
+            self,
+            x: str,
+            y: str,
+            df_source: str='parametric',
+            hue: str=None,
+            style: str=None,
+            size: str=None,
+            col: str=None,
+            row: str=None,
+            add_trend: str=None,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            alpha: float=0.75,
+            height: float=4,
+            aspect: float=1.2,
+            figsize: tuple=None,
+    ):
+        """
+        Generates a scatter plot (optionally faceted) for parametric/optimisation outputs.
+
+        :param x: Column name for the X axis.
+        :param y: Column name for the Y axis.
+        :param df_source: 'parametric' or 'optimisation'.
+        :param hue: Optional grouping column for point colour.
+        :param style: Optional grouping column for point marker.
+        :param size: Optional grouping column for point size.
+        :param col: Optional faceting column.
+        :param row: Optional faceting row.
+        :param add_trend: Optional trend line ('linear' or 'lowess').
+        :param out_dir: Output directory for saving the figure.
+        :param normalize_per_m2: Normalize energy-like axes to kWh/m2 (if possible).
+        :param alpha: Point transparency.
+        :param height: Height (inches) of each facet.
+        :param aspect: Width/height ratio of each facet.
+        :param figsize: Optional full-figure size override (width, height).
+        :return: seaborn FacetGrid.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_scatter. Please pip install seaborn.')
+            return
+
+        allowed_trends = {None, 'linear', 'lowess'}
+        if add_trend not in allowed_trends:
+            raise ValueError("add_trend must be one of: None, 'linear', 'lowess'")
+
+        df = self._get_plot_source_df(df_source=df_source)
+        required_cols = [x, y]
+        optional_cols = [hue, style, size, col, row]
+
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for scatter plot: {missing}')
+
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for scatter plot: {missing_optional}')
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y], normalize_per_m2=normalize_per_m2)
+
+        os.makedirs(out_dir, exist_ok=True)
+        g = sns.relplot(
+            data=df,
+            x=x,
+            y=y,
+            hue=hue,
+            style=style,
+            size=size,
+            col=col,
+            row=row,
+            kind='scatter',
+            alpha=alpha,
+            height=height,
+            aspect=aspect,
+        )
+
+        if figsize is not None:
+            g.fig.set_size_inches(figsize)
+
+        if add_trend is not None and pd.api.types.is_numeric_dtype(df[x]) and pd.api.types.is_numeric_dtype(df[y]):
+            if g.axes_dict:
+                for facet_key, ax in g.axes_dict.items():
+                    mask = pd.Series(True, index=df.index)
+                    if row and col:
+                        mask &= (df[row] == facet_key[0]) & (df[col] == facet_key[1])
+                    elif row:
+                        mask &= (df[row] == facet_key)
+                    elif col:
+                        mask &= (df[col] == facet_key)
+                    df_facet = df[mask]
+                    if len(df_facet) < 2:
+                        continue
+                    sns.regplot(
+                        data=df_facet,
+                        x=x,
+                        y=y,
+                        scatter=False,
+                        lowess=(add_trend == 'lowess'),
+                        ax=ax,
+                        line_kws={'color': '#111111', 'lw': 1.2, 'alpha': 0.9},
+                    )
+            else:
+                sns.regplot(
+                    data=df,
+                    x=x,
+                    y=y,
+                    scatter=False,
+                    lowess=(add_trend == 'lowess'),
+                    ax=g.ax,
+                    line_kws={'color': '#111111', 'lw': 1.2, 'alpha': 0.9},
+                )
+
+        x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+        y_label = f"{y} ({unit_map[y]})" if unit_map.get(y) else y
+        g.set_axis_labels(x_label, y_label)
+
+        title = f"Scatter Plot ({df_source.capitalize()})"
+        if add_trend:
+            title += f" | Trend: {add_trend}"
+        g.fig.subplots_adjust(top=0.9)
+        g.fig.suptitle(title, fontsize=13)
+
+        fname = os.path.join(
+            out_dir,
+            f"plot_parametric_scatter_{df_source}_{self._safe_plot_token(x)}_vs_{self._safe_plot_token(y)}.png",
+        )
+        g.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(g.fig)
+        print(f'  Parametric scatter plot saved: {fname}')
+        return g
+
+    def plot_parametric_lines(
+            self,
+            x: str,
+            y_vars: list=None,
+            df_source: str='parametric',
+            hue: str='epw',
+            style: str=None,
+            units: str=None,
+            col: str='idf',
+            row: str=None,
+            estimator: str='mean',
+            errorbar=('ci', 95),
+            markers: bool=True,
+            dashes: bool=False,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            height: float=4,
+            aspect: float=1.2,
+            figsize: tuple=None,
+            sort_x: bool=True,
+    ) -> dict:
+        """
+        Generates one or more line plots to inspect trends against a swept parameter.
+
+        :param x: Column name for the X axis.
+        :param y_vars: List of output columns to plot. If None, Heating/Cooling are auto-detected.
+        :param df_source: 'parametric' or 'optimisation'.
+        :param hue: Optional grouping column for colour.
+        :param style: Optional grouping column for line style.
+        :param units: Optional column used as line units (useful when estimator=None).
+        :param col: Optional faceting column.
+        :param row: Optional faceting row.
+        :param estimator: Aggregation estimator (e.g., 'mean', 'median') or None for raw traces.
+        :param errorbar: Seaborn errorbar specification. Falls back to legacy ci= when needed.
+        :param markers: Show markers at sampled X locations.
+        :param dashes: Use dashed lines for style groups.
+        :param out_dir: Output directory for saving figures.
+        :param normalize_per_m2: Normalize energy-like Y columns to kWh/m2 (if possible).
+        :param height: Height (inches) of each facet.
+        :param aspect: Width/height ratio of each facet.
+        :param figsize: Optional full-figure size override (width, height).
+        :param sort_x: Sort X values before plotting lines.
+        :return: dict mapping each y_var to its saved PNG file path.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_lines. Please pip install seaborn.')
+            return {}
+
+        df = self._get_plot_source_df(df_source=df_source)
+        if x not in df.columns:
+            raise KeyError(f"Column '{x}' not found in dataframe.")
+
+        if y_vars is None:
+            heating_col = next((c for c in df.columns if 'Heating' in c), None)
+            cooling_col = next((c for c in df.columns if 'Cooling' in c), None)
+            y_vars = [c for c in [heating_col, cooling_col] if c is not None]
+            if not y_vars:
+                raise ValueError('Heating/Cooling columns not found and y_vars was not provided.')
+
+        missing_y = [y_var for y_var in y_vars if y_var not in df.columns]
+        if missing_y:
+            raise KeyError(f'Missing y_vars columns: {missing_y}')
+
+        optional_cols = [hue, style, units, col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for line plot: {missing_optional}')
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2)
+        os.makedirs(out_dir, exist_ok=True)
+
+        saved = {}
+        for y_var in y_vars:
+            relplot_kwargs = {
+                'data': df,
+                'x': x,
+                'y': y_var,
+                'hue': hue,
+                'style': style,
+                'units': units,
+                'col': col,
+                'row': row,
+                'kind': 'line',
+                'estimator': estimator,
+                'markers': markers,
+                'dashes': dashes,
+                'sort': sort_x,
+                'height': height,
+                'aspect': aspect,
+            }
+
+            if errorbar is not None:
+                relplot_kwargs['errorbar'] = errorbar
+
+            try:
+                g = sns.relplot(**relplot_kwargs)
+            except TypeError as err:
+                # Compatibility fallback for seaborn<0.12 where errorbar= is unavailable.
+                if 'errorbar' not in str(err):
+                    raise
+                relplot_kwargs.pop('errorbar', None)
+                if errorbar is not None:
+                    if isinstance(errorbar, tuple) and len(errorbar) == 2 and str(errorbar[0]).lower() == 'ci':
+                        relplot_kwargs['ci'] = errorbar[1]
+                    elif isinstance(errorbar, (int, float)):
+                        relplot_kwargs['ci'] = errorbar
+                g = sns.relplot(**relplot_kwargs)
+
+            if figsize is not None:
+                g.fig.set_size_inches(figsize)
+
+            x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+            y_label = f"{y_var} ({unit_map[y_var]})" if unit_map.get(y_var) else y_var
+            g.set_axis_labels(x_label, y_label)
+            g.fig.subplots_adjust(top=0.9)
+            g.fig.suptitle(f"Parametric Line Plot ({df_source.capitalize()}) - {y_var}", fontsize=13)
+
+            fname = os.path.join(
+                out_dir,
+                f"plot_parametric_lines_{df_source}_{self._safe_plot_token(y_var)}_by_{self._safe_plot_token(x)}.png",
+            )
+            g.savefig(fname, dpi=300, bbox_inches='tight')
+            plt.close(g.fig)
+            print(f'  Parametric line plot saved: {fname}')
+            saved[y_var] = fname
+
+        return saved
+
+    def plot_parametric_heatmap(
+            self,
+            x: str,
+            y: str,
+            z: str,
+            df_source: str='parametric',
+            aggfunc: str='mean',
+            col: str=None,
+            row: str=None,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            cmap: str='viridis',
+            annot: bool=False,
+            fmt: str='.2f',
+            figsize: tuple=None,
+            vmin: float=None,
+            vmax: float=None,
+    ) -> str:
+        """
+        Creates one or more heatmaps from (x, y) parameter combinations and z values.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_heatmap. Please pip install seaborn.')
+            return ''
+
+        df = self._get_plot_source_df(df_source=df_source)
+        required_cols = [x, y, z]
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for heatmap: {missing}')
+
+        optional_cols = [col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for heatmap: {missing_optional}')
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y, z], normalize_per_m2=normalize_per_m2)
+        os.makedirs(out_dir, exist_ok=True)
+
+        row_values = list(pd.unique(df[row].dropna())) if row else [None]
+        col_values = list(pd.unique(df[col].dropna())) if col else [None]
+        if len(row_values) == 0:
+            row_values = [None]
+        if len(col_values) == 0:
+            col_values = [None]
+
+        n_rows = len(row_values)
+        n_cols = len(col_values)
+        if figsize is None:
+            figsize = (4.8 * n_cols, 4.2 * n_rows)
+
+        (fig, axes) = plt.subplots(n_rows, n_cols, figsize=figsize, squeeze=False)
+        for (i, row_val) in enumerate(row_values):
+            for (j, col_val) in enumerate(col_values):
+                ax = axes[i][j]
+                mask = pd.Series(True, index=df.index)
+                if row:
+                    mask &= df[row] == row_val
+                if col:
+                    mask &= df[col] == col_val
+
+                df_facet = df.loc[mask, [x, y, z]].dropna()
+                if df_facet.empty:
+                    ax.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax.transAxes)
+                    ax.set_axis_off()
+                    continue
+
+                pivot_df = pd.pivot_table(df_facet, index=y, columns=x, values=z, aggfunc=aggfunc)
+                if pivot_df.empty:
+                    ax.text(0.5, 0.5, 'No pivot data', ha='center', va='center', transform=ax.transAxes)
+                    ax.set_axis_off()
+                    continue
+
+                pivot_df = pivot_df.sort_index(axis=0).sort_index(axis=1)
+                sns.heatmap(
+                    pivot_df,
+                    ax=ax,
+                    cmap=cmap,
+                    annot=annot,
+                    fmt=fmt,
+                    vmin=vmin,
+                    vmax=vmax,
+                    cbar=True,
+                )
+
+                x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+                y_label = f"{y} ({unit_map[y]})" if unit_map.get(y) else y
+                ax.set_xlabel(x_label)
+                ax.set_ylabel(y_label)
+
+                title_parts = []
+                if row:
+                    title_parts.append(f'{row}={row_val}')
+                if col:
+                    title_parts.append(f'{col}={col_val}')
+                if title_parts:
+                    ax.set_title(' | '.join(title_parts), fontsize=10)
+
+        z_label = f"{z} ({unit_map[z]})" if unit_map.get(z) else z
+        fig.suptitle(f'Parametric Heatmap ({df_source.capitalize()}) - {z_label}', fontsize=13)
+        fig.tight_layout(rect=(0, 0, 1, 0.96))
+
+        fname = os.path.join(
+            out_dir,
+            f'plot_parametric_heatmap_{df_source}_{self._safe_plot_token(z)}_by_{self._safe_plot_token(x)}_{self._safe_plot_token(y)}.png',
+        )
+        fig.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f'  Parametric heatmap saved: {fname}')
+        return fname
+
+    def plot_parametric_contour(
+            self,
+            x: str,
+            y: str,
+            z: str,
+            df_source: str='parametric',
+            col: str=None,
+            row: str=None,
+            levels: int=12,
+            filled: bool=True,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            cmap: str='viridis',
+            scatter_overlay: bool=True,
+            figsize: tuple=None,
+    ) -> str:
+        """
+        Creates contour (or filled contour) plots from numeric x, y, z columns.
+        """
+        df = self._get_plot_source_df(df_source=df_source)
+        required_cols = [x, y, z]
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for contour plot: {missing}')
+
+        for c in required_cols:
+            if not pd.api.types.is_numeric_dtype(df[c]):
+                raise TypeError(f"Column '{c}' must be numeric for contour plotting.")
+
+        optional_cols = [col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for contour plot: {missing_optional}')
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y, z], normalize_per_m2=normalize_per_m2)
+        os.makedirs(out_dir, exist_ok=True)
+
+        row_values = list(pd.unique(df[row].dropna())) if row else [None]
+        col_values = list(pd.unique(df[col].dropna())) if col else [None]
+        if len(row_values) == 0:
+            row_values = [None]
+        if len(col_values) == 0:
+            col_values = [None]
+
+        n_rows = len(row_values)
+        n_cols = len(col_values)
+        if figsize is None:
+            figsize = (5.2 * n_cols, 4.6 * n_rows)
+
+        (fig, axes) = plt.subplots(n_rows, n_cols, figsize=figsize, squeeze=False)
+        for (i, row_val) in enumerate(row_values):
+            for (j, col_val) in enumerate(col_values):
+                ax = axes[i][j]
+                mask = pd.Series(True, index=df.index)
+                if row:
+                    mask &= df[row] == row_val
+                if col:
+                    mask &= df[col] == col_val
+                df_facet = df.loc[mask, [x, y, z]].dropna()
+
+                if df_facet.empty:
+                    ax.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax.transAxes)
+                    ax.set_axis_off()
+                    continue
+
+                if len(df_facet) < 3 or df_facet[x].nunique() < 2 or df_facet[y].nunique() < 2:
+                    sc = ax.scatter(df_facet[x], df_facet[y], c=df_facet[z], cmap=cmap, s=35, alpha=0.85)
+                    fig.colorbar(sc, ax=ax, pad=0.02, shrink=0.85)
+                    ax.set_title('Fallback scatter (insufficient points)', fontsize=9)
+                else:
+                    try:
+                        if filled:
+                            contour = ax.tricontourf(df_facet[x], df_facet[y], df_facet[z], levels=levels, cmap=cmap)
+                        else:
+                            contour = ax.tricontour(df_facet[x], df_facet[y], df_facet[z], levels=levels, cmap=cmap)
+                        fig.colorbar(contour, ax=ax, pad=0.02, shrink=0.85)
+                        if scatter_overlay:
+                            ax.scatter(df_facet[x], df_facet[y], c='#111111', s=14, alpha=0.5)
+                    except Exception:
+                        sc = ax.scatter(df_facet[x], df_facet[y], c=df_facet[z], cmap=cmap, s=35, alpha=0.85)
+                        fig.colorbar(sc, ax=ax, pad=0.02, shrink=0.85)
+                        ax.set_title('Fallback scatter', fontsize=9)
+
+                x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+                y_label = f"{y} ({unit_map[y]})" if unit_map.get(y) else y
+                ax.set_xlabel(x_label)
+                ax.set_ylabel(y_label)
+
+                facet_title_parts = []
+                if row:
+                    facet_title_parts.append(f'{row}={row_val}')
+                if col:
+                    facet_title_parts.append(f'{col}={col_val}')
+                if facet_title_parts:
+                    base_title = ax.get_title()
+                    prefix = ' | '.join(facet_title_parts)
+                    ax.set_title(f'{prefix}\n{base_title}' if base_title else prefix, fontsize=9)
+
+        z_label = f"{z} ({unit_map[z]})" if unit_map.get(z) else z
+        fig.suptitle(f'Parametric Contour ({df_source.capitalize()}) - {z_label}', fontsize=13)
+        fig.tight_layout(rect=(0, 0, 1, 0.96))
+
+        fname = os.path.join(
+            out_dir,
+            f'plot_parametric_contour_{df_source}_{self._safe_plot_token(z)}_by_{self._safe_plot_token(x)}_{self._safe_plot_token(y)}.png',
+        )
+        fig.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f'  Parametric contour plot saved: {fname}')
+        return fname
+
+    def plot_parametric_distributions(
+            self,
+            x: str,
+            y_vars: list=None,
+            kind: str='violin',
+            df_source: str='parametric',
+            hue: str=None,
+            col: str=None,
+            row: str=None,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            inner: str='box',
+            cut: float=0,
+            sharey: bool=True,
+            show_points: bool=False,
+            height: float=4,
+            aspect: float=1.2,
+            figsize: tuple=None,
+    ) -> dict:
+        """
+        Creates categorical distribution plots (violin, boxen, or box) for one or more outputs.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_distributions. Please pip install seaborn.')
+            return {}
+
+        allowed_kinds = {'violin', 'boxen', 'box'}
+        if kind not in allowed_kinds:
+            raise ValueError(f"kind must be one of {sorted(allowed_kinds)}")
+
+        df = self._get_plot_source_df(df_source=df_source)
+        if x not in df.columns:
+            raise KeyError(f"Column '{x}' not found in dataframe.")
+
+        if y_vars is None:
+            heating_col = next((c for c in df.columns if 'Heating' in c), None)
+            cooling_col = next((c for c in df.columns if 'Cooling' in c), None)
+            y_vars = [c for c in [heating_col, cooling_col] if c is not None]
+            if not y_vars:
+                raise ValueError('Heating/Cooling columns not found and y_vars was not provided.')
+
+        missing_y = [y_var for y_var in y_vars if y_var not in df.columns]
+        if missing_y:
+            raise KeyError(f'Missing y_vars columns: {missing_y}')
+
+        optional_cols = [hue, col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for distribution plot: {missing_optional}')
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2)
+        os.makedirs(out_dir, exist_ok=True)
+
+        saved = {}
+        for y_var in y_vars:
+            catplot_kwargs = {
+                'data': df,
+                'x': x,
+                'y': y_var,
+                'hue': hue,
+                'col': col,
+                'row': row,
+                'kind': kind,
+                'sharey': sharey,
+                'height': height,
+                'aspect': aspect,
+            }
+            if kind == 'violin':
+                catplot_kwargs['inner'] = inner
+                catplot_kwargs['cut'] = cut
+
+            g = sns.catplot(**catplot_kwargs)
+            if figsize is not None:
+                g.fig.set_size_inches(figsize)
+
+            if show_points:
+                g.map_dataframe(
+                    sns.stripplot,
+                    x=x,
+                    y=y_var,
+                    hue=hue,
+                    dodge=True if hue else False,
+                    alpha=0.45,
+                    jitter=True,
+                    size=3,
+                    color='#4d4d4d' if hue is None else None,
+                )
+
+            x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+            y_label = f"{y_var} ({unit_map[y_var]})" if unit_map.get(y_var) else y_var
+            g.set_axis_labels(x_label, y_label)
+            g.fig.subplots_adjust(top=0.9)
+            g.fig.suptitle(f'Parametric {kind.title()} Plot ({df_source.capitalize()}) - {y_var}', fontsize=13)
+
+            fname = os.path.join(
+                out_dir,
+                f'plot_parametric_{kind}_{df_source}_{self._safe_plot_token(y_var)}_by_{self._safe_plot_token(x)}.png',
+            )
+            g.savefig(fname, dpi=300, bbox_inches='tight')
+            plt.close(g.fig)
+            print(f'  Parametric {kind} plot saved: {fname}')
+            saved[y_var] = fname
+
+        return saved
+
+    def plot_parametric_ecdf(
+            self,
+            x: str,
+            df_source: str='parametric',
+            hue: str=None,
+            col: str=None,
+            row: str=None,
+            complementary: bool=False,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            height: float=4,
+            aspect: float=1.2,
+            figsize: tuple=None,
+    ) -> str:
+        """
+        Creates an ECDF plot to compare cumulative distributions across scenarios.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_ecdf. Please pip install seaborn.')
+            return ''
+
+        df = self._get_plot_source_df(df_source=df_source)
+        if x not in df.columns:
+            raise KeyError(f"Column '{x}' not found in dataframe.")
+        if not pd.api.types.is_numeric_dtype(df[x]):
+            raise TypeError(f"Column '{x}' must be numeric for ECDF plotting.")
+
+        optional_cols = [hue, col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for ECDF plot: {missing_optional}')
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x], normalize_per_m2=normalize_per_m2)
+        os.makedirs(out_dir, exist_ok=True)
+
+        displot_kwargs = {
+            'data': df,
+            'x': x,
+            'hue': hue,
+            'col': col,
+            'row': row,
+            'kind': 'ecdf',
+            'height': height,
+            'aspect': aspect,
+        }
+
+        if complementary:
+            displot_kwargs['complementary'] = True
+
+        try:
+            g = sns.displot(**displot_kwargs)
+        except TypeError:
+            # Compatibility fallback for older seaborn versions.
+            displot_kwargs.pop('complementary', None)
+            g = sns.displot(**displot_kwargs)
+
+        if figsize is not None:
+            g.fig.set_size_inches(figsize)
+
+        x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+        y_label = '1 - F(x)' if complementary else 'F(x)'
+        g.set_axis_labels(x_label, y_label)
+        g.fig.subplots_adjust(top=0.9)
+        g.fig.suptitle(f'Parametric ECDF ({df_source.capitalize()}) - {x_label}', fontsize=13)
+
+        fname = os.path.join(
+            out_dir,
+            f'plot_parametric_ecdf_{df_source}_{self._safe_plot_token(x)}.png',
+        )
+        g.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(g.fig)
+        print(f'  Parametric ECDF plot saved: {fname}')
+        return fname
+
+    def plot_parametric_density_2d(
+            self,
+            x: str,
+            y: str,
+            kind: str='hexbin',
+            df_source: str='parametric',
+            hue: str=None,
+            col: str=None,
+            row: str=None,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            cmap: str='viridis',
+            gridsize: int=28,
+            mincnt: int=1,
+            levels: int=12,
+            fill: bool=True,
+            alpha: float=0.85,
+            scatter_overlay: bool=False,
+            figsize: tuple=None,
+    ) -> str:
+        """
+        Creates 2D density visualizations using either hexbin or KDE.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_density_2d. Please pip install seaborn.')
+            return ''
+
+        allowed_kinds = {'hexbin', 'kde'}
+        if kind not in allowed_kinds:
+            raise ValueError(f"kind must be one of {sorted(allowed_kinds)}")
+
+        df = self._get_plot_source_df(df_source=df_source)
+        required_cols = [x, y]
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for 2D density plot: {missing}')
+
+        for c in required_cols:
+            if not pd.api.types.is_numeric_dtype(df[c]):
+                raise TypeError(f"Column '{c}' must be numeric for 2D density plotting.")
+
+        optional_cols = [hue, col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for 2D density plot: {missing_optional}')
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y], normalize_per_m2=normalize_per_m2)
+        os.makedirs(out_dir, exist_ok=True)
+
+        row_values = list(pd.unique(df[row].dropna())) if row else [None]
+        col_values = list(pd.unique(df[col].dropna())) if col else [None]
+        if len(row_values) == 0:
+            row_values = [None]
+        if len(col_values) == 0:
+            col_values = [None]
+
+        n_rows = len(row_values)
+        n_cols = len(col_values)
+        if figsize is None:
+            figsize = (5.0 * n_cols, 4.5 * n_rows)
+
+        (fig, axes) = plt.subplots(n_rows, n_cols, figsize=figsize, squeeze=False)
+        for (i, row_val) in enumerate(row_values):
+            for (j, col_val) in enumerate(col_values):
+                ax = axes[i][j]
+                mask = pd.Series(True, index=df.index)
+                if row:
+                    mask &= df[row] == row_val
+                if col:
+                    mask &= df[col] == col_val
+                df_facet = df.loc[mask].copy()
+
+                if df_facet.empty:
+                    ax.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax.transAxes)
+                    ax.set_axis_off()
+                    continue
+
+                if kind == 'hexbin':
+                    hb = ax.hexbin(
+                        df_facet[x],
+                        df_facet[y],
+                        gridsize=gridsize,
+                        mincnt=mincnt,
+                        cmap=cmap,
+                        alpha=alpha,
+                    )
+                    fig.colorbar(hb, ax=ax, pad=0.02, shrink=0.85, label='Count')
+                    if hue:
+                        ax.text(0.01, 0.98, 'hue ignored for hexbin', transform=ax.transAxes, va='top', fontsize=8)
+                else:
+                    kde_kwargs = {
+                        'data': df_facet,
+                        'x': x,
+                        'y': y,
+                        'fill': fill,
+                        'levels': levels,
+                        'ax': ax,
+                    }
+                    if hue:
+                        kde_kwargs['hue'] = hue
+                        kde_kwargs['common_norm'] = False
+                        kde_kwargs['alpha'] = alpha
+                    else:
+                        kde_kwargs['cmap'] = cmap
+                    try:
+                        sns.kdeplot(**kde_kwargs)
+                    except Exception:
+                        sc = ax.scatter(df_facet[x], df_facet[y], c='#1f77b4', s=22, alpha=0.75)
+                        ax.set_title('Fallback scatter', fontsize=9)
+
+                if scatter_overlay:
+                    ax.scatter(df_facet[x], df_facet[y], c='#111111', s=10, alpha=0.35)
+
+                x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+                y_label = f"{y} ({unit_map[y]})" if unit_map.get(y) else y
+                ax.set_xlabel(x_label)
+                ax.set_ylabel(y_label)
+
+                title_parts = []
+                if row:
+                    title_parts.append(f'{row}={row_val}')
+                if col:
+                    title_parts.append(f'{col}={col_val}')
+                if title_parts:
+                    ax.set_title(' | '.join(title_parts), fontsize=10)
+
+        fig.suptitle(f'Parametric 2D Density ({kind}) - {df_source.capitalize()}', fontsize=13)
+        fig.tight_layout(rect=(0, 0, 1, 0.96))
+
+        fname = os.path.join(
+            out_dir,
+            f'plot_parametric_density2d_{kind}_{df_source}_{self._safe_plot_token(x)}_vs_{self._safe_plot_token(y)}.png',
+        )
+        fig.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f'  Parametric 2D density plot saved: {fname}')
+        return fname
+
+    def plot_parametric_radar(
+            self,
+            metrics: list=None,
+            group_by: str='epw',
+            df_source: str='parametric',
+            aggfunc: str='mean',
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            figsize: tuple=(8, 8),
+            fill_alpha: float=0.12,
+    ) -> pd.DataFrame:
+        """
+        Creates a radar chart from aggregated groups and returns the aggregated values.
+        """
+        df = self._get_plot_source_df(df_source=df_source)
+        if group_by not in df.columns:
+            raise KeyError(f"Column '{group_by}' not found in dataframe.")
+
+        if metrics is None:
+            numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+            energy_cols = [c for c in numeric_cols if self._is_energy_like_column(c)]
+            if len(energy_cols) >= 3:
+                metrics = energy_cols[:6]
+            else:
+                metrics = numeric_cols[:6]
+
+        if not metrics:
+            raise ValueError('No numeric metrics found for radar plotting.')
+
+        missing_metrics = [m for m in metrics if m not in df.columns]
+        if missing_metrics:
+            raise KeyError(f'Missing metric columns for radar plot: {missing_metrics}')
+
+        non_numeric = [m for m in metrics if not pd.api.types.is_numeric_dtype(df[m])]
+        if non_numeric:
+            raise TypeError(f'All metrics must be numeric for radar plotting: {non_numeric}')
+
+        if len(metrics) < 3:
+            raise ValueError('Radar plot requires at least 3 metrics.')
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=list(metrics), normalize_per_m2=normalize_per_m2)
+        agg_df = df.groupby(group_by, dropna=False)[metrics].agg(aggfunc).reset_index()
+        if agg_df.empty:
+            raise ValueError('No aggregated rows available for radar plotting.')
+
+        normalised_df = agg_df.copy()
+        for metric in metrics:
+            col_min = normalised_df[metric].min()
+            col_max = normalised_df[metric].max()
+            if pd.isna(col_min) or pd.isna(col_max):
+                normalised_df[metric] = 0.0
+            elif col_max > col_min:
+                normalised_df[metric] = (normalised_df[metric] - col_min) / (col_max - col_min)
+            else:
+                normalised_df[metric] = 0.5
+
+        os.makedirs(out_dir, exist_ok=True)
+        angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
+        angles += angles[:1]
+
+        (fig, ax) = plt.subplots(figsize=figsize, subplot_kw={'polar': True})
+        for idx in range(len(normalised_df)):
+            values = normalised_df.loc[idx, metrics].tolist()
+            values += values[:1]
+            label = str(agg_df[group_by].iloc[idx])
+            ax.plot(angles, values, linewidth=1.8, label=label)
+            ax.fill(angles, values, alpha=fill_alpha)
+
+        metric_labels = [f"{m}\n({unit_map[m]})" if unit_map.get(m) else m for m in metrics]
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(metric_labels, fontsize=9)
+        ax.set_ylim(0, 1)
+        ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
+        ax.set_yticklabels(['0.00', '0.25', '0.50', '0.75', '1.00'], fontsize=8)
+        ax.set_title(
+            f'Parametric Radar ({df_source.capitalize()})\nGroup: {group_by} | Agg: {aggfunc} | Normalized [0, 1]',
+            fontsize=11,
+            va='bottom',
+        )
+        ax.legend(loc='upper right', bbox_to_anchor=(1.35, 1.10), fontsize=8)
+
+        fname = os.path.join(
+            out_dir,
+            f'plot_parametric_radar_{df_source}_group_{self._safe_plot_token(group_by)}.png',
+        )
+        fig.tight_layout()
+        fig.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f'  Parametric radar plot saved: {fname}')
+        return agg_df
+
