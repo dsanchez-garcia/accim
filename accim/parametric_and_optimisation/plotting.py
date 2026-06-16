@@ -1235,6 +1235,7 @@ class PlottingMixin:
             cut: float=0,
             sharey: bool=True,
             show_points: bool=False,
+            legend_out: bool=False,
             height: float=4,
             aspect: float=1.2,
             figsize: tuple=None,
@@ -1286,6 +1287,7 @@ class PlottingMixin:
                 'row': row,
                 'kind': kind,
                 'sharey': sharey,
+                'legend_out': legend_out,
                 'height': height,
                 'aspect': aspect,
             }
