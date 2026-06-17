@@ -5250,6 +5250,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             keep_sim_files_batch_size: int = 50,
             keep_df: Literal['all', 'non-dominated'] = 'all',
             algorithm_options: dict = None,
+            pareto_separate_by_epw: bool = True,
+            pareto_separate_by_idf: bool = False,
     ) -> pd.DataFrame:
         """
         Runs the optimisation.
@@ -5277,6 +5279,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param algorithm_options: optional dictionary with BESOS/Platypus algorithm-specific
             keyword arguments. For example, use ``{'variator': my_variator}`` for algorithms
             that accept a custom variator.
+        :param pareto_separate_by_epw: when True, Pareto optimality is computed independently
+            inside each EPW subset. When False, EPW is ignored in Pareto grouping.
+        :param pareto_separate_by_idf: when True, Pareto optimality is computed independently
+            inside each IDF subset. When False, IDF is ignored in Pareto grouping.
         :return: a pandas DataFrame
         """
         algorithm_options = {} if algorithm_options is None else dict(algorithm_options)
@@ -5289,6 +5295,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         outputs_dict = {}
         full_outputs_dict = {}
         evaluators = {}
+        pareto_group_by = []
+        if pareto_separate_by_epw:
+            pareto_group_by.append('epw')
+        if pareto_separate_by_idf:
+            pareto_group_by.append('idf')
         os.makedirs(out_dir, exist_ok=True)
         # Save an IDF backup into the results folder before starting
         self._save_idf_backup(label='pre_optimisation', out_dir=out_dir)
@@ -5318,50 +5329,50 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             os.remove(log_file)
                         except OSError:
                             pass
-                if processes > 1 and hasattr(evaluator, '_building') and hasattr(evaluator._building, 'idfobjects'):
-                    evaluator._building.idfobjects = GlobalAllCapsDict(evaluator._building.idfobjects)
-                if algorithm == 'GeneticAlgorithm':
-                    outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'EvolutionaryStrategy':
-                    outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'NSGAII':
-                    outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'EpsMOEA':
-                    outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'GDE3':
-                    outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'SPEA2':
-                    outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'MOEAD':
-                    outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'NSGAIII':
-                    outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'ParticleSwarm':
-                    outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'OMOPSO':
-                    outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'SMPSO':
-                    outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'CMAES':
-                    outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'IBEA':
-                    outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'PAES':
-                    outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'PESA2':
-                    outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                elif algorithm == 'EpsNSGAII':
-                    outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
-                else:
-                    raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
-                outputs_optimisation['epw'] = epwname
-                outputs_optimisation['idf'] = idf_basename
-                key = f"{idf_basename}_{epwname}" if len(self.buildings) > 1 else epwname
-                outputs_dict.update({key: outputs_optimisation})
-                full_outputs_optimisation = self._build_full_optimisation_outputs_df(evaluator=evaluator, epwname=epwname)
-                full_outputs_optimisation['idf'] = idf_basename
-                full_outputs_dict.update({key: full_outputs_optimisation})
-                evaluators.update({key: evaluator})
+                    if processes > 1 and hasattr(evaluator, '_building') and hasattr(evaluator._building, 'idfobjects'):
+                        evaluator._building.idfobjects = GlobalAllCapsDict(evaluator._building.idfobjects)
+                    if algorithm == 'GeneticAlgorithm':
+                        outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'EvolutionaryStrategy':
+                        outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'NSGAII':
+                        outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'EpsMOEA':
+                        outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'GDE3':
+                        outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'SPEA2':
+                        outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'MOEAD':
+                        outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'NSGAIII':
+                        outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'ParticleSwarm':
+                        outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'OMOPSO':
+                        outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'SMPSO':
+                        outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'CMAES':
+                        outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'IBEA':
+                        outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'PAES':
+                        outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'PESA2':
+                        outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'EpsNSGAII':
+                        outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    else:
+                        raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
+                    outputs_optimisation['epw'] = epwname
+                    outputs_optimisation['idf'] = idf_basename
+                    key = f"{idf_basename}_{epwname}" if len(self.buildings) > 1 else epwname
+                    outputs_dict.update({key: outputs_optimisation})
+                    full_outputs_optimisation = self._build_full_optimisation_outputs_df(evaluator=evaluator, epwname=epwname)
+                    full_outputs_optimisation['idf'] = idf_basename
+                    full_outputs_dict.update({key: full_outputs_optimisation})
+                    evaluators.update({key: evaluator})
         finally:
             if processes > 1:
                 platypus_evaluator.close()
@@ -5374,7 +5385,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         outputs_optimisation = pd.concat([df for df in full_outputs_dict.values()])
         if len(epws) > 1 or len(self.buildings) > 1:
             outputs_optimisation = outputs_optimisation.reset_index(drop=True)
-        outputs_optimisation = self._annotate_pareto_status(outputs_optimisation_full=outputs_optimisation, outputs_optimisation=outputs_optimisation_non_dominated)
+        outputs_optimisation = self._annotate_pareto_status(
+            outputs_optimisation_full=outputs_optimisation,
+            outputs_optimisation=outputs_optimisation_non_dominated,
+            group_by=pareto_group_by,
+        )
         if keep_sim_files == 'non-dominated':
             import shutil
             for (idx, row) in outputs_optimisation[~outputs_optimisation['pareto-optimal']].iterrows():
@@ -5409,6 +5424,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if len(epws) > 1:
                 outputs_optimisation = outputs_optimisation.reset_index(drop=True)
         self._set_optimisation_outputs(outputs_optimisation_full=outputs_optimisation, outputs_optimisation_non_dominated=outputs_optimisation_non_dominated)
+        self.outputs_optimisation.attrs['pareto_group_by'] = pareto_group_by
+        self.outputs_optimisation.attrs['pareto_separate_by_epw'] = pareto_separate_by_epw
+        self.outputs_optimisation.attrs['pareto_separate_by_idf'] = pareto_separate_by_idf
         self._save_outputs_optimisation_full(out_dir=out_dir)
         self.epws = self.outputs_optimisation.attrs.get('epws', [])
         self.last_run_type = 'optimisation'
@@ -5484,7 +5502,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             key_df[column] = key_df[column].astype(str)
         return key_df.apply(lambda row: '|'.join(row.values.tolist()), axis=1)
 
-    def _annotate_pareto_status(self, outputs_optimisation_full: pd.DataFrame, outputs_optimisation: pd.DataFrame) -> pd.DataFrame:
+    def _annotate_pareto_status(
+        self,
+        outputs_optimisation_full: pd.DataFrame,
+        outputs_optimisation: pd.DataFrame,
+        group_by: Optional[list[str]] = None,
+    ) -> pd.DataFrame:
         """
         Recomputes the Pareto front from scratch using the objective values
         directly on the full evaluation history, grouped per EPW.
@@ -5531,12 +5554,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     objective_data[:, j] = -objective_data[:, j]
             mask = _is_pareto_optimal(objective_data)
             return pd.Series(mask, index=group.index)
+        if group_by is None:
+            group_by = ['epw'] if 'epw' in outputs_optimisation_full.columns and outputs_optimisation_full['epw'].notna().any() else []
+        group_by = [col for col in group_by if col in outputs_optimisation_full.columns]
         pareto_mask = pd.Series(False, index=outputs_optimisation_full.index)
-        if 'epw' in outputs_optimisation_full.columns and outputs_optimisation_full['epw'].notna().any():
-            for (epw, group) in outputs_optimisation_full.groupby('epw'):
-                pareto_mask.loc[group.index] = _pareto_mask_for_group(group)
-        else:
+        if len(group_by) == 0:
             pareto_mask = _pareto_mask_for_group(outputs_optimisation_full)
+        else:
+            for (_, group) in outputs_optimisation_full.groupby(group_by, sort=False, dropna=False):
+                pareto_mask.loc[group.index] = _pareto_mask_for_group(group)
         outputs_optimisation_full['pareto-optimal'] = pareto_mask
         return outputs_optimisation_full
 

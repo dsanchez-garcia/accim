@@ -80,7 +80,14 @@ class PlottingMixin:
 
         return (df, unit_map)
 
-    def plot_best_compromise_solutions(self, out_dir: str='.', mcdm_configs: list=None, normalize_per_m2: bool=False) -> pd.DataFrame:
+    def plot_best_compromise_solutions(
+        self,
+        out_dir: str='.',
+        mcdm_configs: list=None,
+        normalize_per_m2: bool=False,
+        separate_by_epw=None,
+        separate_by_idf=None,
+    ) -> pd.DataFrame:
         """
         Identifies the best compromise solution(s) from the Pareto front for
         each EPW found in ``outputs_optimisation``, saves the results to a
@@ -103,8 +110,14 @@ class PlottingMixin:
                     {'method': 'topsis', 'weights': [0.7, 0.3], 'label': 'topsis_w70_30'},
                 ]
 
+        :param separate_by_epw: whether MCDM is computed independently by EPW.
+            If ``None``, the value is taken from ``outputs_optimisation.attrs``
+            (fallback: ``True``).
+        :param separate_by_idf: whether MCDM is computed independently by IDF.
+            If ``None``, the value is taken from ``outputs_optimisation.attrs``
+            (fallback: ``False``).
         :return: pandas DataFrame with all best solutions (one row per
-            EPW × MCDM method), also saved to CSV.
+            group × MCDM method), also saved to CSV.
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('MCDM best compromise solutions can only be evaluated after an optimisation simulation. Please ensure you run run_optimisation() first.')
@@ -127,6 +140,57 @@ class PlottingMixin:
         if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
             raise ValueError('No optimisation results found. Run run_optimisation (or load via load_outputs_optimisation) first.')
         os.makedirs(out_dir, exist_ok=True)
+        original_optim = self.outputs_optimisation
+        attrs = getattr(original_optim, 'attrs', {}) if hasattr(original_optim, 'attrs') else {}
+        if separate_by_epw is None:
+            separate_by_epw = attrs.get('pareto_separate_by_epw', True)
+        if separate_by_idf is None:
+            separate_by_idf = attrs.get('pareto_separate_by_idf', False)
+        separate_by_epw = bool(separate_by_epw)
+        separate_by_idf = bool(separate_by_idf)
+
+        group_cols = []
+        if separate_by_epw and 'epw' in original_optim.columns:
+            group_cols.append('epw')
+        if separate_by_idf and 'idf' in original_optim.columns:
+            group_cols.append('idf')
+
+        def _build_group_specs(df: pd.DataFrame) -> list:
+            if len(group_cols) == 0:
+                return [{'selector': {}, 'label': 'all', 'df': df.copy()}]
+            specs = []
+            for (group_key, group_df) in df.groupby(group_cols, sort=False, dropna=False):
+                values = group_key if isinstance(group_key, tuple) else (group_key,)
+                selector = {col: val for (col, val) in zip(group_cols, values)}
+                label = ' | '.join(
+                    f"{col}={self._safe_plot_token(val)}"
+                    for (col, val) in selector.items()
+                )
+                specs.append({'selector': selector, 'label': label, 'df': group_df.copy()})
+            return specs
+
+        def _compute_divisors(df_local: pd.DataFrame):
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in df_local.columns:
+                    return df_local['idf'].map(area_attr).fillna(1.0) * base_divisor
+                area_val = area_attr if not isinstance(area_attr, dict) else (list(area_attr.values())[0] if area_attr else 1.0)
+                return base_divisor * area_val
+            return base_divisor
+
+        def _first_divisor(df_local: pd.DataFrame) -> float:
+            divisors = _compute_divisors(df_local)
+            if isinstance(divisors, pd.Series):
+                val = divisors.iloc[0] if len(divisors) > 0 else base_divisor
+            else:
+                val = divisors
+            try:
+                val = float(val)
+            except Exception:
+                val = float(base_divisor)
+            if val == 0:
+                return 1.0
+            return val
+
         if mcdm_configs is None:
             output_names = self.problem.names('outputs')
             n_obj = len(output_names)
@@ -141,58 +205,60 @@ class PlottingMixin:
         _marker_cycle = ['*', 'D', 's', '^', 'P', 'X', 'v', 'o']
         _colour_cycle = ['#e63946', '#f4a261', '#2a9d8f', '#e9c46a', '#264653', '#a8dadc', '#457b9d', '#6d6875']
         _size_cycle = [220, 120, 120, 120, 120, 120, 120, 120]
-        epw_labels = self.outputs_optimisation['epw'].unique()
         output_names = self.problem.names('outputs')
-        heating_col = next((c for c in output_names if 'Heating' in c), output_names[0])
-        _fallback_cool = output_names[-1] if len(output_names) > 1 else output_names[0]
-        cooling_col = next((c for c in output_names if 'Cooling' in c), _fallback_cool)
+        resolved_outputs = output_names
+        if hasattr(self, '_resolve_output_columns'):
+            try:
+                resolved_outputs = self._resolve_output_columns(output_names, list(original_optim.columns), strict=False)
+            except Exception:
+                resolved_outputs = output_names
+        if len(resolved_outputs) == 0:
+            raise ValueError('Could not resolve objective columns for MCDM plotting.')
+        heating_col = next((c for c in resolved_outputs if 'Heating' in str(c)), resolved_outputs[0])
+        if len(resolved_outputs) > 1:
+            cooling_col = next((c for c in resolved_outputs if 'Cooling' in str(c) and c != heating_col), resolved_outputs[1])
+        else:
+            cooling_col = heating_col
+
+        group_specs = _build_group_specs(original_optim)
         all_mcdm_rows = []
-        original_optim = self.outputs_optimisation
-        for epw_label in epw_labels:
-            epw_tag = str(epw_label).replace(' ', '_')
-            self.outputs_optimisation = original_optim[original_optim['epw'] == epw_label].copy()
-            print(f'\n  [{epw_tag}] Best compromise solutions:')
-            for cfg in mcdm_configs:
-                method = cfg['method']
-                weights = cfg.get('weights', None)
-                label = cfg['label']
-                row_df = self.get_best_compromise_solution(method=method, weights=weights)
-                row_df = row_df.copy()
-                row_df['mcdm_method'] = label
-                row_df['epw'] = epw_tag
-                all_mcdm_rows.append(row_df)
-                if normalize_per_m2:
-                    if isinstance(area_attr, dict) and 'idf' in row_df.columns:
-                        area_val = area_attr.get(row_df['idf'].iloc[0], 1.0)
-                    else:
-                        area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
-                    div = base_divisor * area_val
-                else:
-                    div = base_divisor
-                    
-                h_kwh = row_df[heating_col].iloc[0] / div
-                c_kwh = row_df[cooling_col].iloc[0] / div
-                print(f'    {label:25s} | {heating_col}={h_kwh:.1f} {unit_str} | {cooling_col}={c_kwh:.1f} {unit_str}')
+        try:
+            for group_spec in group_specs:
+                group_label = group_spec['label']
+                self.outputs_optimisation = group_spec['df']
+                print(f'\n  [{group_label}] Best compromise solutions:')
+                for cfg in mcdm_configs:
+                    method = cfg['method']
+                    weights = cfg.get('weights', None)
+                    label = cfg['label']
+                    row_df = self.get_best_compromise_solution(method=method, weights=weights)
+                    row_df = row_df.copy()
+                    row_df['mcdm_method'] = label
+                    row_df['mcdm_group'] = group_label
+                    for (key, value) in group_spec['selector'].items():
+                        if key not in row_df.columns:
+                            row_df[key] = value
+                    all_mcdm_rows.append(row_df)
+
+                    div = _first_divisor(row_df)
+                    h_kwh = row_df[heating_col].iloc[0] / div
+                    c_kwh = row_df[cooling_col].iloc[0] / div
+                    print(f'    {label:25s} | {heating_col}={h_kwh:.1f} {unit_str} | {cooling_col}={c_kwh:.1f} {unit_str}')
+        finally:
             self.outputs_optimisation = original_optim
+
+        if len(all_mcdm_rows) == 0:
+            raise ValueError('Could not compute any best-compromise row for the configured groups.')
         mcdm_df = pd.concat(all_mcdm_rows, ignore_index=True)
         fname_csv = os.path.join(out_dir, 'results_mcdm_best_solutions.csv')
         mcdm_df.to_csv(fname_csv, index=False)
         print(f'\n  MCDM summary saved: {fname_csv}')
-        (fig, axes) = plt.subplots(1, len(epw_labels), figsize=(8 * len(epw_labels), 6), squeeze=False)
-        for (ax_idx, epw_label) in enumerate(epw_labels):
-            epw_tag = str(epw_label).replace(' ', '_')
+        (fig, axes) = plt.subplots(1, len(group_specs), figsize=(8 * len(group_specs), 6), squeeze=False)
+        for (ax_idx, group_spec) in enumerate(group_specs):
+            group_label = group_spec['label']
             ax_m = axes[0][ax_idx]
-            df_epw = original_optim[original_optim['epw'] == epw_label].copy()
-            if normalize_per_m2:
-                if isinstance(area_attr, dict) and 'idf' in df_epw.columns:
-                    areas = df_epw['idf'].map(area_attr).fillna(1.0)
-                    divs = base_divisor * areas
-                else:
-                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
-                    divs = base_divisor * area_val
-            else:
-                divs = base_divisor
-                
+            df_epw = group_spec['df'].copy()
+            divs = _compute_divisors(df_epw)
             df_epw['_h'] = df_epw[heating_col] / divs
             df_epw['_c'] = df_epw[cooling_col] / divs
             dom = df_epw[~df_epw['pareto-optimal']]
@@ -201,24 +267,16 @@ class PlottingMixin:
             ax_m.scatter(par['_h'], par['_c'], c='#457b9d', alpha=0.6, s=40, edgecolors='k', linewidths=0.4, zorder=2, label='Pareto-optimal')
             for (i, cfg) in enumerate(mcdm_configs):
                 label = cfg['label']
-                row = mcdm_df[(mcdm_df['epw'] == epw_tag) & (mcdm_df['mcdm_method'] == label)]
+                row = mcdm_df[(mcdm_df['mcdm_group'] == group_label) & (mcdm_df['mcdm_method'] == label)]
                 if row.empty:
                     continue
-                if normalize_per_m2:
-                    if isinstance(area_attr, dict) and 'idf' in row.columns:
-                        area_val = area_attr.get(row['idf'].iloc[0], 1.0)
-                    else:
-                        area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
-                    div = base_divisor * area_val
-                else:
-                    div = base_divisor
-                    
+                div = _first_divisor(row)
                 h = row[heating_col].iloc[0] / div
                 c = row[cooling_col].iloc[0] / div
                 ax_m.scatter(h, c, marker=_marker_cycle[i % len(_marker_cycle)], c=_colour_cycle[i % len(_colour_cycle)], s=_size_cycle[i % len(_size_cycle)], zorder=5, edgecolors='k', linewidths=0.6, label=label)
             ax_m.set_xlabel(f'{heating_col} ({unit_str})', fontsize=11)
             ax_m.set_ylabel(f'{cooling_col} ({unit_str})', fontsize=11)
-            ax_m.set_title(f'Pareto Front + MCDM best solutions\n[{epw_tag}]', fontsize=11)
+            ax_m.set_title(f'Pareto Front + MCDM best solutions\n[{group_label}]', fontsize=11)
             ax_m.legend(fontsize=9)
         plt.tight_layout()
         fname_plot = os.path.join(out_dir, 'plot_mcdm_best_solutions.png')

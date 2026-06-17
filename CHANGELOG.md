@@ -44,6 +44,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pickle Comparison Tutorial Docs**: Added `docs/source/9_pickle_comparison_tutorial.md` and linked it in the docs index for end-to-end guidance on validating simulation output equivalence.
 - **Project Tracking Workflow Files**: Added `DEVLOG.md`, `TODO.md`, and `ROADMAP.md` and documented the workflow in `README.md` to separate release notes, completed work logs, active tasks, and longer-term planning.
 - **Operations Tooling for Notebooks and Campaign Runs**: Added helper scripts under `tools/` for custom output reducers, robust custom-plan parametric execution, batch notebook execution, and reruns of failed notebooks.
+- **Regression Coverage for Optimisation Output Handling**: Added focused tests in `tests/parametric_and_optimisation/test_analysis_output_resolution.py` and `tests/parametric_and_optimisation/test_pareto_grouping.py`.
+  - Covers robust objective-column resolution when optimisation outputs are normalized/renamed.
+  - Covers configurable Pareto grouping by EPW and/or IDF and MCDM grouping behavior in plotting.
 
 ### Changed
 - **Breaking API Change in Output Discovery/Selection Returns**: `get_outputs_df_from_testsim(...)`, `discover_available_outputs(...)`, and `select_outputs(...)` now return a single dictionary instead of tuples.
@@ -65,6 +68,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `apply_outputs_preflight(...)` now defaults to `clean_mode='none'` to preserve user-defined `Output:*` objects unless cleanup is explicitly requested.
   - Legacy methods `set_output_var_df_to_idf(...)` and `set_output_met_objects_to_idf(...)` are preserved as wrappers and now emit `DeprecationWarning` messages that point to the new consistent methods.
   - Updated `tools/output_workflow_notebook_style.py` to use the new API and include the advanced meter DataFrame frequency path.
+- **Notebook 14 Multi-IDF Workflow (without loop)**: Updated `14_main_optimisationsimulation_accim_custom_model_without_idf_loop.ipynb` to run a single `OptimisationSimulation` instance with `buildings=[...]` and explicit Pareto controls.
+  - Step 2 now avoids per-IDF instantiation loops and prepares IDFs once before creating the optimisation object.
+  - Step 3 now plots from one combined optimisation object and forwards the selected MCDM segmentation flags.
 
 ### Fixed
 - **Output Preflight Variable Verification in ACCIM Models**: `get_output_var_df_from_idf` now reads `Output:Variable` objects directly from the current IDF state (side-effect free), preventing false `missing_in_idf` reports after `apply_outputs_preflight(...)`.
@@ -106,6 +112,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Optimisation `add_outputs` Persistence in Worker Logs**: Patched BESOS evaluation records now include `add_outputs_values` in JSONL logs, improving reconstruction of full optimisation histories.
 - **MCDM Output-Column Resolution in Optimisation Analysis**: `get_best_compromise_solution()` now resolves output columns against available dataframe names before indexing, avoiding `KeyError` when stored column labels differ from canonical output names.
 - **EPW-Specific Sensitivity Output Paths**: `run_sensitivity_analysis_by_epw()` now sanitizes EPW labels (including full paths and `.epw` suffixes) before using them in directory/file names, preventing invalid path errors during result export.
+- **Optimisation Execution per EPW in Multi-IDF Runs**: `run_optimisation()` now executes the selected algorithm inside the `EPW` loop for each `IDF × EPW` pair, fixing cases where only the last EPW was effectively optimized.
+- **Configurable Pareto/MCDM Segmentation Across IDF and EPW**:
+  - Added `pareto_separate_by_epw` and `pareto_separate_by_idf` to `run_optimisation(...)`, persisted in output `attrs`.
+  - `_annotate_pareto_status(...)` now supports explicit grouping columns instead of hardcoding EPW-only behavior.
+  - `plot_best_compromise_solutions(...)` now accepts `separate_by_epw` and `separate_by_idf` (defaulting from optimisation `attrs`) to avoid unintended cross-IDF or cross-EPW mixing.
 
 ## [0.7.7] - 2026-04-11
 

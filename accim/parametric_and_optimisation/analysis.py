@@ -2,6 +2,7 @@ import os
 import glob
 import shutil
 import re
+import difflib
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -562,12 +563,99 @@ class AnalysisMixin:
         self.sensitivity_results = results
         return results
 
+    @staticmethod
+    def _canonical_output_name(name: Any) -> str:
+        text = str(name).strip().lower()
+        text = re.sub(r'kwh/m(?:2|\u00b2)', '', text)
+        text = re.sub(r'_kwh[/_]?m2$', '', text)
+        text = re.sub(r'\[[^]]*]', '', text)
+        text = re.sub(r'[^a-z0-9]+', '', text)
+        return text
+
+    def _resolve_output_columns(self, output_names: list, available_columns: list, strict: bool=True) -> list:
+        """Resolve output names against available dataframe columns."""
+        available_cols = [str(col) for col in available_columns]
+        lower_lookup = {}
+        canonical_lookup = {}
+        for col in available_cols:
+            lower_lookup.setdefault(col.lower(), []).append(col)
+            canonical_lookup.setdefault(self._canonical_output_name(col), []).append(col)
+
+        resolved = []
+        used_columns = set()
+
+        def _pick_column(candidates: list) -> Optional[str]:
+            if len(candidates) == 0:
+                return None
+            if len(candidates) == 1:
+                return candidates[0]
+            not_used = [c for c in candidates if c not in used_columns]
+            if len(not_used) >= 1:
+                return not_used[0]
+            return candidates[0]
+
+        for output_name in output_names:
+            requested = str(output_name).strip()
+            chosen = None
+
+            if requested in available_cols:
+                chosen = requested
+
+            if chosen is None:
+                chosen = _pick_column(lower_lookup.get(requested.lower(), []))
+
+            if chosen is None:
+                variants = [
+                    f'{requested}_kWh/m2',
+                    f'{requested} [kWh/m2]',
+                    requested.replace('[J]', '[kWh/m2]'),
+                    requested.replace(' [J]', ' [kWh/m2]'),
+                ]
+                for variant in variants:
+                    if variant in available_cols:
+                        chosen = variant
+                        break
+                    chosen = _pick_column(lower_lookup.get(variant.lower(), []))
+                    if chosen is not None:
+                        break
+
+            if chosen is None:
+                prefix_matches = [
+                    col for col in available_cols
+                    if col.lower().startswith(requested.lower())
+                ]
+                chosen = _pick_column(prefix_matches)
+
+            if chosen is None:
+                canonical = self._canonical_output_name(requested)
+                chosen = _pick_column(canonical_lookup.get(canonical, []))
+
+            if chosen is None:
+                suggestions = difflib.get_close_matches(requested, available_cols, n=3, cutoff=0.45)
+                if strict:
+                    if suggestions:
+                        raise KeyError(
+                            f"Could not resolve output column '{requested}'. Suggestions: {suggestions}"
+                        )
+                    raise KeyError(
+                        f"Could not resolve output column '{requested}'. Available columns: {available_cols}"
+                    )
+                continue
+
+            resolved.append(chosen)
+            used_columns.add(chosen)
+
+        if strict and len(resolved) != len(output_names):
+            raise KeyError('Could not resolve all output columns in optimisation results.')
+
+        return resolved
+
     def get_best_compromise_solution(self, method: Literal['knee_point', 'topsis']='topsis', weights: list=None) -> pd.DataFrame:
         """
         Identifies the best compromise solution from the Pareto front.
 
         :param method: The MCDM method to use. 'knee_point' (closest distance to Utopia point) or 'topsis'.
-        :param weights: A list of weights for each objective, used only in 'topsis'. 
+        :param weights: A list of weights for each objective, used only in 'topsis'.
             If None, equal weights are applied. Must match the number of objectives.
         :return: A pandas DataFrame containing the best compromise solution(s).
         """
