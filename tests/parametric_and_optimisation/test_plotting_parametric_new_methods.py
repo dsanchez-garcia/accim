@@ -2,6 +2,7 @@ import os
 
 import matplotlib
 import pandas as pd
+import pytest
 
 matplotlib.use('Agg')
 
@@ -195,5 +196,20 @@ def test_plot_parametric_radar_generates_png_and_returns_df(tmp_path):
 
     assert not agg_df.empty
     assert any(tmp_path.glob('plot_parametric_radar_*.png'))
+
+
+@pytest.mark.parametrize('hue_var', ['epw', 'idf'])
+def test_plot_categorical_boxplots_hue_id_vars_regression(tmp_path, hue_var):
+    sim = _DummyPlotSession()
+    grid = sim.plot_categorical_boxplots(
+        df_source='parametric',
+        y_vars=['Heating:Electricity [J]'],
+        hue=hue_var,
+        show_points=False,
+        out_dir=str(tmp_path),
+    )
+
+    assert grid is not None
+    assert any(tmp_path.glob('plot_categorical_boxplots_*.png'))
 
 

@@ -564,7 +564,11 @@ class PlottingMixin:
             else:
                 df[y_var] = df[y_var] / base_divisor
 
-        id_vars = [v for v in [col, row, hue, 'idf', 'epw'] if v and v in df.columns]
+        # Build id_vars in a stable order without duplicates to avoid pandas.melt KeyError.
+        id_vars = []
+        for candidate in [col, row, hue, 'idf', 'epw']:
+            if candidate and candidate in df.columns and candidate not in id_vars:
+                id_vars.append(candidate)
         if highlight_dict:
             for k in highlight_dict.keys():
                 if k in df.columns and k not in id_vars:
