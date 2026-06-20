@@ -1552,21 +1552,57 @@ def compare_multiple_pickles_with_reference(
     }
 
 
-def preflight_report(simulation: Any, **kwargs) -> dict:
+def preflight_report(
+    simulation: Any,
+    mode: Optional[Literal['auto', 'parametric', 'optimisation']] = 'auto',
+    **kwargs,
+) -> dict:
     """
-    Convenience wrapper for interactive parametric preflight diagnostics.
+    Convenience wrapper for interactive preflight diagnostics.
 
     Example::
 
-        report = preflight_report(sim)
+        report = preflight_report(sim)  # auto mode
         print(report['recommendation'])
     """
-    if simulation is None or (not hasattr(simulation, 'preflight_report_parametric')):
-        raise TypeError(
-            "preflight_report expects a simulation instance that implements "
-            "'preflight_report_parametric(...)'."
-        )
-    return simulation.preflight_report_parametric(**kwargs)
+    if simulation is None:
+        raise TypeError('preflight_report expects a valid simulation instance.')
+
+    mode_value = str(mode or 'auto').strip().lower()
+    if mode_value not in {'auto', 'parametric', 'optimisation'}:
+        raise ValueError("Argument 'mode' must be one of: 'auto', 'parametric', 'optimisation'.")
+
+    supports_parametric = hasattr(simulation, 'preflight_report_parametric')
+    supports_optimisation = hasattr(simulation, 'preflight_report_optimisation')
+
+    if mode_value == 'parametric':
+        if not supports_parametric:
+            raise TypeError(
+                "preflight_report(mode='parametric') expects an instance that "
+                "implements 'preflight_report_parametric(...)'."
+            )
+        return simulation.preflight_report_parametric(**kwargs)
+
+    if mode_value == 'optimisation':
+        if not supports_optimisation:
+            raise TypeError(
+                "preflight_report(mode='optimisation') expects an instance that "
+                "implements 'preflight_report_optimisation(...)'."
+            )
+        return simulation.preflight_report_optimisation(**kwargs)
+
+    simulation_class_name = type(simulation).__name__.strip().lower()
+    if supports_optimisation and ('optim' in simulation_class_name):
+        return simulation.preflight_report_optimisation(**kwargs)
+    if supports_parametric:
+        return simulation.preflight_report_parametric(**kwargs)
+    if supports_optimisation:
+        return simulation.preflight_report_optimisation(**kwargs)
+
+    raise TypeError(
+        "preflight_report expects a simulation instance that implements "
+        "'preflight_report_parametric(...)' or 'preflight_report_optimisation(...)'."
+    )
 
 
 class SimulationComparisonSession:
@@ -5048,7 +5084,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 subset=['_accim_task_signature'],
                 keep='last',
             ).reset_index(drop=True)
-        checkpoint_df.to_pickle(checkpoint_path)
+        checkpoint_tmp_path = f'{checkpoint_path}.tmp'
+        checkpoint_df.to_pickle(checkpoint_tmp_path)
+        os.replace(checkpoint_tmp_path, checkpoint_path)
 
         meta_payload = {
             'saved_at': datetime.datetime.now().isoformat(timespec='seconds'),
@@ -5057,9 +5095,148 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             'completed_tasks': int(completed_tasks),
             'total_tasks': int(total_tasks),
         }
-        with open(f'{checkpoint_path}.meta.json', 'w', encoding='utf-8') as meta_file:
+        meta_path = f'{checkpoint_path}.meta.json'
+        meta_tmp_path = f'{meta_path}.tmp'
+        with open(meta_tmp_path, 'w', encoding='utf-8') as meta_file:
             json.dump(meta_payload, meta_file, indent=2)
+        os.replace(meta_tmp_path, meta_path)
         return int(len(checkpoint_df))
+
+    @staticmethod
+    def _default_optimisation_checkpoint_path(out_dir: str) -> str:
+        return os.path.abspath(
+            os.path.join(out_dir, 'outputs_optimisation_checkpoint_latest.pkl')
+        )
+
+    @staticmethod
+    def _save_optimisation_checkpoint(
+        checkpoint_cases: dict,
+        checkpoint_path: str,
+        total_cases: int,
+        completed_cases: int,
+        resume_signature: Optional[str] = None,
+    ) -> int:
+        """Persist optimisation case-level checkpoint state atomically."""
+        import datetime
+
+        payload = {
+            'saved_at': datetime.datetime.now().isoformat(timespec='seconds'),
+            'checkpoint_path': checkpoint_path,
+            'total_cases': int(total_cases),
+            'completed_cases': int(completed_cases),
+            'case_count': int(len(checkpoint_cases)),
+            'resume_signature': resume_signature,
+            'cases': checkpoint_cases,
+        }
+
+        checkpoint_tmp_path = f'{checkpoint_path}.tmp'
+        pd.to_pickle(payload, checkpoint_tmp_path)
+        os.replace(checkpoint_tmp_path, checkpoint_path)
+
+        meta_payload = {
+            'saved_at': payload['saved_at'],
+            'checkpoint_path': checkpoint_path,
+            'total_cases': int(total_cases),
+            'completed_cases': int(completed_cases),
+            'case_count': int(len(checkpoint_cases)),
+            'resume_signature': resume_signature,
+        }
+        meta_path = f'{checkpoint_path}.meta.json'
+        meta_tmp_path = f'{meta_path}.tmp'
+        with open(meta_tmp_path, 'w', encoding='utf-8') as meta_file:
+            json.dump(meta_payload, meta_file, indent=2)
+        os.replace(meta_tmp_path, meta_path)
+        return int(len(checkpoint_cases))
+
+    @staticmethod
+    def _load_optimisation_checkpoint(checkpoint_path: str) -> dict:
+        """Load optimisation checkpoint payload and normalize expected schema."""
+        payload = pd.read_pickle(checkpoint_path)
+        if not isinstance(payload, dict):
+            raise ValueError(
+                'Optimisation checkpoint must contain a dictionary payload.'
+            )
+
+        cases = payload.get('cases', payload)
+        if not isinstance(cases, dict):
+            raise ValueError(
+                "Optimisation checkpoint payload key 'cases' must be a dictionary."
+            )
+
+        return {
+            'saved_at': payload.get('saved_at'),
+            'checkpoint_path': payload.get('checkpoint_path', checkpoint_path),
+            'total_cases': payload.get('total_cases'),
+            'completed_cases': payload.get('completed_cases'),
+            'case_count': payload.get('case_count', len(cases)),
+            'resume_signature': payload.get('resume_signature'),
+            'cases': cases,
+        }
+
+    def _iter_parametric_task_blueprints(
+        self,
+        grouped_dfs: dict,
+        epws: list,
+        out_dir: str,
+        problem_names_inputs: list,
+        problem_names_outputs: list,
+        output_specs: list,
+        add_output_specs: list,
+        add_output_names: list,
+        keep_dirs: bool,
+        keep_input: bool,
+    ):
+        """Yield parametric tasks lazily to avoid building the full plan in memory."""
+        backup_paths = []
+        if hasattr(self, 'idf_backup_path') and self.idf_backup_path:
+            backup_paths = self.idf_backup_path if isinstance(self.idf_backup_path, list) else [self.idf_backup_path]
+
+        for (idf_basename, df_for_idf) in grouped_dfs.items():
+            idf_backup_file = None
+            for path in backup_paths:
+                basename = os.path.basename(path)
+                if f'_{idf_basename}_' in basename or f'_{idf_basename}.' in basename:
+                    idf_backup_file = path
+                    break
+
+            if not idf_backup_file:
+                idf_backup_file = idf_basename if idf_basename.lower().endswith('.idf') else f'{idf_basename}.idf'
+
+            epws_for_idf = df_for_idf['epw'].drop_duplicates().tolist() if 'epw' in df_for_idf.columns else epws
+            for epw in epws_for_idf:
+                epwname = epw.split('.epw')[0]
+                if 'epw' in df_for_idf.columns:
+                    evaluator_input_df = df_for_idf.loc[df_for_idf['epw'] == epw, problem_names_inputs]
+                else:
+                    evaluator_input_df = df_for_idf[problem_names_inputs]
+
+                evaluator_df = evaluator_input_df.reset_index(drop=True).copy()
+                for (_, row) in evaluator_df.iterrows():
+                    row_dict = row.to_dict()
+                    task_signature = self._build_parametric_task_signature(
+                        idf_basename=idf_basename,
+                        epw=epw,
+                        problem_names_inputs=problem_names_inputs,
+                        row_dict=row_dict,
+                    )
+                    yield {
+                        'signature': task_signature,
+                        'worker_args': (
+                            idf_backup_file,
+                            epw,
+                            epwname,
+                            idf_basename,
+                            out_dir,
+                            problem_names_inputs,
+                            problem_names_outputs,
+                            output_specs,
+                            add_output_specs,
+                            add_output_names,
+                            row_dict,
+                            keep_dirs,
+                            keep_input,
+                        ),
+                    }
 
     @staticmethod
     def _get_system_resource_snapshot() -> dict:
@@ -5343,6 +5520,162 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         return report
 
+    def preflight_report_optimisation(
+        self,
+        epws: Optional[list] = None,
+        evaluations: int = 20,
+        population_size: int = 10,
+        processes: Optional[int] = None,
+        keep_sim_files: Literal['all', 'non-dominated', 'none'] = 'all',
+        verbose: bool = True,
+    ) -> dict:
+        """
+        Builds a lightweight preflight report before calling
+        :meth:`run_optimisation`.
+
+        The report focuses on:
+        - simulation budget estimation,
+        - basic input validation (EPWs/processes),
+        - conservative recommendations for CPU/RAM usage,
+        - checkpoint-resume flags for safer long runs.
+        """
+        import math
+
+        if evaluations <= 0:
+            raise ValueError("Argument 'evaluations' must be a positive integer.")
+        if population_size <= 0:
+            raise ValueError("Argument 'population_size' must be a positive integer.")
+        if processes is not None and processes <= 0:
+            raise ValueError("Argument 'processes' must be a positive integer when provided.")
+
+        if epws is None:
+            epws = list(getattr(self, 'epws', []) or [])
+        elif isinstance(epws, list):
+            epws = list(epws)
+        else:
+            epws = [epws]
+        epws = [str(epw) for epw in epws]
+
+        idf_identifiers = []
+        try:
+            idf_identifiers = list(self._get_buildings_by_idf().keys())
+        except Exception:
+            idf_identifiers = []
+
+        n_cases = int(len(idf_identifiers) * len(epws))
+        generations = int(math.ceil(evaluations / population_size))
+        sims_per_case = int(population_size * generations)
+        estimated_total_simulations = int(sims_per_case * n_cases)
+
+        system_snapshot = self._get_system_resource_snapshot()
+        logical_cpus = max(1, int(system_snapshot.get('logical_cpus') or 1))
+        available_ram_gb = system_snapshot.get('available_ram_gb')
+        cpu_cap = max(1, logical_cpus - 1)
+
+        if available_ram_gb is None:
+            recommended_processes = max(1, min(cpu_cap, 2, population_size))
+            recommended_population_cap = max(8, population_size)
+            recommended_keep_sim_files_batch_size = 40
+        elif available_ram_gb < 4:
+            recommended_processes = 1
+            recommended_population_cap = 4
+            recommended_keep_sim_files_batch_size = 20
+        elif available_ram_gb < 8:
+            recommended_processes = min(cpu_cap, 2, population_size)
+            recommended_population_cap = 8
+            recommended_keep_sim_files_batch_size = 30
+        elif available_ram_gb < 12:
+            recommended_processes = min(cpu_cap, 3, population_size)
+            recommended_population_cap = 12
+            recommended_keep_sim_files_batch_size = 40
+        else:
+            recommended_processes = min(cpu_cap, 4, population_size)
+            recommended_population_cap = 24
+            recommended_keep_sim_files_batch_size = 60
+
+        recommended_population_size = int(max(1, min(population_size, recommended_population_cap)))
+        recommended_keep_sim_files = keep_sim_files
+        if available_ram_gb is not None and available_ram_gb < 8 and keep_sim_files == 'all':
+            recommended_keep_sim_files = 'none'
+
+        issues = []
+        notes = []
+        if len(epws) == 0:
+            issues.append('no_epws_configured')
+        if len(idf_identifiers) == 0:
+            issues.append('no_buildings_configured')
+        if processes is not None and processes > population_size:
+            issues.append('processes_exceed_population_size')
+        if processes is not None and processes > recommended_processes:
+            notes.append(
+                f"Requested processes={processes} is above conservative recommendation={recommended_processes} for current RAM snapshot."
+            )
+        if keep_sim_files == 'non-dominated':
+            notes.append(
+                "keep_sim_files='non-dominated' may retain extra in-memory evaluation history to perform local Pareto cleanup."
+            )
+
+        report = {
+            'run_type': 'optimisation',
+            'status': 'ok' if len(issues) == 0 else 'check',
+            'issues': issues,
+            'notes': notes,
+            'epws_for_run': epws,
+            'idf_cases_for_run': idf_identifiers,
+            'estimated_cases': n_cases,
+            'evaluations': int(evaluations),
+            'population_size': int(population_size),
+            'estimated_generations_per_case': generations,
+            'estimated_simulations_per_case': sims_per_case,
+            'estimated_total_simulations': estimated_total_simulations,
+            'requested_processes': None if processes is None else int(processes),
+            'system': system_snapshot,
+            'recommendation': {
+                'processes': int(recommended_processes),
+                'population_size': int(recommended_population_size),
+                'keep_sim_files': recommended_keep_sim_files,
+                'keep_sim_files_batch_size': int(recommended_keep_sim_files_batch_size),
+                'checkpoint_every_case': True,
+                'resume_from_checkpoint': True,
+            },
+            'recommended_run_kwargs': {
+                'processes': int(recommended_processes),
+                'keep_sim_files': recommended_keep_sim_files,
+                'keep_sim_files_batch_size': int(recommended_keep_sim_files_batch_size),
+                'checkpoint_every_case': True,
+                'resume_from_checkpoint': True,
+                'evaluations': int(evaluations),
+                'population_size': int(population_size),
+            },
+        }
+
+        if verbose:
+            print('[preflight_report_optimisation]')
+            print(f"  Cases (IDF x EPW)     : {report['estimated_cases']}")
+            print(f"  Evaluations requested : {report['evaluations']}")
+            print(f"  Population size       : {report['population_size']}")
+            print(f"  Generations/case      : {report['estimated_generations_per_case']}")
+            print(f"  Sims per case         : {report['estimated_simulations_per_case']}")
+            print(f"  Estimated total sims  : {report['estimated_total_simulations']}")
+            print(
+                '  System snapshot       : '
+                f"CPUs={system_snapshot.get('logical_cpus')}, "
+                f"RAM(total/free GB)={system_snapshot.get('total_ram_gb')}/{system_snapshot.get('available_ram_gb')}"
+            )
+            print(
+                '  Recommended run       : '
+                f"processes={report['recommendation']['processes']}, "
+                f"keep_sim_files={report['recommendation']['keep_sim_files']}, "
+                f"keep_sim_files_batch_size={report['recommendation']['keep_sim_files_batch_size']}, "
+                'checkpoint_every_case=True, resume_from_checkpoint=True'
+            )
+            if len(issues) > 0:
+                print(f"  Issues                : {issues}")
+            if len(notes) > 0:
+                print(f"  Notes                 : {notes}")
+
+        return report
+
     def run_parametric_simulation(
         self,
         epws: list = None,
@@ -5416,67 +5749,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     UserWarning,
                 )
         
-        tasks = []
-        # Ensure idf_backup_path is iterable even if it's a single string
-        _backup_paths = []
-        if hasattr(self, 'idf_backup_path') and self.idf_backup_path:
-            _backup_paths = self.idf_backup_path if isinstance(self.idf_backup_path, list) else [self.idf_backup_path]
-
-        for (idf_basename, df_for_idf) in grouped_dfs.items():
-            # Find the actual path to the saved backup for this IDF
-            idf_backup_file = None
-            for p in _backup_paths:
-                # The backup filename format is accim_idf_backup_{idf_basename}{suffix}_{timestamp}.idf
-                # We can check if the idf_basename is in the path
-                if f"_{idf_basename}_" in os.path.basename(p) or f"_{idf_basename}." in os.path.basename(p):
-                    idf_backup_file = p
-                    break
-            
-            if not idf_backup_file:
-                # Fallback: assume the file is in the current directory with .idf appended if missing
-                idf_backup_file = idf_basename if idf_basename.lower().endswith('.idf') else f"{idf_basename}.idf"
-                
-            epws_for_idf = df_for_idf['epw'].drop_duplicates().tolist() if 'epw' in df_for_idf.columns else epws
-            for epw in epws_for_idf:
-                epwname = epw.split('.epw')[0]
-                if 'epw' in df_for_idf.columns:
-                    evaluator_input_df = df_for_idf.loc[df_for_idf['epw'] == epw, problem_names_inputs]
-                else:
-                    evaluator_input_df = df_for_idf[problem_names_inputs]
-                    
-                evaluator_df = evaluator_input_df.reset_index(drop=True).copy()
-                
-                for _, row in evaluator_df.iterrows():
-                    row_dict = row.to_dict()
-                    task_signature = self._build_parametric_task_signature(
-                        idf_basename=idf_basename,
-                        epw=epw,
-                        problem_names_inputs=problem_names_inputs,
-                        row_dict=row_dict,
-                    )
-                    tasks.append({
-                        'signature': task_signature,
-                        'worker_args': (
-                        idf_backup_file,
-                        epw,
-                        epwname,
-                        idf_basename,
-                        out_dir,
-                        problem_names_inputs,
-                        problem_names_outputs,
-                        output_specs,
-                        add_output_specs,
-                        add_output_names,
-                        row_dict,
-                        keep_dirs,
-                        keep_input
-                        ),
-                    })
-
-        task_signatures = {task['signature'] for task in tasks}
-
         all_results = []
-        completed_signatures = set()
+        checkpoint_completed_signatures = set()
+        checkpoint_df = None
+        task_signatures = set()
+        total_tasks = 0
+        pending_tasks_count = 0
         resume_requested = bool(resume_from_checkpoint)
         if resume_requested:
             if os.path.exists(checkpoint_path):
@@ -5493,15 +5771,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         keep='last',
                     ).copy()
                     checkpoint_df['_accim_task_signature'] = checkpoint_df['_accim_task_signature'].astype(str)
-                    checkpoint_df = checkpoint_df[
-                        checkpoint_df['_accim_task_signature'].isin(task_signatures)
-                    ].copy()
-                    all_results = checkpoint_df.to_dict(orient='records')
-                    completed_signatures = set(checkpoint_df['_accim_task_signature'].tolist())
-                    print(
-                        '[run_parametric_simulation] Resuming from checkpoint: '
-                        f'{len(completed_signatures)}/{len(tasks)} tasks already completed.'
-                    )
+                    checkpoint_completed_signatures = set(checkpoint_df['_accim_task_signature'].tolist())
             elif isinstance(resume_from_checkpoint, str):
                 raise FileNotFoundError(
                     f"Checkpoint file not found: {checkpoint_path}"
@@ -5513,31 +5783,61 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     UserWarning,
                 )
 
-        pending_tasks = [
-            task for task in tasks
-            if task['signature'] not in completed_signatures
-        ]
+        for task in self._iter_parametric_task_blueprints(
+            grouped_dfs=grouped_dfs,
+            epws=epws,
+            out_dir=out_dir,
+            problem_names_inputs=problem_names_inputs,
+            problem_names_outputs=problem_names_outputs,
+            output_specs=output_specs,
+            add_output_specs=add_output_specs,
+            add_output_names=add_output_names,
+            keep_dirs=keep_dirs,
+            keep_input=keep_input,
+        ):
+            total_tasks += 1
+            task_signatures.add(task['signature'])
+            if task['signature'] not in checkpoint_completed_signatures:
+                pending_tasks_count += 1
 
-        if len(pending_tasks) == 0 and len(tasks) > 0:
+        if checkpoint_df is not None and '_accim_task_signature' in checkpoint_df.columns:
+            checkpoint_df = checkpoint_df[
+                checkpoint_df['_accim_task_signature'].isin(task_signatures)
+            ].copy()
+            all_results = checkpoint_df.to_dict(orient='records')
+            checkpoint_completed_signatures = set(checkpoint_df['_accim_task_signature'].tolist())
+            print(
+                '[run_parametric_simulation] Resuming from checkpoint: '
+                f'{len(checkpoint_completed_signatures)}/{total_tasks} tasks already completed.'
+            )
+
+        completed_signatures = set(checkpoint_completed_signatures)
+
+        if pending_tasks_count == 0 and total_tasks > 0:
             print('[run_parametric_simulation] No pending tasks to execute.')
         else:
-            effective_batch_size = batch_size or max(1, len(pending_tasks))
-            n_batches = max(1, (len(pending_tasks) + effective_batch_size - 1) // effective_batch_size)
+            effective_batch_size = batch_size or max(1, pending_tasks_count)
+            n_batches = max(1, (pending_tasks_count + effective_batch_size - 1) // effective_batch_size)
             from tqdm import tqdm
-            for batch_idx, start in enumerate(range(0, len(pending_tasks), effective_batch_size), start=1):
-                batch_tasks = pending_tasks[start:start + effective_batch_size]
+
+            batch_tasks = []
+            batch_idx = 0
+
+            def _run_parametric_batch(tasks_for_batch: list, current_batch_idx: int):
+                if len(tasks_for_batch) == 0:
+                    return []
                 batch_results = []
-                if processes > 1 and len(batch_tasks) > 1:
+                if processes > 1 and len(tasks_for_batch) > 1:
                     import concurrent.futures
                     with concurrent.futures.ProcessPoolExecutor(max_workers=processes) as executor:
                         futures = {}
-                        for task in batch_tasks:
+                        for task in tasks_for_batch:
                             future = executor.submit(_run_single_evaluation_worker, *task['worker_args'])
                             futures[future] = task['signature']
                         for future in tqdm(
                             concurrent.futures.as_completed(futures),
-                            total=len(batch_tasks),
-                            desc=f"Executing parametric simulations (batch {batch_idx}/{n_batches})",
+                            total=len(tasks_for_batch),
+                            desc=f"Executing parametric simulations (batch {current_batch_idx}/{n_batches})",
                             unit='row',
                         ):
                             result = future.result()
@@ -5545,13 +5845,37 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             batch_results.append(result)
                 else:
                     for task in tqdm(
-                        batch_tasks,
-                        desc=f"Executing parametric simulations (batch {batch_idx}/{n_batches})",
+                        tasks_for_batch,
+                        desc=f"Executing parametric simulations (batch {current_batch_idx}/{n_batches})",
                         unit='row',
                     ):
                         result = _run_single_evaluation_worker(*task['worker_args'])
                         result['_accim_task_signature'] = task['signature']
                         batch_results.append(result)
+
+                return batch_results
+
+            for task in self._iter_parametric_task_blueprints(
+                grouped_dfs=grouped_dfs,
+                epws=epws,
+                out_dir=out_dir,
+                problem_names_inputs=problem_names_inputs,
+                problem_names_outputs=problem_names_outputs,
+                output_specs=output_specs,
+                add_output_specs=add_output_specs,
+                add_output_names=add_output_names,
+                keep_dirs=keep_dirs,
+                keep_input=keep_input,
+            ):
+                if task['signature'] in checkpoint_completed_signatures:
+                    continue
+                batch_tasks.append(task)
+                if len(batch_tasks) < effective_batch_size:
+                    continue
+
+                batch_idx += 1
+                batch_results = _run_parametric_batch(batch_tasks, batch_idx)
+                batch_tasks = []
 
                 all_results.extend(batch_results)
                 completed_signatures.update(
@@ -5564,13 +5888,36 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     rows_in_checkpoint = self._save_parametric_checkpoint(
                         all_results=all_results,
                         checkpoint_path=checkpoint_path,
-                        total_tasks=len(tasks),
+                        total_tasks=total_tasks,
                         completed_tasks=len(completed_signatures),
                     )
                     print(
                         '[run_parametric_simulation] Checkpoint saved '
                         f'({rows_in_checkpoint} rows, '
-                        f'{len(completed_signatures)}/{len(tasks)} tasks).'
+                        f'{len(completed_signatures)}/{total_tasks} tasks).'
+                    )
+
+            if len(batch_tasks) > 0:
+                batch_idx += 1
+                batch_results = _run_parametric_batch(batch_tasks, batch_idx)
+                all_results.extend(batch_results)
+                completed_signatures.update(
+                    result.get('_accim_task_signature')
+                    for result in batch_results
+                    if result.get('_accim_task_signature') is not None
+                )
+
+                if checkpoint_every_batch:
+                    rows_in_checkpoint = self._save_parametric_checkpoint(
+                        all_results=all_results,
+                        checkpoint_path=checkpoint_path,
+                        total_tasks=total_tasks,
+                        completed_tasks=len(completed_signatures),
+                    )
+                    print(
+                        '[run_parametric_simulation] Checkpoint saved '
+                        f'({rows_in_checkpoint} rows, '
+                        f'{len(completed_signatures)}/{total_tasks} tasks).'
                     )
                 
         outputs_param_simulation = pd.DataFrame(all_results)
@@ -5581,7 +5928,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 keep='last',
             ).reset_index(drop=True)
 
-        if len(tasks) > 0 and len(outputs_param_simulation) == 0:
+        if (checkpoint_every_batch or resume_requested) and total_tasks > 0:
+            self._save_parametric_checkpoint(
+                all_results=all_results,
+                checkpoint_path=checkpoint_path,
+                total_tasks=total_tasks,
+                completed_tasks=len(completed_signatures),
+            )
+
+        if total_tasks > 0 and len(outputs_param_simulation) == 0:
             warnings.warn(
                 'No parametric evaluation results were produced. The resulting DataFrame is empty.',
                 UserWarning,
@@ -5770,6 +6125,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             algorithm_options: dict = None,
             pareto_separate_by_epw: bool = True,
             pareto_separate_by_idf: bool = False,
+            checkpoint_every_case: bool = False,
+            resume_from_checkpoint: Union[bool, str] = False,
     ) -> pd.DataFrame:
         """
         Runs the optimisation.
@@ -5801,6 +6158,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             inside each EPW subset. When False, EPW is ignored in Pareto grouping.
         :param pareto_separate_by_idf: when True, Pareto optimality is computed independently
             inside each IDF subset. When False, IDF is ignored in Pareto grouping.
+        :param checkpoint_every_case: when True, persist an optimisation checkpoint after each
+            IDF/EPW case so already completed cases can be reused after interruptions.
+        :param resume_from_checkpoint: False (default) runs all cases from scratch. Use True
+            to resume from the default checkpoint path, or provide an explicit checkpoint path.
         :return: a pandas DataFrame
         """
         algorithm_options = {} if algorithm_options is None else dict(algorithm_options)
@@ -5808,7 +6169,66 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             epws = getattr(self, 'epws', [])
         if not epws:
             raise ValueError("No EPWs provided and no default EPWs found in class instance.")
+        if not getattr(self, 'buildings', None):
+            raise ValueError('No buildings were configured in this simulation instance.')
         self.epws = epws
+
+        resume_signature_payload = {
+            'algorithm': str(algorithm),
+            'evaluations': int(evaluations),
+            'population_size': int(population_size),
+            'algorithm_options': algorithm_options,
+            'pareto_separate_by_epw': bool(pareto_separate_by_epw),
+            'pareto_separate_by_idf': bool(pareto_separate_by_idf),
+            'keep_df': str(keep_df),
+        }
+        resume_signature = hashlib.sha1(
+            json.dumps(resume_signature_payload, sort_keys=True, ensure_ascii=True, default=str).encode('utf-8')
+        ).hexdigest()
+
+        checkpoint_path = self._default_optimisation_checkpoint_path(out_dir=out_dir)
+        if isinstance(resume_from_checkpoint, str):
+            checkpoint_text = resume_from_checkpoint.strip()
+            if len(checkpoint_text) == 0:
+                raise ValueError("Argument 'resume_from_checkpoint' cannot be an empty string.")
+            checkpoint_path = os.path.abspath(checkpoint_text)
+
+        resume_requested = bool(resume_from_checkpoint)
+        checkpoint_cases = {}
+        if resume_requested:
+            if os.path.exists(checkpoint_path):
+                checkpoint_payload = self._load_optimisation_checkpoint(checkpoint_path=checkpoint_path)
+                checkpoint_cases = checkpoint_payload.get('cases', {}) if isinstance(checkpoint_payload, dict) else {}
+                checkpoint_cases = checkpoint_cases if isinstance(checkpoint_cases, dict) else {}
+                checkpoint_signature = checkpoint_payload.get('resume_signature') if isinstance(checkpoint_payload, dict) else None
+                if checkpoint_signature is None:
+                    warnings.warn(
+                        'Checkpoint found but it does not contain a compatibility signature. '
+                        'For safety, this optimisation run will start from scratch.',
+                        UserWarning,
+                    )
+                    checkpoint_cases = {}
+                elif checkpoint_signature != resume_signature:
+                    warnings.warn(
+                        'Checkpoint found but optimisation settings do not match this run. '
+                        'For safety, this optimisation run will start from scratch.',
+                        UserWarning,
+                    )
+                    checkpoint_cases = {}
+                else:
+                    print(
+                        '[run_optimisation] Resuming from checkpoint: '
+                        f'{len(checkpoint_cases)} completed case(s) detected.'
+                    )
+            elif isinstance(resume_from_checkpoint, str):
+                raise FileNotFoundError(f'Checkpoint file not found: {checkpoint_path}')
+            else:
+                warnings.warn(
+                    f'resume_from_checkpoint=True but no checkpoint was found at {checkpoint_path}. '
+                    'Starting a fresh optimisation run.',
+                    UserWarning,
+                )
+
         available_algorithms = ['GeneticAlgorithm', 'EvolutionaryStrategy', 'NSGAII', 'EpsMOEA', 'GDE3', 'SPEA2', 'MOEAD', 'NSGAIII', 'ParticleSwarm', 'OMOPSO', 'SMPSO', 'CMAES', 'IBEA', 'PAES', 'PESA2', 'EpsNSGAII']
         outputs_dict = {}
         full_outputs_dict = {}
@@ -5825,22 +6245,68 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if not hasattr(AbstractEvaluator, '_original_to_platypus'):
             AbstractEvaluator._original_to_platypus = AbstractEvaluator.to_platypus
         AbstractEvaluator.to_platypus = _patched_to_platypus
+        platypus_evaluator = None
+        original_evaluator = None
+        PlatypusConfig = None
         if processes > 1:
             import platypus
             from platypus.config import PlatypusConfig
             original_evaluator = PlatypusConfig.default_evaluator
             platypus_evaluator = platypus.ProcessPoolEvaluator(processes)
             PlatypusConfig.default_evaluator = platypus_evaluator
+        total_cases = 0
         try:
             buildings_by_idf = self._get_buildings_by_idf()
+            total_cases = int(len(buildings_by_idf) * len(epws))
+            planned_case_ids = {
+                f"{idf_basename}::{epw.split('.epw')[0]}"
+                for idf_basename in buildings_by_idf.keys()
+                for epw in epws
+            }
+            if len(checkpoint_cases) > 0:
+                checkpoint_cases = {
+                    case_id: case_payload
+                    for (case_id, case_payload) in checkpoint_cases.items()
+                    if case_id in planned_case_ids
+                }
             for (idf_basename, b) in buildings_by_idf.items():
                 for epw in epws:
+                    epwname = epw.split('.epw')[0]
+                    key = f"{idf_basename}_{epwname}" if len(self.buildings) > 1 else epwname
+                    case_id = f'{idf_basename}::{epwname}'
+
+                    resumed_case = checkpoint_cases.get(case_id)
+                    if isinstance(resumed_case, dict):
+                        resumed_non_dominated = resumed_case.get('outputs_non_dominated')
+                        resumed_full = resumed_case.get('outputs_full')
+                        if isinstance(resumed_non_dominated, pd.DataFrame) and isinstance(resumed_full, pd.DataFrame):
+                            resumed_non_dominated = resumed_non_dominated.copy()
+                            resumed_full = resumed_full.copy()
+                            if 'epw' not in resumed_non_dominated.columns:
+                                resumed_non_dominated['epw'] = epwname
+                            if 'idf' not in resumed_non_dominated.columns:
+                                resumed_non_dominated['idf'] = idf_basename
+                            if 'epw' not in resumed_full.columns:
+                                resumed_full['epw'] = epwname
+                            if 'idf' not in resumed_full.columns:
+                                resumed_full['idf'] = idf_basename
+                            outputs_dict.update({key: resumed_non_dominated})
+                            full_outputs_dict.update({key: resumed_full})
+                            evaluators.update({key: None})
+                            print(f'[run_optimisation] Reused checkpoint case: {case_id}')
+                            continue
+
+                        warnings.warn(
+                            f'Checkpoint case {case_id} is invalid and will be recomputed.',
+                            UserWarning,
+                        )
+
                     evaluator = self.set_evaluator(epw=epw, out_dir=out_dir, building=b)
                     evaluator._keep_sim_files = keep_sim_files
                     evaluator._keep_sim_files_batch_size = keep_sim_files_batch_size
                     evaluator._keep_dirs = False if keep_sim_files == 'none' else True
                     evaluator._optimisation_eval_records = []
-                    epwname = epw.split('.epw')[0]
+                    evaluator._store_optimisation_records_in_memory = bool(keep_sim_files == 'non-dominated')
                     evaluator._optimisation_log_base = os.path.join(out_dir, f'optim_eval_log_{idf_basename}_{epwname}_{os.getpid()}')
                     for log_file in pyglob.glob(f'{evaluator._optimisation_log_base}_*.jsonl'):
                         try:
@@ -5885,24 +6351,60 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
                     outputs_optimisation['epw'] = epwname
                     outputs_optimisation['idf'] = idf_basename
-                    key = f"{idf_basename}_{epwname}" if len(self.buildings) > 1 else epwname
                     outputs_dict.update({key: outputs_optimisation})
                     full_outputs_optimisation = self._build_full_optimisation_outputs_df(evaluator=evaluator, epwname=epwname)
                     full_outputs_optimisation['idf'] = idf_basename
                     full_outputs_dict.update({key: full_outputs_optimisation})
                     evaluators.update({key: evaluator})
+
+                    checkpoint_cases[case_id] = {
+                        'idf': idf_basename,
+                        'epw': epwname,
+                        'key': key,
+                        'outputs_non_dominated': outputs_optimisation.copy(),
+                        'outputs_full': full_outputs_optimisation.copy(),
+                    }
+                    if checkpoint_every_case:
+                        saved_cases = self._save_optimisation_checkpoint(
+                            checkpoint_cases=checkpoint_cases,
+                            checkpoint_path=checkpoint_path,
+                            total_cases=total_cases,
+                            completed_cases=len(checkpoint_cases),
+                            resume_signature=resume_signature,
+                        )
+                        print(
+                            '[run_optimisation] Checkpoint saved '
+                            f'({saved_cases} case(s), {len(checkpoint_cases)}/{total_cases}).'
+                        )
         finally:
-            if processes > 1:
+            if processes > 1 and platypus_evaluator is not None and PlatypusConfig is not None:
                 platypus_evaluator.close()
                 PlatypusConfig.default_evaluator = original_evaluator
-                if hasattr(AbstractEvaluator, '_original_to_platypus'):
-                    AbstractEvaluator.to_platypus = AbstractEvaluator._original_to_platypus
-        outputs_optimisation_non_dominated = pd.concat([df for df in outputs_dict.values()])
-        if len(epws) > 1 or len(self.buildings) > 1:
-            outputs_optimisation_non_dominated = outputs_optimisation_non_dominated.reset_index(drop=True)
-        outputs_optimisation = pd.concat([df for df in full_outputs_dict.values()])
-        if len(epws) > 1 or len(self.buildings) > 1:
-            outputs_optimisation = outputs_optimisation.reset_index(drop=True)
+            if hasattr(AbstractEvaluator, '_original_to_platypus'):
+                AbstractEvaluator.to_platypus = AbstractEvaluator._original_to_platypus
+        if checkpoint_every_case or resume_requested:
+            self._save_optimisation_checkpoint(
+                checkpoint_cases=checkpoint_cases,
+                checkpoint_path=checkpoint_path,
+                total_cases=total_cases,
+                completed_cases=len(checkpoint_cases),
+                resume_signature=resume_signature,
+            )
+
+        if len(outputs_dict) == 0 or len(full_outputs_dict) == 0:
+            warnings.warn(
+                'No optimisation evaluation results were produced. The resulting DataFrame is empty.',
+                UserWarning,
+            )
+            outputs_optimisation_non_dominated = pd.DataFrame()
+            outputs_optimisation = pd.DataFrame()
+        else:
+            outputs_optimisation_non_dominated = pd.concat([df for df in outputs_dict.values()])
+            if len(epws) > 1 or len(self.buildings) > 1:
+                outputs_optimisation_non_dominated = outputs_optimisation_non_dominated.reset_index(drop=True)
+            outputs_optimisation = pd.concat([df for df in full_outputs_dict.values()])
+            if len(epws) > 1 or len(self.buildings) > 1:
+                outputs_optimisation = outputs_optimisation.reset_index(drop=True)
         outputs_optimisation = self._annotate_pareto_status(
             outputs_optimisation_full=outputs_optimisation,
             outputs_optimisation=outputs_optimisation_non_dominated,
@@ -5945,6 +6447,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.outputs_optimisation.attrs['pareto_group_by'] = pareto_group_by
         self.outputs_optimisation.attrs['pareto_separate_by_epw'] = pareto_separate_by_epw
         self.outputs_optimisation.attrs['pareto_separate_by_idf'] = pareto_separate_by_idf
+        if checkpoint_every_case or resume_requested:
+            self.outputs_optimisation.attrs['checkpoint_path'] = checkpoint_path
         self._save_outputs_optimisation_full(out_dir=out_dir)
         self.epws = self.outputs_optimisation.attrs.get('epws', [])
         self.last_run_type = 'optimisation'
@@ -6476,58 +6980,175 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             base._merge_one(other)
         return base
 
-    def get_hourly_df(self, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
-        """
-        Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame, saved in the
-         internal variable named outputs_param_simulation_hourly.
 
-        :param start_date: the start date for the simulation results, in format 'YYY-MM-DD HH'
-        :param normalize_per_m2: if True, divides energy columns by the building floor area.
+    def get_hourly_df_parametric(
+            self,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+    ):
         """
+        Expands parametric results to hourly frequency and saves the result in
+        ``outputs_param_simulation_hourly``.
+        Default behavior reads hourly values from simulation output files (CSV),
+        which is usually lighter in memory during the simulation run.
+
+        When ``output_columns`` is provided for CSV sources, each requested item
+        can be an exact name or a partial substring. Partial matches may resolve
+        to one or many CSV columns (for example, multiple zones reporting the
+        same variable).
+        """
+        if file_source not in {'csv', 'eso', 'auto'}:
+            raise ValueError("file_source must be one of: 'csv', 'eso', 'auto'.")
         if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
             raise ValueError('No parametric simulation data available to expand hourly.')
-
-        if hasattr(self, 'parameters_list'):
-            parameter_columns = [i.name for i in self.parameters_list]
-        elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
-            parameter_columns = self.problem.names('inputs')
-        elif hasattr(self, 'outputs_param_simulation') and self.outputs_param_simulation.attrs.get('parameters_names'):
-            parameter_columns = list(self.outputs_param_simulation.attrs['parameters_names'])
+        _using_defaults = epw_filter is None and output_columns is None and (simulation_indices is None)
+        source_df = self.outputs_param_simulation.copy()
+        if simulation_indices is not None:
+            source_df = source_df.loc[simulation_indices]
+        elif epw_filter is not None:
+            if isinstance(epw_filter, str):
+                epw_filter = [epw_filter]
+            epw_mask = source_df['epw'].astype(str).apply(lambda x: any((f.lower() in x.lower() for f in epw_filter)))
+            source_df = source_df[epw_mask]
+        if source_df.empty:
+            raise ValueError('The applied filters resulted in an empty selection. Relax epw_filter or simulation_indices.')
+        if include_summary_columns:
+            if hasattr(self, 'parameters_list'):
+                parameter_columns = [i.name for i in self.parameters_list if i.name in source_df.columns]
+            elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+                parameter_columns = [c for c in self.problem.names('inputs') if c in source_df.columns]
+            elif self.outputs_param_simulation.attrs.get('parameters_names'):
+                parameter_columns = [c for c in self.outputs_param_simulation.attrs['parameters_names'] if c in source_df.columns]
+            else:
+                parameter_columns = []
+            for extra_col in ['epw', 'idf', 'pareto-optimal']:
+                if extra_col in source_df.columns and extra_col not in parameter_columns:
+                    parameter_columns.append(extra_col)
         else:
             parameter_columns = []
-        if 'epw' not in parameter_columns:
-            parameter_columns.append('epw')
-        if 'idf' not in parameter_columns and 'idf' in self.outputs_param_simulation.columns:
-            parameter_columns.append('idf')
-            
-        for extra_col in ['pareto-optimal']:
-            if extra_col in self.outputs_param_simulation.columns and extra_col not in parameter_columns:
-                parameter_columns.append(extra_col)
-
-        parameter_columns = [c for c in parameter_columns if c in self.outputs_param_simulation.columns]
-        
-        from accim.parametric_and_optimisation.utils import identify_hourly_columns
-        hourly_cols = identify_hourly_columns(self.outputs_param_simulation)
-        
-        # If no list columns are detected, attempt to read them from the CSV files natively
-        if len(hourly_cols) == 0:
-            print("[get_hourly_df] No hourly lists found in outputs_param_simulation. Attempting to extract from output CSV files...")
-            try:
-                source_df = self._attach_hourly_outputs_from_simulation_files(df=self.outputs_param_simulation, file_source='csv', file_output_columns=None)
-            except Exception as e:
-                raise ValueError(f"Failed to extract hourly columns from simulation files: {e}")
+        effective_file_source = file_source
+        if file_source == 'auto':
+            hourly_cols = identify_hourly_columns(source_df)
+            if len(hourly_cols) > 0 and output_columns is None:
+                expanded_source_df = source_df
+                effective_file_source = 'embedded'
+            else:
+                effective_file_source = 'csv'
+                try:
+                    expanded_source_df = self._attach_hourly_outputs_from_simulation_files(
+                        df=source_df,
+                        file_source='csv',
+                        file_output_columns=output_columns,
+                        eplus_install_dir=eplus_install_dir,
+                        only_run_period=only_run_period,
+                    )
+                except KeyError as e:
+                    raise ValueError(f'Failed to resolve requested output_columns: {e}') from e
+                hourly_cols = identify_hourly_columns(expanded_source_df)
         else:
-            source_df = self.outputs_param_simulation
-            
-        self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(df=source_df, parameter_columns=parameter_columns, start_date=start_date)
-        
+            try:
+                expanded_source_df = self._attach_hourly_outputs_from_simulation_files(
+                    df=source_df,
+                    file_source=file_source,
+                    file_output_columns=output_columns,
+                    eplus_install_dir=eplus_install_dir,
+                    only_run_period=only_run_period,
+                )
+            except KeyError as e:
+                raise ValueError(f'Failed to resolve requested output_columns: {e}') from e
+            hourly_cols = identify_hourly_columns(expanded_source_df)
+        if len(hourly_cols) == 0:
+            raise ValueError(
+                'No hourly columns were detected to expand. '
+                'Check keep_dirs/keep_sim_files settings and output_columns names.'
+            )
+        if start_date is None:
+            try:
+                first_row = source_df.iloc[0]
+                csv_path = self._resolve_simulation_file_path(row=first_row, file_source='csv')
+                if os.path.exists(csv_path):
+                    sample_df = pd.read_csv(csv_path, nrows=1)
+                    date_col = 'Date/Time' if 'Date/Time' in sample_df.columns else ('date/time' if 'date/time' in sample_df.columns else None)
+                    if date_col is not None and len(sample_df) > 0:
+                        _dt_raw = sample_df[date_col].iloc[0]
+                        if isinstance(_dt_raw, str):
+                            _dt_clean = _dt_raw.strip()
+                            (_month_day, _time) = _dt_clean.split()
+                            (_month, _day) = _month_day.split('/')
+                            _hour = int(_time.split(':')[0])
+                            if _hour == 24:
+                                _hour = 0
+                            start_date = f'2024-{int(_month):02d}-{int(_day):02d} {_hour:02d}'
+            except Exception:
+                pass
+            if start_date is None:
+                start_date = '2024-01-01 01'
+        sample = expanded_source_df[hourly_cols[0]].iloc[0]
+        n_steps = 8760
+        if isinstance(sample, (list, tuple, np.ndarray)):
+            n_steps = len(sample)
+        elif isinstance(sample, str):
+            try:
+                import ast
+                parsed = ast.literal_eval(sample.strip())
+                if isinstance(parsed, (list, tuple, np.ndarray)):
+                    n_steps = len(parsed)
+            except Exception:
+                pass
+        n_rows = len(expanded_source_df)
+        n_hourly = len(hourly_cols)
+        total_rows = n_rows * n_steps
+        total_cols = len(parameter_columns) + n_hourly + 2
+        approx_mb = total_rows * total_cols * 8 / 1000000.0
+        size_msg = (
+            f"\n  Simulations selected : {n_rows}"
+            f"\n  Hourly steps per sim : {n_steps}"
+            f"\n  Hourly output columns: {n_hourly}  -> {hourly_cols[:5]}{('...' if n_hourly > 5 else '')}"
+            f"\n  Source              : {effective_file_source}"
+            f"\n  Expanded shape       : ~{total_rows:,} rows x {total_cols} cols"
+            f"\n  Approx. memory       : ~{approx_mb:.1f} MB"
+        )
+        if _using_defaults and (not skip_confirmation):
+            print(f'[get_hourly_df_parametric] Estimated output size:{size_msg}')
+            answer = input('\nProceed with expansion? [y/N]: ').strip().lower()
+            if answer != 'y':
+                print('Expansion cancelled. Use epw_filter, output_columns or simulation_indices to reduce the size.')
+                return None
+        else:
+            print(f'[get_hourly_df_parametric] Expanding...{size_msg}')
+        self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(
+            df=expanded_source_df,
+            parameter_columns=parameter_columns,
+            start_date=start_date,
+            hourly_columns=hourly_cols,
+        )
         if normalize_per_m2:
             if getattr(self, 'outputs_normalized', False):
                 print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
             else:
                 self.normalize_outputs(df_types=['parametric_hourly'])
                 self.outputs_normalized = False # Revert to False because we only normalized the hourly df
-
+        return self.outputs_param_simulation_hourly
+    def get_hourly_df(self, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
+        """
+        Backward-compatible wrapper for parametric hourly expansion.
+        This preserves the previous behavior: use embedded hourly list-columns when
+        available, otherwise fall back to reading simulation CSV outputs.
+        """
+        return self.get_hourly_df_parametric(
+            file_source='auto',
+            start_date=start_date,
+            skip_confirmation=True,
+            normalize_per_m2=normalize_per_m2,
+        )
     def get_monthly_df(self, agg_funcs: dict = None, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
         """
         Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame with monthly aggregated values,
@@ -6642,13 +7263,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         selected_cols.append(lower_exact_map[requested_lower])
                         continue
                     contains_matches = [c for c in df_file.columns if requested_lower in c.lower()]
-                    if len(contains_matches) == 1:
-                        selected_cols.append(contains_matches[0])
-                    else:
+                    if len(contains_matches) == 0:
                         missing.append(requested)
-                if missing:
+                    else:
+                        selected_cols.extend(contains_matches)
+                selected_cols = list(dict.fromkeys(selected_cols))
+                if missing and len(selected_cols) == 0:
                     sample_cols = [c for c in df_file.columns if ':Zone Operative Temperature' in c or 'VRF Heat Pump Cooling Electricity Energy' in c]
                     raise KeyError(f"Requested CSV columns not found in '{path}': {missing}. Example available columns: {sample_cols[:8]}")
+                if missing and len(selected_cols) > 0:
+                    warnings.warn(
+                        f"Some requested CSV columns were not found in '{path}': {missing}. "
+                        f"Continuing with {len(selected_cols)} matched columns.",
+                        UserWarning,
+                    )
             return {c: df_file[c].tolist() for c in selected_cols}
         eso_results = read_eso_using_readvarseso(eso_file_path=path, eplus_install_dir=eplus_install_dir, only_run_period=only_run_period, cleanup=True)
         data_by_freq = eso_results.get('data', {})
@@ -6665,9 +7293,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if file_output_columns is None:
             return flattened_map
         missing = [c for c in file_output_columns if c not in flattened_map]
-        if missing:
+        if missing and len(flattened_map) == 0:
             raise KeyError(f"Requested ESO columns not found in '{path}': {missing}")
-        return {c: flattened_map[c] for c in file_output_columns}
+        if missing and len(flattened_map) > 0:
+            warnings.warn(
+                f"Some requested ESO columns were not found in '{path}': {missing}. "
+                f"Continuing with available matches.",
+                UserWarning,
+            )
+        return {c: flattened_map[c] for c in file_output_columns if c in flattened_map}
 
     def _attach_hourly_outputs_from_simulation_files(self, df: pd.DataFrame, file_source: Literal['csv', 'eso'], file_output_columns: Optional[List[str]]=None, eplus_install_dir: Optional[str]=None, only_run_period: bool=True) -> pd.DataFrame:
         df_augmented = df.copy()
@@ -6915,7 +7549,6 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         monthly_df = df_hourly.groupby(groupby_cols).agg(default_agg).reset_index()
         self.outputs_optimisation_monthly = monthly_df
         
-        normalize_per_m2 = kwargs.get('normalize_per_m2', False)
         if normalize_per_m2:
             if getattr(self, 'outputs_normalized', False):
                 print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
@@ -6949,7 +7582,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
                 raise ValueError('Parametric outputs not found. Run or load parametric simulation first.')
             self.outputs_hourly_columns = identify_hourly_columns(self.outputs_param_simulation)
-            return self.outputs_hourly_columns
+            if len(self.outputs_hourly_columns) > 0:
+                return self.outputs_hourly_columns
+            for (_, row) in self.outputs_param_simulation.iterrows():
+                try:
+                    path = self._resolve_simulation_file_path(row=row, file_source='csv')
+                    if os.path.exists(path):
+                        df_file = pd.read_csv(path, nrows=5)
+                        excluded_columns = {'Date/Time', 'date/time'}
+                        numeric_cols = [c for c in df_file.columns if c not in excluded_columns and pd.api.types.is_numeric_dtype(df_file[c])]
+                        self.outputs_hourly_columns = numeric_cols
+                        return self.outputs_hourly_columns
+                except Exception:
+                    continue
+            raise FileNotFoundError('Could not find any valid parametric simulation output CSV files to infer hourly columns.')
         else:
             raise ValueError('No previous simulation run type detected. Please run parametric or optimisation first.')
 

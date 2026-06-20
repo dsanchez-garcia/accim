@@ -141,6 +141,10 @@ def test_parametric_resume_from_checkpoint_skips_completed_tasks(tmp_path, monke
     assert len(results) == 4
     assert sorted(results['x'].tolist()) == [1, 2, 3, 4]
 
+    refreshed_checkpoint_df = pd.read_pickle(checkpoint_path)
+    assert len(refreshed_checkpoint_df) == 4
+    assert sorted(refreshed_checkpoint_df['x'].tolist()) == [1, 2, 3, 4]
+
 
 def test_parametric_batch_size_validation(tmp_path):
     sim = _make_lightweight_parametric(epw='Test.epw')

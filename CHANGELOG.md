@@ -55,6 +55,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Reports missing required input columns, null counts, unknown IDF/EPW labels, duplicate task signatures, and estimated total simulations.
   - Provides conservative recommendations for `processes` and `batch_size` using a lightweight system CPU/RAM snapshot.
   - Added tests in `tests/parametric_and_optimisation/test_parametric_preflight_report.py` for task estimation, validation checks, and wrapper behavior.
+- **Optimisation Case Checkpoint Resume**: `run_optimisation(...)` now supports case-level recovery for long multi-IDF/multi-EPW campaigns.
+  - Added `checkpoint_every_case` and `resume_from_checkpoint` arguments.
+  - Added a default checkpoint artifact (`outputs_optimisation_checkpoint_latest.pkl` + metadata JSON) and automatic reuse of completed `IDF::EPW` cases.
+  - Added a run-configuration compatibility signature in checkpoint metadata so incompatible checkpoints are skipped safely.
+  - Added tests in `tests/parametric_and_optimisation/test_optimisation_checkpoint_resume.py` for checkpoint reuse and memory-mode behavior.
+- **Interactive Optimisation Preflight Diagnostics**: Added `preflight_report_optimisation(...)` and expanded `preflight_report(...)` to support `mode='optimisation'` and auto-selection.
+  - Reports case count, generations, estimated simulations, CPU/RAM snapshot, and conservative run kwargs including checkpoint-resume defaults.
+  - Added tests in `tests/parametric_and_optimisation/test_optimisation_preflight_report.py` for estimation and wrapper mode routing.
+- **Parametric Lazy Task Streaming and Atomic Checkpoints**: `run_parametric_simulation(...)` now iterates tasks lazily to reduce planning-memory pressure and writes checkpoints atomically (`.tmp` + replace).
+  - Added a final checkpoint synchronization step when resuming, even if `checkpoint_every_batch=False`.
+  - Extended tests in `tests/parametric_and_optimisation/test_parametric_batch_checkpoint.py` to verify refreshed checkpoints after resume.
 
 ### Changed
 - **Breaking API Change in Output Discovery/Selection Returns**: `get_outputs_df_from_testsim(...)`, `discover_available_outputs(...)`, and `select_outputs(...)` now return a single dictionary instead of tuples.

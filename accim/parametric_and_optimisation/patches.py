@@ -51,6 +51,7 @@ def _patched_eval_func(evaluator, all_outputs):
     results = evaluator(all_outputs, keep_dirs=keep_dirs)
     if not hasattr(evaluator, '_optimisation_eval_records'):
         evaluator._optimisation_eval_records = []
+    store_records_in_memory = bool(getattr(evaluator, '_store_optimisation_records_in_memory', True))
     eval_record = {'inputs': tuple(all_outputs)}
     if keep_dirs:
         eval_record['results'] = tuple(results[:-1])
@@ -94,7 +95,8 @@ def _patched_eval_func(evaluator, all_outputs):
         add_outputs_values = []
     eval_record['add_outputs_values'] = tuple(add_outputs_values)
 
-    evaluator._optimisation_eval_records.append(eval_record)
+    if store_records_in_memory:
+        evaluator._optimisation_eval_records.append(eval_record)
     log_base = getattr(evaluator, '_optimisation_log_base', None)
     if log_base is not None:
 
@@ -125,7 +127,7 @@ def _patched_eval_func(evaluator, all_outputs):
     if keep_dirs:
         results = results[:-1]
     keep_sim_files = getattr(evaluator, '_keep_sim_files', 'all')
-    if keep_dirs and keep_sim_files == 'non-dominated':
+    if keep_dirs and keep_sim_files == 'non-dominated' and store_records_in_memory:
         records = evaluator._optimisation_eval_records
         if len(records) > 0 and len(records) % getattr(evaluator, '_keep_sim_files_batch_size', 50) == 0:
             import shutil
