@@ -51,6 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `batch_size`, `checkpoint_every_batch`, and `resume_from_checkpoint` arguments for memory-aware execution and recovery after interruptions.
   - Added deterministic task signatures and a default checkpoint artifact (`outputs_param_simulation_checkpoint_latest.pkl` + metadata JSON) in the run output directory.
   - Added focused tests in `tests/parametric_and_optimisation/test_parametric_batch_checkpoint.py` covering batch checkpoints, resume behavior, validation, and explicit missing-checkpoint errors.
+- **Interactive Parametric Preflight Diagnostics**: Added `preflight_report(...)` and `preflight_report_parametric(...)` to validate simulation plans before launching heavy runs.
+  - Reports missing required input columns, null counts, unknown IDF/EPW labels, duplicate task signatures, and estimated total simulations.
+  - Provides conservative recommendations for `processes` and `batch_size` using a lightweight system CPU/RAM snapshot.
+  - Added tests in `tests/parametric_and_optimisation/test_parametric_preflight_report.py` for task estimation, validation checks, and wrapper behavior.
 
 ### Changed
 - **Breaking API Change in Output Discovery/Selection Returns**: `get_outputs_df_from_testsim(...)`, `discover_available_outputs(...)`, and `select_outputs(...)` now return a single dictionary instead of tuples.

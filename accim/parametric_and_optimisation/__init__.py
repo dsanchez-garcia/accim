@@ -51,6 +51,7 @@ from .main import (
     compare_simulation_instances,
     compare_latest_pickles_in_folders,
     compare_multiple_pickles_with_reference,
+    preflight_report,
 )
 
 __all__ = [
@@ -63,4 +64,5 @@ __all__ = [
     'compare_simulation_instances',
     'compare_latest_pickles_in_folders',
     'compare_multiple_pickles_with_reference',
+    'preflight_report',
 ]

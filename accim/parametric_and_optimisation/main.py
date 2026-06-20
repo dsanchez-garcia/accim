@@ -1552,6 +1552,23 @@ def compare_multiple_pickles_with_reference(
     }
 
 
+def preflight_report(simulation: Any, **kwargs) -> dict:
+    """
+    Convenience wrapper for interactive parametric preflight diagnostics.
+
+    Example::
+
+        report = preflight_report(sim)
+        print(report['recommendation'])
+    """
+    if simulation is None or (not hasattr(simulation, 'preflight_report_parametric')):
+        raise TypeError(
+            "preflight_report expects a simulation instance that implements "
+            "'preflight_report_parametric(...)'."
+        )
+    return simulation.preflight_report_parametric(**kwargs)
+
+
 class SimulationComparisonSession:
     """
     Stateful helper to compare simulation outputs and inspect reports via attributes.
@@ -5043,6 +5060,288 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         with open(f'{checkpoint_path}.meta.json', 'w', encoding='utf-8') as meta_file:
             json.dump(meta_payload, meta_file, indent=2)
         return int(len(checkpoint_df))
+
+    @staticmethod
+    def _get_system_resource_snapshot() -> dict:
+        """Best-effort system snapshot for CPU/RAM-based recommendations."""
+        snapshot = {
+            'logical_cpus': int(os.cpu_count() or 1),
+            'total_ram_gb': None,
+            'available_ram_gb': None,
+        }
+
+        try:
+            if os.name == 'nt':
+                import ctypes
+
+                class _MemoryStatus(ctypes.Structure):
+                    _fields_ = [
+                        ('dwLength', ctypes.c_ulong),
+                        ('dwMemoryLoad', ctypes.c_ulong),
+                        ('ullTotalPhys', ctypes.c_ulonglong),
+                        ('ullAvailPhys', ctypes.c_ulonglong),
+                        ('ullTotalPageFile', ctypes.c_ulonglong),
+                        ('ullAvailPageFile', ctypes.c_ulonglong),
+                        ('ullTotalVirtual', ctypes.c_ulonglong),
+                        ('ullAvailVirtual', ctypes.c_ulonglong),
+                        ('ullAvailExtendedVirtual', ctypes.c_ulonglong),
+                    ]
+
+                mem_status = _MemoryStatus()
+                mem_status.dwLength = ctypes.sizeof(_MemoryStatus)
+                ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(mem_status))
+                snapshot['total_ram_gb'] = round(mem_status.ullTotalPhys / (1024 ** 3), 1)
+                snapshot['available_ram_gb'] = round(mem_status.ullAvailPhys / (1024 ** 3), 1)
+            elif hasattr(os, 'sysconf'):
+                page_size = int(os.sysconf('SC_PAGE_SIZE'))
+                total_pages = int(os.sysconf('SC_PHYS_PAGES'))
+                available_pages = int(os.sysconf('SC_AVPHYS_PAGES'))
+                snapshot['total_ram_gb'] = round((page_size * total_pages) / (1024 ** 3), 1)
+                snapshot['available_ram_gb'] = round((page_size * available_pages) / (1024 ** 3), 1)
+        except Exception:
+            # Keep None values when runtime cannot provide RAM stats.
+            pass
+
+        return snapshot
+
+    def preflight_report_parametric(
+        self,
+        df: Optional[pd.DataFrame] = None,
+        epws: Optional[list] = None,
+        target_batches: int = 60,
+        verbose: bool = True,
+    ) -> dict:
+        """
+        Builds a lightweight preflight report before calling
+        :meth:`run_parametric_simulation`.
+
+        The report focuses on:
+        - plan shape/validation (missing columns, nulls, unknown IDF/EPW labels),
+        - estimated number of simulation tasks,
+        - duplicate task signatures,
+        - conservative recommendations for ``processes`` and ``batch_size``.
+        """
+        import math
+
+        if target_batches <= 0:
+            raise ValueError("Argument 'target_batches' must be a positive integer.")
+
+        if df is None:
+            df = getattr(self, 'parameters_values_df', None)
+        if df is None:
+            raise ValueError(
+                "No DataFrame was provided and 'self.parameters_values_df' is empty. "
+                "Run a sampling method first or pass 'df'."
+            )
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError("Argument 'df' must be a pandas DataFrame.")
+
+        plan_df = df.copy()
+        if epws is None:
+            epws = list(getattr(self, 'epws', []) or [])
+        elif isinstance(epws, list):
+            epws = list(epws)
+        else:
+            epws = [epws]
+        epws = [str(epw) for epw in epws]
+
+        problem_names_inputs = self._get_problem_input_names()
+        missing_required_columns = [
+            column for column in problem_names_inputs
+            if column not in plan_df.columns
+        ]
+        null_counts_required_inputs = {
+            column: int(plan_df[column].isna().sum())
+            for column in problem_names_inputs
+            if column in plan_df.columns
+        }
+
+        epw_counts_in_plan = {}
+        if 'epw' in plan_df.columns:
+            epw_counts_in_plan = (
+                plan_df['epw']
+                .fillna('<NA>')
+                .astype(str)
+                .value_counts(dropna=False)
+                .to_dict()
+            )
+
+        idf_counts_in_plan = {}
+        if 'idf' in plan_df.columns:
+            idf_counts_in_plan = (
+                plan_df['idf']
+                .fillna('<NA>')
+                .astype(str)
+                .value_counts(dropna=False)
+                .to_dict()
+            )
+
+        unknown_epws_in_plan = []
+        if 'epw' in plan_df.columns and len(epws) > 0:
+            unknown_epws_in_plan = sorted(
+                set(plan_df['epw'].dropna().astype(str)) - set(epws)
+            )
+
+        allowed_idfs = []
+        if len(getattr(self, 'buildings', []) or []) > 0:
+            try:
+                allowed_idfs = list(self._get_buildings_by_idf().keys())
+            except Exception:
+                allowed_idfs = []
+
+        unknown_idfs_in_plan = []
+        if len(getattr(self, 'buildings', []) or []) > 1 and 'idf' in plan_df.columns:
+            unknown_idfs_in_plan = sorted(
+                set(plan_df['idf'].dropna().astype(str)) - set(allowed_idfs)
+            )
+
+        prepare_error = None
+        grouped_dfs = {}
+        estimated_total_tasks = None
+        duplicate_task_signatures = None
+
+        if len(epws) == 0:
+            prepare_error = 'No EPWs provided (pass epws=... or set self.epws before running).'
+        elif len(missing_required_columns) == 0:
+            try:
+                grouped_dfs = self._prepare_dataframe_for_buildings(df=plan_df, epws=epws)
+                estimated_total_tasks = 0
+                for (_, df_for_idf) in grouped_dfs.items():
+                    if 'epw' in df_for_idf.columns:
+                        for epw in df_for_idf['epw'].drop_duplicates().tolist():
+                            estimated_total_tasks += int(len(df_for_idf.loc[df_for_idf['epw'] == epw]))
+                    else:
+                        estimated_total_tasks += int(len(df_for_idf) * len(epws))
+
+                signatures_seen = set()
+                duplicate_task_signatures = 0
+                for (idf_basename, df_for_idf) in grouped_dfs.items():
+                    epws_for_idf = df_for_idf['epw'].drop_duplicates().tolist() if 'epw' in df_for_idf.columns else epws
+                    for epw in epws_for_idf:
+                        if 'epw' in df_for_idf.columns:
+                            evaluator_input_df = df_for_idf.loc[df_for_idf['epw'] == epw, problem_names_inputs]
+                        else:
+                            evaluator_input_df = df_for_idf[problem_names_inputs]
+                        for (_, row) in evaluator_input_df.iterrows():
+                            signature = self._build_parametric_task_signature(
+                                idf_basename=idf_basename,
+                                epw=epw,
+                                problem_names_inputs=problem_names_inputs,
+                                row_dict=row.to_dict(),
+                            )
+                            if signature in signatures_seen:
+                                duplicate_task_signatures += 1
+                            else:
+                                signatures_seen.add(signature)
+            except Exception as exc:
+                prepare_error = str(exc)
+
+        system_snapshot = self._get_system_resource_snapshot()
+        logical_cpus = max(1, int(system_snapshot.get('logical_cpus') or 1))
+        available_ram_gb = system_snapshot.get('available_ram_gb')
+
+        cpu_cap = max(1, logical_cpus - 1)
+        if available_ram_gb is None:
+            recommended_processes = max(1, min(cpu_cap, 2))
+            min_batch_size = 20
+            max_batch_size = 80
+        elif available_ram_gb < 4:
+            recommended_processes = 1
+            min_batch_size = 10
+            max_batch_size = 20
+        elif available_ram_gb < 8:
+            recommended_processes = min(cpu_cap, 2)
+            min_batch_size = 20
+            max_batch_size = 40
+        elif available_ram_gb < 12:
+            recommended_processes = min(cpu_cap, 3)
+            min_batch_size = 30
+            max_batch_size = 60
+        else:
+            recommended_processes = min(cpu_cap, 4)
+            min_batch_size = 40
+            max_batch_size = 120
+
+        if estimated_total_tasks is None or estimated_total_tasks == 0:
+            recommended_batch_size = min_batch_size
+            estimated_n_batches = None
+        else:
+            tasks_per_target_batch = max(1, math.ceil(estimated_total_tasks / target_batches))
+            recommended_batch_size = min(
+                max(tasks_per_target_batch, min_batch_size),
+                max_batch_size,
+            )
+            estimated_n_batches = int(math.ceil(estimated_total_tasks / recommended_batch_size))
+
+        issues = []
+        if len(missing_required_columns) > 0:
+            issues.append('missing_required_columns')
+        if any(v > 0 for v in null_counts_required_inputs.values()):
+            issues.append('null_values_in_required_inputs')
+        if len(unknown_epws_in_plan) > 0:
+            issues.append('unknown_epws_in_plan')
+        if len(unknown_idfs_in_plan) > 0:
+            issues.append('unknown_idfs_in_plan')
+        if prepare_error is not None:
+            issues.append('prepare_dataframe_failed')
+
+        report = {
+            'status': 'ok' if len(issues) == 0 else 'check',
+            'issues': issues,
+            'rows_in_df': int(len(plan_df)),
+            'estimated_total_tasks': int(estimated_total_tasks) if estimated_total_tasks is not None else None,
+            'target_batches': int(target_batches),
+            'estimated_n_batches': estimated_n_batches,
+            'required_input_columns': list(problem_names_inputs),
+            'missing_required_columns': missing_required_columns,
+            'null_counts_required_inputs': null_counts_required_inputs,
+            'duplicate_task_signatures': duplicate_task_signatures,
+            'epws_for_run': epws,
+            'allowed_idfs_for_run': allowed_idfs,
+            'epw_counts_in_plan': epw_counts_in_plan,
+            'idf_counts_in_plan': idf_counts_in_plan,
+            'unknown_epws_in_plan': unknown_epws_in_plan,
+            'unknown_idfs_in_plan': unknown_idfs_in_plan,
+            'prepare_error': prepare_error,
+            'system': system_snapshot,
+            'recommendation': {
+                'processes': int(recommended_processes),
+                'batch_size': int(recommended_batch_size),
+                'checkpoint_every_batch': True,
+                'resume_from_checkpoint': True,
+            },
+            'recommended_run_kwargs': {
+                'processes': int(recommended_processes),
+                'batch_size': int(recommended_batch_size),
+                'checkpoint_every_batch': True,
+                'resume_from_checkpoint': True,
+            },
+        }
+
+        if verbose:
+            print('[preflight_report_parametric]')
+            print(f"  Rows in plan          : {report['rows_in_df']}")
+            print(f"  Estimated total tasks : {report['estimated_total_tasks']}")
+            print(f"  Missing input cols    : {report['missing_required_columns']}")
+            print(f"  Nulls in inputs       : {report['null_counts_required_inputs']}")
+            print(f"  Unknown EPWs          : {report['unknown_epws_in_plan']}")
+            print(f"  Unknown IDFs          : {report['unknown_idfs_in_plan']}")
+            print(f"  Duplicate tasks       : {report['duplicate_task_signatures']}")
+            print(
+                '  System snapshot       : '
+                f"CPUs={system_snapshot.get('logical_cpus')}, "
+                f"RAM(total/free GB)={system_snapshot.get('total_ram_gb')}/{system_snapshot.get('available_ram_gb')}"
+            )
+            print(
+                '  Recommended run       : '
+                f"processes={report['recommendation']['processes']}, "
+                f"batch_size={report['recommendation']['batch_size']}, "
+                'checkpoint_every_batch=True, resume_from_checkpoint=True'
+            )
+            if prepare_error is not None:
+                print(f'  Prepare error         : {prepare_error}')
+
+        return report
 
     def run_parametric_simulation(
         self,
