@@ -47,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Regression Coverage for Optimisation Output Handling**: Added focused tests in `tests/parametric_and_optimisation/test_analysis_output_resolution.py` and `tests/parametric_and_optimisation/test_pareto_grouping.py`.
   - Covers robust objective-column resolution when optimisation outputs are normalized/renamed.
   - Covers configurable Pareto grouping by EPW and/or IDF and MCDM grouping behavior in plotting.
+- **Parametric Batch Execution with Checkpoint Resume**: `run_parametric_simulation(...)` now supports large campaigns using incremental batches and crash-safe resume.
+  - Added `batch_size`, `checkpoint_every_batch`, and `resume_from_checkpoint` arguments for memory-aware execution and recovery after interruptions.
+  - Added deterministic task signatures and a default checkpoint artifact (`outputs_param_simulation_checkpoint_latest.pkl` + metadata JSON) in the run output directory.
+  - Added focused tests in `tests/parametric_and_optimisation/test_parametric_batch_checkpoint.py` covering batch checkpoints, resume behavior, validation, and explicit missing-checkpoint errors.
 
 ### Changed
 - **Breaking API Change in Output Discovery/Selection Returns**: `get_outputs_df_from_testsim(...)`, `discover_available_outputs(...)`, and `select_outputs(...)` now return a single dictionary instead of tuples.

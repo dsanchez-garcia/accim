@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import hashlib
 import importlib
 import glob as pyglob
 from typing import Literal, List, Union, Optional, Any
@@ -4967,7 +4968,94 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 })
         return specs
 
-    def run_parametric_simulation(self, epws: list = None, out_dir: str = 'param_results', df: pd.DataFrame = None, processes: int=2, keep_input: bool=True, keep_dirs: bool=True) -> pd.DataFrame:
+    @staticmethod
+    def _normalize_signature_value(value: Any) -> Any:
+        """Normalize values so task signatures are stable across runs/processes."""
+        if isinstance(value, dict):
+            return {
+                str(k): SimulationBase._normalize_signature_value(v)
+                for (k, v) in sorted(value.items(), key=lambda kv: str(kv[0]))
+            }
+        if isinstance(value, (list, tuple)):
+            return [SimulationBase._normalize_signature_value(v) for v in value]
+        if isinstance(value, os.PathLike):
+            return os.fspath(value)
+        if isinstance(value, np.generic):
+            return value.item()
+        try:
+            if pd.isna(value):
+                return None
+        except Exception:
+            pass
+        return value
+
+    @staticmethod
+    def _build_parametric_task_signature(
+        idf_basename: str,
+        epw: str,
+        problem_names_inputs: list,
+        row_dict: dict,
+    ) -> str:
+        """Build a deterministic signature for a parametric task row."""
+        payload_inputs = {
+            str(name): SimulationBase._normalize_signature_value(row_dict.get(name))
+            for name in problem_names_inputs
+        }
+        payload = {
+            'idf': str(idf_basename),
+            'epw': str(epw),
+            'inputs': payload_inputs,
+        }
+        serialized = json.dumps(payload, sort_keys=True, ensure_ascii=True, default=str)
+        return hashlib.sha1(serialized.encode('utf-8')).hexdigest()
+
+    @staticmethod
+    def _default_parametric_checkpoint_path(out_dir: str) -> str:
+        return os.path.abspath(
+            os.path.join(out_dir, 'outputs_param_simulation_checkpoint_latest.pkl')
+        )
+
+    @staticmethod
+    def _save_parametric_checkpoint(
+        all_results: list,
+        checkpoint_path: str,
+        total_tasks: int,
+        completed_tasks: int,
+    ) -> int:
+        """Persist current parametric results state for crash-safe resume."""
+        import datetime
+
+        checkpoint_df = pd.DataFrame(all_results)
+        if '_accim_task_signature' in checkpoint_df.columns:
+            checkpoint_df = checkpoint_df.drop_duplicates(
+                subset=['_accim_task_signature'],
+                keep='last',
+            ).reset_index(drop=True)
+        checkpoint_df.to_pickle(checkpoint_path)
+
+        meta_payload = {
+            'saved_at': datetime.datetime.now().isoformat(timespec='seconds'),
+            'checkpoint_path': checkpoint_path,
+            'rows_in_checkpoint': int(len(checkpoint_df)),
+            'completed_tasks': int(completed_tasks),
+            'total_tasks': int(total_tasks),
+        }
+        with open(f'{checkpoint_path}.meta.json', 'w', encoding='utf-8') as meta_file:
+            json.dump(meta_payload, meta_file, indent=2)
+        return int(len(checkpoint_df))
+
+    def run_parametric_simulation(
+        self,
+        epws: list = None,
+        out_dir: str = 'param_results',
+        df: pd.DataFrame = None,
+        processes: int = 2,
+        keep_input: bool = True,
+        keep_dirs: bool = True,
+        batch_size: Optional[int] = None,
+        checkpoint_every_batch: bool = False,
+        resume_from_checkpoint: Union[bool, str] = False,
+    ) -> pd.DataFrame:
         """
         Runs the parametric simulation.
 
@@ -4977,8 +5065,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param processes: the number of CPUs to be used in simulation
         :param keep_input: True to keep the input DataFrame in the results
         :param keep_dirs: True to keep the simulation results
+        :param batch_size: optional number of evaluations to execute per batch.
+            When None (default), all pending evaluations run in one batch.
+        :param checkpoint_every_batch: when True, save a checkpoint pickle after each
+            batch at ``<out_dir>/outputs_param_simulation_checkpoint_latest.pkl``.
+        :param resume_from_checkpoint: False (default) runs from scratch. Use True to
+            resume from the default checkpoint path, or provide a checkpoint pickle path.
         :return: a pandas DataFrame
         """
+        if batch_size is not None and (not isinstance(batch_size, int) or batch_size <= 0):
+            raise ValueError("Argument 'batch_size' must be a positive integer or None.")
         if epws is None:
             epws = getattr(self, 'epws', [])
         if not epws:
@@ -4989,6 +5085,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 raise ValueError("Argument 'df' cannot be None if self.parameters_values_df is not populated. Run a sampling method first or provide 'df'.")
 
         os.makedirs(out_dir, exist_ok=True)
+
+        checkpoint_path = self._default_parametric_checkpoint_path(out_dir=out_dir)
+        if isinstance(resume_from_checkpoint, str):
+            checkpoint_text = resume_from_checkpoint.strip()
+            if len(checkpoint_text) == 0:
+                raise ValueError("Argument 'resume_from_checkpoint' cannot be an empty string.")
+            checkpoint_path = os.path.abspath(checkpoint_text)
+
         # Update the IDF backup with the exact building state used for this run
         self._save_idf_backup(label='pre_parametric', out_dir=out_dir)
 
@@ -5044,7 +5148,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 evaluator_df = evaluator_input_df.reset_index(drop=True).copy()
                 
                 for _, row in evaluator_df.iterrows():
-                    tasks.append((
+                    row_dict = row.to_dict()
+                    task_signature = self._build_parametric_task_signature(
+                        idf_basename=idf_basename,
+                        epw=epw,
+                        problem_names_inputs=problem_names_inputs,
+                        row_dict=row_dict,
+                    )
+                    tasks.append({
+                        'signature': task_signature,
+                        'worker_args': (
                         idf_backup_file,
                         epw,
                         epwname,
@@ -5055,26 +5168,130 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         output_specs,
                         add_output_specs,
                         add_output_names,
-                        row.to_dict(),
+                        row_dict,
                         keep_dirs,
                         keep_input
-                    ))
+                        ),
+                    })
+
+        task_signatures = {task['signature'] for task in tasks}
 
         all_results = []
-        if processes > 1 and len(tasks) > 1:
-            import concurrent.futures
-            from tqdm import tqdm
-            with concurrent.futures.ProcessPoolExecutor(max_workers=processes) as executor:
-                futures = [executor.submit(_run_single_evaluation_worker, *t) for t in tasks]
-                for future in tqdm(concurrent.futures.as_completed(futures), total=len(tasks), desc="Executing parametric simulations", unit="row"):
-                    all_results.append(future.result())
+        completed_signatures = set()
+        resume_requested = bool(resume_from_checkpoint)
+        if resume_requested:
+            if os.path.exists(checkpoint_path):
+                checkpoint_df = pd.read_pickle(checkpoint_path)
+                if '_accim_task_signature' not in checkpoint_df.columns:
+                    warnings.warn(
+                        "Checkpoint file found but column '_accim_task_signature' is missing. "
+                        'Resume will start from scratch.',
+                        UserWarning,
+                    )
+                else:
+                    checkpoint_df = checkpoint_df.drop_duplicates(
+                        subset=['_accim_task_signature'],
+                        keep='last',
+                    ).copy()
+                    checkpoint_df['_accim_task_signature'] = checkpoint_df['_accim_task_signature'].astype(str)
+                    checkpoint_df = checkpoint_df[
+                        checkpoint_df['_accim_task_signature'].isin(task_signatures)
+                    ].copy()
+                    all_results = checkpoint_df.to_dict(orient='records')
+                    completed_signatures = set(checkpoint_df['_accim_task_signature'].tolist())
+                    print(
+                        '[run_parametric_simulation] Resuming from checkpoint: '
+                        f'{len(completed_signatures)}/{len(tasks)} tasks already completed.'
+                    )
+            elif isinstance(resume_from_checkpoint, str):
+                raise FileNotFoundError(
+                    f"Checkpoint file not found: {checkpoint_path}"
+                )
+            else:
+                warnings.warn(
+                    f'resume_from_checkpoint=True but no checkpoint was found at {checkpoint_path}. '
+                    'Starting a fresh run.',
+                    UserWarning,
+                )
+
+        pending_tasks = [
+            task for task in tasks
+            if task['signature'] not in completed_signatures
+        ]
+
+        if len(pending_tasks) == 0 and len(tasks) > 0:
+            print('[run_parametric_simulation] No pending tasks to execute.')
         else:
+            effective_batch_size = batch_size or max(1, len(pending_tasks))
+            n_batches = max(1, (len(pending_tasks) + effective_batch_size - 1) // effective_batch_size)
             from tqdm import tqdm
-            for t in tqdm(tasks, desc="Executing parametric simulations", unit="row"):
-                all_results.append(_run_single_evaluation_worker(*t))
+            for batch_idx, start in enumerate(range(0, len(pending_tasks), effective_batch_size), start=1):
+                batch_tasks = pending_tasks[start:start + effective_batch_size]
+                batch_results = []
+                if processes > 1 and len(batch_tasks) > 1:
+                    import concurrent.futures
+                    with concurrent.futures.ProcessPoolExecutor(max_workers=processes) as executor:
+                        futures = {}
+                        for task in batch_tasks:
+                            future = executor.submit(_run_single_evaluation_worker, *task['worker_args'])
+                            futures[future] = task['signature']
+                        for future in tqdm(
+                            concurrent.futures.as_completed(futures),
+                            total=len(batch_tasks),
+                            desc=f"Executing parametric simulations (batch {batch_idx}/{n_batches})",
+                            unit='row',
+                        ):
+                            result = future.result()
+                            result['_accim_task_signature'] = futures[future]
+                            batch_results.append(result)
+                else:
+                    for task in tqdm(
+                        batch_tasks,
+                        desc=f"Executing parametric simulations (batch {batch_idx}/{n_batches})",
+                        unit='row',
+                    ):
+                        result = _run_single_evaluation_worker(*task['worker_args'])
+                        result['_accim_task_signature'] = task['signature']
+                        batch_results.append(result)
+
+                all_results.extend(batch_results)
+                completed_signatures.update(
+                    result.get('_accim_task_signature')
+                    for result in batch_results
+                    if result.get('_accim_task_signature') is not None
+                )
+
+                if checkpoint_every_batch:
+                    rows_in_checkpoint = self._save_parametric_checkpoint(
+                        all_results=all_results,
+                        checkpoint_path=checkpoint_path,
+                        total_tasks=len(tasks),
+                        completed_tasks=len(completed_signatures),
+                    )
+                    print(
+                        '[run_parametric_simulation] Checkpoint saved '
+                        f'({rows_in_checkpoint} rows, '
+                        f'{len(completed_signatures)}/{len(tasks)} tasks).'
+                    )
                 
-        import pandas as pd
         outputs_param_simulation = pd.DataFrame(all_results)
+
+        if '_accim_task_signature' in outputs_param_simulation.columns:
+            outputs_param_simulation = outputs_param_simulation.drop_duplicates(
+                subset=['_accim_task_signature'],
+                keep='last',
+            ).reset_index(drop=True)
+
+        if len(tasks) > 0 and len(outputs_param_simulation) == 0:
+            warnings.warn(
+                'No parametric evaluation results were produced. The resulting DataFrame is empty.',
+                UserWarning,
+            )
+
+        if '_accim_task_signature' in outputs_param_simulation.columns:
+            outputs_param_simulation = outputs_param_simulation.drop(
+                columns=['_accim_task_signature']
+            )
         
         if len(epws) > 1 or len(self.buildings) > 1:
             outputs_param_simulation = outputs_param_simulation.reset_index(drop=True)
@@ -5095,6 +5312,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         
         self.outputs_param_simulation.attrs['idf_backup_path'] = getattr(self, 'idf_backup_path', [])
         self.outputs_param_simulation.attrs['epws'] = epws
+        if checkpoint_every_batch or resume_requested:
+            self.outputs_param_simulation.attrs['checkpoint_path'] = checkpoint_path
         
         _base = os.path.join(out_dir, f'outputs_param_simulation_{timestamp}')
         self.outputs_param_simulation.to_csv(f'{_base}.csv', index=False)
