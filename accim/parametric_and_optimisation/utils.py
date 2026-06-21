@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 
 def descriptor_has_options(values):
@@ -149,6 +149,7 @@ def make_all_combinations(parameters_values_dict: dict) -> pd.DataFrame:
 
 
 SUBPLOT_ORDER_MODES = ('auto', 'alphabetical', 'ascending', 'descending', 'custom')
+DATA_FILTER_EMPTY_MODES = ('error', 'warn', 'ignore')
 
 
 def _subplot_sort_key(value, case_sensitive: bool = False):
@@ -175,6 +176,221 @@ def _can_sort_subplot_values_numerically(values: list) -> bool:
         if np.isnan(numeric_value):
             return False
     return True
+
+
+def _is_data_filter_sequence(value: Any) -> bool:
+    if isinstance(value, (str, bytes, dict)):
+        return False
+    return isinstance(value, (list, tuple, set, np.ndarray, pd.Index, pd.Series))
+
+
+def _casefold_if_needed(value: Any, case_sensitive: bool = False):
+    if case_sensitive or not isinstance(value, str):
+        return value
+    return value.casefold()
+
+
+def _normalise_series_for_text(series: pd.Series, case_sensitive: bool = False) -> pd.Series:
+    series_text = series.astype(str)
+    return series_text if case_sensitive else series_text.str.casefold()
+
+
+def _match_scalar_condition(series: pd.Series, condition: Any, case_sensitive: bool = False) -> pd.Series:
+    if isinstance(condition, str):
+        lhs = _normalise_series_for_text(series, case_sensitive=case_sensitive)
+        rhs = _casefold_if_needed(condition, case_sensitive=case_sensitive)
+        return lhs == rhs
+    return series == condition
+
+
+def _match_sequence_condition(series: pd.Series, condition_values: list, case_sensitive: bool = False) -> pd.Series:
+    if len(condition_values) == 0:
+        return pd.Series(False, index=series.index)
+
+    if all(isinstance(v, str) for v in condition_values):
+        lhs = _normalise_series_for_text(series, case_sensitive=case_sensitive)
+        rhs_values = [_casefold_if_needed(v, case_sensitive=case_sensitive) for v in condition_values]
+        return lhs.isin(rhs_values)
+
+    return series.isin(condition_values)
+
+
+def _numeric_compare_series(series: pd.Series, op: str, value: Any, context: str) -> pd.Series:
+    numeric_series = pd.to_numeric(series, errors='coerce')
+    try:
+        numeric_value = float(value)
+    except (TypeError, ValueError) as err:
+        raise ValueError(f"{context}: operator '{op}' expects a numeric value.") from err
+
+    if op == 'gt':
+        return numeric_series > numeric_value
+    if op == 'ge':
+        return numeric_series >= numeric_value
+    if op == 'lt':
+        return numeric_series < numeric_value
+    if op == 'le':
+        return numeric_series <= numeric_value
+    raise ValueError(f"{context}: unsupported numeric operator '{op}'.")
+
+
+def _build_filter_mask(series: pd.Series, condition: Any, case_sensitive: bool = False, context: str = 'data_filter') -> pd.Series:
+    if isinstance(condition, dict):
+        if len(condition) == 0:
+            raise ValueError(f'{context}: empty condition dict is not allowed.')
+
+        combined_mask = pd.Series(True, index=series.index)
+        for (raw_op, op_value) in condition.items():
+            op = str(raw_op).strip().lower()
+
+            if op in ('in', 'values'):
+                if not _is_data_filter_sequence(op_value):
+                    raise ValueError(f"{context}: operator '{raw_op}' expects a list-like value.")
+                part = _match_sequence_condition(
+                    series=series,
+                    condition_values=list(op_value),
+                    case_sensitive=case_sensitive,
+                )
+            elif op == 'between':
+                if not _is_data_filter_sequence(op_value) or len(list(op_value)) != 2:
+                    raise ValueError(f"{context}: operator 'between' expects two values [min, max].")
+                (lo, hi) = list(op_value)
+                lo_num = pd.to_numeric(pd.Series([lo]), errors='coerce').iloc[0]
+                hi_num = pd.to_numeric(pd.Series([hi]), errors='coerce').iloc[0]
+                if pd.notna(lo_num) and pd.notna(hi_num):
+                    numeric_series = pd.to_numeric(series, errors='coerce')
+                    part = numeric_series.between(float(lo_num), float(hi_num), inclusive='both')
+                else:
+                    part = series.between(lo, hi, inclusive='both')
+            elif op in ('gt', 'ge', 'lt', 'le'):
+                part = _numeric_compare_series(series=series, op=op, value=op_value, context=context)
+            elif op in ('eq', 'ne'):
+                part = _match_scalar_condition(series=series, condition=op_value, case_sensitive=case_sensitive)
+                if op == 'ne':
+                    part = ~part
+            elif op == 'contains':
+                values = [op_value] if isinstance(op_value, str) else list(op_value) if _is_data_filter_sequence(op_value) else None
+                if values is None:
+                    raise ValueError(f"{context}: operator 'contains' expects a string or list of strings.")
+                part = pd.Series(False, index=series.index)
+                lhs = series.astype(str)
+                for token in values:
+                    if not isinstance(token, str):
+                        raise ValueError(f"{context}: operator 'contains' only supports string tokens.")
+                    part |= lhs.str.contains(token, case=case_sensitive, regex=False, na=False)
+            elif op == 'regex':
+                if not isinstance(op_value, str):
+                    raise ValueError(f"{context}: operator 'regex' expects a pattern string.")
+                part = series.astype(str).str.contains(op_value, case=case_sensitive, regex=True, na=False)
+            elif op == 'isna':
+                part = series.isna() if bool(op_value) else ~series.isna()
+            else:
+                raise ValueError(
+                    f"{context}: unsupported operator '{raw_op}'. Supported operators are: "
+                    "in, values, between, gt, ge, lt, le, eq, ne, contains, regex, isna."
+                )
+
+            combined_mask &= part.fillna(False)
+
+        return combined_mask
+
+    if _is_data_filter_sequence(condition):
+        return _match_sequence_condition(series=series, condition_values=list(condition), case_sensitive=case_sensitive)
+
+    return _match_scalar_condition(series=series, condition=condition, case_sensitive=case_sensitive)
+
+
+def apply_data_filter(
+        df: pd.DataFrame,
+        data_filter: Optional[dict] = None,
+        case_sensitive: bool = False,
+        strict: bool = True,
+        on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+        context: str = 'apply_data_filter',
+) -> tuple[pd.DataFrame, dict]:
+    """Apply include/exclude/query row filtering and return (filtered_df, report)."""
+    if on_empty not in DATA_FILTER_EMPTY_MODES:
+        raise ValueError(f"{context}: on_empty must be one of {DATA_FILTER_EMPTY_MODES}.")
+
+    filtered_df = df.copy()
+    rows_before = len(filtered_df)
+    report = {
+        'rows_before': rows_before,
+        'rows_after': rows_before,
+        'rows_removed': 0,
+        'applied_rules': [],
+        'missing_columns': [],
+    }
+
+    if data_filter is None:
+        return (filtered_df, report)
+
+    if not isinstance(data_filter, dict):
+        raise TypeError(f'{context}: data_filter must be a dict or None.')
+
+    allowed_keys = {'include', 'exclude', 'query'}
+    unknown_keys = [k for k in data_filter.keys() if k not in allowed_keys]
+    if unknown_keys:
+        raise ValueError(f"{context}: unsupported data_filter keys {unknown_keys}. Allowed keys: {sorted(allowed_keys)}.")
+
+    for block_name in ('include', 'exclude'):
+        block = data_filter.get(block_name, None)
+        if block is None:
+            continue
+        if not isinstance(block, dict):
+            raise TypeError(f"{context}: data_filter['{block_name}'] must be a dict.")
+
+        mask = pd.Series(True, index=filtered_df.index)
+        for (column, condition) in block.items():
+            if column not in filtered_df.columns:
+                missing_msg = (
+                    f"{context}: column '{column}' from data_filter['{block_name}'] was not found. "
+                    f'Available columns: {list(filtered_df.columns)}'
+                )
+                if strict:
+                    raise KeyError(missing_msg)
+                report['missing_columns'].append(column)
+                continue
+
+            column_mask = _build_filter_mask(
+                series=filtered_df[column],
+                condition=condition,
+                case_sensitive=case_sensitive,
+                context=f"{context} ({block_name}.{column})",
+            )
+
+            if block_name == 'include':
+                mask &= column_mask.fillna(False)
+            else:
+                mask &= ~column_mask.fillna(False)
+
+            report['applied_rules'].append(f'{block_name}:{column}')
+
+        filtered_df = filtered_df.loc[mask].copy()
+
+    queries = data_filter.get('query', None)
+    if queries is not None:
+        query_list = [queries] if isinstance(queries, str) else list(queries)
+        for query_expr in query_list:
+            if not isinstance(query_expr, str) or len(query_expr.strip()) == 0:
+                raise ValueError(f'{context}: each query expression must be a non-empty string.')
+            try:
+                filtered_df = filtered_df.query(query_expr, engine='python').copy()
+            except Exception as err:
+                raise ValueError(f"{context}: invalid query expression '{query_expr}'. {err}") from err
+            report['applied_rules'].append(f'query:{query_expr}')
+
+    rows_after = len(filtered_df)
+    report['rows_after'] = rows_after
+    report['rows_removed'] = rows_before - rows_after
+
+    if rows_after == 0:
+        empty_msg = f"{context}: filtering returned zero rows."
+        if on_empty == 'error':
+            raise ValueError(empty_msg)
+        if on_empty == 'warn':
+            print(f'[!] Warning: {empty_msg}')
+
+    return (filtered_df, report)
 
 
 def resolve_subplot_order(

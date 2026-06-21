@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Any, Dict, Literal, Optional, Union
-from accim.parametric_and_optimisation.utils import resolve_subplot_orders
+from accim.parametric_and_optimisation.utils import apply_data_filter, resolve_subplot_orders
 
 class AnalysisMixin:
 
@@ -1149,6 +1149,10 @@ class AnalysisMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> dict:
         """
         Runs Sensitivity Analysis separately for each EPW found in
@@ -1184,8 +1188,18 @@ class AnalysisMixin:
         import matplotlib.pyplot as plt
         if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
             raise ValueError('No parametric simulation results found. Run run_parametric_simulation before calling this method.')
+
+        (filtered_outputs, _) = apply_data_filter(
+            df=self.outputs_param_simulation,
+            data_filter=data_filter,
+            case_sensitive=data_filter_case_sensitive,
+            strict=data_filter_strict,
+            on_empty=data_filter_on_empty,
+            context='run_sensitivity_analysis_by_epw',
+        )
+
         os.makedirs(out_dir, exist_ok=True)
-        epw_labels = self.outputs_param_simulation['epw'].unique()
+        epw_labels = filtered_outputs['epw'].unique()
         results_by_epw = {}
         original_df = self.outputs_param_simulation
         for epw_label in epw_labels:
@@ -1193,7 +1207,7 @@ class AnalysisMixin:
             if raw_tag.lower().endswith('.epw'):
                 raw_tag = os.path.splitext(os.path.basename(raw_tag))[0]
             epw_tag = re.sub(r'[^A-Za-z0-9_.-]+', '_', raw_tag).strip('_') or 'unknown_epw'
-            self.outputs_param_simulation = original_df[original_df['epw'] == epw_label].copy()
+            self.outputs_param_simulation = filtered_outputs[filtered_outputs['epw'] == epw_label].copy()
             sa_results = self.run_sensitivity_analysis(
                 method=method,
                 calc_second_order=calc_second_order,

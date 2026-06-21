@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Integrated ordering support in subplot-producing methods of `PlottingMixin` (including hourly, parametric, categorical, MCDM, heatmap/contour/density, and pairwise matrix visualisations) and in `run_sensitivity_analysis_by_epw(...)` for output-panel ordering.
   - Added consistent validations and explicit errors for unsupported dimension requests, missing `custom` configuration for active dimensions, and invalid custom labels with available-value hints.
   - Added dedicated tests in `tests/parametric_and_optimisation/test_subplot_ordering.py` (unit + integration + error cases).
+- **Transversal Data Filtering for Tables and Visualisation**: Added a shared row-filter API to include/exclude/query simulation outputs before building tables or plots.
+  - Added reusable helper `apply_data_filter(...)` in `accim.parametric_and_optimisation.utils` with support for `include`, `exclude`, and `query` filters, case-sensitivity control, strict/non-strict missing-column behavior, and configurable empty-result handling.
+  - Added `get_filtered_results_table(...)` in `PlottingMixin` to produce filtered DataFrames for tabular review/export.
+  - Integrated filtering arguments across plotting methods (hourly, parametric, categorical, optimisation visualisations, and radar) and in `run_sensitivity_analysis_by_epw(...)`.
+  - Added tests in `tests/parametric_and_optimisation/test_data_filtering_api.py` for helper behavior, table filtering, plotting integration, and error paths.
 - **Area Normalization and Floor Area Configuration**: Extended `set_building_floor_area` and related normalisation workflows for multi-IDF studies.
   - Added `mode='air-conditioned'` to calculate floor area from zones served or controlled by HVAC-related IDF objects such as `ZoneControl:*`, `ZoneHVAC:*`, `ZoneHVAC:EquipmentConnections`, `HVACTemplate:Zone:*`, and `AirTerminal:*`. The alias `mode='air-condicioned'` is also accepted.
   - `zones_list` can now be either a global list applied to every IDF or a dictionary mapping each IDF to its own list of zones.

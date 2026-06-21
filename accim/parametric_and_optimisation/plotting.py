@@ -8,7 +8,7 @@ import matplotlib.cm as cm
 from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 import seaborn as sns
-from accim.parametric_and_optimisation.utils import resolve_subplot_orders
+from accim.parametric_and_optimisation.utils import apply_data_filter, resolve_subplot_orders
 
 class PlottingMixin:
 
@@ -37,6 +37,55 @@ class PlottingMixin:
         if df is None or df.empty:
             raise ValueError(f'No results found for {df_source}. Please run the simulation first.')
         return df.copy()
+
+    @staticmethod
+    def _apply_plot_data_filter(
+            df: pd.DataFrame,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            context: str = 'Plot data filter',
+    ) -> tuple[pd.DataFrame, dict]:
+        return apply_data_filter(
+            df=df,
+            data_filter=data_filter,
+            case_sensitive=data_filter_case_sensitive,
+            strict=data_filter_strict,
+            on_empty=data_filter_on_empty,
+            context=context,
+        )
+
+    def get_filtered_results_table(
+            self,
+            df_source: str = 'parametric',
+            data_filter: Optional[dict] = None,
+            columns: Optional[list] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+    ) -> pd.DataFrame:
+        """Return a filtered results table ready for display/export."""
+        df = self._get_plot_source_df(df_source=df_source)
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'get_filtered_results_table[{df_source}]',
+        )
+
+        if columns is not None:
+            missing_cols = [c for c in columns if c not in df.columns]
+            if missing_cols:
+                raise KeyError(
+                    f"Columns from 'columns' not found in dataframe: {missing_cols}. "
+                    f'Available columns: {list(df.columns)}'
+                )
+            df = df[list(columns)].copy()
+
+        return df.reset_index(drop=True)
 
     def _normalise_plot_columns(self, df: pd.DataFrame, columns: list, normalize_per_m2: bool = False) -> tuple[pd.DataFrame, dict]:
         outputs_normalized = getattr(self, 'outputs_normalized', False)
@@ -150,6 +199,10 @@ class PlottingMixin:
             categorical_orders: dict = None,
             variable_col: str = 'variable',
             value_col: str = 'value',
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> pd.DataFrame:
         """
         Prepares an hourly dataframe for plotting by applying filters and a melt
@@ -159,6 +212,14 @@ class PlottingMixin:
         """
         df = self._get_plot_source_df(df_source=df_source)
         df = self._filter_epw_rows(df=df, epw_filter=epw_filter)
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'prepare_hourly_long_df[{df_source}]',
+        )
 
         if df.empty:
             raise ValueError('No hourly rows available after applying filters.')
@@ -266,6 +327,10 @@ class PlottingMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ):
         """
         Creates faceted hourly scatter plots, using RMOT on x-axis by default.
@@ -279,9 +344,21 @@ class PlottingMixin:
                 epw_filter=epw_filter,
                 categorical_orders=categorical_orders,
                 rmot_pattern=rmot_pattern,
+                data_filter=data_filter,
+                data_filter_case_sensitive=data_filter_case_sensitive,
+                data_filter_strict=data_filter_strict,
+                data_filter_on_empty=data_filter_on_empty,
             )
         else:
             df_plot = self._filter_epw_rows(df=df_long.copy(), epw_filter=epw_filter)
+            (df_plot, _) = self._apply_plot_data_filter(
+                df=df_plot,
+                data_filter=data_filter,
+                data_filter_case_sensitive=data_filter_case_sensitive,
+                data_filter_strict=data_filter_strict,
+                data_filter_on_empty=data_filter_on_empty,
+                context='plot_hourly_scatter[df_long]',
+            )
 
         if df_plot.empty:
             raise ValueError('No rows available for hourly scatter plotting.')
@@ -394,6 +471,10 @@ class PlottingMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ):
         """
         Creates faceted hourly line plots (time series by default).
@@ -406,9 +487,21 @@ class PlottingMixin:
                 value_tokens=value_tokens,
                 epw_filter=epw_filter,
                 categorical_orders=categorical_orders,
+                data_filter=data_filter,
+                data_filter_case_sensitive=data_filter_case_sensitive,
+                data_filter_strict=data_filter_strict,
+                data_filter_on_empty=data_filter_on_empty,
             )
         else:
             df_plot = self._filter_epw_rows(df=df_long.copy(), epw_filter=epw_filter)
+            (df_plot, _) = self._apply_plot_data_filter(
+                df=df_plot,
+                data_filter=data_filter,
+                data_filter_case_sensitive=data_filter_case_sensitive,
+                data_filter_strict=data_filter_strict,
+                data_filter_on_empty=data_filter_on_empty,
+                context='plot_hourly_lines[df_long]',
+            )
 
         if df_plot.empty:
             raise ValueError('No rows available for hourly line plotting.')
@@ -505,6 +598,10 @@ class PlottingMixin:
         subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
         subplot_order_custom: Optional[dict] = None,
         subplot_order_case_sensitive: bool = False,
+        data_filter: Optional[dict] = None,
+        data_filter_case_sensitive: bool = False,
+        data_filter_strict: bool = True,
+        data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> pd.DataFrame:
         """
         Identifies the best compromise solution(s) from the Pareto front for
@@ -540,6 +637,7 @@ class PlottingMixin:
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('MCDM best compromise solutions can only be evaluated after an optimisation simulation. Please ensure you run run_optimisation() first.')
         import matplotlib.pyplot as plt
+        area_attr = getattr(self, 'building_floor_area', None)
         if getattr(self, 'outputs_normalized', False):
             if normalize_per_m2:
                 print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
@@ -559,6 +657,18 @@ class PlottingMixin:
             raise ValueError('No optimisation results found. Run run_optimisation (or load via load_outputs_optimisation) first.')
         os.makedirs(out_dir, exist_ok=True)
         original_optim = self.outputs_optimisation
+        filtered_optim = original_optim.copy()
+        (filtered_optim, _) = self._apply_plot_data_filter(
+            df=filtered_optim,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context='plot_best_compromise_solutions',
+        )
+        if filtered_optim.empty:
+            raise ValueError('No optimisation rows available for MCDM plotting after filtering.')
+
         attrs = getattr(original_optim, 'attrs', {}) if hasattr(original_optim, 'attrs') else {}
         if separate_by_epw is None:
             separate_by_epw = attrs.get('pareto_separate_by_epw', True)
@@ -627,7 +737,7 @@ class PlottingMixin:
         resolved_outputs = output_names
         if hasattr(self, '_resolve_output_columns'):
             try:
-                resolved_outputs = self._resolve_output_columns(output_names, list(original_optim.columns), strict=False)
+                resolved_outputs = self._resolve_output_columns(output_names, list(filtered_optim.columns), strict=False)
             except Exception:
                 resolved_outputs = output_names
         if len(resolved_outputs) == 0:
@@ -638,7 +748,7 @@ class PlottingMixin:
         else:
             cooling_col = heating_col
 
-        group_specs = _build_group_specs(original_optim)
+        group_specs = _build_group_specs(filtered_optim)
         subplot_orders = self._resolve_subplot_dimension_orders(
             dimension_values={'col': [spec['label'] for spec in group_specs]},
             subplot_order_mode=subplot_order_mode,
@@ -714,7 +824,17 @@ class PlottingMixin:
         print(f'  MCDM plot saved: {fname_plot}')
         return mcdm_df
 
-    def plot_pareto_front(self, color_by: str=None, size_by: str=None, out_dir: str='.', normalize_per_m2: bool=False):
+    def plot_pareto_front(
+            self,
+            color_by: str=None,
+            size_by: str=None,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+    ):
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('This method can only be run after an optimisation simulation. Ensure you run run_optimisation() first.')
@@ -731,6 +851,7 @@ class PlottingMixin:
         from matplotlib.colors import Normalize
         from matplotlib.lines import Line2D
         import pandas as pd
+        area_attr = getattr(self, 'building_floor_area', None)
         if getattr(self, 'outputs_normalized', False):
             if normalize_per_m2:
                 print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
@@ -748,6 +869,16 @@ class PlottingMixin:
                     normalize_per_m2 = False
         os.makedirs(out_dir, exist_ok=True)
         df = self.outputs_optimisation.copy()
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context='plot_pareto_front',
+        )
+        if df.empty:
+            raise ValueError('No optimisation rows available for Pareto plotting after filtering.')
         epw_labels = df['epw'].unique()
         heating_col = next((c for c in df.columns if 'Heating:Electricity' in c), None)
         cooling_col = next((c for c in df.columns if 'Cooling:Electricity' in c), None)
@@ -836,7 +967,14 @@ class PlottingMixin:
             plt.close()
             print('  Pareto front plot saved: ' + fname_pareto)
 
-    def plot_parallel_coordinates(self, out_dir: str='.'):
+    def plot_parallel_coordinates(
+            self,
+            out_dir: str='.',
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+    ):
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
@@ -850,6 +988,16 @@ class PlottingMixin:
         from matplotlib.lines import Line2D
         os.makedirs(out_dir, exist_ok=True)
         df = self.outputs_optimisation.copy()
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context='plot_parallel_coordinates',
+        )
+        if df.empty:
+            raise ValueError('No optimisation rows available for parallel coordinates plotting after filtering.')
         epw_labels = df['epw'].unique()
         param_cols = self.problem.names('inputs')
         df['pareto_str'] = df['pareto-optimal'].map({True: 'Pareto-optimal', False: 'Dominated'})
@@ -889,6 +1037,10 @@ class PlottingMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ):
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
@@ -902,6 +1054,7 @@ class PlottingMixin:
         import matplotlib.pyplot as plt
         import matplotlib.cm as cm
         from matplotlib.colors import Normalize
+        area_attr = getattr(self, 'building_floor_area', None)
         if getattr(self, 'outputs_normalized', False):
             if normalize_per_m2:
                 print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
@@ -924,6 +1077,16 @@ class PlottingMixin:
             return
         os.makedirs(out_dir, exist_ok=True)
         df = self.outputs_optimisation.copy()
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context='plot_pairwise_scatter_matrix',
+        )
+        if df.empty:
+            raise ValueError('No optimisation rows available for pairwise scatter matrix after filtering.')
         heating_col = next((c for c in df.columns if 'Heating:Electricity' in c), None)
         cooling_col = next((c for c in df.columns if 'Cooling:Electricity' in c), None)
         if heating_col and cooling_col:
@@ -1000,6 +1163,10 @@ class PlottingMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ):
         """
         Generates categorical boxplots from simulation results, automatically melting
@@ -1036,17 +1203,15 @@ class PlottingMixin:
             print('[!] Seaborn is required for plot_categorical_boxplots. Please pip install seaborn.')
             return
 
-        if df_source == 'parametric':
-            df = getattr(self, 'outputs_param_simulation', None)
-        elif df_source == 'optimisation':
-            df = getattr(self, 'outputs_optimisation', None)
-        else:
-            raise ValueError("df_source must be 'parametric' or 'optimisation'")
-
-        if df is None or df.empty:
-            raise ValueError(f"No results found for {df_source}. Please run the simulation first.")
-
-        df = df.copy()
+        df = self._get_plot_source_df(df_source=df_source)
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_categorical_boxplots[{df_source}]',
+        )
         
         if getattr(self, 'outputs_normalized', False):
             if normalize_per_m2:
@@ -1292,6 +1457,10 @@ class PlottingMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ):
         """
         Generates a scatter plot (optionally faceted) for parametric/optimisation outputs.
@@ -1334,6 +1503,15 @@ class PlottingMixin:
         missing_optional = [c for c in optional_cols if c and c not in df.columns]
         if missing_optional:
             raise KeyError(f'Missing optional columns for scatter plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_scatter[{df_source}]',
+        )
 
         (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y], normalize_per_m2=normalize_per_m2)
 
@@ -1445,6 +1623,10 @@ class PlottingMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> dict:
         """
         Generates one or more line plots to inspect trends against a swept parameter.
@@ -1494,6 +1676,15 @@ class PlottingMixin:
         missing_optional = [c for c in optional_cols if c and c not in df.columns]
         if missing_optional:
             raise KeyError(f'Missing optional columns for line plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_lines[{df_source}]',
+        )
 
         (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2)
         subplot_orders = self._resolve_subplot_dimension_orders(
@@ -1586,6 +1777,10 @@ class PlottingMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> str:
         """
         Creates one or more heatmaps from (x, y) parameter combinations and z values.
@@ -1606,6 +1801,15 @@ class PlottingMixin:
         missing_optional = [c for c in optional_cols if c and c not in df.columns]
         if missing_optional:
             raise KeyError(f'Missing optional columns for heatmap: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_heatmap[{df_source}]',
+        )
 
         (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y, z], normalize_per_m2=normalize_per_m2)
         os.makedirs(out_dir, exist_ok=True)
@@ -1715,6 +1919,10 @@ class PlottingMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> str:
         """
         Creates contour (or filled contour) plots from numeric x, y, z columns.
@@ -1733,6 +1941,15 @@ class PlottingMixin:
         missing_optional = [c for c in optional_cols if c and c not in df.columns]
         if missing_optional:
             raise KeyError(f'Missing optional columns for contour plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_contour[{df_source}]',
+        )
 
         (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y, z], normalize_per_m2=normalize_per_m2)
         os.makedirs(out_dir, exist_ok=True)
@@ -1848,6 +2065,10 @@ class PlottingMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> dict:
         """
         Creates categorical distribution plots (violin, boxen, or box) for one or more outputs.
@@ -1881,6 +2102,15 @@ class PlottingMixin:
         missing_optional = [c for c in optional_cols if c and c not in df.columns]
         if missing_optional:
             raise KeyError(f'Missing optional columns for distribution plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_distributions[{df_source}]',
+        )
 
         (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2)
         subplot_orders = self._resolve_subplot_dimension_orders(
@@ -1965,6 +2195,10 @@ class PlottingMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> str:
         """
         Creates an ECDF plot to compare cumulative distributions across scenarios.
@@ -1985,6 +2219,15 @@ class PlottingMixin:
         missing_optional = [c for c in optional_cols if c and c not in df.columns]
         if missing_optional:
             raise KeyError(f'Missing optional columns for ECDF plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_ecdf[{df_source}]',
+        )
 
         (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x], normalize_per_m2=normalize_per_m2)
         subplot_orders = self._resolve_subplot_dimension_orders(
@@ -2061,6 +2304,10 @@ class PlottingMixin:
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> str:
         """
         Creates 2D density visualizations using either hexbin or KDE.
@@ -2089,6 +2336,15 @@ class PlottingMixin:
         missing_optional = [c for c in optional_cols if c and c not in df.columns]
         if missing_optional:
             raise KeyError(f'Missing optional columns for 2D density plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_density_2d[{df_source}]',
+        )
 
         (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y], normalize_per_m2=normalize_per_m2)
         os.makedirs(out_dir, exist_ok=True)
@@ -2207,11 +2463,23 @@ class PlottingMixin:
             normalize_per_m2: bool=False,
             figsize: tuple=(8, 8),
             fill_alpha: float=0.12,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> pd.DataFrame:
         """
         Creates a radar chart from aggregated groups and returns the aggregated values.
         """
         df = self._get_plot_source_df(df_source=df_source)
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_radar[{df_source}]',
+        )
         if group_by not in df.columns:
             raise KeyError(f"Column '{group_by}' not found in dataframe.")
 
