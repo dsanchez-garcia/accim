@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Any, Dict, Literal, Optional, Union
+from accim.parametric_and_optimisation.utils import resolve_subplot_orders
 
 class AnalysisMixin:
 
@@ -1145,6 +1146,9 @@ class AnalysisMixin:
             seed: Optional[int] = None,
             scaled: bool = False,
             num_levels: int = 4,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
     ) -> dict:
         """
         Runs Sensitivity Analysis separately for each EPW found in
@@ -1231,6 +1235,17 @@ class AnalysisMixin:
             sa_df.to_csv(fname_csv, index=False)
             print(f'  SA ({method}) results saved: {fname_csv}')
             output_names_sa = list(sa_results.keys())
+            subplot_orders = resolve_subplot_orders(
+                dimension_values={'col': output_names_sa},
+                mode=subplot_order_mode,
+                custom=subplot_order_custom,
+                case_sensitive=subplot_order_case_sensitive,
+                context='run_sensitivity_analysis_by_epw',
+            )
+            if 'col' in subplot_orders:
+                order_lookup = {label: idx for (idx, label) in enumerate(subplot_orders['col'])}
+                output_names_sa = sorted(output_names_sa, key=lambda name: order_lookup[name])
+
             n_outputs = len(output_names_sa)
             (fig, axes) = plt.subplots(1, n_outputs, figsize=(6 * n_outputs, 5), squeeze=False)
             width = 0.35

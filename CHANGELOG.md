@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Configurable Subplot Ordering Across Plotting/Analysis**: Added a shared subplot-ordering API to control panel/facet order in plotting methods that use `FacetGrid`, `catplot`/`relplot`/`displot`, `PairGrid`, and `matplotlib` subplot grids.
+  - Added common arguments with backward-compatible defaults: `subplot_order_mode=('auto'|'alphabetical'|'ascending'|'descending'|'custom')`, `subplot_order_custom`, and `subplot_order_case_sensitive`.
+  - Added reusable helpers in `accim.parametric_and_optimisation.utils`: `resolve_subplot_order(...)` and `resolve_subplot_orders(...)`.
+  - Integrated ordering support in subplot-producing methods of `PlottingMixin` (including hourly, parametric, categorical, MCDM, heatmap/contour/density, and pairwise matrix visualisations) and in `run_sensitivity_analysis_by_epw(...)` for output-panel ordering.
+  - Added consistent validations and explicit errors for unsupported dimension requests, missing `custom` configuration for active dimensions, and invalid custom labels with available-value hints.
+  - Added dedicated tests in `tests/parametric_and_optimisation/test_subplot_ordering.py` (unit + integration + error cases).
 - **Area Normalization and Floor Area Configuration**: Extended `set_building_floor_area` and related normalisation workflows for multi-IDF studies.
   - Added `mode='air-conditioned'` to calculate floor area from zones served or controlled by HVAC-related IDF objects such as `ZoneControl:*`, `ZoneHVAC:*`, `ZoneHVAC:EquipmentConnections`, `HVACTemplate:Zone:*`, and `AirTerminal:*`. The alias `mode='air-condicioned'` is also accepted.
   - `zones_list` can now be either a global list applied to every IDF or a dictionary mapping each IDF to its own list of zones.

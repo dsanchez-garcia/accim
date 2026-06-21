@@ -15,6 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
+from typing import Literal, Optional
 
 
 def descriptor_has_options(values):
@@ -145,3 +146,163 @@ def make_all_combinations(parameters_values_dict: dict) -> pd.DataFrame:
     combinations = list(product(*parameters_values_dict.values()))
     parameters_values_df = pd.DataFrame(combinations, columns=parameters_values_dict.keys())
     return parameters_values_df
+
+
+SUBPLOT_ORDER_MODES = ('auto', 'alphabetical', 'ascending', 'descending', 'custom')
+
+
+def _subplot_sort_key(value, case_sensitive: bool = False):
+    text = str(value)
+    return text if case_sensitive else text.casefold()
+
+
+def _subplot_custom_match_key(value, case_sensitive: bool = False):
+    if isinstance(value, str):
+        return value if case_sensitive else value.casefold()
+    return value
+
+
+def _can_sort_subplot_values_numerically(values: list) -> bool:
+    if len(values) == 0:
+        return False
+    for value in values:
+        if value is None:
+            return False
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            return False
+        if np.isnan(numeric_value):
+            return False
+    return True
+
+
+def resolve_subplot_order(
+        values: list,
+        mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+        custom_values: Optional[list] = None,
+        case_sensitive: bool = False,
+) -> list:
+    """Resolve ordered subplot labels for one subplot dimension."""
+    values_list = list(values)
+
+    if mode not in SUBPLOT_ORDER_MODES:
+        raise ValueError(f"subplot_order_mode must be one of: {', '.join(SUBPLOT_ORDER_MODES)}")
+
+    if mode == 'auto':
+        return values_list
+
+    if mode == 'alphabetical':
+        return sorted(values_list, key=lambda x: _subplot_sort_key(x, case_sensitive=case_sensitive))
+
+    if mode in ('ascending', 'descending'):
+        reverse = mode == 'descending'
+        if _can_sort_subplot_values_numerically(values_list):
+            return sorted(values_list, key=lambda x: float(x), reverse=reverse)
+        return sorted(
+            values_list,
+            key=lambda x: _subplot_sort_key(x, case_sensitive=case_sensitive),
+            reverse=reverse,
+        )
+
+    if custom_values is None:
+        raise ValueError("subplot_order_mode='custom' requires custom values for the active subplot dimension.")
+
+    custom_list = list(custom_values)
+    available_by_key = {}
+    for value in values_list:
+        key = _subplot_custom_match_key(value, case_sensitive=case_sensitive)
+        if key not in available_by_key:
+            available_by_key[key] = value
+
+    invalid_values = []
+    seen_keys = set()
+    ordered_values = []
+    for value in custom_list:
+        key = _subplot_custom_match_key(value, case_sensitive=case_sensitive)
+        if key not in available_by_key:
+            invalid_values.append(value)
+            continue
+        if key in seen_keys:
+            continue
+        ordered_values.append(available_by_key[key])
+        seen_keys.add(key)
+
+    if invalid_values:
+        raise ValueError(
+            'Custom subplot order contains values that are not present in the data. '
+            f'Invalid values: {invalid_values}. Available values: {values_list}'
+        )
+
+    # Preserve any remaining categories not explicitly listed in custom_values.
+    for value in values_list:
+        key = _subplot_custom_match_key(value, case_sensitive=case_sensitive)
+        if key not in seen_keys:
+            ordered_values.append(value)
+            seen_keys.add(key)
+
+    return ordered_values
+
+
+def resolve_subplot_orders(
+        dimension_values: dict,
+        mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+        custom: Optional[dict] = None,
+        case_sensitive: bool = False,
+        context: str = 'Subplot ordering',
+) -> dict:
+    """Resolve ordered subplot labels for multiple subplot dimensions (e.g., row/col)."""
+    if mode not in SUBPLOT_ORDER_MODES:
+        raise ValueError(f"subplot_order_mode must be one of: {', '.join(SUBPLOT_ORDER_MODES)}")
+
+    if custom is not None and not isinstance(custom, dict):
+        raise TypeError('subplot_order_custom must be a dictionary or None.')
+
+    active_dimensions = {
+        dim_name: list(values)
+        for (dim_name, values) in (dimension_values or {}).items()
+        if values is not None
+    }
+
+    if mode != 'auto' and len(active_dimensions) == 0:
+        raise ValueError(
+            f"{context}: subplot_order_mode='{mode}' was requested but there are no active subplot dimensions."
+        )
+
+    if mode != 'custom' and custom is not None:
+        raise ValueError("subplot_order_custom can only be used when subplot_order_mode='custom'.")
+
+    if mode == 'custom':
+        if custom is None:
+            raise ValueError("subplot_order_mode='custom' requires subplot_order_custom.")
+
+        missing_dims = [dim for dim in active_dimensions.keys() if dim not in custom]
+        if missing_dims:
+            raise ValueError(
+                f"{context}: subplot_order_mode='custom' requires explicit order for active dimensions {missing_dims}. "
+                f'Active dimensions: {list(active_dimensions.keys())}'
+            )
+
+        invalid_dims = [dim for dim in custom.keys() if dim not in active_dimensions]
+        if invalid_dims:
+            raise ValueError(
+                f"{context}: subplot_order_custom includes dimensions not active in this plot: {invalid_dims}. "
+                f'Active dimensions: {list(active_dimensions.keys())}'
+            )
+
+    resolved = {}
+    for (dim_name, values) in active_dimensions.items():
+        try:
+            resolved[dim_name] = resolve_subplot_order(
+                values=values,
+                mode=mode,
+                custom_values=custom.get(dim_name) if mode == 'custom' else None,
+                case_sensitive=case_sensitive,
+            )
+        except Exception as err:
+            raise ValueError(
+                f"{context}: invalid subplot order for dimension '{dim_name}'. {err}"
+            ) from err
+
+    return resolved
+

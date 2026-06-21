@@ -1,5 +1,6 @@
 import os
 import re
+from typing import Literal, Optional
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -7,6 +8,7 @@ import matplotlib.cm as cm
 from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 import seaborn as sns
+from accim.parametric_and_optimisation.utils import resolve_subplot_orders
 
 class PlottingMixin:
 
@@ -25,9 +27,12 @@ class PlottingMixin:
         source_map = {
             'parametric': 'outputs_param_simulation',
             'optimisation': 'outputs_optimisation',
+            'parametric_hourly': 'outputs_param_simulation_hourly',
+            'optimisation_hourly': 'outputs_optimisation_hourly',
         }
         if df_source not in source_map:
-            raise ValueError("df_source must be 'parametric' or 'optimisation'")
+            allowed = ', '.join([f"'{k}'" for k in source_map.keys()])
+            raise ValueError(f'df_source must be one of: {allowed}')
         df = getattr(self, source_map[df_source], None)
         if df is None or df.empty:
             raise ValueError(f'No results found for {df_source}. Please run the simulation first.')
@@ -80,6 +85,416 @@ class PlottingMixin:
 
         return (df, unit_map)
 
+    @staticmethod
+    def _filter_epw_rows(df: pd.DataFrame, epw_filter=None) -> pd.DataFrame:
+        if epw_filter is None:
+            return df.copy()
+        if 'epw' not in df.columns:
+            raise KeyError("Column 'epw' is required when epw_filter is used.")
+        filters = [epw_filter] if isinstance(epw_filter, str) else list(epw_filter)
+        filters = [str(f).strip().lower() for f in filters if str(f).strip()]
+        if len(filters) == 0:
+            return df.copy()
+        mask = df['epw'].astype(str).str.lower().apply(lambda x: any((flt in x for flt in filters)))
+        return df.loc[mask].copy()
+
+    @staticmethod
+    def _find_first_column_contains(columns: list, pattern: str):
+        if pattern is None:
+            return None
+        pattern_l = str(pattern).lower()
+        for col in columns:
+            if pattern_l in str(col).lower():
+                return col
+        return None
+
+    @staticmethod
+    def _collect_subplot_dimension_values(df: pd.DataFrame, row: str = None, col: str = None) -> dict:
+        values = {}
+        if row is not None and row in df.columns:
+            values['row'] = list(pd.unique(df[row].dropna()))
+        if col is not None and col in df.columns:
+            values['col'] = list(pd.unique(df[col].dropna()))
+        return values
+
+    @staticmethod
+    def _resolve_subplot_dimension_orders(
+            dimension_values: dict,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            context: str = 'Subplot ordering',
+    ) -> dict:
+        resolved_orders = resolve_subplot_orders(
+            dimension_values=dimension_values,
+            mode=subplot_order_mode,
+            custom=subplot_order_custom,
+            case_sensitive=subplot_order_case_sensitive,
+            context=context,
+        )
+        if subplot_order_mode == 'auto':
+            return {}
+        return resolved_orders
+
+    def prepare_hourly_long_df(
+            self,
+            df_source: str = 'parametric_hourly',
+            id_vars: list = None,
+            value_vars: list = None,
+            value_tokens: list = None,
+            epw_filter=None,
+            rmot_pattern: str = 'Running Average',
+            drop_constant_columns: bool = True,
+            drop_hour_column: bool = True,
+            datetime_col: str = 'datetime',
+            categorical_orders: dict = None,
+            variable_col: str = 'variable',
+            value_col: str = 'value',
+    ) -> pd.DataFrame:
+        """
+        Prepares an hourly dataframe for plotting by applying filters and a melt
+        transformation into long format.
+
+        This method is designed to replace repetitive notebook preprocessing code.
+        """
+        df = self._get_plot_source_df(df_source=df_source)
+        df = self._filter_epw_rows(df=df, epw_filter=epw_filter)
+
+        if df.empty:
+            raise ValueError('No hourly rows available after applying filters.')
+
+        if datetime_col in df.columns:
+            df[datetime_col] = pd.to_datetime(df[datetime_col], errors='coerce')
+
+        rmot_col = self._find_first_column_contains(columns=list(df.columns), pattern=rmot_pattern)
+
+        if id_vars is None:
+            default_id_vars = [datetime_col, 'CustAST_m', 'CustAST_n', 'epw']
+            if rmot_col is not None:
+                default_id_vars.append(rmot_col)
+            id_vars = [c for c in default_id_vars if c in df.columns]
+        else:
+            missing_id = [c for c in id_vars if c not in df.columns]
+            if missing_id:
+                raise KeyError(f'Missing id_vars columns in hourly dataframe: {missing_id}')
+
+        if drop_hour_column and 'hour' in df.columns and 'hour' not in id_vars:
+            df = df.drop(columns=['hour'])
+
+        if drop_constant_columns:
+            protected = set(id_vars)
+            if value_vars is not None:
+                protected.update(value_vars)
+            cols_to_drop = [
+                c for c in df.columns
+                if c not in protected and df[c].nunique(dropna=False) <= 1
+            ]
+            if len(cols_to_drop) > 0:
+                df = df.drop(columns=cols_to_drop)
+
+        if categorical_orders is not None:
+            for (cat_col, cat_order) in categorical_orders.items():
+                if cat_col in df.columns:
+                    df[cat_col] = pd.Categorical(df[cat_col], categories=list(cat_order), ordered=True)
+
+        if value_vars is None:
+            if value_tokens is None:
+                value_tokens = [
+                    'Zone Operative Temperature',
+                    'Setpoint Temperature_No Tolerance',
+                    'Zone Thermal Comfort Fanger Model PMV',
+                ]
+            candidate_cols = [c for c in df.columns if c not in id_vars]
+            lowered_tokens = [str(token).lower() for token in value_tokens]
+            value_vars = [
+                c for c in candidate_cols
+                if any((token in str(c).lower() for token in lowered_tokens))
+            ]
+            if len(value_vars) == 0:
+                value_vars = [c for c in candidate_cols if pd.api.types.is_numeric_dtype(df[c])]
+        else:
+            missing_values = [c for c in value_vars if c not in df.columns]
+            if missing_values:
+                raise KeyError(f'Missing value_vars columns in hourly dataframe: {missing_values}')
+
+        if len(value_vars) == 0:
+            raise ValueError('No hourly value columns found for melt(). Use value_vars or value_tokens.')
+
+        df_long = (
+            df.melt(
+                id_vars=id_vars,
+                value_vars=value_vars,
+                var_name=variable_col,
+                value_name=value_col,
+            )
+            .dropna(subset=[value_col])
+            .reset_index(drop=True)
+        )
+
+        if df_long.empty:
+            raise ValueError('Hourly long dataframe is empty after melt/dropna.')
+
+        return df_long
+
+    def plot_hourly_scatter(
+            self,
+            df_long: pd.DataFrame = None,
+            df_source: str = 'parametric_hourly',
+            x: str = None,
+            y: str = 'value',
+            hue: str = 'variable',
+            row: str = 'CustAST_m',
+            col: str = 'CustAST_n',
+            epw_filter=None,
+            id_vars: list = None,
+            value_vars: list = None,
+            value_tokens: list = None,
+            categorical_orders: dict = None,
+            rmot_pattern: str = 'Running Average',
+            x_label: str = None,
+            y_label: str = None,
+            out_dir: str = '.',
+            filename: str = None,
+            height: float = 3.2,
+            aspect: float = 1.25,
+            marker_size: float = 1.0,
+            marker_alpha: float = None,
+            legend_loc: str = 'upper center',
+            legend_bbox_to_anchor: tuple = (0.5, 0),
+            facet_kws: dict = None,
+            scatter_kws: dict = None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+    ):
+        """
+        Creates faceted hourly scatter plots, using RMOT on x-axis by default.
+        """
+        if df_long is None:
+            df_plot = self.prepare_hourly_long_df(
+                df_source=df_source,
+                id_vars=id_vars,
+                value_vars=value_vars,
+                value_tokens=value_tokens,
+                epw_filter=epw_filter,
+                categorical_orders=categorical_orders,
+                rmot_pattern=rmot_pattern,
+            )
+        else:
+            df_plot = self._filter_epw_rows(df=df_long.copy(), epw_filter=epw_filter)
+
+        if df_plot.empty:
+            raise ValueError('No rows available for hourly scatter plotting.')
+
+        if x is None:
+            x = self._find_first_column_contains(columns=list(df_plot.columns), pattern=rmot_pattern)
+            if x is None:
+                raise ValueError('x was not provided and no RMOT-like column was found. Pass x explicitly.')
+
+        if row is not None and row not in df_plot.columns:
+            row = None
+        if col is not None and col not in df_plot.columns:
+            col = None
+        if hue is not None and hue not in df_plot.columns:
+            hue = None
+
+        required_cols = [x, y]
+        missing = [c for c in required_cols if c not in df_plot.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for hourly scatter: {missing}')
+
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df_plot, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_hourly_scatter',
+        )
+
+        grid_kwargs = {
+            'data': df_plot,
+            'row': row,
+            'col': col,
+            'height': height,
+            'aspect': aspect,
+        }
+        if facet_kws is not None:
+            grid_kwargs.update(dict(facet_kws))
+        if 'row' in subplot_orders:
+            grid_kwargs['row_order'] = subplot_orders['row']
+        if 'col' in subplot_orders:
+            grid_kwargs['col_order'] = subplot_orders['col']
+        g = sns.FacetGrid(**grid_kwargs)
+
+        plot_kwargs = {'x': x, 'y': y}
+        if hue is not None:
+            plot_kwargs['hue'] = hue
+        if scatter_kws is not None:
+            plot_kwargs.update(dict(scatter_kws))
+        if 's' not in plot_kwargs:
+            plot_kwargs['s'] = marker_size
+        if marker_alpha is not None and 'alpha' not in plot_kwargs:
+            plot_kwargs['alpha'] = marker_alpha
+
+        g.map_dataframe(sns.scatterplot, **plot_kwargs)
+        g.set_axis_labels(x_label or x, y_label or y)
+
+        if hue is not None:
+            g.add_legend(loc=legend_loc, bbox_to_anchor=legend_bbox_to_anchor)
+            if g._legend is not None and hasattr(g._legend, 'legend_handles'):
+                for handle in g._legend.legend_handles:
+                    if hasattr(handle, 'set_markersize'):
+                        handle.set_markersize(max(4.0, marker_size * 4.0))
+
+        g.figure.tight_layout()
+
+        os.makedirs(out_dir, exist_ok=True)
+        if filename is None:
+            if epw_filter is None:
+                epw_token = 'all_epw'
+            elif isinstance(epw_filter, str):
+                epw_token = self._safe_plot_token(epw_filter)
+            else:
+                epw_token = self._safe_plot_token('_'.join([str(v) for v in epw_filter]))
+            filename = f'plot_hourly_scatter_{self._safe_plot_token(x)}_{epw_token}.png'
+
+        output_path = os.path.join(out_dir, filename)
+        g.figure.savefig(output_path, dpi=300, bbox_inches='tight')
+        g.saved_path = output_path
+        print(f'  Hourly scatter plot saved: {output_path}')
+        plt.close(g.figure)
+        return g
+
+    def plot_hourly_lines(
+            self,
+            df_long: pd.DataFrame = None,
+            df_source: str = 'parametric_hourly',
+            x: str = 'datetime',
+            y: str = 'value',
+            hue: str = 'variable',
+            row: str = 'CustAST_m',
+            col: str = 'CustAST_n',
+            epw_filter=None,
+            id_vars: list = None,
+            value_vars: list = None,
+            value_tokens: list = None,
+            categorical_orders: dict = None,
+            x_label: str = None,
+            y_label: str = None,
+            estimator='mean',
+            errorbar=None,
+            out_dir: str = '.',
+            filename: str = None,
+            height: float = 3.2,
+            aspect: float = 1.25,
+            legend_loc: str = 'upper center',
+            legend_bbox_to_anchor: tuple = (0.5, 0),
+            facet_kws: dict = None,
+            line_kws: dict = None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+    ):
+        """
+        Creates faceted hourly line plots (time series by default).
+        """
+        if df_long is None:
+            df_plot = self.prepare_hourly_long_df(
+                df_source=df_source,
+                id_vars=id_vars,
+                value_vars=value_vars,
+                value_tokens=value_tokens,
+                epw_filter=epw_filter,
+                categorical_orders=categorical_orders,
+            )
+        else:
+            df_plot = self._filter_epw_rows(df=df_long.copy(), epw_filter=epw_filter)
+
+        if df_plot.empty:
+            raise ValueError('No rows available for hourly line plotting.')
+
+        if row is not None and row not in df_plot.columns:
+            row = None
+        if col is not None and col not in df_plot.columns:
+            col = None
+        if hue is not None and hue not in df_plot.columns:
+            hue = None
+
+        required_cols = [x, y]
+        missing = [c for c in required_cols if c not in df_plot.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for hourly line plot: {missing}')
+
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df_plot, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_hourly_lines',
+        )
+
+        grid_kwargs = {
+            'data': df_plot,
+            'row': row,
+            'col': col,
+            'height': height,
+            'aspect': aspect,
+        }
+        if facet_kws is not None:
+            grid_kwargs.update(dict(facet_kws))
+        if 'row' in subplot_orders:
+            grid_kwargs['row_order'] = subplot_orders['row']
+        if 'col' in subplot_orders:
+            grid_kwargs['col_order'] = subplot_orders['col']
+        g = sns.FacetGrid(**grid_kwargs)
+
+        plot_kwargs = {'x': x, 'y': y}
+        if hue is not None:
+            plot_kwargs['hue'] = hue
+        if estimator is not None:
+            plot_kwargs['estimator'] = estimator
+        if errorbar is not None:
+            plot_kwargs['errorbar'] = errorbar
+        if line_kws is not None:
+            plot_kwargs.update(dict(line_kws))
+
+        try:
+            g.map_dataframe(sns.lineplot, **plot_kwargs)
+        except TypeError as err:
+            if 'errorbar' not in str(err):
+                raise
+            plot_kwargs.pop('errorbar', None)
+            if errorbar is not None:
+                if isinstance(errorbar, tuple) and len(errorbar) == 2 and str(errorbar[0]).lower() == 'ci':
+                    plot_kwargs['ci'] = errorbar[1]
+                elif isinstance(errorbar, (int, float)):
+                    plot_kwargs['ci'] = errorbar
+            g.map_dataframe(sns.lineplot, **plot_kwargs)
+
+        g.set_axis_labels(x_label or x, y_label or y)
+
+        if hue is not None:
+            g.add_legend(loc=legend_loc, bbox_to_anchor=legend_bbox_to_anchor)
+
+        g.figure.tight_layout()
+
+        os.makedirs(out_dir, exist_ok=True)
+        if filename is None:
+            if epw_filter is None:
+                epw_token = 'all_epw'
+            elif isinstance(epw_filter, str):
+                epw_token = self._safe_plot_token(epw_filter)
+            else:
+                epw_token = self._safe_plot_token('_'.join([str(v) for v in epw_filter]))
+            filename = f'plot_hourly_lines_{self._safe_plot_token(x)}_{epw_token}.png'
+
+        output_path = os.path.join(out_dir, filename)
+        g.figure.savefig(output_path, dpi=300, bbox_inches='tight')
+        g.saved_path = output_path
+        print(f'  Hourly line plot saved: {output_path}')
+        plt.close(g.figure)
+        return g
+
     def plot_best_compromise_solutions(
         self,
         out_dir: str='.',
@@ -87,6 +502,9 @@ class PlottingMixin:
         normalize_per_m2: bool=False,
         separate_by_epw=None,
         separate_by_idf=None,
+        subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+        subplot_order_custom: Optional[dict] = None,
+        subplot_order_case_sensitive: bool = False,
     ) -> pd.DataFrame:
         """
         Identifies the best compromise solution(s) from the Pareto front for
@@ -221,6 +639,17 @@ class PlottingMixin:
             cooling_col = heating_col
 
         group_specs = _build_group_specs(original_optim)
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values={'col': [spec['label'] for spec in group_specs]},
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_best_compromise_solutions',
+        )
+        if 'col' in subplot_orders:
+            order_lookup = {label: idx for (idx, label) in enumerate(subplot_orders['col'])}
+            group_specs = sorted(group_specs, key=lambda spec: order_lookup[spec['label']])
+
         all_mcdm_rows = []
         try:
             for group_spec in group_specs:
@@ -453,7 +882,14 @@ class PlottingMixin:
             plt.close()
             print(f'  Parallel coordinates plot saved: {fname_parallel}')
 
-    def plot_pairwise_scatter_matrix(self, out_dir: str='.', normalize_per_m2: bool=False):
+    def plot_pairwise_scatter_matrix(
+            self,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+    ):
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
@@ -504,6 +940,16 @@ class PlottingMixin:
             df['Total_Energy'] = 0
         epw_labels = df['epw'].unique()
         param_cols = self.problem.names('inputs')
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values={'col': list(param_cols)},
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_pairwise_scatter_matrix',
+        )
+        if 'col' in subplot_orders:
+            param_cols = subplot_orders['col']
+
         for epw_label in epw_labels:
             epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
             pareto_epw = df[(df['epw'] == epw_label) & df['pareto-optimal']].copy()
@@ -536,7 +982,25 @@ class PlottingMixin:
             plt.close('all')
             print(f'  Pairwise scatter matrix saved: {fname_pair}')
 
-    def plot_categorical_boxplots(self, df_source: str='parametric', y_vars: list=None, col: str=None, row: str=None, hue: str=None, highlight_dict: dict=None, out_dir: str='.', normalize_per_m2: bool=False, sharey: bool=True, show_points: bool=True, height: float=4, aspect: float=1.2, figsize: tuple=None):
+    def plot_categorical_boxplots(
+            self,
+            df_source: str='parametric',
+            y_vars: list=None,
+            col: str=None,
+            row: str=None,
+            hue: str=None,
+            highlight_dict: dict=None,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            sharey: bool=True,
+            show_points: bool=True,
+            height: float=4,
+            aspect: float=1.2,
+            figsize: tuple=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+    ):
         """
         Generates categorical boxplots from simulation results, automatically melting
         specified energy columns (or detecting Heating/Cooling by default) so they share
@@ -646,23 +1110,36 @@ class PlottingMixin:
 
         order = df_melt['Energy_Type'].unique().tolist()
         hue_order = sorted(df_melt[hue].dropna().unique()) if hue else None
-
-        g = sns.catplot(
-            data=df_melt,
-            x='Energy_Type',
-            y='Energy_Value',
-            col=col,
-            row=row,
-            hue=hue,
-            kind='box',
-            order=order,
-            hue_order=hue_order,
-            sharex=True,
-            sharey=sharey,
-            palette='Set2',
-            height=height,
-            aspect=aspect
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df_melt, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_categorical_boxplots',
         )
+
+        catplot_kwargs = {
+            'data': df_melt,
+            'x': 'Energy_Type',
+            'y': 'Energy_Value',
+            'col': col,
+            'row': row,
+            'hue': hue,
+            'kind': 'box',
+            'order': order,
+            'hue_order': hue_order,
+            'sharex': True,
+            'sharey': sharey,
+            'palette': 'Set2',
+            'height': height,
+            'aspect': aspect,
+        }
+        if 'row' in subplot_orders:
+            catplot_kwargs['row_order'] = subplot_orders['row']
+        if 'col' in subplot_orders:
+            catplot_kwargs['col_order'] = subplot_orders['col']
+
+        g = sns.catplot(**catplot_kwargs)
 
         # Apply explicit figsize override if requested
         if figsize is not None:
@@ -812,6 +1289,9 @@ class PlottingMixin:
             height: float=4,
             aspect: float=1.2,
             figsize: tuple=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
     ):
         """
         Generates a scatter plot (optionally faceted) for parametric/optimisation outputs.
@@ -857,21 +1337,35 @@ class PlottingMixin:
 
         (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y], normalize_per_m2=normalize_per_m2)
 
-        os.makedirs(out_dir, exist_ok=True)
-        g = sns.relplot(
-            data=df,
-            x=x,
-            y=y,
-            hue=hue,
-            style=style,
-            size=size,
-            col=col,
-            row=row,
-            kind='scatter',
-            alpha=alpha,
-            height=height,
-            aspect=aspect,
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_scatter',
         )
+
+        os.makedirs(out_dir, exist_ok=True)
+        relplot_kwargs = {
+            'data': df,
+            'x': x,
+            'y': y,
+            'hue': hue,
+            'style': style,
+            'size': size,
+            'col': col,
+            'row': row,
+            'kind': 'scatter',
+            'alpha': alpha,
+            'height': height,
+            'aspect': aspect,
+        }
+        if 'row' in subplot_orders:
+            relplot_kwargs['row_order'] = subplot_orders['row']
+        if 'col' in subplot_orders:
+            relplot_kwargs['col_order'] = subplot_orders['col']
+
+        g = sns.relplot(**relplot_kwargs)
 
         if figsize is not None:
             g.fig.set_size_inches(figsize)
@@ -948,6 +1442,9 @@ class PlottingMixin:
             aspect: float=1.2,
             figsize: tuple=None,
             sort_x: bool=True,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
     ) -> dict:
         """
         Generates one or more line plots to inspect trends against a swept parameter.
@@ -999,6 +1496,13 @@ class PlottingMixin:
             raise KeyError(f'Missing optional columns for line plot: {missing_optional}')
 
         (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2)
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_lines',
+        )
         os.makedirs(out_dir, exist_ok=True)
 
         saved = {}
@@ -1020,6 +1524,10 @@ class PlottingMixin:
                 'height': height,
                 'aspect': aspect,
             }
+            if 'row' in subplot_orders:
+                relplot_kwargs['row_order'] = subplot_orders['row']
+            if 'col' in subplot_orders:
+                relplot_kwargs['col_order'] = subplot_orders['col']
 
             if errorbar is not None:
                 relplot_kwargs['errorbar'] = errorbar
@@ -1075,6 +1583,9 @@ class PlottingMixin:
             figsize: tuple=None,
             vmin: float=None,
             vmax: float=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
     ) -> str:
         """
         Creates one or more heatmaps from (x, y) parameter combinations and z values.
@@ -1105,6 +1616,21 @@ class PlottingMixin:
             row_values = [None]
         if len(col_values) == 0:
             col_values = [None]
+
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values={
+                'row': row_values if row else None,
+                'col': col_values if col else None,
+            },
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_heatmap',
+        )
+        if row and 'row' in subplot_orders:
+            row_values = subplot_orders['row']
+        if col and 'col' in subplot_orders:
+            col_values = subplot_orders['col']
 
         n_rows = len(row_values)
         n_cols = len(col_values)
@@ -1186,6 +1712,9 @@ class PlottingMixin:
             cmap: str='viridis',
             scatter_overlay: bool=True,
             figsize: tuple=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
     ) -> str:
         """
         Creates contour (or filled contour) plots from numeric x, y, z columns.
@@ -1214,6 +1743,21 @@ class PlottingMixin:
             row_values = [None]
         if len(col_values) == 0:
             col_values = [None]
+
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values={
+                'row': row_values if row else None,
+                'col': col_values if col else None,
+            },
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_contour',
+        )
+        if row and 'row' in subplot_orders:
+            row_values = subplot_orders['row']
+        if col and 'col' in subplot_orders:
+            col_values = subplot_orders['col']
 
         n_rows = len(row_values)
         n_cols = len(col_values)
@@ -1301,6 +1845,9 @@ class PlottingMixin:
             height: float=4,
             aspect: float=1.2,
             figsize: tuple=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
     ) -> dict:
         """
         Creates categorical distribution plots (violin, boxen, or box) for one or more outputs.
@@ -1336,6 +1883,13 @@ class PlottingMixin:
             raise KeyError(f'Missing optional columns for distribution plot: {missing_optional}')
 
         (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2)
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_distributions',
+        )
         os.makedirs(out_dir, exist_ok=True)
 
         saved = {}
@@ -1353,6 +1907,10 @@ class PlottingMixin:
                 'height': height,
                 'aspect': aspect,
             }
+            if 'row' in subplot_orders:
+                catplot_kwargs['row_order'] = subplot_orders['row']
+            if 'col' in subplot_orders:
+                catplot_kwargs['col_order'] = subplot_orders['col']
             if kind == 'violin':
                 catplot_kwargs['inner'] = inner
                 catplot_kwargs['cut'] = cut
@@ -1404,6 +1962,9 @@ class PlottingMixin:
             height: float=4,
             aspect: float=1.2,
             figsize: tuple=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
     ) -> str:
         """
         Creates an ECDF plot to compare cumulative distributions across scenarios.
@@ -1426,6 +1987,13 @@ class PlottingMixin:
             raise KeyError(f'Missing optional columns for ECDF plot: {missing_optional}')
 
         (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x], normalize_per_m2=normalize_per_m2)
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_ecdf',
+        )
         os.makedirs(out_dir, exist_ok=True)
 
         displot_kwargs = {
@@ -1438,6 +2006,10 @@ class PlottingMixin:
             'height': height,
             'aspect': aspect,
         }
+        if 'row' in subplot_orders:
+            displot_kwargs['row_order'] = subplot_orders['row']
+        if 'col' in subplot_orders:
+            displot_kwargs['col_order'] = subplot_orders['col']
 
         if complementary:
             displot_kwargs['complementary'] = True
@@ -1486,6 +2058,9 @@ class PlottingMixin:
             alpha: float=0.85,
             scatter_overlay: bool=False,
             figsize: tuple=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
     ) -> str:
         """
         Creates 2D density visualizations using either hexbin or KDE.
@@ -1524,6 +2099,21 @@ class PlottingMixin:
             row_values = [None]
         if len(col_values) == 0:
             col_values = [None]
+
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values={
+                'row': row_values if row else None,
+                'col': col_values if col else None,
+            },
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_density_2d',
+        )
+        if row and 'row' in subplot_orders:
+            row_values = subplot_orders['row']
+        if col and 'col' in subplot_orders:
+            col_values = subplot_orders['col']
 
         n_rows = len(row_values)
         n_cols = len(col_values)
