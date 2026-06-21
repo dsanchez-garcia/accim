@@ -231,6 +231,29 @@ You can apply aPMV setpoints to a building using the following function:
         verbose_mode=bool # verbose_mode: True to print detailed progress messages (added objects) and warnings to the console. Default is True.
     )
 
+### 2.2.7 Faster floor-area setup with representative IDFs
+
+When you have many IDFs with repeated typologies, you can avoid loading every file to
+compute floor area for normalization:
+
+    sim.set_building_floor_area(
+        mode='air-conditioned',
+        representative_mode='by_idf_mapping_category',
+        representative_category='building_type',
+    )
+
+You can also provide an explicit map from category value to representative IDF:
+
+    sim.set_building_floor_area(
+        mode='air-conditioned',
+        representative_mode='custom_map',
+        representative_category='building_type',
+        representative_map={
+            'residential': 'OSM_Res_A',
+            'office': 'OSM_Office_A',
+        },
+    )
+
 # 3. Documentation
 
 Detailed documentation, including the explanation of the different arguments, is at: https://accim.readthedocs.io/en/master/

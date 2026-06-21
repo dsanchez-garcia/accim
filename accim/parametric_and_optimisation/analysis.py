@@ -289,15 +289,7 @@ class AnalysisMixin:
             raise ValueError(f"zones_list includes unknown zones/lists for IDF '{idf_name}': {unknown}")
         return resolved
 
-    def _get_floor_area_buildings(self) -> list:
-        buildings = getattr(self, 'buildings', [])
-        if buildings:
-            return buildings
-
-        idf = getattr(self, 'building', None)
-        if idf is not None:
-            return [idf]
-
+    def _load_floor_area_buildings_from_backup_paths(self, requested_idf_names: Optional[list] = None) -> list:
         backup_path = getattr(self, 'idf_backup_path', None)
         backup_list = backup_path if isinstance(backup_path, list) else ([backup_path] if backup_path else [])
         valid_backups = [p for p in backup_list if p and os.path.isfile(p)]
@@ -307,10 +299,137 @@ class AnalysisMixin:
                 "Either provide mode='custom' with a custom_area value, or load the "
                 "session with an IDF object (building= argument)."
             )
+
+        selected_paths = valid_backups
+        if requested_idf_names is not None:
+            requested_names = []
+            for name in requested_idf_names:
+                normalised_name = self._normalise_floor_area_idf_name(name)
+                if normalised_name and normalised_name not in requested_names:
+                    requested_names.append(normalised_name)
+
+            backup_by_name = {}
+            duplicated_names = set()
+            for path in valid_backups:
+                normalised_name = self._normalise_floor_area_idf_name(path)
+                if normalised_name in backup_by_name:
+                    duplicated_names.add(normalised_name)
+                    continue
+                backup_by_name[normalised_name] = path
+
+            if duplicated_names:
+                duplicated = sorted(duplicated_names)
+                raise ValueError(
+                    f"Duplicate IDF names found in idf_backup_path for floor area calculation: {duplicated}. "
+                    f"Use unique filenames or pre-load self.buildings with those IDFs."
+                )
+
+            missing = sorted(name for name in requested_names if name not in backup_by_name)
+            if missing:
+                available = sorted(backup_by_name.keys())
+                raise ValueError(
+                    f"Could not find IDF backup path(s) for: {missing}. "
+                    f"Available IDFs from idf_backup_path: {available}"
+                )
+
+            selected_paths = [backup_by_name[name] for name in requested_names]
+
         from accim.utils import get_building
-        loaded = [get_building(p) for p in valid_backups]
-        self.buildings = loaded
-        print(f'  [info] {len(loaded)} IDF(s) auto-loaded from backup paths.')
+        return [get_building(path) for path in selected_paths]
+
+    def _get_floor_area_buildings(self, requested_idf_names: Optional[list] = None) -> list:
+        requested_names = None
+        if requested_idf_names is not None:
+            requested_names = []
+            for name in requested_idf_names:
+                normalised_name = self._normalise_floor_area_idf_name(name)
+                if normalised_name and normalised_name not in requested_names:
+                    requested_names.append(normalised_name)
+
+        buildings = getattr(self, 'buildings', [])
+        if buildings:
+            if requested_names is None:
+                return buildings
+
+            available = {
+                self._get_floor_area_idf_name(idf, idx): idf
+                for idx, idf in enumerate(buildings)
+            }
+            selected = []
+            missing = []
+            for name in requested_names:
+                idf = available.get(name)
+                if idf is None:
+                    missing.append(name)
+                else:
+                    selected.append(idf)
+
+            if not missing:
+                return selected
+
+            try:
+                loaded_missing = self._load_floor_area_buildings_from_backup_paths(missing)
+            except AttributeError:
+                raise ValueError(
+                    f"Could not find IDF object(s) for floor area calculation: {sorted(missing)}. "
+                    f"Load those IDFs in self.buildings or provide matching idf_backup_path entries."
+                )
+
+            loaded_missing_map = {
+                self._get_floor_area_idf_name(idf, idx): idf
+                for idx, idf in enumerate(loaded_missing)
+            }
+            combined = dict(available)
+            combined.update(loaded_missing_map)
+
+            unresolved = sorted(name for name in requested_names if name not in combined)
+            if unresolved:
+                raise ValueError(
+                    f"Could not find IDF object(s) for floor area calculation: {unresolved}."
+                )
+
+            return [combined[name] for name in requested_names]
+
+        idf = getattr(self, 'building', None)
+        if idf is not None:
+            if requested_names is None:
+                return [idf]
+
+            idf_name = self._get_floor_area_idf_name(idf, 0)
+            selected_names = [name for name in requested_names if name == idf_name]
+            missing_names = [name for name in requested_names if name != idf_name]
+
+            if not missing_names and selected_names:
+                return [idf]
+
+            try:
+                loaded_missing = self._load_floor_area_buildings_from_backup_paths(missing_names) if missing_names else []
+            except AttributeError:
+                raise ValueError(
+                    f"Could not find IDF object(s) for floor area calculation: {sorted(missing_names)}. "
+                    f"Load those IDFs in self.buildings or provide matching idf_backup_path entries."
+                )
+            loaded_missing_map = {
+                self._get_floor_area_idf_name(loaded_idf, idx): loaded_idf
+                for idx, loaded_idf in enumerate(loaded_missing)
+            }
+            combined = {idf_name: idf}
+            combined.update(loaded_missing_map)
+
+            unresolved = sorted(name for name in requested_names if name not in combined)
+            if unresolved:
+                raise ValueError(
+                    f"Could not find IDF object(s) for floor area calculation: {unresolved}."
+                )
+
+            return [combined[name] for name in requested_names]
+
+        loaded = self._load_floor_area_buildings_from_backup_paths(requested_names)
+        if requested_names is None:
+            self.buildings = loaded
+            print(f'  [info] {len(loaded)} IDF(s) auto-loaded from backup paths.')
+        else:
+            print(f'  [info] {len(loaded)} representative IDF(s) loaded from backup paths.')
         return loaded
 
     def _set_and_return_building_floor_area(self, areas: Dict[str, float]):
@@ -324,11 +443,227 @@ class AnalysisMixin:
             print(f'  [info] Building floor area [{idf_name}]: {area:.2f} m²')
         return areas
 
+    def _calculate_floor_area_for_idf(
+            self,
+            idf: Any,
+            idf_name: str,
+            idf_names: list,
+            normalised_mode: str,
+            zones_list: Union[list, Dict[str, list]],
+            custom_area: Union[str, float, Dict[str, Union[str, float]]]
+    ) -> float:
+        surfaces = self._idf_objects(idf, 'BuildingSurface:Detailed')
+        floors = [s for s in surfaces if getattr(s, 'Surface_Type', '').lower() == 'floor']
+
+        if normalised_mode == 'custom':
+            custom_value = self._resolve_floor_area_config(custom_area, idf_name, idf_names, 'custom_area')
+            return self._coerce_custom_floor_area(custom_value)
+        if normalised_mode == 'all':
+            return self._sum_floor_area(idf, floors)
+        if normalised_mode == 'occupied':
+            zone_names = self._resolve_occupied_zone_names(idf)
+            return self._sum_floor_area(idf, floors, zone_names)
+        if normalised_mode == 'air-conditioned':
+            zone_names = self._resolve_air_conditioned_zone_names(idf)
+            return self._sum_floor_area(idf, floors, zone_names)
+        if normalised_mode == 'list':
+            idf_zones_list = self._resolve_floor_area_config(zones_list, idf_name, idf_names, 'zones_list')
+            zone_names = self._coerce_zones_list(idf, idf_zones_list, idf_name)
+            return self._sum_floor_area(idf, floors, zone_names)
+
+        raise ValueError(f'Unknown mode: {normalised_mode}')
+
+    @staticmethod
+    def _normalise_representative_mode(mode: str) -> str:
+        return str(mode).strip().lower().replace('-', '_')
+
+    @staticmethod
+    def _normalise_representative_category_value(value: Any):
+        try:
+            if pd.isna(value):
+                return None
+        except Exception:
+            pass
+        return value
+
+    @staticmethod
+    def _representative_sort_key(value: Any) -> str:
+        if value is None:
+            return ''
+        return str(value)
+
+    @staticmethod
+    def _format_representative_values(values: set) -> list:
+        return sorted(values, key=AnalysisMixin._representative_sort_key)
+
+    def _available_idf_mapping_categories(self) -> list:
+        idf_mapping_rules = getattr(self, 'idf_mapping_rules', {}) or {}
+        return sorted(idf_mapping_rules.keys())
+
+    def _get_floor_area_idf_category_groups(self, representative_category: str, available_categories: list):
+        outputs = getattr(self, 'outputs_param_simulation', None)
+        if outputs is None or outputs.empty:
+            raise ValueError(
+                "outputs_param_simulation must be available and non-empty when "
+                "representative_mode is not 'all'."
+            )
+        if 'idf' not in outputs.columns:
+            raise ValueError("Column 'idf' is required in outputs_param_simulation to use representative_mode.")
+        if representative_category not in outputs.columns:
+            raise ValueError(
+                f"Category column '{representative_category}' is missing in outputs_param_simulation. "
+                f"Available categories: {available_categories}"
+            )
+
+        idf_category_df = outputs[['idf', representative_category]].copy()
+        idf_category_df['idf'] = idf_category_df['idf'].apply(self._normalise_floor_area_idf_name)
+        idf_category_df[representative_category] = idf_category_df[representative_category].apply(
+            self._normalise_representative_category_value
+        )
+        idf_category_df = idf_category_df[idf_category_df['idf'] != '']
+
+        if idf_category_df.empty:
+            raise ValueError('No valid IDF/category rows found in outputs_param_simulation for floor area mapping.')
+
+        category_counts = idf_category_df.groupby('idf')[representative_category].nunique(dropna=False)
+        conflicted_idfs = sorted(category_counts[category_counts > 1].index.tolist())
+        if conflicted_idfs:
+            raise ValueError(
+                f"Category '{representative_category}' has multiple values for the same IDF in "
+                f"outputs_param_simulation: {conflicted_idfs}"
+            )
+
+        unique_pairs = idf_category_df.drop_duplicates(subset=['idf'])
+        idf_to_category = dict(zip(unique_pairs['idf'], unique_pairs[representative_category]))
+
+        category_to_idfs = {}
+        for idf_name, category_value in idf_to_category.items():
+            category_to_idfs.setdefault(category_value, []).append(idf_name)
+        for idf_list in category_to_idfs.values():
+            idf_list.sort()
+
+        return idf_to_category, category_to_idfs
+
+    def _normalise_representative_map(self, representative_map: Optional[Dict[str, str]]) -> Dict[Any, str]:
+        if not isinstance(representative_map, dict) or len(representative_map) == 0:
+            raise ValueError("representative_map must be a non-empty dict when representative_mode='custom_map'.")
+
+        normalised_map = {}
+        for category_value, representative_idf in representative_map.items():
+            normalised_category = self._normalise_representative_category_value(category_value)
+            normalised_idf = self._normalise_floor_area_idf_name(representative_idf)
+            if not normalised_idf:
+                raise ValueError(
+                    f"Invalid representative IDF for category {category_value!r}: {representative_idf!r}"
+                )
+            if normalised_category in normalised_map and normalised_map[normalised_category] != normalised_idf:
+                raise ValueError(
+                    f"Duplicate category key in representative_map after normalization: {category_value!r}"
+                )
+            normalised_map[normalised_category] = normalised_idf
+
+        return normalised_map
+
+    def _resolve_floor_area_representative_plan(
+            self,
+            representative_mode: str,
+            representative_category: Optional[str],
+            representative_map: Optional[Dict[str, str]]
+    ) -> Dict[str, Any]:
+        available_categories = self._available_idf_mapping_categories()
+        resolved_category = representative_category
+
+        if representative_mode == 'by_idf_mapping_category':
+            if not resolved_category:
+                raise ValueError(
+                    "representative_category must be provided when "
+                    "representative_mode='by_idf_mapping_category'."
+                )
+        elif representative_mode == 'custom_map':
+            if not resolved_category and len(available_categories) == 1:
+                resolved_category = available_categories[0]
+            if not resolved_category:
+                raise ValueError(
+                    "representative_category must be provided when representative_mode='custom_map'."
+                )
+        else:
+            raise ValueError(f"Unknown representative_mode: {representative_mode}")
+
+        if resolved_category not in available_categories:
+            raise ValueError(
+                f"Invalid representative_category={resolved_category!r}. "
+                f"Available categories: {available_categories}"
+            )
+
+        idf_to_category, category_to_idfs = self._get_floor_area_idf_category_groups(
+            representative_category=resolved_category,
+            available_categories=available_categories,
+        )
+
+        if representative_mode == 'by_idf_mapping_category':
+            category_to_representative = {
+                category_value: idf_names[0]
+                for category_value, idf_names in category_to_idfs.items()
+            }
+        else:
+            normalised_map = self._normalise_representative_map(representative_map)
+            expected_values = set(category_to_idfs.keys())
+            provided_values = set(normalised_map.keys())
+            missing_values = expected_values - provided_values
+            unknown_values = provided_values - expected_values
+            if missing_values or unknown_values:
+                error_messages = []
+                if missing_values:
+                    error_messages.append(
+                        f"missing category values: {self._format_representative_values(missing_values)}"
+                    )
+                if unknown_values:
+                    error_messages.append(
+                        f"unknown category values: {self._format_representative_values(unknown_values)}"
+                    )
+                raise ValueError(
+                    f"Invalid representative_map ({'; '.join(error_messages)})."
+                )
+
+            available_idfs = sorted(idf_to_category.keys())
+            category_to_representative = {}
+            for category_value in category_to_idfs:
+                representative_idf_name = normalised_map[category_value]
+                if representative_idf_name not in idf_to_category:
+                    raise ValueError(
+                        f"Representative IDF '{representative_idf_name}' for category "
+                        f"{category_value!r} was not found in outputs_param_simulation IDFs: {available_idfs}"
+                    )
+                if representative_idf_name not in category_to_idfs[category_value]:
+                    expected_group = category_to_idfs[category_value]
+                    raise ValueError(
+                        f"Representative IDF '{representative_idf_name}' does not belong to category "
+                        f"{category_value!r}. Expected one of: {expected_group}"
+                    )
+                category_to_representative[category_value] = representative_idf_name
+
+        idf_to_representative = {
+            idf_name: category_to_representative[category_value]
+            for idf_name, category_value in idf_to_category.items()
+        }
+        all_idf_names = sorted(idf_to_representative.keys())
+        representative_idf_names = sorted(set(idf_to_representative.values()))
+
+        return {
+            'representative_category': resolved_category,
+            'all_idf_names': all_idf_names,
+            'representative_idf_names': representative_idf_names,
+            'idf_to_representative': idf_to_representative,
+        }
+
     def set_building_floor_area(
             self,
             mode: Literal['all', 'occupied', 'air-conditioned', 'air-condicioned', 'custom', 'list']='all',
             zones_list: Union[list, Dict[str, list]]=None,
-            custom_area: Union[str, float, Dict[str, Union[str, float]]]=None
+            custom_area: Union[str, float, Dict[str, Union[str, float]]]=None,
+            representative_mode: Literal['all', 'by_idf_mapping_category', 'custom_map']='all',
+            representative_category: Optional[str]=None,
+            representative_map: Optional[Dict[str, str]]=None,
     ) -> Union[float, Dict[str, float]]:
         """
         Calculates or sets the floor area to be used for normalizing energy results (kWh/m2).
@@ -340,11 +675,48 @@ class AnalysisMixin:
                      'list' to use Floor surfaces only in the zones specified in `zones_list`.
         :param zones_list: List of zone names for mode 'list', or a dict mapping each IDF to its list.
         :param custom_area: Float/string value for mode 'custom', or a dict mapping each IDF to its value.
+        :param representative_mode: Strategy to reduce IDF loading when calculating areas.
+            'all' keeps legacy behaviour.
+            'by_idf_mapping_category' loads one deterministic representative IDF per
+            category value in `representative_category`.
+            'custom_map' uses `representative_map` (category_value -> representative_idf).
+        :param representative_category: IDF category column name used to group IDFs.
+            Must be one of the keys in `idf_mapping_rules` when representative_mode is
+            not 'all'.
+        :param representative_map: Explicit mapping for representative_mode='custom_map',
+            with format {category_value: representative_idf}.
+
+        Example::
+
+            sim.set_building_floor_area(mode='air-conditioned')
+            sim.set_building_floor_area(
+                mode='air-conditioned',
+                representative_mode='by_idf_mapping_category',
+                representative_category='building_type',
+            )
+            sim.set_building_floor_area(
+                mode='air-conditioned',
+                representative_mode='custom_map',
+                representative_category='building_type',
+                representative_map={
+                    'residential': 'Residential_A',
+                    'office': 'Office_A',
+                },
+            )
+
         :return: the calculated or assigned floor area.
         """
         normalised_mode = str(mode).lower().replace('_', '-').strip()
         if normalised_mode == 'air-condicioned':
             normalised_mode = 'air-conditioned'
+
+        normalised_representative_mode = self._normalise_representative_mode(representative_mode)
+        valid_representative_modes = {'all', 'by_idf_mapping_category', 'custom_map'}
+        if normalised_representative_mode not in valid_representative_modes:
+            raise ValueError(
+                f"Invalid representative_mode={representative_mode!r}. "
+                f"Valid options are: {sorted(valid_representative_modes)}"
+            )
 
         if normalised_mode == 'custom':
             if custom_area is None:
@@ -353,35 +725,75 @@ class AnalysisMixin:
                 self.building_floor_area = self._coerce_custom_floor_area(custom_area)
                 return self.building_floor_area
 
-        buildings = self._get_floor_area_buildings()
-        idf_names = [self._get_floor_area_idf_name(idf, idx) for idx, idf in enumerate(buildings)]
+        if normalised_representative_mode == 'all':
+            buildings = self._get_floor_area_buildings()
+            idf_names = [self._get_floor_area_idf_name(idf, idx) for idx, idf in enumerate(buildings)]
+
+            print(
+                f"  [info] Floor area calculation: total IDFs={len(idf_names)}, "
+                f"representative IDFs loaded={len(idf_names)}."
+            )
+
+            areas = {}
+            for idx, idf in enumerate(buildings):
+                idf_name = idf_names[idx]
+                areas[idf_name] = self._calculate_floor_area_for_idf(
+                    idf=idf,
+                    idf_name=idf_name,
+                    idf_names=idf_names,
+                    normalised_mode=normalised_mode,
+                    zones_list=zones_list,
+                    custom_area=custom_area,
+                )
+
+            print(f"  [info] Floor area mapping coverage: {len(areas)}/{len(idf_names)} IDFs.")
+            return self._set_and_return_building_floor_area(areas)
+
+        representative_plan = self._resolve_floor_area_representative_plan(
+            representative_mode=normalised_representative_mode,
+            representative_category=representative_category,
+            representative_map=representative_map,
+        )
+        all_idf_names = representative_plan['all_idf_names']
+        representative_idf_names = representative_plan['representative_idf_names']
+        idf_to_representative = representative_plan['idf_to_representative']
+
+        representative_buildings = self._get_floor_area_buildings(requested_idf_names=representative_idf_names)
+        representative_buildings_by_name = {
+            self._get_floor_area_idf_name(idf, idx): idf
+            for idx, idf in enumerate(representative_buildings)
+        }
+        missing_representatives = [
+            name for name in representative_idf_names
+            if name not in representative_buildings_by_name
+        ]
+        if missing_representatives:
+            raise ValueError(
+                f"Could not load representative IDF object(s): {sorted(missing_representatives)}"
+            )
+
+        print(
+            f"  [info] Floor area calculation: total IDFs={len(all_idf_names)}, "
+            f"representative IDFs loaded={len(representative_idf_names)}."
+        )
+
+        representative_areas = {}
+        for representative_idf_name in representative_idf_names:
+            representative_areas[representative_idf_name] = self._calculate_floor_area_for_idf(
+                idf=representative_buildings_by_name[representative_idf_name],
+                idf_name=representative_idf_name,
+                idf_names=all_idf_names,
+                normalised_mode=normalised_mode,
+                zones_list=zones_list,
+                custom_area=custom_area,
+            )
 
         areas = {}
-        for idx, idf in enumerate(buildings):
-            idf_name = idf_names[idx]
-            surfaces = self._idf_objects(idf, 'BuildingSurface:Detailed')
-            floors = [s for s in surfaces if getattr(s, 'Surface_Type', '').lower() == 'floor']
+        for idf_name in all_idf_names:
+            representative_idf_name = idf_to_representative[idf_name]
+            areas[idf_name] = representative_areas[representative_idf_name]
 
-            if normalised_mode == 'custom':
-                custom_value = self._resolve_floor_area_config(custom_area, idf_name, idf_names, 'custom_area')
-                total_area = self._coerce_custom_floor_area(custom_value)
-            elif normalised_mode == 'all':
-                total_area = self._sum_floor_area(idf, floors)
-            elif normalised_mode == 'occupied':
-                zone_names = self._resolve_occupied_zone_names(idf)
-                total_area = self._sum_floor_area(idf, floors, zone_names)
-            elif normalised_mode == 'air-conditioned':
-                zone_names = self._resolve_air_conditioned_zone_names(idf)
-                total_area = self._sum_floor_area(idf, floors, zone_names)
-            elif normalised_mode == 'list':
-                idf_zones_list = self._resolve_floor_area_config(zones_list, idf_name, idf_names, 'zones_list')
-                zone_names = self._coerce_zones_list(idf, idf_zones_list, idf_name)
-                total_area = self._sum_floor_area(idf, floors, zone_names)
-            else:
-                raise ValueError(f'Unknown mode: {mode}')
-
-            areas[idf_name] = total_area
-
+        print(f"  [info] Floor area mapping coverage: {len(areas)}/{len(all_idf_names)} IDFs.")
         return self._set_and_return_building_floor_area(areas)
 
     def normalize_outputs(self, df_types: list=None):

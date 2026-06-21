@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `custom_area` can now be a global float/string value or a dictionary mapping each IDF to its own value.
   - Dictionary keys are normalized against IDF names and validated to prevent silent mismatches.
   - Multi-IDF area maps, `normalize_outputs()`, `normalize_per_m2` in dataframe extraction methods, and double-normalisation safeguards are supported consistently.
+  - Added representative-IDF modes to reduce floor-area setup cost in large campaigns:
+    - `representative_mode='all'` keeps legacy behavior.
+    - `representative_mode='by_idf_mapping_category'` groups IDFs by a user-selected category (`representative_category`) and loads one deterministic representative IDF per category value.
+    - `representative_mode='custom_map'` accepts explicit `representative_map={category_value: representative_idf}` with strict coverage and route validation.
+  - Added validation and explicit errors for representative workflows:
+    - Invalid `representative_category` now reports available categories from `idf_mapping_rules`.
+    - Missing category columns in `outputs_param_simulation` now raise clear errors including available categories.
+    - `custom_map` now validates missing/unknown category values and representative IDF membership per category group.
+  - Added informative logs for floor-area representative workflows (total IDFs, representative IDFs loaded, and final mapping coverage).
 - **Simulation Input Traceability (`in.idf`)**: Parametric and optimisation workflows now preserve the exact transient IDF executed by BESOS/EnergyPlus inside each simulation result directory.
 - **Outputs Preflight Workflow (`parametric_and_optimisation`)**: Added `discover_available_outputs(...)`, `select_outputs(...)`, `clear_outputs(...)`, and `apply_outputs_preflight(...)` to discover, validate, clean, and apply output requests before running simulations.
 - **Scoped Multi-IDF Output Preflight**: Added `idf_scope`/`validation_idf_scope` support across output discovery, selection, cleanup, application, and IDF output DataFrame helpers, plus `keep_only_outputs_in_idfs(...)` to prune existing `Output:Meter` and `Output:Variable` objects without adding missing outputs.
