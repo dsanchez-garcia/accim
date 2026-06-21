@@ -2384,6 +2384,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.outputs_inventory_after_injection_ = self.scan_output_objects(idf_scope='all') if len(self.buildings) > 0 else {}
         self.outputs_duplicates_after_injection_ = self.autocorrect_output_duplicates(idf_scope='all', warn=True) if len(self.buildings) > 0 else {}
         self.last_run_type = None
+        self.simulation_summary: Optional[dict] = None
         # Save an initial IDF backup right after addAccis/apply_apmv_setpoints so the
         # modified IDF (with EMS scripts and outputs already injected) is always
         # recoverable, even if run_parametric_simulation / run_optimisation are not called yet.
@@ -4908,6 +4909,401 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.category_mapping_preview_dfs = {'epw': epw_df, 'idf': idf_df}
         return self.category_mapping_preview_dfs
 
+    @staticmethod
+    def _simulation_df_source_map() -> dict:
+        """Maps public df_source aliases to canonical source keys and DataFrame attributes."""
+        return {
+            'parametric': ('parametric', 'outputs_param_simulation'),
+            'outputs_param_simulation': ('parametric', 'outputs_param_simulation'),
+            'parametric_hourly': ('parametric_hourly', 'outputs_param_simulation_hourly'),
+            'outputs_param_simulation_hourly': ('parametric_hourly', 'outputs_param_simulation_hourly'),
+            'parametric_monthly': ('parametric_monthly', 'outputs_param_simulation_monthly'),
+            'outputs_param_simulation_monthly': ('parametric_monthly', 'outputs_param_simulation_monthly'),
+            'optimisation': ('optimisation', 'outputs_optimisation'),
+            'optimization': ('optimisation', 'outputs_optimisation'),
+            'outputs_optimisation': ('optimisation', 'outputs_optimisation'),
+            'optimisation_hourly': ('optimisation_hourly', 'outputs_optimisation_hourly'),
+            'optimization_hourly': ('optimisation_hourly', 'outputs_optimisation_hourly'),
+            'outputs_optimisation_hourly': ('optimisation_hourly', 'outputs_optimisation_hourly'),
+            'optimisation_monthly': ('optimisation_monthly', 'outputs_optimisation_monthly'),
+            'optimization_monthly': ('optimisation_monthly', 'outputs_optimisation_monthly'),
+            'outputs_optimisation_monthly': ('optimisation_monthly', 'outputs_optimisation_monthly'),
+        }
+
+    def _resolve_simulation_df_source(self, df_source: str = 'parametric') -> tuple[str, str, Any]:
+        """Resolve a df_source alias into ``(canonical_source, attr_name, dataframe)``."""
+        source_key = str(df_source).strip().lower()
+        source_map = self._simulation_df_source_map()
+        if source_key not in source_map:
+            raise ValueError(
+                f"Unsupported df_source '{df_source}'. "
+                f"Valid options are: {sorted(source_map.keys())}"
+            )
+        (canonical_source, attr_name) = source_map[source_key]
+        return canonical_source, attr_name, getattr(self, attr_name, None)
+
+    @staticmethod
+    def _normalise_summary_count_key(value: Any) -> str:
+        """Normalize category labels so summary dictionaries are print/JSON friendly."""
+        try:
+            if pd.isna(value):
+                return '<NA>'
+        except Exception:
+            pass
+        return str(value)
+
+    @staticmethod
+    def _detect_energy_columns_from_numeric(numeric_columns: list[str]) -> list[str]:
+        """Heuristic detection of energy-related numeric columns based on column names."""
+        energy_pattern = re.compile(
+            r'energy|heating|cooling|electric(?:ity)?|gas|fuel|demand|consumption|load|'
+            r'kwh|mwh|gj|mj|kj|btu|therm|eui|end[_\s-]?use',
+            flags=re.IGNORECASE,
+        )
+        return [column for column in numeric_columns if energy_pattern.search(str(column))]
+
+    def _get_rule_based_category_candidates(self, df_columns: list[str]) -> list[str]:
+        """Returns category columns requested by mapping rules and available in the DataFrame."""
+        epw_rules = getattr(self, 'epw_mapping_rules', {}) or {}
+        idf_rules = getattr(self, 'idf_mapping_rules', {}) or {}
+
+        candidates = []
+        for category in epw_rules.keys():
+            category_name = str(category)
+            candidates.append(category_name)
+            candidates.append(f'epw_{category_name}')
+        for category in idf_rules.keys():
+            candidates.append(str(category))
+
+        filtered = []
+        seen = set()
+        for column in candidates:
+            if column in df_columns and column not in seen:
+                filtered.append(column)
+                seen.add(column)
+        return filtered
+
+    def _infer_category_columns(
+        self,
+        df: pd.DataFrame,
+        energy_columns: list[str],
+    ) -> list[str]:
+        """
+        Infer category columns dynamically when explicit category rules are unavailable.
+        """
+        rule_based_columns = self._get_rule_based_category_candidates(df_columns=list(df.columns))
+        if len(rule_based_columns) > 0:
+            return rule_based_columns
+
+        excluded_exact = {
+            'idf',
+            'epw',
+            'output_dir',
+            'simulation_directory',
+            'simulation_output_csv_path',
+            '_accim_task_signature',
+            'pareto-optimal',
+        }
+
+        inferred = []
+        for column in df.columns:
+            column_name = str(column)
+            column_name_lower = column_name.lower()
+
+            if column_name_lower in excluded_exact:
+                continue
+            if column_name in energy_columns:
+                continue
+            if column_name_lower.endswith('_path') or column_name_lower.endswith('_dir'):
+                continue
+
+            dtype = df[column].dtype
+            is_textual_or_categorical = (
+                pd.api.types.is_object_dtype(dtype)
+                or pd.api.types.is_string_dtype(dtype)
+                or isinstance(dtype, pd.CategoricalDtype)
+                or pd.api.types.is_bool_dtype(dtype)
+            )
+            if not is_textual_or_categorical:
+                continue
+
+            non_na = df[column].dropna()
+            if len(non_na) == 0:
+                continue
+
+            unique_ratio = float(non_na.nunique(dropna=True)) / float(len(non_na))
+            avg_len = float(non_na.astype(str).str.len().mean())
+            if unique_ratio >= 0.98 and avg_len > 24:
+                continue
+
+            inferred.append(column_name)
+
+        return inferred
+
+    def build_simulation_summary(
+        self,
+        df_source: str = 'parametric',
+        category_columns: Optional[list] = None,
+        include_na: bool = True,
+    ) -> dict:
+        """
+        Builds a compact summary for a simulation outputs DataFrame and stores it in
+        ``self.simulation_summary``.
+
+        :param df_source: DataFrame source alias. Supported values include
+            ``'parametric'``, ``'optimisation'``, and hourly/monthly variants.
+        :param category_columns: optional explicit list of category columns.
+            If provided, automatic detection is skipped after validation.
+        :param include_na: when ``True``, missing values are included in category
+            counts and unique counts.
+        :return: summary dictionary with general metrics and category counts.
+        """
+        (canonical_source, attr_name, df) = self._resolve_simulation_df_source(df_source=df_source)
+        if df is None:
+            raise ValueError(
+                f"DataFrame '{attr_name}' is not available for df_source='{df_source}'. "
+                'Run or load results first.'
+            )
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError(
+                f"Attribute '{attr_name}' is not a pandas DataFrame (got {type(df).__name__})."
+            )
+        if df.empty:
+            raise ValueError(
+                f"DataFrame '{attr_name}' is empty for df_source='{df_source}'."
+            )
+
+        total_rows = int(len(df))
+        total_columns = int(len(df.columns))
+        n_unique = {
+            column: int(df[column].nunique(dropna=not include_na))
+            for column in ['idf', 'epw', 'output_dir']
+            if column in df.columns
+        }
+
+        numeric_columns = [
+            str(column)
+            for column in df.columns
+            if pd.api.types.is_numeric_dtype(df[column].dtype)
+            and not pd.api.types.is_bool_dtype(df[column].dtype)
+        ]
+        energy_columns = self._detect_energy_columns_from_numeric(numeric_columns=numeric_columns)
+
+        detected_categories = self._infer_category_columns(df=df, energy_columns=energy_columns)
+
+        if category_columns is not None:
+            if isinstance(category_columns, str):
+                category_columns = [category_columns]
+            if not isinstance(category_columns, list):
+                raise TypeError("Argument 'category_columns' must be a list of strings or None.")
+
+            requested_columns = []
+            for column in category_columns:
+                if not isinstance(column, str):
+                    raise TypeError("All items in 'category_columns' must be strings.")
+                if column not in requested_columns:
+                    requested_columns.append(column)
+
+            invalid_columns = [column for column in requested_columns if column not in df.columns]
+            if invalid_columns:
+                raise ValueError(
+                    'Invalid category_columns provided. '
+                    f'Invalid: {invalid_columns}. '
+                    f'Available columns: {list(df.columns)}. '
+                    f'Automatically detected categories: {detected_categories}.'
+                )
+            detected_categories = requested_columns
+
+        category_counts = {}
+        for column in detected_categories:
+            counts_series = df[column].value_counts(dropna=not include_na)
+            category_counts[column] = {
+                self._normalise_summary_count_key(value): int(count)
+                for (value, count) in counts_series.items()
+            }
+
+        import datetime
+        summary = {
+            'df_source': canonical_source,
+            'df_attr': attr_name,
+            'generated_at': datetime.datetime.now().isoformat(timespec='seconds'),
+            'total_rows': total_rows,
+            'total_columns': total_columns,
+            'n_unique': n_unique,
+            'detected_category_columns': detected_categories,
+            'category_counts': category_counts,
+            'numeric_columns': numeric_columns,
+            'energy_columns': energy_columns,
+        }
+        self.simulation_summary = summary
+        return summary
+
+    def print_simulation_summary(
+        self,
+        df_source: str = 'parametric',
+        refresh: bool = False,
+    ) -> None:
+        """
+        Prints the summary generated by :meth:`build_simulation_summary`.
+
+        :param df_source: DataFrame source alias.
+        :param refresh: when ``True``, rebuilds the summary before printing.
+        """
+        (canonical_source, _, _) = self._resolve_simulation_df_source(df_source=df_source)
+        cached_summary = self.simulation_summary if isinstance(self.simulation_summary, dict) else None
+
+        needs_rebuild = (
+            refresh
+            or cached_summary is None
+            or cached_summary.get('df_source') != canonical_source
+        )
+        if needs_rebuild:
+            try:
+                cached_summary = self.build_simulation_summary(df_source=canonical_source)
+            except Exception as exc:
+                print(f'  [info] Could not build simulation summary: {exc}')
+                self.simulation_summary = None
+                return
+
+        summary = cached_summary
+
+        def _preview(columns: list[str], max_items: int = 12) -> list[str]:
+            if len(columns) <= max_items:
+                return columns
+            return columns[:max_items] + [f'...(+{len(columns) - max_items} more)']
+
+        print(f"=== Simulation summary: {summary['df_source']} ===")
+        print(f"generated_at  : {summary.get('generated_at')}")
+        print(f"total_rows    : {summary.get('total_rows')}")
+        print(f"total_columns : {summary.get('total_columns')}")
+
+        unique_counts = summary.get('n_unique', {})
+        if unique_counts:
+            print('n_unique:')
+            for (column, value) in unique_counts.items():
+                print(f'  - {column}: {value}')
+        else:
+            print('n_unique: (no key columns found)')
+
+        detected_categories = summary.get('detected_category_columns', [])
+        print(f'detected_category_columns ({len(detected_categories)}): {detected_categories}')
+
+        category_counts = summary.get('category_counts', {})
+        if category_counts:
+            print('category_counts:')
+            for column in detected_categories:
+                print(f"  - {column}: {category_counts.get(column, {})}")
+        else:
+            print('category_counts: {}')
+
+        numeric_columns = summary.get('numeric_columns', [])
+        energy_columns = summary.get('energy_columns', [])
+        print(f'numeric_columns ({len(numeric_columns)}): {_preview(numeric_columns)}')
+        print(f'energy_columns ({len(energy_columns)}): {_preview(energy_columns)}')
+
+    def _get_default_simulation_summary_json_path(self, df_source: str) -> str:
+        """Build a default JSON path for simulation summary exports."""
+        import datetime
+
+        (canonical_source, _, _) = self._resolve_simulation_df_source(df_source=df_source)
+        if canonical_source.startswith('parametric'):
+            reference_output_path = getattr(self, 'outputs_param_simulation_filepath', None)
+        else:
+            reference_output_path = getattr(self, 'outputs_optimisation_filepath', None)
+
+        base_dir = os.getcwd()
+        if isinstance(reference_output_path, str) and len(reference_output_path.strip()) > 0:
+            base_dir = os.path.dirname(os.path.abspath(reference_output_path))
+
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'simulation_summary_{canonical_source}_{timestamp}.json'
+        return os.path.abspath(os.path.join(base_dir, filename))
+
+    def export_simulation_summary_json(
+        self,
+        json_path: str = None,
+        df_source: str = 'parametric',
+        refresh: bool = False,
+        category_columns: Optional[list] = None,
+        include_na: bool = True,
+    ) -> str:
+        """
+        Exports ``self.simulation_summary`` to a JSON file.
+
+        :param json_path: optional destination path. If ``None``, a default path is
+            generated in the latest results directory when available.
+        :param df_source: DataFrame source alias used to resolve/build the summary.
+        :param refresh: when ``True``, rebuilds the summary before exporting.
+        :param category_columns: optional explicit category columns when rebuilding.
+        :param include_na: controls NA handling when rebuilding the summary.
+        :return: absolute path to the exported JSON file.
+        """
+        (canonical_source, _, _) = self._resolve_simulation_df_source(df_source=df_source)
+        cached_summary = self.simulation_summary if isinstance(self.simulation_summary, dict) else None
+        needs_rebuild = (
+            refresh
+            or cached_summary is None
+            or cached_summary.get('df_source') != canonical_source
+        )
+        if needs_rebuild:
+            cached_summary = self.build_simulation_summary(
+                df_source=canonical_source,
+                category_columns=category_columns,
+                include_na=include_na,
+            )
+
+        target_path = (
+            os.path.abspath(json_path)
+            if isinstance(json_path, str) and len(json_path.strip()) > 0
+            else self._get_default_simulation_summary_json_path(df_source=canonical_source)
+        )
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+
+        import datetime
+        payload = dict(cached_summary)
+        payload['exported_at'] = datetime.datetime.now().isoformat(timespec='seconds')
+        payload['summary_json_path'] = target_path
+
+        with open(target_path, 'w', encoding='utf-8') as handle:
+            json.dump(payload, handle, indent=2, ensure_ascii=True, default=str)
+
+        self.simulation_summary = payload
+        print(f'  [info] simulation_summary exported to {target_path}')
+        return target_path
+
+    def _refresh_simulation_summary_after_results_change(
+        self,
+        df_source: str = 'parametric',
+        context: str = '',
+    ) -> None:
+        """
+        Safely refreshes ``self.simulation_summary`` after run/load operations.
+
+        This helper never raises, preserving backward compatibility in existing
+        workflows even if summary generation fails.
+        """
+        try:
+            (_, _, df) = self._resolve_simulation_df_source(df_source=df_source)
+        except Exception as exc:
+            self.simulation_summary = None
+            if context:
+                print(f'  [info] simulation_summary cleared after {context}: {exc}')
+            return
+
+        if df is None or (hasattr(df, 'empty') and df.empty):
+            self.simulation_summary = None
+            detail = f' after {context}' if context else ''
+            print(f'  [info] simulation_summary cleared for {df_source}{detail}: no data available.')
+            return
+
+        try:
+            self.build_simulation_summary(df_source=df_source)
+            if context:
+                print(f'  [info] simulation_summary updated for {df_source} after {context}.')
+        except Exception as exc:
+            self.simulation_summary = None
+            print(f'  [info] simulation_summary could not be updated for {df_source}: {exc}')
+
     def set_evaluator(self, epw: str, out_dir: str, building: Any = None) -> besos.evaluator.EvaluatorEP:
         """
         Used internally for setting the evaluator in run_parametric_simulation and run_optimisation methods.
@@ -5687,9 +6083,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         batch_size: Optional[int] = None,
         checkpoint_every_batch: bool = False,
         resume_from_checkpoint: Union[bool, str] = False,
+        export_summary_json: bool = False,
+        summary_json_path: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Runs the parametric simulation.
+
+        This method refreshes ``self.simulation_summary`` for ``df_source='parametric'``
+        once the final outputs DataFrame is generated.
 
         :param epws: a list of .epw filenames
         :param out_dir: the name of the directory to store the outputs
@@ -5703,6 +6104,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             batch at ``<out_dir>/outputs_param_simulation_checkpoint_latest.pkl``.
         :param resume_from_checkpoint: False (default) runs from scratch. Use True to
             resume from the default checkpoint path, or provide a checkpoint pickle path.
+        :param export_summary_json: when True, exports ``self.simulation_summary``
+            automatically to a JSON file at the end of the run.
+        :param summary_json_path: optional path for the summary JSON export. Ignored
+            unless ``export_summary_json=True``.
         :return: a pandas DataFrame
         """
         if batch_size is not None and (not isinstance(batch_size, int) or batch_size <= 0):
@@ -5989,6 +6394,24 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         
         if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
             self.apply_category_mapping(df_types=['parametric'])
+
+        self._refresh_simulation_summary_after_results_change(
+            df_source='parametric',
+            context='run_parametric_simulation',
+        )
+
+        if export_summary_json:
+            try:
+                self.export_simulation_summary_json(
+                    json_path=summary_json_path,
+                    df_source='parametric',
+                    refresh=False,
+                )
+            except Exception as exc:
+                warnings.warn(
+                    f'Could not export parametric simulation_summary JSON: {exc}',
+                    UserWarning,
+                )
         
         return self.outputs_param_simulation
 
@@ -5996,6 +6419,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         """
         Loads outputs of a previous parametric simulation from a CSV, Pickle, or JSON file.
         This allows you to resume a parametric session without rerunning the simulations.
+        It also refreshes ``self.simulation_summary`` for quick inspection.
         
         :param csv_path: path to the CSV file containing parametric simulation results.
         :param pickle_path: path to the Pickle file containing parametric simulation results (recommended).
@@ -6077,6 +6501,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         )
                     )
             print(f'  [info] epw_suffix_categories restored: {list(_suffix_cats.keys())}')
+
+        self._refresh_simulation_summary_after_results_change(
+            df_source='parametric',
+            context='load_outputs_parametric',
+        )
         return self.outputs_param_simulation
 
     def estimate_optimisation_sims(self, evaluations: int, population_size: int, epws: list) -> int:
@@ -6127,9 +6556,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             pareto_separate_by_idf: bool = False,
             checkpoint_every_case: bool = False,
             resume_from_checkpoint: Union[bool, str] = False,
+            export_summary_json: bool = False,
+            summary_json_path: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Runs the optimisation.
+
+        This method refreshes ``self.simulation_summary`` for ``df_source='optimisation'``
+        once the final outputs DataFrame is generated.
 
         :param epws: a list of .epw filenames
         :param out_dir: the directory name to save the outputs
@@ -6162,6 +6596,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             IDF/EPW case so already completed cases can be reused after interruptions.
         :param resume_from_checkpoint: False (default) runs all cases from scratch. Use True
             to resume from the default checkpoint path, or provide an explicit checkpoint path.
+        :param export_summary_json: when True, exports ``self.simulation_summary``
+            automatically to a JSON file at the end of the run.
+        :param summary_json_path: optional path for the summary JSON export. Ignored
+            unless ``export_summary_json=True``.
         :return: a pandas DataFrame
         """
         algorithm_options = {} if algorithm_options is None else dict(algorithm_options)
@@ -6457,6 +6895,24 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
             self.apply_category_mapping(df_types=['optimisation'])
 
+        self._refresh_simulation_summary_after_results_change(
+            df_source='optimisation',
+            context='run_optimisation',
+        )
+
+        if export_summary_json:
+            try:
+                self.export_simulation_summary_json(
+                    json_path=summary_json_path,
+                    df_source='optimisation',
+                    refresh=False,
+                )
+            except Exception as exc:
+                warnings.warn(
+                    f'Could not export optimisation simulation_summary JSON: {exc}',
+                    UserWarning,
+                )
+
         return self.outputs_optimisation
 
     def _build_full_optimisation_outputs_df(self, evaluator: EvaluatorEP, epwname: str) -> pd.DataFrame:
@@ -6658,6 +7114,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         Loads full optimisation outputs (dominated + non-dominated) from a CSV, Pickle, or JSON file
         previously generated by :meth:`run_optimisation`, and rebuilds the related
         internal attributes without rerunning simulations.
+        It also refreshes ``self.simulation_summary`` for quick inspection.
 
         :param csv_path: path to a CSV file with full optimisation outputs.
         :param pickle_path: path to a Pickle file with full optimisation outputs (recommended).
@@ -6739,6 +7196,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         )
                     )
             print(f'  [info] epw_suffix_categories restored: {list(_suffix_cats.keys())}')
+
+        self._refresh_simulation_summary_after_results_change(
+            df_source='optimisation',
+            context='load_outputs_optimisation',
+        )
         return self.outputs_optimisation
 
     def compare_with(

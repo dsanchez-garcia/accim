@@ -86,6 +86,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Parametric Lazy Task Streaming and Atomic Checkpoints**: `run_parametric_simulation(...)` now iterates tasks lazily to reduce planning-memory pressure and writes checkpoints atomically (`.tmp` + replace).
   - Added a final checkpoint synchronization step when resuming, even if `checkpoint_every_batch=False`.
   - Extended tests in `tests/parametric_and_optimisation/test_parametric_batch_checkpoint.py` to verify refreshed checkpoints after resume.
+- **Global Simulation Summary API (`parametric_and_optimisation`)**: Added structured summary inspection for parametric/optimisation outputs.
+  - Added persistent attribute `simulation_summary` plus public methods `build_simulation_summary(...)` and `print_simulation_summary(...)` in `SimulationBase`.
+  - Summary includes dynamic category detection (rule-driven via `epw_mapping_rules`/`idf_mapping_rules` when available, otherwise inferred), key uniques (`idf`, `epw`, `output_dir`), numeric/energy column detection, and per-category counts.
+  - Added strict validation for explicit `category_columns` with detailed invalid/available/auto-detected diagnostics.
+  - Added optional JSON export API `export_simulation_summary_json(...)` for reproducibility/audit workflows.
+  - Added automatic summary refresh after `run_parametric_simulation(...)`, `load_outputs_parametric(...)`, `run_optimisation(...)`, and `load_outputs_optimisation(...)`.
+  - Added optional run flags `export_summary_json` and `summary_json_path` to auto-export summary JSON at the end of parametric and optimisation runs.
+  - Added focused tests in `tests/parametric_and_optimisation/test_simulation_summary.py` covering rules/inference/validation, run/load auto-refresh, and manual/automatic JSON export.
 
 ### Changed
 - **Breaking API Change in Output Discovery/Selection Returns**: `get_outputs_df_from_testsim(...)`, `discover_available_outputs(...)`, and `select_outputs(...)` now return a single dictionary instead of tuples.

@@ -254,6 +254,47 @@ You can also provide an explicit map from category value to representative IDF:
         },
     )
 
+### 2.2.8 Quick simulation summary inspection
+
+After running or loading parametric outputs, ACCIM now updates a compact in-memory
+summary (`sim.simulation_summary`) so you can quickly inspect what was executed.
+
+```python
+# Build/refresh summary explicitly
+summary = sim.build_simulation_summary(df_source='parametric')
+print(summary['total_rows'])
+print(summary['n_unique'])
+
+# Pretty print in console
+sim.print_simulation_summary(df_source='parametric')
+
+# Optional: force explicit category columns
+summary_custom = sim.build_simulation_summary(
+    df_source='parametric',
+    category_columns=['weather_type', 'city', 'building_type'],
+)
+
+# Optional: export summary for audit/reproducibility
+summary_json = sim.export_simulation_summary_json(
+    df_source='parametric',
+    json_path='param_results/simulation_summary_parametric.json',
+)
+print(summary_json)
+
+# Optional: auto-export at the end of each run
+sim.run_parametric_simulation(
+    out_dir='param_results',
+    export_summary_json=True,
+)
+sim.run_optimisation(
+    out_dir='optim_results',
+    export_summary_json=True,
+)
+```
+
+Category detection is dynamic: if `epw_mapping_rules`/`idf_mapping_rules` exist,
+their keys are used first; otherwise ACCIM infers category columns from the DataFrame.
+
 # 3. Documentation
 
 Detailed documentation, including the explanation of the different arguments, is at: https://accim.readthedocs.io/en/master/
