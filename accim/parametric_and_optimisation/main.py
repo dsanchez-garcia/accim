@@ -4,6 +4,7 @@ import json
 import hashlib
 import importlib
 import glob as pyglob
+import gc
 from typing import Literal, List, Union, Optional, Any
 import warnings
 import functools
@@ -2289,6 +2290,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             verbosemode: bool = True,
             bypass_addAccis: bool = False,
             building: Any = None,
+            accim_results_root: Optional[str] = None,
     ):
         """
         Initialize the simulation base instance.
@@ -2306,6 +2308,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param verbosemode: True to print addAccis progress messages
         :param bypass_addAccis: True to skip the internal addAccis execution
         :param building: legacy alias for buildings, accepted for backward compatibility
+        :param accim_results_root: optional base directory used to resolve relative
+            out_dir paths for simulation outputs.
         """
         if buildings is None and building is not None:
             buildings = building
@@ -2389,10 +2393,59 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         # modified IDF (with EMS scripts and outputs already injected) is always
         # recoverable, even if run_parametric_simulation / run_optimisation are not called yet.
         self.idf_backup_path: str = None
+        self.accim_results_root = self._normalize_results_root_path(accim_results_root)
         # NOTE: IDF backup is deferred until run_parametric_simulation /
         # run_optimisation are called, so the backup is always written to the
         # results folder (out_dir) rather than creating a separate
         # 'accim_idf_backups' directory in the working directory.
+
+    @staticmethod
+    def _normalize_results_root_path(path_value: Optional[Union[str, os.PathLike]]) -> Optional[str]:
+        """Normalize optional root paths used to resolve relative output directories."""
+        if path_value is None:
+            return None
+        if not isinstance(path_value, (str, os.PathLike)):
+            raise TypeError(
+                "Argument 'accim_results_root' must be a string/path-like value or None."
+            )
+        normalized = os.fspath(path_value).strip()
+        if len(normalized) == 0:
+            return None
+        return os.path.abspath(normalized)
+
+    def _resolve_results_out_dir(
+        self,
+        out_dir: Union[str, os.PathLike],
+        accim_results_root: Optional[Union[str, os.PathLike]] = None,
+    ) -> str:
+        """
+        Resolve output directory with the following precedence:
+        1) absolute out_dir,
+        2) explicit method accim_results_root,
+        3) instance accim_results_root,
+        4) ACCIM_RESULTS_ROOT environment variable,
+        5) fallback to legacy relative out_dir behavior.
+        """
+        if not isinstance(out_dir, (str, os.PathLike)):
+            raise TypeError("Argument 'out_dir' must be a string/path-like value.")
+
+        out_dir_text = os.fspath(out_dir).strip()
+        if len(out_dir_text) == 0:
+            raise ValueError("Argument 'out_dir' cannot be empty.")
+
+        if os.path.isabs(out_dir_text):
+            return os.path.abspath(out_dir_text)
+
+        for candidate in (
+            accim_results_root,
+            getattr(self, 'accim_results_root', None),
+            os.environ.get('ACCIM_RESULTS_ROOT'),
+        ):
+            normalized_root = self._normalize_results_root_path(candidate)
+            if normalized_root is not None:
+                return os.path.abspath(os.path.join(normalized_root, out_dir_text))
+
+        return out_dir_text
 
     # ------------------------------------------------------------------
     # IDF backup helpers
@@ -5465,29 +5518,200 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         )
 
     @staticmethod
+    def _default_parametric_batches_dir(out_dir: str) -> str:
+        return os.path.abspath(
+            os.path.join(out_dir, 'outputs_param_simulation_batches')
+        )
+
+    @staticmethod
+    def _save_parametric_batch_chunk(
+        batch_results: Union[pd.DataFrame, list],
+        batches_dir: str,
+        batch_idx: int,
+        file_prefix: str = 'outputs_param_simulation_batch',
+    ) -> Optional[str]:
+        """Persist a batch chunk to disk and return its absolute pickle path."""
+        if isinstance(batch_results, pd.DataFrame):
+            batch_df = batch_results.copy()
+        else:
+            batch_df = pd.DataFrame(batch_results)
+
+        if len(batch_df) == 0:
+            return None
+
+        if '_accim_task_signature' in batch_df.columns:
+            batch_df['_accim_task_signature'] = batch_df['_accim_task_signature'].astype(str)
+            batch_df = batch_df.drop_duplicates(
+                subset=['_accim_task_signature'],
+                keep='last',
+            ).reset_index(drop=True)
+
+        os.makedirs(batches_dir, exist_ok=True)
+        import datetime
+
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        chunk_name = f'{file_prefix}_{int(batch_idx):05d}_{timestamp}.pkl'
+        chunk_path = os.path.abspath(os.path.join(batches_dir, chunk_name))
+        chunk_tmp_path = f'{chunk_path}.tmp'
+        batch_df.to_pickle(chunk_tmp_path)
+        os.replace(chunk_tmp_path, chunk_path)
+        return chunk_path
+
+    @staticmethod
+    def _load_parametric_checkpoint_state(checkpoint_path: str) -> dict:
+        """
+        Load parametric checkpoint in either legacy-DataFrame format or the
+        new state-dict format.
+        """
+        payload = pd.read_pickle(checkpoint_path)
+
+        if isinstance(payload, pd.DataFrame):
+            legacy_df = payload.copy()
+            if '_accim_task_signature' not in legacy_df.columns:
+                return {
+                    'completed_signatures': set(),
+                    'batch_pickles': [],
+                    'legacy_results_df': None,
+                    'total_tasks': None,
+                    'completed_tasks': None,
+                }
+
+            legacy_df['_accim_task_signature'] = legacy_df['_accim_task_signature'].astype(str)
+            legacy_df = legacy_df.drop_duplicates(
+                subset=['_accim_task_signature'],
+                keep='last',
+            ).reset_index(drop=True)
+            return {
+                'completed_signatures': set(legacy_df['_accim_task_signature'].tolist()),
+                'batch_pickles': [],
+                'legacy_results_df': legacy_df,
+                'total_tasks': None,
+                'completed_tasks': int(len(legacy_df)),
+            }
+
+        if not isinstance(payload, dict):
+            raise ValueError(
+                'Parametric checkpoint must contain a DataFrame (legacy) or a dictionary payload.'
+            )
+
+        completed_signatures_raw = payload.get('completed_signatures', [])
+        if isinstance(completed_signatures_raw, (set, tuple)):
+            completed_signatures_raw = list(completed_signatures_raw)
+        if not isinstance(completed_signatures_raw, list):
+            completed_signatures_raw = []
+
+        completed_signatures = {
+            str(signature)
+            for signature in completed_signatures_raw
+            if signature is not None and str(signature).strip() != ''
+        }
+
+        batch_pickles_raw = payload.get('batch_pickles', [])
+        if isinstance(batch_pickles_raw, (set, tuple)):
+            batch_pickles_raw = list(batch_pickles_raw)
+        if not isinstance(batch_pickles_raw, list):
+            batch_pickles_raw = []
+
+        batch_pickles = []
+        for entry in batch_pickles_raw:
+            if isinstance(entry, (str, os.PathLike)):
+                batch_pickles.append(os.path.abspath(os.fspath(entry)))
+
+        return {
+            'completed_signatures': completed_signatures,
+            'batch_pickles': batch_pickles,
+            'legacy_results_df': None,
+            'total_tasks': payload.get('total_tasks'),
+            'completed_tasks': payload.get('completed_tasks'),
+        }
+
+    @staticmethod
+    def _merge_parametric_batch_pickles(batch_pickles: list) -> pd.DataFrame:
+        """Merge persisted parametric batch pickle files into a single DataFrame."""
+        if len(batch_pickles) == 0:
+            return pd.DataFrame()
+
+        frames = []
+        for pickle_path in batch_pickles:
+            if not isinstance(pickle_path, (str, os.PathLike)):
+                continue
+            path = os.path.abspath(os.fspath(pickle_path))
+            if not os.path.exists(path):
+                warnings.warn(
+                    f'Batch pickle not found during merge: {path}',
+                    UserWarning,
+                )
+                continue
+            chunk_df = pd.read_pickle(path)
+            if isinstance(chunk_df, pd.DataFrame) and len(chunk_df) > 0:
+                frames.append(chunk_df)
+
+        if len(frames) == 0:
+            return pd.DataFrame()
+
+        merged_df = pd.concat(frames, ignore_index=True)
+        if '_accim_task_signature' in merged_df.columns:
+            merged_df['_accim_task_signature'] = merged_df['_accim_task_signature'].astype(str)
+            merged_df = merged_df.drop_duplicates(
+                subset=['_accim_task_signature'],
+                keep='last',
+            ).reset_index(drop=True)
+
+        return merged_df
+
+    @staticmethod
     def _save_parametric_checkpoint(
         all_results: list,
         checkpoint_path: str,
         total_tasks: int,
         completed_tasks: int,
+        completed_signatures: Optional[set] = None,
+        batch_pickles: Optional[list] = None,
     ) -> int:
         """Persist current parametric results state for crash-safe resume."""
         import datetime
 
-        checkpoint_df = pd.DataFrame(all_results)
-        if '_accim_task_signature' in checkpoint_df.columns:
-            checkpoint_df = checkpoint_df.drop_duplicates(
-                subset=['_accim_task_signature'],
-                keep='last',
-            ).reset_index(drop=True)
         checkpoint_tmp_path = f'{checkpoint_path}.tmp'
-        checkpoint_df.to_pickle(checkpoint_tmp_path)
+        meta_rows = 0
+        if completed_signatures is not None or batch_pickles is not None:
+            signatures_list = sorted(
+                {
+                    str(signature)
+                    for signature in (completed_signatures or set())
+                    if signature is not None and str(signature).strip() != ''
+                }
+            )
+            normalized_pickles = []
+            for pickle_path in (batch_pickles or []):
+                if isinstance(pickle_path, (str, os.PathLike)):
+                    normalized_pickles.append(os.path.abspath(os.fspath(pickle_path)))
+            payload = {
+                'saved_at': datetime.datetime.now().isoformat(timespec='seconds'),
+                'checkpoint_path': checkpoint_path,
+                'checkpoint_format': 'state_v2',
+                'completed_signatures': signatures_list,
+                'batch_pickles': normalized_pickles,
+                'completed_tasks': int(completed_tasks),
+                'total_tasks': int(total_tasks),
+            }
+            pd.to_pickle(payload, checkpoint_tmp_path)
+            meta_rows = int(len(signatures_list))
+        else:
+            checkpoint_df = pd.DataFrame(all_results)
+            if '_accim_task_signature' in checkpoint_df.columns:
+                checkpoint_df = checkpoint_df.drop_duplicates(
+                    subset=['_accim_task_signature'],
+                    keep='last',
+                ).reset_index(drop=True)
+            checkpoint_df.to_pickle(checkpoint_tmp_path)
+            meta_rows = int(len(checkpoint_df))
+
         os.replace(checkpoint_tmp_path, checkpoint_path)
 
         meta_payload = {
             'saved_at': datetime.datetime.now().isoformat(timespec='seconds'),
             'checkpoint_path': checkpoint_path,
-            'rows_in_checkpoint': int(len(checkpoint_df)),
+            'rows_in_checkpoint': int(meta_rows),
             'completed_tasks': int(completed_tasks),
             'total_tasks': int(total_tasks),
         }
@@ -5496,7 +5720,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         with open(meta_tmp_path, 'w', encoding='utf-8') as meta_file:
             json.dump(meta_payload, meta_file, indent=2)
         os.replace(meta_tmp_path, meta_path)
-        return int(len(checkpoint_df))
+        return int(meta_rows)
 
     @staticmethod
     def _default_optimisation_checkpoint_path(out_dir: str) -> str:
@@ -6085,6 +6309,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         resume_from_checkpoint: Union[bool, str] = False,
         export_summary_json: bool = False,
         summary_json_path: Optional[str] = None,
+        accim_results_root: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Runs the parametric simulation.
@@ -6108,6 +6333,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             automatically to a JSON file at the end of the run.
         :param summary_json_path: optional path for the summary JSON export. Ignored
             unless ``export_summary_json=True``.
+        :param accim_results_root: optional root folder used to resolve ``out_dir``
+            when ``out_dir`` is provided as a relative path.
         :return: a pandas DataFrame
         """
         if batch_size is not None and (not isinstance(batch_size, int) or batch_size <= 0):
@@ -6121,7 +6348,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if df is None:
                 raise ValueError("Argument 'df' cannot be None if self.parameters_values_df is not populated. Run a sampling method first or provide 'df'.")
 
+        out_dir = self._resolve_results_out_dir(
+            out_dir=out_dir,
+            accim_results_root=accim_results_root,
+        )
         os.makedirs(out_dir, exist_ok=True)
+        batches_dir = self._default_parametric_batches_dir(out_dir=out_dir)
+        os.makedirs(batches_dir, exist_ok=True)
 
         checkpoint_path = self._default_parametric_checkpoint_path(out_dir=out_dir)
         if isinstance(resume_from_checkpoint, str):
@@ -6154,29 +6387,41 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     UserWarning,
                 )
         
-        all_results = []
         checkpoint_completed_signatures = set()
-        checkpoint_df = None
+        checkpoint_batch_pickles = []
+        legacy_checkpoint_seed_df = None
         task_signatures = set()
         total_tasks = 0
-        pending_tasks_count = 0
         resume_requested = bool(resume_from_checkpoint)
         if resume_requested:
             if os.path.exists(checkpoint_path):
-                checkpoint_df = pd.read_pickle(checkpoint_path)
-                if '_accim_task_signature' not in checkpoint_df.columns:
+                try:
+                    checkpoint_state = self._load_parametric_checkpoint_state(checkpoint_path=checkpoint_path)
+                except Exception as exc:
                     warnings.warn(
-                        "Checkpoint file found but column '_accim_task_signature' is missing. "
-                        'Resume will start from scratch.',
+                        f'Could not read checkpoint at {checkpoint_path}: {exc}. Resume will start from scratch.',
                         UserWarning,
                     )
-                else:
-                    checkpoint_df = checkpoint_df.drop_duplicates(
-                        subset=['_accim_task_signature'],
-                        keep='last',
-                    ).copy()
-                    checkpoint_df['_accim_task_signature'] = checkpoint_df['_accim_task_signature'].astype(str)
-                    checkpoint_completed_signatures = set(checkpoint_df['_accim_task_signature'].tolist())
+                    checkpoint_state = {
+                        'completed_signatures': set(),
+                        'batch_pickles': [],
+                        'legacy_results_df': None,
+                    }
+
+                checkpoint_completed_signatures = set(
+                    checkpoint_state.get('completed_signatures', set()) or set()
+                )
+                checkpoint_batch_pickles = []
+                for pickle_path in (checkpoint_state.get('batch_pickles', []) or []):
+                    if os.path.exists(pickle_path):
+                        checkpoint_batch_pickles.append(os.path.abspath(os.fspath(pickle_path)))
+                    else:
+                        warnings.warn(
+                            f'Checkpoint references missing batch pickle: {pickle_path}',
+                            UserWarning,
+                        )
+
+                legacy_checkpoint_seed_df = checkpoint_state.get('legacy_results_df')
             elif isinstance(resume_from_checkpoint, str):
                 raise FileNotFoundError(
                     f"Checkpoint file not found: {checkpoint_path}"
@@ -6187,6 +6432,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     'Starting a fresh run.',
                     UserWarning,
                 )
+
+        if isinstance(legacy_checkpoint_seed_df, pd.DataFrame) and len(legacy_checkpoint_seed_df) > 0:
+            seed_pickle = self._save_parametric_batch_chunk(
+                batch_results=legacy_checkpoint_seed_df,
+                batches_dir=batches_dir,
+                batch_idx=0,
+                file_prefix='outputs_param_simulation_resume_seed',
+            )
+            if seed_pickle is not None:
+                checkpoint_batch_pickles.append(seed_pickle)
 
         for task in self._iter_parametric_task_blueprints(
             grouped_dfs=grouped_dfs,
@@ -6200,23 +6455,37 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             keep_dirs=keep_dirs,
             keep_input=keep_input,
         ):
+            task_signature = str(task.get('signature'))
             total_tasks += 1
-            task_signatures.add(task['signature'])
-            if task['signature'] not in checkpoint_completed_signatures:
+            task_signatures.add(task_signature)
+
+        checkpoint_completed_signatures = checkpoint_completed_signatures.intersection(task_signatures)
+
+        pending_tasks_count = 0
+        for task in self._iter_parametric_task_blueprints(
+            grouped_dfs=grouped_dfs,
+            epws=epws,
+            out_dir=out_dir,
+            problem_names_inputs=problem_names_inputs,
+            problem_names_outputs=problem_names_outputs,
+            output_specs=output_specs,
+            add_output_specs=add_output_specs,
+            add_output_names=add_output_names,
+            keep_dirs=keep_dirs,
+            keep_input=keep_input,
+        ):
+            task_signature = str(task.get('signature'))
+            if task_signature not in checkpoint_completed_signatures:
                 pending_tasks_count += 1
 
-        if checkpoint_df is not None and '_accim_task_signature' in checkpoint_df.columns:
-            checkpoint_df = checkpoint_df[
-                checkpoint_df['_accim_task_signature'].isin(task_signatures)
-            ].copy()
-            all_results = checkpoint_df.to_dict(orient='records')
-            checkpoint_completed_signatures = set(checkpoint_df['_accim_task_signature'].tolist())
+        if resume_requested and len(checkpoint_completed_signatures) > 0:
             print(
                 '[run_parametric_simulation] Resuming from checkpoint: '
                 f'{len(checkpoint_completed_signatures)}/{total_tasks} tasks already completed.'
             )
 
         completed_signatures = set(checkpoint_completed_signatures)
+        batch_pickles = list(dict.fromkeys(checkpoint_batch_pickles))
 
         if pending_tasks_count == 0 and total_tasks > 0:
             print('[run_parametric_simulation] No pending tasks to execute.')
@@ -6238,7 +6507,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         futures = {}
                         for task in tasks_for_batch:
                             future = executor.submit(_run_single_evaluation_worker, *task['worker_args'])
-                            futures[future] = task['signature']
+                            futures[future] = str(task.get('signature'))
                         for future in tqdm(
                             concurrent.futures.as_completed(futures),
                             total=len(tasks_for_batch),
@@ -6255,7 +6524,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         unit='row',
                     ):
                         result = _run_single_evaluation_worker(*task['worker_args'])
-                        result['_accim_task_signature'] = task['signature']
+                        result['_accim_task_signature'] = str(task.get('signature'))
                         batch_results.append(result)
 
                 return batch_results
@@ -6272,8 +6541,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 keep_dirs=keep_dirs,
                 keep_input=keep_input,
             ):
-                if task['signature'] in checkpoint_completed_signatures:
+                task_signature = str(task.get('signature'))
+                if task_signature in checkpoint_completed_signatures:
                     continue
+                task['signature'] = task_signature
                 batch_tasks.append(task)
                 if len(batch_tasks) < effective_batch_size:
                     continue
@@ -6282,64 +6553,93 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 batch_results = _run_parametric_batch(batch_tasks, batch_idx)
                 batch_tasks = []
 
-                all_results.extend(batch_results)
                 completed_signatures.update(
                     result.get('_accim_task_signature')
                     for result in batch_results
                     if result.get('_accim_task_signature') is not None
                 )
+                batch_pickle = self._save_parametric_batch_chunk(
+                    batch_results=batch_results,
+                    batches_dir=batches_dir,
+                    batch_idx=batch_idx,
+                )
+                if batch_pickle is not None:
+                    batch_pickles.append(batch_pickle)
+                del batch_results
+                gc.collect()
 
                 if checkpoint_every_batch:
-                    rows_in_checkpoint = self._save_parametric_checkpoint(
-                        all_results=all_results,
+                    tracked_rows = self._save_parametric_checkpoint(
+                        all_results=[],
                         checkpoint_path=checkpoint_path,
                         total_tasks=total_tasks,
                         completed_tasks=len(completed_signatures),
+                        completed_signatures=completed_signatures,
+                        batch_pickles=batch_pickles,
                     )
                     print(
                         '[run_parametric_simulation] Checkpoint saved '
-                        f'({rows_in_checkpoint} rows, '
+                        f'({tracked_rows} tracked tasks, '
                         f'{len(completed_signatures)}/{total_tasks} tasks).'
                     )
 
             if len(batch_tasks) > 0:
                 batch_idx += 1
                 batch_results = _run_parametric_batch(batch_tasks, batch_idx)
-                all_results.extend(batch_results)
                 completed_signatures.update(
                     result.get('_accim_task_signature')
                     for result in batch_results
                     if result.get('_accim_task_signature') is not None
                 )
+                batch_pickle = self._save_parametric_batch_chunk(
+                    batch_results=batch_results,
+                    batches_dir=batches_dir,
+                    batch_idx=batch_idx,
+                )
+                if batch_pickle is not None:
+                    batch_pickles.append(batch_pickle)
+                del batch_results
+                gc.collect()
 
                 if checkpoint_every_batch:
-                    rows_in_checkpoint = self._save_parametric_checkpoint(
-                        all_results=all_results,
+                    tracked_rows = self._save_parametric_checkpoint(
+                        all_results=[],
                         checkpoint_path=checkpoint_path,
                         total_tasks=total_tasks,
                         completed_tasks=len(completed_signatures),
+                        completed_signatures=completed_signatures,
+                        batch_pickles=batch_pickles,
                     )
                     print(
                         '[run_parametric_simulation] Checkpoint saved '
-                        f'({rows_in_checkpoint} rows, '
+                        f'({tracked_rows} tracked tasks, '
                         f'{len(completed_signatures)}/{total_tasks} tasks).'
                     )
-                
-        outputs_param_simulation = pd.DataFrame(all_results)
+
+        batch_pickles = list(dict.fromkeys(batch_pickles))
+
+        if (checkpoint_every_batch or resume_requested) and total_tasks > 0:
+            self._save_parametric_checkpoint(
+                all_results=[],
+                checkpoint_path=checkpoint_path,
+                total_tasks=total_tasks,
+                completed_tasks=len(completed_signatures),
+                completed_signatures=completed_signatures,
+                batch_pickles=batch_pickles,
+            )
+
+        outputs_param_simulation = self._merge_parametric_batch_pickles(
+            batch_pickles=batch_pickles,
+        )
 
         if '_accim_task_signature' in outputs_param_simulation.columns:
+            outputs_param_simulation = outputs_param_simulation[
+                outputs_param_simulation['_accim_task_signature'].isin(task_signatures)
+            ].copy()
             outputs_param_simulation = outputs_param_simulation.drop_duplicates(
                 subset=['_accim_task_signature'],
                 keep='last',
             ).reset_index(drop=True)
-
-        if (checkpoint_every_batch or resume_requested) and total_tasks > 0:
-            self._save_parametric_checkpoint(
-                all_results=all_results,
-                checkpoint_path=checkpoint_path,
-                total_tasks=total_tasks,
-                completed_tasks=len(completed_signatures),
-            )
 
         if total_tasks > 0 and len(outputs_param_simulation) == 0:
             warnings.warn(
@@ -6558,6 +6858,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             resume_from_checkpoint: Union[bool, str] = False,
             export_summary_json: bool = False,
             summary_json_path: Optional[str] = None,
+            accim_results_root: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Runs the optimisation.
@@ -6600,6 +6901,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             automatically to a JSON file at the end of the run.
         :param summary_json_path: optional path for the summary JSON export. Ignored
             unless ``export_summary_json=True``.
+        :param accim_results_root: optional root folder used to resolve ``out_dir``
+            when ``out_dir`` is provided as a relative path.
         :return: a pandas DataFrame
         """
         algorithm_options = {} if algorithm_options is None else dict(algorithm_options)
@@ -6610,6 +6913,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if not getattr(self, 'buildings', None):
             raise ValueError('No buildings were configured in this simulation instance.')
         self.epws = epws
+
+        out_dir = self._resolve_results_out_dir(
+            out_dir=out_dir,
+            accim_results_root=accim_results_root,
+        )
 
         resume_signature_payload = {
             'algorithm': str(algorithm),
@@ -8099,6 +8407,7 @@ class ParametricSimulation(SimulationBase):
             verbosemode: bool = True,
             bypass_addAccis: bool = False,
             building: Any = None,
+            accim_results_root: Optional[str] = None,
     ):
         """
         Initialize a parametric simulation.
@@ -8117,6 +8426,8 @@ class ParametricSimulation(SimulationBase):
         :param verbosemode: print addAccis progress messages.
         :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
         :param building: legacy alias for buildings, accepted for backward compatibility.
+        :param accim_results_root: optional base directory used to resolve
+            relative output directories.
         """
         super().__init__(
             buildings=buildings,
@@ -8132,6 +8443,7 @@ class ParametricSimulation(SimulationBase):
             verbosemode=verbosemode,
             bypass_addAccis=bypass_addAccis,
             building=building,
+            accim_results_root=accim_results_root,
         )
         # Parametric-specific attributes
         self.outputs_param_simulation = None
@@ -8192,6 +8504,7 @@ class OptimisationSimulation(SimulationBase):
             verbosemode: bool = True,
             bypass_addAccis: bool = False,
             building: Any = None,
+            accim_results_root: Optional[str] = None,
     ):
         """
         Initialize an optimisation simulation.
@@ -8210,6 +8523,8 @@ class OptimisationSimulation(SimulationBase):
         :param verbosemode: print addAccis progress messages.
         :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
         :param building: legacy alias for buildings, accepted for backward compatibility.
+        :param accim_results_root: optional base directory used to resolve
+            relative output directories.
         """
         super().__init__(
             buildings=buildings,
@@ -8225,6 +8540,7 @@ class OptimisationSimulation(SimulationBase):
             verbosemode=verbosemode,
             bypass_addAccis=bypass_addAccis,
             building=building,
+            accim_results_root=accim_results_root,
         )
         # Optimization-specific attributes
         self.outputs_optimisation = None
@@ -8256,6 +8572,7 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
             debugging: bool = False,
             building: Any = None,
+            accim_results_root: Optional[str] = None,
     ):
         """
         Initialize the predefined-model parametric wrapper.
@@ -8269,10 +8586,12 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
         :param debugging: create EnergyPlus EDD debugging output.
         :param building: legacy alias for buildings, accepted for backward compatibility.
+        :param accim_results_root: optional base directory used to resolve
+            relative output directories.
         """
         if buildings is None and building is not None:
             buildings = building
-        super().__init__(buildings=buildings, epws=epws, parameters_type='accim predefined model', output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging)
+        super().__init__(buildings=buildings, epws=epws, parameters_type='accim predefined model', output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging, accim_results_root=accim_results_root)
         for b in self.buildings:
             accis.modifyAccis(idf=b, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)
 

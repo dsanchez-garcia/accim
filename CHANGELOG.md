@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pickle Comparison Tutorial Docs**: Added `docs/source/9_pickle_comparison_tutorial.md` and linked it in the docs index for end-to-end guidance on validating simulation output equivalence.
 - **Project Tracking Workflow Files**: Added `DEVLOG.md`, `TODO.md`, and `ROADMAP.md` and documented the workflow in `README.md` to separate release notes, completed work logs, active tasks, and longer-term planning.
 - **Operations Tooling for Notebooks and Campaign Runs**: Added helper scripts under `tools/` for custom output reducers, robust custom-plan parametric execution, batch notebook execution, and reruns of failed notebooks.
+- **Smoke/Resume Validation Tooling**: Added `tools/smoke_resume_runner.py` plus quick guides (`tools/README_smoke_resume_runner.md`, `tools/CHECKLIST_smoke_resume.md`) to validate checkpoint-resume behavior and `accim_results_root` routing with small test campaigns.
 - **Regression Coverage for Optimisation Output Handling**: Added focused tests in `tests/parametric_and_optimisation/test_analysis_output_resolution.py` and `tests/parametric_and_optimisation/test_pareto_grouping.py`.
   - Covers robust objective-column resolution when optimisation outputs are normalized/renamed.
   - Covers configurable Pareto grouping by EPW and/or IDF and MCDM grouping behavior in plotting.
@@ -115,6 +116,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `apply_outputs_preflight(...)` now defaults to `clean_mode='none'` to preserve user-defined `Output:*` objects unless cleanup is explicitly requested.
   - Legacy methods `set_output_var_df_to_idf(...)` and `set_output_met_objects_to_idf(...)` are preserved as wrappers and now emit `DeprecationWarning` messages that point to the new consistent methods.
   - Updated `tools/output_workflow_notebook_style.py` to use the new API and include the advanced meter DataFrame frequency path.
+- **Configurable Results Root Routing**: Added optional `accim_results_root` support in simulation constructors and run methods to resolve relative `out_dir` paths without relying on global environment variables.
+  - Supported in `SimulationBase`, `ParametricSimulation`, `OptimisationSimulation`, and `AccimPredefModelsParamSim` constructors.
+  - Supported as a per-run override in `run_parametric_simulation(...)` and `run_optimisation(...)`.
+  - Resolution precedence is now: absolute `out_dir` > method `accim_results_root` > instance `accim_results_root` > `ACCIM_RESULTS_ROOT` environment variable > legacy relative behavior.
+- **Parametric Checkpoint Internals for Long Runs**: `run_parametric_simulation(...)` now persists batch chunks to disk and merges them at the end instead of keeping the full run payload in memory.
+  - Added batch artifact directory `outputs_param_simulation_batches`.
+  - Added stateful checkpoint payload support (`completed_signatures`, `batch_pickles`) while keeping backward compatibility with legacy DataFrame checkpoints.
 - **Notebook 14 Multi-IDF Workflow (without loop)**: Updated `14_main_optimisationsimulation_accim_custom_model_without_idf_loop.ipynb` to run a single `OptimisationSimulation` instance with `buildings=[...]` and explicit Pareto controls.
   - Step 2 now avoids per-IDF instantiation loops and prepares IDFs once before creating the optimisation object.
   - Step 3 now plots from one combined optimisation object and forwards the selected MCDM segmentation flags.
