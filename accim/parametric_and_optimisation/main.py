@@ -1,3 +1,19 @@
+"""Core workflows for ACCIM parametric and optimisation simulations.
+
+This module defines simulation session classes, worker helpers, and utility
+functions for running EnergyPlus evaluations and post-processing results.
+
+Usage
+-----
+Instantiate `ParametricSimulation` or `OptimisationSimulation` and run the
+corresponding simulation methods.
+
+Examples
+--------
+sim = ParametricSimulation(buildings=[idf], epws=['Seville.epw'])
+sim.run_parametric_simulation(parameters_values_df=my_samples)
+"""
+
 import os
 import re
 import json
@@ -35,19 +51,43 @@ import accim.parametric_and_optimisation.params_dicts as params_dicts
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
 
 def get_rdd_file_as_df(out_dir: str = 'available_outputs'):
-    """
-    Returns the .rdd file from the test simulation as a pandas DataFrame
-
+    """Returns the .rdd file from the test simulation as a pandas DataFrame
+    
     :return: a pandas DataFrame containing the .rdd file from the test simulation
+    
+    Parameters
+    ----------
+    out_dir : Any
+        Path-like value used by this routine.
+    
+    Usage
+    -----
+    Use `get_rdd_file_as_df` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = get_rdd_file_as_df(out_dir=...)
     """
     rdd_df = pd.read_csv(filepath_or_buffer=os.path.join(out_dir, 'eplusout.rdd'), sep=',|;', skiprows=2, names=['object', 'key_value', 'variable_name', 'frequency', 'units'], engine='python')
     return rdd_df
 
 def parse_mtd_file(out_dir: str = 'available_outputs') -> list[Union[dict[str, Union[str, None, list[str]]], dict[str, Union[str, None, list[str]]]]]:
-    """
-    Returns a list of the objects in the .mtd file from the test simulation.
-
+    """Returns a list of the objects in the .mtd file from the test simulation.
+    
     :return: a list of the objects in the .mtd file from the test simulation
+    
+    Parameters
+    ----------
+    out_dir : Any
+        Path-like value used by this routine.
+    
+    Usage
+    -----
+    Use `parse_mtd_file` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = parse_mtd_file(out_dir=...)
     """
     meter_list = []
     with open(os.path.join(out_dir, 'eplusout.mtd'), 'r') as file:
@@ -71,16 +111,42 @@ def parse_mtd_file(out_dir: str = 'available_outputs') -> list[Union[dict[str, U
     return meter_list
 
 def get_mdd_file_as_df(out_dir: str = 'available_outputs'):
-    """
-    Returns the .mdd file from the test simulation as a pandas DataFrame
-
+    """Returns the .mdd file from the test simulation as a pandas DataFrame
+    
     :return: a pandas DataFrame containing the .mdd file from the test simulation
+    
+    Parameters
+    ----------
+    out_dir : Any
+        Path-like value used by this routine.
+    
+    Usage
+    -----
+    Use `get_mdd_file_as_df` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = get_mdd_file_as_df(out_dir=...)
     """
     mdd_df = pd.read_csv(filepath_or_buffer=os.path.join(out_dir, 'eplusout.mdd'), sep=',|;', skiprows=2, names=['object', 'meter_name', 'frequency', 'units'], engine='python')
     return mdd_df
 
 def _serialize_output_func(func_spec: Any):
-    """Serialize output reducer functions so they can be safely sent to workers."""
+    """Serialize output reducer functions so they can be safely sent to workers.
+    
+    Parameters
+    ----------
+    func_spec : Any
+        Argument used by `_serialize_output_func`.
+    
+    Usage
+    -----
+    Use `_serialize_output_func` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = _serialize_output_func(func_spec=...)
+    """
     if func_spec is None:
         return None
     if isinstance(func_spec, str):
@@ -96,7 +162,21 @@ def _serialize_output_func(func_spec: Any):
 
 
 def _resolve_output_func(func_spec: Any):
-    """Resolve reducer specs to callables; supports 'module.submodule:callable_name'."""
+    """Resolve reducer specs to callables; supports 'module.submodule:callable_name'.
+    
+    Parameters
+    ----------
+    func_spec : Any
+        Argument used by `_resolve_output_func`.
+    
+    Usage
+    -----
+    Use `_resolve_output_func` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = _resolve_output_func(func_spec=...)
+    """
     if func_spec is None or callable(func_spec):
         return func_spec
     if not isinstance(func_spec, str):
@@ -133,6 +213,55 @@ def _run_single_evaluation_worker(
     sim_files_extensions: Optional[tuple[str, ...]],
     sim_files_policy: str,
 ) -> dict:
+    """Run one evaluation in a worker process and return output values.
+
+    Parameters
+    ----------
+    idf_path : str
+        Path to the IDF file loaded by the worker.
+    epw : str
+        EPW path passed to BESOS evaluator.
+    epwname : str
+        EPW label stored in returned metadata.
+    idf_basename : str
+        Base IDF name stored in returned metadata.
+    out_dir : str
+        Output directory used for simulation artifacts.
+    problem_names_inputs : list
+        Ordered list of input variable names.
+    problem_names_outputs : list
+        Ordered list of primary output names.
+    output_specs : Optional[list]
+        Serialized output reader specifications for primary outputs.
+    add_output_specs : Optional[list]
+        Serialized output reader specifications for additional outputs.
+    add_output_names : list
+        Names of additional outputs expected in the result tuple.
+    row_dict : dict
+        Input values to write into the worker IDF before simulation.
+    keep_dirs : bool
+        Whether BESOS simulation directories should be preserved.
+    keep_input : bool
+        Whether input values should be copied into the output dictionary.
+    sim_files_extensions : Optional[tuple[str, ...]]
+        Optional simulation-file extension policy for post-run cleanup.
+    sim_files_policy : str
+        File cleanup strategy used when pruning worker output folders.
+
+    Returns
+    -------
+    dict
+        Dictionary with requested outputs and worker metadata (`epw`, `idf`,
+        optional `output_dir`, and optional input columns).
+
+    Usage
+    -----
+    Internal helper invoked by multiprocessing evaluation paths.
+
+    Examples
+    --------
+    result = _run_single_evaluation_worker(...)
+    """
     import warnings
     warnings.filterwarnings('ignore')
     from besos.evaluator import EvaluatorEP
@@ -284,18 +413,17 @@ def compare_simulation_instances(
     max_examples: int = 5,
     prefer_pickle_from_instances: bool = True,
 ) -> dict:
-    """
-    Compare two simulation-result sources and report if they are equivalent.
-
+    """Compare two simulation-result sources and report if they are equivalent.
+    
     Supported sources for ``left`` and ``right``:
     - ``ParametricSimulation`` / ``OptimisationSimulation`` instances
     - ``pandas.DataFrame`` objects
     - file paths to ``.pkl/.pickle``, ``.csv`` or ``.json`` outputs
-
+    
     The comparison is oriented to common workflows where both runs should contain
     the same simulation battery (same input combinations) and equivalent results.
     If possible, outputs are aligned by input columns before value comparison.
-
+    
     :param left: first source to compare.
     :param right: second source to compare.
     :param input_columns: explicit input columns used as comparison keys.
@@ -325,6 +453,10 @@ def compare_simulation_instances(
     :param prefer_pickle_from_instances: when ``True``, and an instance has a saved
         file path, the corresponding pickle is loaded first to compare persisted data.
     :return: dictionary report with schema, input-set and output-difference details.
+    
+    Usage
+    -----
+    Use `compare_simulation_instances` within ACCIM parametric and optimisation workflows.
     """
     from collections import Counter, defaultdict
 
@@ -1265,7 +1397,29 @@ def _collect_pickle_files(
     glob_pattern: str = '*.pkl',
     recursive: bool = False,
 ) -> list[str]:
-    """Collect pickle files from files, directories and/or glob patterns."""
+    """Collect pickle files from files, directories and/or glob patterns.
+    
+    Parameters
+    ----------
+    pickle_sources : Any
+        Argument used by `_collect_pickle_files`.
+    pickle_paths : Any
+        Path-like value used by this routine.
+    directory : Any
+        Path-like value used by this routine.
+    glob_pattern : Any
+        Argument used by `_collect_pickle_files`.
+    recursive : Any
+        Argument used by `_collect_pickle_files`.
+    
+    Usage
+    -----
+    Use `_collect_pickle_files` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = _collect_pickle_files(pickle_sources=..., pickle_paths=..., directory=..., ...)
+    """
     collected: list[str] = []
     valid_exts = {'.pkl', '.pickle'}
 
@@ -1336,7 +1490,25 @@ def _order_pickle_files(
     order_by: Literal['mtime', 'name'] = 'mtime',
     descending: bool = True,
 ) -> list[str]:
-    """Return ordered pickle files with deterministic tie-breaking."""
+    """Sort pickle files with deterministic tie-breaking.
+    
+    Parameters
+    ----------
+    pickle_files : Any
+        Argument used by `_order_pickle_files`.
+    order_by : Any
+        Argument used by `_order_pickle_files`.
+    descending : Any
+        Argument used by `_order_pickle_files`.
+    
+    Usage
+    -----
+    Use `_order_pickle_files` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = _order_pickle_files(pickle_files=..., order_by=..., descending=...)
+    """
     if order_by == 'mtime':
         return sorted(
             pickle_files,
@@ -1356,7 +1528,21 @@ def _resolve_reference_pickle(
     ordered_pickles: list[str],
     reference: Optional[Union[int, str, os.PathLike]] = None,
 ) -> tuple[str, int]:
-    """Resolve a reference pickle from index, path, or basename."""
+    """Resolve a reference pickle from index, path, or basename.
+    
+    Parameters
+    ----------
+    ordered_pickles : Any
+        Argument used by `_resolve_reference_pickle`.
+    
+    Usage
+    -----
+    Use `_resolve_reference_pickle` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = _resolve_reference_pickle(ordered_pickles=..., reference=...)
+    """
     if len(ordered_pickles) == 0:
         raise ValueError('No pickle files available to resolve a reference.')
 
@@ -1415,14 +1601,50 @@ def compare_latest_pickles_in_folders(
     numeric_rtol: float = 1e-5,
     max_examples: int = 5,
 ) -> dict:
-    """
-    Compare the newest pickle in each directory.
-
+    """Compare the newest pickle in each directory.
+    
     This is useful when each simulation batch saves timestamped pickle files and you
     want a quick comparison between the latest parametric/optimisation run outputs.
-
+    
     Flexible mismatch handling is delegated to :func:`compare_simulation_instances`
     through ``inputs_mismatch_strategy``, ``reference_columns`` and ``equal_mode``.
+    
+    Parameters
+    ----------
+    left_dir : Any
+        Path-like value used by this routine.
+    right_dir : Any
+        Path-like value used by this routine.
+    glob_pattern : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    recursive : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    input_columns : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    output_columns : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    ignore_columns : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    compare_attrs : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    ignore_attr_keys : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    reference_max_distance : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    numeric_atol : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    numeric_rtol : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    max_examples : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    
+    Usage
+    -----
+    Use `compare_latest_pickles_in_folders` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = compare_latest_pickles_in_folders(left_dir=..., right_dir=..., glob_pattern=..., ...)
     """
     left_pickles = _collect_pickle_files(directory=left_dir, glob_pattern=glob_pattern, recursive=recursive)
     right_pickles = _collect_pickle_files(directory=right_dir, glob_pattern=glob_pattern, recursive=recursive)
@@ -1484,22 +1706,54 @@ def compare_multiple_pickles_with_reference(
     numeric_rtol: float = 1e-5,
     max_examples: int = 5,
 ) -> dict:
-    """
-    Compare multiple pickle files against one reference pickle.
-
+    """Compare multiple pickle files against one reference pickle.
+    
     ``reference`` can be:
     - ``None``: first file in ordered list (default)
     - ``int``: index in ordered list
     - ``str/path``: absolute path or basename present in the ordered list
-
+    
     File selection options:
     - ``pickle_sources``: mixed list of files, directories, and/or glob patterns.
     - ``pickle_paths`` / ``pickle_list``: explicit file list (aliases).
     - ``directory`` + ``glob_pattern``: directory scan.
-
+    
     Flexible mismatch/reference behaviour can be controlled with
     ``inputs_mismatch_strategy``, ``reference_columns``, ``reference_max_distance``
     and ``equal_mode``.
+    
+    Parameters
+    ----------
+    recursive : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    order_by : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    descending : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    input_columns : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    output_columns : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    ignore_columns : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    compare_attrs : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    ignore_attr_keys : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    numeric_atol : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    numeric_rtol : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    max_examples : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    
+    Usage
+    -----
+    Use `compare_multiple_pickles_with_reference` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = compare_multiple_pickles_with_reference(pickle_sources=..., pickle_paths=..., pickle_list=..., ...)
     """
     explicit_pickle_paths = list(pickle_paths or []) + list(pickle_list or [])
     selected_pickles = _collect_pickle_files(
@@ -1572,13 +1826,23 @@ def preflight_report(
     mode: Optional[Literal['auto', 'parametric', 'optimisation']] = 'auto',
     **kwargs,
 ) -> dict:
-    """
-    Convenience wrapper for interactive preflight diagnostics.
-
+    """Convenience wrapper for interactive preflight diagnostics.
+    
     Example::
-
+    
         report = preflight_report(sim)  # auto mode
         print(report['recommendation'])
+    
+    Parameters
+    ----------
+    simulation : Any
+        Argument used by `preflight_report`.
+    kwargs : Any
+        Additional keyword arguments forwarded internally.
+    
+    Usage
+    -----
+    Use `preflight_report` within ACCIM parametric and optimisation workflows.
     """
     if simulation is None:
         raise TypeError('preflight_report expects a valid simulation instance.')
@@ -1621,11 +1885,18 @@ def preflight_report(
 
 
 class SimulationComparisonSession:
-    """
-    Stateful helper to compare simulation outputs and inspect reports via attributes.
-
+    """Stateful helper to compare simulation outputs and inspect reports via attributes.
+    
     This class wraps the functional API and stores the latest comparison artifacts
     (inputs, outputs, reference matching, attrs and full report) for quick inspection.
+    
+    Usage
+    -----
+    Use `SimulationComparisonSession` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    obj = SimulationComparisonSession()
     """
 
     def __init__(
@@ -1643,6 +1914,48 @@ class SimulationComparisonSession:
         numeric_rtol: float = 1e-5,
         max_examples: int = 5,
     ):
+        """Initialize a stateful comparison session with reusable defaults.
+
+        Parameters
+        ----------
+        input_columns : Optional[list[str]]
+            Columns treated as simulation inputs for equality checks.
+        output_columns : Optional[list[str]]
+            Columns treated as simulation outputs for comparison.
+        ignore_columns : Optional[list[str]]
+            Columns excluded from comparison operations.
+        compare_attrs : bool
+            Whether to compare dataframe/object attrs in reports.
+        ignore_attr_keys : Optional[list[str]]
+            Attr keys excluded when `compare_attrs` is enabled.
+        inputs_mismatch_strategy : Literal['strict', 'auto', 'nearest', 'row_order']
+            Strategy used when input rows are not aligned.
+        reference_columns : Optional[list[str]]
+            Optional columns used for row matching and diagnostics.
+        reference_max_distance : Optional[float]
+            Optional threshold for nearest-reference matching.
+        equal_mode : Literal['strict', 'relaxed']
+            Equality policy for comparison checks.
+        numeric_atol : float
+            Absolute tolerance for numeric relaxed comparisons.
+        numeric_rtol : float
+            Relative tolerance for numeric relaxed comparisons.
+        max_examples : int
+            Maximum mismatch examples stored in reports.
+
+        Returns
+        -------
+        None
+            Initializes session state and empty history containers.
+
+        Usage
+        -----
+        Create one session and reuse it across multiple comparisons.
+
+        Examples
+        --------
+        session = SimulationComparisonSession(equal_mode='relaxed')
+        """
         self.input_columns = input_columns
         self.output_columns = output_columns
         self.ignore_columns = ignore_columns
@@ -1675,6 +1988,26 @@ class SimulationComparisonSession:
         self.history: list[dict] = []
 
     def _effective_kwargs(self, **overrides) -> dict:
+        """Merge session defaults with call-time overrides.
+
+        Parameters
+        ----------
+        **overrides : dict
+            Optional keyword overrides for comparison settings.
+
+        Returns
+        -------
+        dict
+            Effective keyword arguments sent to comparison helpers.
+
+        Usage
+        -----
+        Internal helper used by public comparison methods.
+
+        Examples
+        --------
+        kwargs = self._effective_kwargs(equal_mode='relaxed')
+        """
         kwargs = {
             'input_columns': self.input_columns,
             'output_columns': self.output_columns,
@@ -1695,6 +2028,28 @@ class SimulationComparisonSession:
         return kwargs
 
     def _capture(self, operation: str, report: dict) -> dict:
+        """Store report artifacts in session state and history.
+
+        Parameters
+        ----------
+        operation : str
+            Operation name associated with the report.
+        report : dict
+            Report payload returned by comparison helpers.
+
+        Returns
+        -------
+        dict
+            Same report dictionary after session attributes are updated.
+
+        Usage
+        -----
+        Internal helper called after each comparison operation.
+
+        Examples
+        --------
+        captured = self._capture('compare', report)
+        """
         self.last_operation = operation
         self.last_report = report
         self.last_report_path = None
@@ -1741,6 +2096,32 @@ class SimulationComparisonSession:
         prefer_pickle_from_instances: bool = True,
         **overrides,
     ) -> dict:
+        """Compare two simulation sources and store the resulting report.
+
+        Parameters
+        ----------
+        left : Union[Any, pd.DataFrame, str, os.PathLike]
+            Left simulation source (instance, dataframe, or file path).
+        right : Union[Any, pd.DataFrame, str, os.PathLike]
+            Right simulation source (instance, dataframe, or file path).
+        prefer_pickle_from_instances : bool
+            Whether instance-backed comparisons should prefer pickle outputs.
+        **overrides : dict
+            Optional overrides for configured comparison defaults.
+
+        Returns
+        -------
+        dict
+            Comparison report with equality flags and mismatch details.
+
+        Usage
+        -----
+        Main session method for one-to-one source comparison.
+
+        Examples
+        --------
+        report = session.compare(left='run_a.pkl', right='run_b.pkl')
+        """
         self._last_left_input = left
         self._last_right_input = right
         report = compare_simulation_instances(
@@ -1759,6 +2140,34 @@ class SimulationComparisonSession:
         recursive: bool = False,
         **overrides,
     ) -> dict:
+        """Compare latest pickle artifacts found in two folders.
+
+        Parameters
+        ----------
+        left_dir : Union[str, os.PathLike]
+            Folder scanned for the latest left pickle.
+        right_dir : Union[str, os.PathLike]
+            Folder scanned for the latest right pickle.
+        glob_pattern : str
+            File pattern used during folder scan.
+        recursive : bool
+            Whether folder scanning should recurse into subdirectories.
+        **overrides : dict
+            Optional overrides for configured comparison defaults.
+
+        Returns
+        -------
+        dict
+            Folder-level report including selected files and comparison output.
+
+        Usage
+        -----
+        Convenience method for notebook/session workflows with periodic exports.
+
+        Examples
+        --------
+        report = session.compare_latest_in_folders('run_a', 'run_b')
+        """
         report = compare_latest_pickles_in_folders(
             left_dir=left_dir,
             right_dir=right_dir,
@@ -1779,12 +2188,34 @@ class SimulationComparisonSession:
         preferred_name_tokens: Optional[list[str]] = None,
         **overrides,
     ) -> dict:
-        """
-        Compare latest files in two folders for any supported source pattern.
-
+        """Compare latest files in two folders for any supported source pattern.
+        
         Unlike ``compare_latest_in_folders`` (pickle-focused), this method can
         target ``*.csv``/``*.json``/``*.pkl`` and is useful for notebook-style
         workflows with a single method call.
+        
+        Parameters
+        ----------
+        left_dir : Any
+            Path-like value used by this routine.
+        right_dir : Any
+            Path-like value used by this routine.
+        glob_pattern : Any
+            Argument used by `SimulationComparisonSession.compare_latest_sources_in_folders`.
+        recursive : Any
+            Argument used by `SimulationComparisonSession.compare_latest_sources_in_folders`.
+        preferred_name_tokens : Any
+            Argument used by `SimulationComparisonSession.compare_latest_sources_in_folders`.
+        overrides : Any
+            Argument used by `SimulationComparisonSession.compare_latest_sources_in_folders`.
+        
+        Usage
+        -----
+        Use `SimulationComparisonSession.compare_latest_sources_in_folders` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.compare_latest_sources_in_folders(left_dir=..., right_dir=..., glob_pattern=..., ...)
         """
 
         def _pick_latest_source(folder: Union[str, os.PathLike]) -> tuple[str, int, int]:
@@ -1847,6 +2278,30 @@ class SimulationComparisonSession:
         source: Union[Any, pd.DataFrame, str, os.PathLike],
         prefer_pickle_from_instances: bool = True,
     ) -> pd.DataFrame:
+        """Load a dataframe from a path, dataframe, or simulation-like instance.
+
+        Parameters
+        ----------
+        source : Union[Any, pd.DataFrame, str, os.PathLike]
+            Data source to resolve. It can be a dataframe, a file path, or an
+            instance exposing ACCIM output attributes.
+        prefer_pickle_from_instances : bool
+            When ``True``, instance file paths prefer sibling ``.pkl`` files
+            when available.
+
+        Returns
+        -------
+        pd.DataFrame
+            Loaded dataframe ready for comparison/output analysis.
+
+        Usage
+        -----
+        Internal helper used by output-delta analysis methods.
+
+        Examples
+        --------
+        df = SimulationComparisonSession._load_source_dataframe('results.pkl')
+        """
         def _load_path(pathlike: Union[str, os.PathLike]) -> pd.DataFrame:
             path = os.path.abspath(os.fspath(pathlike))
             ext = os.path.splitext(path)[1].lower()
@@ -1931,6 +2386,28 @@ class SimulationComparisonSession:
 
     @staticmethod
     def _resolve_case_insensitive_column(df: pd.DataFrame, requested: str) -> str:
+        """Resolve one dataframe column name with case-insensitive matching.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe containing candidate columns.
+        requested : str
+            Requested column label.
+
+        Returns
+        -------
+        str
+            Resolved column name as it exists in ``df``.
+
+        Usage
+        -----
+        Internal helper for robust output/category column resolution.
+
+        Examples
+        --------
+        col = SimulationComparisonSession._resolve_case_insensitive_column(df, 'epw')
+        """
         request = str(requested).strip()
         if request in df.columns:
             return request
@@ -1955,6 +2432,28 @@ class SimulationComparisonSession:
         left: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None,
         right: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None,
     ) -> tuple[Union[Any, pd.DataFrame, str, os.PathLike], Union[Any, pd.DataFrame, str, os.PathLike]]:
+        """Resolve left/right sources for output change analysis.
+
+        Parameters
+        ----------
+        left : Optional[Union[Any, pd.DataFrame, str, os.PathLike]]
+            Optional explicit left source.
+        right : Optional[Union[Any, pd.DataFrame, str, os.PathLike]]
+            Optional explicit right source.
+
+        Returns
+        -------
+        tuple[Union[Any, pd.DataFrame, str, os.PathLike], Union[Any, pd.DataFrame, str, os.PathLike]]
+            Pair ``(left_source, right_source)`` with resolved values.
+
+        Usage
+        -----
+        Called before computing selected-output deltas.
+
+        Examples
+        --------
+        left_src, right_src = self._resolve_sources_for_output_analysis()
+        """
         left_source = left
         right_source = right
 
@@ -1995,12 +2494,11 @@ class SimulationComparisonSession:
         groupby_dropna: bool = False,
         prefer_pickle_from_instances: bool = True,
     ) -> dict:
-        """
-        Compare selected output columns and return case-level and category-level deltas.
-
+        """Compare selected output columns and return case-level and category-level deltas.
+        
         The method is notebook-friendly: run one comparison first, then call this
         method with only ``outputs=[...]`` to inspect how those outputs changed.
-
+        
         :param outputs: output names to compare (case-insensitive resolution).
         :param category_columns: grouping columns. If ``None``, uses the latest
             comparison input columns when available.
@@ -2012,6 +2510,14 @@ class SimulationComparisonSession:
         :param prefer_pickle_from_instances: when ``True``, instance-backed sources
             prefer sibling ``.pkl`` files if available.
         :return: dictionary with ``changes_by_case`` and ``changes_by_categories``.
+        
+        Usage
+        -----
+        Use `SimulationComparisonSession.compare_selected_outputs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.compare_selected_outputs(outputs=..., category_columns=..., left=..., ...)
         """
         if not isinstance(outputs, (list, tuple)) or len(outputs) == 0:
             raise ValueError("'outputs' must be a non-empty list of column names.")
@@ -2237,6 +2743,44 @@ class SimulationComparisonSession:
         descending: bool = True,
         **overrides,
     ) -> dict:
+        """Compare multiple pickle sources against a chosen reference source.
+
+        Parameters
+        ----------
+        pickle_sources : Optional[list[Union[str, os.PathLike]]]
+            Explicit source list to compare.
+        pickle_paths : Optional[list[Union[str, os.PathLike]]]
+            Alias for ``pickle_sources``.
+        pickle_list : Optional[list[Union[str, os.PathLike]]]
+            Additional alias for backward compatibility.
+        directory : Union[str, os.PathLike, None]
+            Directory scanned when source lists are not provided.
+        glob_pattern : str
+            File pattern used in directory scan.
+        recursive : bool
+            Whether directory scanning is recursive.
+        reference : Optional[Union[int, str, os.PathLike]]
+            Reference selector (index/path/name) used for comparisons.
+        order_by : Literal['mtime', 'name']
+            Ordering strategy before choosing default reference.
+        descending : bool
+            Ordering direction for ``order_by``.
+        **overrides : dict
+            Optional override settings for comparison behavior.
+
+        Returns
+        -------
+        dict
+            Multi-source comparison report captured in session state.
+
+        Usage
+        -----
+        Use when validating many run artifacts against one baseline run.
+
+        Examples
+        --------
+        report = session.compare_multiple_with_reference(directory='outputs')
+        """
         report = compare_multiple_pickles_with_reference(
             pickle_sources=pickle_sources,
             pickle_paths=pickle_paths,
@@ -2252,6 +2796,26 @@ class SimulationComparisonSession:
         return self._capture('compare_multiple_with_reference', report)
 
     def save_last_report_json(self, output_path: Union[str, os.PathLike]) -> str:
+        """Persist the latest captured report as a JSON file.
+
+        Parameters
+        ----------
+        output_path : Union[str, os.PathLike]
+            Destination path for JSON export.
+
+        Returns
+        -------
+        str
+            Absolute path to the saved JSON report.
+
+        Usage
+        -----
+        Call after any comparison method that fills ``self.last_report``.
+
+        Examples
+        --------
+        path = session.save_last_report_json('comparison_report.json')
+        """
         if self.last_report is None:
             raise ValueError('No report available. Run a comparison first.')
         path = os.path.abspath(os.fspath(output_path))
@@ -2261,6 +2825,26 @@ class SimulationComparisonSession:
         return path
 
     def get_last_summary(self) -> dict:
+        """Build a compact summary for the last captured comparison.
+
+        Parameters
+        ----------
+        None
+            This method does not require explicit arguments.
+
+        Returns
+        -------
+        dict
+            Summary dictionary with key equality and matching indicators.
+
+        Usage
+        -----
+        Useful for quick notebook checks without inspecting full reports.
+
+        Examples
+        --------
+        summary = session.get_last_summary()
+        """
         if not isinstance(self.last_comparison, dict):
             return {
                 'operation': self.last_operation,
@@ -2279,14 +2863,21 @@ class SimulationComparisonSession:
         }
 
 class SimulationBase(AnalysisMixin, PlottingMixin):
-    """
-    Base class for parametric simulations and multi-objective optimization.
-
+    """Base class for parametric simulations and multi-objective optimization.
+    
     Contains shared functionality for managing buildings, EPWs, parameters, outputs,
     and IDF backup operations. Subclasses should override simulation-specific methods.
-
+    
     .. versionadded:: 0.8.0
         Split from OptimParamSimulation for better code organization and reduced cognitive load.
+    
+    Usage
+    -----
+    Use `SimulationBase` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    obj = SimulationBase()
     """
 
     def __init__(
@@ -2306,9 +2897,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             building: Any = None,
             accim_results_root: Optional[str] = None,
     ):
-        """
-        Initialize the simulation base instance.
-
+        """Initialize the simulation base instance.
+        
         :param buildings: the besos.IDF_class returned from method get_building(idfpath)
         :param epws: a list of .epw filenames
         :param parameters_type: to specify the type of parameters that should be used
@@ -2324,6 +2914,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param building: legacy alias for buildings, accepted for backward compatibility
         :param accim_results_root: optional base directory used to resolve relative
             out_dir paths for simulation outputs.
+        
+        Usage
+        -----
+        Use `SimulationBase.__init__` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        obj = SimulationBase(buildings=..., epws=..., parameters_type=..., ...)
         """
         if buildings is None and building is not None:
             buildings = building
@@ -2415,7 +3013,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _normalize_results_root_path(path_value: Optional[Union[str, os.PathLike]]) -> Optional[str]:
-        """Normalize optional root paths used to resolve relative output directories."""
+        """Normalize optional root paths used to resolve relative output directories.
+        
+        Parameters
+        ----------
+        path_value : Any
+            Path-like value used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._normalize_results_root_path` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._normalize_results_root_path(path_value=...)
+        """
         if path_value is None:
             return None
         if not isinstance(path_value, (str, os.PathLike)):
@@ -2432,13 +3044,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         out_dir: Union[str, os.PathLike],
         accim_results_root: Optional[Union[str, os.PathLike]] = None,
     ) -> str:
-        """
-        Resolve output directory with the following precedence:
+        """Resolve output directory with the following precedence:
         1) absolute out_dir,
         2) explicit method accim_results_root,
         3) instance accim_results_root,
         4) ACCIM_RESULTS_ROOT environment variable,
         5) fallback to legacy relative out_dir behavior.
+        
+        Usage
+        -----
+        Use `SimulationBase._resolve_results_out_dir` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._resolve_results_out_dir(out_dir=..., accim_results_root=...)
         """
         if not isinstance(out_dir, (str, os.PathLike)):
             raise TypeError("Argument 'out_dir' must be a string/path-like value.")
@@ -2467,6 +3086,30 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         sim_files_policy: str,
         context: str,
     ) -> None:
+        """Warn when configured cleanup may delete CSV outputs.
+
+        Parameters
+        ----------
+        sim_files_extensions : Optional[tuple[str, ...]]
+            Extensions targeted by simulation-file cleanup.
+        sim_files_policy : str
+            Cleanup policy applied to extension filtering.
+        context : str
+            Context label used in the warning message.
+
+        Returns
+        -------
+        None
+            Emits a warning when CSV files are at risk.
+
+        Usage
+        -----
+        Internal helper invoked before simulation runs with file cleanup enabled.
+
+        Examples
+        --------
+        SimulationBase._warn_if_sim_file_cleanup_can_remove_csv(exts, 'keep', 'run')
+        """
         if sim_files_extensions is None:
             return
         if sim_file_policy_will_remove_extension(
@@ -2487,6 +3130,30 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         sim_files_extensions: Optional[tuple[str, ...]],
         sim_files_policy: str,
     ) -> dict:
+        """Apply post-run cleanup policy to a sequence of simulation folders.
+
+        Parameters
+        ----------
+        sim_dirs : Sequence[Any]
+            Candidate simulation directories to process.
+        sim_files_extensions : Optional[tuple[str, ...]]
+            Extension policy used by cleanup helper.
+        sim_files_policy : str
+            Cleanup policy forwarded to pruning logic.
+
+        Returns
+        -------
+        dict
+            Aggregated cleanup statistics across processed directories.
+
+        Usage
+        -----
+        Internal helper used after evaluator runs when directory retention is on.
+
+        Examples
+        --------
+        stats = SimulationBase._cleanup_simulation_output_directories(sim_dirs, exts, policy)
+        """
         stats = {
             'processed_dirs': 0,
             'removed_files': 0,
@@ -2531,16 +3198,23 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
     # ------------------------------------------------------------------
 
     def _save_idf_backup(self, label: str = '', out_dir: str = None) -> str:
-        """
-        Saves a copy of ``self.buildings`` to disk as an IDF file and stores
+        """Saves a copy of ``self.buildings`` to disk as an IDF file and stores
         the path in ``self.idf_backup_path``.
-
+        
         :param label: optional suffix to embed in the filename.
         :param out_dir: directory where the backup should be saved.  Must be
             provided; backups are always written inside the simulation results
             folder so that no extra ``accim_idf_backups`` directory is created
             in the working directory.
         :return: absolute path to the saved IDF.
+        
+        Usage
+        -----
+        Use `SimulationBase._save_idf_backup` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._save_idf_backup(label=..., out_dir=...)
         """
         import datetime
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -2566,14 +3240,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return self.idf_backup_path
 
     def get_output_var_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
-        """
-        Gets a pandas DataFrame which contains the Output:Variable objects from the idf.
+        """Gets a pandas DataFrame which contains the Output:Variable objects from the idf.
         Therefore, it may contain wildcards such as '*', which means the variable is requested
         for all zones.
-
+        
         :param idf_scope: which IDFs to read. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to read fewer IDFs.
         :return: a pandas DataFrame which contains the Output:Variable objects from the idf
+        
+        Usage
+        -----
+        Use `SimulationBase.get_output_var_df_from_idf` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_output_var_df_from_idf(idf_scope=...)
         """
         scoped_buildings = self._resolve_idf_scope(idf_scope)
         output_dfs = []
@@ -2598,6 +3279,28 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return pd.DataFrame(columns=['key_value', 'variable_name', 'frequency', 'schedule_name'])
 
     def _get_idf_identifier(self, building: Any, index: int = None) -> str:
+        """Build a stable identifier for an IDF object.
+
+        Parameters
+        ----------
+        building : Any
+            IDF object candidate.
+        index : int, optional
+            Fallback index used when the IDF has no filename.
+
+        Returns
+        -------
+        str
+            Identifier derived from `idfname` or a deterministic fallback name.
+
+        Usage
+        -----
+        Used by IDF-scope and grouping utilities.
+
+        Examples
+        --------
+        idf_name = self._get_idf_identifier(building, index=0)
+        """
         if hasattr(building, 'idfname') and building.idfname:
             return os.path.basename(building.idfname).replace('.idf', '')
         if index is not None:
@@ -2605,15 +3308,27 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return 'unknown_idf'
 
     def _resolve_idf_scope(self, idf_scope: Any = 'all') -> list[tuple[int, Any]]:
-        """
-        Resolve an IDF scope into ``(index, building)`` pairs.
-
+        """Resolve an IDF scope into ``(index, building)`` pairs.
+        
         Accepted values:
         - 'all' (default): every IDF in ``self.buildings``.
         - 'first': only the first IDF.
         - int: zero-based IDF index.
         - str: IDF identifier, file stem, or file name.
         - list/tuple/set: any mix of the previous selectors.
+        
+        Parameters
+        ----------
+        idf_scope : Any
+            Argument used by `SimulationBase._resolve_idf_scope`.
+        
+        Usage
+        -----
+        Use `SimulationBase._resolve_idf_scope` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._resolve_idf_scope(idf_scope=...)
         """
         if not getattr(self, 'buildings', None):
             return []
@@ -2675,6 +3390,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return selected
 
     def _idf_scope_label(self, idf_scope: Any = 'all') -> str:
+        """Build a human-readable label representing a resolved IDF scope.
+
+        Parameters
+        ----------
+        idf_scope : Any
+            Scope selector accepted by `_resolve_idf_scope`.
+
+        Returns
+        -------
+        str
+            Pipe-separated IDF identifiers.
+
+        Usage
+        -----
+        Used in scan/autocorrect reports for traceability.
+
+        Examples
+        --------
+        label = self._idf_scope_label('all')
+        """
         return '|'.join(
             self._get_idf_identifier(building, idx)
             for (idx, building) in self._resolve_idf_scope(idf_scope)
@@ -2682,6 +3417,28 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _idfobjects_get_case(building: Any, key: str) -> list:
+        """Fetch IDF objects by key with tolerant case variants.
+
+        Parameters
+        ----------
+        building : Any
+            IDF object exposing an `idfobjects` mapping.
+        key : str
+            Object type key to retrieve.
+
+        Returns
+        -------
+        list
+            Matching IDF objects, or an empty list when absent.
+
+        Usage
+        -----
+        Internal helper used by output-object scanning and deduplication.
+
+        Examples
+        --------
+        vars_objs = SimulationBase._idfobjects_get_case(building, 'Output:Variable')
+        """
         objs = list(getattr(building, 'idfobjects', {}).get(key, []))
         if len(objs) == 0:
             objs = list(getattr(building, 'idfobjects', {}).get(str(key).upper(), []))
@@ -2691,6 +3448,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _norm_output_token(value: Any) -> str:
+        """Normalize output-object tokens for deterministic comparisons.
+
+        Parameters
+        ----------
+        value : Any
+            Raw token value from IDF objects.
+
+        Returns
+        -------
+        str
+            Uppercase normalized token, or empty string for missing values.
+
+        Usage
+        -----
+        Used to build duplicate-detection keys for outputs/meters.
+
+        Examples
+        --------
+        token = SimulationBase._norm_output_token(' hourly ')
+        """
         try:
             if pd.isna(value):
                 return ''
@@ -2699,6 +3476,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return str(value).strip().upper()
 
     def _variable_key_from_obj(self, obj: Any) -> tuple[str, str, str, str]:
+        """Build a duplicate-detection key for an `Output:Variable` object.
+
+        Parameters
+        ----------
+        obj : Any
+            Output-variable IDF object.
+
+        Returns
+        -------
+        tuple[str, str, str, str]
+            Normalized key tuple `(key_value, variable_name, frequency, schedule_name)`.
+
+        Usage
+        -----
+        Internal helper used by output deduplication routines.
+
+        Examples
+        --------
+        key = self._variable_key_from_obj(obj)
+        """
         return (
             self._norm_output_token(getattr(obj, 'Key_Value', '')),
             self._norm_output_token(getattr(obj, 'Variable_Name', '')),
@@ -2707,13 +3504,47 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         )
 
     def _meter_key_from_obj(self, obj: Any) -> tuple[str, str]:
+        """Build a duplicate-detection key for an `Output:Meter` object.
+
+        Parameters
+        ----------
+        obj : Any
+            Output-meter IDF object.
+
+        Returns
+        -------
+        tuple[str, str]
+            Normalized key tuple `(key_name, frequency)`.
+
+        Usage
+        -----
+        Internal helper used by output deduplication routines.
+
+        Examples
+        --------
+        key = self._meter_key_from_obj(obj)
+        """
         return (
             self._norm_output_token(getattr(obj, 'Key_Name', '')),
             self._norm_output_token(getattr(obj, 'Reporting_Frequency', '')),
         )
 
     def scan_output_objects(self, idf_scope: Any = 'all') -> dict:
-        """Return current output objects plus duplicate counts without modifying IDFs."""
+        """Inspect current output objects and duplicate counts without modifying IDFs.
+        
+        Parameters
+        ----------
+        idf_scope : Any
+            Argument used by `SimulationBase.scan_output_objects`.
+        
+        Usage
+        -----
+        Use `SimulationBase.scan_output_objects` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.scan_output_objects(idf_scope=...)
+        """
         df_vars = self.get_output_var_df_from_idf(idf_scope=idf_scope)
         df_meters = self.get_output_meter_df_from_idf(idf_scope=idf_scope)
 
@@ -2753,7 +3584,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         }
 
     def autocorrect_output_duplicates(self, idf_scope: Any = 'all', warn: bool = True) -> dict:
-        """Remove duplicate Output:Variable/Output:Meter objects and optionally warn."""
+        """Remove duplicate Output:Variable/Output:Meter objects and optionally warn.
+        
+        Parameters
+        ----------
+        idf_scope : Any
+            Argument used by `SimulationBase.autocorrect_output_duplicates`.
+        
+        Usage
+        -----
+        Use `SimulationBase.autocorrect_output_duplicates` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.autocorrect_output_duplicates(idf_scope=..., warn=...)
+        """
         report = {
             'idf_scope': self._idf_scope_label(idf_scope),
             'buildings': {},
@@ -2800,6 +3645,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return report
 
     def _get_buildings_by_idf(self) -> dict:
+        """Map IDF identifiers to loaded building objects.
+
+        Parameters
+        ----------
+        None
+            This method uses `self.buildings`.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping IDF identifier strings to building objects.
+
+        Usage
+        -----
+        Internal helper for validating dataframe `idf` selectors.
+
+        Examples
+        --------
+        by_idf = self._get_buildings_by_idf()
+        """
         buildings_by_idf = {}
         for (idx, building) in enumerate(self.buildings):
             idf_name = self._get_idf_identifier(building=building, index=idx)
@@ -2812,6 +3677,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return buildings_by_idf
 
     def _get_problem_input_names(self) -> list:
+        """List input names defined by the active problem/parameter set.
+
+        Parameters
+        ----------
+        None
+            Uses instance attributes (`problem`, `parameters_list`).
+
+        Returns
+        -------
+        list
+            Input variable names expected by evaluators.
+
+        Usage
+        -----
+        Internal helper for dataframe validation and ordering.
+
+        Examples
+        --------
+        input_names = self._get_problem_input_names()
+        """
         if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
             return list(self.problem.names('inputs'))
         if hasattr(self, 'parameters_list'):
@@ -2819,12 +3704,74 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return []
 
     def _get_external_input_names(self) -> list:
+        """List extra evaluator input columns required by session context.
+
+        Parameters
+        ----------
+        None
+            Uses the count of loaded buildings.
+
+        Returns
+        -------
+        list
+            External input names (for example `idf` in multi-IDF sessions).
+
+        Usage
+        -----
+        Internal helper for dataframe schema checks.
+
+        Examples
+        --------
+        external_cols = self._get_external_input_names()
+        """
         return ['idf'] if len(self.buildings) > 1 else []
 
     def _get_all_input_names(self) -> list:
+        """List combined problem and external input column names.
+
+        Parameters
+        ----------
+        None
+            Uses helper methods from the current simulation instance.
+
+        Returns
+        -------
+        list
+            Concatenated input names required by evaluators.
+
+        Usage
+        -----
+        Internal helper used while preparing evaluation dataframes.
+
+        Examples
+        --------
+        all_inputs = self._get_all_input_names()
+        """
         return self._get_problem_input_names() + self._get_external_input_names()
 
     def _prepare_dataframe_for_buildings(self, df: pd.DataFrame, epws: list = None) -> dict:
+        """Validate and split an input dataframe per target building.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input samples dataframe.
+        epws : list, optional
+            Allowed EPW labels used to validate optional `epw` column.
+
+        Returns
+        -------
+        dict
+            Mapping `{idf_name: dataframe_subset}` ready for evaluator dispatch.
+
+        Usage
+        -----
+        Internal helper used by dataframe-driven simulation execution.
+
+        Examples
+        --------
+        grouped = self._prepare_dataframe_for_buildings(df=samples_df, epws=self.epws)
+        """
         if df is None:
             raise ValueError('Argument df must be a pandas DataFrame.')
         if not isinstance(df, pd.DataFrame):
@@ -2886,12 +3833,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return grouped
 
     def get_output_meter_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
-        """
-        Gets a pandas DataFrame which contains the Output:Meter objects from the idf.
-
+        """Gets a pandas DataFrame which contains the Output:Meter objects from the idf.
+        
         :param idf_scope: which IDFs to read. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to read fewer IDFs.
         :return: a pandas DataFrame which contains the Output:Meter objects from the idf
+        
+        Usage
+        -----
+        Use `SimulationBase.get_output_meter_df_from_idf` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_output_meter_df_from_idf(idf_scope=...)
         """
         scoped_buildings = self._resolve_idf_scope(idf_scope)
         output_dfs = []
@@ -2912,11 +3866,39 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return pd.DataFrame(columns=['key_name', 'frequency'])
 
     def get_output_variables_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
-        """Alias consistente de get_output_var_df_from_idf."""
+        """Alias consistente de get_output_var_df_from_idf.
+        
+        Parameters
+        ----------
+        idf_scope : Any
+            Argument used by `SimulationBase.get_output_variables_df_from_idf`.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_output_variables_df_from_idf` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_output_variables_df_from_idf(idf_scope=...)
+        """
         return self.get_output_var_df_from_idf(idf_scope=idf_scope)
 
     def get_output_meters_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
-        """Alias consistente de get_output_meter_df_from_idf."""
+        """Alias consistente de get_output_meter_df_from_idf.
+        
+        Parameters
+        ----------
+        idf_scope : Any
+            Argument used by `SimulationBase.get_output_meters_df_from_idf`.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_output_meters_df_from_idf` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_output_meters_df_from_idf(idf_scope=...)
+        """
         return self.get_output_meter_df_from_idf(idf_scope=idf_scope)
 
     def set_output_variables_to_idf(
@@ -2926,12 +3908,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             idf_scope: Any = 'all',
             mode: Literal['append', 'replace'] = 'append',
     ):
-        """
-        Adds Output:Variable objects from a DataFrame.
-
+        """Adds Output:Variable objects from a DataFrame.
+        
         - ``mode='append'`` (default): keep existing objects and add only missing ones.
         - ``mode='replace'``: remove all existing Output:Variable objects first, then add rows.
-
+        
         :param df_output_variable: DataFrame de variables con columnas key_value,
             variable_name, frequency y opcionalmente schedule_name.
         :param output_variables: lista alternativa para definir variables. Soporta:
@@ -2942,6 +3923,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             an IDF name, or a list of selectors to modify fewer IDFs.
         :param mode: 'append' or 'replace'.
         :return:
+        
+        Usage
+        -----
+        Use `SimulationBase.set_output_variables_to_idf` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_output_variables_to_idf(df_output_variable=..., output_variables=..., idf_scope=..., ...)
         """
         if mode not in {'append', 'replace'}:
             raise ValueError("mode must be 'append' or 'replace'.")
@@ -3045,7 +4034,25 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             idf_scope: Any = 'all',
             mode: Literal['append', 'replace'] = 'append',
     ):
-        """Legacy wrapper. Use set_output_variables_to_idf instead."""
+        """Legacy wrapper. Use set_output_variables_to_idf instead.
+        
+        Parameters
+        ----------
+        outputs_df : Any
+            Argument used by `SimulationBase.set_output_var_df_to_idf`.
+        idf_scope : Any
+            Argument used by `SimulationBase.set_output_var_df_to_idf`.
+        mode : Any
+            Argument used by `SimulationBase.set_output_var_df_to_idf`.
+        
+        Usage
+        -----
+        Use `SimulationBase.set_output_var_df_to_idf` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_output_var_df_to_idf(outputs_df=..., idf_scope=..., mode=...)
+        """
         warnings.warn(
             "set_output_var_df_to_idf is deprecated and will be removed in a future version. "
             "Use set_output_variables_to_idf(df_output_variable=..., output_variables=..., ...) instead.",
@@ -3069,13 +4076,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             idf_scope: Any = 'all',
             dry_run: bool = False,
     ) -> dict:
-        """
-        Remove Output:Meter and/or Output:Variable objects not matching the requested selection.
-
+        """Remove Output:Meter and/or Output:Variable objects not matching the requested selection.
+        
         This method edits existing IDF output objects only; it does not run EnergyPlus and it does
         not add missing outputs. ``None`` means "do not filter this output type"; an empty list or
         empty DataFrame means "remove all objects of this output type".
-
+        
         :param df_output_variable: optional DataFrame with columns such as key_value,
             variable_name, frequency and schedule_name.
         :param df_output_meter: optional DataFrame with key_name and optionally frequency.
@@ -3088,6 +4094,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             an IDF name, or a list of selectors to filter fewer IDFs.
         :param dry_run: when True, return the report without modifying the IDFs.
         :return: report dict with kept/removed counts per IDF.
+        
+        Usage
+        -----
+        Use `SimulationBase.keep_only_outputs_in_idfs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.keep_only_outputs_in_idfs(df_output_variable=..., df_output_meter=..., output_variables=..., ...)
         """
         filter_meters = df_output_meter is not None or output_meters is not None
         filter_variables = df_output_variable is not None or output_variables is not None
@@ -3255,9 +4269,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             validation_idf_scope: Any = None,
             keep_available_outputs: bool = False,
     ):
-        """
-        Adds Output:Meter objects from DataFrame and/or list.
-
+        """Adds Output:Meter objects from DataFrame and/or list.
+        
         :param df_output_meter: DataFrame opcional con columnas key_name y opcionalmente
             frequency. Si frequency no está, se usan las frecuencias de self.output_freqs.
         :param output_meters: lista opcional de medidores. Cada item puede ser:
@@ -3274,6 +4287,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param validation_idf_scope: IDFs to use for the validation test simulation. Defaults
             to idf_scope. Use 'first' to validate once while applying to all IDFs.
         :return:
+        
+        Parameters
+        ----------
+        keep_available_outputs : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.set_output_meters_to_idf` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_output_meters_to_idf(df_output_meter=..., output_meters=..., validate=..., ...)
         """
         meter_input_df = pd.DataFrame(columns=['key_name', 'frequency'])
         if df_output_meter is not None and len(df_output_meter) > 0:
@@ -3457,7 +4483,35 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             validation_idf_scope: Any = None,
             keep_available_outputs: bool = False,
     ):
-        """Legacy wrapper. Use set_output_meters_to_idf instead."""
+        """Legacy wrapper. Use set_output_meters_to_idf instead.
+        
+        Parameters
+        ----------
+        output_meters : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        validate : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        on_missing : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        auto_filter : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        reduce_sim_time : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        idf_scope : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        validation_idf_scope : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        keep_available_outputs : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.set_output_met_objects_to_idf` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_output_met_objects_to_idf(output_meters=..., validate=..., on_missing=..., ...)
+        """
         warnings.warn(
             "set_output_met_objects_to_idf is deprecated and will be removed in a future version. "
             "Use set_output_meters_to_idf(df_output_meter=..., output_meters=..., ...) instead.",
@@ -3482,15 +4536,27 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         idf_scope: Any = 'all',
         keep_available_outputs: bool = False,
     ) -> dict[str, pd.DataFrame]:
-        """
-        Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.
+        """Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.
         Therefore, it won't contain wildcards such as '*'.
-
+        
         :param reduce_sim_time: True to reduce the simulation runtime
         :param idf_scope: IDFs to test. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to run fewer test simulations.
-
+        
         :return: dictionary with ``meters`` and ``variables`` DataFrames.
+        
+        Parameters
+        ----------
+        keep_available_outputs : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_outputs_df_from_testsim` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_outputs_df_from_testsim(reduce_sim_time=..., idf_scope=..., keep_available_outputs=...)
         """
         scoped_buildings = self._resolve_idf_scope(idf_scope)
         if len(scoped_buildings) > 1:
@@ -3718,11 +4784,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         idf_scope: Any = 'all',
         keep_available_outputs: bool = False,
     ) -> dict[str, Any]:
-        """
-        Discovers which outputs are actually available for this model.
-
+        """Discovers which outputs are actually available for this model.
+        
         This is intended as a preflight step before choosing outputs.
-
+        
         :param reduce_sim_time: when using EnergyPlus test-sim discovery, reduce runtime.
         :param prefer: 'testsimeplus' (default) uses a lightweight EnergyPlus run via
             ``get_outputs_df_from_testsim``; 'rdd_mdd' reads `available_outputs/eplusout.rdd`
@@ -3733,6 +4798,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param keep_available_outputs: when False (default), removes the temporary
             ``available_outputs`` directory once discovery is done.
         :return: dictionary with keys ``meters``, ``variables`` and ``meta``.
+        
+        Usage
+        -----
+        Use `SimulationBase.discover_available_outputs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.discover_available_outputs(reduce_sim_time=..., prefer=..., refresh=..., ...)
         """
         requested_prefer = prefer
         scope_label = self._idf_scope_label(idf_scope)
@@ -3816,17 +4889,45 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         idf_scope: Any = 'all',
         keep_available_outputs: bool = False,
     ) -> dict[str, Any]:
-        """
-        Validates and builds output selection DataFrames from a simple wishlist and/or DataFrames.
-
+        """Validates and builds output selection DataFrames from a simple wishlist and/or DataFrames.
+        
         This method requires that available outputs are known. If not cached, it will
         run discovery (EnergyPlus test-sim by default).
-
+        
         Returns DataFrames compatible with ``set_output_var_df_to_idf`` and
         ``set_output_met_objects_to_idf``.
-
+        
         :param idf_scope: IDFs used for discovery/validation. Defaults to 'all'. Use
             'first' when you know all IDFs expose the same outputs.
+        
+        Parameters
+        ----------
+        meters : Any
+            Argument used by `SimulationBase.select_outputs`.
+        variables : Any
+            Argument used by `SimulationBase.select_outputs`.
+        from_df_vars : Any
+            Argument used by `SimulationBase.select_outputs`.
+        from_df_meters : Any
+            Argument used by `SimulationBase.select_outputs`.
+        match : Any
+            Argument used by `SimulationBase.select_outputs`.
+        on_missing : Any
+            Argument used by `SimulationBase.select_outputs`.
+        suggest : Any
+            Argument used by `SimulationBase.select_outputs`.
+        reduce_sim_time : Any
+            Argument used by `SimulationBase.select_outputs`.
+        keep_available_outputs : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.select_outputs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.select_outputs(meters=..., variables=..., from_df_vars=..., ...)
         """
         if meters is None:
             meters = []
@@ -4013,15 +5114,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         dry_run: bool = False,
         idf_scope: Any = 'all',
     ) -> dict:
-        """
-        Removes existing output-related objects from the IDF(s) prior to simulation.
-
+        """Removes existing output-related objects from the IDF(s) prior to simulation.
+        
         :param mode: 'meters_vars' removes only Output:Variable and Output:Meter; 'all' removes
             all object types starting with Output:* and OutputControl:* (and a few common diagnostics).
         :param dry_run: when True, do not modify the IDFs; only return what would be removed.
         :param idf_scope: IDFs to clean. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to clean fewer IDFs.
         :return: report dict with counts by building and object type.
+        
+        Usage
+        -----
+        Use `SimulationBase.clear_outputs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.clear_outputs(mode=..., dry_run=..., idf_scope=...)
         """
         report: dict = {'mode': mode, 'dry_run': dry_run, 'idf_scope': self._idf_scope_label(idf_scope), 'buildings': {}}
 
@@ -4075,16 +5183,40 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         idf_scope: Any = 'all',
         validation_idf_scope: Any = None,
     ) -> dict:
-        """
-        Orchestrates a complete outputs preflight:
+        """Orchestrates a complete outputs preflight:
         - (optional) discover/validate available outputs
         - (optional) clear existing output objects in the IDF(s)
         - apply selected Output:Variable and Output:Meter
         - (optional) verify IDF state matches selection
-
+        
         ``idf_scope`` controls which IDFs are cleaned/applied/verified. ``validation_idf_scope``
         controls which IDFs are used for EnergyPlus test-sim validation; set it to 'first'
         when all IDFs are known to expose the same outputs.
+        
+        Parameters
+        ----------
+        df_vars_sel : Any
+            Input dataframe used by this routine.
+        df_meters_sel : Any
+            Input dataframe used by this routine.
+        clean_mode : Any
+            Argument used by `SimulationBase.apply_outputs_preflight`.
+        validate_before_apply : Any
+            Argument used by `SimulationBase.apply_outputs_preflight`.
+        validate_after_apply : Any
+            Argument used by `SimulationBase.apply_outputs_preflight`.
+        on_missing : Any
+            Argument used by `SimulationBase.apply_outputs_preflight`.
+        reduce_sim_time : Any
+            Argument used by `SimulationBase.apply_outputs_preflight`.
+        
+        Usage
+        -----
+        Use `SimulationBase.apply_outputs_preflight` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.apply_outputs_preflight(df_vars_sel=..., df_meters_sel=..., clean_mode=..., ...)
         """
         validation_scope = idf_scope if validation_idf_scope is None else validation_idf_scope
         report: dict = {
@@ -4204,19 +5336,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return report
 
     def set_outputs_for_simulation(self, df_output_variable: pd.DataFrame=None, df_output_meter: pd.DataFrame=None):
-        """
-        Sets the outputs for the parametric analysis or optimisation based on the input pandas DataFrames
+        """Sets the outputs for the parametric analysis or optimisation based on the input pandas DataFrames
         for Output:Variable and/or Output:Meter objects. These DataFrames can include columns for the output name
         and the aggregation function (see the 'func' argument of MeterReader and VariableReader classes in besos),
         respectively named 'name' and 'func'. If no 'name' and/or 'func' columns are provided,
         the names will be the variable and meter names, and the hourly values will be summed.
         The 'func' value can be either a callable or an import path string with format
         'module.submodule:callable_name'.
-
+        
         :param df_output_variable: a pandas DataFrame containing the Output:Variable objects, similar to that one
             returned in key ``variables`` from method get_outputs_df_from_testsim()
         :param df_output_meter: a pandas DataFrame containing the Output:Meter objects, similar to that one
             returned in key ``meters`` from method get_outputs_df_from_testsim()
+        
+        Usage
+        -----
+        Use `SimulationBase.set_outputs_for_simulation` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_outputs_for_simulation(df_output_variable=..., df_output_meter=...)
         """
         if df_output_variable is not None:
             df_output_variable['output_name'] = 'temp'
@@ -4253,10 +5392,17 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.sim_outputs = objs_meters + objs_variables
 
     def get_available_parameters(self) -> list:
-        """
-        Returns a list containing the available parameters depending on the parameters_type argument previously input.
-
+        """Returns a list containing the available parameters depending on the parameters_type argument previously input.
+        
         :return: a list containing the available parameters depending on the parameters_type argument previously input
+        
+        Usage
+        -----
+        Use `SimulationBase.get_available_parameters` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_available_parameters()
         """
         if self.is_accim_predef_model:
             available_params = [i for i in params_dicts.accim_predef_model_params.keys()]
@@ -4269,9 +5415,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return available_params
 
     def set_parameters(self, accis_params_dict: dict = None, additional_params: list=None, use_dflt_values: bool=True):
-        """
-        Sets the parameters for the parametric analysis or optimisation.
-
+        """Sets the parameters for the parametric analysis or optimisation.
+        
         :param accis_params_dict: a dictionary containing the parameters names in the keys,
             and in the values, the options or range of values using respectively
             a list or tuple with min and max values.
@@ -4280,6 +5425,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             for more information, refer to addAccis
         :param VentCtrl: only used in accim predefined and custom models; sets the VentCtrl argument;
             for more information, refer to addAccis
+        
+        Parameters
+        ----------
+        use_dflt_values : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.set_parameters` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_parameters(accis_params_dict=..., additional_params=..., use_dflt_values=...)
         """
         if accis_params_dict is None:
             accis_params_dict = {}
@@ -4446,10 +5604,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             add_outputs: Union[int, list] = None,
             converters: dict = None,
     ):
-        """
-        Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters
+        """Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters
         method, and for outputs, those set using the set_outputs_for_simulation method.
-
+        
         :param minimize_outputs: only used in optimisation; a list containing booleans to specify if the outputs must
             be minimized (True), maximized (False), or just show the output (None).
         :param constraints: only used in optimisation;
@@ -4458,6 +5615,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             a list containing the logical expressions for the constraints
         :param add_outputs: BESOS outputs that should be reported but not optimized
         :param converters: BESOS converters for outputs and constraints
+        
+        Usage
+        -----
+        Use `SimulationBase.set_problem` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_problem(minimize_outputs=..., constraints=..., constraint_bounds=..., ...)
         """
         problem = EPProblem(
             inputs=self.parameters_list,
@@ -4471,9 +5636,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.problem = problem
 
     def sampling_full_set(self):
-        """
-        Combines all values from all parameters and saves it into a pandas DataFrame, stored in an internal variable
+        """Combines all values from all parameters and saves it into a pandas DataFrame, stored in an internal variable
         named parameters_values_df.
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_full_set` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.sampling_full_set()
         """
         from accim.parametric_and_optimisation.utils import make_all_combinations
         
@@ -4502,11 +5674,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.parameters_values_df = parameters_values_df
 
     def sampling_custom(self, custom_plan: Union[List[dict], dict, pd.DataFrame]):
-        """
-        Sets a custom simulation plan.
+        """Sets a custom simulation plan.
         :param custom_plan: A pandas DataFrame, a list of dictionaries, or a dictionary mapping IDFs to EPWs.
             Example list: [{'idf': 'Building_A', 'epw': 'seville.epw'}, {'idf': 'Building_B', 'epw': 'madrid.epw'}]
             Example dict: {'Building_A': 'seville.epw', 'Building_B': ['madrid_2024.epw', 'madrid_2025.epw']}
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_custom` within ACCIM parametric and optimisation workflows.
         """
         import pandas as pd
         if isinstance(custom_plan, pd.DataFrame):
@@ -4525,8 +5700,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             raise TypeError('custom_plan must be a pandas DataFrame, a list of dicts, or a dict.')
 
     def _expand_samples_with_buildings_and_epws(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Expands a parameter samples DataFrame with cartesian products for IDFs and EPWs.
+        """Expands a parameter samples DataFrame with cartesian products for IDFs and EPWs.
+        
+        Parameters
+        ----------
+        df : Any
+            Input dataframe used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._expand_samples_with_buildings_and_epws` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._expand_samples_with_buildings_and_epws(df=...)
         """
         if df is None or df.empty:
             return df
@@ -4549,12 +5736,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return df
 
     def sampling_full_factorial(self, level: int):
-        """
-        Split the range of every parameter in the number of parts specified in argument level,
+        """Split the range of every parameter in the number of parts specified in argument level,
         and saves it into a pandas DataFrame, stored in an internal variable named parameters_values_df.
         For more information, see besos.sampling.dist_sampler and besos.sampling.full_factorial
-
+        
         :param level: an integer; represents the number of parts to split each parameter's range
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_full_factorial` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.sampling_full_factorial(level=...)
         """
         if self.descriptors_has_range:
             parameters_values_df = sampling.dist_sampler(sampling.full_factorial, self.problem, num_samples=2, level=level)
@@ -4563,12 +5757,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
     def sampling_lhs(self, num_samples: int):
-        """
-        Uses Latin Hypercube Sampling to make samples, where the total number is specified in the num_samples argument,
+        """Uses Latin Hypercube Sampling to make samples, where the total number is specified in the num_samples argument,
         and saves it into a pandas DataFrame, stored in an internal variable named parameters_values_df.
         For more information, see besos.sampling.dist_sampler and besos.sampling.lhs
-
+        
         :param num_samples: an integer; represents the total number of samples
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_lhs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.sampling_lhs(num_samples=...)
         """
         if self.descriptors_has_range:
             parameters_values_df = sampling.dist_sampler(sampling.lhs, self.problem, num_samples=num_samples)
@@ -4577,8 +5778,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
     def _get_salib_problem(self) -> dict:
-        """
-        Internal method to build the SALib problem dictionary based on besos parameters.
+        """Internal method to build the SALib problem dictionary based on besos parameters.
+        
+        Usage
+        -----
+        Use `SimulationBase._get_salib_problem` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._get_salib_problem()
         """
         names = self.problem.names('inputs')
         bounds = []
@@ -4592,14 +5800,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return problem
 
     def sampling_sobol(self, num_samples: int=128):
-        """
-        Uses Saltelli's extension of the Sobol sequence to generate samples for Sensitivity Analysis.
+        """Uses Saltelli's extension of the Sobol sequence to generate samples for Sensitivity Analysis.
         The samples are saved into a pandas DataFrame, stored in an internal variable named parameters_values_df.
         Requires SALib to be installed.
-
+        
         :param num_samples: an integer; represents the number of samples to generate.
             The total number of samples generated will be num_samples * (2 * num_vars + 2).
             For Sobol, num_samples should preferably be a power of 2 (e.g. 64, 128, 256, 512, 1024).
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_sobol` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.sampling_sobol(num_samples=...)
         """
         if not self.descriptors_has_range:
             raise KeyError('sampling_sobol method can only be used with range descriptors.')
@@ -4613,14 +5828,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
     def sampling_morris(self, num_samples: int=100, num_levels: int=4):
-        """
-        Uses Morris' method to generate samples for Sensitivity Analysis.
+        """Uses Morris' method to generate samples for Sensitivity Analysis.
         The samples are saved into a pandas DataFrame, stored in an internal variable named parameters_values_df.
         Requires SALib to be installed.
-
+        
         :param num_samples: an integer; represents the number of trajectories (N).
             The total number of samples generated will be num_samples * (num_vars + 1).
         :param num_levels: number of grid levels.
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_morris` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.sampling_morris(num_samples=..., num_levels=...)
         """
         if not self.descriptors_has_range:
             raise KeyError('sampling_morris method can only be used with range descriptors.')
@@ -4638,16 +5860,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
     # ------------------------------------------------------------------
 
     def set_category_mapping(self, epw_mapping_rules: dict = None, idf_mapping_rules: dict = None) -> None:
-        """
-        Defines keyword-based mapping rules to automatically assign category labels to EPW
+        """Defines keyword-based mapping rules to automatically assign category labels to EPW
         and/or IDF files in the simulation results. Once set, categories are applied
         automatically at the end of ``run_parametric_simulation`` and ``run_optimisation``,
         and can be re-applied manually at any time with :meth:`apply_category_mapping`.
-
+        
         The format follows the pyfwg convention:
-
+        
         .. code-block:: python
-
+        
             epw_mapping_rules = {
                 'city': {
                     'seville': ['sevilla', 'SVQ'],
@@ -4658,22 +5879,30 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     'future': ['rcp45', 'rcp85'],
                 },
             }
-
+        
             idf_mapping_rules = {
                 'typology': {
                     'residential': ['res', 'house'],
                     'office': ['office', 'ofic'],
                 },
             }
-
+        
         Matching is **case-insensitive substring search** on the file basename (without path
         or extension). The first matching keyword wins. If no keyword matches, the category
         value for that row will be ``None``.
-
+        
         :param epw_mapping_rules: dict of ``{category_name: {category_value: keyword_or_list}}``.
             Applied to the ``epw`` column of result DataFrames.
         :param idf_mapping_rules: dict of ``{category_name: {category_value: keyword_or_list}}``.
             Applied to the ``idf`` column of result DataFrames.
+        
+        Usage
+        -----
+        Use `SimulationBase.set_category_mapping` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_category_mapping(epw_mapping_rules=..., idf_mapping_rules=...)
         """
         def _validate_rules(rules: dict, name: str):
             if rules is None:
@@ -4703,13 +5932,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _resolve_category_for_value(filename: str, category_rules: dict):
-        """
-        Returns the category value for *filename* based on *category_rules*, or ``None``
+        """Returns the category value for *filename* based on *category_rules*, or ``None``
         if no keyword matches.
-
+        
         :param filename: the EPW or IDF basename (without path or extension).
         :param category_rules: a ``{category_value: keyword_or_list}`` dict for one category.
         :return: matched category value string, or ``None``.
+        
+        Usage
+        -----
+        Use `SimulationBase._resolve_category_for_value` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._resolve_category_for_value(filename=..., category_rules=...)
         """
         name_lower = os.path.basename(filename).lower()
         # Strip common extensions so matching works on the stem
@@ -4726,23 +5962,30 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return None
 
     def apply_category_mapping(self, df_types: list = None) -> None:
-        """
-        Applies the category mapping rules (previously set via :meth:`set_category_mapping`)
+        """Applies the category mapping rules (previously set via :meth:`set_category_mapping`)
         to the specified result DataFrames, adding one new column per category.
-
+        
         Columns are inserted immediately after the ``epw`` or ``idf`` column they derive from.
         If a category column already exists it is overwritten with a warning.
-
+        
         .. note::
             If an EPW category and an IDF category share the same name (e.g. both called
             ``'type'``), the EPW category is automatically renamed to ``'epw_<name>'``
             (e.g. ``'epw_type'``) to prevent the IDF values from silently overwriting the
             EPW values.  A ``UserWarning`` is emitted in that case.
-
+        
         :param df_types: list of strings specifying which DataFrames to process.
             Valid values: ``'parametric'``, ``'parametric_hourly'``, ``'parametric_monthly'``,
             ``'optimisation'``, ``'optimisation_hourly'``, ``'optimisation_monthly'``.
             If ``None``, all available DataFrames are processed.
+        
+        Usage
+        -----
+        Use `SimulationBase.apply_category_mapping` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.apply_category_mapping(df_types=...)
         """
         epw_rules = getattr(self, 'epw_mapping_rules', {})
         idf_rules = getattr(self, 'idf_mapping_rules', {})
@@ -4852,23 +6095,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         fallback: str = 'historical',
         df_types: list = None,
     ) -> None:
-        """
-        Adds a new category column derived from the last ``'_'``-separated suffix
+        """Adds a new category column derived from the last ``'_'``-separated suffix
         of each EPW value and persists the rule in ``DataFrame.attrs`` so it is
         automatically re-applied every time results are loaded from a pickle.
-
+        
         This is the recommended way to create EPW-based derived categories that are
         **not** covered by the keyword rules of :meth:`set_category_mapping` (e.g.
         distinguishing TMY/MET/historical based on a filename suffix).
-
+        
         The rule is stored both on the instance (``self.epw_suffix_categories``) and
         inside ``df.attrs['epw_suffix_categories']``, which survives ``DataFrame.to_pickle``
         / ``pd.read_pickle`` round-trips.  When :meth:`load_outputs_parametric` or
         :meth:`load_outputs_optimisation` loads a pickle that contains these attrs, it
         automatically re-derives the columns without requiring any manual intervention.
-
+        
         Example::
-
+        
             # Call once after loading results:
             sim.add_epw_suffix_category(
                 col_name='weather_type',
@@ -4877,7 +6119,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             )
             # From now on, every sim.load_outputs_parametric(...) will automatically
             # recreate the 'weather_type' column.
-
+        
         :param col_name: Name of the new column to create / overwrite.
         :param suffix_map: Mapping from EPW filename suffix (the last ``'_'``-delimited
             token) to the desired category label.
@@ -4886,6 +6128,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             Default ``'historical'``.
         :param df_types: List of DataFrame keys to process.  Same values accepted as
             in :meth:`apply_category_mapping`.  ``None`` processes all available DFs.
+        
+        Usage
+        -----
+        Use `SimulationBase.add_epw_suffix_category` within ACCIM parametric and optimisation workflows.
         """
         if not hasattr(self, 'epw_suffix_categories'):
             self.epw_suffix_categories = {}
@@ -4963,20 +6209,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         print(f'  [!] Could not update {pkl_path}: {_e}')
 
     def preview_category_mapping(self) -> dict:
-        """
-        Returns a dictionary containing DataFrames showing the category labels that would be assigned to each
+        """Returns a dictionary containing DataFrames showing the category labels that would be assigned to each
         EPW and IDF currently registered in this instance, based on the rules defined
         via :meth:`set_category_mapping`. The DataFrames are also saved in the attribute
         `category_mapping_preview_dfs`.
-
+        
         Use this **before running any simulation** to verify that the mapping rules
         produce the expected results.
-
+        
         :return: a dictionary with keys ``'epw'`` and ``'idf'``, where each value is a pandas DataFrame.
             Returns empty DataFrames if no mapping rules have been set.
-
+        
         Example::
-
+        
             preview = parametric.preview_category_mapping()
             print(preview['epw'].to_string(index=False))
             # file                       city      scenario
@@ -4985,6 +6230,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             print(preview['idf'].to_string(index=False))
             # file                       typology
             # office_building_A.idf      None
+        
+        Usage
+        -----
+        Use `SimulationBase.preview_category_mapping` within ACCIM parametric and optimisation workflows.
         """
         epw_rules = getattr(self, 'epw_mapping_rules', {})
         idf_rules = getattr(self, 'idf_mapping_rules', {})
@@ -5043,7 +6292,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _simulation_df_source_map() -> dict:
-        """Maps public df_source aliases to canonical source keys and DataFrame attributes."""
+        """Maps public df_source aliases to canonical source keys and DataFrame attributes.
+        
+        Usage
+        -----
+        Use `SimulationBase._simulation_df_source_map` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._simulation_df_source_map()
+        """
         return {
             'parametric': ('parametric', 'outputs_param_simulation'),
             'outputs_param_simulation': ('parametric', 'outputs_param_simulation'),
@@ -5063,7 +6321,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         }
 
     def _resolve_simulation_df_source(self, df_source: str = 'parametric') -> tuple[str, str, Any]:
-        """Resolve a df_source alias into ``(canonical_source, attr_name, dataframe)``."""
+        """Resolve a df_source alias into ``(canonical_source, attr_name, dataframe)``.
+        
+        Usage
+        -----
+        Use `SimulationBase._resolve_simulation_df_source` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._resolve_simulation_df_source(df_source=...)
+        """
         source_key = str(df_source).strip().lower()
         source_map = self._simulation_df_source_map()
         if source_key not in source_map:
@@ -5076,7 +6343,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _normalise_summary_count_key(value: Any) -> str:
-        """Normalize category labels so summary dictionaries are print/JSON friendly."""
+        """Normalize category labels so summary dictionaries are print/JSON friendly.
+        
+        Parameters
+        ----------
+        value : Any
+            Argument used by `SimulationBase._normalise_summary_count_key`.
+        
+        Usage
+        -----
+        Use `SimulationBase._normalise_summary_count_key` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._normalise_summary_count_key(value=...)
+        """
         try:
             if pd.isna(value):
                 return '<NA>'
@@ -5086,7 +6367,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _detect_energy_columns_from_numeric(numeric_columns: list[str]) -> list[str]:
-        """Heuristic detection of energy-related numeric columns based on column names."""
+        """Heuristic detection of energy-related numeric columns based on column names.
+        
+        Parameters
+        ----------
+        numeric_columns : Any
+            Argument used by `SimulationBase._detect_energy_columns_from_numeric`.
+        
+        Usage
+        -----
+        Use `SimulationBase._detect_energy_columns_from_numeric` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._detect_energy_columns_from_numeric(numeric_columns=...)
+        """
         energy_pattern = re.compile(
             r'energy|heating|cooling|electric(?:ity)?|gas|fuel|demand|consumption|load|'
             r'kwh|mwh|gj|mj|kj|btu|therm|eui|end[_\s-]?use',
@@ -5095,7 +6390,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return [column for column in numeric_columns if energy_pattern.search(str(column))]
 
     def _get_rule_based_category_candidates(self, df_columns: list[str]) -> list[str]:
-        """Returns category columns requested by mapping rules and available in the DataFrame."""
+        """Returns category columns requested by mapping rules and available in the DataFrame.
+        
+        Parameters
+        ----------
+        df_columns : Any
+            Input dataframe used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._get_rule_based_category_candidates` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._get_rule_based_category_candidates(df_columns=...)
+        """
         epw_rules = getattr(self, 'epw_mapping_rules', {}) or {}
         idf_rules = getattr(self, 'idf_mapping_rules', {}) or {}
 
@@ -5120,8 +6429,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         df: pd.DataFrame,
         energy_columns: list[str],
     ) -> list[str]:
-        """
-        Infer category columns dynamically when explicit category rules are unavailable.
+        """Infer category columns dynamically when explicit category rules are unavailable.
+        
+        Parameters
+        ----------
+        df : Any
+            Input dataframe used by this routine.
+        energy_columns : Any
+            Argument used by `SimulationBase._infer_category_columns`.
+        
+        Usage
+        -----
+        Use `SimulationBase._infer_category_columns` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._infer_category_columns(df=..., energy_columns=...)
         """
         rule_based_columns = self._get_rule_based_category_candidates(df_columns=list(df.columns))
         if len(rule_based_columns) > 0:
@@ -5178,10 +6501,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         category_columns: Optional[list] = None,
         include_na: bool = True,
     ) -> dict:
-        """
-        Builds a compact summary for a simulation outputs DataFrame and stores it in
+        """Builds a compact summary for a simulation outputs DataFrame and stores it in
         ``self.simulation_summary``.
-
+        
         :param df_source: DataFrame source alias. Supported values include
             ``'parametric'``, ``'optimisation'``, and hourly/monthly variants.
         :param category_columns: optional explicit list of category columns.
@@ -5189,6 +6511,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param include_na: when ``True``, missing values are included in category
             counts and unique counts.
         :return: summary dictionary with general metrics and category counts.
+        
+        Usage
+        -----
+        Use `SimulationBase.build_simulation_summary` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.build_simulation_summary(df_source=..., category_columns=..., include_na=...)
         """
         (canonical_source, attr_name, df) = self._resolve_simulation_df_source(df_source=df_source)
         if df is None:
@@ -5275,11 +6605,18 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         df_source: str = 'parametric',
         refresh: bool = False,
     ) -> None:
-        """
-        Prints the summary generated by :meth:`build_simulation_summary`.
-
+        """Prints the summary generated by :meth:`build_simulation_summary`.
+        
         :param df_source: DataFrame source alias.
         :param refresh: when ``True``, rebuilds the summary before printing.
+        
+        Usage
+        -----
+        Use `SimulationBase.print_simulation_summary` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.print_simulation_summary(df_source=..., refresh=...)
         """
         (canonical_source, _, _) = self._resolve_simulation_df_source(df_source=df_source)
         cached_summary = self.simulation_summary if isinstance(self.simulation_summary, dict) else None
@@ -5334,7 +6671,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         print(f'energy_columns ({len(energy_columns)}): {_preview(energy_columns)}')
 
     def _get_default_simulation_summary_json_path(self, df_source: str) -> str:
-        """Build a default JSON path for simulation summary exports."""
+        """Build a default JSON path for simulation summary exports.
+        
+        Parameters
+        ----------
+        df_source : Any
+            Input dataframe used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._get_default_simulation_summary_json_path` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._get_default_simulation_summary_json_path(df_source=...)
+        """
         import datetime
 
         (canonical_source, _, _) = self._resolve_simulation_df_source(df_source=df_source)
@@ -5359,9 +6710,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         category_columns: Optional[list] = None,
         include_na: bool = True,
     ) -> str:
-        """
-        Exports ``self.simulation_summary`` to a JSON file.
-
+        """Exports ``self.simulation_summary`` to a JSON file.
+        
         :param json_path: optional destination path. If ``None``, a default path is
             generated in the latest results directory when available.
         :param df_source: DataFrame source alias used to resolve/build the summary.
@@ -5369,6 +6719,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param category_columns: optional explicit category columns when rebuilding.
         :param include_na: controls NA handling when rebuilding the summary.
         :return: absolute path to the exported JSON file.
+        
+        Usage
+        -----
+        Use `SimulationBase.export_simulation_summary_json` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.export_simulation_summary_json(json_path=..., df_source=..., refresh=..., ...)
         """
         (canonical_source, _, _) = self._resolve_simulation_df_source(df_source=df_source)
         cached_summary = self.simulation_summary if isinstance(self.simulation_summary, dict) else None
@@ -5408,11 +6766,25 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         df_source: str = 'parametric',
         context: str = '',
     ) -> None:
-        """
-        Safely refreshes ``self.simulation_summary`` after run/load operations.
-
+        """Safely refreshes ``self.simulation_summary`` after run/load operations.
+        
         This helper never raises, preserving backward compatibility in existing
         workflows even if summary generation fails.
+        
+        Parameters
+        ----------
+        df_source : Any
+            Input dataframe used by this routine.
+        context : Any
+            Label or identifier used for diagnostics and reporting.
+        
+        Usage
+        -----
+        Use `SimulationBase._refresh_simulation_summary_after_results_change` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._refresh_simulation_summary_after_results_change(df_source=..., context=...)
         """
         try:
             (_, _, df) = self._resolve_simulation_df_source(df_source=df_source)
@@ -5437,13 +6809,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             print(f'  [info] simulation_summary could not be updated for {df_source}: {exc}')
 
     def set_evaluator(self, epw: str, out_dir: str, building: Any = None) -> besos.evaluator.EvaluatorEP:
-        """
-        Used internally for setting the evaluator in run_parametric_simulation and run_optimisation methods.
-
+        """Used internally for setting the evaluator in run_parametric_simulation and run_optimisation methods.
+        
         :param epw: The epw file name
         :param out_dir: The name of the output directory to save the results.
         :param building: Optional building to evaluate (if multiple are simulated)
         :return: the besos.evaluator.EvaluatorEP class instance
+        
+        Usage
+        -----
+        Use `SimulationBase.set_evaluator` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_evaluator(epw=..., out_dir=..., building=...)
         """
         b = building if building is not None else self.building
         evaluator = EvaluatorEP(problem=self.problem, building=b, epw=epw, out_dir=out_dir)
@@ -5457,6 +6836,34 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         keep_dirs: bool,
         processes: int,
     ) -> pd.DataFrame:
+        """Run evaluator dataframe application with/without explicit inputs.
+
+        Parameters
+        ----------
+        evaluator : EvaluatorEP
+            BESOS evaluator configured for the target case.
+        df : pd.DataFrame
+            Input dataframe passed to evaluator execution.
+        keep_input : bool
+            Whether original input columns are included in returned rows.
+        keep_dirs : bool
+            Whether BESOS simulation folders are preserved.
+        processes : int
+            Number of processes used by `evaluator.df_apply` when applicable.
+
+        Returns
+        -------
+        pd.DataFrame
+            Evaluator outputs as a dataframe.
+
+        Usage
+        -----
+        Internal helper used by parametric and optimisation execution paths.
+
+        Examples
+        --------
+        outputs = self._run_evaluator_df_apply(evaluator, df, keep_input=True, keep_dirs=False, processes=1)
+        """
         if len(self._get_problem_input_names()) > 0:
             return evaluator.df_apply(
                 df=df,
@@ -5483,20 +6890,67 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return pd.DataFrame(rows)
 
     def _serialize_problem_outputs(self) -> list[dict]:
-        """
-        Serialize outputs/readers so worker processes can reconstruct MeterReader/
+        """Serialize outputs/readers so worker processes can reconstruct MeterReader/
         VariableReader objects instead of losing type information.
+        
+        Usage
+        -----
+        Use `SimulationBase._serialize_problem_outputs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._serialize_problem_outputs()
         """
         output_names = self.problem.names('outputs') if hasattr(self, 'problem') and hasattr(self.problem, 'names') else []
         sim_outputs = getattr(self, 'sim_outputs', None)
         return self._serialize_output_readers(sim_outputs, output_names)
 
     def _serialize_problem_add_outputs(self) -> list[dict]:
+        """Serialize `problem.add_outputs` readers for worker-safe transport.
+
+        Parameters
+        ----------
+        None
+            Uses `self.problem.add_outputs` and derived output names.
+
+        Returns
+        -------
+        list[dict]
+            Serialized add-output reader specifications.
+
+        Usage
+        -----
+        Internal helper used by multiprocessing worker dispatch.
+
+        Examples
+        --------
+        add_specs = self._serialize_problem_add_outputs()
+        """
         add_outputs = getattr(getattr(self, 'problem', None), 'add_outputs', None)
         add_output_names = self._get_problem_add_output_names()
         return self._serialize_output_readers(add_outputs, add_output_names)
 
     def _get_problem_add_output_names(self) -> list:
+        """List names defined for `problem.add_outputs` readers.
+
+        Parameters
+        ----------
+        None
+            Uses `self.problem.add_outputs`.
+
+        Returns
+        -------
+        list
+            Add-output names in current problem order.
+
+        Usage
+        -----
+        Internal helper used by serialization and worker output mapping.
+
+        Examples
+        --------
+        names = self._get_problem_add_output_names()
+        """
         add_outputs = getattr(getattr(self, 'problem', None), 'add_outputs', None)
         if not isinstance(add_outputs, list):
             return []
@@ -5507,6 +6961,28 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _serialize_output_readers(readers: Any, output_names: Optional[list] = None) -> list[dict]:
+        """Serialize output-reader objects into transportable dictionaries.
+
+        Parameters
+        ----------
+        readers : Any
+            Reader list (MeterReader/VariableReader) or compatible objects.
+        output_names : Optional[list]
+            Optional fallback names aligned with reader order.
+
+        Returns
+        -------
+        list[dict]
+            Serialized reader descriptors with kind, identifiers and reducer.
+
+        Usage
+        -----
+        Used by worker-based execution to reconstruct reader objects remotely.
+
+        Examples
+        --------
+        specs = SimulationBase._serialize_output_readers(readers, output_names)
+        """
         specs: list[dict] = []
         if output_names is None:
             output_names = []
@@ -5551,7 +7027,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _normalize_signature_value(value: Any) -> Any:
-        """Normalize values so task signatures are stable across runs/processes."""
+        """Normalize values so task signatures are stable across runs/processes.
+        
+        Parameters
+        ----------
+        value : Any
+            Argument used by `SimulationBase._normalize_signature_value`.
+        
+        Usage
+        -----
+        Use `SimulationBase._normalize_signature_value` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._normalize_signature_value(value=...)
+        """
         if isinstance(value, dict):
             return {
                 str(k): SimulationBase._normalize_signature_value(v)
@@ -5577,7 +7067,27 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         problem_names_inputs: list,
         row_dict: dict,
     ) -> str:
-        """Build a deterministic signature for a parametric task row."""
+        """Build a deterministic signature for a parametric task row.
+        
+        Parameters
+        ----------
+        idf_basename : Any
+            Argument used by `SimulationBase._build_parametric_task_signature`.
+        epw : Any
+            Argument used by `SimulationBase._build_parametric_task_signature`.
+        problem_names_inputs : Any
+            Argument used by `SimulationBase._build_parametric_task_signature`.
+        row_dict : Any
+            Argument used by `SimulationBase._build_parametric_task_signature`.
+        
+        Usage
+        -----
+        Use `SimulationBase._build_parametric_task_signature` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._build_parametric_task_signature(idf_basename=..., epw=..., problem_names_inputs=..., ...)
+        """
         payload_inputs = {
             str(name): SimulationBase._normalize_signature_value(row_dict.get(name))
             for name in problem_names_inputs
@@ -5592,12 +7102,52 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _default_parametric_checkpoint_path(out_dir: str) -> str:
+        """Build the default parametric checkpoint path.
+
+        Parameters
+        ----------
+        out_dir : str
+            Base output directory of the parametric run.
+
+        Returns
+        -------
+        str
+            Absolute checkpoint path for latest parametric state.
+
+        Usage
+        -----
+        Internal helper for resume/checkpoint workflows.
+
+        Examples
+        --------
+        checkpoint = SimulationBase._default_parametric_checkpoint_path('param_results')
+        """
         return os.path.abspath(
             os.path.join(out_dir, 'outputs_param_simulation_checkpoint_latest.pkl')
         )
 
     @staticmethod
     def _default_parametric_batches_dir(out_dir: str) -> str:
+        """Build the default directory for parametric batch chunks.
+
+        Parameters
+        ----------
+        out_dir : str
+            Base output directory of the parametric run.
+
+        Returns
+        -------
+        str
+            Absolute path to the batch-chunk folder.
+
+        Usage
+        -----
+        Internal helper for batch persistence during long runs.
+
+        Examples
+        --------
+        batches_dir = SimulationBase._default_parametric_batches_dir('param_results')
+        """
         return os.path.abspath(
             os.path.join(out_dir, 'outputs_param_simulation_batches')
         )
@@ -5609,7 +7159,27 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         batch_idx: int,
         file_prefix: str = 'outputs_param_simulation_batch',
     ) -> Optional[str]:
-        """Persist a batch chunk to disk and return its absolute pickle path."""
+        """Persist a batch chunk to disk and return its absolute pickle path.
+        
+        Parameters
+        ----------
+        batch_results : Any
+            Argument used by `SimulationBase._save_parametric_batch_chunk`.
+        batches_dir : Any
+            Path-like value used by this routine.
+        batch_idx : Any
+            Argument used by `SimulationBase._save_parametric_batch_chunk`.
+        file_prefix : Any
+            Argument used by `SimulationBase._save_parametric_batch_chunk`.
+        
+        Usage
+        -----
+        Use `SimulationBase._save_parametric_batch_chunk` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._save_parametric_batch_chunk(batch_results=..., batches_dir=..., batch_idx=..., ...)
+        """
         if isinstance(batch_results, pd.DataFrame):
             batch_df = batch_results.copy()
         else:
@@ -5638,9 +7208,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _load_parametric_checkpoint_state(checkpoint_path: str) -> dict:
-        """
-        Load parametric checkpoint in either legacy-DataFrame format or the
+        """Load parametric checkpoint in either legacy-DataFrame format or the
         new state-dict format.
+        
+        Parameters
+        ----------
+        checkpoint_path : Any
+            Path-like value used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._load_parametric_checkpoint_state` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._load_parametric_checkpoint_state(checkpoint_path=...)
         """
         payload = pd.read_pickle(checkpoint_path)
 
@@ -5706,7 +7288,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _merge_parametric_batch_pickles(batch_pickles: list) -> pd.DataFrame:
-        """Merge persisted parametric batch pickle files into a single DataFrame."""
+        """Merge persisted parametric batch pickle files into a single DataFrame.
+        
+        Parameters
+        ----------
+        batch_pickles : Any
+            Argument used by `SimulationBase._merge_parametric_batch_pickles`.
+        
+        Usage
+        -----
+        Use `SimulationBase._merge_parametric_batch_pickles` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._merge_parametric_batch_pickles(batch_pickles=...)
+        """
         if len(batch_pickles) == 0:
             return pd.DataFrame()
 
@@ -5747,7 +7343,31 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         completed_signatures: Optional[set] = None,
         batch_pickles: Optional[list] = None,
     ) -> int:
-        """Persist current parametric results state for crash-safe resume."""
+        """Persist current parametric results state for crash-safe resume.
+        
+        Parameters
+        ----------
+        all_results : Any
+            Argument used by `SimulationBase._save_parametric_checkpoint`.
+        checkpoint_path : Any
+            Path-like value used by this routine.
+        total_tasks : Any
+            Argument used by `SimulationBase._save_parametric_checkpoint`.
+        completed_tasks : Any
+            Argument used by `SimulationBase._save_parametric_checkpoint`.
+        completed_signatures : Any
+            Argument used by `SimulationBase._save_parametric_checkpoint`.
+        batch_pickles : Any
+            Argument used by `SimulationBase._save_parametric_checkpoint`.
+        
+        Usage
+        -----
+        Use `SimulationBase._save_parametric_checkpoint` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._save_parametric_checkpoint(all_results=..., checkpoint_path=..., total_tasks=..., ...)
+        """
         import datetime
 
         checkpoint_tmp_path = f'{checkpoint_path}.tmp'
@@ -5803,6 +7423,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _default_optimisation_checkpoint_path(out_dir: str) -> str:
+        """Build the default optimisation checkpoint path.
+
+        Parameters
+        ----------
+        out_dir : str
+            Base output directory of the optimisation run.
+
+        Returns
+        -------
+        str
+            Absolute checkpoint path for latest optimisation state.
+
+        Usage
+        -----
+        Internal helper for optimisation resume support.
+
+        Examples
+        --------
+        checkpoint = SimulationBase._default_optimisation_checkpoint_path('optim_results')
+        """
         return os.path.abspath(
             os.path.join(out_dir, 'outputs_optimisation_checkpoint_latest.pkl')
         )
@@ -5815,7 +7455,29 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         completed_cases: int,
         resume_signature: Optional[str] = None,
     ) -> int:
-        """Persist optimisation case-level checkpoint state atomically."""
+        """Persist optimisation case-level checkpoint state atomically.
+        
+        Parameters
+        ----------
+        checkpoint_cases : Any
+            Argument used by `SimulationBase._save_optimisation_checkpoint`.
+        checkpoint_path : Any
+            Path-like value used by this routine.
+        total_cases : Any
+            Argument used by `SimulationBase._save_optimisation_checkpoint`.
+        completed_cases : Any
+            Argument used by `SimulationBase._save_optimisation_checkpoint`.
+        resume_signature : Any
+            Argument used by `SimulationBase._save_optimisation_checkpoint`.
+        
+        Usage
+        -----
+        Use `SimulationBase._save_optimisation_checkpoint` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._save_optimisation_checkpoint(checkpoint_cases=..., checkpoint_path=..., total_cases=..., ...)
+        """
         import datetime
 
         payload = {
@@ -5849,7 +7511,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _load_optimisation_checkpoint(checkpoint_path: str) -> dict:
-        """Load optimisation checkpoint payload and normalize expected schema."""
+        """Load optimisation checkpoint payload and normalize expected schema.
+        
+        Parameters
+        ----------
+        checkpoint_path : Any
+            Path-like value used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._load_optimisation_checkpoint` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._load_optimisation_checkpoint(checkpoint_path=...)
+        """
         payload = pd.read_pickle(checkpoint_path)
         if not isinstance(payload, dict):
             raise ValueError(
@@ -5887,7 +7563,43 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         sim_files_extensions: Optional[tuple[str, ...]] = None,
         sim_files_policy: Literal['keep', 'delete'] = 'keep',
     ):
-        """Yield parametric tasks lazily to avoid building the full plan in memory."""
+        """Yield parametric tasks lazily to avoid building the full plan in memory.
+        
+        Parameters
+        ----------
+        grouped_dfs : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        epws : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        out_dir : Any
+            Path-like value used by this routine.
+        problem_names_inputs : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        problem_names_outputs : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        output_specs : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        add_output_specs : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        add_output_names : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        keep_dirs : Any
+            Boolean or mode flag controlling behaviour.
+        keep_input : Any
+            Boolean or mode flag controlling behaviour.
+        sim_files_extensions : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        sim_files_policy : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        
+        Usage
+        -----
+        Use `SimulationBase._iter_parametric_task_blueprints` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._iter_parametric_task_blueprints(grouped_dfs=..., epws=..., out_dir=..., ...)
+        """
         backup_paths = []
         if hasattr(self, 'idf_backup_path') and self.idf_backup_path:
             backup_paths = self.idf_backup_path if isinstance(self.idf_backup_path, list) else [self.idf_backup_path]
@@ -5943,7 +7655,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _get_system_resource_snapshot() -> dict:
-        """Best-effort system snapshot for CPU/RAM-based recommendations."""
+        """Best-effort system snapshot for CPU/RAM-based recommendations.
+        
+        Usage
+        -----
+        Use `SimulationBase._get_system_resource_snapshot` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._get_system_resource_snapshot()
+        """
         snapshot = {
             'logical_cpus': int(os.cpu_count() or 1),
             'total_ram_gb': None,
@@ -5991,15 +7712,33 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         target_batches: int = 60,
         verbose: bool = True,
     ) -> dict:
-        """
-        Builds a lightweight preflight report before calling
+        """Builds a lightweight preflight report before calling
         :meth:`run_parametric_simulation`.
-
+        
         The report focuses on:
         - plan shape/validation (missing columns, nulls, unknown IDF/EPW labels),
         - estimated number of simulation tasks,
         - duplicate task signatures,
         - conservative recommendations for ``processes`` and ``batch_size``.
+        
+        Parameters
+        ----------
+        df : Any
+            Input dataframe used by this routine.
+        epws : Any
+            Argument used by `SimulationBase.preflight_report_parametric`.
+        target_batches : Any
+            Argument used by `SimulationBase.preflight_report_parametric`.
+        verbose : Any
+            Argument used by `SimulationBase.preflight_report_parametric`.
+        
+        Usage
+        -----
+        Use `SimulationBase.preflight_report_parametric` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.preflight_report_parametric(df=..., epws=..., target_batches=..., ...)
         """
         import math
 
@@ -6232,15 +7971,29 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         keep_sim_files: Literal['all', 'non-dominated', 'none'] = 'all',
         verbose: bool = True,
     ) -> dict:
-        """
-        Builds a lightweight preflight report before calling
+        """Builds a lightweight preflight report before calling
         :meth:`run_optimisation`.
-
+        
         The report focuses on:
         - simulation budget estimation,
         - basic input validation (EPWs/processes),
         - conservative recommendations for CPU/RAM usage,
         - checkpoint-resume flags for safer long runs.
+        
+        Parameters
+        ----------
+        evaluations : Any
+            Argument used by `SimulationBase.preflight_report_optimisation`.
+        population_size : Any
+            Argument used by `SimulationBase.preflight_report_optimisation`.
+        keep_sim_files : Any
+            Boolean or mode flag controlling behaviour.
+        verbose : Any
+            Argument used by `SimulationBase.preflight_report_optimisation`.
+        
+        Examples
+        --------
+        result = self.preflight_report_optimisation(epws=..., evaluations=..., population_size=..., ...)
         """
         import math
 
@@ -6396,12 +8149,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         summary_json_path: Optional[str] = None,
         accim_results_root: Optional[str] = None,
     ) -> pd.DataFrame:
-        """
-        Runs the parametric simulation.
-
+        """Runs the parametric simulation.
+        
         This method refreshes ``self.simulation_summary`` for ``df_source='parametric'``
         once the final outputs DataFrame is generated.
-
+        
         :param epws: a list of .epw filenames
         :param out_dir: the name of the directory to store the outputs
         :param df: a pandas DataFrame which contains the values of the parameters to simulate
@@ -6430,24 +8182,28 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param accim_results_root: optional root folder used to resolve ``out_dir``
             when ``out_dir`` is provided as a relative path.
         :return: a pandas DataFrame
-
+        
         Notes::
-
+        
             - Per-file cleanup is applied only when ``keep_dirs=True``.
               If ``keep_dirs=False``, BESOS does not retain simulation folders and
               ``sim_files_extensions``/``sim_files_policy`` are ignored.
             - This cleanup only touches files inside each simulation subdirectory;
               it does **not** remove IDF backups such as ``accim_idf_backup_*``
               stored in the run root ``out_dir``.
-
+        
         Example::
-
+        
             sim.run_parametric_simulation(
                 out_dir='param_results',
                 keep_dirs=True,
                 sim_files_extensions=['.csv', '.idf'],
                 sim_files_policy='keep',
             )
+        
+        Usage
+        -----
+        Use `SimulationBase.run_parametric_simulation` within ACCIM parametric and optimisation workflows.
         """
         if batch_size is not None and (not isinstance(batch_size, int) or batch_size <= 0):
             raise ValueError("Argument 'batch_size' must be a positive integer or None.")
@@ -6864,8 +8620,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return self.outputs_param_simulation
 
     def load_outputs_parametric(self, csv_path: str=None, pickle_path: str=None, json_path: str=None, hourly_csv_path: str=None, hourly_pickle_path: str=None, parameters_names: list=None, outputs_names: list=None) -> pd.DataFrame:
-        """
-        Loads outputs of a previous parametric simulation from a CSV, Pickle, or JSON file.
+        """Loads outputs of a previous parametric simulation from a CSV, Pickle, or JSON file.
         This allows you to resume a parametric session without rerunning the simulations.
         It also refreshes ``self.simulation_summary`` for quick inspection.
         
@@ -6877,6 +8632,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param parameters_names: optional list of parameter names to reconstruct the internal problem object.
         :param outputs_names: optional list of output names to reconstruct the internal problem object.
         :return: pandas DataFrame containing the loaded parametric simulation outputs.
+        
+        Usage
+        -----
+        Use `SimulationBase.load_outputs_parametric` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.load_outputs_parametric(csv_path=..., pickle_path=..., json_path=..., ...)
         """
         import pandas as pd
         if not csv_path and (not pickle_path) and (not json_path):
@@ -6957,28 +8720,35 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return self.outputs_param_simulation
 
     def estimate_optimisation_sims(self, evaluations: int, population_size: int, epws: list) -> int:
-        """
-        Estimates the maximum number of EnergyPlus simulations that will be run by
+        """Estimates the maximum number of EnergyPlus simulations that will be run by
         :meth:`run_optimisation` **before** launching it.
-
+        
         NSGA-II (and most platypus algorithms) work in discrete generations, each of which
         evaluates exactly ``population_size`` individuals.  The stopping criterion
         ``evaluations`` is checked **between** generations, so the algorithm always
         completes the current generation before stopping.  Therefore:
-
+        
         .. code-block:: text
-
+        
             sims_per_epw = population_size × ⌈evaluations / population_size⌉
             total_sims   = sims_per_epw × len(epws)
-
+        
         Special case: if ``evaluations < population_size`` the initial generation
         already exceeds the budget, but it is always completed in full, so
         ``sims_per_epw`` equals ``population_size``.
-
+        
         :param evaluations: same value you will pass to :meth:`run_optimisation`
         :param population_size: same value you will pass to :meth:`run_optimisation`
         :param epws: same list you will pass to :meth:`run_optimisation`
         :return: estimated total number of EnergyPlus simulations
+        
+        Usage
+        -----
+        Use `SimulationBase.estimate_optimisation_sims` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.estimate_optimisation_sims(evaluations=..., population_size=..., epws=...)
         """
         import math
         sims_per_epw = population_size * math.ceil(evaluations / population_size)
@@ -7010,12 +8780,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             summary_json_path: Optional[str] = None,
             accim_results_root: Optional[str] = None,
     ) -> pd.DataFrame:
-        """
-        Runs the optimisation.
-
+        """Runs the optimisation.
+        
         This method refreshes ``self.simulation_summary`` for ``df_source='optimisation'``
         once the final outputs DataFrame is generated.
-
+        
         :param epws: a list of .epw filenames
         :param out_dir: the directory name to save the outputs
         :param evaluations: the algorithm will be stopped once it uses more than this many
@@ -7063,9 +8832,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param accim_results_root: optional root folder used to resolve ``out_dir``
             when ``out_dir`` is provided as a relative path.
         :return: a pandas DataFrame
-
+        
         Notes::
-
+        
             - If ``keep_sim_files='none'``, simulation directories are removed and
               ``sim_files_extensions``/``sim_files_policy`` are ignored.
             - If ``keep_sim_files='non-dominated'``, dominated directories may be
@@ -7074,15 +8843,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             - This cleanup only touches files inside each simulation subdirectory;
               it does **not** remove IDF backups such as ``accim_idf_backup_*``
               stored in the run root ``out_dir``.
-
+        
         Example::
-
+        
             sim.run_optimisation(
                 out_dir='optim_results',
                 keep_sim_files='all',
                 sim_files_extensions=['csv', '*.idf'],
                 sim_files_policy='keep',
             )
+        
+        Usage
+        -----
+        Use `SimulationBase.run_optimisation` within ACCIM parametric and optimisation workflows.
         """
         algorithm_options = {} if algorithm_options is None else dict(algorithm_options)
         if epws is None:
@@ -7441,6 +9214,29 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return self.outputs_optimisation
 
     def _build_full_optimisation_outputs_df(self, evaluator: EvaluatorEP, epwname: str) -> pd.DataFrame:
+        """Build full optimisation-history dataframe from evaluator records/logs.
+
+        Parameters
+        ----------
+        evaluator : EvaluatorEP
+            Evaluator containing optimisation evaluation records.
+        epwname : str
+            EPW label assigned to produced rows.
+
+        Returns
+        -------
+        pd.DataFrame
+            Full evaluation-history dataframe including inputs, outputs,
+            constraints, add_outputs, and simulation paths.
+
+        Usage
+        -----
+        Internal helper used by `run_optimisation` to reconstruct full history.
+
+        Examples
+        --------
+        full_df = self._build_full_optimisation_outputs_df(evaluator, epwname='Seville')
+        """
         records = getattr(evaluator, '_optimisation_eval_records', [])
         if len(records) == 0:
             log_base = getattr(evaluator, '_optimisation_log_base', None)
@@ -7498,6 +9294,28 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _make_match_key(df: pd.DataFrame, match_columns: list) -> pd.Series:
+        """Build row-wise stable matching keys from selected columns.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe used to derive match keys.
+        match_columns : list
+            Column names used to compose the key.
+
+        Returns
+        -------
+        pd.Series
+            Pipe-joined normalized key for each dataframe row.
+
+        Usage
+        -----
+        Internal helper for matching/merging optimisation result rows.
+
+        Examples
+        --------
+        key = SimulationBase._make_match_key(df, ['epw', 'idf'])
+        """
         key_df = df[match_columns].copy()
         for column in match_columns:
             if pd.api.types.is_numeric_dtype(key_df[column]):
@@ -7511,14 +9329,30 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         outputs_optimisation: pd.DataFrame,
         group_by: Optional[list[str]] = None,
     ) -> pd.DataFrame:
-        """
-        Recomputes the Pareto front from scratch using the objective values
+        """Recomputes the Pareto front from scratch using the objective values
         directly on the full evaluation history, grouped per EPW.
-
+        
         This approach is more reliable than matching against the final NSGA-II
         population (which only contains the last generation), avoiding both
         false negatives caused by points evaluated in earlier generations that
         are genuinely non-dominated, and floating-point matching issues.
+        
+        Parameters
+        ----------
+        outputs_optimisation_full : Any
+            Argument used by `SimulationBase._annotate_pareto_status`.
+        outputs_optimisation : Any
+            Argument used by `SimulationBase._annotate_pareto_status`.
+        group_by : Any
+            Argument used by `SimulationBase._annotate_pareto_status`.
+        
+        Usage
+        -----
+        Use `SimulationBase._annotate_pareto_status` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._annotate_pareto_status(outputs_optimisation_full=..., outputs_optimisation=..., group_by=...)
         """
         if outputs_optimisation_full.empty:
             outputs_optimisation_full['pareto-optimal'] = pd.Series(dtype=bool)
@@ -7570,6 +9404,28 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return outputs_optimisation_full
 
     def _set_optimisation_outputs(self, outputs_optimisation_full: pd.DataFrame, outputs_optimisation_non_dominated: pd.DataFrame=None):
+        """Store optimisation outputs and refresh derived path-index attributes.
+
+        Parameters
+        ----------
+        outputs_optimisation_full : pd.DataFrame
+            Full optimisation dataframe (dominated + non-dominated rows).
+        outputs_optimisation_non_dominated : pd.DataFrame, optional
+            Optional non-dominated subset used as fallback metadata source.
+
+        Returns
+        -------
+        None
+            Updates optimisation attributes on the simulation instance.
+
+        Usage
+        -----
+        Internal helper called after optimisation run/load workflows.
+
+        Examples
+        --------
+        self._set_optimisation_outputs(full_df, pareto_df)
+        """
         if 'pareto-optimal' not in outputs_optimisation_full.columns:
             raise KeyError("Column 'pareto-optimal' is required in outputs_optimisation_full.")
         if 'simulation_output_csv_path' not in outputs_optimisation_full.columns:
@@ -7611,6 +9467,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.optimisation_csv_paths_dominated = outputs_optimisation_full[~outputs_optimisation_full['pareto-optimal']]['simulation_output_csv_path'].dropna().drop_duplicates().tolist()
 
     def _save_outputs_optimisation_full(self, out_dir: str):
+        """Persist optimisation outputs to CSV/XLSX/PKL/JSON artifacts.
+
+        Parameters
+        ----------
+        out_dir : str
+            Destination directory for exported optimisation artifacts.
+
+        Returns
+        -------
+        None
+            Writes files and updates `self.outputs_optimisation_filepath`.
+
+        Usage
+        -----
+        Internal helper used at the end of optimisation workflows.
+
+        Examples
+        --------
+        self._save_outputs_optimisation_full(out_dir='optim_results')
+        """
         import json
         import datetime
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -7635,12 +9511,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.outputs_optimisation_filepath = full_results_path
 
     def load_outputs_optimisation(self, csv_path: str=None, pickle_path: str=None, json_path: str=None, hourly_csv_path: str=None, hourly_pickle_path: str=None, parameters_names: list=None, outputs_names: list=None, minimize_outputs: list=None) -> pd.DataFrame:
-        """
-        Loads full optimisation outputs (dominated + non-dominated) from a CSV, Pickle, or JSON file
+        """Loads full optimisation outputs (dominated + non-dominated) from a CSV, Pickle, or JSON file
         previously generated by :meth:`run_optimisation`, and rebuilds the related
         internal attributes without rerunning simulations.
         It also refreshes ``self.simulation_summary`` for quick inspection.
-
+        
         :param csv_path: path to a CSV file with full optimisation outputs.
         :param pickle_path: path to a Pickle file with full optimisation outputs (recommended).
         :param json_path: path to a JSON file with full optimisation outputs (human-readable).
@@ -7650,6 +9525,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param outputs_names: optional list of output names to reconstruct the internal problem object.
         :param minimize_outputs: optional list of booleans indicating if outputs should be minimized.
         :return: pandas DataFrame containing full optimisation outputs (dominated + non-dominated)
+        
+        Usage
+        -----
+        Use `SimulationBase.load_outputs_optimisation` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.load_outputs_optimisation(csv_path=..., pickle_path=..., json_path=..., ...)
         """
         target_path = pickle_path or json_path or csv_path or self.outputs_optimisation_filepath
         if target_path is None:
@@ -7745,11 +9628,49 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         max_examples: int = 5,
         prefer_pickle_from_instances: bool = True,
     ) -> dict:
-        """
-        Convenience wrapper around :func:`compare_simulation_instances`.
-
+        """Convenience wrapper around :func:`compare_simulation_instances`.
+        
         Useful for comparing this simulation against another simulation instance,
         a DataFrame, or a persisted outputs file.
+        
+        Parameters
+        ----------
+        other : Any
+            Argument used by `SimulationBase.compare_with`.
+        input_columns : Any
+            Argument used by `SimulationBase.compare_with`.
+        output_columns : Any
+            Argument used by `SimulationBase.compare_with`.
+        ignore_columns : Any
+            Argument used by `SimulationBase.compare_with`.
+        compare_attrs : Any
+            Argument used by `SimulationBase.compare_with`.
+        ignore_attr_keys : Any
+            Argument used by `SimulationBase.compare_with`.
+        inputs_mismatch_strategy : Any
+            Argument used by `SimulationBase.compare_with`.
+        reference_columns : Any
+            Argument used by `SimulationBase.compare_with`.
+        reference_max_distance : Any
+            Argument used by `SimulationBase.compare_with`.
+        equal_mode : Any
+            Argument used by `SimulationBase.compare_with`.
+        numeric_atol : Any
+            Argument used by `SimulationBase.compare_with`.
+        numeric_rtol : Any
+            Argument used by `SimulationBase.compare_with`.
+        max_examples : Any
+            Argument used by `SimulationBase.compare_with`.
+        prefer_pickle_from_instances : Any
+            Argument used by `SimulationBase.compare_with`.
+        
+        Usage
+        -----
+        Use `SimulationBase.compare_with` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.compare_with(other=..., input_columns=..., output_columns=..., ...)
         """
         return compare_simulation_instances(
             left=self,
@@ -7774,39 +9695,42 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         other: 'Union[SimulationBase, List[SimulationBase]]',
         inplace: bool = False,
     ) -> 'SimulationBase':
-        """
-        Merges one or more simulation instances into this one by concatenating
+        """Merges one or more simulation instances into this one by concatenating
         their result DataFrames, allowing you to combine multiple separate work
         sessions and analyse the full dataset together.
-
+        
         The resulting instance inherits **all** metadata from ``self``
         (``building_floor_area``, ``epw_mapping_rules``, ``epw_suffix_categories``,
         etc.).  Scalar/dict metadata from ``other`` is merged only when
         ``self`` does not already have a value for that attribute.
-
+        
         ``other`` can be a **single instance** or a **list of instances**;
         in the list case they are merged sequentially into ``self``.
-
+        
         For merging from a standalone list (without a pre-existing base instance)
         see the :meth:`merge_all` classmethod.
-
+        
         Examples::
-
+        
             # Two instances:
             sim_total = sim_a.merge(sim_b)
-
+        
             # Many instances at once — all appended to sim_a:
             sim_total = sim_a.merge([sim_b, sim_c, sim_d])
-
+        
             # In-place (mutates sim_a):
             sim_a.merge([sim_b, sim_c], inplace=True)
-
+        
         :param other: A single :class:`SimulationBase` instance **or** a list of
             them whose data will be appended in order.
         :param inplace: If ``False`` (default), returns a **new** instance leaving
             all originals unchanged.  If ``True``, modifies ``self`` in-place and
             returns ``self``.
         :return: The merged simulation instance.
+        
+        Usage
+        -----
+        Use `SimulationBase.merge` within ACCIM parametric and optimisation workflows.
         """
         import copy
         import warnings
@@ -7837,7 +9761,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return target
 
     def _merge_one(self, other: 'SimulationBase') -> None:
-        """Internal helper: merges a single ``other`` instance into ``self`` in-place."""
+        """Internal helper: merges a single ``other`` instance into ``self`` in-place.
+        
+        Usage
+        -----
+        Use `SimulationBase._merge_one` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._merge_one(other=...)
+        """
         import warnings
 
         # ── DataFrames to concatenate ──────────────────────────────────────────
@@ -7925,25 +9858,24 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         instances: 'List[SimulationBase]',
         inplace: bool = False,
     ) -> 'SimulationBase':
-        """
-        Merges a **list** of simulation instances into a single one by
+        """Merges a **list** of simulation instances into a single one by
         concatenating all result DataFrames in order.
-
+        
         The first element of the list is used as the base (its metadata takes
         priority).  This is equivalent to ``instances[0].merge(instances[1:])``.
-
+        
         Example::
-
+        
             sims = []
             for pkl in ['session_a.pkl', 'session_b.pkl', 'session_c.pkl']:
                 s = ParametricSimulation()
                 s.load_outputs_parametric(pickle_path=pkl)
                 sims.append(s)
-
+        
             sim_total = ParametricSimulation.merge_all(sims)
             print(len(sim_total.outputs_param_simulation))
             # → sum of all rows across all sessions
-
+        
         :param instances: Non-empty list of :class:`SimulationBase` instances
             (or subclasses) to merge in order.
         :param inplace: If ``True``, modifies ``instances[0]`` in-place instead
@@ -7951,6 +9883,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :return: The merged simulation instance.
         :raises ValueError: If ``instances`` is empty.
         :raises TypeError: If any element is not a :class:`SimulationBase`.
+        
+        Usage
+        -----
+        Use `SimulationBase.merge_all` within ACCIM parametric and optimisation workflows.
         """
         import copy
 
@@ -7981,16 +9917,40 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             skip_confirmation: bool = False,
             normalize_per_m2: bool = False,
     ):
-        """
-        Expands parametric results to hourly frequency and saves the result in
+        """Expands parametric results to hourly frequency and saves the result in
         ``outputs_param_simulation_hourly``.
         Default behavior reads hourly values from simulation output files (CSV),
         which is usually lighter in memory during the simulation run.
-
+        
         When ``output_columns`` is provided for CSV sources, each requested item
         can be an exact name or a partial substring. Partial matches may resolve
         to one or many CSV columns (for example, multiple zones reporting the
         same variable).
+        
+        Parameters
+        ----------
+        epw_filter : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        simulation_indices : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        include_summary_columns : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        file_source : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        eplus_install_dir : Any
+            Path-like value used by this routine.
+        only_run_period : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        start_date : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        skip_confirmation : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_hourly_df_parametric` within ACCIM parametric and optimisation workflows.
         """
         if file_source not in {'csv', 'eso', 'auto'}:
             raise ValueError("file_source must be one of: 'csv', 'eso', 'auto'.")
@@ -8125,10 +10085,24 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 self.outputs_normalized = False # Revert to False because we only normalized the hourly df
         return self.outputs_param_simulation_hourly
     def get_hourly_df(self, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
-        """
-        Backward-compatible wrapper for parametric hourly expansion.
+        """Backward-compatible wrapper for parametric hourly expansion.
         This preserves the previous behavior: use embedded hourly list-columns when
         available, otherwise fall back to reading simulation CSV outputs.
+        
+        Parameters
+        ----------
+        start_date : Any
+            Argument used by `SimulationBase.get_hourly_df`.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_hourly_df` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_hourly_df(start_date=..., normalize_per_m2=...)
         """
         return self.get_hourly_df_parametric(
             file_source='auto',
@@ -8137,15 +10111,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             normalize_per_m2=normalize_per_m2,
         )
     def get_monthly_df(self, agg_funcs: dict = None, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
-        """
-        Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame with monthly aggregated values,
+        """Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame with monthly aggregated values,
         saved in the internal variable named outputs_param_simulation_monthly.
-
+        
         :param agg_funcs: a dictionary mapping column names to aggregation functions 
             (e.g. {'DistrictHeating:Facility': 'sum', 'Zone Mean Air Temperature': 'mean'}).
             Defaults to 'mean' for temperature, PMV, PPD, rate, and coefficient, and 'sum' for everything else.
         :param start_date: the start date for the simulation results, in format 'YYY-MM-DD HH'
         :param normalize_per_m2: if True, divides energy columns by the building floor area.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_monthly_df` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_monthly_df(agg_funcs=..., start_date=..., normalize_per_m2=...)
         """
         if getattr(self, 'outputs_param_simulation_hourly', None) is None:
             self.get_hourly_df(start_date=start_date)
@@ -8200,6 +10181,28 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _resolve_simulation_file_path(row: pd.Series, file_source: Literal['csv', 'eso']) -> str:
+        """Resolve the simulation output file path for one result row.
+
+        Parameters
+        ----------
+        row : pd.Series
+            Row containing simulation path metadata.
+        file_source : Literal['csv', 'eso']
+            Requested output file type.
+
+        Returns
+        -------
+        str
+            Resolved path to the requested simulation output file.
+
+        Usage
+        -----
+        Internal helper used by hourly extraction routines.
+
+        Examples
+        --------
+        path = SimulationBase._resolve_simulation_file_path(row, file_source='csv')
+        """
         error_msg = (
             f"{file_source.upper()} path cannot be resolved for this simulation. "
             "If you used keep_sim_files='non-dominated' and this is a dominated simulation, "
@@ -8230,10 +10233,58 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _flatten_eso_column_name(col: tuple) -> str:
+        """Convert multi-index ESO columns into flat readable labels.
+
+        Parameters
+        ----------
+        col : tuple
+            ESO column tuple `(area, variable, units)`.
+
+        Returns
+        -------
+        str
+            Flattened label used in dataframe columns.
+
+        Usage
+        -----
+        Internal helper used while transforming ESO results.
+
+        Examples
+        --------
+        name = SimulationBase._flatten_eso_column_name(('ZONE1', 'Temp', 'C'))
+        """
         (area, variable, units) = col
         return f'{variable} [{units}] | {area}'
 
     def _extract_hourly_outputs_from_file(self, row: pd.Series, file_source: Literal['csv', 'eso'], file_output_columns: Optional[List[str]]=None, eplus_install_dir: Optional[str]=None, only_run_period: bool=True) -> dict:
+        """Extract hourly output series from one simulation CSV/ESO file.
+
+        Parameters
+        ----------
+        row : pd.Series
+            Result row with file path metadata.
+        file_source : Literal['csv', 'eso']
+            Source file type used for extraction.
+        file_output_columns : Optional[List[str]]
+            Optional requested output columns/patterns.
+        eplus_install_dir : Optional[str]
+            EnergyPlus installation directory (used for ESO parsing).
+        only_run_period : bool
+            Whether ESO parsing should keep only run-period records.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping output names to hourly value lists.
+
+        Usage
+        -----
+        Internal helper used before expanding optimisation outputs to hourly rows.
+
+        Examples
+        --------
+        values = self._extract_hourly_outputs_from_file(row, file_source='csv')
+        """
         path = self._resolve_simulation_file_path(row=row, file_source=file_source)
         if not os.path.exists(path):
             raise FileNotFoundError(f'Simulation output file not found: {path}')
@@ -8297,6 +10348,34 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return {c: flattened_map[c] for c in file_output_columns if c in flattened_map}
 
     def _attach_hourly_outputs_from_simulation_files(self, df: pd.DataFrame, file_source: Literal['csv', 'eso'], file_output_columns: Optional[List[str]]=None, eplus_install_dir: Optional[str]=None, only_run_period: bool=True) -> pd.DataFrame:
+        """Attach per-row hourly output lists extracted from simulation files.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Base dataframe with simulation metadata rows.
+        file_source : Literal['csv', 'eso']
+            Source file type used for extraction.
+        file_output_columns : Optional[List[str]]
+            Optional output columns/patterns to extract.
+        eplus_install_dir : Optional[str]
+            EnergyPlus installation directory for ESO parsing.
+        only_run_period : bool
+            Whether ESO parsing should keep only run-period records.
+
+        Returns
+        -------
+        pd.DataFrame
+            Copy of input dataframe with appended list-valued hourly columns.
+
+        Usage
+        -----
+        Internal helper for `get_hourly_df_parametric` and `get_hourly_df_optimisation`.
+
+        Examples
+        --------
+        augmented = self._attach_hourly_outputs_from_simulation_files(df, file_source='csv')
+        """
         df_augmented = df.copy()
         per_row_outputs = []
         all_output_cols = set()
@@ -8315,18 +10394,17 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return df_augmented
 
     def get_hourly_df_optimisation(self, only_pareto_optimal: bool=True, epw_filter: Union[str, List[str]]=None, simulation_indices: Optional[List[int]]=None, output_columns: Optional[List[str]]=None, include_summary_columns: bool=True, file_source: Literal['csv', 'eso']='csv', eplus_install_dir: Optional[str]=None, only_run_period: bool=True, start_date: Optional[str]=None, skip_confirmation: bool=False, normalize_per_m2: bool = False):
-        """
-        Expands optimisation results to hourly frequency and saves the result
+        """Expands optimisation results to hourly frequency and saves the result
         in ``outputs_optimisation_hourly``.
-
+        
         The method reads hourly values directly from the simulation output files
         (CSV or ESO), giving you full control over which simulations and which
         outputs are expanded to avoid memory saturation with large batches.
-
+        
         When ``epw_filter`` and ``output_columns`` are both left as None (defaults),
         an automatic size estimate is printed and you will be asked to confirm before
         the expansion proceeds. Use ``skip_confirmation=True`` to bypass this prompt.
-
+        
         :param only_pareto_optimal: if True (default), only Pareto-optimal (non-dominated)
             solutions are expanded. Set to False to include dominated solutions too.
         :param epw_filter: EPW name or list of EPW names to limit the expansion to
@@ -8337,18 +10415,18 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             ``outputs_optimisation``) to select exactly which simulations to expand.
             This is the most direct way to expand specific runs.
             Overrides ``only_pareto_optimal`` and ``epw_filter`` when provided.
-
+        
             Example – expand only the 3rd and 7th rows::
-
+        
                 parametric.get_hourly_df_optimisation(simulation_indices=[2, 6])
-
+        
             Example – expand only the Pareto-optimal rows with index < 10::
-
+        
                 pareto_idx = parametric.outputs_optimisation[
                     parametric.outputs_optimisation['pareto-optimal']
                 ].index[:10].tolist()
                 parametric.get_hourly_df_optimisation(simulation_indices=pareto_idx)
-
+        
         :param output_columns: list of column names (or partial names) to extract from
             the simulation output file. If None (default), all numeric hourly columns
             are used. Use ``get_hourly_df_columns()`` first to discover available names.
@@ -8369,6 +10447,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             prompt that is shown when ``epw_filter`` and ``output_columns`` are both
             left at their defaults. Useful for running in non-interactive environments
             (scripts, notebooks, CI pipelines).
+        
+        Parameters
+        ----------
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_hourly_df_optimisation` within ACCIM parametric and optimisation workflows.
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('This method requires optimisation outputs. Please run run_optimisation() or load_outputs_optimisation() first.')
@@ -8466,8 +10553,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             skip_confirmation: bool = False,
             normalize_per_m2: bool = False,
     ):
-        """
-        Transforms the hourly values of outputs_optimisation to a new pandas DataFrame with monthly aggregated values,
+        """Transforms the hourly values of outputs_optimisation to a new pandas DataFrame with monthly aggregated values,
         saved in the internal variable named outputs_optimisation_monthly.
         
         :param agg_funcs: a dictionary mapping column names to aggregation functions 
@@ -8484,6 +10570,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param start_date: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
         :param skip_confirmation: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
         :param normalize_per_m2: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_monthly_df_optimisation` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_monthly_df_optimisation(agg_funcs=..., only_pareto_optimal=..., epw_filter=..., ...)
         """
         if getattr(self, 'outputs_optimisation_hourly', None) is None:
             self.get_hourly_df_optimisation(
@@ -8550,9 +10644,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 self.outputs_normalized = False # Revert because we only normalized the monthly df
 
     def get_hourly_df_columns(self):
-        """
-        Identifies the columns which contain hourly values, and save the names in a list, saved in the
+        """Identifies the columns which contain hourly values, and save the names in a list, saved in the
         internal variable named outputs_hourly_columns. Supports both parametric and optimisation runs.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_hourly_df_columns` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_hourly_df_columns()
         """
         import os
         import pandas as pd
@@ -8594,25 +10695,32 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
 
 class ParametricSimulation(SimulationBase):
-    """
-    Specialization of SimulationBase for parametric simulations.
-
+    """Specialization of SimulationBase for parametric simulations.
+    
     This class handles parameter sampling, running multiple simulations with different
     parameter values, and collecting/analyzing parametric simulation results.
-
+    
     Parameters specific to parametric simulations:
     - outputs_param_simulation: main results DataFrame
     - outputs_param_simulation_hourly: hourly-level expanded results
     - outputs_param_simulation_monthly: monthly-level aggregated results
     - outputs_param_simulation_filepath: path to saved results
-
+    
     Methods specific to parametric simulations:
     - sampling_*(): parameter sampling strategies
     - run_parametric_simulation(): execute parametric simulation
     - load_outputs_parametric(): restore previous parametric results
-
+    
     .. versionadded:: 0.8.0
         Extracted from OptimParamSimulation for better separation of concerns.
+    
+    Usage
+    -----
+    Use `ParametricSimulation` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    obj = ParametricSimulation()
     """
 
     def __init__(
@@ -8632,9 +10740,8 @@ class ParametricSimulation(SimulationBase):
             building: Any = None,
             accim_results_root: Optional[str] = None,
     ):
-        """
-        Initialize a parametric simulation.
-
+        """Initialize a parametric simulation.
+        
         :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
         :param epws: one EPW filename or a list of EPW filenames.
         :param parameters_type: parameter workflow to prepare: accim custom model,
@@ -8651,6 +10758,14 @@ class ParametricSimulation(SimulationBase):
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
             relative output directories.
+        
+        Usage
+        -----
+        Use `ParametricSimulation.__init__` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        obj = ParametricSimulation(buildings=..., epws=..., parameters_type=..., ...)
         """
         super().__init__(
             buildings=buildings,
@@ -8676,22 +10791,50 @@ class ParametricSimulation(SimulationBase):
 
     @property
     def outputs_param_sim(self):
-        """Backward-compatible alias for outputs_param_simulation."""
+        """Backward-compatible alias for outputs_param_simulation.
+        
+        Usage
+        -----
+        Use `ParametricSimulation.outputs_param_sim` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.outputs_param_sim()
+        """
         return self.outputs_param_simulation
 
     @outputs_param_sim.setter
     def outputs_param_sim(self, value):
+        """Set the backward-compatible alias `outputs_param_simulation`.
+
+        Parameters
+        ----------
+        value : Any
+            Value assigned to `outputs_param_simulation`.
+
+        Returns
+        -------
+        None
+            Updates the canonical parametric outputs attribute.
+
+        Usage
+        -----
+        Use for legacy code paths expecting the `outputs_param_sim` alias.
+
+        Examples
+        --------
+        sim.outputs_param_sim = df
+        """
         self.outputs_param_simulation = value
 
 
 class OptimisationSimulation(SimulationBase):
-    """
-    Specialization of SimulationBase for multi-objective optimization.
-
+    """Specialization of SimulationBase for multi-objective optimization.
+    
     This class handles multi-objective optimization using various genetic/evolutionary
     algorithms (NSGA-II, EpsNSGAII, etc.), Pareto analysis, and optimization-specific
     output management.
-
+    
     Parameters specific to optimization:
     - outputs_optimisation: complete evaluation history (dominated + non-dominated)
     - outputs_optimisation_filepath: path to saved results
@@ -8700,16 +10843,24 @@ class OptimisationSimulation(SimulationBase):
     - optimisation_csv_paths_non_dominated_by_epw: non-dominated paths grouped by EPW
     - optimisation_csv_paths_dominated_by_epw: dominated paths grouped by EPW
     - evaluators: tracking of besos evaluators per IDF/EPW combination
-
+    
     Methods specific to optimization:
     - run_optimisation(): execute multi-objective optimization
     - estimate_optimisation_sims(): preview expected run count
     - load_outputs_optimisation(): restore previous optimization results
     - get_hourly_df_optimisation(): retrieve hourly data from optimization
     - get_monthly_df_optimisation(): retrieve monthly data from optimization
-
+    
     .. versionadded:: 0.8.0
         Extracted from OptimParamSimulation for better separation of concerns.
+    
+    Usage
+    -----
+    Use `OptimisationSimulation` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    obj = OptimisationSimulation()
     """
 
     def __init__(
@@ -8729,9 +10880,8 @@ class OptimisationSimulation(SimulationBase):
             building: Any = None,
             accim_results_root: Optional[str] = None,
     ):
-        """
-        Initialize an optimisation simulation.
-
+        """Initialize an optimisation simulation.
+        
         :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
         :param epws: one EPW filename or a list of EPW filenames.
         :param parameters_type: parameter workflow to prepare: accim custom model,
@@ -8748,6 +10898,14 @@ class OptimisationSimulation(SimulationBase):
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
             relative output directories.
+        
+        Usage
+        -----
+        Use `OptimisationSimulation.__init__` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        obj = OptimisationSimulation(buildings=..., epws=..., parameters_type=..., ...)
         """
         super().__init__(
             buildings=buildings,
@@ -8783,6 +10941,20 @@ OptimParamSimulation = ParametricSimulation
 
 
 class AccimPredefModelsParamSim(ParametricSimulation):
+    """Compatibility wrapper for predefined-model parametric simulations.
+
+    This class keeps the historical constructor style while delegating to
+    `ParametricSimulation` with `parameters_type='accim predefined model'`.
+
+    Usage
+    -----
+    Instantiate this wrapper when maintaining legacy scripts that still
+    reference the predefined-model class name.
+
+    Examples
+    --------
+    sim = AccimPredefModelsParamSim(buildings=[idf], epws=['Seville.epw'])
+    """
 
     def __init__(
             self,
@@ -8797,9 +10969,8 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             building: Any = None,
             accim_results_root: Optional[str] = None,
     ):
-        """
-        Initialize the predefined-model parametric wrapper.
-
+        """Initialize the predefined-model parametric wrapper.
+        
         :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
         :param epws: one EPW filename or a list of EPW filenames.
         :param output_type: output selection preset used by addAccis.
@@ -8811,6 +10982,14 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
             relative output directories.
+        
+        Usage
+        -----
+        Use `AccimPredefModelsParamSim.__init__` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        obj = AccimPredefModelsParamSim(buildings=..., epws=..., output_type=..., ...)
         """
         if buildings is None and building is not None:
             buildings = building

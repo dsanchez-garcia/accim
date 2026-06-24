@@ -14,6 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+"""ACCIS parameter-modifier helpers used by BESOS problem definitions.
+
+This module provides:
+- low-level IDF EMS line modifiers (``modify_*``), and
+- utilities to validate/drop invalid combinations for ACCIS parameters.
+
+Usage
+-----
+Use `<module>` within ACCIM parametric and optimisation workflows.
+
+Examples
+--------
+result = <module>()
+"""
+
 import besos.IDF_class
 
 # def modify_VSToffset(building, value):
@@ -36,6 +51,27 @@ import besos.IDF_class
 
 
 def get_valid_param_combinations():
+    """List the allowed `(CAT, ComfMod)` options per `ComfStand` value.
+
+    Parameters
+    ----------
+    None
+        This helper returns a static compatibility mapping.
+
+    Returns
+    -------
+    dict
+        Dictionary keyed by `ComfStand` with two lists:
+        `[valid_CAT_values, valid_ComfMod_values]`.
+
+    Usage
+    -----
+    Use this map to validate sampled parameter grids before simulation.
+
+    Examples
+    --------
+    valid_map = get_valid_param_combinations()
+    """
 
     # CS_CA_CM_list_dict = {
     #     0:{
@@ -104,6 +140,27 @@ def get_valid_param_combinations():
     return CS_CA_CM_list_dict
 
 def drop_invalid_param_combinations(samples_df):
+    """Filter sampled rows that violate ACCIS parameter compatibility rules.
+
+    Parameters
+    ----------
+    samples_df : pandas.DataFrame
+        Dataframe with sampled ACCIS parameters (for example `ComfStand`,
+        `CAT`, `ComfMod`, `HVACmode`).
+
+    Returns
+    -------
+    pandas.DataFrame
+        Cleaned dataframe containing only valid parameter combinations.
+
+    Usage
+    -----
+    Run this helper before dispatching batch simulations from sampled inputs.
+
+    Examples
+    --------
+    samples_clean = drop_invalid_param_combinations(samples_df)
+    """
     samples_df = samples_df.dropna()
 
     valid_params = {
@@ -205,12 +262,19 @@ def drop_invalid_param_combinations(samples_df):
 
 
 def modify_ComfStand(idf: besos.IDF_class, value: int):
-    """
-    Modifies the ComfStand argument to match the entered value.
-
+    """Modifies the ComfStand argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_ComfStand` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_ComfStand(idf=..., value=...)
     """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
@@ -219,12 +283,19 @@ def modify_ComfStand(idf: besos.IDF_class, value: int):
     return
 
 def modify_CustAST_ACSTaul(idf: besos.IDF_class, value: float):
-    """
-    Modifies the CustAST_ACSTaul argument to match the entered value.
-
+    """Modifies the CustAST_ACSTaul argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CustAST_ACSTaul` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CustAST_ACSTaul(idf=..., value=...)
     """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
@@ -233,12 +304,19 @@ def modify_CustAST_ACSTaul(idf: besos.IDF_class, value: float):
     return
 
 def modify_CustAST_ACSTall(idf: besos.IDF_class, value: float):
-    """
-    Modifies the CustAST_ACSTall argument to match the entered value.
-
+    """Modifies the CustAST_ACSTall argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CustAST_ACSTall` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CustAST_ACSTall(idf=..., value=...)
     """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
@@ -247,12 +325,19 @@ def modify_CustAST_ACSTall(idf: besos.IDF_class, value: float):
     return
 
 def modify_CustAST_AHSTaul(idf: besos.IDF_class, value: float):
-    """
-    Modifies the CustAST_AHSTaul argument to match the entered value.
-
+    """Modifies the CustAST_AHSTaul argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CustAST_AHSTaul` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CustAST_AHSTaul(idf=..., value=...)
     """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
@@ -261,12 +346,19 @@ def modify_CustAST_AHSTaul(idf: besos.IDF_class, value: float):
     return
 
 def modify_CustAST_AHSTall(idf: besos.IDF_class, value: float):
-    """
-    Modifies the CustAST_AHSTall argument to match the entered value.
-
+    """Modifies the CustAST_AHSTall argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CustAST_AHSTall` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CustAST_AHSTall(idf=..., value=...)
     """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
@@ -275,12 +367,19 @@ def modify_CustAST_AHSTall(idf: besos.IDF_class, value: float):
     return
 
 def modify_CustAST_ASTall(idf: besos.IDF_class, value: float):
-    """
-    Modifies the CustAST_ACSTall and CustAST_AHSTall arguments to match the entered value.
-
+    """Modifies the CustAST_ACSTall and CustAST_AHSTall arguments to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CustAST_ASTall` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CustAST_ASTall(idf=..., value=...)
     """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
@@ -290,12 +389,19 @@ def modify_CustAST_ASTall(idf: besos.IDF_class, value: float):
     return
 
 def modify_CustAST_ASTaul(idf: besos.IDF_class, value: float):
-    """
-    Modifies the CustAST_ACSTaul and CustAST_AHSTaul arguments to match the entered value.
-
+    """Modifies the CustAST_ACSTaul and CustAST_AHSTaul arguments to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CustAST_ASTaul` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CustAST_ASTaul(idf=..., value=...)
     """
     SetAppLimits = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                           program.Name == 'SetAppLimits'][0])
@@ -305,12 +411,19 @@ def modify_CustAST_ASTaul(idf: besos.IDF_class, value: float):
     return
 
 def modify_CustAST_m(idf: besos.IDF_class, value: float):
-    """
-    Modifies the CustAST_m argument to match the entered value.
-
+    """Modifies the CustAST_m argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CustAST_m` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CustAST_m(idf=..., value=...)
     """
     SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                program.Name == 'SetAST'][0])
@@ -320,12 +433,19 @@ def modify_CustAST_m(idf: besos.IDF_class, value: float):
 
 
 def modify_CustAST_n(idf: besos.IDF_class, value: float):
-    """
-    Modifies the CustAST_n argument to match the entered value.
-
+    """Modifies the CustAST_n argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CustAST_n` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CustAST_n(idf=..., value=...)
     """
     SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                program.Name == 'SetAST'][0])
@@ -334,12 +454,19 @@ def modify_CustAST_n(idf: besos.IDF_class, value: float):
     return
 
 def modify_CustAST_ACSToffset(idf: besos.IDF_class, value: float):
-    """
-    Modifies the ACSToffset argument to match the entered value.
-
+    """Modifies the ACSToffset argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CustAST_ACSToffset` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CustAST_ACSToffset(idf=..., value=...)
     """
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
@@ -349,12 +476,19 @@ def modify_CustAST_ACSToffset(idf: besos.IDF_class, value: float):
 
 
 def modify_CustAST_AHSToffset(idf: besos.IDF_class, value: float):
-    """
-    Modifies the AHSToffset argument to match the entered value.
-
+    """Modifies the AHSToffset argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CustAST_AHSToffset` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CustAST_AHSToffset(idf=..., value=...)
     """
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
@@ -363,12 +497,19 @@ def modify_CustAST_AHSToffset(idf: besos.IDF_class, value: float):
     return
 
 def modify_CustAST_ASToffset(idf: besos.IDF_class, value: float):
-    """
-    Modifies the ACSToffset and AHSToffset arguments symmetrically to match the entered value.
-
+    """Modifies the ACSToffset and AHSToffset arguments symmetrically to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CustAST_ASToffset` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CustAST_ASToffset(idf=..., value=...)
     """
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
@@ -379,12 +520,19 @@ def modify_CustAST_ASToffset(idf: besos.IDF_class, value: float):
 
 
 def modify_CAT(idf: besos.IDF_class, value: int):
-    """
-    Modifies the CAT argument to match the entered value.
-
+    """Modifies the CAT argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CAT` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CAT(idf=..., value=...)
     """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
@@ -393,12 +541,19 @@ def modify_CAT(idf: besos.IDF_class, value: int):
     return
 
 def modify_CATcoolOffset(idf: besos.IDF_class, value: float):
-    """
-    Modifies the CATcoolOffset argument to match the entered value.
-
+    """Modifies the CATcoolOffset argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CATcoolOffset` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CATcoolOffset(idf=..., value=...)
     """
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
@@ -407,12 +562,19 @@ def modify_CATcoolOffset(idf: besos.IDF_class, value: float):
     return
 
 def modify_CATheatOffset(idf: besos.IDF_class, value: float):
-    """
-    Modifies the CATheatOffset argument to match the entered value.
-
+    """Modifies the CATheatOffset argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CATheatOffset` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CATheatOffset(idf=..., value=...)
     """
     ApplyCAT = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                  program.Name == 'ApplyCAT'][0])
@@ -421,12 +583,19 @@ def modify_CATheatOffset(idf: besos.IDF_class, value: float):
     return
 
 def modify_ComfMod(idf: besos.IDF_class, value: float):
-    """
-    Modifies the ComfMod argument to match the entered value.
-
+    """Modifies the ComfMod argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_ComfMod` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_ComfMod(idf=..., value=...)
     """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
@@ -435,12 +604,19 @@ def modify_ComfMod(idf: besos.IDF_class, value: float):
     return
 
 def modify_HVACmode(idf: besos.IDF_class, value: int):
-    """
-    Modifies the HVACmode argument to match the entered value.
-
+    """Modifies the HVACmode argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_HVACmode` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_HVACmode(idf=..., value=...)
     """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
@@ -448,12 +624,19 @@ def modify_HVACmode(idf: besos.IDF_class, value: int):
     return
 
 def modify_VentCtrl(idf: besos.IDF_class, value: int):
-    """
-    Modifies the VentCtrl argument to match the entered value.
-
+    """Modifies the VentCtrl argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_VentCtrl` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_VentCtrl(idf=..., value=...)
     """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
@@ -461,12 +644,19 @@ def modify_VentCtrl(idf: besos.IDF_class, value: int):
     return
 
 def modify_VSToffset(idf: besos.IDF_class, value: float):
-    """
-    Modifies the VSToffset argument to match the entered value.
-
+    """Modifies the VSToffset argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_VSToffset` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_VSToffset(idf=..., value=...)
     """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
@@ -474,12 +664,19 @@ def modify_VSToffset(idf: besos.IDF_class, value: float):
     return
 
 def modify_MinOToffset(idf: besos.IDF_class, value: float):
-    """
-    Modifies the MinOToffset argument to match the entered value.
-
+    """Modifies the MinOToffset argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_MinOToffset` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_MinOToffset(idf=..., value=...)
     """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
@@ -487,12 +684,19 @@ def modify_MinOToffset(idf: besos.IDF_class, value: float):
     return
 
 def modify_MaxWindSpeed(idf: besos.IDF_class, value: float):
-    """
-    Modifies the MaxWindSpeed argument to match the entered value.
-
+    """Modifies the MaxWindSpeed argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_MaxWindSpeed` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_MaxWindSpeed(idf=..., value=...)
     """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
@@ -500,12 +704,19 @@ def modify_MaxWindSpeed(idf: besos.IDF_class, value: float):
     return
 
 def modify_ASTtol(idf: besos.IDF_class, value: float):
-    """
-    Modifies the ACSTtol and AHSTtol arguments symmetrically to match the entered value.
-
+    """Modifies the ACSTtol and AHSTtol arguments symmetrically to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_ASTtol` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_ASTtol(idf=..., value=...)
     """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
@@ -514,13 +725,20 @@ def modify_ASTtol(idf: besos.IDF_class, value: float):
     return
 
 def modify_CoolSeasonStart(idf: besos.IDF_class, value: any):
-    """
-    Modifies the CoolSeasonStart argument to match the entered value.
-
+    """Modifies the CoolSeasonStart argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument. Can be an integer representing the day of the year, or the
         date in format dd/mm.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CoolSeasonStart` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CoolSeasonStart(idf=..., value=...)
     """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
@@ -532,13 +750,20 @@ def modify_CoolSeasonStart(idf: besos.IDF_class, value: any):
     return
 
 def modify_CoolSeasonEnd(idf: besos.IDF_class, value: any):
-    """
-    Modifies the CoolSeasonEnd argument to match the entered value.
-
+    """Modifies the CoolSeasonEnd argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument. Can be an integer representing the day of the year, or the
         date in format dd/mm.
     :return:
+    
+    Usage
+    -----
+    Use `modify_CoolSeasonEnd` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_CoolSeasonEnd(idf=..., value=...)
     """
     SetInputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                      program.Name == 'SetInputData'][0])
@@ -550,12 +775,19 @@ def modify_CoolSeasonEnd(idf: besos.IDF_class, value: any):
     return
 
 def modify_SetpointAcc(idf: besos.IDF_class, value: float):
-    """
-    Modifies the SetpointAcc argument to match the entered value.
-
+    """Modifies the SetpointAcc argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_SetpointAcc` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_SetpointAcc(idf=..., value=...)
     """
     SetAST = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                program.Name == 'SetAST'][0])
@@ -563,12 +795,19 @@ def modify_SetpointAcc(idf: besos.IDF_class, value: float):
     return
 
 def modify_MaxTempDiffVOF(idf: besos.IDF_class, value: float):
-    """
-    Modifies the MaxTempDiffVOF argument to match the entered value.
-
+    """Modifies the MaxTempDiffVOF argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_MaxTempDiffVOF` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_MaxTempDiffVOF(idf=..., value=...)
     """
     SetVOFinputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                         program.Name == 'SetVOFinputData'][0])
@@ -576,12 +815,19 @@ def modify_MaxTempDiffVOF(idf: besos.IDF_class, value: float):
     return
 
 def modify_MinTempDiffVOF(idf: besos.IDF_class, value: float):
-    """
-    Modifies the MinTempDiffVOF argument to match the entered value.
-
+    """Modifies the MinTempDiffVOF argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_MinTempDiffVOF` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_MinTempDiffVOF(idf=..., value=...)
     """
     SetVOFinputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                         program.Name == 'SetVOFinputData'][0])
@@ -589,12 +835,19 @@ def modify_MinTempDiffVOF(idf: besos.IDF_class, value: float):
     return
 
 def modify_MultiplierVOF(idf: besos.IDF_class, value: int):
-    """
-    Modifies the MultiplierVOF argument to match the entered value.
-
+    """Modifies the MultiplierVOF argument to match the entered value.
+    
     :param idf: The eppy or besos IDF class instance.
     :param value: The value to be applied in the argument.
     :return:
+    
+    Usage
+    -----
+    Use `modify_MultiplierVOF` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = modify_MultiplierVOF(idf=..., value=...)
     """
     SetVOFinputData = ([program for program in idf.idfobjects['EnergyManagementSystem:Program'] if
                         program.Name == 'SetVOFinputData'][0])

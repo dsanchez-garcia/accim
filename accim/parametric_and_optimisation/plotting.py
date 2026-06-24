@@ -1,3 +1,18 @@
+"""Plotting mixin utilities for ACCIM parametric and optimisation workflows.
+
+This module provides reusable helpers for filtering result dataframes,
+normalizing energy outputs, resolving subplot ordering, and generating
+safe/output-stable filenames for figures.
+
+Usage
+-----
+Use `<module>` within ACCIM parametric and optimisation workflows.
+
+Examples
+--------
+result = <module>()
+"""
+
 import os
 import re
 from typing import Literal, Optional
@@ -11,14 +26,67 @@ import seaborn as sns
 from accim.parametric_and_optimisation.utils import apply_data_filter, resolve_subplot_orders
 
 class PlottingMixin:
+    """Shared plotting helpers used by simulation classes.
+    
+        The mixin centralizes dataframe selection/filtering, filename resolution,
+        and subplot-order utilities so higher-level plotting methods stay concise.
+    
+    Usage
+    -----
+    Use `PlottingMixin` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    obj = PlottingMixin()
+    """
 
     @staticmethod
     def _safe_plot_token(value: str) -> str:
+        """Convert arbitrary values into filename-safe tokens.
+
+        Parameters
+        ----------
+        value : str
+            Raw value to sanitize.
+
+        Returns
+        -------
+        str
+            Safe token containing only letters, digits, `_`, `-`, and `.`.
+
+        Usage
+        -----
+        Internal helper for deterministic plot filenames and placeholders.
+
+        Examples
+        --------
+        token = PlottingMixin._safe_plot_token('Sydney 2024.epw')
+        """
         token = re.sub(r'[^A-Za-z0-9_.-]+', '_', str(value).strip())
         return token.strip('_') or 'unknown'
 
     @staticmethod
     def _summarise_placeholder_values(values: list) -> str:
+        """Summarize multiple placeholder values into one compact token.
+
+        Parameters
+        ----------
+        values : list
+            Distinct candidate values from a dataframe column.
+
+        Returns
+        -------
+        str
+            Concise token suitable for filename placeholders.
+
+        Usage
+        -----
+        Used when one placeholder must represent multiple filtered categories.
+
+        Examples
+        --------
+        label = PlottingMixin._summarise_placeholder_values(['Seville', 'Sydney'])
+        """
         tokens = []
         for value in values:
             token = PlottingMixin._safe_plot_token(value)
@@ -32,6 +100,26 @@ class PlottingMixin:
         return '_'.join(tokens[:4]) + f'_plus{len(tokens) - 4}'
 
     def _get_mapping_placeholder_columns(self, df: pd.DataFrame) -> list:
+        """Collect dataframe columns eligible as mapping-based placeholders.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Filtered dataframe used to resolve available placeholders.
+
+        Returns
+        -------
+        list
+            Ordered placeholder column names found in `df`.
+
+        Usage
+        -----
+        Internal helper used by filename-template context generation.
+
+        Examples
+        --------
+        cols = self._get_mapping_placeholder_columns(df)
+        """
         df_attrs = getattr(df, 'attrs', {}) if hasattr(df, 'attrs') else {}
 
         epw_rules = {}
@@ -77,6 +165,28 @@ class PlottingMixin:
             df: Optional[pd.DataFrame] = None,
             extra_context: Optional[dict] = None,
     ) -> dict:
+        """Build a sanitized context dictionary for filename templates.
+
+        Parameters
+        ----------
+        df : Optional[pd.DataFrame]
+            Optional dataframe used to infer mapping-category placeholders.
+        extra_context : Optional[dict]
+            Extra key/value pairs injected into template context.
+
+        Returns
+        -------
+        dict
+            Placeholder dictionary safe for `str.format` rendering.
+
+        Usage
+        -----
+        Called before resolving plot output filenames from templates.
+
+        Examples
+        --------
+        ctx = self._build_filename_template_context(df=df, extra_context={'plot': 'pareto'})
+        """
         context = {}
         for (key, value) in (extra_context or {}).items():
             context[str(key)] = self._safe_plot_token(value)
@@ -98,6 +208,34 @@ class PlottingMixin:
             template_context: Optional[dict] = None,
             context: str = 'plot',
     ) -> str:
+        """Resolve final output path from default name or filename template.
+
+        Parameters
+        ----------
+        out_dir : str
+            Base output directory.
+        default_filename : str
+            Fallback filename when no template is provided.
+        filename_template : Optional[str]
+            Optional `str.format` template for output naming.
+        template_context : Optional[dict]
+            Context values used to render `filename_template`.
+        context : str
+            Label used in error messages.
+
+        Returns
+        -------
+        str
+            Resolved output file path.
+
+        Usage
+        -----
+        Internal helper used by all plot save operations.
+
+        Examples
+        --------
+        path = self._resolve_output_filename('plots', 'default.png', '{plot}_{epw}.png', {'plot': 'pf', 'epw': 'sev'})
+        """
         filename = default_filename
         if filename_template is not None:
             template = str(filename_template).strip()
@@ -126,6 +264,30 @@ class PlottingMixin:
 
     @staticmethod
     def _ensure_unique_output_path(output_path: str, seen_output_paths: set, context: str) -> None:
+        """Validate that a generated output path is unique in current run.
+
+        Parameters
+        ----------
+        output_path : str
+            Candidate output path.
+        seen_output_paths : set
+            Set of already-resolved normalized paths.
+        context : str
+            Label used in raised error messages.
+
+        Returns
+        -------
+        None
+            Adds path to `seen_output_paths` or raises on duplicate.
+
+        Usage
+        -----
+        Used by plotting methods that save one file per subgroup.
+
+        Examples
+        --------
+        PlottingMixin._ensure_unique_output_path(path, seen, 'plot_pareto_front')
+        """
         normalised_path = os.path.normcase(os.path.abspath(output_path))
         if normalised_path in seen_output_paths:
             raise ValueError(
@@ -136,11 +298,51 @@ class PlottingMixin:
 
     @staticmethod
     def _is_energy_like_column(column_name: str) -> bool:
+        """Heuristically identify energy-related columns by name.
+
+        Parameters
+        ----------
+        column_name : str
+            Column label to evaluate.
+
+        Returns
+        -------
+        bool
+            `True` when the column appears energy-like.
+
+        Usage
+        -----
+        Internal helper used before unit conversion/normalization.
+
+        Examples
+        --------
+        ok = PlottingMixin._is_energy_like_column('Heating:Electricity [J](Annual)')
+        """
         keywords = ('heating', 'cooling', 'energy', 'electricity', 'gas', 'facility')
         lowered = str(column_name).lower()
         return any(k in lowered for k in keywords)
 
     def _get_plot_source_df(self, df_source: str = 'parametric') -> pd.DataFrame:
+        """Select and copy the dataframe identified by a source alias.
+
+        Parameters
+        ----------
+        df_source : str
+            Data source alias (`parametric`, `optimisation`, hourly variants).
+
+        Returns
+        -------
+        pd.DataFrame
+            Selected results dataframe copy.
+
+        Usage
+        -----
+        Internal helper used as first step in plotting pipelines.
+
+        Examples
+        --------
+        df = self._get_plot_source_df('optimisation')
+        """
         source_map = {
             'parametric': 'outputs_param_simulation',
             'optimisation': 'outputs_optimisation',
@@ -164,6 +366,36 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             context: str = 'Plot data filter',
     ) -> tuple[pd.DataFrame, dict]:
+        """Apply unified dataframe filtering settings for plotting methods.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Source dataframe to filter.
+        data_filter : Optional[dict]
+            Column/value filtering definition.
+        data_filter_case_sensitive : bool
+            Whether string matching should be case-sensitive.
+        data_filter_strict : bool
+            When `True`, unknown columns/values raise immediately.
+        data_filter_on_empty : Literal['error', 'warn', 'ignore']
+            Behavior when filtering yields no rows.
+        context : str
+            Label attached to filter diagnostics.
+
+        Returns
+        -------
+        tuple[pd.DataFrame, dict]
+            Filtered dataframe plus metadata from filter operation.
+
+        Usage
+        -----
+        Thin wrapper around `apply_data_filter` to standardize options.
+
+        Examples
+        --------
+        df_f, meta = PlottingMixin._apply_plot_data_filter(df, {'epw': 'Seville'})
+        """
         return apply_data_filter(
             df=df,
             data_filter=data_filter,
@@ -182,7 +414,31 @@ class PlottingMixin:
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> pd.DataFrame:
-        """Return a filtered results table ready for display/export."""
+        """Build a filtered results table ready for display or export.
+        
+        Parameters
+        ----------
+        df_source : Any
+            Input dataframe used by this routine.
+        data_filter : Any
+            Argument used by `PlottingMixin.get_filtered_results_table`.
+        columns : Any
+            Argument used by `PlottingMixin.get_filtered_results_table`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.get_filtered_results_table`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.get_filtered_results_table`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.get_filtered_results_table`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.get_filtered_results_table` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_filtered_results_table(df_source=..., data_filter=..., columns=..., ...)
+        """
         df = self._get_plot_source_df(df_source=df_source)
         (df, _) = self._apply_plot_data_filter(
             df=df,
@@ -205,6 +461,30 @@ class PlottingMixin:
         return df.reset_index(drop=True)
 
     def _normalise_plot_columns(self, df: pd.DataFrame, columns: list, normalize_per_m2: bool = False) -> tuple[pd.DataFrame, dict]:
+        """Normalize selected energy-like columns and report output units.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe containing plot columns.
+        columns : list
+            Candidate columns to normalize when energy-like.
+        normalize_per_m2 : bool
+            Whether values should be converted to per-area basis.
+
+        Returns
+        -------
+        tuple[pd.DataFrame, dict]
+            Updated dataframe and unit map (`column -> unit or None`).
+
+        Usage
+        -----
+        Internal helper used by generic scatter/line plot wrappers.
+
+        Examples
+        --------
+        df_n, unit_map = self._normalise_plot_columns(df, [x, y], normalize_per_m2=True)
+        """
         outputs_normalized = getattr(self, 'outputs_normalized', False)
         area_attr = getattr(self, 'building_floor_area', None)
 
@@ -253,6 +533,28 @@ class PlottingMixin:
 
     @staticmethod
     def _filter_epw_rows(df: pd.DataFrame, epw_filter=None) -> pd.DataFrame:
+        """Filter dataframe rows by EPW substring(s).
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input dataframe that may include an `epw` column.
+        epw_filter : Any
+            String or iterable of strings used as case-insensitive substrings.
+
+        Returns
+        -------
+        pd.DataFrame
+            Filtered dataframe copy.
+
+        Usage
+        -----
+        Internal helper for hourly plots that support EPW filtering.
+
+        Examples
+        --------
+        df_epw = PlottingMixin._filter_epw_rows(df, epw_filter=['Seville', 'Sydney'])
+        """
         if epw_filter is None:
             return df.copy()
         if 'epw' not in df.columns:
@@ -266,6 +568,28 @@ class PlottingMixin:
 
     @staticmethod
     def _find_first_column_contains(columns: list, pattern: str):
+        """Find the first column whose name contains the requested pattern.
+
+        Parameters
+        ----------
+        columns : list
+            Candidate column labels.
+        pattern : str
+            Case-insensitive substring pattern.
+
+        Returns
+        -------
+        Any
+            First matching column value, or `None` when no match exists.
+
+        Usage
+        -----
+        Used to auto-detect RMOT-like columns for hourly visualizations.
+
+        Examples
+        --------
+        rmot_col = PlottingMixin._find_first_column_contains(df.columns, 'Running Average')
+        """
         if pattern is None:
             return None
         pattern_l = str(pattern).lower()
@@ -276,6 +600,30 @@ class PlottingMixin:
 
     @staticmethod
     def _collect_subplot_dimension_values(df: pd.DataFrame, row: str = None, col: str = None) -> dict:
+        """Collect unique row/col facet values for subplot ordering.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe used to extract facet levels.
+        row : str, optional
+            Row facet column name.
+        col : str, optional
+            Column facet column name.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys `row` and/or `col` and unique values.
+
+        Usage
+        -----
+        Prepares dimension values for `_resolve_subplot_dimension_orders`.
+
+        Examples
+        --------
+        dims = PlottingMixin._collect_subplot_dimension_values(df, row='scenario', col='city')
+        """
         values = {}
         if row is not None and row in df.columns:
             values['row'] = list(pd.unique(df[row].dropna()))
@@ -291,6 +639,34 @@ class PlottingMixin:
             subplot_order_case_sensitive: bool = False,
             context: str = 'Subplot ordering',
     ) -> dict:
+        """Resolve subplot row/col order according to configured ordering mode.
+
+        Parameters
+        ----------
+        dimension_values : dict
+            Available facet values by dimension (`row`, `col`).
+        subplot_order_mode : Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom']
+            Ordering strategy.
+        subplot_order_custom : Optional[dict]
+            Explicit custom order values when mode is `custom`.
+        subplot_order_case_sensitive : bool
+            Whether textual order resolution should be case-sensitive.
+        context : str
+            Label used in error messages.
+
+        Returns
+        -------
+        dict
+            Resolved row/col orders; returns `{}` when mode is `auto`.
+
+        Usage
+        -----
+        Shared helper for all faceted plotting APIs.
+
+        Examples
+        --------
+        orders = PlottingMixin._resolve_subplot_dimension_orders({'col': ['b', 'a']}, subplot_order_mode='alphabetical')
+        """
         resolved_orders = resolve_subplot_orders(
             dimension_values=dimension_values,
             mode=subplot_order_mode,
@@ -321,11 +697,53 @@ class PlottingMixin:
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ) -> pd.DataFrame:
-        """
-        Prepares an hourly dataframe for plotting by applying filters and a melt
+        """Prepares an hourly dataframe for plotting by applying filters and a melt
         transformation into long format.
-
+        
         This method is designed to replace repetitive notebook preprocessing code.
+        
+        Parameters
+        ----------
+        df_source : Any
+            Input dataframe used by this routine.
+        id_vars : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        value_vars : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        value_tokens : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        epw_filter : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        rmot_pattern : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        drop_constant_columns : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        drop_hour_column : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        datetime_col : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        categorical_orders : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        variable_col : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        value_col : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        data_filter : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.prepare_hourly_long_df` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.prepare_hourly_long_df(df_source=..., id_vars=..., value_vars=..., ...)
         """
         df = self._get_plot_source_df(df_source=df_source)
         df = self._filter_epw_rows(df=df, epw_filter=epw_filter)
@@ -450,15 +868,79 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ):
-        """
-        Creates faceted hourly scatter plots, using RMOT on x-axis by default.
-
+        """Creates faceted hourly scatter plots, using RMOT on x-axis by default.
+        
         :param filename: Optional explicit output filename. If provided,
             ``filename_template`` is ignored.
         :param filename_template: Optional output filename pattern using
             ``str.format`` (for example ``'hourly_scatter_{epw_filter}_{x}.png'``).
             Mapping-category placeholders from ``epw_mapping_rules`` and
             ``idf_mapping_rules`` are available when present in the filtered data.
+        
+        Parameters
+        ----------
+        df_long : Any
+            Input dataframe used by this routine.
+        df_source : Any
+            Input dataframe used by this routine.
+        y : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        hue : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        row : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        col : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        id_vars : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        value_vars : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        value_tokens : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        categorical_orders : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        rmot_pattern : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        x_label : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        y_label : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        out_dir : Any
+            Path-like value used by this routine.
+        height : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        aspect : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        marker_size : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        marker_alpha : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        legend_loc : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        legend_bbox_to_anchor : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        facet_kws : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        scatter_kws : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_hourly_scatter` within ACCIM parametric and optimisation workflows.
         """
         if df_long is None:
             df_plot = self.prepare_hourly_long_df(
@@ -627,15 +1109,77 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ):
-        """
-        Creates faceted hourly line plots (time series by default).
-
+        """Creates faceted hourly line plots (time series by default).
+        
         :param filename: Optional explicit output filename. If provided,
             ``filename_template`` is ignored.
         :param filename_template: Optional output filename pattern using
             ``str.format`` (for example ``'hourly_lines_{epw_filter}_{x}.png'``).
             Mapping-category placeholders from ``epw_mapping_rules`` and
             ``idf_mapping_rules`` are available when present in the filtered data.
+        
+        Parameters
+        ----------
+        df_long : Any
+            Input dataframe used by this routine.
+        df_source : Any
+            Input dataframe used by this routine.
+        y : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        hue : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        row : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        col : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        id_vars : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        value_vars : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        value_tokens : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        categorical_orders : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        x_label : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        y_label : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        estimator : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        errorbar : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        out_dir : Any
+            Path-like value used by this routine.
+        height : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        aspect : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        legend_loc : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        legend_bbox_to_anchor : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        facet_kws : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        line_kws : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_hourly_lines` within ACCIM parametric and optimisation workflows.
         """
         if df_long is None:
             df_plot = self.prepare_hourly_long_df(
@@ -787,28 +1331,27 @@ class PlottingMixin:
         data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
         filename_template: str = None,
     ) -> pd.DataFrame:
-        """
-        Identifies the best compromise solution(s) from the Pareto front for
+        """Identifies the best compromise solution(s) from the Pareto front for
         each EPW found in ``outputs_optimisation``, saves the results to a
         CSV and a scatter-plot PNG, and returns the combined DataFrame.
-
+        
         :param out_dir: directory where output files will be saved.
         :param mcdm_configs: list of dicts, each specifying one MCDM run.
             Each dict must have a ``'method'`` key (``'knee_point'`` or
             ``'topsis'``) and may optionally have:
-
+        
             - ``'weights'``: list of per-objective weights (TOPSIS only).
             - ``'label'``: string label used in the legend and CSV column
               (auto-generated if omitted).
-
+        
             Default (when ``None``)::
-
+        
                 [
                     {'method': 'knee_point'},
                     {'method': 'topsis'},
                     {'method': 'topsis', 'weights': [0.7, 0.3], 'label': 'topsis_w70_30'},
                 ]
-
+        
         :param separate_by_epw: whether MCDM is computed independently by EPW.
             If ``None``, the value is taken from ``outputs_optimisation.attrs``
             (fallback: ``True``).
@@ -822,6 +1365,29 @@ class PlottingMixin:
             when present in the filtered data.
         :return: pandas DataFrame with all best solutions (one row per
             group × MCDM method), also saved to CSV.
+        
+        Parameters
+        ----------
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_best_compromise_solutions` within ACCIM parametric and optimisation workflows.
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('MCDM best compromise solutions can only be evaluated after an optimisation simulation. Please ensure you run run_optimisation() first.')
@@ -1041,19 +1607,44 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ):
-        """
-        if getattr(self, 'last_run_type', None) != 'optimisation':
-            raise ValueError('This method can only be run after an optimisation simulation. Ensure you run run_optimisation() first.')
+        """Plot Pareto-front scatter figures for each EPW subset.
 
-        Plots the Pareto front scatter for each EPW.
-        If color_by is provided a colorbar is added. If size_by is provided,
-        representative size handles appear in the legend.
+        Parameters
+        ----------
+        color_by : str, optional
+            Numeric column used to color Pareto-optimal points.
+        size_by : str, optional
+            Numeric column used to scale Pareto-optimal marker size.
+        out_dir : str
+            Directory where output figures are written.
+        normalize_per_m2 : bool
+            Whether to convert energy outputs to kWh/m2 when floor area is available.
+        data_filter : Optional[dict]
+            Optional filter rules applied before plotting.
+        data_filter_case_sensitive : bool
+            Case-sensitivity flag forwarded to the filter utility.
+        data_filter_strict : bool
+            When True, invalid filter rules raise an exception.
+        data_filter_on_empty : Literal['error', 'warn', 'ignore']
+            Behaviour when filtering produces no rows.
+        filename_template : str, optional
+            Optional str.format template for output filenames. Include varying
+            placeholders such as ``{epw_tag}`` because one figure is generated
+            per EPW subset.
 
-        :param filename_template: Optional output filename pattern using
-            ``str.format``. This method writes one file per EPW, so include a
-            varying placeholder such as ``{epw_tag}`` (for example
-            ``'pareto_{epw_tag}_{building_type}.png'``). Mapping-category
-            placeholders are available when present in each EPW subset.
+        Returns
+        -------
+        None
+            Saves one PNG figure per EPW and prints saved paths.
+
+        Usage
+        -----
+        Run after optimisation results are available to visualize dominated and
+        Pareto-optimal solutions per weather file.
+
+        Examples
+        --------
+        self.plot_pareto_front(color_by='Total_Energy', size_by='discomfort')
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('Pareto front scatter plot can only be generated after an optimisation simulation. Please ensure you run run_optimisation() first.')
@@ -1214,16 +1805,37 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ):
-        """
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
+        """Plot parallel-coordinates charts for optimisation parameter space.
 
-        Plots a multivariate parallel coordinates visualization of the parameter space.
+        Parameters
+        ----------
+        out_dir : str
+            Directory where output figures are written.
+        data_filter : Optional[dict]
+            Optional filter rules applied before plotting.
+        data_filter_case_sensitive : bool
+            Case-sensitivity flag forwarded to the filter utility.
+        data_filter_strict : bool
+            When True, invalid filter rules raise an exception.
+        data_filter_on_empty : Literal['error', 'warn', 'ignore']
+            Behaviour when filtering produces no rows.
+        filename_template : str, optional
+            Optional str.format template for output filenames. Include
+            ``{epw_tag}`` because one figure is generated per EPW subset.
 
-        :param filename_template: Optional output filename pattern using
-            ``str.format``. This method writes one file per EPW, so include
-            ``{epw_tag}`` in the template (for example
-            ``'parallel_{epw_tag}_{city}.png'``).
+        Returns
+        -------
+        None
+            Saves one PNG figure per EPW and prints saved paths.
+
+        Usage
+        -----
+        Run after optimisation results are available to inspect parameter
+        distributions for dominated versus Pareto-optimal solutions.
+
+        Examples
+        --------
+        self.plot_parallel_coordinates(filename_template='parallel_{epw_tag}.png')
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('Parallel coordinates plot requires either a parametric or optimisation simulation to be run first.')
@@ -1310,16 +1922,45 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ):
-        """
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
+        """Plot pairwise scatter matrices for Pareto-optimal solutions per EPW.
 
-        Plots a pairwise scatter matrix using seaborn.PairGrid for Pareto-optimal solutions.
+        Parameters
+        ----------
+        out_dir : str
+            Directory where output figures are written.
+        normalize_per_m2 : bool
+            Whether to convert energy outputs to kWh/m2 when floor area is available.
+        subplot_order_mode : Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom']
+            Ordering strategy applied to parameter columns.
+        subplot_order_custom : Optional[dict]
+            Custom order definitions used when ``subplot_order_mode='custom'``.
+        subplot_order_case_sensitive : bool
+            Whether text ordering should be case-sensitive.
+        data_filter : Optional[dict]
+            Optional filter rules applied before plotting.
+        data_filter_case_sensitive : bool
+            Case-sensitivity flag forwarded to the filter utility.
+        data_filter_strict : bool
+            When True, invalid filter rules raise an exception.
+        data_filter_on_empty : Literal['error', 'warn', 'ignore']
+            Behaviour when filtering produces no rows.
+        filename_template : str, optional
+            Optional str.format template for output filenames. Include
+            ``{epw_tag}`` because one figure is generated per EPW subset.
 
-        :param filename_template: Optional output filename pattern using
-            ``str.format``. This method writes one file per EPW, so include
-            ``{epw_tag}`` in the template (for example
-            ``'pairwise_{epw_tag}_{city}.png'``).
+        Returns
+        -------
+        None
+            Saves one PNG figure per EPW and prints saved paths.
+
+        Usage
+        -----
+        Run after optimisation results are available to inspect pairwise
+        parameter relationships among Pareto-optimal points.
+
+        Examples
+        --------
+        self.plot_pairwise_scatter_matrix(normalize_per_m2=True)
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('Pairwise scatter matrix requires either a parametric or optimisation simulation to be run first.')
@@ -1465,11 +2106,10 @@ class PlottingMixin:
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
     ):
-        """
-        Generates categorical boxplots from simulation results, automatically melting
+        """Generates categorical boxplots from simulation results, automatically melting
         specified energy columns (or detecting Heating/Cooling by default) so they share
         the Y-axis and appear side-by-side on the X-axis for each FacetGrid subplot.
-
+        
         :param df_source: 'parametric' (uses outputs_param_simulation) or 'optimisation'
             (uses outputs_optimisation).
         :param y_vars: List of column names to plot on the Y-axis. If None, it attempts
@@ -1494,6 +2134,27 @@ class PlottingMixin:
             figure size calculated from height and aspect. Applied after the
             FacetGrid is built, so it always takes precedence.
             Example: figsize=(20, 8).
+        
+        Parameters
+        ----------
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_categorical_boxplots` within ACCIM parametric and optimisation workflows.
         """
         import os
         import pandas as pd
@@ -1782,9 +2443,8 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ):
-        """
-        Generates a scatter plot (optionally faceted) for parametric/optimisation outputs.
-
+        """Generates a scatter plot (optionally faceted) for parametric/optimisation outputs.
+        
         :param x: Column name for the X axis.
         :param y: Column name for the Y axis.
         :param df_source: 'parametric' or 'optimisation'.
@@ -1806,6 +2466,27 @@ class PlottingMixin:
             Mapping-category placeholders are available when present in the
             filtered data.
         :return: seaborn FacetGrid.
+        
+        Parameters
+        ----------
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_scatter` within ACCIM parametric and optimisation workflows.
         """
         try:
             import seaborn as sns
@@ -1974,9 +2655,8 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ) -> dict:
-        """
-        Generates one or more line plots to inspect trends against a swept parameter.
-
+        """Generates one or more line plots to inspect trends against a swept parameter.
+        
         :param x: Column name for the X axis.
         :param y_vars: List of output columns to plot. If None, Heating/Cooling are auto-detected.
         :param df_source: 'parametric' or 'optimisation'.
@@ -2000,6 +2680,27 @@ class PlottingMixin:
             per ``y_var``), include ``{y_var}`` (for example
             ``'lines_{df_source}_{y_var}_by_{x}_{city}.png'``).
         :return: dict mapping each y_var to its saved PNG file path.
+        
+        Parameters
+        ----------
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_lines` within ACCIM parametric and optimisation workflows.
         """
         try:
             import seaborn as sns
@@ -2156,12 +2857,54 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ) -> str:
-        """
-        Creates one or more heatmaps from (x, y) parameter combinations and z values.
-
+        """Creates one or more heatmaps from (x, y) parameter combinations and z values.
+        
         :param filename_template: Optional output filename pattern using
             ``str.format`` (for example
             ``'heatmap_{df_source}_{z}_by_{x}_{y}_{building_type}.png'``).
+        
+        Parameters
+        ----------
+        aggfunc : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        col : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        row : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        cmap : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        annot : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        fmt : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        vmin : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        vmax : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_heatmap` within ACCIM parametric and optimisation workflows.
         """
         try:
             import seaborn as sns
@@ -2320,12 +3063,48 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ) -> str:
-        """
-        Creates contour (or filled contour) plots from numeric x, y, z columns.
-
+        """Creates contour (or filled contour) plots from numeric x, y, z columns.
+        
         :param filename_template: Optional output filename pattern using
             ``str.format`` (for example
             ``'contour_{df_source}_{z}_by_{x}_{y}_{building_type}.png'``).
+        
+        Parameters
+        ----------
+        col : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        row : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        levels : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        cmap : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        scatter_overlay : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_contour` within ACCIM parametric and optimisation workflows.
         """
         df = self._get_plot_source_df(df_source=df_source)
         required_cols = [x, y, z]
@@ -2488,13 +3267,63 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ) -> dict:
-        """
-        Creates categorical distribution plots (violin, boxen, or box) for one or more outputs.
-
+        """Creates categorical distribution plots (violin, boxen, or box) for one or more outputs.
+        
         :param filename_template: Optional output filename pattern using
             ``str.format``. Because this method can save multiple figures (one
             per ``y_var``), include ``{y_var}`` (for example
             ``'distribution_{kind}_{y_var}_by_{x}_{city}.png'``).
+        
+        Parameters
+        ----------
+        y_vars : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        df_source : Any
+            Input dataframe used by this routine.
+        hue : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        col : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        row : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        inner : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        cut : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        sharey : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        show_points : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        legend_out : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        height : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        aspect : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_distributions` within ACCIM parametric and optimisation workflows.
         """
         try:
             import seaborn as sns
@@ -2647,12 +3476,50 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ) -> str:
-        """
-        Creates an ECDF plot to compare cumulative distributions across scenarios.
-
+        """Creates an ECDF plot to compare cumulative distributions across scenarios.
+        
         :param filename_template: Optional output filename pattern using
             ``str.format`` (for example
             ``'ecdf_{df_source}_{x}_{building_type}.png'``).
+        
+        Parameters
+        ----------
+        hue : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        col : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        row : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        complementary : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        height : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        aspect : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_ecdf` within ACCIM parametric and optimisation workflows.
         """
         try:
             import seaborn as sns
@@ -2777,12 +3644,60 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ) -> str:
-        """
-        Creates 2D density visualizations using either hexbin or KDE.
-
+        """Creates 2D density visualizations using either hexbin or KDE.
+        
         :param filename_template: Optional output filename pattern using
             ``str.format`` (for example
             ``'density2d_{kind}_{x}_vs_{y}_{building_type}.png'``).
+        
+        Parameters
+        ----------
+        df_source : Any
+            Input dataframe used by this routine.
+        hue : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        col : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        row : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        cmap : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        gridsize : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        mincnt : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        levels : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        fill : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        alpha : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        scatter_overlay : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_density_2d` within ACCIM parametric and optimisation workflows.
         """
         try:
             import seaborn as sns
@@ -2958,12 +3873,38 @@ class PlottingMixin:
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
             filename_template: str = None,
     ) -> pd.DataFrame:
-        """
-        Creates a radar chart from aggregated groups and returns the aggregated values.
-
+        """Creates a radar chart from aggregated groups and returns the aggregated values.
+        
         :param filename_template: Optional output filename pattern using
             ``str.format`` (for example
             ``'radar_{df_source}_group_{group_by}_{city}.png'``).
+        
+        Parameters
+        ----------
+        metrics : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        aggfunc : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        fill_alpha : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_radar` within ACCIM parametric and optimisation workflows.
         """
         df = self._get_plot_source_df(df_source=df_source)
         (df, _) = self._apply_plot_data_filter(

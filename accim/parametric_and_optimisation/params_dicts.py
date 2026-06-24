@@ -14,6 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+"""Mappings between public parameter names and IDF modifier callables.
+
+Exports dictionaries for predefined ACCIM models, custom ACCIM models,
+APMV setpoints, and a merged `all_params` dictionary.
+
+Usage
+-----
+Import this module when building parameter descriptors that need a stable
+lookup from public parameter names to callable modifier functions.
+
+Examples
+--------
+modifier = all_params['ComfStand']
+"""
+
 from accim.parametric_and_optimisation.funcs_for_besos import param_accis, param_apmv
 
 accim_predef_model_params = {

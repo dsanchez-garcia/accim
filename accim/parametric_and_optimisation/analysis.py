@@ -1,3 +1,19 @@
+"""Analysis helpers for ACCIM parametric and optimisation post-processing.
+
+This module centralises floor-area normalization, sensitivity analysis,
+and decision-support routines used by the simulation workflows.
+
+Usage
+-----
+Use `AnalysisMixin` in the main workflow class and call the public methods
+after running parametric or optimisation simulations.
+
+Examples
+--------
+sim.set_building_floor_area(mode='all')
+sim.normalize_outputs()
+"""
+
 import os
 import glob
 import shutil
@@ -12,8 +28,45 @@ from accim.parametric_and_optimisation.utils import apply_data_filter, resolve_s
 
 class AnalysisMixin:
 
+    """Mixin with post-processing helpers for parametric and optimisation runs.
+
+    The mixin groups internal utilities for floor-area handling, plus public
+    methods for normalization, sensitivity analysis, clustering, and robustness.
+
+    Usage
+    -----
+    Inherit this mixin in the simulation session class and call the public
+    APIs once `outputs_param_simulation` or `outputs_optimisation` are available.
+
+    Examples
+    --------
+    session.set_building_floor_area(mode='occupied')
+    session.run_sensitivity_analysis(method='morris')
+    """
+
     @staticmethod
     def _normalise_floor_area_idf_name(name: str) -> str:
+        """Normalize an IDF identifier to a canonical name used for floor-area mapping.
+
+        Parameters
+        ----------
+        name : Any
+            Raw IDF/object name or text to normalize.
+
+        Returns
+        -------
+        str
+            Canonical IDF key without backup prefixes/suffixes.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        AnalysisMixin._normalise_floor_area_idf_name('accim_idf_backup_Model_A_post_setup_20260624_101010.idf')
+        """
+
         import re
 
         normalised = os.path.basename(str(name)) if name is not None else ''
@@ -28,6 +81,29 @@ class AnalysisMixin:
         return normalised
 
     def _get_floor_area_idf_name(self, idf: Any, idx: int) -> str:
+        """Resolve a stable, normalized IDF name for floor-area calculations.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+        idx : Any
+            Zero-based IDF index used for deterministic fallback names.
+
+        Returns
+        -------
+        str
+            Normalized IDF name, with a deterministic fallback when unavailable.
+
+        Usage
+        -----
+        Used internally by `set_building_floor_area` during floor-area resolution.
+
+        Examples
+        --------
+        self._get_floor_area_idf_name(idf=my_idf, idx=0)
+        """
+
         if hasattr(self, '_get_idf_identifier'):
             raw_name = self._get_idf_identifier(idf, idx)
         else:
@@ -37,6 +113,29 @@ class AnalysisMixin:
 
     @staticmethod
     def _idf_objects(idf: Any, object_key: str) -> list:
+        """Retrieve IDF objects for a class key using tolerant key matching.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+        object_key : Any
+            Requested EnergyPlus object class key.
+
+        Returns
+        -------
+        list
+            Matching list of IDF objects for the requested class key.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        self._idf_objects(idf=my_idf, object_key='ZONE')
+        """
+
         idfobjects = getattr(idf, 'idfobjects', {})
         for key in (object_key, object_key.upper(), object_key.lower()):
             try:
@@ -53,6 +152,27 @@ class AnalysisMixin:
 
     @staticmethod
     def _idf_object_items(idf: Any):
+        """Iterate IDF object-class items safely even when mappings are non-standard.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+
+        Returns
+        -------
+        Iterator[tuple[str, Any]]
+            Pairs of object class name and associated object collection.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        AnalysisMixin._idf_object_items(idf=...)
+        """
+
         idfobjects = getattr(idf, 'idfobjects', {})
         try:
             keys = list(idfobjects.keys())
@@ -66,6 +186,29 @@ class AnalysisMixin:
 
     @staticmethod
     def _first_existing_attr(obj: Any, attrs: list):
+        """Find the first non-empty attribute value from a list of candidate names.
+
+        Parameters
+        ----------
+        obj : Any
+            IDF object to inspect.
+        attrs : Any
+            Ordered attribute names to evaluate.
+
+        Returns
+        -------
+        Any
+            First non-empty attribute value or None when no candidate exists.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        AnalysisMixin._first_existing_attr(obj=..., attrs=...)
+        """
+
         for attr in attrs:
             value = getattr(obj, attr, None)
             if value not in (None, ''):
@@ -74,6 +217,29 @@ class AnalysisMixin:
 
     @staticmethod
     def _iter_list_object_values(obj: Any, prefix: str):
+        """Yield unique referenced object names from list-like IDF fields.
+
+        Parameters
+        ----------
+        obj : Any
+            IDF object to inspect.
+        prefix : Any
+            Prefix used to identify list-like field names.
+
+        Returns
+        -------
+        Iterator[Any]
+            Unique referenced names extracted from list-style fields.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        AnalysisMixin._iter_list_object_values(obj=..., prefix=...)
+        """
+
         seen = set()
         fieldnames = getattr(obj, 'fieldnames', [])
         for field in fieldnames:
@@ -92,6 +258,27 @@ class AnalysisMixin:
                     yield value
 
     def _get_zone_lookup(self, idf: Any) -> Dict[str, str]:
+        """Build a lookup from uppercase zone names to original zone names.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+
+        Returns
+        -------
+        dict
+            Dictionary keyed by uppercase zone name.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        self._get_zone_lookup(idf=...)
+        """
+
         return {
             z.Name.upper(): z.Name
             for z in self._idf_objects(idf, 'ZONE')
@@ -99,6 +286,27 @@ class AnalysisMixin:
         }
 
     def _get_space_to_zone_lookup(self, idf: Any) -> Dict[str, str]:
+        """Build a lookup from space names to their parent zone names.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+
+        Returns
+        -------
+        dict
+            Dictionary keyed by uppercase space name with uppercase zone values.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        self._get_space_to_zone_lookup(idf=...)
+        """
+
         lookup = {}
         for space in self._idf_objects(idf, 'SPACE'):
             space_name = getattr(space, 'Name', None)
@@ -108,6 +316,27 @@ class AnalysisMixin:
         return lookup
 
     def _get_zonelist_lookup(self, idf: Any) -> Dict[str, set]:
+        """Build a lookup from zonelist names to the set of contained zones.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+
+        Returns
+        -------
+        dict
+            Dictionary keyed by uppercase zonelist name with zone-name sets.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        self._get_zonelist_lookup(idf=...)
+        """
+
         lookup = {}
         for zonelist in self._idf_objects(idf, 'ZONELIST'):
             name = getattr(zonelist, 'Name', None)
@@ -116,6 +345,27 @@ class AnalysisMixin:
         return lookup
 
     def _get_spacelist_lookup(self, idf: Any) -> Dict[str, set]:
+        """Build a lookup from spacelist names to resolved zone names.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+
+        Returns
+        -------
+        dict
+            Dictionary keyed by uppercase spacelist name with zone-name sets.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        self._get_spacelist_lookup(idf=...)
+        """
+
         space_to_zone = self._get_space_to_zone_lookup(idf)
         lookup = {}
         for spacelist in self._idf_objects(idf, 'SPACELIST'):
@@ -131,6 +381,29 @@ class AnalysisMixin:
         return lookup
 
     def _resolve_zone_like_names(self, idf: Any, names: list) -> set:
+        """Resolve names that can reference zones, spaces, zonelists, or spacelists.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+        names : Any
+            Candidate names that may reference zones, spaces, or list objects.
+
+        Returns
+        -------
+        set
+            Set of uppercase resolved zone names.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        self._resolve_zone_like_names(idf=..., names=...)
+        """
+
         zone_lookup = self._get_zone_lookup(idf)
         space_to_zone = self._get_space_to_zone_lookup(idf)
         zonelist_lookup = self._get_zonelist_lookup(idf)
@@ -153,6 +426,27 @@ class AnalysisMixin:
         return resolved
 
     def _resolve_occupied_zone_names(self, idf: Any) -> set:
+        """Resolve occupied zone names from PEOPLE object targets.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+
+        Returns
+        -------
+        set
+            Set of uppercase occupied zone names.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        self._resolve_occupied_zone_names(idf=...)
+        """
+
         targets = []
         people_target_fields = [
             'Zone_or_ZoneList_or_Space_or_SpaceList_Name',
@@ -167,6 +461,27 @@ class AnalysisMixin:
 
     @staticmethod
     def _is_air_conditioning_object_class(class_name: str) -> bool:
+        """Check whether an object class can reference conditioned zones.
+
+        Parameters
+        ----------
+        class_name : Any
+            EnergyPlus object class name.
+
+        Returns
+        -------
+        bool
+            True when the object class is HVAC/zone-control related.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        AnalysisMixin._is_air_conditioning_object_class(class_name=...)
+        """
+
         upper_class = class_name.upper()
         return (
             upper_class == 'ZONEHVAC:EQUIPMENTCONNECTIONS'
@@ -178,6 +493,27 @@ class AnalysisMixin:
 
     @staticmethod
     def _is_conditioned_zone_field(field_name: str) -> bool:
+        """Check whether a field name is likely to represent a conditioned zone reference.
+
+        Parameters
+        ----------
+        field_name : Any
+            Field name to evaluate.
+
+        Returns
+        -------
+        bool
+            True when the field is considered a conditioned-zone reference field.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        AnalysisMixin._is_conditioned_zone_field(field_name=...)
+        """
+
         field = field_name.lower()
         exact_zone_fields = {
             'zone_name',
@@ -196,6 +532,27 @@ class AnalysisMixin:
         return False
 
     def _iter_conditioned_zone_targets(self, obj: Any):
+        """Yield unique zone-like targets declared in HVAC-related IDF objects.
+
+        Parameters
+        ----------
+        obj : Any
+            IDF object to inspect.
+
+        Returns
+        -------
+        Iterator[Any]
+            Unique target names extracted from conditioned-zone fields.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        self._iter_conditioned_zone_targets(obj=...)
+        """
+
         explicit_fields = [
             'Zone_Name',
             'Zone_or_ZoneList_Name',
@@ -219,6 +576,27 @@ class AnalysisMixin:
                     yield value
 
     def _resolve_air_conditioned_zone_names(self, idf: Any) -> set:
+        """Resolve conditioned zone names from HVAC/control objects.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+
+        Returns
+        -------
+        set
+            Set of uppercase air-conditioned zone names.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        self._resolve_air_conditioned_zone_names(idf=...)
+        """
+
         targets = []
         for object_class, objects in self._idf_object_items(idf):
             if not self._is_air_conditioning_object_class(object_class):
@@ -228,6 +606,31 @@ class AnalysisMixin:
         return self._resolve_zone_like_names(idf, targets)
 
     def _sum_floor_area(self, idf: Any, floors: list, zone_names: set = None) -> float:
+        """Sum floor area for all floors or for floors linked to selected zones.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+        floors : Any
+            Collection of floor surfaces.
+        zone_names : Any
+            Optional set of uppercase zone names used to filter surfaces.
+
+        Returns
+        -------
+        float
+            Summed floor area in m2.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        self._sum_floor_area(idf=..., floors=..., zone_names=...)
+        """
+
         if zone_names is None:
             return sum((getattr(f, 'area', 0.0) for f in floors))
 
@@ -244,6 +647,33 @@ class AnalysisMixin:
         return total_area
 
     def _resolve_floor_area_config(self, config: Any, idf_name: str, idf_names: list, argument_name: str):
+        """Resolve a scalar-or-dictionary floor-area configuration for one IDF.
+
+        Parameters
+        ----------
+        config : Any
+            Scalar value or dictionary keyed by IDF name.
+        idf_name : Any
+            Normalized IDF name currently being processed.
+        idf_names : Any
+            Expected normalized IDF names.
+        argument_name : Any
+            Argument label used in validation error messages.
+
+        Returns
+        -------
+        Any
+            Resolved scalar value for the current IDF.
+
+        Usage
+        -----
+        Used internally by `set_building_floor_area` during floor-area resolution.
+
+        Examples
+        --------
+        self._resolve_floor_area_config(config=..., idf_name=..., idf_names=..., argument_name=...)
+        """
+
         if not isinstance(config, dict):
             return config
 
@@ -270,11 +700,57 @@ class AnalysisMixin:
 
     @staticmethod
     def _coerce_custom_floor_area(value: Union[str, float, int]) -> float:
+        """Coerce a custom floor-area value to float.
+
+        Parameters
+        ----------
+        value : Any
+            Input value to convert or normalize.
+
+        Returns
+        -------
+        float
+            Parsed numeric floor area.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        AnalysisMixin._coerce_custom_floor_area(value=...)
+        """
+
         if isinstance(value, str):
             value = value.strip().replace(',', '.')
         return float(value)
 
     def _coerce_zones_list(self, idf: Any, zones_list: Any, idf_name: str) -> set:
+        """Validate and resolve a user-provided zones list into canonical zone names.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+        zones_list : Any
+            Zone list value (list/string) or mapping by IDF.
+        idf_name : Any
+            Normalized IDF name currently being processed.
+
+        Returns
+        -------
+        set
+            Resolved set of uppercase zone names.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        self._coerce_zones_list(idf=..., zones_list=..., idf_name=...)
+        """
+
         if zones_list in (None, ''):
             raise ValueError("zones_list must be provided when mode='list'")
         if isinstance(zones_list, str):
@@ -291,6 +767,27 @@ class AnalysisMixin:
         return resolved
 
     def _load_floor_area_buildings_from_backup_paths(self, requested_idf_names: Optional[list] = None) -> list:
+        """Load IDF objects from backup paths, optionally filtered by requested names.
+
+        Parameters
+        ----------
+        requested_idf_names : Any
+            Optional list of IDF names that must be loaded.
+
+        Returns
+        -------
+        list
+            List of loaded IDF objects.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        self._load_floor_area_buildings_from_backup_paths(requested_idf_names=...)
+        """
+
         backup_path = getattr(self, 'idf_backup_path', None)
         backup_list = backup_path if isinstance(backup_path, list) else ([backup_path] if backup_path else [])
         valid_backups = [p for p in backup_list if p and os.path.isfile(p)]
@@ -339,6 +836,27 @@ class AnalysisMixin:
         return [get_building(path) for path in selected_paths]
 
     def _get_floor_area_buildings(self, requested_idf_names: Optional[list] = None) -> list:
+        """Get IDF objects for floor-area calculations from loaded models or backup paths.
+
+        Parameters
+        ----------
+        requested_idf_names : Any
+            Optional list of IDF names that must be loaded.
+
+        Returns
+        -------
+        list
+            List of IDF objects matching the requested scope.
+
+        Usage
+        -----
+        Used internally by `set_building_floor_area` during floor-area resolution.
+
+        Examples
+        --------
+        self._get_floor_area_buildings(requested_idf_names=['Model_A', 'Model_B'])
+        """
+
         requested_names = None
         if requested_idf_names is not None:
             requested_names = []
@@ -434,6 +952,27 @@ class AnalysisMixin:
         return loaded
 
     def _set_and_return_building_floor_area(self, areas: Dict[str, float]):
+        """Store calculated floor area(s), print diagnostics, and return the stored value.
+
+        Parameters
+        ----------
+        areas : Any
+            Dictionary mapping IDF names to computed floor areas.
+
+        Returns
+        -------
+        Any
+            Stored floor area value (float or mapping).
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        self._set_and_return_building_floor_area(areas=...)
+        """
+
         if len(areas) == 1:
             self.building_floor_area = list(areas.values())[0]
             print(f'  [info] Building floor area: {self.building_floor_area:.2f} m² (single IDF)')
@@ -453,6 +992,37 @@ class AnalysisMixin:
             zones_list: Union[list, Dict[str, list]],
             custom_area: Union[str, float, Dict[str, Union[str, float]]]
     ) -> float:
+        """Compute floor area for one IDF according to the selected mode.
+
+        Parameters
+        ----------
+        idf : Any
+            IDF model object.
+        idf_name : Any
+            Normalized IDF name currently being processed.
+        idf_names : Any
+            Expected normalized IDF names.
+        normalised_mode : Any
+            Normalized floor-area mode.
+        zones_list : Any
+            Zone list value (list/string) or mapping by IDF.
+        custom_area : Any
+            Custom floor area value or mapping keyed by IDF.
+
+        Returns
+        -------
+        float
+            Calculated floor area for the target IDF in m2.
+
+        Usage
+        -----
+        Used internally by `set_building_floor_area` during floor-area resolution.
+
+        Examples
+        --------
+        self._calculate_floor_area_for_idf(idf=my_idf, idf_name='Model_A', idf_names=['Model_A'], normalised_mode='all', zones_list=None, custom_area=None)
+        """
+
         surfaces = self._idf_objects(idf, 'BuildingSurface:Detailed')
         floors = [s for s in surfaces if getattr(s, 'Surface_Type', '').lower() == 'floor']
 
@@ -476,10 +1046,52 @@ class AnalysisMixin:
 
     @staticmethod
     def _normalise_representative_mode(mode: str) -> str:
+        """Normalize representative mode labels to the internal canonical form.
+
+        Parameters
+        ----------
+        mode : Any
+            Value for `mode`.
+
+        Returns
+        -------
+        str
+            Normalized representative mode label.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        AnalysisMixin._normalise_representative_mode(mode=...)
+        """
+
         return str(mode).strip().lower().replace('-', '_')
 
     @staticmethod
     def _normalise_representative_category_value(value: Any):
+        """Normalize representative category values, mapping missing values to None.
+
+        Parameters
+        ----------
+        value : Any
+            Input value to convert or normalize.
+
+        Returns
+        -------
+        Any
+            Normalized category value, or None for missing values.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        AnalysisMixin._normalise_representative_category_value(value=...)
+        """
+
         try:
             if pd.isna(value):
                 return None
@@ -489,19 +1101,105 @@ class AnalysisMixin:
 
     @staticmethod
     def _representative_sort_key(value: Any) -> str:
+        """Build a deterministic sort key for representative category values.
+
+        Parameters
+        ----------
+        value : Any
+            Input value to convert or normalize.
+
+        Returns
+        -------
+        str
+            String sort key used for deterministic ordering.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        AnalysisMixin._representative_sort_key(value=...)
+        """
+
         if value is None:
             return ''
         return str(value)
 
     @staticmethod
     def _format_representative_values(values: set) -> list:
+        """Format representative category values in a sorted order for readable messages.
+
+        Parameters
+        ----------
+        values : Any
+            Value for `values`.
+
+        Returns
+        -------
+        list
+            Sorted category values ready for display.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        AnalysisMixin._format_representative_values(values=...)
+        """
+
         return sorted(values, key=AnalysisMixin._representative_sort_key)
 
     def _available_idf_mapping_categories(self) -> list:
+        """Get sorted IDF mapping categories available in the current session.
+
+        Parameters
+        ----------
+        None
+            This helper does not receive explicit arguments.
+
+        Returns
+        -------
+        list
+            Sorted category names from idf_mapping_rules.
+
+        Usage
+        -----
+        Internal utility used by the analysis pipeline.
+
+        Examples
+        --------
+        self._available_idf_mapping_categories()
+        """
+
         idf_mapping_rules = getattr(self, 'idf_mapping_rules', {}) or {}
         return sorted(idf_mapping_rules.keys())
 
     def _get_floor_area_idf_category_groups(self, representative_category: str, available_categories: list):
+        """Build IDF-to-category and category-to-IDFs mappings from simulation outputs.
+
+        Parameters
+        ----------
+        representative_category : Any
+            Grouping category name used for representative selection.
+        available_categories : Any
+            Valid category names available for grouping.
+
+        Returns
+        -------
+        tuple
+            Tuple with (idf_to_category, category_to_idfs).
+
+        Usage
+        -----
+        Used internally by `set_building_floor_area` during floor-area resolution.
+
+        Examples
+        --------
+        self._get_floor_area_idf_category_groups(representative_category=..., available_categories=...)
+        """
+
         outputs = getattr(self, 'outputs_param_simulation', None)
         if outputs is None or outputs.empty:
             raise ValueError(
@@ -546,6 +1244,27 @@ class AnalysisMixin:
         return idf_to_category, category_to_idfs
 
     def _normalise_representative_map(self, representative_map: Optional[Dict[str, str]]) -> Dict[Any, str]:
+        """Normalize and validate a custom representative map.
+
+        Parameters
+        ----------
+        representative_map : Any
+            Custom mapping from category values to representative IDF names.
+
+        Returns
+        -------
+        dict
+            Normalized category-to-representative-IDF mapping.
+
+        Usage
+        -----
+        Internal utility used by analysis workflows to keep data handling deterministic.
+
+        Examples
+        --------
+        self._normalise_representative_map(representative_map=...)
+        """
+
         if not isinstance(representative_map, dict) or len(representative_map) == 0:
             raise ValueError("representative_map must be a non-empty dict when representative_mode='custom_map'.")
 
@@ -571,6 +1290,31 @@ class AnalysisMixin:
             representative_category: Optional[str],
             representative_map: Optional[Dict[str, str]]
     ) -> Dict[str, Any]:
+        """Resolve representative-IDF planning metadata for grouped floor-area calculation.
+
+        Parameters
+        ----------
+        representative_mode : Any
+            Representative loading strategy.
+        representative_category : Any
+            Grouping category name used for representative selection.
+        representative_map : Any
+            Custom mapping from category values to representative IDF names.
+
+        Returns
+        -------
+        dict
+            Representative plan with resolved category and IDF mappings.
+
+        Usage
+        -----
+        Used internally by `set_building_floor_area` during floor-area resolution.
+
+        Examples
+        --------
+        self._resolve_floor_area_representative_plan(representative_mode='by_idf_mapping_category', representative_category='building_type', representative_map=None)
+        """
+
         available_categories = self._available_idf_mapping_categories()
         resolved_category = representative_category
 
@@ -666,9 +1410,8 @@ class AnalysisMixin:
             representative_category: Optional[str]=None,
             representative_map: Optional[Dict[str, str]]=None,
     ) -> Union[float, Dict[str, float]]:
-        """
-        Calculates or sets the floor area to be used for normalizing energy results (kWh/m2).
-
+        """Calculates or sets the floor area to be used for normalizing energy results (kWh/m2).
+        
         :param mode: 'all' to use all Floor surfaces in the IDF.
                      'occupied' to use Floor surfaces in zones that have a People object.
                      'air-conditioned' to use Floor surfaces in zones served or controlled by HVAC objects.
@@ -686,9 +1429,9 @@ class AnalysisMixin:
             not 'all'.
         :param representative_map: Explicit mapping for representative_mode='custom_map',
             with format {category_value: representative_idf}.
-
+        
         Example::
-
+        
             sim.set_building_floor_area(mode='air-conditioned')
             sim.set_building_floor_area(
                 mode='air-conditioned',
@@ -704,8 +1447,12 @@ class AnalysisMixin:
                     'office': 'Office_A',
                 },
             )
-
+        
         :return: the calculated or assigned floor area.
+        
+        Usage
+        -----
+        Use `AnalysisMixin.set_building_floor_area` within ACCIM parametric and optimisation workflows.
         """
         normalised_mode = str(mode).lower().replace('_', '-').strip()
         if normalised_mode == 'air-condicioned':
@@ -807,6 +1554,16 @@ class AnalysisMixin:
             Options include: 'parametric', 'parametric_hourly', 'parametric_monthly',
             'optimisation', 'optimisation_hourly', 'optimisation_monthly'.
             If None, all available dataframes will be normalized.
+
+        Usage::
+
+            Call this method after `set_building_floor_area(...)` and after simulation
+            outputs have been generated.
+
+        Example::
+
+            sim.set_building_floor_area(mode='all')
+            sim.normalize_outputs(df_types=['parametric', 'optimisation'])
         """
         import pandas as pd
         area_attr = getattr(self, 'building_floor_area', None)
@@ -921,6 +1678,17 @@ class AnalysisMixin:
         :param scaled: Morris only. Scale elementary effects by X/Y standard deviation.
         :param num_levels: Morris only. Number of grid levels used by sampling_morris.
         :return: a dictionary mapping each output name to its SALib analysis results.
+
+        Usage::
+
+            Run this method after `run_parametric_simulation(...)` with a compatible
+            SALib sampling workflow.
+
+        Example::
+
+            sim.sampling_morris(num_samples=50)
+            sim.run_parametric_simulation(...)
+            sa = sim.run_sensitivity_analysis(method='morris')
         """
         if getattr(self, 'last_run_type', None) != 'parametric':
             raise ValueError('Sensitivity Analysis can only be run after a parametric simulation. Please ensure you run run_parametric_simulation() first.')
@@ -978,6 +1746,27 @@ class AnalysisMixin:
 
     @staticmethod
     def _canonical_output_name(name: Any) -> str:
+        """Canonicalize an output column name for robust fuzzy matching.
+
+        Parameters
+        ----------
+        name : Any
+            Raw IDF/object name or text to normalize.
+
+        Returns
+        -------
+        str
+            Normalized token used for output-column matching.
+
+        Usage
+        -----
+        Called by `_resolve_output_columns` to match output names with tolerant normalization.
+
+        Examples
+        --------
+        AnalysisMixin._canonical_output_name(name=...)
+        """
+
         text = str(name).strip().lower()
         text = re.sub(r'kwh/m(?:2|\u00b2)', '', text)
         text = re.sub(r'_kwh[/_]?m2$', '', text)
@@ -986,7 +1775,28 @@ class AnalysisMixin:
         return text
 
     def _resolve_output_columns(self, output_names: list, available_columns: list, strict: bool=True) -> list:
-        """Resolve output names against available dataframe columns."""
+        """Resolve requested output names against available dataframe columns.
+
+        :param output_names: Output names requested by the optimisation/sensitivity
+            workflow.
+        :param available_columns: Actual dataframe columns available for lookup.
+        :param strict: If True, raises `KeyError` when one or more outputs cannot be
+            resolved. If False, unresolved outputs are skipped.
+        :return: Ordered list of resolved column names.
+
+        Usage::
+
+            Called internally before MCDM or sensitivity post-processing to align
+            problem output names with dataframe columns.
+
+        Example::
+
+            resolved = self._resolve_output_columns(
+                output_names=['Total HVAC Energy'],
+                available_columns=list(df.columns),
+                strict=False,
+            )
+        """
         available_cols = [str(col) for col in available_columns]
         lower_lookup = {}
         canonical_lookup = {}
@@ -1071,6 +1881,15 @@ class AnalysisMixin:
         :param weights: A list of weights for each objective, used only in 'topsis'.
             If None, equal weights are applied. Must match the number of objectives.
         :return: A pandas DataFrame containing the best compromise solution(s).
+
+        Usage::
+
+            Call this method after `run_optimisation(...)` when `outputs_optimisation`
+            contains Pareto-optimal rows.
+
+        Example::
+
+            best = sim.get_best_compromise_solution(method='topsis', weights=[0.5, 0.5])
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('MCDM best compromise solutions can only be evaluated after an optimisation simulation. Please ensure you run run_optimisation() first.')
@@ -1180,7 +1999,34 @@ class AnalysisMixin:
         :param seed: forwarded to ``run_sensitivity_analysis``.
         :param scaled: Morris only. Forwarded to ``run_sensitivity_analysis``.
         :param num_levels: Morris only. Forwarded to ``run_sensitivity_analysis``.
+        :param subplot_order_mode: Strategy used to order output subplots.
+            Accepted values are ``'auto'``, ``'alphabetical'``, ``'ascending'``,
+            ``'descending'``, and ``'custom'``.
+        :param subplot_order_custom: Custom subplot order mapping passed when
+            ``subplot_order_mode='custom'``.
+        :param subplot_order_case_sensitive: Whether subplot ordering should respect
+            case when comparing labels.
+        :param data_filter: Optional filtering spec applied before per-EPW analysis.
+        :param data_filter_case_sensitive: Whether text matching in ``data_filter``
+            should be case-sensitive.
+        :param data_filter_strict: If True, invalid filter keys/values raise errors.
+        :param data_filter_on_empty: Behaviour when filtering produces no rows:
+            ``'error'``, ``'warn'``, or ``'ignore'``.
         :return: nested dict ``{epw_label: {output_name: SALib_result}}``.
+
+        Usage::
+
+            Use this method after running a parametric simulation with multiple EPWs
+            to obtain and export one sensitivity report per climate file.
+
+        Example::
+
+            sa_by_epw = sim.run_sensitivity_analysis_by_epw(
+                method='morris',
+                out_dir='results_sa',
+                subplot_order_mode='alphabetical',
+                data_filter={'building_type': ['residential']},
+            )
         """
         if getattr(self, 'last_run_type', None) != 'parametric':
             raise ValueError('Sensitivity Analysis by EPW can only be run after a parametric simulation. Please ensure you run run_parametric_simulation() first.')
@@ -1288,20 +2134,33 @@ class AnalysisMixin:
         return results_by_epw
 
     def run_clustering(self, n_clusters: int=3, cluster_by: str='parameters', pareto_only: bool=True, out_dir: str='.'):
-        """
-        if pareto_only and getattr(self, 'last_run_type', None) != 'optimisation':
-            raise ValueError('Clustering with pareto_only=True requires an optimisation simulation. Run run_optimisation() first, or set pareto_only=False.')
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
+        """Cluster simulation solutions into design families using KMeans.
 
-        Groups solutions into K clusters using KMeans to identify design families.
-        
-        :param n_clusters: Number of clusters (K).
-        :param cluster_by: 'parameters' or 'objectives'.
-        :param pareto_only: If True, only clusters the Pareto optimal solutions.
-        :param out_dir: Output directory for saving the CSV and plot.
-        :return: DataFrame with the 'Cluster_ID' column added.
+        Parameters
+        ----------
+        n_clusters : Any
+            Number of clusters for KMeans.
+        cluster_by : Any
+            Feature family used for clustering ('parameters' or 'objectives').
+        pareto_only : Any
+            Whether to use only Pareto-optimal rows when clustering.
+        out_dir : Any
+            Directory where result files are saved.
+
+        Returns
+        -------
+        pd.DataFrame
+            Results dataframe with cluster labels.
+
+        Usage
+        -----
+        Call after a parametric/optimisation run to segment solutions by design similarity.
+
+        Examples
+        --------
+        clusters = self.run_clustering(n_clusters=3, cluster_by='parameters', pareto_only=True, out_dir='results')
         """
+
         if pareto_only and getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('Clustering with pareto_only=True requires an optimisation simulation. Please ensure you run run_optimisation() first, or set pareto_only=False.')
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
@@ -1348,19 +2207,33 @@ class AnalysisMixin:
         return df
 
     def run_robustness_analysis(self, optimal_solutions_df: pd.DataFrame, epws_robustness: list, out_dir: str='.', normalize_per_m2: bool=False):
-        """
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
+        """Evaluate selected solutions across alternative EPW files to assess robustness.
 
-        Evaluates the robustness of selected optimal solutions against variations in weather (multiple EPWs).
-        
-        TODO: Future expansion could include small mathematical parametric perturbations (e.g. ±5%) 
-        within the same method or via an additional argument.
-        
-        :param optimal_solutions_df: A subset DataFrame of the optimal solutions (e.g., from MCDM).
-        :param epws_robustness: A list of EPW strings to test against.
-        :param out_dir: Output directory for saving the robustness results.
+        Parameters
+        ----------
+        optimal_solutions_df : Any
+            Dataframe with selected solutions to be re-evaluated.
+        epws_robustness : Any
+            List of EPW paths used in robustness checks.
+        out_dir : Any
+            Directory where result files are saved.
+        normalize_per_m2 : Any
+            Whether to normalize energy metrics by floor area.
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe containing robustness results across EPWs.
+
+        Usage
+        -----
+        Call after selecting candidate solutions to compare their stability under multiple climates.
+
+        Examples
+        --------
+        robustness = self.run_robustness_analysis(optimal_solutions_df=best_df, epws_robustness=['Seville.epw', 'Sydney.epw'], out_dir='results')
         """
+
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('Robustness analysis requires either a parametric or optimisation simulation to be run first.')
         import os
