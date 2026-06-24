@@ -1,5 +1,6 @@
 import matplotlib
 import pandas as pd
+import pytest
 
 matplotlib.use('Agg')
 
@@ -74,6 +75,22 @@ def test_plot_hourly_scatter_generates_png(tmp_path):
     assert any(tmp_path.glob('plot_hourly_scatter_*.png'))
 
 
+def test_plot_hourly_scatter_filename_template(tmp_path):
+    sim = _DummyHourlyPlotSession()
+
+    grid = sim.plot_hourly_scatter(
+        df_source='parametric_hourly',
+        x='datetime',
+        epw_filter='Seville',
+        out_dir=str(tmp_path),
+        filename_template='hourly_scatter_{epw_filter}_{x}.png',
+    )
+
+    expected_path = tmp_path / 'hourly_scatter_Seville_datetime.png'
+    assert grid is not None
+    assert expected_path.exists()
+
+
 def test_plot_hourly_lines_generates_png(tmp_path):
     sim = _DummyHourlyPlotSession()
 
@@ -86,4 +103,18 @@ def test_plot_hourly_lines_generates_png(tmp_path):
 
     assert grid is not None
     assert any(tmp_path.glob('plot_hourly_lines_*.png'))
+
+
+def test_plot_hourly_lines_filename_and_template_together_raise(tmp_path):
+    sim = _DummyHourlyPlotSession()
+
+    with pytest.raises(ValueError, match='either filename or filename_template'):
+        sim.plot_hourly_lines(
+            df_source='parametric_hourly',
+            epw_filter='Sydney',
+            out_dir=str(tmp_path),
+            filename='forced_name.png',
+            filename_template='hourly_lines_{epw_filter}_{x}.png',
+        )
+
 

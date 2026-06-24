@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Template-based Plot Filenames with Category Placeholders**: Added `filename_template` support across plotting helpers in `PlottingMixin` (hourly, parametric, categorical, Pareto/MCDM, pairwise, and radar workflows).
+  - Filenames can be customized via `str.format(...)` placeholders, including category labels sourced from `epw_mapping_rules` and `idf_mapping_rules` when those columns are present in the filtered plotting DataFrame.
+  - Added method-specific placeholders (for example, `epw_tag`, `x`, `y`, `y_var`, `kind`, `df_source`) and automatic `.png` suffix completion when omitted.
+  - Added collision protection for multi-file plotting methods (`plot_parametric_lines`, `plot_parametric_distributions`, EPW-loop methods) to raise a clear error when a template resolves to duplicate output paths.
+  - Expanded plotting docstrings with `filename_template` usage guidance and examples.
+  - Added regression tests in `tests/parametric_and_optimisation/test_plotting_parametric_new_methods.py` and `tests/parametric_and_optimisation/test_plotting_hourly_methods.py`.
 - **Configurable Subplot Ordering Across Plotting/Analysis**: Added a shared subplot-ordering API to control panel/facet order in plotting methods that use `FacetGrid`, `catplot`/`relplot`/`displot`, `PairGrid`, and `matplotlib` subplot grids.
   - Added common arguments with backward-compatible defaults: `subplot_order_mode=('auto'|'alphabetical'|'ascending'|'descending'|'custom')`, `subplot_order_custom`, and `subplot_order_case_sensitive`.
   - Added reusable helpers in `accim.parametric_and_optimisation.utils`: `resolve_subplot_order(...)` and `resolve_subplot_orders(...)`.
@@ -103,6 +109,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added focused tests in `tests/parametric_and_optimisation/test_sim_file_cleanup.py`.
 
 ### Changed
+- **Custom Subplot Ordering Semantics (`subplot_order_mode='custom'`)**: Active subplot dimensions no longer require exhaustive `subplot_order_custom` entries.
+  - Unspecified active dimensions now preserve their current data order (equivalent to `auto`) instead of raising an error.
+  - Validation for unsupported/custom dimensions remains strict and unchanged.
 - **Breaking API Change in Output Discovery/Selection Returns**: `get_outputs_df_from_testsim(...)`, `discover_available_outputs(...)`, and `select_outputs(...)` now return a single dictionary instead of tuples.
   - New contracts are:
     - `get_outputs_df_from_testsim(...) -> {'meters': DataFrame, 'variables': DataFrame}`

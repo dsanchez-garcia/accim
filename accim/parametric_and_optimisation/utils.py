@@ -492,13 +492,6 @@ def resolve_subplot_orders(
         if custom is None:
             raise ValueError("subplot_order_mode='custom' requires subplot_order_custom.")
 
-        missing_dims = [dim for dim in active_dimensions.keys() if dim not in custom]
-        if missing_dims:
-            raise ValueError(
-                f"{context}: subplot_order_mode='custom' requires explicit order for active dimensions {missing_dims}. "
-                f'Active dimensions: {list(active_dimensions.keys())}'
-            )
-
         invalid_dims = [dim for dim in custom.keys() if dim not in active_dimensions]
         if invalid_dims:
             raise ValueError(
@@ -509,6 +502,16 @@ def resolve_subplot_orders(
     resolved = {}
     for (dim_name, values) in active_dimensions.items():
         try:
+            if mode == 'custom' and dim_name not in custom:
+                # Allow partial custom configuration: unspecified dimensions preserve current order.
+                resolved[dim_name] = resolve_subplot_order(
+                    values=values,
+                    mode='auto',
+                    custom_values=None,
+                    case_sensitive=case_sensitive,
+                )
+                continue
+
             resolved[dim_name] = resolve_subplot_order(
                 values=values,
                 mode=mode,

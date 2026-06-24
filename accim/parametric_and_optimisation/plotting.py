@@ -18,6 +18,123 @@ class PlottingMixin:
         return token.strip('_') or 'unknown'
 
     @staticmethod
+    def _summarise_placeholder_values(values: list) -> str:
+        tokens = []
+        for value in values:
+            token = PlottingMixin._safe_plot_token(value)
+            if token not in tokens:
+                tokens.append(token)
+
+        if len(tokens) == 0:
+            return 'na'
+        if len(tokens) <= 4:
+            return '_'.join(tokens)
+        return '_'.join(tokens[:4]) + f'_plus{len(tokens) - 4}'
+
+    def _get_mapping_placeholder_columns(self, df: pd.DataFrame) -> list:
+        df_attrs = getattr(df, 'attrs', {}) if hasattr(df, 'attrs') else {}
+
+        epw_rules = {}
+        idf_rules = {}
+
+        for rules in [
+            getattr(self, 'epw_mapping_rules', None),
+            df_attrs.get('epw_mapping_rules') if isinstance(df_attrs, dict) else None,
+        ]:
+            if isinstance(rules, dict):
+                epw_rules.update(rules)
+
+        for rules in [
+            getattr(self, 'idf_mapping_rules', None),
+            df_attrs.get('idf_mapping_rules') if isinstance(df_attrs, dict) else None,
+        ]:
+            if isinstance(rules, dict):
+                idf_rules.update(rules)
+
+        epw_categories = [str(category) for category in epw_rules.keys()]
+        idf_categories = [str(category) for category in idf_rules.keys()]
+        collisions = set(epw_categories) & set(idf_categories)
+
+        candidates = []
+        for category in epw_categories:
+            collision_safe_name = f'epw_{category}' if category in collisions else category
+            candidates.append(collision_safe_name)
+            candidates.append(category)
+        candidates.extend(idf_categories)
+
+        available_columns = {str(col) for col in df.columns}
+        placeholder_columns = []
+        seen = set()
+        for column_name in candidates:
+            if column_name in available_columns and column_name not in seen:
+                placeholder_columns.append(column_name)
+                seen.add(column_name)
+
+        return placeholder_columns
+
+    def _build_filename_template_context(
+            self,
+            df: Optional[pd.DataFrame] = None,
+            extra_context: Optional[dict] = None,
+    ) -> dict:
+        context = {}
+        for (key, value) in (extra_context or {}).items():
+            context[str(key)] = self._safe_plot_token(value)
+
+        if df is None:
+            return context
+
+        for column_name in self._get_mapping_placeholder_columns(df=df):
+            unique_values = list(pd.unique(df[column_name].dropna()))
+            context[column_name] = self._summarise_placeholder_values(unique_values)
+
+        return context
+
+    def _resolve_output_filename(
+            self,
+            out_dir: str,
+            default_filename: str,
+            filename_template: Optional[str] = None,
+            template_context: Optional[dict] = None,
+            context: str = 'plot',
+    ) -> str:
+        filename = default_filename
+        if filename_template is not None:
+            template = str(filename_template).strip()
+            if len(template) == 0:
+                raise ValueError(f'{context}: filename_template cannot be empty.')
+
+            try:
+                filename = template.format(**(template_context or {}))
+            except KeyError as err:
+                missing_key = str(err).strip("'")
+                available_placeholders = sorted((template_context or {}).keys())
+                raise ValueError(
+                    f"{context}: filename_template uses unknown placeholder '{missing_key}'. "
+                    f'Available placeholders: {available_placeholders}'
+                ) from err
+            except Exception as err:
+                raise ValueError(f'{context}: invalid filename_template. {err}') from err
+
+            filename = str(filename).strip()
+            if len(filename) == 0:
+                raise ValueError(f'{context}: filename_template rendered an empty filename.')
+            if not filename.lower().endswith('.png'):
+                filename = f'{filename}.png'
+
+        return os.path.join(out_dir, filename)
+
+    @staticmethod
+    def _ensure_unique_output_path(output_path: str, seen_output_paths: set, context: str) -> None:
+        normalised_path = os.path.normcase(os.path.abspath(output_path))
+        if normalised_path in seen_output_paths:
+            raise ValueError(
+                f"{context}: filename_template produced duplicate output path '{output_path}'. "
+                "Include placeholders that vary per generated figure (for example: {epw_tag}, {y_var})."
+            )
+        seen_output_paths.add(normalised_path)
+
+    @staticmethod
     def _is_energy_like_column(column_name: str) -> bool:
         keywords = ('heating', 'cooling', 'energy', 'electricity', 'gas', 'facility')
         lowered = str(column_name).lower()
@@ -331,9 +448,17 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ):
         """
         Creates faceted hourly scatter plots, using RMOT on x-axis by default.
+
+        :param filename: Optional explicit output filename. If provided,
+            ``filename_template`` is ignored.
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example ``'hourly_scatter_{epw_filter}_{x}.png'``).
+            Mapping-category placeholders from ``epw_mapping_rules`` and
+            ``idf_mapping_rules`` are available when present in the filtered data.
         """
         if df_long is None:
             df_plot = self.prepare_hourly_long_df(
@@ -426,16 +551,41 @@ class PlottingMixin:
         g.figure.tight_layout()
 
         os.makedirs(out_dir, exist_ok=True)
-        if filename is None:
-            if epw_filter is None:
-                epw_token = 'all_epw'
-            elif isinstance(epw_filter, str):
-                epw_token = self._safe_plot_token(epw_filter)
-            else:
-                epw_token = self._safe_plot_token('_'.join([str(v) for v in epw_filter]))
-            filename = f'plot_hourly_scatter_{self._safe_plot_token(x)}_{epw_token}.png'
+        if epw_filter is None:
+            epw_token = 'all_epw'
+        elif isinstance(epw_filter, str):
+            epw_token = self._safe_plot_token(epw_filter)
+        else:
+            epw_token = self._safe_plot_token('_'.join([str(v) for v in epw_filter]))
 
-        output_path = os.path.join(out_dir, filename)
+        if filename is not None and filename_template is not None:
+            raise ValueError("plot_hourly_scatter: use either filename or filename_template, not both.")
+
+        if filename is not None:
+            output_path = os.path.join(out_dir, filename)
+        else:
+            filename_context = self._build_filename_template_context(
+                df=df_plot,
+                extra_context={
+                    'plot': 'hourly_scatter',
+                    'df_source': df_source,
+                    'x': x,
+                    'y': y,
+                    'row_dim': row or 'none',
+                    'col_dim': col or 'none',
+                    'hue_dim': hue or 'none',
+                    'epw_filter': epw_token,
+                },
+            )
+            output_path = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f'plot_hourly_scatter_{self._safe_plot_token(x)}_{epw_token}.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_hourly_scatter',
+            )
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         g.figure.savefig(output_path, dpi=300, bbox_inches='tight')
         g.saved_path = output_path
         print(f'  Hourly scatter plot saved: {output_path}')
@@ -475,9 +625,17 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ):
         """
         Creates faceted hourly line plots (time series by default).
+
+        :param filename: Optional explicit output filename. If provided,
+            ``filename_template`` is ignored.
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example ``'hourly_lines_{epw_filter}_{x}.png'``).
+            Mapping-category placeholders from ``epw_mapping_rules`` and
+            ``idf_mapping_rules`` are available when present in the filtered data.
         """
         if df_long is None:
             df_plot = self.prepare_hourly_long_df(
@@ -572,16 +730,41 @@ class PlottingMixin:
         g.figure.tight_layout()
 
         os.makedirs(out_dir, exist_ok=True)
-        if filename is None:
-            if epw_filter is None:
-                epw_token = 'all_epw'
-            elif isinstance(epw_filter, str):
-                epw_token = self._safe_plot_token(epw_filter)
-            else:
-                epw_token = self._safe_plot_token('_'.join([str(v) for v in epw_filter]))
-            filename = f'plot_hourly_lines_{self._safe_plot_token(x)}_{epw_token}.png'
+        if epw_filter is None:
+            epw_token = 'all_epw'
+        elif isinstance(epw_filter, str):
+            epw_token = self._safe_plot_token(epw_filter)
+        else:
+            epw_token = self._safe_plot_token('_'.join([str(v) for v in epw_filter]))
 
-        output_path = os.path.join(out_dir, filename)
+        if filename is not None and filename_template is not None:
+            raise ValueError("plot_hourly_lines: use either filename or filename_template, not both.")
+
+        if filename is not None:
+            output_path = os.path.join(out_dir, filename)
+        else:
+            filename_context = self._build_filename_template_context(
+                df=df_plot,
+                extra_context={
+                    'plot': 'hourly_lines',
+                    'df_source': df_source,
+                    'x': x,
+                    'y': y,
+                    'row_dim': row or 'none',
+                    'col_dim': col or 'none',
+                    'hue_dim': hue or 'none',
+                    'epw_filter': epw_token,
+                },
+            )
+            output_path = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f'plot_hourly_lines_{self._safe_plot_token(x)}_{epw_token}.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_hourly_lines',
+            )
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         g.figure.savefig(output_path, dpi=300, bbox_inches='tight')
         g.saved_path = output_path
         print(f'  Hourly line plot saved: {output_path}')
@@ -602,6 +785,7 @@ class PlottingMixin:
         data_filter_case_sensitive: bool = False,
         data_filter_strict: bool = True,
         data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+        filename_template: str = None,
     ) -> pd.DataFrame:
         """
         Identifies the best compromise solution(s) from the Pareto front for
@@ -631,6 +815,11 @@ class PlottingMixin:
         :param separate_by_idf: whether MCDM is computed independently by IDF.
             If ``None``, the value is taken from ``outputs_optimisation.attrs``
             (fallback: ``False``).
+        :param filename_template: Optional output filename pattern for the PNG
+            figure using ``str.format`` (for example
+            ``'mcdm_{building_type}_{city}.png'``). Mapping-category placeholders
+            from ``epw_mapping_rules`` and ``idf_mapping_rules`` are available
+            when present in the filtered data.
         :return: pandas DataFrame with all best solutions (one row per
             group × MCDM method), also saved to CSV.
         """
@@ -818,7 +1007,23 @@ class PlottingMixin:
             ax_m.set_title(f'Pareto Front + MCDM best solutions\n[{group_label}]', fontsize=11)
             ax_m.legend(fontsize=9)
         plt.tight_layout()
-        fname_plot = os.path.join(out_dir, 'plot_mcdm_best_solutions.png')
+
+        filename_context = self._build_filename_template_context(
+            df=filtered_optim,
+            extra_context={
+                'plot': 'mcdm_best_solutions',
+                'heating_col': heating_col,
+                'cooling_col': cooling_col,
+            },
+        )
+        fname_plot = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename='plot_mcdm_best_solutions.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_best_compromise_solutions',
+        )
+        os.makedirs(os.path.dirname(fname_plot), exist_ok=True)
         plt.savefig(fname_plot, dpi=300, bbox_inches='tight')
         plt.close()
         print(f'  MCDM plot saved: {fname_plot}')
@@ -834,6 +1039,7 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ):
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
@@ -842,6 +1048,12 @@ class PlottingMixin:
         Plots the Pareto front scatter for each EPW.
         If color_by is provided a colorbar is added. If size_by is provided,
         representative size handles appear in the legend.
+
+        :param filename_template: Optional output filename pattern using
+            ``str.format``. This method writes one file per EPW, so include a
+            varying placeholder such as ``{epw_tag}`` (for example
+            ``'pareto_{epw_tag}_{building_type}.png'``). Mapping-category
+            placeholders are available when present in each EPW subset.
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('Pareto front scatter plot can only be generated after an optimisation simulation. Please ensure you run run_optimisation() first.')
@@ -885,6 +1097,8 @@ class PlottingMixin:
         if not heating_col or not cooling_col:
             print('[!] Heating or Cooling electricity columns not found.')
             return
+
+        seen_output_paths = set()
         for epw_label in epw_labels:
             epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
             df_epw = df[df['epw'] == epw_label].copy()
@@ -962,7 +1176,31 @@ class PlottingMixin:
                 fname_suffix += '_c_' + color_by
             if size_by:
                 fname_suffix += '_s_' + size_by
-            fname_pareto = os.path.join(out_dir, 'plot_pareto_front_' + fname_suffix + '.png')
+
+            filename_context = self._build_filename_template_context(
+                df=df_epw,
+                extra_context={
+                    'plot': 'pareto_front',
+                    'df_source': 'optimisation',
+                    'epw': epw_label,
+                    'epw_tag': epw_tag,
+                    'color_by': color_by or 'none',
+                    'size_by': size_by or 'none',
+                },
+            )
+            fname_pareto = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename='plot_pareto_front_' + fname_suffix + '.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_pareto_front',
+            )
+            self._ensure_unique_output_path(
+                output_path=fname_pareto,
+                seen_output_paths=seen_output_paths,
+                context='plot_pareto_front',
+            )
+            os.makedirs(os.path.dirname(fname_pareto), exist_ok=True)
             plt.savefig(fname_pareto, dpi=300, bbox_inches='tight')
             plt.close()
             print('  Pareto front plot saved: ' + fname_pareto)
@@ -974,12 +1212,18 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ):
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
 
         Plots a multivariate parallel coordinates visualization of the parameter space.
+
+        :param filename_template: Optional output filename pattern using
+            ``str.format``. This method writes one file per EPW, so include
+            ``{epw_tag}`` in the template (for example
+            ``'parallel_{epw_tag}_{city}.png'``).
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('Parallel coordinates plot requires either a parametric or optimisation simulation to be run first.')
@@ -1001,6 +1245,7 @@ class PlottingMixin:
         epw_labels = df['epw'].unique()
         param_cols = self.problem.names('inputs')
         df['pareto_str'] = df['pareto-optimal'].map({True: 'Pareto-optimal', False: 'Dominated'})
+        seen_output_paths = set()
         for epw_label in epw_labels:
             epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
             df_epw = df[df['epw'] == epw_label].copy()
@@ -1025,7 +1270,29 @@ class PlottingMixin:
             legend_elements = [Line2D([0], [0], color='#e63946', lw=1.5, label='Pareto-optimal'), Line2D([0], [0], color='#adb5bd', lw=1.0, label='Dominated')]
             ax.legend(handles=legend_elements, loc='upper right', fontsize=9)
             plt.tight_layout()
-            fname_parallel = os.path.join(out_dir, f'plot_parallel_coordinates_{epw_tag}.png')
+
+            filename_context = self._build_filename_template_context(
+                df=df_epw,
+                extra_context={
+                    'plot': 'parallel_coordinates',
+                    'df_source': 'optimisation',
+                    'epw': epw_label,
+                    'epw_tag': epw_tag,
+                },
+            )
+            fname_parallel = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f'plot_parallel_coordinates_{epw_tag}.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_parallel_coordinates',
+            )
+            self._ensure_unique_output_path(
+                output_path=fname_parallel,
+                seen_output_paths=seen_output_paths,
+                context='plot_parallel_coordinates',
+            )
+            os.makedirs(os.path.dirname(fname_parallel), exist_ok=True)
             plt.savefig(fname_parallel, dpi=300, bbox_inches='tight')
             plt.close()
             print(f'  Parallel coordinates plot saved: {fname_parallel}')
@@ -1041,12 +1308,18 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ):
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
 
         Plots a pairwise scatter matrix using seaborn.PairGrid for Pareto-optimal solutions.
+
+        :param filename_template: Optional output filename pattern using
+            ``str.format``. This method writes one file per EPW, so include
+            ``{epw_tag}`` in the template (for example
+            ``'pairwise_{epw_tag}_{city}.png'``).
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('Pairwise scatter matrix requires either a parametric or optimisation simulation to be run first.')
@@ -1113,6 +1386,7 @@ class PlottingMixin:
         if 'col' in subplot_orders:
             param_cols = subplot_orders['col']
 
+        seen_output_paths = set()
         for epw_label in epw_labels:
             epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
             pareto_epw = df[(df['epw'] == epw_label) & df['pareto-optimal']].copy()
@@ -1140,7 +1414,29 @@ class PlottingMixin:
             cbar = g.figure.colorbar(sm, ax=g.axes, shrink=0.6, pad=0.02)
             cbar.set_label(f'Total HVAC Energy ({unit_str})', fontsize=9)
             g.figure.suptitle(f'Pairwise Parameter Space – Pareto-Optimal Solutions [{epw_tag}]', y=1.01, fontsize=11)
-            fname_pair = os.path.join(out_dir, f'plot_pairwise_scatter_matrix_{epw_tag}.png')
+
+            filename_context = self._build_filename_template_context(
+                df=pareto_epw,
+                extra_context={
+                    'plot': 'pairwise_scatter_matrix',
+                    'df_source': 'optimisation',
+                    'epw': epw_label,
+                    'epw_tag': epw_tag,
+                },
+            )
+            fname_pair = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f'plot_pairwise_scatter_matrix_{epw_tag}.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_pairwise_scatter_matrix',
+            )
+            self._ensure_unique_output_path(
+                output_path=fname_pair,
+                seen_output_paths=seen_output_paths,
+                context='plot_pairwise_scatter_matrix',
+            )
+            os.makedirs(os.path.dirname(fname_pair), exist_ok=True)
             g.figure.savefig(fname_pair, dpi=300, bbox_inches='tight')
             plt.close('all')
             print(f'  Pairwise scatter matrix saved: {fname_pair}')
@@ -1154,6 +1450,7 @@ class PlottingMixin:
             hue: str=None,
             highlight_dict: dict=None,
             out_dir: str='.',
+            filename_template: str=None,
             normalize_per_m2: bool=False,
             sharey: bool=True,
             show_points: bool=True,
@@ -1183,6 +1480,10 @@ class PlottingMixin:
         :param highlight_dict: Dictionary of category columns and values to highlight 
             as overlaid points (e.g., {'weather_type': ['tmy', 'met']}).
         :param out_dir: Output directory for saving the plot.
+        :param filename_template: Optional output filename pattern using ``str.format``
+            placeholders. Category placeholders from ``epw_mapping_rules`` and
+            ``idf_mapping_rules`` are available when the corresponding columns exist
+            in the filtered DataFrame (for example ``{city}``, ``{building_type}``).
         :param normalize_per_m2: If True, values will be divided by building floor area.
         :param sharey: If True, all subplots will share the same Y-axis scale.
         :param show_points: If True, overlays all underlying simulation data points on the boxplots.
@@ -1430,9 +1731,27 @@ class PlottingMixin:
         fname_suffix = f"col_{col}" if col else ""
         fname_suffix += f"_row_{row}" if row else ""
         fname_suffix += f"_hue_{hue}" if hue else ""
-        
-        fname_plot = os.path.join(out_dir, f'plot_categorical_boxplots_{df_source}_{fname_suffix}.png')
+
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'categorical_boxplots',
+                'df_source': df_source,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'hue_dim': hue or 'none',
+            },
+        )
+        fname_plot = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_categorical_boxplots_{df_source}_{fname_suffix}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_categorical_boxplots',
+        )
+        os.makedirs(os.path.dirname(fname_plot), exist_ok=True)
         g.savefig(fname_plot, dpi=300, bbox_inches='tight')
+        g.saved_path = fname_plot
         plt.close(g.fig)
         print(f'  Categorical boxplot saved: {fname_plot}')
         return g
@@ -1461,6 +1780,7 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ):
         """
         Generates a scatter plot (optionally faceted) for parametric/optimisation outputs.
@@ -1480,6 +1800,11 @@ class PlottingMixin:
         :param height: Height (inches) of each facet.
         :param aspect: Width/height ratio of each facet.
         :param figsize: Optional full-figure size override (width, height).
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'scatter_{df_source}_{x}_vs_{y}_{building_type}.png'``).
+            Mapping-category placeholders are available when present in the
+            filtered data.
         :return: seaborn FacetGrid.
         """
         try:
@@ -1591,11 +1916,31 @@ class PlottingMixin:
         g.fig.subplots_adjust(top=0.9)
         g.fig.suptitle(title, fontsize=13)
 
-        fname = os.path.join(
-            out_dir,
-            f"plot_parametric_scatter_{df_source}_{self._safe_plot_token(x)}_vs_{self._safe_plot_token(y)}.png",
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'parametric_scatter',
+                'df_source': df_source,
+                'x': x,
+                'y': y,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'hue_dim': hue or 'none',
+                'style_dim': style or 'none',
+                'size_dim': size or 'none',
+                'trend': add_trend or 'none',
+            },
         )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f"plot_parametric_scatter_{df_source}_{self._safe_plot_token(x)}_vs_{self._safe_plot_token(y)}.png",
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_scatter',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
         g.savefig(fname, dpi=300, bbox_inches='tight')
+        g.saved_path = fname
         plt.close(g.fig)
         print(f'  Parametric scatter plot saved: {fname}')
         return g
@@ -1627,6 +1972,7 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ) -> dict:
         """
         Generates one or more line plots to inspect trends against a swept parameter.
@@ -1649,6 +1995,10 @@ class PlottingMixin:
         :param aspect: Width/height ratio of each facet.
         :param figsize: Optional full-figure size override (width, height).
         :param sort_x: Sort X values before plotting lines.
+        :param filename_template: Optional output filename pattern using
+            ``str.format``. Because this method can save multiple figures (one
+            per ``y_var``), include ``{y_var}`` (for example
+            ``'lines_{df_source}_{y_var}_by_{x}_{city}.png'``).
         :return: dict mapping each y_var to its saved PNG file path.
         """
         try:
@@ -1697,6 +2047,7 @@ class PlottingMixin:
         os.makedirs(out_dir, exist_ok=True)
 
         saved = {}
+        seen_output_paths = set()
         for y_var in y_vars:
             relplot_kwargs = {
                 'data': df,
@@ -1746,10 +2097,32 @@ class PlottingMixin:
             g.fig.subplots_adjust(top=0.9)
             g.fig.suptitle(f"Parametric Line Plot ({df_source.capitalize()}) - {y_var}", fontsize=13)
 
-            fname = os.path.join(
-                out_dir,
-                f"plot_parametric_lines_{df_source}_{self._safe_plot_token(y_var)}_by_{self._safe_plot_token(x)}.png",
+            filename_context = self._build_filename_template_context(
+                df=df,
+                extra_context={
+                    'plot': 'parametric_lines',
+                    'df_source': df_source,
+                    'x': x,
+                    'y_var': y_var,
+                    'row_dim': row or 'none',
+                    'col_dim': col or 'none',
+                    'hue_dim': hue or 'none',
+                    'style_dim': style or 'none',
+                },
             )
+            fname = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f"plot_parametric_lines_{df_source}_{self._safe_plot_token(y_var)}_by_{self._safe_plot_token(x)}.png",
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_parametric_lines',
+            )
+            self._ensure_unique_output_path(
+                output_path=fname,
+                seen_output_paths=seen_output_paths,
+                context='plot_parametric_lines',
+            )
+            os.makedirs(os.path.dirname(fname), exist_ok=True)
             g.savefig(fname, dpi=300, bbox_inches='tight')
             plt.close(g.fig)
             print(f'  Parametric line plot saved: {fname}')
@@ -1781,9 +2154,14 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ) -> str:
         """
         Creates one or more heatmaps from (x, y) parameter combinations and z values.
+
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'heatmap_{df_source}_{z}_by_{x}_{y}_{building_type}.png'``).
         """
         try:
             import seaborn as sns
@@ -1892,10 +2270,27 @@ class PlottingMixin:
         fig.suptitle(f'Parametric Heatmap ({df_source.capitalize()}) - {z_label}', fontsize=13)
         fig.tight_layout(rect=(0, 0, 1, 0.96))
 
-        fname = os.path.join(
-            out_dir,
-            f'plot_parametric_heatmap_{df_source}_{self._safe_plot_token(z)}_by_{self._safe_plot_token(x)}_{self._safe_plot_token(y)}.png',
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'parametric_heatmap',
+                'df_source': df_source,
+                'x': x,
+                'y': y,
+                'z': z,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'aggfunc': aggfunc,
+            },
         )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_parametric_heatmap_{df_source}_{self._safe_plot_token(z)}_by_{self._safe_plot_token(x)}_{self._safe_plot_token(y)}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_heatmap',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
         fig.savefig(fname, dpi=300, bbox_inches='tight')
         plt.close(fig)
         print(f'  Parametric heatmap saved: {fname}')
@@ -1923,9 +2318,14 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ) -> str:
         """
         Creates contour (or filled contour) plots from numeric x, y, z columns.
+
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'contour_{df_source}_{z}_by_{x}_{y}_{building_type}.png'``).
         """
         df = self._get_plot_source_df(df_source=df_source)
         required_cols = [x, y, z]
@@ -2034,10 +2434,27 @@ class PlottingMixin:
         fig.suptitle(f'Parametric Contour ({df_source.capitalize()}) - {z_label}', fontsize=13)
         fig.tight_layout(rect=(0, 0, 1, 0.96))
 
-        fname = os.path.join(
-            out_dir,
-            f'plot_parametric_contour_{df_source}_{self._safe_plot_token(z)}_by_{self._safe_plot_token(x)}_{self._safe_plot_token(y)}.png',
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'parametric_contour',
+                'df_source': df_source,
+                'x': x,
+                'y': y,
+                'z': z,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'filled': 'true' if filled else 'false',
+            },
         )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_parametric_contour_{df_source}_{self._safe_plot_token(z)}_by_{self._safe_plot_token(x)}_{self._safe_plot_token(y)}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_contour',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
         fig.savefig(fname, dpi=300, bbox_inches='tight')
         plt.close(fig)
         print(f'  Parametric contour plot saved: {fname}')
@@ -2069,9 +2486,15 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ) -> dict:
         """
         Creates categorical distribution plots (violin, boxen, or box) for one or more outputs.
+
+        :param filename_template: Optional output filename pattern using
+            ``str.format``. Because this method can save multiple figures (one
+            per ``y_var``), include ``{y_var}`` (for example
+            ``'distribution_{kind}_{y_var}_by_{x}_{city}.png'``).
         """
         try:
             import seaborn as sns
@@ -2123,6 +2546,7 @@ class PlottingMixin:
         os.makedirs(out_dir, exist_ok=True)
 
         saved = {}
+        seen_output_paths = set()
         for y_var in y_vars:
             catplot_kwargs = {
                 'data': df,
@@ -2168,10 +2592,32 @@ class PlottingMixin:
             g.fig.subplots_adjust(top=0.9)
             g.fig.suptitle(f'Parametric {kind.title()} Plot ({df_source.capitalize()}) - {y_var}', fontsize=13)
 
-            fname = os.path.join(
-                out_dir,
-                f'plot_parametric_{kind}_{df_source}_{self._safe_plot_token(y_var)}_by_{self._safe_plot_token(x)}.png',
+            filename_context = self._build_filename_template_context(
+                df=df,
+                extra_context={
+                    'plot': 'parametric_distribution',
+                    'df_source': df_source,
+                    'kind': kind,
+                    'x': x,
+                    'y_var': y_var,
+                    'row_dim': row or 'none',
+                    'col_dim': col or 'none',
+                    'hue_dim': hue or 'none',
+                },
             )
+            fname = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f'plot_parametric_{kind}_{df_source}_{self._safe_plot_token(y_var)}_by_{self._safe_plot_token(x)}.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_parametric_distributions',
+            )
+            self._ensure_unique_output_path(
+                output_path=fname,
+                seen_output_paths=seen_output_paths,
+                context='plot_parametric_distributions',
+            )
+            os.makedirs(os.path.dirname(fname), exist_ok=True)
             g.savefig(fname, dpi=300, bbox_inches='tight')
             plt.close(g.fig)
             print(f'  Parametric {kind} plot saved: {fname}')
@@ -2199,9 +2645,14 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ) -> str:
         """
         Creates an ECDF plot to compare cumulative distributions across scenarios.
+
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'ecdf_{df_source}_{x}_{building_type}.png'``).
         """
         try:
             import seaborn as sns
@@ -2273,10 +2724,26 @@ class PlottingMixin:
         g.fig.subplots_adjust(top=0.9)
         g.fig.suptitle(f'Parametric ECDF ({df_source.capitalize()}) - {x_label}', fontsize=13)
 
-        fname = os.path.join(
-            out_dir,
-            f'plot_parametric_ecdf_{df_source}_{self._safe_plot_token(x)}.png',
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'parametric_ecdf',
+                'df_source': df_source,
+                'x': x,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'hue_dim': hue or 'none',
+                'complementary': 'true' if complementary else 'false',
+            },
         )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_parametric_ecdf_{df_source}_{self._safe_plot_token(x)}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_ecdf',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
         g.savefig(fname, dpi=300, bbox_inches='tight')
         plt.close(g.fig)
         print(f'  Parametric ECDF plot saved: {fname}')
@@ -2308,9 +2775,14 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ) -> str:
         """
         Creates 2D density visualizations using either hexbin or KDE.
+
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'density2d_{kind}_{x}_vs_{y}_{building_type}.png'``).
         """
         try:
             import seaborn as sns
@@ -2444,10 +2916,27 @@ class PlottingMixin:
         fig.suptitle(f'Parametric 2D Density ({kind}) - {df_source.capitalize()}', fontsize=13)
         fig.tight_layout(rect=(0, 0, 1, 0.96))
 
-        fname = os.path.join(
-            out_dir,
-            f'plot_parametric_density2d_{kind}_{df_source}_{self._safe_plot_token(x)}_vs_{self._safe_plot_token(y)}.png',
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'parametric_density_2d',
+                'df_source': df_source,
+                'kind': kind,
+                'x': x,
+                'y': y,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'hue_dim': hue or 'none',
+            },
         )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_parametric_density2d_{kind}_{df_source}_{self._safe_plot_token(x)}_vs_{self._safe_plot_token(y)}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_density_2d',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
         fig.savefig(fname, dpi=300, bbox_inches='tight')
         plt.close(fig)
         print(f'  Parametric 2D density plot saved: {fname}')
@@ -2467,9 +2956,14 @@ class PlottingMixin:
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
     ) -> pd.DataFrame:
         """
         Creates a radar chart from aggregated groups and returns the aggregated values.
+
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'radar_{df_source}_group_{group_by}_{city}.png'``).
         """
         df = self._get_plot_source_df(df_source=df_source)
         (df, _) = self._apply_plot_data_filter(
@@ -2546,10 +3040,23 @@ class PlottingMixin:
         )
         ax.legend(loc='upper right', bbox_to_anchor=(1.35, 1.10), fontsize=8)
 
-        fname = os.path.join(
-            out_dir,
-            f'plot_parametric_radar_{df_source}_group_{self._safe_plot_token(group_by)}.png',
+        filename_context = self._build_filename_template_context(
+            df=agg_df,
+            extra_context={
+                'plot': 'parametric_radar',
+                'df_source': df_source,
+                'group_by': group_by,
+                'aggfunc': aggfunc,
+            },
         )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_parametric_radar_{df_source}_group_{self._safe_plot_token(group_by)}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_radar',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
         fig.tight_layout()
         fig.savefig(fname, dpi=300, bbox_inches='tight')
         plt.close(fig)
