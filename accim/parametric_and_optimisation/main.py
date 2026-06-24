@@ -5,7 +5,7 @@ import hashlib
 import importlib
 import glob as pyglob
 import gc
-from typing import Literal, List, Union, Optional, Any
+from typing import Literal, List, Union, Optional, Any, Sequence
 import warnings
 import functools
 import difflib
@@ -30,6 +30,7 @@ import accim.parametric_and_optimisation.parameters as params
 from accim.parametric_and_optimisation.analysis import AnalysisMixin
 from accim.parametric_and_optimisation.plotting import PlottingMixin
 from accim.parametric_and_optimisation.patches import GlobalAllCapsDict, _patched_eval_func, _patched_to_platypus, _ensure_run_energyplus_copies_in_idf
+from accim.parametric_and_optimisation.file_cleanup import normalize_sim_file_cleanup_options, sim_file_policy_will_remove_extension, prune_simulation_output_files
 import accim.parametric_and_optimisation.params_dicts as params_dicts
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
 
@@ -128,7 +129,9 @@ def _run_single_evaluation_worker(
     add_output_names: list,
     row_dict: dict,
     keep_dirs: bool,
-    keep_input: bool
+    keep_input: bool,
+    sim_files_extensions: Optional[tuple[str, ...]],
+    sim_files_policy: str,
 ) -> dict:
     import warnings
     warnings.filterwarnings('ignore')
@@ -242,7 +245,18 @@ def _run_single_evaluation_worker(
         result_dict[add_output_name] = result[n_main_outputs + idx] if (n_main_outputs + idx) < len(result) else pd.NA
     
     if keep_dirs and len(result) > (n_main_outputs + n_add_outputs):
-        result_dict['output_dir'] = result[-1]
+        sim_dir = result[-1]
+        result_dict['output_dir'] = sim_dir
+        if sim_files_extensions is not None and sim_dir not in (None, ''):
+            try:
+                prune_simulation_output_files(
+                    sim_dir=sim_dir,
+                    sim_files_extensions=sim_files_extensions,
+                    sim_files_policy=sim_files_policy,
+                )
+            except Exception:
+                # Never fail a simulation because post-run file cleanup failed.
+                pass
         
     if keep_input:
         result_dict.update(row_dict)
@@ -2446,6 +2460,71 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 return os.path.abspath(os.path.join(normalized_root, out_dir_text))
 
         return out_dir_text
+
+    @staticmethod
+    def _warn_if_sim_file_cleanup_can_remove_csv(
+        sim_files_extensions: Optional[tuple[str, ...]],
+        sim_files_policy: str,
+        context: str,
+    ) -> None:
+        if sim_files_extensions is None:
+            return
+        if sim_file_policy_will_remove_extension(
+            sim_files_extensions=sim_files_extensions,
+            sim_files_policy=sim_files_policy,
+            extension='.csv',
+        ):
+            warnings.warn(
+                "Configured sim_files_extensions/sim_files_policy may remove '.csv' files "
+                f"during {context}. Methods that read hourly CSV outputs (for example "
+                "get_hourly_df/get_monthly_df) may fail unless '.csv' is retained.",
+                UserWarning,
+            )
+
+    @staticmethod
+    def _cleanup_simulation_output_directories(
+        sim_dirs: Sequence[Any],
+        sim_files_extensions: Optional[tuple[str, ...]],
+        sim_files_policy: str,
+    ) -> dict:
+        stats = {
+            'processed_dirs': 0,
+            'removed_files': 0,
+            'remove_errors': 0,
+            'removed_empty_dirs': 0,
+        }
+        if sim_files_extensions is None:
+            return stats
+
+        seen_dirs = set()
+        for sim_dir in sim_dirs:
+            if sim_dir in (None, ''):
+                continue
+            try:
+                if pd.isna(sim_dir):
+                    continue
+            except Exception:
+                pass
+
+            try:
+                sim_dir_path = os.path.abspath(os.fspath(sim_dir))
+            except TypeError:
+                continue
+            if sim_dir_path in seen_dirs:
+                continue
+            seen_dirs.add(sim_dir_path)
+
+            cleanup_stats = prune_simulation_output_files(
+                sim_dir=sim_dir_path,
+                sim_files_extensions=sim_files_extensions,
+                sim_files_policy=sim_files_policy,
+            )
+            stats['processed_dirs'] += int(cleanup_stats.get('processed', False))
+            stats['removed_files'] += int(cleanup_stats.get('removed_files', 0))
+            stats['remove_errors'] += int(cleanup_stats.get('remove_errors', 0))
+            stats['removed_empty_dirs'] += int(cleanup_stats.get('removed_empty_dirs', 0))
+
+        return stats
 
     # ------------------------------------------------------------------
     # IDF backup helpers
@@ -5805,6 +5884,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         add_output_names: list,
         keep_dirs: bool,
         keep_input: bool,
+        sim_files_extensions: Optional[tuple[str, ...]] = None,
+        sim_files_policy: Literal['keep', 'delete'] = 'keep',
     ):
         """Yield parametric tasks lazily to avoid building the full plan in memory."""
         backup_paths = []
@@ -5855,6 +5936,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             row_dict,
                             keep_dirs,
                             keep_input,
+                            sim_files_extensions,
+                            sim_files_policy,
                         ),
                     }
 
@@ -6304,6 +6387,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         processes: int = 2,
         keep_input: bool = True,
         keep_dirs: bool = True,
+        sim_files_extensions: Optional[Union[str, Sequence[str]]] = None,
+        sim_files_policy: Literal['keep', 'delete'] = 'keep',
         batch_size: Optional[int] = None,
         checkpoint_every_batch: bool = False,
         resume_from_checkpoint: Union[bool, str] = False,
@@ -6323,6 +6408,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param processes: the number of CPUs to be used in simulation
         :param keep_input: True to keep the input DataFrame in the results
         :param keep_dirs: True to keep the simulation results
+        :param sim_files_extensions: optional extension selector applied inside each
+            per-simulation subdirectory generated by BESOS (typically inside
+            ``BESOS_Output*``). Accepts one string or a list/tuple of strings.
+            Supported token formats per extension are ``'csv'``, ``'.csv'`` and
+            ``'*.csv'`` (case-insensitive). When ``None`` (default), no per-file
+            cleanup is performed.
+        :param sim_files_policy: cleanup mode used with ``sim_files_extensions``.
+            ``'keep'`` preserves only the listed extensions and removes all others.
+            ``'delete'`` removes only the listed extensions and keeps the rest.
         :param batch_size: optional number of evaluations to execute per batch.
             When None (default), all pending evaluations run in one batch.
         :param checkpoint_every_batch: when True, save a checkpoint pickle after each
@@ -6336,9 +6430,44 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param accim_results_root: optional root folder used to resolve ``out_dir``
             when ``out_dir`` is provided as a relative path.
         :return: a pandas DataFrame
+
+        Notes::
+
+            - Per-file cleanup is applied only when ``keep_dirs=True``.
+              If ``keep_dirs=False``, BESOS does not retain simulation folders and
+              ``sim_files_extensions``/``sim_files_policy`` are ignored.
+            - This cleanup only touches files inside each simulation subdirectory;
+              it does **not** remove IDF backups such as ``accim_idf_backup_*``
+              stored in the run root ``out_dir``.
+
+        Example::
+
+            sim.run_parametric_simulation(
+                out_dir='param_results',
+                keep_dirs=True,
+                sim_files_extensions=['.csv', '.idf'],
+                sim_files_policy='keep',
+            )
         """
         if batch_size is not None and (not isinstance(batch_size, int) or batch_size <= 0):
             raise ValueError("Argument 'batch_size' must be a positive integer or None.")
+        (sim_files_extensions_normalized, sim_files_policy_normalized) = normalize_sim_file_cleanup_options(
+            sim_files_extensions=sim_files_extensions,
+            sim_files_policy=sim_files_policy,
+        )
+        if sim_files_extensions_normalized is not None:
+            if not keep_dirs:
+                warnings.warn(
+                    "sim_files_extensions/sim_files_policy were provided but keep_dirs=False. "
+                    'Per-file cleanup is ignored because simulation directories are not kept.',
+                    UserWarning,
+                )
+            else:
+                self._warn_if_sim_file_cleanup_can_remove_csv(
+                    sim_files_extensions=sim_files_extensions_normalized,
+                    sim_files_policy=sim_files_policy_normalized,
+                    context='run_parametric_simulation',
+                )
         if epws is None:
             epws = getattr(self, 'epws', [])
         if not epws:
@@ -6454,6 +6583,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             add_output_names=add_output_names,
             keep_dirs=keep_dirs,
             keep_input=keep_input,
+            sim_files_extensions=sim_files_extensions_normalized,
+            sim_files_policy=sim_files_policy_normalized,
         ):
             task_signature = str(task.get('signature'))
             total_tasks += 1
@@ -6473,6 +6604,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             add_output_names=add_output_names,
             keep_dirs=keep_dirs,
             keep_input=keep_input,
+            sim_files_extensions=sim_files_extensions_normalized,
+            sim_files_policy=sim_files_policy_normalized,
         ):
             task_signature = str(task.get('signature'))
             if task_signature not in checkpoint_completed_signatures:
@@ -6540,6 +6673,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 add_output_names=add_output_names,
                 keep_dirs=keep_dirs,
                 keep_input=keep_input,
+                sim_files_extensions=sim_files_extensions_normalized,
+                sim_files_policy=sim_files_policy_normalized,
             ):
                 task_signature = str(task.get('signature'))
                 if task_signature in checkpoint_completed_signatures:
@@ -6654,6 +6789,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         
         if len(epws) > 1 or len(self.buildings) > 1:
             outputs_param_simulation = outputs_param_simulation.reset_index(drop=True)
+
+        if keep_dirs and sim_files_extensions_normalized is not None and 'output_dir' in outputs_param_simulation.columns:
+            cleanup_stats = self._cleanup_simulation_output_directories(
+                sim_dirs=outputs_param_simulation['output_dir'].tolist(),
+                sim_files_extensions=sim_files_extensions_normalized,
+                sim_files_policy=sim_files_policy_normalized,
+            )
+            if cleanup_stats['removed_files'] > 0:
+                print(
+                    '[run_parametric_simulation] Simulation file cleanup applied '
+                    f"(dirs={cleanup_stats['processed_dirs']}, removed_files={cleanup_stats['removed_files']}, "
+                    f"errors={cleanup_stats['remove_errors']})."
+                )
             
         outputs_param_simulation.attrs = getattr(outputs_param_simulation, 'attrs', {})
         if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
@@ -6850,6 +6998,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             processes: int = 1,
             keep_sim_files: Literal['all', 'non-dominated', 'none'] = 'all',
             keep_sim_files_batch_size: int = 50,
+            sim_files_extensions: Optional[Union[str, Sequence[str]]] = None,
+            sim_files_policy: Literal['keep', 'delete'] = 'keep',
             keep_df: Literal['all', 'non-dominated'] = 'all',
             algorithm_options: dict = None,
             pareto_separate_by_epw: bool = True,
@@ -6884,6 +7034,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             'all' (keeps everything), 'non-dominated' (deletes directories of dominated solutions to save space),
             or 'none' (keeps no simulation files).
         :param keep_sim_files_batch_size: number of evaluations per worker to wait before running the local pareto batch cleanup.
+        :param sim_files_extensions: optional extension selector applied inside each
+            kept simulation subdirectory generated by BESOS (typically inside
+            ``BESOS_Output*``). Accepts one string or a list/tuple of strings.
+            Supported token formats per extension are ``'csv'``, ``'.csv'`` and
+            ``'*.csv'`` (case-insensitive). When ``None`` (default), no per-file
+            cleanup is performed.
+        :param sim_files_policy: cleanup mode used with ``sim_files_extensions``.
+            ``'keep'`` preserves only the listed extensions and removes all others.
+            ``'delete'`` removes only the listed extensions and keeps the rest.
         :param keep_df: specifies which evaluations to keep in the outputs_optimisation DataFrame:
             'all' (keeps dominated and non-dominated) or 'non-dominated'.
         :param algorithm_options: optional dictionary with BESOS/Platypus algorithm-specific
@@ -6904,6 +7063,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param accim_results_root: optional root folder used to resolve ``out_dir``
             when ``out_dir`` is provided as a relative path.
         :return: a pandas DataFrame
+
+        Notes::
+
+            - If ``keep_sim_files='none'``, simulation directories are removed and
+              ``sim_files_extensions``/``sim_files_policy`` are ignored.
+            - If ``keep_sim_files='non-dominated'``, dominated directories may be
+              deleted entirely; extension cleanup is then applied only to remaining
+              directories.
+            - This cleanup only touches files inside each simulation subdirectory;
+              it does **not** remove IDF backups such as ``accim_idf_backup_*``
+              stored in the run root ``out_dir``.
+
+        Example::
+
+            sim.run_optimisation(
+                out_dir='optim_results',
+                keep_sim_files='all',
+                sim_files_extensions=['csv', '*.idf'],
+                sim_files_policy='keep',
+            )
         """
         algorithm_options = {} if algorithm_options is None else dict(algorithm_options)
         if epws is None:
@@ -6913,6 +7092,24 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if not getattr(self, 'buildings', None):
             raise ValueError('No buildings were configured in this simulation instance.')
         self.epws = epws
+
+        (sim_files_extensions_normalized, sim_files_policy_normalized) = normalize_sim_file_cleanup_options(
+            sim_files_extensions=sim_files_extensions,
+            sim_files_policy=sim_files_policy,
+        )
+        if sim_files_extensions_normalized is not None:
+            if keep_sim_files == 'none':
+                warnings.warn(
+                    "sim_files_extensions/sim_files_policy were provided but keep_sim_files='none'. "
+                    'Per-file cleanup is ignored because simulation directories are removed entirely.',
+                    UserWarning,
+                )
+            else:
+                self._warn_if_sim_file_cleanup_can_remove_csv(
+                    sim_files_extensions=sim_files_extensions_normalized,
+                    sim_files_policy=sim_files_policy_normalized,
+                    context='run_optimisation',
+                )
 
         out_dir = self._resolve_results_out_dir(
             out_dir=out_dir,
@@ -7051,6 +7248,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     evaluator._keep_sim_files = keep_sim_files
                     evaluator._keep_sim_files_batch_size = keep_sim_files_batch_size
                     evaluator._keep_dirs = False if keep_sim_files == 'none' else True
+                    evaluator._sim_files_extensions = sim_files_extensions_normalized
+                    evaluator._sim_files_policy = sim_files_policy_normalized
                     evaluator._optimisation_eval_records = []
                     evaluator._store_optimisation_records_in_memory = bool(keep_sim_files == 'non-dominated')
                     evaluator._optimisation_log_base = os.path.join(out_dir, f'optim_eval_log_{idf_basename}_{epwname}_{os.getpid()}')
@@ -7185,6 +7384,24 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     pass
             outputs_optimisation['simulation_directory'] = pd.NA
             outputs_optimisation['simulation_output_csv_path'] = pd.NA
+
+        if (
+            keep_sim_files != 'none'
+            and sim_files_extensions_normalized is not None
+            and 'simulation_directory' in outputs_optimisation.columns
+        ):
+            cleanup_stats = self._cleanup_simulation_output_directories(
+                sim_dirs=outputs_optimisation['simulation_directory'].tolist(),
+                sim_files_extensions=sim_files_extensions_normalized,
+                sim_files_policy=sim_files_policy_normalized,
+            )
+            if cleanup_stats['removed_files'] > 0:
+                print(
+                    '[run_optimisation] Simulation file cleanup applied '
+                    f"(dirs={cleanup_stats['processed_dirs']}, removed_files={cleanup_stats['removed_files']}, "
+                    f"errors={cleanup_stats['remove_errors']})."
+                )
+
         if keep_df == 'non-dominated':
             outputs_optimisation = outputs_optimisation[outputs_optimisation['pareto-optimal']].copy()
             if len(epws) > 1:
@@ -7983,7 +8200,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
     @staticmethod
     def _resolve_simulation_file_path(row: pd.Series, file_source: Literal['csv', 'eso']) -> str:
-        error_msg = f"{file_source.upper()} path cannot be resolved for this simulation. If you used keep_sim_files='non-dominated' and this is a dominated simulation, the files were deleted to save space. To analyze this simulation, re-run keeping its files."
+        error_msg = (
+            f"{file_source.upper()} path cannot be resolved for this simulation. "
+            "If you used keep_sim_files='non-dominated' and this is a dominated simulation, "
+            "the files were deleted to save space. Also check whether sim_files_extensions/"
+            "sim_files_policy removed this file extension. To analyze this simulation, re-run "
+            'keeping the required files.'
+        )
         if file_source == 'csv':
             if pd.notna(row.get('simulation_output_csv_path', pd.NA)):
                 return str(row['simulation_output_csv_path'])

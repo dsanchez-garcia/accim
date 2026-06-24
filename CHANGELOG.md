@@ -95,6 +95,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added automatic summary refresh after `run_parametric_simulation(...)`, `load_outputs_parametric(...)`, `run_optimisation(...)`, and `load_outputs_optimisation(...)`.
   - Added optional run flags `export_summary_json` and `summary_json_path` to auto-export summary JSON at the end of parametric and optimisation runs.
   - Added focused tests in `tests/parametric_and_optimisation/test_simulation_summary.py` covering rules/inference/validation, run/load auto-refresh, and manual/automatic JSON export.
+- **Per-Extension Simulation File Cleanup (`parametric_and_optimisation`)**: Added file-level cleanup controls for retained simulation folders.
+  - Added `sim_files_extensions` and `sim_files_policy=('keep'|'delete')` to `run_parametric_simulation(...)` and `run_optimisation(...)`.
+  - Extension selectors accept tokens like `csv`, `.csv`, and `*.csv` (case-insensitive) and are applied within each simulation subdirectory under `BESOS_Output*`.
+  - Added warnings when a selected policy can remove `.csv` outputs used by hourly/monthly post-processing.
+  - Clarified in API docstrings that this cleanup does **not** delete run-level backups such as `accim_idf_backup_*`.
+  - Added focused tests in `tests/parametric_and_optimisation/test_sim_file_cleanup.py`.
 
 ### Changed
 - **Breaking API Change in Output Discovery/Selection Returns**: `get_outputs_df_from_testsim(...)`, `discover_available_outputs(...)`, and `select_outputs(...)` now return a single dictionary instead of tuples.

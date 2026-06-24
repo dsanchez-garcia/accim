@@ -47,6 +47,8 @@ def _fake_worker(
     row_dict,
     keep_dirs,
     keep_input,
+    sim_files_extensions=None,
+    sim_files_policy='keep',
 ):
     result = {
         problem_names_outputs[0]: float(row_dict['x']) * 10.0,

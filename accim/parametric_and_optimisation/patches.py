@@ -1,6 +1,7 @@
 import os
 import json
 import functools
+from accim.parametric_and_optimisation.file_cleanup import prune_simulation_output_files
 
 class GlobalAllCapsDict(dict):
 
@@ -94,6 +95,19 @@ def _patched_eval_func(evaluator, all_outputs):
     except Exception:
         add_outputs_values = []
     eval_record['add_outputs_values'] = tuple(add_outputs_values)
+
+    sim_files_extensions = getattr(evaluator, '_sim_files_extensions', None)
+    sim_files_policy = getattr(evaluator, '_sim_files_policy', 'keep')
+    if keep_dirs and eval_record.get('sim_dir') is not None and sim_files_extensions is not None:
+        try:
+            prune_simulation_output_files(
+                sim_dir=eval_record['sim_dir'],
+                sim_files_extensions=sim_files_extensions,
+                sim_files_policy=sim_files_policy,
+            )
+        except Exception:
+            # Never fail optimisation because post-run cleanup failed.
+            pass
 
     if store_records_in_memory:
         evaluator._optimisation_eval_records.append(eval_record)
