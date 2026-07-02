@@ -57,6 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Consistent Output Management API (`parametric_and_optimisation`)**: Added `set_output_variables_to_idf(...)` and `set_output_meters_to_idf(...)` with aligned signatures and behavior.
   - Variables now accept both DataFrame (`df_output_variable`) and list (`output_variables`) inputs.
   - Meters now accept both list (`output_meters`) and DataFrame (`df_output_meter`) inputs, including per-row `frequency` overrides when present.
+  - `set_output_meters_to_idf(...)` now supports `mode=('append'|'replace')`, matching the variable API: `replace` removes existing `Output:Meter` objects in the selected IDF scope before adding the requested meters.
+  - Legacy wrapper `set_output_met_objects_to_idf(...)` now forwards the new `mode` argument for backward-compatible migration.
+  - Added regression coverage in `tests/parametric_and_optimisation/10_test_outputs_preflight.py` for meter replacement behavior.
   - Added symmetric read aliases: `get_output_variables_df_from_idf(...)` and `get_output_meters_df_from_idf(...)`.
 - **Importable Custom Output Reducers in Multiprocessing**: `set_outputs_for_simulation(...)` now accepts `func` values as callables or import-path strings (`"module.submodule:callable_name"`).
   - Reader reducer functions are serialized/resolved for worker processes so custom aggregation logic can be reused with `processes > 1` in parametric simulations.

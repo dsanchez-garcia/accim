@@ -4268,8 +4268,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             idf_scope: Any = 'all',
             validation_idf_scope: Any = None,
             keep_available_outputs: bool = False,
+            mode: Literal['append', 'replace'] = 'append',
     ):
         """Adds Output:Meter objects from DataFrame and/or list.
+
+        - ``mode='append'`` (default): keep existing objects and add only missing ones.
+        - ``mode='replace'``: remove all existing Output:Meter objects first, then add rows.
         
         :param df_output_meter: DataFrame opcional con columnas key_name y opcionalmente
             frequency. Si frequency no está, se usan las frecuencias de self.output_freqs.
@@ -4286,6 +4290,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             an IDF name, or a list of selectors to modify fewer IDFs.
         :param validation_idf_scope: IDFs to use for the validation test simulation. Defaults
             to idf_scope. Use 'first' to validate once while applying to all IDFs.
+        :param mode: 'append' or 'replace'.
         :return:
         
         Parameters
@@ -4328,6 +4333,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         if len(meter_input_df) == 0:
             return
+
+        if mode not in {'append', 'replace'}:
+            raise ValueError("mode must be 'append' or 'replace'.")
 
         if 'key_name' not in meter_input_df.columns:
             raise ValueError("df_output_meter must contain a 'key_name' column.")
@@ -4457,6 +4465,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     return explicit
                 return [str(v) for v in self.output_freqs]
 
+            if mode == 'replace':
+                allmeters = [meter for meter in b.idfobjects['Output:Meter']]
+                for existing in allmeters:
+                    b.removeidfobject(existing)
+
             existing_meter_keys = {
                 self._meter_key_from_obj(existing)
                 for existing in self._idfobjects_get_case(b, 'Output:Meter')
@@ -4482,6 +4495,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             idf_scope: Any = 'all',
             validation_idf_scope: Any = None,
             keep_available_outputs: bool = False,
+            mode: Literal['append', 'replace'] = 'append',
     ):
         """Legacy wrapper. Use set_output_meters_to_idf instead.
         
@@ -4503,6 +4517,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             Argument used by `SimulationBase.set_output_met_objects_to_idf`.
         keep_available_outputs : Any
             Boolean or mode flag controlling behaviour.
+        mode : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
         
         Usage
         -----
@@ -4528,6 +4544,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             idf_scope=idf_scope,
             validation_idf_scope=validation_idf_scope,
             keep_available_outputs=keep_available_outputs,
+            mode=mode,
         )
 
     def get_outputs_df_from_testsim(

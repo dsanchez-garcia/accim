@@ -8,6 +8,7 @@ Tests del flujo de outputs preflight:
 """
 
 import pytest
+import pandas as pd
 from .. import test_setup as ts
 
 
@@ -152,6 +153,42 @@ def test_keep_only_outputs_in_idfs_filters_all_buildings():
         variables = [obj.Variable_Name for obj in building.idfobjects['Output:Variable']]
         assert meters == ['Heating:Electricity']
         assert variables == ['Zone Air Temperature']
+
+
+def test_set_output_meters_to_idf_mode_replace_replaces_existing_meters():
+    ts.print_section("TEST: set_output_meters_to_idf mode='replace'")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['medium']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['medium']['epws'][:1],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    sim.clear_outputs(mode='meters_vars', idf_scope='all')
+    for building in buildings:
+        building.newidfobject('OUTPUT:METER', Key_Name='Heating:Electricity', Reporting_Frequency='Hourly')
+        building.newidfobject('OUTPUT:METER', Key_Name='Cooling:Electricity', Reporting_Frequency='Hourly')
+
+    df_output_meter = pd.DataFrame([
+        {'key_name': 'DistrictHeating:Facility', 'frequency': 'Hourly'},
+        {'key_name': 'DistrictCooling:Facility', 'frequency': 'Hourly'},
+    ])
+
+    sim.set_output_meters_to_idf(
+        df_output_meter=df_output_meter,
+        validate=False,
+        idf_scope='all',
+        mode='replace',
+    )
+
+    expected_names = ['DISTRICTCOOLING:FACILITY', 'DISTRICTHEATING:FACILITY']
+    for building in buildings:
+        meters = list(building.idfobjects['Output:Meter'])
+        assert sorted([obj.Key_Name.upper() for obj in meters]) == expected_names
+        assert all(str(obj.Reporting_Frequency).lower() == 'hourly' for obj in meters)
 
 
 def test_output_scope_first_modifies_only_first_idf():
