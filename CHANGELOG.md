@@ -44,6 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Outputs Preflight Workflow (`parametric_and_optimisation`)**: Added `discover_available_outputs(...)`, `select_outputs(...)`, `clear_outputs(...)`, and `apply_outputs_preflight(...)` to discover, validate, clean, and apply output requests before running simulations.
 - **Scoped Multi-IDF Output Preflight**: Added `idf_scope`/`validation_idf_scope` support across output discovery, selection, cleanup, application, and IDF output DataFrame helpers, plus `keep_only_outputs_in_idfs(...)` to prune existing `Output:Meter` and `Output:Variable` objects without adding missing outputs.
   - Multi-IDF output reads now include an `idf` column, cache entries are scoped to the validation target, temporary test-simulation IDFs use unique names per source IDF, and preflight verification reports include per-IDF details.
+- **Constructor-Level Output Object Safeguards (`parametric_and_optimisation`)**: Simulation constructors now enforce essential output objects in each loaded IDF.
+  - `ParametricSimulation` and `OptimisationSimulation` now ensure `OutputControl:Files` exists and sets `Output_CSV`, `Output_MTR`, and `Output_ESO` to `Yes`.
+  - Added constructor argument `remove_output_tables` (default `True`) to `SimulationBase`, `ParametricSimulation`, `OptimisationSimulation`, and `AccimPredefModelsParamSim`.
+  - When enabled, initialization removes `Output:Table:Monthly` and `Output:Table:Annual` objects from each IDF.
+  - Added regression coverage in `tests/parametric_and_optimisation/10_test_outputs_preflight.py` for constructor enforcement and optional table-retention mode.
 - **Plotting and Category Utilities**: Added categorical energy boxplots, highlight overlays, subplot sizing controls, keyword-based category mapping, category previews, and EPW suffix category persistence.
 - **Advanced Parametric Visualisation Suite**: Added eight new plotting helpers in `PlottingMixin` for both `ParametricSimulation` and optimisation datasets (`df_source='parametric'|'optimisation'`).
   - New methods: `plot_parametric_scatter`, `plot_parametric_lines`, `plot_parametric_heatmap`, `plot_parametric_contour`, `plot_parametric_distributions`, `plot_parametric_ecdf`, `plot_parametric_density_2d`, and `plot_parametric_radar`.
@@ -180,6 +185,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Normalization Plotting Artifacts**: Fixed divisor handling and `parameters_type` parsing errors in normalization-aware plotting.
 - **Parametric Multiprocessing Output Readers**: Workers now preserve serialized meter/variable reader specifications, including frequency and aggregation behavior.
 - **Output Deduplication Across IDF Key Casing**: Output scanning/insertion now resolves `Output:*` object keys robustly across casing variants (for example, `Output:Meter` vs `OUTPUT:METER`), preventing missed duplicate detection in mixed IDD environments.
+- **Case-Robust Filtering in `keep_only_outputs_in_idfs(...)`**: Output pruning now reads `Output:Meter` and `Output:Variable` objects with casing-tolerant key access, so objects created as `OUTPUT:*` are correctly matched and removed when not selected.
 - **aPMV Output Re-application Duplicates**: `_add_apmv_outputs(...)` now checks full `Output:Variable` keys (`Key_Value`, `Variable_Name`, `Reporting_Frequency`) before insertion, including `Schedule Value` rows.
 - **Parametric `add_outputs` Visibility in Multiprocessing**: `run_parametric_simulation(...)` now reconstructs and evaluates BESOS `add_outputs` readers in worker processes, so callable-derived columns are persisted in `outputs_param_simulation`/`outputs_param_sim`.
 - **Optimisation `add_outputs` Persistence in Worker Logs**: Patched BESOS evaluation records now include `add_outputs_values` in JSONL logs, improving reconstruction of full optimisation histories.

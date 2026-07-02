@@ -12,6 +12,22 @@ import pandas as pd
 from .. import test_setup as ts
 
 
+def _idfobjects_get_case(building, key):
+    objects = list(getattr(building, 'idfobjects', {}).get(key, []))
+    if len(objects) == 0:
+        objects = list(getattr(building, 'idfobjects', {}).get(str(key).upper(), []))
+    if len(objects) == 0:
+        objects = list(getattr(building, 'idfobjects', {}).get(str(key).title(), []))
+    if len(objects) == 0:
+        objects = list(getattr(building, 'idfobjects', {}).get(str(key).lower(), []))
+    return objects
+
+
+def _remove_idfobjects_case(building, key):
+    for obj in list(_idfobjects_get_case(building, key)):
+        building.removeidfobject(obj)
+
+
 def test_outputs_preflight_discover_and_select_with_suggestions():
     ts.print_section("TEST: Outputs preflight - discover + select (suggestions)")
 
@@ -189,6 +205,88 @@ def test_set_output_meters_to_idf_mode_replace_replaces_existing_meters():
         meters = list(building.idfobjects['Output:Meter'])
         assert sorted([obj.Key_Name.upper() for obj in meters]) == expected_names
         assert all(str(obj.Reporting_Frequency).lower() == 'hourly' for obj in meters)
+
+
+@pytest.mark.parametrize('sim_cls', [ts.ParametricSimulation, ts.OptimisationSimulation])
+@pytest.mark.parametrize('precreate_outputcontrol', [False, True])
+def test_simulation_init_ensures_outputcontrol_files(sim_cls, precreate_outputcontrol):
+    ts.print_section("TEST: constructor ensures OutputControl:Files")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    building = buildings[0]
+    _remove_idfobjects_case(building, 'OutputControl:Files')
+
+    if precreate_outputcontrol:
+        building.newidfobject(
+            key='OUTPUTCONTROL:FILES',
+            Output_CSV='No',
+            Output_MTR='No',
+            Output_ESO='No',
+        )
+
+    sim_cls(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    output_control_files = _idfobjects_get_case(building, 'OutputControl:Files')
+    assert len(output_control_files) >= 1
+    target = output_control_files[0]
+    assert str(getattr(target, 'Output_CSV', '')).upper() == 'YES'
+    assert str(getattr(target, 'Output_MTR', '')).upper() == 'YES'
+    assert str(getattr(target, 'Output_ESO', '')).upper() == 'YES'
+
+
+@pytest.mark.parametrize('sim_cls', [ts.ParametricSimulation, ts.OptimisationSimulation])
+def test_simulation_init_removes_tabular_outputs_by_default(sim_cls):
+    ts.print_section("TEST: constructor removes monthly/annual output tables by default")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    building = buildings[0]
+    _remove_idfobjects_case(building, 'Output:Table:Monthly')
+    _remove_idfobjects_case(building, 'Output:Table:Annual')
+
+    building.newidfobject(key='OUTPUT:TABLE:MONTHLY')
+    building.newidfobject(key='OUTPUT:TABLE:ANNUAL')
+
+    sim_cls(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    assert len(_idfobjects_get_case(building, 'Output:Table:Monthly')) == 0
+    assert len(_idfobjects_get_case(building, 'Output:Table:Annual')) == 0
+
+
+@pytest.mark.parametrize('sim_cls', [ts.ParametricSimulation, ts.OptimisationSimulation])
+def test_simulation_init_keeps_tabular_outputs_when_disabled(sim_cls):
+    ts.print_section("TEST: constructor keeps monthly/annual output tables when disabled")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    building = buildings[0]
+    _remove_idfobjects_case(building, 'Output:Table:Monthly')
+    _remove_idfobjects_case(building, 'Output:Table:Annual')
+
+    building.newidfobject(key='OUTPUT:TABLE:MONTHLY')
+    building.newidfobject(key='OUTPUT:TABLE:ANNUAL')
+
+    sim_cls(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+        remove_output_tables=False,
+    )
+
+    assert len(_idfobjects_get_case(building, 'Output:Table:Monthly')) == 1
+    assert len(_idfobjects_get_case(building, 'Output:Table:Annual')) == 1
 
 
 def test_output_scope_first_modifies_only_first_idf():

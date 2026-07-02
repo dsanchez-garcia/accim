@@ -2896,6 +2896,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             bypass_addAccis: bool = False,
             building: Any = None,
             accim_results_root: Optional[str] = None,
+            remove_output_tables: bool = True,
     ):
         """Initialize the simulation base instance.
         
@@ -2914,6 +2915,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param building: legacy alias for buildings, accepted for backward compatibility
         :param accim_results_root: optional base directory used to resolve relative
             out_dir paths for simulation outputs.
+        :param remove_output_tables: when True, removes Output:Table:Monthly and
+            Output:Table:Annual objects from each IDF during initialization.
         
         Usage
         -----
@@ -2926,11 +2929,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if buildings is None and building is not None:
             buildings = building
 
+        if not isinstance(remove_output_tables, bool):
+            raise TypeError("Argument 'remove_output_tables' must be a boolean value.")
+
         self.building = buildings[0] if isinstance(buildings, list) and len(buildings) > 0 else buildings
         self.buildings = buildings if isinstance(buildings, list) else ([buildings] if buildings is not None else [])
         self.epws = epws if isinstance(epws, list) else ([epws] if epws is not None else [])
         self.output_freqs = output_freqs
         self.parameters_type = parameters_type
+        self.remove_output_tables = remove_output_tables
         self.outputs_inventory_initial_ = self.scan_output_objects(idf_scope='all') if len(self.buildings) > 0 else {}
         self.outputs_duplicates_initial_ = self.autocorrect_output_duplicates(idf_scope='all', warn=True) if len(self.buildings) > 0 else {}
             
@@ -2997,6 +3004,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.is_accim_predef_model = is_accim_predef_model
         self.is_apmv_setpoints = is_apmv_setpoints
         self.bypass_addAccis = bypass_addAccis
+
+        for b in self.buildings:
+            self._ensure_output_control_files_for_building(b)
+            if self.remove_output_tables:
+                self._remove_tabular_outputs_for_building(b)
+
         self.outputs_inventory_after_injection_ = self.scan_output_objects(idf_scope='all') if len(self.buildings) > 0 else {}
         self.outputs_duplicates_after_injection_ = self.autocorrect_output_duplicates(idf_scope='all', warn=True) if len(self.buildings) > 0 else {}
         self.last_run_type = None
@@ -3445,6 +3458,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if len(objs) == 0:
             objs = list(getattr(building, 'idfobjects', {}).get(str(key).title(), []))
         return objs
+
+    @classmethod
+    def _ensure_output_control_files_for_building(cls, building: Any) -> None:
+        """Ensure OutputControl:Files exists and enables CSV/MTR/ESO outputs."""
+        output_control_files = cls._idfobjects_get_case(building, 'OutputControl:Files')
+        if len(output_control_files) > 0:
+            output_control_file = output_control_files[0]
+        else:
+            output_control_file = building.newidfobject(key='OUTPUTCONTROL:FILES')
+
+        output_control_file.Output_CSV = 'Yes'
+        output_control_file.Output_MTR = 'Yes'
+        output_control_file.Output_ESO = 'Yes'
+
+    @classmethod
+    def _remove_tabular_outputs_for_building(cls, building: Any) -> None:
+        """Remove monthly/annual tabular outputs that can trigger heavy output artifacts."""
+        for obj_type in ('Output:Table:Monthly', 'Output:Table:Annual'):
+            for obj in list(cls._idfobjects_get_case(building, obj_type)):
+                building.removeidfobject(obj)
 
     @staticmethod
     def _norm_output_token(value: Any) -> str:
@@ -4218,7 +4251,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             variable_specs = _variable_specs(idf_id)
 
             if filter_meters:
-                meter_objects = list(building.idfobjects.get('Output:Meter', []))
+                meter_objects = list(self._idfobjects_get_case(building, 'Output:Meter'))
                 removed = 0
                 kept = 0
                 for obj in meter_objects:
@@ -4235,7 +4268,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 building_report['meters'] = {'kept': kept, 'removed': removed}
 
             if filter_variables:
-                variable_objects = list(building.idfobjects.get('Output:Variable', []))
+                variable_objects = list(self._idfobjects_get_case(building, 'Output:Variable'))
                 removed = 0
                 kept = 0
                 for obj in variable_objects:
@@ -10756,6 +10789,7 @@ class ParametricSimulation(SimulationBase):
             bypass_addAccis: bool = False,
             building: Any = None,
             accim_results_root: Optional[str] = None,
+            remove_output_tables: bool = True,
     ):
         """Initialize a parametric simulation.
         
@@ -10775,6 +10809,8 @@ class ParametricSimulation(SimulationBase):
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
             relative output directories.
+        :param remove_output_tables: when True, removes Output:Table:Monthly and
+            Output:Table:Annual objects from each IDF during initialization.
         
         Usage
         -----
@@ -10799,6 +10835,7 @@ class ParametricSimulation(SimulationBase):
             bypass_addAccis=bypass_addAccis,
             building=building,
             accim_results_root=accim_results_root,
+            remove_output_tables=remove_output_tables,
         )
         # Parametric-specific attributes
         self.outputs_param_simulation = None
@@ -10896,6 +10933,7 @@ class OptimisationSimulation(SimulationBase):
             bypass_addAccis: bool = False,
             building: Any = None,
             accim_results_root: Optional[str] = None,
+            remove_output_tables: bool = True,
     ):
         """Initialize an optimisation simulation.
         
@@ -10915,6 +10953,8 @@ class OptimisationSimulation(SimulationBase):
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
             relative output directories.
+        :param remove_output_tables: when True, removes Output:Table:Monthly and
+            Output:Table:Annual objects from each IDF during initialization.
         
         Usage
         -----
@@ -10939,6 +10979,7 @@ class OptimisationSimulation(SimulationBase):
             bypass_addAccis=bypass_addAccis,
             building=building,
             accim_results_root=accim_results_root,
+            remove_output_tables=remove_output_tables,
         )
         # Optimization-specific attributes
         self.outputs_optimisation = None
@@ -10985,6 +11026,7 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             debugging: bool = False,
             building: Any = None,
             accim_results_root: Optional[str] = None,
+            remove_output_tables: bool = True,
     ):
         """Initialize the predefined-model parametric wrapper.
         
@@ -10999,6 +11041,8 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
             relative output directories.
+        :param remove_output_tables: when True, removes Output:Table:Monthly and
+            Output:Table:Annual objects from each IDF during initialization.
         
         Usage
         -----
@@ -11010,7 +11054,7 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         """
         if buildings is None and building is not None:
             buildings = building
-        super().__init__(buildings=buildings, epws=epws, parameters_type='accim predefined model', output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging, accim_results_root=accim_results_root)
+        super().__init__(buildings=buildings, epws=epws, parameters_type='accim predefined model', output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging, accim_results_root=accim_results_root, remove_output_tables=remove_output_tables)
         for b in self.buildings:
             accis.modifyAccis(idf=b, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)
 
