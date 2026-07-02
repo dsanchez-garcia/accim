@@ -289,6 +289,204 @@ def test_simulation_init_keeps_tabular_outputs_when_disabled(sim_cls):
     assert len(_idfobjects_get_case(building, 'Output:Table:Annual')) == 1
 
 
+def test_get_hourly_df_split_by_category_handles_variable_output_columns():
+    ts.print_section("TEST: get_hourly_df split_by con columnas variables")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['medium']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['medium']['epws'][:2],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    sim.set_category_mapping(
+        idf_mapping_rules={
+            'climate_zone': {
+                'B': '_B_',
+                'D': '_D_',
+            }
+        }
+    )
+
+    idf_0 = sim._get_idf_identifier(buildings[0], 0)
+    idf_1 = sim._get_idf_identifier(buildings[1], 1)
+    epw_0 = ts.TEST_CATEGORIES['medium']['epws'][0]
+    epw_1 = ts.TEST_CATEGORIES['medium']['epws'][1]
+
+    sim.outputs_param_simulation = pd.DataFrame([
+        {
+            'idf': idf_0,
+            'epw': epw_0,
+            'Zone Mean Air Temperature [Zone_1]': [20.0, 21.0],
+            'Zone Mean Air Temperature [Zone_2]': [],
+        },
+        {
+            'idf': idf_1,
+            'epw': epw_1,
+            'Zone Mean Air Temperature [Zone_1]': [],
+            'Zone Mean Air Temperature [Zone_2]': [19.0, 20.0],
+        },
+    ])
+
+    hourly_by_category = sim.get_hourly_df(
+        start_date='2024-01-01 01',
+        split_by='climate_zone',
+    )
+
+    assert isinstance(hourly_by_category, dict)
+    assert set(hourly_by_category.keys()) == {'B', 'D'}
+    assert len(hourly_by_category['B']) == 2
+    assert len(hourly_by_category['D']) == 2
+    assert 'climate_zone' in sim.outputs_param_simulation_hourly.columns
+
+    # Each category dataframe should keep only non-empty output columns for that group.
+    assert 'Zone Mean Air Temperature [Zone_2]' not in hourly_by_category['B'].columns
+    assert 'Zone Mean Air Temperature [Zone_1]' not in hourly_by_category['D'].columns
+
+
+def test_get_monthly_df_supports_daily_monthly_and_runperiod_frequency():
+    ts.print_section("TEST: agregación diaria/mensual/runperiod")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['medium']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['medium']['epws'][:2],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    sim.set_category_mapping(
+        idf_mapping_rules={
+            'climate_zone': {
+                'B': '_B_',
+                'D': '_D_',
+            }
+        }
+    )
+
+    idf_0 = sim._get_idf_identifier(buildings[0], 0)
+    idf_1 = sim._get_idf_identifier(buildings[1], 1)
+    epw_0 = ts.TEST_CATEGORIES['medium']['epws'][0]
+    epw_1 = ts.TEST_CATEGORIES['medium']['epws'][1]
+
+    sim.outputs_param_simulation = pd.DataFrame([
+        {
+            'idf': idf_0,
+            'epw': epw_0,
+            'Zone Mean Air Temperature [Zone_1]': [20.0, 22.0],
+            'Zone Mean Air Temperature [Zone_2]': [],
+        },
+        {
+            'idf': idf_1,
+            'epw': epw_1,
+            'Zone Mean Air Temperature [Zone_1]': [],
+            'Zone Mean Air Temperature [Zone_2]': [19.0, 21.0],
+        },
+    ])
+
+    sim.get_hourly_df(start_date='2024-01-01 01')
+
+    daily_by_category = sim.get_output_df(
+        frequency='daily',
+        split_by='climate_zone',
+    )
+    assert isinstance(daily_by_category, dict)
+    assert set(daily_by_category.keys()) == {'B', 'D'}
+    assert sim.outputs_param_simulation_daily is not None
+    assert 'day' in sim.outputs_param_simulation_daily.columns
+
+    monthly_df = sim.get_monthly_df()
+    assert monthly_df is not None and not monthly_df.empty
+    assert 'month' in monthly_df.columns
+
+    runperiod_df = sim.get_output_df(frequency='runperiod')
+    assert runperiod_df is not None and not runperiod_df.empty
+    assert 'day' not in runperiod_df.columns
+    assert 'month' not in runperiod_df.columns
+    assert len(runperiod_df) == 2
+
+
+def test_get_monthly_df_optimisation_supports_daily_and_runperiod_frequency():
+    ts.print_section("TEST: agregación daily/runperiod en optimización")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['medium']['idfs'])
+    sim = ts.OptimisationSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['medium']['epws'][:2],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+    sim.last_run_type = 'optimisation'
+
+    idf_0 = sim._get_idf_identifier(buildings[0], 0)
+    idf_1 = sim._get_idf_identifier(buildings[1], 1)
+    epw_0 = ts.TEST_CATEGORIES['medium']['epws'][0]
+    epw_1 = ts.TEST_CATEGORIES['medium']['epws'][1]
+
+    sim.outputs_optimisation_hourly = pd.DataFrame([
+        {
+            'idf': idf_0,
+            'epw': epw_0,
+            'pareto-optimal': True,
+            'hour': 1,
+            'datetime': pd.Timestamp('2024-01-01 01:00'),
+            'Zone Mean Air Temperature [Zone_1]': 20.0,
+        },
+        {
+            'idf': idf_0,
+            'epw': epw_0,
+            'pareto-optimal': True,
+            'hour': 2,
+            'datetime': pd.Timestamp('2024-01-01 02:00'),
+            'Zone Mean Air Temperature [Zone_1]': 22.0,
+        },
+        {
+            'idf': idf_1,
+            'epw': epw_1,
+            'pareto-optimal': False,
+            'hour': 1,
+            'datetime': pd.Timestamp('2024-01-01 01:00'),
+            'Zone Mean Air Temperature [Zone_2]': 19.0,
+        },
+        {
+            'idf': idf_1,
+            'epw': epw_1,
+            'pareto-optimal': False,
+            'hour': 2,
+            'datetime': pd.Timestamp('2024-01-01 02:00'),
+            'Zone Mean Air Temperature [Zone_2]': 21.0,
+        },
+    ])
+
+    sim.set_category_mapping(
+        idf_mapping_rules={
+            'climate_zone': {
+                'B': '_B_',
+                'D': '_D_',
+            }
+        }
+    )
+
+    daily_by_category = sim.get_output_df(
+        frequency='daily',
+        split_by='climate_zone',
+    )
+    assert isinstance(daily_by_category, dict)
+    assert set(daily_by_category.keys()) == {'B', 'D'}
+    assert sim.outputs_optimisation_daily is not None
+    assert 'day' in sim.outputs_optimisation_daily.columns
+
+    runperiod_df = sim.get_output_df(frequency='runperiod')
+    assert runperiod_df is not None and not runperiod_df.empty
+    assert 'day' not in runperiod_df.columns
+    assert 'month' not in runperiod_df.columns
+    assert len(runperiod_df) == 2
+
+
 def test_output_scope_first_modifies_only_first_idf():
     ts.print_section("TEST: Outputs preflight - idf_scope='first'")
 

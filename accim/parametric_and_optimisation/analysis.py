@@ -1551,8 +1551,10 @@ class AnalysisMixin:
         The results are saved in-place, and `self.outputs_normalized` is set to True.
         
         :param df_types: A list of strings specifying which dataframes to normalize.
-            Options include: 'parametric', 'parametric_hourly', 'parametric_monthly',
-            'optimisation', 'optimisation_hourly', 'optimisation_monthly'.
+            Options include: 'parametric', 'parametric_hourly', 'parametric_daily',
+            'parametric_monthly', 'parametric_runperiod',
+            'optimisation', 'optimisation_hourly', 'optimisation_daily',
+            'optimisation_monthly', 'optimisation_runperiod'.
             If None, all available dataframes will be normalized.
 
         Usage::
@@ -1576,17 +1578,21 @@ class AnalysisMixin:
 
         if df_types is None:
             df_types = [
-                'parametric', 'parametric_hourly', 'parametric_monthly',
-                'optimisation', 'optimisation_hourly', 'optimisation_monthly'
+                'parametric', 'parametric_hourly', 'parametric_daily', 'parametric_monthly', 'parametric_runperiod',
+                'optimisation', 'optimisation_hourly', 'optimisation_daily', 'optimisation_monthly', 'optimisation_runperiod'
             ]
             
         df_mapping = {
             'parametric': 'outputs_param_simulation',
             'parametric_hourly': 'outputs_param_simulation_hourly',
+            'parametric_daily': 'outputs_param_simulation_daily',
             'parametric_monthly': 'outputs_param_simulation_monthly',
+            'parametric_runperiod': 'outputs_param_simulation_runperiod',
             'optimisation': 'outputs_optimisation',
             'optimisation_hourly': 'outputs_optimisation_hourly',
-            'optimisation_monthly': 'outputs_optimisation_monthly'
+            'optimisation_daily': 'outputs_optimisation_daily',
+            'optimisation_monthly': 'outputs_optimisation_monthly',
+            'optimisation_runperiod': 'outputs_optimisation_runperiod',
         }
         
         energy_keywords = ['Heating', 'Cooling', 'Energy', 'Electricity', 'Gas', 'Facility']

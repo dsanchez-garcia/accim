@@ -143,14 +143,38 @@ def expand_to_hourly_dataframe(
     # Convert start_date to datetime object
     start_datetime = datetime.strptime(start_date, '%Y-%m-%d %H')
 
-    # Function to expand the dataframe for hourly data
+    def _as_hourly_series(value):
+        if isinstance(value, np.ndarray):
+            return value.tolist()
+        if isinstance(value, (list, tuple)):
+            return list(value)
+        return []
+
+    # Function to expand each simulation row to hourly rows.
+    # It supports sparse/variable output columns by using the first non-empty
+    # hourly list as the row length and filling missing columns with NaN.
     def expand_hourly_data(row):
-        num_hours = len(row[hourly_columns[0]])
+        hourly_values = {col: _as_hourly_series(row[col]) for col in hourly_columns}
+        lengths = [len(vals) for vals in hourly_values.values() if len(vals) > 0]
+        if len(lengths) == 0:
+            return pd.DataFrame(columns=parameter_columns + ['hour', 'datetime'] + hourly_columns)
+
+        num_hours = max(lengths)
         expanded_rows = {col: [row[col]] * num_hours for col in parameter_columns}
         expanded_rows['hour'] = list(range(1, num_hours + 1))
         expanded_rows['datetime'] = [start_datetime + timedelta(hours=i) for i in range(num_hours)]
+
         for col in hourly_columns:
-            expanded_rows[col] = row[col]
+            values = hourly_values[col]
+            if len(values) == num_hours:
+                expanded_rows[col] = values
+            elif len(values) == 0:
+                expanded_rows[col] = [np.nan] * num_hours
+            elif len(values) < num_hours:
+                expanded_rows[col] = values + [np.nan] * (num_hours - len(values))
+            else:
+                expanded_rows[col] = values[:num_hours]
+
         return pd.DataFrame(expanded_rows)
 
     # Apply the function to each row and concatenate the results

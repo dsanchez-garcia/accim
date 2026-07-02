@@ -49,6 +49,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added constructor argument `remove_output_tables` (default `True`) to `SimulationBase`, `ParametricSimulation`, `OptimisationSimulation`, and `AccimPredefModelsParamSim`.
   - When enabled, initialization removes `Output:Table:Monthly` and `Output:Table:Annual` objects from each IDF.
   - Added regression coverage in `tests/parametric_and_optimisation/10_test_outputs_preflight.py` for constructor enforcement and optional table-retention mode.
+- **Category-Split Hourly Outputs and Multi-Frequency Aggregation**: Added output post-processing controls for variable CSV output schemas across IDFs.
+  - `get_hourly_df_parametric(...)` / `get_hourly_df(...)` now accept `split_by` to return a dictionary of DataFrames grouped by category (e.g. `building_type`), with optional `drop_all_empty_output_columns=True` to remove all-empty output columns per group.
+  - `get_hourly_df_optimisation(...)` now supports the same `split_by` dictionary workflow.
+  - Added generic aggregation methods `get_output_df(...)` and `get_output_df_optimisation(...)` with `frequency=('daily'|'monthly'|'runperiod')`.
+  - `get_monthly_df(...)` and `get_monthly_df_optimisation(...)` are kept as monthly wrappers for backward compatibility.
+  - `OptimisationSimulation` now exposes unified method names (`get_hourly_df`, `get_output_df`, `get_monthly_df`, `get_daily_df`, `get_runperiod_df`) so post-processing calls can match `ParametricSimulation` naming.
+  - Added convenience wrappers: `get_daily_df(...)`, `get_runperiod_df(...)`, `get_daily_df_optimisation(...)`, and `get_runperiod_df_optimisation(...)`.
+  - Added support in `normalize_outputs(...)` for new aggregated DataFrames: `parametric_daily`, `parametric_runperiod`, `optimisation_daily`, and `optimisation_runperiod`.
+  - Added regression coverage in `tests/parametric_and_optimisation/10_test_outputs_preflight.py` for category-split hourly outputs and daily/monthly/runperiod aggregation.
 - **Plotting and Category Utilities**: Added categorical energy boxplots, highlight overlays, subplot sizing controls, keyword-based category mapping, category previews, and EPW suffix category persistence.
 - **Advanced Parametric Visualisation Suite**: Added eight new plotting helpers in `PlottingMixin` for both `ParametricSimulation` and optimisation datasets (`df_source='parametric'|'optimisation'`).
   - New methods: `plot_parametric_scatter`, `plot_parametric_lines`, `plot_parametric_heatmap`, `plot_parametric_contour`, `plot_parametric_distributions`, `plot_parametric_ecdf`, `plot_parametric_density_2d`, and `plot_parametric_radar`.
@@ -186,6 +195,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Parametric Multiprocessing Output Readers**: Workers now preserve serialized meter/variable reader specifications, including frequency and aggregation behavior.
 - **Output Deduplication Across IDF Key Casing**: Output scanning/insertion now resolves `Output:*` object keys robustly across casing variants (for example, `Output:Meter` vs `OUTPUT:METER`), preventing missed duplicate detection in mixed IDD environments.
 - **Case-Robust Filtering in `keep_only_outputs_in_idfs(...)`**: Output pruning now reads `Output:Meter` and `Output:Variable` objects with casing-tolerant key access, so objects created as `OUTPUT:*` are correctly matched and removed when not selected.
+- **Sparse Hourly Expansion with Variable Output Columns**: `expand_to_hourly_dataframe(...)` now handles rows where some hourly outputs are missing (e.g. different zone counts by IDF) by using the first non-empty series length and padding missing columns with `NaN` instead of silently dropping rows.
 - **aPMV Output Re-application Duplicates**: `_add_apmv_outputs(...)` now checks full `Output:Variable` keys (`Key_Value`, `Variable_Name`, `Reporting_Frequency`) before insertion, including `Schedule Value` rows.
 - **Parametric `add_outputs` Visibility in Multiprocessing**: `run_parametric_simulation(...)` now reconstructs and evaluates BESOS `add_outputs` readers in worker processes, so callable-derived columns are persisted in `outputs_param_simulation`/`outputs_param_sim`.
 - **Optimisation `add_outputs` Persistence in Worker Logs**: Patched BESOS evaluation records now include `add_outputs_values` in JSONL logs, improving reconstruction of full optimisation histories.

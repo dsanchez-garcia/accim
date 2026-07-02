@@ -9953,6 +9953,199 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             base._merge_one(other)
         return base
 
+    def _get_configured_category_columns(self) -> list[str]:
+        """Return effective category-column names from configured mapping rules."""
+        epw_rules = getattr(self, 'epw_mapping_rules', {}) or {}
+        idf_rules = getattr(self, 'idf_mapping_rules', {}) or {}
+        collisions = set(epw_rules.keys()) & set(idf_rules.keys())
+        epw_cols = [f'epw_{cat}' if cat in collisions else cat for cat in epw_rules.keys()]
+        return epw_cols + list(idf_rules.keys())
+
+    def _ensure_grouping_category_column(self, df: pd.DataFrame, split_by: str) -> tuple[pd.DataFrame, str]:
+        """Ensure grouping category exists as a DataFrame column (derive from rules if needed)."""
+        category = str(split_by).strip()
+        if len(category) == 0:
+            raise ValueError("Argument 'split_by' cannot be empty.")
+        if category in df.columns:
+            return df, category
+
+        epw_rules = getattr(self, 'epw_mapping_rules', {}) or {}
+        idf_rules = getattr(self, 'idf_mapping_rules', {}) or {}
+        collisions = set(epw_rules.keys()) & set(idf_rules.keys())
+        safe_epw_name = f'epw_{category}' if category in collisions else category
+        if safe_epw_name in df.columns:
+            return df, safe_epw_name
+
+        df_out = df.copy()
+
+        if category in idf_rules and 'idf' in df_out.columns:
+            rules = idf_rules[category]
+            df_out[category] = df_out['idf'].apply(lambda v: self._resolve_category_for_value(str(v), rules))
+            return df_out, category
+
+        if category in epw_rules and 'epw' in df_out.columns:
+            rules = epw_rules[category]
+            col_name = safe_epw_name
+            df_out[col_name] = df_out['epw'].apply(lambda v: self._resolve_category_for_value(str(v), rules))
+            return df_out, col_name
+
+        if category.startswith('epw_') and len(category) > 4 and 'epw' in df_out.columns:
+            raw_category = category[4:]
+            if raw_category in epw_rules:
+                rules = epw_rules[raw_category]
+                df_out[category] = df_out['epw'].apply(lambda v: self._resolve_category_for_value(str(v), rules))
+                return df_out, category
+
+        configured = self._get_configured_category_columns()
+        raise ValueError(
+            f"Category '{split_by}' was not found in dataframe columns and could not be derived from rules. "
+            f"Available configured category names: {configured}"
+        )
+
+    @staticmethod
+    def _format_split_group_key(value: Any) -> str:
+        try:
+            if pd.isna(value):
+                return 'uncategorized'
+        except (TypeError, ValueError):
+            pass
+        text = str(value).strip()
+        return text if len(text) > 0 else 'uncategorized'
+
+    def _get_identifier_columns_for_aggregation(
+        self,
+        df_hourly: pd.DataFrame,
+        source: Literal['parametric', 'optimisation'] = 'parametric',
+    ) -> list[str]:
+        """Resolve identifier columns to preserve when aggregating/splitting hourly data."""
+        identifier_columns: list[str] = []
+
+        if hasattr(self, 'parameters_list'):
+            for p in getattr(self, 'parameters_list', []):
+                name = getattr(p, 'name', None)
+                if isinstance(name, str) and name in df_hourly.columns and name not in identifier_columns:
+                    identifier_columns.append(name)
+        elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+            try:
+                for name in (self.problem.names('inputs') or []):
+                    if name in df_hourly.columns and name not in identifier_columns:
+                        identifier_columns.append(name)
+            except Exception:
+                pass
+        else:
+            source_df = getattr(self, 'outputs_param_simulation', None) if source == 'parametric' else getattr(self, 'outputs_optimisation', None)
+            if source_df is not None and hasattr(source_df, 'attrs'):
+                param_names = source_df.attrs.get('parameters_names', [])
+                if isinstance(param_names, list):
+                    for name in param_names:
+                        if name in df_hourly.columns and name not in identifier_columns:
+                            identifier_columns.append(name)
+
+        for extra_col in ['epw', 'idf', 'pareto-optimal']:
+            if extra_col in df_hourly.columns and extra_col not in identifier_columns:
+                identifier_columns.append(extra_col)
+
+        for category_col in self._get_configured_category_columns():
+            if category_col in df_hourly.columns and category_col not in identifier_columns:
+                identifier_columns.append(category_col)
+
+        return identifier_columns
+
+    def _split_dataframe_by_category(
+        self,
+        df: pd.DataFrame,
+        split_by: str,
+        source: Literal['parametric', 'optimisation'] = 'parametric',
+        drop_all_empty_output_columns: bool = True,
+    ) -> tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
+        """Split a dataframe by category and optionally drop all-empty output columns per group."""
+        (df_with_category, category_col) = self._ensure_grouping_category_column(df=df, split_by=split_by)
+        protected_cols = set(self._get_identifier_columns_for_aggregation(df_with_category, source=source))
+        protected_cols.update({'datetime', 'hour', 'day', 'month', category_col})
+
+        grouped: dict[str, pd.DataFrame] = {}
+        for group_value, subset in df_with_category.groupby(category_col, dropna=False, sort=False):
+            subset_df = subset.copy().reset_index(drop=True)
+            if drop_all_empty_output_columns:
+                cols_to_drop = [
+                    c for c in subset_df.columns
+                    if c not in protected_cols and subset_df[c].isna().all()
+                ]
+                if len(cols_to_drop) > 0:
+                    subset_df = subset_df.drop(columns=cols_to_drop)
+            grouped[self._format_split_group_key(group_value)] = subset_df
+
+        return df_with_category, grouped
+
+    @staticmethod
+    def _build_default_aggregation_map(data_columns: list[str], agg_funcs: Optional[dict] = None) -> dict:
+        """Build default aggregation functions and apply user overrides."""
+        default_agg = {}
+        for col in data_columns:
+            col_lower = str(col).lower()
+            if any(keyword in col_lower for keyword in ['temperature', 'pmv', 'ppd', 'rate', 'coefficient']):
+                default_agg[col] = 'mean'
+            else:
+                default_agg[col] = 'sum'
+        if agg_funcs:
+            default_agg.update(agg_funcs)
+        return default_agg
+
+    @staticmethod
+    def _normalize_aggregation_frequency(frequency: str = 'monthly') -> Literal['daily', 'monthly', 'runperiod']:
+        """Normalize user frequency aliases to the internal aggregation tokens."""
+        token = 'monthly' if frequency is None else str(frequency).strip().lower()
+        aliases = {
+            'd': 'daily',
+            'day': 'daily',
+            'daily': 'daily',
+            'm': 'monthly',
+            'month': 'monthly',
+            'monthly': 'monthly',
+            'rp': 'runperiod',
+            'runperiod': 'runperiod',
+            'run_period': 'runperiod',
+            'run-period': 'runperiod',
+            'annual': 'runperiod',
+        }
+        if token not in aliases:
+            raise ValueError(
+                "frequency must be one of: 'daily', 'monthly', 'runperiod' "
+                "(aliases: 'D', 'M', 'RP', 'run_period', 'annual')."
+            )
+        return aliases[token]
+
+    def _aggregate_hourly_dataframe(
+        self,
+        df_hourly: pd.DataFrame,
+        source: Literal['parametric', 'optimisation'] = 'parametric',
+        frequency: str = 'monthly',
+        agg_funcs: Optional[dict] = None,
+    ) -> pd.DataFrame:
+        """Aggregate an hourly dataframe to daily/monthly/runperiod frequency."""
+        if 'datetime' not in df_hourly.columns:
+            raise ValueError("Hourly dataframe must contain a 'datetime' column for aggregation.")
+
+        freq_token = self._normalize_aggregation_frequency(frequency)
+        identifier_columns = self._get_identifier_columns_for_aggregation(df_hourly=df_hourly, source=source)
+        exclude_cols = set(identifier_columns + ['datetime', 'hour', 'day', 'month'])
+        data_columns = [c for c in df_hourly.columns if c not in exclude_cols]
+        aggregation_map = self._build_default_aggregation_map(data_columns=data_columns, agg_funcs=agg_funcs)
+
+        df_work = df_hourly.copy()
+        groupby_cols = list(identifier_columns)
+
+        if freq_token == 'daily':
+            df_work['day'] = df_work['datetime'].dt.to_period('D')
+            groupby_cols.append('day')
+        elif freq_token == 'monthly':
+            df_work['month'] = df_work['datetime'].dt.to_period('M')
+            groupby_cols.append('month')
+
+        if len(groupby_cols) == 0:
+            return pd.DataFrame([df_work.agg(aggregation_map)])
+        return df_work.groupby(groupby_cols).agg(aggregation_map).reset_index()
+
 
     def get_hourly_df_parametric(
             self,
@@ -9966,6 +10159,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             start_date: Optional[str] = None,
             skip_confirmation: bool = False,
             normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
     ):
         """Expands parametric results to hourly frequency and saves the result in
         ``outputs_param_simulation_hourly``.
@@ -9996,6 +10191,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         skip_confirmation : Any
             Argument used by `SimulationBase.get_hourly_df_parametric`.
         normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        split_by : Any
+            Optional category column name used to return a dict of DataFrames by group.
+        drop_all_empty_output_columns : Any
             Boolean or mode flag controlling behaviour.
         
         Usage
@@ -10029,6 +10228,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             for extra_col in ['epw', 'idf', 'pareto-optimal']:
                 if extra_col in source_df.columns and extra_col not in parameter_columns:
                     parameter_columns.append(extra_col)
+            for category_col in self._get_configured_category_columns():
+                if category_col in source_df.columns and category_col not in parameter_columns:
+                    parameter_columns.append(category_col)
         else:
             parameter_columns = []
         effective_file_source = file_source
@@ -10127,14 +10329,31 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             start_date=start_date,
             hourly_columns=hourly_cols,
         )
+        self.outputs_param_simulation_hourly_by_category = None
         if normalize_per_m2:
             if getattr(self, 'outputs_normalized', False):
                 print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
             else:
                 self.normalize_outputs(df_types=['parametric_hourly'])
                 self.outputs_normalized = False # Revert to False because we only normalized the hourly df
+        if split_by is not None:
+            (df_with_category, grouped) = self._split_dataframe_by_category(
+                df=self.outputs_param_simulation_hourly,
+                split_by=split_by,
+                source='parametric',
+                drop_all_empty_output_columns=drop_all_empty_output_columns,
+            )
+            self.outputs_param_simulation_hourly = df_with_category
+            self.outputs_param_simulation_hourly_by_category = grouped
+            return grouped
         return self.outputs_param_simulation_hourly
-    def get_hourly_df(self, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
+    def get_hourly_df(
+            self,
+            start_date: str='2024-01-01 01',
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
         """Backward-compatible wrapper for parametric hourly expansion.
         This preserves the previous behavior: use embedded hourly list-columns when
         available, otherwise fall back to reading simulation CSV outputs.
@@ -10144,6 +10363,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         start_date : Any
             Argument used by `SimulationBase.get_hourly_df`.
         normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        split_by : Any
+            Optional category column name used to return a dict of DataFrames by group.
+        drop_all_empty_output_columns : Any
             Boolean or mode flag controlling behaviour.
         
         Usage
@@ -10159,75 +10382,139 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             start_date=start_date,
             skip_confirmation=True,
             normalize_per_m2=normalize_per_m2,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
         )
-    def get_monthly_df(self, agg_funcs: dict = None, start_date: str='2024-01-01 01', normalize_per_m2: bool = False):
-        """Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame with monthly aggregated values,
-        saved in the internal variable named outputs_param_simulation_monthly.
-        
-        :param agg_funcs: a dictionary mapping column names to aggregation functions 
-            (e.g. {'DistrictHeating:Facility': 'sum', 'Zone Mean Air Temperature': 'mean'}).
-            Defaults to 'mean' for temperature, PMV, PPD, rate, and coefficient, and 'sum' for everything else.
-        :param start_date: the start date for the simulation results, in format 'YYY-MM-DD HH'
-        :param normalize_per_m2: if True, divides energy columns by the building floor area.
-        
-        Usage
-        -----
-        Use `SimulationBase.get_monthly_df` within ACCIM parametric and optimisation workflows.
-        
-        Examples
-        --------
-        result = self.get_monthly_df(agg_funcs=..., start_date=..., normalize_per_m2=...)
-        """
+    def get_output_df(
+            self,
+            agg_funcs: dict = None,
+            start_date: str='2024-01-01 01',
+            normalize_per_m2: bool = False,
+            frequency: Literal['daily', 'monthly', 'runperiod'] = 'monthly',
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Aggregate parametric hourly results by daily, monthly or runperiod frequency."""
         if getattr(self, 'outputs_param_simulation_hourly', None) is None:
             self.get_hourly_df(start_date=start_date)
 
         df_hourly = self.outputs_param_simulation_hourly.copy()
-        
-        if hasattr(self, 'parameters_list'):
-            parameter_columns = [i.name for i in self.parameters_list]
-        elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
-            parameter_columns = self.problem.names('inputs')
-        elif hasattr(self, 'outputs_param_simulation') and self.outputs_param_simulation.attrs.get('parameters_names'):
-            parameter_columns = list(self.outputs_param_simulation.attrs['parameters_names'])
+        freq_token = self._normalize_aggregation_frequency(frequency)
+        aggregated_df = self._aggregate_hourly_dataframe(
+            df_hourly=df_hourly,
+            source='parametric',
+            frequency=freq_token,
+            agg_funcs=agg_funcs,
+        )
+
+        target_df_type = 'parametric_monthly'
+        if freq_token == 'monthly':
+            self.outputs_param_simulation_monthly = aggregated_df
+            target_df_type = 'parametric_monthly'
+        elif freq_token == 'daily':
+            self.outputs_param_simulation_daily = aggregated_df
+            target_df_type = 'parametric_daily'
         else:
-            parameter_columns = []
-            
-        if 'epw' not in parameter_columns:
-            parameter_columns.append('epw')
-        if 'idf' not in parameter_columns and 'idf' in df_hourly.columns:
-            parameter_columns.append('idf')
-            
-        parameter_columns = [c for c in parameter_columns if c in df_hourly.columns]
-        
-        # Identify data columns (excluding parameters, datetime, hour, etc)
-        exclude_cols = set(parameter_columns + ['datetime', 'hour'])
-        data_columns = [c for c in df_hourly.columns if c not in exclude_cols]
-        
-        # Determine default aggregations
-        default_agg = {}
-        for col in data_columns:
-            col_lower = col.lower()
-            if any(keyword in col_lower for keyword in ['temperature', 'pmv', 'ppd', 'rate', 'coefficient']):
-                default_agg[col] = 'mean'
+            self.outputs_param_simulation_runperiod = aggregated_df
+            target_df_type = 'parametric_runperiod'
+
+        grouped = None
+        if split_by is not None:
+            (aggregated_df, grouped) = self._split_dataframe_by_category(
+                df=aggregated_df,
+                split_by=split_by,
+                source='parametric',
+                drop_all_empty_output_columns=drop_all_empty_output_columns,
+            )
+            if freq_token == 'monthly':
+                self.outputs_param_simulation_monthly = aggregated_df
+            elif freq_token == 'daily':
+                self.outputs_param_simulation_daily = aggregated_df
             else:
-                default_agg[col] = 'sum'
-                
-        if agg_funcs:
-            default_agg.update(agg_funcs)
-            
-        # Extract month from datetime for grouping
-        df_hourly['month'] = df_hourly['datetime'].dt.to_period('M')
-        groupby_cols = parameter_columns + ['month']
-        
-        monthly_df = df_hourly.groupby(groupby_cols).agg(default_agg).reset_index()
-        self.outputs_param_simulation_monthly = monthly_df
-        
+                self.outputs_param_simulation_runperiod = aggregated_df
+
+        if not hasattr(self, 'outputs_param_simulation_aggregated_by_category') or self.outputs_param_simulation_aggregated_by_category is None:
+            self.outputs_param_simulation_aggregated_by_category = {}
+        self.outputs_param_simulation_aggregated_by_category[freq_token] = grouped
+
         if normalize_per_m2:
             if getattr(self, 'outputs_normalized', False):
                 print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
             else:
-                self.normalize_outputs(df_types=['parametric_monthly'])
-                self.outputs_normalized = False # Revert because we only normalized the monthly df
+                self.normalize_outputs(df_types=[target_df_type])
+                self.outputs_normalized = False  # Revert because only this aggregated df was normalized.
+                if split_by is not None:
+                    normalized_df = (
+                        self.outputs_param_simulation_monthly if freq_token == 'monthly'
+                        else self.outputs_param_simulation_daily if freq_token == 'daily'
+                        else self.outputs_param_simulation_runperiod
+                    )
+                    (_, grouped) = self._split_dataframe_by_category(
+                        df=normalized_df,
+                        split_by=split_by,
+                        source='parametric',
+                        drop_all_empty_output_columns=drop_all_empty_output_columns,
+                    )
+                    self.outputs_param_simulation_aggregated_by_category[freq_token] = grouped
+
+        return grouped if split_by is not None else aggregated_df
+
+    def get_monthly_df(
+            self,
+            agg_funcs: dict = None,
+            start_date: str='2024-01-01 01',
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Monthly wrapper kept for backward compatibility.
+
+        For non-monthly aggregation, use `get_output_df(frequency=...)`.
+        """
+        return self.get_output_df(
+            agg_funcs=agg_funcs,
+            start_date=start_date,
+            normalize_per_m2=normalize_per_m2,
+            frequency='monthly',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_daily_df(
+            self,
+            agg_funcs: dict = None,
+            start_date: str='2024-01-01 01',
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Convenience wrapper for daily aggregation of parametric hourly results."""
+        return self.get_output_df(
+            agg_funcs=agg_funcs,
+            start_date=start_date,
+            normalize_per_m2=normalize_per_m2,
+            frequency='daily',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_runperiod_df(
+            self,
+            agg_funcs: dict = None,
+            start_date: str='2024-01-01 01',
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Convenience wrapper for runperiod aggregation of parametric hourly results."""
+        return self.get_output_df(
+            agg_funcs=agg_funcs,
+            start_date=start_date,
+            normalize_per_m2=normalize_per_m2,
+            frequency='runperiod',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
 
     @staticmethod
     def _resolve_simulation_file_path(row: pd.Series, file_source: Literal['csv', 'eso']) -> str:
@@ -10443,7 +10730,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             df_augmented[target_col] = [row_outputs[col] if col in row_outputs else [] for row_outputs in per_row_outputs]
         return df_augmented
 
-    def get_hourly_df_optimisation(self, only_pareto_optimal: bool=True, epw_filter: Union[str, List[str]]=None, simulation_indices: Optional[List[int]]=None, output_columns: Optional[List[str]]=None, include_summary_columns: bool=True, file_source: Literal['csv', 'eso']='csv', eplus_install_dir: Optional[str]=None, only_run_period: bool=True, start_date: Optional[str]=None, skip_confirmation: bool=False, normalize_per_m2: bool = False):
+    def get_hourly_df_optimisation(
+            self,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
         """Expands optimisation results to hourly frequency and saves the result
         in ``outputs_optimisation_hourly``.
         
@@ -10502,6 +10804,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         ----------
         normalize_per_m2 : Any
             Boolean or mode flag controlling behaviour.
+        split_by : Any
+            Optional category column name used to return a dict of DataFrames by group.
+        drop_all_empty_output_columns : Any
+            Boolean or mode flag controlling behaviour.
         
         Usage
         -----
@@ -10554,9 +10860,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
                     _known_non_param.update(self.problem.names('outputs') or [])
                 param_cols = [c for c in source_df.columns if c not in _known_non_param and (not source_df[c].apply(lambda x: isinstance(x, (list, tuple))).any())]
-            for extra_col in ['epw', 'pareto-optimal']:
+            for extra_col in ['epw', 'idf', 'pareto-optimal']:
                 if extra_col in source_df.columns and extra_col not in param_cols:
                     param_cols.append(extra_col)
+            for category_col in self._get_configured_category_columns():
+                if category_col in source_df.columns and category_col not in param_cols:
+                    param_cols.append(category_col)
         else:
             param_cols = []
         from accim.parametric_and_optimisation.utils import identify_hourly_columns
@@ -10581,14 +10890,26 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         else:
             print(f'[get_hourly_df_optimisation] Expanding…{size_msg}')
         self.outputs_optimisation_hourly = expand_to_hourly_dataframe(df=source_df, parameter_columns=param_cols, start_date=start_date)
+        self.outputs_optimisation_hourly_by_category = None
         if normalize_per_m2:
             if getattr(self, 'outputs_normalized', False):
                 print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
             else:
                 self.normalize_outputs(df_types=['optimisation_hourly'])
                 self.outputs_normalized = False # Revert to False because we only normalized the hourly df
+        if split_by is not None:
+            (df_with_category, grouped) = self._split_dataframe_by_category(
+                df=self.outputs_optimisation_hourly,
+                split_by=split_by,
+                source='optimisation',
+                drop_all_empty_output_columns=drop_all_empty_output_columns,
+            )
+            self.outputs_optimisation_hourly = df_with_category
+            self.outputs_optimisation_hourly_by_category = grouped
+            return grouped
+        return self.outputs_optimisation_hourly
 
-    def get_monthly_df_optimisation(
+    def get_output_df_optimisation(
             self,
             agg_funcs: dict = None,
             only_pareto_optimal: bool = True,
@@ -10602,33 +10923,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             start_date: Optional[str] = None,
             skip_confirmation: bool = False,
             normalize_per_m2: bool = False,
+            frequency: Literal['daily', 'monthly', 'runperiod'] = 'monthly',
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
     ):
-        """Transforms the hourly values of outputs_optimisation to a new pandas DataFrame with monthly aggregated values,
-        saved in the internal variable named outputs_optimisation_monthly.
-        
-        :param agg_funcs: a dictionary mapping column names to aggregation functions 
-            (e.g. {'DistrictHeating:Facility': 'sum', 'Zone Mean Air Temperature': 'mean'}).
-            Defaults to 'mean' for temperature, PMV, PPD, rate, and coefficient, and 'sum' for everything else.
-        :param only_pareto_optimal: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
-        :param epw_filter: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
-        :param simulation_indices: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
-        :param output_columns: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
-        :param include_summary_columns: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
-        :param file_source: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
-        :param eplus_install_dir: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
-        :param only_run_period: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
-        :param start_date: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
-        :param skip_confirmation: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
-        :param normalize_per_m2: passed to get_hourly_df_optimisation if the hourly df needs to be generated.
-        
-        Usage
-        -----
-        Use `SimulationBase.get_monthly_df_optimisation` within ACCIM parametric and optimisation workflows.
-        
-        Examples
-        --------
-        result = self.get_monthly_df_optimisation(agg_funcs=..., only_pareto_optimal=..., epw_filter=..., ...)
-        """
+        """Aggregate optimisation hourly results by daily, monthly or runperiod frequency."""
         if getattr(self, 'outputs_optimisation_hourly', None) is None:
             self.get_hourly_df_optimisation(
                 only_pareto_optimal=only_pareto_optimal,
@@ -10648,50 +10947,176 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             raise ValueError('Failed to generate hourly dataframe for optimisation.')
 
         df_hourly = self.outputs_optimisation_hourly.copy()
-        
-        param_cols = []
-        if hasattr(self, 'parameters_list'):
-            param_cols = [i.name for i in self.parameters_list]
-        elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
-            param_cols = self.problem.names('inputs')
-        elif getattr(self, 'outputs_optimisation', None) is not None and self.outputs_optimisation.attrs.get('parameters_names'):
-            param_cols = list(self.outputs_optimisation.attrs['parameters_names'])
-            
-        for extra_col in ['epw', 'idf', 'pareto-optimal']:
-            if extra_col not in param_cols and extra_col in df_hourly.columns:
-                param_cols.append(extra_col)
-                
-        param_cols = [c for c in param_cols if c in df_hourly.columns]
-        
-        # Identify data columns (excluding parameters, datetime, hour, etc)
-        exclude_cols = set(param_cols + ['datetime', 'hour'])
-        data_columns = [c for c in df_hourly.columns if c not in exclude_cols]
-        
-        # Determine default aggregations
-        default_agg = {}
-        for col in data_columns:
-            col_lower = col.lower()
-            if any(keyword in col_lower for keyword in ['temperature', 'pmv', 'ppd', 'rate', 'coefficient']):
-                default_agg[col] = 'mean'
+        freq_token = self._normalize_aggregation_frequency(frequency)
+        aggregated_df = self._aggregate_hourly_dataframe(
+            df_hourly=df_hourly,
+            source='optimisation',
+            frequency=freq_token,
+            agg_funcs=agg_funcs,
+        )
+
+        target_df_type = 'optimisation_monthly'
+        if freq_token == 'monthly':
+            self.outputs_optimisation_monthly = aggregated_df
+            target_df_type = 'optimisation_monthly'
+        elif freq_token == 'daily':
+            self.outputs_optimisation_daily = aggregated_df
+            target_df_type = 'optimisation_daily'
+        else:
+            self.outputs_optimisation_runperiod = aggregated_df
+            target_df_type = 'optimisation_runperiod'
+
+        grouped = None
+        if split_by is not None:
+            (aggregated_df, grouped) = self._split_dataframe_by_category(
+                df=aggregated_df,
+                split_by=split_by,
+                source='optimisation',
+                drop_all_empty_output_columns=drop_all_empty_output_columns,
+            )
+            if freq_token == 'monthly':
+                self.outputs_optimisation_monthly = aggregated_df
+            elif freq_token == 'daily':
+                self.outputs_optimisation_daily = aggregated_df
             else:
-                default_agg[col] = 'sum'
-                
-        if agg_funcs:
-            default_agg.update(agg_funcs)
-            
-        # Extract month from datetime for grouping
-        df_hourly['month'] = df_hourly['datetime'].dt.to_period('M')
-        groupby_cols = param_cols + ['month']
-        
-        monthly_df = df_hourly.groupby(groupby_cols).agg(default_agg).reset_index()
-        self.outputs_optimisation_monthly = monthly_df
-        
+                self.outputs_optimisation_runperiod = aggregated_df
+
+        if not hasattr(self, 'outputs_optimisation_aggregated_by_category') or self.outputs_optimisation_aggregated_by_category is None:
+            self.outputs_optimisation_aggregated_by_category = {}
+        self.outputs_optimisation_aggregated_by_category[freq_token] = grouped
+
         if normalize_per_m2:
             if getattr(self, 'outputs_normalized', False):
                 print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
             else:
-                self.normalize_outputs(df_types=['optimisation_monthly'])
-                self.outputs_normalized = False # Revert because we only normalized the monthly df
+                self.normalize_outputs(df_types=[target_df_type])
+                self.outputs_normalized = False  # Revert because only this aggregated df was normalized.
+                if split_by is not None:
+                    normalized_df = (
+                        self.outputs_optimisation_monthly if freq_token == 'monthly'
+                        else self.outputs_optimisation_daily if freq_token == 'daily'
+                        else self.outputs_optimisation_runperiod
+                    )
+                    (_, grouped) = self._split_dataframe_by_category(
+                        df=normalized_df,
+                        split_by=split_by,
+                        source='optimisation',
+                        drop_all_empty_output_columns=drop_all_empty_output_columns,
+                    )
+                    self.outputs_optimisation_aggregated_by_category[freq_token] = grouped
+
+        return grouped if split_by is not None else aggregated_df
+
+    def get_monthly_df_optimisation(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Monthly wrapper kept for backward compatibility.
+
+        For non-monthly aggregation, use `get_output_df_optimisation(frequency=...)`.
+        """
+        return self.get_output_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            frequency='monthly',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_daily_df_optimisation(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Convenience wrapper for daily aggregation of optimisation hourly results."""
+        return self.get_output_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            frequency='daily',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_runperiod_df_optimisation(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Convenience wrapper for runperiod aggregation of optimisation hourly results."""
+        return self.get_output_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            frequency='runperiod',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
 
     def get_hourly_df_columns(self):
         """Identifies the columns which contain hourly values, and save the names in a list, saved in the
@@ -10840,7 +11265,11 @@ class ParametricSimulation(SimulationBase):
         # Parametric-specific attributes
         self.outputs_param_simulation = None
         self.outputs_param_simulation_hourly = None
+        self.outputs_param_simulation_hourly_by_category = None
         self.outputs_param_simulation_monthly = None
+        self.outputs_param_simulation_daily = None
+        self.outputs_param_simulation_runperiod = None
+        self.outputs_param_simulation_aggregated_by_category = {}
         self.outputs_param_simulation_filepath = None
 
     @property
@@ -10985,12 +11414,197 @@ class OptimisationSimulation(SimulationBase):
         self.outputs_optimisation = None
         self.outputs_optimisation_filepath = None
         self.outputs_optimisation_hourly = None
+        self.outputs_optimisation_hourly_by_category = None
         self.outputs_optimisation_monthly = None
+        self.outputs_optimisation_daily = None
+        self.outputs_optimisation_runperiod = None
+        self.outputs_optimisation_aggregated_by_category = {}
         self.optimisation_csv_paths_non_dominated = []
         self.optimisation_csv_paths_dominated = []
         self.optimisation_csv_paths_non_dominated_by_epw = {}
         self.optimisation_csv_paths_dominated_by_epw = {}
         self.evaluators = {}
+
+    def get_hourly_df(
+            self,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Unified alias for optimisation hourly expansion.
+
+        Keeps API naming consistent with `ParametricSimulation.get_hourly_df`.
+        """
+        return self.get_hourly_df_optimisation(
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_output_df(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            frequency: Literal['daily', 'monthly', 'runperiod'] = 'monthly',
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Unified alias for optimisation aggregation.
+
+        Keeps API naming consistent with `ParametricSimulation.get_output_df`.
+        """
+        return self.get_output_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            frequency=frequency,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_monthly_df(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Unified monthly alias for optimisation aggregation."""
+        return self.get_monthly_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_daily_df(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Unified daily alias for optimisation aggregation."""
+        return self.get_daily_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_runperiod_df(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Unified runperiod alias for optimisation aggregation."""
+        return self.get_runperiod_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
 
 
 # Backward compatibility alias
