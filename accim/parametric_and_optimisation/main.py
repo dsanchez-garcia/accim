@@ -10078,17 +10078,53 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         return df_with_category, grouped
 
     @staticmethod
-    def _build_default_aggregation_map(data_columns: list[str], agg_funcs: Optional[dict] = None) -> dict:
+    def _build_default_aggregation_map(
+        data_columns: list[str],
+        agg_funcs: Optional[dict] = None,
+        warn_on_unclassified: bool = False,
+    ) -> dict:
         """Build default aggregation functions and apply user overrides."""
         default_agg = {}
+        mean_keywords = ['temperature', 'pmv', 'ppd', 'rate', 'coefficient']
+        sum_keywords = [
+            'heating',
+            'cooling',
+            'energy',
+            'electricity',
+            'gas',
+            'facility',
+            'district',
+            'consumption',
+            'load',
+        ]
+        unclassified_columns = []
+
         for col in data_columns:
             col_lower = str(col).lower()
-            if any(keyword in col_lower for keyword in ['temperature', 'pmv', 'ppd', 'rate', 'coefficient']):
+            if any((keyword in col_lower) for keyword in mean_keywords):
                 default_agg[col] = 'mean'
+            elif any((keyword in col_lower) for keyword in sum_keywords):
+                default_agg[col] = 'sum'
             else:
                 default_agg[col] = 'sum'
+                unclassified_columns.append(col)
+
         if agg_funcs:
             default_agg.update(agg_funcs)
+            overridden_columns = set(agg_funcs.keys())
+            unclassified_columns = [
+                col for col in unclassified_columns
+                if col not in overridden_columns
+            ]
+
+        if warn_on_unclassified and len(unclassified_columns) > 0:
+            warnings.warn(
+                "Default aggregation assigned 'sum' to unclassified numeric columns. "
+                "Provide agg_funcs to override if these are intensive variables. "
+                f"Columns: {unclassified_columns}",
+                UserWarning,
+            )
+
         return default_agg
 
     @staticmethod
@@ -10130,7 +10166,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         identifier_columns = self._get_identifier_columns_for_aggregation(df_hourly=df_hourly, source=source)
         exclude_cols = set(identifier_columns + ['datetime', 'hour', 'day', 'month'])
         data_columns = [c for c in df_hourly.columns if c not in exclude_cols]
-        aggregation_map = self._build_default_aggregation_map(data_columns=data_columns, agg_funcs=agg_funcs)
+        aggregation_map = self._build_default_aggregation_map(
+            data_columns=data_columns,
+            agg_funcs=agg_funcs,
+            warn_on_unclassified=True,
+        )
 
         df_work = df_hourly.copy()
         groupby_cols = list(identifier_columns)
@@ -10323,6 +10363,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 return None
         else:
             print(f'[get_hourly_df_parametric] Expanding...{size_msg}')
+        self._invalidate_normalized_df_types(df_types=['parametric_hourly'])
         self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(
             df=expanded_source_df,
             parameter_columns=parameter_columns,
@@ -10331,11 +10372,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         )
         self.outputs_param_simulation_hourly_by_category = None
         if normalize_per_m2:
-            if getattr(self, 'outputs_normalized', False):
-                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
+            if self._is_df_type_normalized('parametric_hourly'):
+                print('[!] Warning: parametric hourly outputs are already normalized. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
             else:
                 self.normalize_outputs(df_types=['parametric_hourly'])
-                self.outputs_normalized = False # Revert to False because we only normalized the hourly df
         if split_by is not None:
             (df_with_category, grouped) = self._split_dataframe_by_category(
                 df=self.outputs_param_simulation_hourly,
@@ -10347,12 +10387,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.outputs_param_simulation_hourly_by_category = grouped
             return grouped
         return self.outputs_param_simulation_hourly
+
     def get_hourly_df(
             self,
-            start_date: str='2024-01-01 01',
+            start_date: Optional[str] = '2024-01-01 01',
             normalize_per_m2: bool = False,
             split_by: Optional[str] = None,
             drop_all_empty_output_columns: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'auto',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            skip_confirmation: bool = True,
     ):
         """Backward-compatible wrapper for parametric hourly expansion.
         This preserves the previous behavior: use embedded hourly list-columns when
@@ -10378,25 +10427,53 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         result = self.get_hourly_df(start_date=..., normalize_per_m2=...)
         """
         return self.get_hourly_df_parametric(
-            file_source='auto',
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
             start_date=start_date,
-            skip_confirmation=True,
+            skip_confirmation=skip_confirmation,
             normalize_per_m2=normalize_per_m2,
             split_by=split_by,
             drop_all_empty_output_columns=drop_all_empty_output_columns,
         )
+
     def get_output_df(
             self,
             agg_funcs: dict = None,
-            start_date: str='2024-01-01 01',
+            start_date: Optional[str] = '2024-01-01 01',
             normalize_per_m2: bool = False,
             frequency: Literal['daily', 'monthly', 'runperiod'] = 'monthly',
             split_by: Optional[str] = None,
             drop_all_empty_output_columns: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'auto',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            skip_confirmation: bool = True,
     ):
         """Aggregate parametric hourly results by daily, monthly or runperiod frequency."""
         if getattr(self, 'outputs_param_simulation_hourly', None) is None:
-            self.get_hourly_df(start_date=start_date)
+            self.get_hourly_df(
+                start_date=start_date,
+                normalize_per_m2=False,
+                split_by=None,
+                drop_all_empty_output_columns=drop_all_empty_output_columns,
+                epw_filter=epw_filter,
+                simulation_indices=simulation_indices,
+                output_columns=output_columns,
+                include_summary_columns=include_summary_columns,
+                file_source=file_source,
+                eplus_install_dir=eplus_install_dir,
+                only_run_period=only_run_period,
+                skip_confirmation=skip_confirmation,
+            )
 
         df_hourly = self.outputs_param_simulation_hourly.copy()
         freq_token = self._normalize_aggregation_frequency(frequency)
@@ -10407,16 +10484,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             agg_funcs=agg_funcs,
         )
 
-        target_df_type = 'parametric_monthly'
         if freq_token == 'monthly':
-            self.outputs_param_simulation_monthly = aggregated_df
             target_df_type = 'parametric_monthly'
         elif freq_token == 'daily':
-            self.outputs_param_simulation_daily = aggregated_df
             target_df_type = 'parametric_daily'
         else:
-            self.outputs_param_simulation_runperiod = aggregated_df
             target_df_type = 'parametric_runperiod'
+
+        self._invalidate_normalized_df_types(df_types=[target_df_type])
+
+        if freq_token == 'monthly':
+            self.outputs_param_simulation_monthly = aggregated_df
+        elif freq_token == 'daily':
+            self.outputs_param_simulation_daily = aggregated_df
+        else:
+            self.outputs_param_simulation_runperiod = aggregated_df
 
         grouped = None
         if split_by is not None:
@@ -10438,11 +10520,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.outputs_param_simulation_aggregated_by_category[freq_token] = grouped
 
         if normalize_per_m2:
-            if getattr(self, 'outputs_normalized', False):
-                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
+            if self._is_df_type_normalized(target_df_type):
+                print(f"[!] Warning: {target_df_type} outputs are already normalized. The argument normalize_per_m2=True will have no effect to prevent double normalization.")
             else:
                 self.normalize_outputs(df_types=[target_df_type])
-                self.outputs_normalized = False  # Revert because only this aggregated df was normalized.
                 if split_by is not None:
                     normalized_df = (
                         self.outputs_param_simulation_monthly if freq_token == 'monthly'
@@ -10462,10 +10543,18 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
     def get_monthly_df(
             self,
             agg_funcs: dict = None,
-            start_date: str='2024-01-01 01',
+            start_date: Optional[str] = '2024-01-01 01',
             normalize_per_m2: bool = False,
             split_by: Optional[str] = None,
             drop_all_empty_output_columns: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'auto',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            skip_confirmation: bool = True,
     ):
         """Monthly wrapper kept for backward compatibility.
 
@@ -10478,15 +10567,31 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             frequency='monthly',
             split_by=split_by,
             drop_all_empty_output_columns=drop_all_empty_output_columns,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            skip_confirmation=skip_confirmation,
         )
 
     def get_daily_df(
             self,
             agg_funcs: dict = None,
-            start_date: str='2024-01-01 01',
+            start_date: Optional[str] = '2024-01-01 01',
             normalize_per_m2: bool = False,
             split_by: Optional[str] = None,
             drop_all_empty_output_columns: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'auto',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            skip_confirmation: bool = True,
     ):
         """Convenience wrapper for daily aggregation of parametric hourly results."""
         return self.get_output_df(
@@ -10496,15 +10601,31 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             frequency='daily',
             split_by=split_by,
             drop_all_empty_output_columns=drop_all_empty_output_columns,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            skip_confirmation=skip_confirmation,
         )
 
     def get_runperiod_df(
             self,
             agg_funcs: dict = None,
-            start_date: str='2024-01-01 01',
+            start_date: Optional[str] = '2024-01-01 01',
             normalize_per_m2: bool = False,
             split_by: Optional[str] = None,
             drop_all_empty_output_columns: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'auto',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            skip_confirmation: bool = True,
     ):
         """Convenience wrapper for runperiod aggregation of parametric hourly results."""
         return self.get_output_df(
@@ -10514,6 +10635,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             frequency='runperiod',
             split_by=split_by,
             drop_all_empty_output_columns=drop_all_empty_output_columns,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            skip_confirmation=skip_confirmation,
         )
 
     @staticmethod
@@ -10889,14 +11018,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 return None
         else:
             print(f'[get_hourly_df_optimisation] Expanding…{size_msg}')
+        self._invalidate_normalized_df_types(df_types=['optimisation_hourly'])
         self.outputs_optimisation_hourly = expand_to_hourly_dataframe(df=source_df, parameter_columns=param_cols, start_date=start_date)
         self.outputs_optimisation_hourly_by_category = None
         if normalize_per_m2:
-            if getattr(self, 'outputs_normalized', False):
-                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
+            if self._is_df_type_normalized('optimisation_hourly'):
+                print('[!] Warning: optimisation hourly outputs are already normalized. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
             else:
                 self.normalize_outputs(df_types=['optimisation_hourly'])
-                self.outputs_normalized = False # Revert to False because we only normalized the hourly df
         if split_by is not None:
             (df_with_category, grouped) = self._split_dataframe_by_category(
                 df=self.outputs_optimisation_hourly,
@@ -10955,16 +11084,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             agg_funcs=agg_funcs,
         )
 
-        target_df_type = 'optimisation_monthly'
         if freq_token == 'monthly':
-            self.outputs_optimisation_monthly = aggregated_df
             target_df_type = 'optimisation_monthly'
         elif freq_token == 'daily':
-            self.outputs_optimisation_daily = aggregated_df
             target_df_type = 'optimisation_daily'
         else:
-            self.outputs_optimisation_runperiod = aggregated_df
             target_df_type = 'optimisation_runperiod'
+
+        self._invalidate_normalized_df_types(df_types=[target_df_type])
+
+        if freq_token == 'monthly':
+            self.outputs_optimisation_monthly = aggregated_df
+        elif freq_token == 'daily':
+            self.outputs_optimisation_daily = aggregated_df
+        else:
+            self.outputs_optimisation_runperiod = aggregated_df
 
         grouped = None
         if split_by is not None:
@@ -10986,11 +11120,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.outputs_optimisation_aggregated_by_category[freq_token] = grouped
 
         if normalize_per_m2:
-            if getattr(self, 'outputs_normalized', False):
-                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
+            if self._is_df_type_normalized(target_df_type):
+                print(f"[!] Warning: {target_df_type} outputs are already normalized. The argument normalize_per_m2=True will have no effect to prevent double normalization.")
             else:
                 self.normalize_outputs(df_types=[target_df_type])
-                self.outputs_normalized = False  # Revert because only this aggregated df was normalized.
                 if split_by is not None:
                     normalized_df = (
                         self.outputs_optimisation_monthly if freq_token == 'monthly'
@@ -11204,7 +11337,7 @@ class ParametricSimulation(SimulationBase):
             epws: list = None,
             parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
-            output_keep_existing: bool = False,
+            output_keep_existing: bool = True,
             output_freqs: List[allowed_output_freqs] = ['hourly'],
             ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
             SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
@@ -11352,7 +11485,7 @@ class OptimisationSimulation(SimulationBase):
             epws: list = None,
             parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
-            output_keep_existing: bool = False,
+            output_keep_existing: bool = True,
             output_freqs: List[allowed_output_freqs] = ['hourly'],
             ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
             SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
@@ -11633,7 +11766,7 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             buildings: Union[Any, List] = None,
             epws: list = None,
             output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
-            output_keep_existing: bool = False,
+            output_keep_existing: bool = True,
             output_freqs: List[allowed_output_freqs] = ['hourly'],
             ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
             SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',

@@ -126,6 +126,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added focused tests in `tests/parametric_and_optimisation/test_sim_file_cleanup.py`.
 
 ### Changed
+- **Output Retrieval API Explicitness and Constructor Defaults**:
+  - `ParametricSimulation` wrappers (`get_hourly_df`, `get_output_df`, `get_monthly_df`, `get_daily_df`, `get_runperiod_df`) now expose advanced extraction arguments explicitly (for example `epw_filter`, `simulation_indices`, `output_columns`, `file_source`, `skip_confirmation`) without `**kwargs`, improving IDE discoverability.
+  - Constructor default `output_keep_existing` is now aligned to `True` across `SimulationBase`, `ParametricSimulation`, `OptimisationSimulation`, and `AccimPredefModelsParamSim`.
 - **Custom Subplot Ordering Semantics (`subplot_order_mode='custom'`)**: Active subplot dimensions no longer require exhaustive `subplot_order_custom` entries.
   - Unspecified active dimensions now preserve their current data order (equivalent to `auto`) instead of raising an error.
   - Validation for unsupported/custom dimensions remains strict and unchanged.
@@ -160,6 +163,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Step 3 now plots from one combined optimisation object and forwards the selected MCDM segmentation flags.
 
 ### Fixed
+- **Per-DataFrame Normalization State Tracking in Output Post-Processing**:
+  - Replaced fragile global-only normalization gating with per-dataset tracking (`parametric_hourly`, `parametric_monthly`, `optimisation_daily`, etc.) to avoid false skips or side effects when normalizing selected outputs.
+  - Hourly/aggregated output builders now invalidate normalization state only for the datasets they overwrite, preventing stale normalization markers.
+- **Default Aggregation Heuristic Diagnostics**:
+  - `get_output_df(...)` / `get_output_df_optimisation(...)` now emit a warning when numeric output columns do not match known `mean`/`sum` keyword heuristics and therefore default to `sum`, making aggregation assumptions explicit.
 - **Output Preflight Variable Verification in ACCIM Models**: `get_output_var_df_from_idf` now reads `Output:Variable` objects directly from the current IDF state (side-effect free), preventing false `missing_in_idf` reports after `apply_outputs_preflight(...)`.
 - **`run_optimisation()` Return Value**: Restored the method return so it consistently returns the full optimisation `DataFrame` (`self.outputs_optimisation`) instead of `None`, fixing downstream errors like `TypeError: object of type 'NoneType' has no len()`.
 - **Consistent Simulation Returns**: `run_parametric_simulation()` and `run_optimisation()` now consistently return their result DataFrames (`self.outputs_param_simulation` and `self.outputs_optimisation`) so downstream code can safely use `len(...)` and chaining without receiving `None`.

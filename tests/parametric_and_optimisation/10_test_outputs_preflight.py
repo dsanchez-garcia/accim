@@ -7,6 +7,8 @@ Tests del flujo de outputs preflight:
 - apply_outputs_preflight: limpia outputs (mode='all') y deja el IDF con lo seleccionado
 """
 
+import inspect
+
 import pytest
 import pandas as pd
 from .. import test_setup as ts
@@ -485,6 +487,119 @@ def test_get_monthly_df_optimisation_supports_daily_and_runperiod_frequency():
     assert 'day' not in runperiod_df.columns
     assert 'month' not in runperiod_df.columns
     assert len(runperiod_df) == 2
+
+
+def test_output_keep_existing_default_is_consistent_across_classes():
+    ts.print_section("TEST: output_keep_existing default consistency")
+
+    from accim.parametric_and_optimisation.main import SimulationBase
+
+    base_default = inspect.signature(SimulationBase.__init__).parameters['output_keep_existing'].default
+    param_default = inspect.signature(ts.ParametricSimulation.__init__).parameters['output_keep_existing'].default
+    optim_default = inspect.signature(ts.OptimisationSimulation.__init__).parameters['output_keep_existing'].default
+    predef_default = inspect.signature(ts.AccimPredefModelsParamSim.__init__).parameters['output_keep_existing'].default
+
+    assert base_default is True
+    assert param_default is True
+    assert optim_default is True
+    assert predef_default is True
+
+
+def test_parametric_output_wrappers_expose_explicit_advanced_arguments():
+    ts.print_section("TEST: firmas explícitas en wrappers paramétricos de outputs")
+
+    hourly_sig = inspect.signature(ts.ParametricSimulation.get_hourly_df)
+    output_sig = inspect.signature(ts.ParametricSimulation.get_output_df)
+
+    for expected in [
+        'epw_filter',
+        'simulation_indices',
+        'output_columns',
+        'include_summary_columns',
+        'file_source',
+        'eplus_install_dir',
+        'only_run_period',
+        'skip_confirmation',
+    ]:
+        assert expected in hourly_sig.parameters
+        assert expected in output_sig.parameters
+
+    assert all(p.kind != inspect.Parameter.VAR_KEYWORD for p in hourly_sig.parameters.values())
+    assert all(p.kind != inspect.Parameter.VAR_KEYWORD for p in output_sig.parameters.values())
+
+
+def test_normalize_outputs_tracks_df_types_without_global_blocking():
+    ts.print_section("TEST: normalize_outputs tracking por tipo de dataframe")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    idf_0 = sim._get_idf_identifier(buildings[0], 0)
+    sim.building_floor_area = {idf_0: 100.0}
+
+    sim.outputs_param_simulation_hourly = pd.DataFrame([
+        {
+            'idf': idf_0,
+            'epw': ts.TEST_CATEGORIES['fast']['epws'][0],
+            'hour': 1,
+            'datetime': pd.Timestamp('2024-01-01 01:00'),
+            'DistrictHeating:Facility [J]': 3_600_000.0,
+        }
+    ])
+    sim.outputs_param_simulation_monthly = pd.DataFrame([
+        {
+            'idf': idf_0,
+            'epw': ts.TEST_CATEGORIES['fast']['epws'][0],
+            'month': pd.Period('2024-01', freq='M'),
+            'DistrictHeating:Facility [J]': 7_200_000.0,
+        }
+    ])
+
+    sim.normalize_outputs(df_types=['parametric_hourly'])
+    assert 'DistrictHeating:Facility [kWh/m2]' in sim.outputs_param_simulation_hourly.columns
+    assert 'DistrictHeating:Facility [J]' in sim.outputs_param_simulation_monthly.columns
+    assert sim._is_df_type_normalized('parametric_hourly')
+    assert not sim._is_df_type_normalized('parametric_monthly')
+    assert sim.outputs_normalized is False
+
+    sim.normalize_outputs(df_types=['parametric_monthly'])
+    assert 'DistrictHeating:Facility [kWh/m2]' in sim.outputs_param_simulation_monthly.columns
+    assert sim._is_df_type_normalized('parametric_monthly')
+    assert sim.outputs_normalized is True
+
+
+def test_get_output_df_warns_for_unclassified_numeric_columns_defaulting_to_sum():
+    ts.print_section("TEST: warning de agregación por defecto en columnas no clasificadas")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    idf_0 = sim._get_idf_identifier(buildings[0], 0)
+    sim.outputs_param_simulation = pd.DataFrame([
+        {
+            'idf': idf_0,
+            'epw': ts.TEST_CATEGORIES['fast']['epws'][0],
+            'Custom KPI [arb]': [1.0, 2.0],
+        }
+    ])
+
+    with pytest.warns(UserWarning, match="unclassified numeric columns"):
+        daily_df = sim.get_output_df(frequency='daily', start_date='2024-01-01 01')
+
+    assert daily_df is not None and not daily_df.empty
+    assert daily_df['Custom KPI [arb]'].iloc[0] == pytest.approx(3.0)
 
 
 def test_output_scope_first_modifies_only_first_idf():

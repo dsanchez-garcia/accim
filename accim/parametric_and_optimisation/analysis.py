@@ -1544,11 +1544,63 @@ class AnalysisMixin:
         print(f"  [info] Floor area mapping coverage: {len(areas)}/{len(all_idf_names)} IDFs.")
         return self._set_and_return_building_floor_area(areas)
 
+    @staticmethod
+    def _normalizable_output_df_mapping() -> dict:
+        """Return the canonical mapping between df_type tokens and dataframe attributes."""
+        return {
+            'parametric': 'outputs_param_simulation',
+            'parametric_hourly': 'outputs_param_simulation_hourly',
+            'parametric_daily': 'outputs_param_simulation_daily',
+            'parametric_monthly': 'outputs_param_simulation_monthly',
+            'parametric_runperiod': 'outputs_param_simulation_runperiod',
+            'optimisation': 'outputs_optimisation',
+            'optimisation_hourly': 'outputs_optimisation_hourly',
+            'optimisation_daily': 'outputs_optimisation_daily',
+            'optimisation_monthly': 'outputs_optimisation_monthly',
+            'optimisation_runperiod': 'outputs_optimisation_runperiod',
+        }
+
+    def _get_normalized_output_df_types(self) -> set:
+        """Return/create the internal tracker of normalized dataframe types."""
+        normalized_df_types = getattr(self, '_normalized_output_df_types', None)
+        if not isinstance(normalized_df_types, set):
+            normalized_df_types = set()
+            self._normalized_output_df_types = normalized_df_types
+        return normalized_df_types
+
+    def _is_df_type_normalized(self, df_type: str) -> bool:
+        """Check whether a specific output dataframe type has already been normalized."""
+        return str(df_type) in self._get_normalized_output_df_types()
+
+    def _invalidate_normalized_df_types(self, df_types: Optional[list] = None) -> None:
+        """Invalidate normalization state for one or many dataframe types."""
+        normalized_df_types = self._get_normalized_output_df_types()
+        if df_types is None:
+            normalized_df_types.clear()
+        else:
+            for df_type in df_types:
+                normalized_df_types.discard(str(df_type))
+        self._refresh_outputs_normalized_flag()
+
+    def _refresh_outputs_normalized_flag(self) -> None:
+        """Refresh the legacy global flag based on per-dataframe normalization state."""
+        normalized_df_types = self._get_normalized_output_df_types()
+        df_mapping = self._normalizable_output_df_mapping()
+        loaded_df_types = []
+        for (df_key, df_attr) in df_mapping.items():
+            df = getattr(self, df_attr, None)
+            if isinstance(df, pd.DataFrame) and (not df.empty):
+                loaded_df_types.append(df_key)
+        self.outputs_normalized = len(loaded_df_types) > 0 and all(
+            (df_key in normalized_df_types) for df_key in loaded_df_types
+        )
+
     def normalize_outputs(self, df_types: list=None):
         """
         Normalizes energy-related columns in the specified dataframes by dividing them
-        by the building floor area (and converting from Joules to kWh). 
-        The results are saved in-place, and `self.outputs_normalized` is set to True.
+        by the building floor area (and converting from Joules to kWh).
+        The results are saved in-place, and the legacy `self.outputs_normalized`
+        flag is refreshed from per-dataframe normalization tracking.
         
         :param df_types: A list of strings specifying which dataframes to normalize.
             Options include: 'parametric', 'parametric_hourly', 'parametric_daily',
@@ -1572,34 +1624,23 @@ class AnalysisMixin:
         if not area_attr:
             raise ValueError('building_floor_area is not set. Please call set_building_floor_area() first.')
             
-        if getattr(self, 'outputs_normalized', False):
-            print('Outputs are already normalized. Skipping.')
-            return
+        df_mapping = self._normalizable_output_df_mapping()
+        normalized_df_types = self._get_normalized_output_df_types()
 
         if df_types is None:
-            df_types = [
-                'parametric', 'parametric_hourly', 'parametric_daily', 'parametric_monthly', 'parametric_runperiod',
-                'optimisation', 'optimisation_hourly', 'optimisation_daily', 'optimisation_monthly', 'optimisation_runperiod'
-            ]
-            
-        df_mapping = {
-            'parametric': 'outputs_param_simulation',
-            'parametric_hourly': 'outputs_param_simulation_hourly',
-            'parametric_daily': 'outputs_param_simulation_daily',
-            'parametric_monthly': 'outputs_param_simulation_monthly',
-            'parametric_runperiod': 'outputs_param_simulation_runperiod',
-            'optimisation': 'outputs_optimisation',
-            'optimisation_hourly': 'outputs_optimisation_hourly',
-            'optimisation_daily': 'outputs_optimisation_daily',
-            'optimisation_monthly': 'outputs_optimisation_monthly',
-            'optimisation_runperiod': 'outputs_optimisation_runperiod',
-        }
+            df_types = list(df_mapping.keys())
+        else:
+            df_types = [str(df_key) for df_key in df_types]
         
         energy_keywords = ['Heating', 'Cooling', 'Energy', 'Electricity', 'Gas', 'Facility']
         
         for df_key in df_types:
             df_attr = df_mapping.get(df_key)
             if not df_attr:
+                continue
+
+            if df_key in normalized_df_types:
+                print(f'  [info] {df_attr} is already normalized. Skipping.')
                 continue
                 
             df = getattr(self, df_attr, None)
@@ -1652,8 +1693,9 @@ class AnalysisMixin:
                 
             df.rename(columns=new_columns, inplace=True)
             print(f'  [info] Normalized {len(energy_cols)} energy columns in {df_attr}.')
+            normalized_df_types.add(df_key)
             
-        self.outputs_normalized = True
+        self._refresh_outputs_normalized_flag()
 
     def run_sensitivity_analysis(
             self,
