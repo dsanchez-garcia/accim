@@ -2869,7 +2869,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
     and IDF backup operations. Subclasses should override simulation-specific methods.
     
     .. versionadded:: 0.8.0
-        Split from OptimParamSimulation for better code organization and reduced cognitive load.
+        Introduced as the shared base class for dedicated parametric and
+        optimisation workflows.
     
     Usage
     -----
@@ -3822,7 +3823,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 unknown_idfs = sorted(set(prepared_df['idf'].dropna().astype(str)) - set(buildings_by_idf.keys()))
                 if unknown_idfs:
                     raise ValueError(
-                        f'The following IDFs in df are not part of this OptimParamSimulation instance: {unknown_idfs}'
+                        f'The following IDFs in df are not part of this {self.__class__.__name__} instance: {unknown_idfs}'
                     )
                 prepared_df['idf'] = prepared_df['idf'].astype(str)
             else:
@@ -11320,7 +11321,7 @@ class ParametricSimulation(SimulationBase):
     - load_outputs_parametric(): restore previous parametric results
     
     .. versionadded:: 0.8.0
-        Extracted from OptimParamSimulation for better separation of concerns.
+        Introduced as the dedicated class for parametric workflows.
     
     Usage
     -----
@@ -11468,7 +11469,7 @@ class OptimisationSimulation(SimulationBase):
     - get_monthly_df_optimisation(): retrieve monthly data from optimization
     
     .. versionadded:: 0.8.0
-        Extracted from OptimParamSimulation for better separation of concerns.
+        Introduced as the dedicated class for optimisation workflows.
     
     Usage
     -----
@@ -11738,11 +11739,6 @@ class OptimisationSimulation(SimulationBase):
             split_by=split_by,
             drop_all_empty_output_columns=drop_all_empty_output_columns,
         )
-
-
-# Backward compatibility alias
-# Using factory function allows auto-selection based on usage patterns in future versions
-OptimParamSimulation = ParametricSimulation
 
 
 class AccimPredefModelsParamSim(ParametricSimulation):

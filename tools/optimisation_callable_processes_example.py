@@ -16,7 +16,7 @@ from pathlib import Path
 import pandas as pd
 from besos import eppy_funcs as ef
 
-from accim.parametric_and_optimisation.main import OptimParamSimulation
+from accim.parametric_and_optimisation.main import OptimisationSimulation
 
 # Top-level importable callables (safe pattern for multiprocessing on Windows)
 from tools.custom_output_funcs import return_time_series, q95
@@ -38,7 +38,7 @@ print(f"RUN_FULL={RUN_FULL}")
 # %%
 building = ef.get_building(str(idf_path))
 
-optim = OptimParamSimulation(
+optim = OptimisationSimulation(
     building=building,
     parameters_type="accim custom model",
 )
