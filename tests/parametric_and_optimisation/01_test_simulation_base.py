@@ -66,7 +66,7 @@ def test_get_output_var_df():
         parameters_type='accim predefined model'
     )
 
-    df = sim.get_output_var_df_from_idf()
+    df = sim.get_output_variables_df_from_idf()
     ts.log_test("Get Output Var DF", "PASS" if len(df) > 0 else "FAIL",
              f"Variables: {len(df)}")
     assert len(df) > 0
@@ -82,7 +82,7 @@ def test_get_output_meter_df():
         parameters_type='accim predefined model'
     )
 
-    df = sim.get_output_meter_df_from_idf()
+    df = sim.get_output_meters_df_from_idf()
     ts.log_test("Get Output Meter DF", "PASS" if isinstance(df, pd.DataFrame) else "FAIL",
              f"Meters: {len(df)}")
 
@@ -99,14 +99,14 @@ def test_set_evaluator():
 
     # Configurar parámetros, outputs y problema antes de crear evaluador
     sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
-    df_var = sim.get_output_var_df_from_idf()
-    df_meter = sim.get_output_meter_df_from_idf()
-    # Renombrar columnas para que coincidan con lo esperado por set_outputs_for_simulation
+    df_var = sim.get_output_variables_df_from_idf()
+    df_meter = sim.get_output_meters_df_from_idf()
+    # Renombrar columnas para que coincidan con lo esperado por set_output_readers
     if not df_var.empty:
         df_var = df_var.rename(columns={'reporting_frequency': 'frequency'})
     if not df_meter.empty:
         df_meter = df_meter.rename(columns={'reporting_frequency': 'frequency'})
-    sim.set_outputs_for_simulation(df_output_meter=df_meter, df_output_variable=df_var)
+    sim.set_output_readers(df_output_meter=df_meter, df_output_variable=df_var)
     sim.set_problem()
 
     out_dir = './test_evaluator'

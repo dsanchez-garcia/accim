@@ -126,6 +126,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added focused tests in `tests/parametric_and_optimisation/test_sim_file_cleanup.py`.
 
 ### Changed
+- **Consolidated Output-Objects API (`parametric_and_optimisation`)**: reduced the Output:Variable/Output:Meter method surface to a canonical set (read: `get_output_variables_df_from_idf`/`get_output_meters_df_from_idf`/`scan_output_objects`; discover: `discover_available_outputs`; write: `set_output_variables_to_idf`/`set_output_meters_to_idf`; prune: `keep_only_outputs_in_idfs`/`clear_outputs`/`autocorrect_output_duplicates`; orchestrate: `select_outputs`/`apply_outputs_preflight`/`set_output_readers`).
+  - `set_output_variables_to_idf(...)` and `set_output_meters_to_idf(...)` now share the same argument order and defaults, including `validate=True` (behaviour change for variables, which previously defaulted to `False`); the deprecated `set_output_var_df_to_idf(...)` wrapper pins `validate=False` to preserve legacy behaviour.
+  - Both setters share unified semantics: rows with empty `frequency` are expanded using `self.output_freqs`; `mode='replace'` always removes existing objects of the type in every scoped IDF (with a warning when nothing remains to add); object access is case-tolerant.
+  - Both setters now return a report dict with per-IDF counts (`added`, `skipped_existing`, `removed_replace`, `missing`, `filtered_missing`) and aggregated totals.
+  - Meter validation no longer re-implements discovery inline: both setters delegate to a shared helper that reuses any cached discovery matching the validation scope (including `prefer='rdd_mdd'` caches) and otherwise runs `discover_available_outputs(prefer='testsimeplus')`. This also gives meter validation the VRF-autosizing `SizingPeriod:WeatherFileDays` safeguard, and makes the number of test simulations independent of call order.
+  - `clear_outputs(mode='meters_vars')` is now implemented on top of `keep_only_outputs_in_idfs(...)` so a single removal engine exists; unreachable dead code in the `'all'` filter was removed and invalid `mode` values now raise `ValueError`.
+  - `apply_outputs_preflight(...)` now reports the actually-applied counts from the setter reports (exposed under `setter_reports`), applies meters from the selection DataFrame (preserving per-row frequencies), and its verification step no longer flags auto-filtered outputs as missing.
+  - Tests and sample notebooks were migrated to the canonical API.
 - **Output Variable API Symmetry with Meters**:
   - `set_output_variables_to_idf(...)` now exposes validation controls aligned with `set_output_meters_to_idf(...)`: `validate`, `on_missing`, `auto_filter`, `reduce_sim_time`, `validation_idf_scope`, and `keep_available_outputs`.
   - Variable application can now pre-validate availability via `discover_available_outputs(...)`, with consistent missing-output handling (`warn`/`raise`/`ignore`) and optional auto-filtering.
@@ -179,7 +187,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Step 2 now avoids per-IDF instantiation loops and prepares IDFs once before creating the optimisation object.
   - Step 3 now plots from one combined optimisation object and forwards the selected MCDM segmentation flags.
 
+### Deprecated
+- **Output-Objects API legacy names (`parametric_and_optimisation`)**: the following methods now emit `DeprecationWarning` and delegate to their canonical replacements; they will be removed in a future version.
+  - `get_output_var_df_from_idf(...)` → `get_output_variables_df_from_idf(...)`
+  - `get_output_meter_df_from_idf(...)` → `get_output_meters_df_from_idf(...)`
+  - `get_outputs_df_from_testsim(...)` → `discover_available_outputs(...)` (the test-simulation implementation is now the internal helper `_get_outputs_df_from_testsim`)
+  - `set_outputs_for_simulation(...)` → `set_output_readers(...)` (renamed because it registers besos readers and does not modify the IDFs)
+  - `set_output_var_df_to_idf(...)` and `set_output_met_objects_to_idf(...)` remain deprecated wrappers of `set_output_variables_to_idf(...)` / `set_output_meters_to_idf(...)`.
+
 ### Fixed
+- **Output-Objects API fixes (`parametric_and_optimisation`)**:
+  - `select_outputs(match='exact')` now matches correctly for variables (the needle was previously compared against an upper-cased series, so mixed-case requests never matched); for meters, `'exact'` is now truly exact instead of behaving case-insensitively. `'contains'` no longer interprets the needle as a regex, and missing/suggestion reports preserve the original casing of requested and available names.
+  - `set_output_readers(...)` (formerly `set_outputs_for_simulation`) no longer mutates the caller's DataFrames when adding the internal `output_name` column.
+  - `discover_available_outputs(...)` now raises an early `ValueError` for invalid `prefer` values instead of failing later with `NameError`.
+  - Output setters now emit an explicit warning when validation is requested but discovery yields no available outputs, instead of silently adding everything.
+  - `SimulationBase.__init__` no longer shares the mutable default `output_freqs` list across instances.
 - **`set_parameters(...)` Robustness for Custom Models Without Parsed `CustAST` Args**:
   - Added a safe fallback path when `get_accim_args(...)` does not expose a `CustAST` dictionary, avoiding `KeyError: 'CustAST'` during custom-model parameter setup.
 - **Per-DataFrame Normalization State Tracking in Output Post-Processing**:

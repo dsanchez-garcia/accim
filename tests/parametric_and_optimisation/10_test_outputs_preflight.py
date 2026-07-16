@@ -286,7 +286,7 @@ def test_discover_available_outputs_default_prefer_still_uses_testsimeplus(monke
             'variables': pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
         }
 
-    monkeypatch.setattr(main_module.SimulationBase, 'get_outputs_df_from_testsim', fake_get_outputs_df_from_testsim)
+    monkeypatch.setattr(main_module.SimulationBase, '_get_outputs_df_from_testsim', fake_get_outputs_df_from_testsim)
 
     buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
     sim = ts.ParametricSimulation(
@@ -937,6 +937,112 @@ def test_get_output_df_warns_for_unclassified_numeric_columns_defaulting_to_sum(
 
     assert daily_df is not None and not daily_df.empty
     assert daily_df['Custom KPI [arb]'].iloc[0] == pytest.approx(3.0)
+
+
+def test_deprecated_output_api_wrappers_delegate_with_warning(monkeypatch):
+    ts.print_section("TEST: wrappers deprecados de outputs delegan con DeprecationWarning")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    with pytest.warns(DeprecationWarning, match='get_output_variables_df_from_idf'):
+        df_vars = sim.get_output_var_df_from_idf()
+    with pytest.warns(DeprecationWarning, match='get_output_meters_df_from_idf'):
+        df_meters = sim.get_output_meter_df_from_idf()
+    pd.testing.assert_frame_equal(df_vars, sim.get_output_variables_df_from_idf())
+    pd.testing.assert_frame_equal(df_meters, sim.get_output_meters_df_from_idf())
+
+    # get_outputs_df_from_testsim must warn and delegate to the internal helper
+    # (patched here so no EnergyPlus run happens).
+    def fake_internal_testsim(self, reduce_sim_time=True, idf_scope='all', keep_available_outputs=False):
+        return {
+            'meters': pd.DataFrame(columns=['key_name', 'frequency']),
+            'variables': pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
+        }
+
+    monkeypatch.setattr(main_module.SimulationBase, '_get_outputs_df_from_testsim', fake_internal_testsim)
+    with pytest.warns(DeprecationWarning, match='discover_available_outputs'):
+        testsim_outputs = sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+    assert set(testsim_outputs.keys()) == {'meters', 'variables'}
+
+    with pytest.warns(DeprecationWarning, match='set_output_readers'):
+        sim.set_outputs_for_simulation(
+            df_output_meter=pd.DataFrame([{'key_name': 'Heating:Electricity', 'frequency': 'hourly'}]),
+        )
+    assert len(sim.sim_outputs) == 1
+
+
+def test_set_output_readers_does_not_mutate_input_dataframes():
+    ts.print_section("TEST: set_output_readers no muta los DataFrames de entrada")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    df_meter = pd.DataFrame([{'key_name': 'Heating:Electricity', 'frequency': 'hourly'}])
+    df_var = pd.DataFrame([
+        {'key_value': '*', 'variable_name': 'Zone Mean Air Temperature', 'frequency': 'hourly'},
+    ])
+    sim.set_output_readers(df_output_meter=df_meter, df_output_variable=df_var)
+
+    assert 'output_name' not in df_meter.columns
+    assert 'output_name' not in df_var.columns
+    assert len(sim.sim_outputs) == 2
+
+
+def test_select_outputs_match_exact_respects_original_case(monkeypatch):
+    ts.print_section("TEST: select_outputs match='exact' respeta el caso original")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    def fake_discover(self, reduce_sim_time=True, prefer='testsimeplus', refresh=False, idf_scope='all', keep_available_outputs=False):
+        return {
+            'meters': pd.DataFrame([{'key_name': 'Heating:Electricity', 'frequency': 'Hourly'}]),
+            'variables': pd.DataFrame([
+                {'key_value': 'ZONE_1', 'variable_name': 'Zone Mean Air Temperature', 'frequency': 'Hourly'},
+            ]),
+            'meta': {'source': 'testsimeplus'},
+        }
+
+    monkeypatch.setattr(main_module.SimulationBase, 'discover_available_outputs', fake_discover)
+
+    selection = sim.select_outputs(
+        meters=['Heating:Electricity'],
+        variables=['Zone Mean Air Temperature'],
+        match='exact',
+        on_missing='raise',
+        suggest=False,
+    )
+    assert len(selection['meters']) == 1
+    assert len(selection['variables']) == 1
+
+    # 'exact' must now be truly exact: a different casing is a miss.
+    selection_wrong_case = sim.select_outputs(
+        meters=['HEATING:ELECTRICITY'],
+        match='exact',
+        on_missing='ignore',
+        suggest=False,
+    )
+    assert len(selection_wrong_case['meters']) == 0
+    assert selection_wrong_case['report']['missing']['meters'] == ['HEATING:ELECTRICITY']
 
 
 def test_output_scope_first_modifies_only_first_idf():

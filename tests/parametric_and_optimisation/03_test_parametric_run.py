@@ -144,13 +144,13 @@ def test_parametric_with_custom_outputs():
     )
 
     # Get test sim outputs first
-    outputs_from_testsim = sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+    outputs_from_testsim = sim.discover_available_outputs(reduce_sim_time=True)
     df_meters = outputs_from_testsim['meters']
     df_vars = outputs_from_testsim['variables']
 
     # Filter metros
     df_meters_filtered = df_meters[df_meters['key_name'].str.contains('Heating|Cooling', na=False)]
-    sim.set_outputs_for_simulation(df_output_meter=df_meters_filtered)
+    sim.set_output_readers(df_output_meter=df_meters_filtered)
 
     sim.set_parameters(accis_params_dict={'ComfStand': [0]})
     sim.set_problem()

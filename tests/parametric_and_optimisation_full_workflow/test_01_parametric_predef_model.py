@@ -3,9 +3,9 @@ Test 01 — ParametricSimulation: Accim Predefined Model (flujo completo)
 ========================================================================
 Clases: ParametricSimulation (parameters_type='accim predefined model')
 Métodos cubiertos:
-  SimulationBase.__init__, get_output_var_df_from_idf, get_output_meter_df_from_idf,
-  set_output_var_df_to_idf, set_output_met_objects_to_idf, get_outputs_df_from_testsim,
-  set_outputs_for_simulation, get_available_parameters, set_parameters,
+  SimulationBase.__init__, get_output_variables_df_from_idf, get_output_meters_df_from_idf,
+  set_output_variables_to_idf, set_output_meters_to_idf, discover_available_outputs,
+  set_output_readers, get_available_parameters, set_parameters,
   sampling_full_set, set_category_mapping, preview_category_mapping,
   set_building_floor_area (mode='all' y 'occupied'), run_parametric_simulation,
   normalize_outputs, get_hourly_df, get_monthly_df, get_hourly_df_columns,
@@ -70,11 +70,11 @@ parametric = ParametricSimulation(
 # 3. Inspeccionar outputs en el IDF
 # ---------------------------------------------------------------------------
 print("\n=== [3] Inspeccionar outputs del IDF ===")
-df_vars = parametric.get_output_var_df_from_idf()
+df_vars = parametric.get_output_variables_df_from_idf()
 print(f"  Output variables en IDF: {len(df_vars)} filas")
-assert not df_vars.empty, "get_output_var_df_from_idf devolvió DataFrame vacío"
+assert not df_vars.empty, "get_output_variables_df_from_idf devolvió DataFrame vacío"
 
-df_meters = parametric.get_output_meter_df_from_idf()
+df_meters = parametric.get_output_meters_df_from_idf()
 print(f"  Output meters en IDF: {len(df_meters)} filas")
 
 # Filtrar outputs a sólo los de temperatura operativa y setpoints
@@ -86,10 +86,10 @@ df_vars_filtered = df_vars[
 print(f"  Variables filtradas: {len(df_vars_filtered)}")
 
 # Aplicar el subset de variables al IDF
-parametric.set_output_var_df_to_idf(outputs_df=df_vars_filtered)
+parametric.set_output_variables_to_idf(df_output_variable=df_vars_filtered)
 
 # Añadir meters de energía
-parametric.set_output_met_objects_to_idf(
+parametric.set_output_meters_to_idf(
     output_meters=['Heating:Electricity', 'Cooling:Electricity']
 )
 
@@ -97,7 +97,7 @@ parametric.set_output_met_objects_to_idf(
 # 4. Test simulation → obtener outputs disponibles
 # ---------------------------------------------------------------------------
 print("\n=== [4] Test simulation ===")
-outputs_from_testsim = parametric.get_outputs_df_from_testsim(reduce_sim_time=True)
+outputs_from_testsim = parametric.discover_available_outputs(reduce_sim_time=True)
 df_meters_ts = outputs_from_testsim['meters']
 df_vars_ts = outputs_from_testsim['variables']
 print(f"  Meters disponibles: {len(df_meters_ts)}")
@@ -109,7 +109,7 @@ df_meters_problem = df_meters_ts[
 ].drop_duplicates(subset=['key_name']).head(2)
 print(f"  Meters seleccionados para el problema: {df_meters_problem['key_name'].tolist()}")
 
-parametric.set_outputs_for_simulation(df_output_meter=df_meters_problem)
+parametric.set_output_readers(df_output_meter=df_meters_problem)
 
 # ---------------------------------------------------------------------------
 # 5. Parámetros predefinidos — opciones (lista)

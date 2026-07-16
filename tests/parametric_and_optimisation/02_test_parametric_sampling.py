@@ -18,13 +18,13 @@ def test_sampling_full_set():
     )
 
     sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
-    df_var = sim.get_output_var_df_from_idf()
-    df_meter = sim.get_output_meter_df_from_idf()
+    df_var = sim.get_output_variables_df_from_idf()
+    df_meter = sim.get_output_meters_df_from_idf()
     if not df_var.empty:
         df_var = df_var.rename(columns={'reporting_frequency': 'frequency'})
     if not df_meter.empty:
         df_meter = df_meter.rename(columns={'reporting_frequency': 'frequency'})
-    sim.set_outputs_for_simulation(df_output_meter=df_meter, df_output_variable=df_var)
+    sim.set_output_readers(df_output_meter=df_meter, df_output_variable=df_var)
     sim.set_problem()
     sim.sampling_full_set()
 
@@ -44,13 +44,13 @@ def test_sampling_lhs():
     )
 
     sim.set_parameters(accis_params_dict={'CAT': [70, 90]})  # Rango
-    df_var = sim.get_output_var_df_from_idf()
-    df_meter = sim.get_output_meter_df_from_idf()
+    df_var = sim.get_output_variables_df_from_idf()
+    df_meter = sim.get_output_meters_df_from_idf()
     if not df_var.empty:
         df_var = df_var.rename(columns={'reporting_frequency': 'frequency'})
     if not df_meter.empty:
         df_meter = df_meter.rename(columns={'reporting_frequency': 'frequency'})
-    sim.set_outputs_for_simulation(df_output_meter=df_meter, df_output_variable=df_var)
+    sim.set_output_readers(df_output_meter=df_meter, df_output_variable=df_var)
     sim.set_problem()
     sim.sampling_lhs(num_samples=5)
 
@@ -70,13 +70,13 @@ def test_sampling_sobol():
     )
 
     sim.set_parameters(accis_params_dict={'CAT': [70, 90], 'ComfMod': [2, 4]})
-    df_var = sim.get_output_var_df_from_idf()
-    df_meter = sim.get_output_meter_df_from_idf()
+    df_var = sim.get_output_variables_df_from_idf()
+    df_meter = sim.get_output_meters_df_from_idf()
     if not df_var.empty:
         df_var = df_var.rename(columns={'reporting_frequency': 'frequency'})
     if not df_meter.empty:
         df_meter = df_meter.rename(columns={'reporting_frequency': 'frequency'})
-    sim.set_outputs_for_simulation(df_output_meter=df_meter, df_output_variable=df_var)
+    sim.set_output_readers(df_output_meter=df_meter, df_output_variable=df_var)
     sim.set_problem()
     sim.sampling_sobol(num_samples=64)
 
@@ -96,13 +96,13 @@ def test_sampling_morris():
     )
 
     sim.set_parameters(accis_params_dict={'CAT': [70, 90], 'ComfMod': [2, 4]})
-    df_var = sim.get_output_var_df_from_idf()
-    df_meter = sim.get_output_meter_df_from_idf()
+    df_var = sim.get_output_variables_df_from_idf()
+    df_meter = sim.get_output_meters_df_from_idf()
     if not df_var.empty:
         df_var = df_var.rename(columns={'reporting_frequency': 'frequency'})
     if not df_meter.empty:
         df_meter = df_meter.rename(columns={'reporting_frequency': 'frequency'})
-    sim.set_outputs_for_simulation(df_output_meter=df_meter, df_output_variable=df_var)
+    sim.set_output_readers(df_output_meter=df_meter, df_output_variable=df_var)
     sim.set_problem()
     sim.sampling_morris(num_samples=2, num_levels=4)  # Pequeño para testing rápido
 
@@ -122,13 +122,13 @@ def test_sampling_full_factorial():
     )
 
     sim.set_parameters(accis_params_dict={'ComfStand': [0, 1], 'HVACmode': [0, 2]})
-    df_var = sim.get_output_var_df_from_idf()
-    df_meter = sim.get_output_meter_df_from_idf()
+    df_var = sim.get_output_variables_df_from_idf()
+    df_meter = sim.get_output_meters_df_from_idf()
     if not df_var.empty:
         df_var = df_var.rename(columns={'reporting_frequency': 'frequency'})
     if not df_meter.empty:
         df_meter = df_meter.rename(columns={'reporting_frequency': 'frequency'})
-    sim.set_outputs_for_simulation(df_output_meter=df_meter, df_output_variable=df_var)
+    sim.set_output_readers(df_output_meter=df_meter, df_output_variable=df_var)
     sim.set_problem()
     sim.sampling_full_factorial(level=2)
 

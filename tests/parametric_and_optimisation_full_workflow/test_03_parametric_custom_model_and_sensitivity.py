@@ -53,13 +53,13 @@ def build_custom_sim(out_freqs=None):
         ScriptType='vrf_mm',
         verbosemode=False,
     )
-    sim.set_output_met_objects_to_idf(['Heating:Electricity', 'Cooling:Electricity'])
-    outputs_from_testsim = sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+    sim.set_output_meters_to_idf(output_meters=['Heating:Electricity', 'Cooling:Electricity'])
+    outputs_from_testsim = sim.discover_available_outputs(reduce_sim_time=True)
     df_meters_ts = outputs_from_testsim['meters']
     df_meters_problem = df_meters_ts[
         df_meters_ts['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])
     ].drop_duplicates(subset=['key_name'])
-    sim.set_outputs_for_simulation(df_output_meter=df_meters_problem)
+    sim.set_output_readers(df_output_meter=df_meters_problem)
     sim.set_category_mapping(
         epw_mapping_rules={
             'city': {'seville': ['seville'], 'madrid': ['madrid']},

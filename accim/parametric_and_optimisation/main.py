@@ -2949,7 +2949,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.building = buildings[0] if isinstance(buildings, list) and len(buildings) > 0 else buildings
         self.buildings = buildings if isinstance(buildings, list) else ([buildings] if buildings is not None else [])
         self.epws = epws if isinstance(epws, list) else ([epws] if epws is not None else [])
-        self.output_freqs = output_freqs
+        # Copy to avoid sharing (and mutating) the default list across instances.
+        self.output_freqs = list(output_freqs) if isinstance(output_freqs, (list, tuple)) else output_freqs
         self.parameters_type = parameters_type
         self.remove_output_tables = remove_output_tables
         self.outputs_inventory_initial_ = self.scan_output_objects(idf_scope='all') if len(self.buildings) > 0 else {}
@@ -3300,22 +3301,22 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.idf_backup_path = self.idf_backup_path[0]
         return self.idf_backup_path
 
-    def get_output_var_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
+    def get_output_variables_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
         """Gets a pandas DataFrame which contains the Output:Variable objects from the idf.
         Therefore, it may contain wildcards such as '*', which means the variable is requested
         for all zones.
-        
+
         :param idf_scope: which IDFs to read. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to read fewer IDFs.
         :return: a pandas DataFrame which contains the Output:Variable objects from the idf
-        
+
         Usage
         -----
-        Use `SimulationBase.get_output_var_df_from_idf` within ACCIM parametric and optimisation workflows.
-        
+        Use `SimulationBase.get_output_variables_df_from_idf` within ACCIM parametric and optimisation workflows.
+
         Examples
         --------
-        result = self.get_output_var_df_from_idf(idf_scope=...)
+        result = self.get_output_variables_df_from_idf(idf_scope=...)
         """
         scoped_buildings = self._resolve_idf_scope(idf_scope)
         output_dfs = []
@@ -3626,8 +3627,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self.scan_output_objects(idf_scope=...)
         """
-        df_vars = self.get_output_var_df_from_idf(idf_scope=idf_scope)
-        df_meters = self.get_output_meter_df_from_idf(idf_scope=idf_scope)
+        df_vars = self.get_output_variables_df_from_idf(idf_scope=idf_scope)
+        df_meters = self.get_output_meters_df_from_idf(idf_scope=idf_scope)
 
         vars_work = df_vars.copy()
         meters_work = df_meters.copy()
@@ -3913,20 +3914,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         return grouped
 
-    def get_output_meter_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
+    def get_output_meters_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
         """Gets a pandas DataFrame which contains the Output:Meter objects from the idf.
-        
+
         :param idf_scope: which IDFs to read. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to read fewer IDFs.
         :return: a pandas DataFrame which contains the Output:Meter objects from the idf
-        
+
         Usage
         -----
-        Use `SimulationBase.get_output_meter_df_from_idf` within ACCIM parametric and optimisation workflows.
-        
+        Use `SimulationBase.get_output_meters_df_from_idf` within ACCIM parametric and optimisation workflows.
+
         Examples
         --------
-        result = self.get_output_meter_df_from_idf(idf_scope=...)
+        result = self.get_output_meters_df_from_idf(idf_scope=...)
         """
         scoped_buildings = self._resolve_idf_scope(idf_scope)
         output_dfs = []
@@ -3946,41 +3947,91 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             return pd.concat(output_dfs, ignore_index=True)
         return pd.DataFrame(columns=['key_name', 'frequency'])
 
-    def get_output_variables_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
-        """Alias consistente de get_output_var_df_from_idf.
-        
+    def get_output_var_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
+        """Deprecated alias. Use get_output_variables_df_from_idf instead.
+
         Parameters
         ----------
         idf_scope : Any
-            Argument used by `SimulationBase.get_output_variables_df_from_idf`.
-        
+            Argument forwarded to `SimulationBase.get_output_variables_df_from_idf`.
+
         Usage
         -----
         Use `SimulationBase.get_output_variables_df_from_idf` within ACCIM parametric and optimisation workflows.
-        
+
         Examples
         --------
         result = self.get_output_variables_df_from_idf(idf_scope=...)
         """
-        return self.get_output_var_df_from_idf(idf_scope=idf_scope)
+        warnings.warn(
+            "get_output_var_df_from_idf is deprecated and will be removed in a future version. "
+            "Use get_output_variables_df_from_idf instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_output_variables_df_from_idf(idf_scope=idf_scope)
 
-    def get_output_meters_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
-        """Alias consistente de get_output_meter_df_from_idf.
-        
+    def get_output_meter_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
+        """Deprecated alias. Use get_output_meters_df_from_idf instead.
+
         Parameters
         ----------
         idf_scope : Any
-            Argument used by `SimulationBase.get_output_meters_df_from_idf`.
-        
+            Argument forwarded to `SimulationBase.get_output_meters_df_from_idf`.
+
         Usage
         -----
         Use `SimulationBase.get_output_meters_df_from_idf` within ACCIM parametric and optimisation workflows.
-        
+
         Examples
         --------
         result = self.get_output_meters_df_from_idf(idf_scope=...)
         """
-        return self.get_output_meter_df_from_idf(idf_scope=idf_scope)
+        warnings.warn(
+            "get_output_meter_df_from_idf is deprecated and will be removed in a future version. "
+            "Use get_output_meters_df_from_idf instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_output_meters_df_from_idf(idf_scope=idf_scope)
+
+    def _get_available_outputs_for_validation(
+        self,
+        validation_scope: Any,
+        reduce_sim_time: bool = True,
+        keep_available_outputs: bool = False,
+    ) -> dict:
+        """Return available outputs for setter validation, reusing cached discovery.
+
+        Unlike ``discover_available_outputs`` (which re-runs when the requested
+        ``prefer`` differs from the cached one), validation only needs availability
+        lists, so any cached discovery matching the IDF scope is accepted
+        (e.g. a previous ``prefer='rdd_mdd'`` run).
+
+        Usage
+        -----
+        Internal helper used by set_output_variables_to_idf / set_output_meters_to_idf.
+
+        Examples
+        --------
+        discovered = self._get_available_outputs_for_validation(validation_scope)
+        """
+        cached = getattr(self, 'available_outputs_', None)
+        if isinstance(cached, dict) and 'df_meters' in cached and 'df_vars' in cached and 'meta' in cached:
+            cached_meta = dict(cached.get('meta', {}))
+            if cached_meta.get('idf_scope') == self._idf_scope_label(validation_scope):
+                return {
+                    'meters': cached['df_meters'].copy(),
+                    'variables': cached['df_vars'].copy(),
+                    'meta': cached_meta,
+                }
+        return self.discover_available_outputs(
+            reduce_sim_time=reduce_sim_time,
+            prefer='testsimeplus',
+            refresh=False,
+            idf_scope=validation_scope,
+            keep_available_outputs=keep_available_outputs,
+        )
 
     def set_output_variables_to_idf(
             self,
@@ -3988,27 +4039,31 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             output_variables: Optional[list[Union[str, tuple, dict]]] = None,
             idf_scope: Any = 'all',
             mode: Literal['append', 'replace'] = 'append',
-            validate: bool = False,
+            validate: bool = True,
             on_missing: Literal['warn', 'raise', 'ignore'] = 'warn',
             auto_filter: bool = True,
             reduce_sim_time: bool = True,
             validation_idf_scope: Any = None,
             keep_available_outputs: bool = False,
-    ):
+    ) -> dict:
         """Adds Output:Variable objects from DataFrame and/or list.
-        
+
         - ``mode='append'`` (default): keep existing objects and add only missing ones.
-        - ``mode='replace'``: remove all existing Output:Variable objects first, then add rows.
-        
-        :param df_output_variable: DataFrame de variables con columnas key_value,
-            variable_name, frequency y opcionalmente schedule_name.
-        :param output_variables: lista alternativa para definir variables. Soporta:
-            - str: variable_name (con key_value='*' y frecuencias self.output_freqs)
-            - tuple/list de 2 elementos: (key_value, variable_name)
-            - dict: variable_name (+ opcionales key_value, frequency, schedule_name)
-        :param validate: when True, validates requested variables against discovered outputs
-            from a lightweight test simulation before modifying the IDFs.
-            Defaults to False for backward compatibility.
+        - ``mode='replace'``: remove all existing Output:Variable objects in every scoped
+          IDF first, then add the requested rows. The removal happens even when the
+          requested selection ends up empty after validation (a warning is emitted).
+
+        Rows with an empty ``frequency`` are expanded using ``self.output_freqs``.
+
+        :param df_output_variable: DataFrame with columns key_value, variable_name,
+            frequency and optionally schedule_name.
+        :param output_variables: alternative list to define variables. Supports:
+            - str: variable_name (with key_value='*' and frequencies from self.output_freqs)
+            - tuple/list of 2 elements: (key_value, variable_name)
+            - dict: variable_name (+ optional key_value, frequency, schedule_name)
+        :param validate: when True (default), validates requested variables against
+            discovered outputs from a lightweight test simulation (cached in
+            ``self.available_outputs_``) before modifying the IDFs.
         :param on_missing: behaviour when some requested variables are not available.
         :param auto_filter: when True and validate=True, skip missing variables instead
             of adding them to the IDF.
@@ -4020,12 +4075,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param keep_available_outputs: when validating, keep the temporary
             ``available_outputs`` folder if True.
         :param mode: 'append' or 'replace'.
-        :return:
-        
+        :return: report dict with per-IDF counts (`added`, `skipped_existing`,
+            `removed_replace`, `missing`, `filtered_missing`) and aggregated totals.
+
         Usage
         -----
         Use `SimulationBase.set_output_variables_to_idf` within ACCIM parametric and optimisation workflows.
-        
+
         Examples
         --------
         result = self.set_output_variables_to_idf(df_output_variable=..., output_variables=..., idf_scope=..., ...)
@@ -4034,6 +4090,18 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             raise ValueError("mode must be 'append' or 'replace'.")
         if on_missing not in {'warn', 'raise', 'ignore'}:
             raise ValueError("on_missing must be 'warn', 'raise', or 'ignore'.")
+
+        report: dict = {
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'mode': mode,
+            'validated': False,
+            'added': 0,
+            'skipped_existing': 0,
+            'removed_replace': 0,
+            'missing': [],
+            'filtered_missing': [],
+            'buildings': {},
+        }
 
         outputs_df = pd.DataFrame(columns=['key_value', 'variable_name', 'frequency', 'schedule_name'])
         if df_output_variable is not None and len(df_output_variable) > 0:
@@ -4074,12 +4142,29 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 outputs_df = pd.concat([outputs_df, pd.DataFrame(variable_rows)], ignore_index=True)
 
         if len(outputs_df) == 0:
-            return
+            return report
 
         required_cols = {'key_value', 'variable_name', 'frequency'}
         missing_cols = [col for col in required_cols if col not in outputs_df.columns]
         if missing_cols:
             raise ValueError(f"outputs_df must contain columns: {sorted(required_cols)}. Missing: {missing_cols}")
+
+        # Normalize once and expand empty frequencies using self.output_freqs
+        # (same rule applied by set_output_meters_to_idf).
+        if 'schedule_name' not in outputs_df.columns:
+            outputs_df['schedule_name'] = ''
+        outputs_df = outputs_df.fillna('')
+        expanded_rows = []
+        for _, row in outputs_df.iterrows():
+            freq_value = str(row.get('frequency', '')).strip()
+            row_freqs = [freq_value] if freq_value != '' else [str(f) for f in self.output_freqs]
+            for row_freq in row_freqs:
+                expanded_row = row.copy()
+                expanded_row['frequency'] = row_freq
+                expanded_rows.append(expanded_row)
+        if len(expanded_rows) == 0:
+            return report
+        outputs_df = pd.DataFrame(expanded_rows).reset_index(drop=True)
 
         available_pairs_by_idx: dict[int, set[tuple[str, str]]] = {}
         available_names_by_idx: dict[int, set[str]] = {}
@@ -4088,11 +4173,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         validation_scope = idf_scope if validation_idf_scope is None else validation_idf_scope
         if validate:
-            discovered = self.discover_available_outputs(
+            discovered = self._get_available_outputs_for_validation(
+                validation_scope,
                 reduce_sim_time=reduce_sim_time,
-                prefer='testsimeplus',
-                refresh=False,
-                idf_scope=validation_scope,
                 keep_available_outputs=keep_available_outputs,
             )
             validation_buildings = self._resolve_idf_scope(validation_scope)
@@ -4135,6 +4218,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 fallback_available_pairs = set.intersection(*available_pairs_by_idx.values())
                 fallback_available_names = set.intersection(*available_names_by_idx.values())
 
+            if len(available_pairs_by_idx) == 0:
+                warnings.warn(
+                    'Output validation was requested but no available Output:Variable outputs '
+                    'could be discovered; requested variables will be added without validation.'
+                )
+
+        report['validated'] = validate and len(available_pairs_by_idx) > 0
+
         def _is_available_variable(row: pd.Series, available_pairs: set[tuple[str, str]], available_names: set[str]) -> bool:
             variable_name = self._norm_output_token(row.get('variable_name', ''))
             if variable_name == '':
@@ -4142,22 +4233,27 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             key_value = self._norm_output_token(row.get('key_value', ''))
             if key_value in {'', '*'}:
                 return variable_name in available_names
-            return (key_value, variable_name) in available_pairs
+            # RDD/MDD-based discovery reports pairs with '*' as key_value, so a
+            # wildcard availability entry also validates specific-key requests.
+            return (key_value, variable_name) in available_pairs or ('*', variable_name) in available_pairs
 
         scoped_buildings = self._resolve_idf_scope(idf_scope)
         for idx, b in scoped_buildings:
+            idf_id = self._get_idf_identifier(b, idx)
+            building_report = {
+                'added': 0,
+                'skipped_existing': 0,
+                'removed_replace': 0,
+                'missing': [],
+                'filtered_missing': [],
+            }
+            report['buildings'][idf_id] = building_report
+
             outputs_for_building = outputs_df
             if 'idf' in outputs_df.columns:
-                idf_id = self._get_idf_identifier(b, idx)
                 outputs_for_building = outputs_df[outputs_df['idf'].astype(str) == idf_id].drop(columns=['idf'])
-            if len(outputs_for_building) == 0:
-                continue
 
             outputs_for_building = outputs_for_building.copy()
-            if 'schedule_name' not in outputs_for_building.columns:
-                outputs_for_building['schedule_name'] = ''
-
-            outputs_for_building = outputs_for_building.fillna('')
             outputs_for_building['frequency'] = outputs_for_building['frequency'].astype(str)
             outputs_for_building = outputs_for_building.drop_duplicates(
                 subset=['key_value', 'variable_name', 'frequency', 'schedule_name'],
@@ -4168,18 +4264,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             available_names = available_names_by_idx.get(idx, fallback_available_names)
             has_validation_result = validate and len(available_pairs_by_idx) > 0
 
-            if has_validation_result:
+            if has_validation_result and len(outputs_for_building) > 0:
                 availability_mask = outputs_for_building.apply(
                     lambda row: _is_available_variable(row, available_pairs, available_names),
                     axis=1,
                 )
                 missing_rows = outputs_for_building.loc[~availability_mask, ['key_value', 'variable_name']].drop_duplicates()
                 if len(missing_rows) > 0:
-                    idf_id = self._get_idf_identifier(b, idx)
                     missing_specs = [
                         (str(r['key_value']), str(r['variable_name']))
                         for (_, r) in missing_rows.iterrows()
                     ]
+                    building_report['missing'] = missing_specs
+                    if auto_filter:
+                        building_report['filtered_missing'] = missing_specs
                     msg = (
                         "Some requested Output:Variable (key_value, variable_name) values are not available in this model "
                         f"for IDF '{idf_id}' (and will be ignored={auto_filter}): {missing_specs}"
@@ -4191,13 +4289,20 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
                 if auto_filter:
                     outputs_for_building = outputs_for_building.loc[availability_mask]
-                    if len(outputs_for_building) == 0:
-                        continue
 
             if mode == 'replace':
-                alloutputs = [output for output in b.idfobjects['Output:Variable']]
-                for existing in alloutputs:
+                existing_variables = list(self._idfobjects_get_case(b, 'Output:Variable'))
+                for existing in existing_variables:
                     b.removeidfobject(existing)
+                building_report['removed_replace'] = len(existing_variables)
+                if len(outputs_for_building) == 0:
+                    warnings.warn(
+                        f"mode='replace' removed all existing Output:Variable objects in IDF '{idf_id}' "
+                        'but no requested variables remained to be added.'
+                    )
+
+            if len(outputs_for_building) == 0:
+                continue
 
             existing_keys = {
                 self._variable_key_from_obj(existing)
@@ -4211,6 +4316,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     self._norm_output_token(row.get('schedule_name', '')),
                 )
                 if key in existing_keys:
+                    building_report['skipped_existing'] += 1
                     continue
                 b.newidfobject(
                     'Output:Variable',
@@ -4220,6 +4326,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     Schedule_Name=row.get('schedule_name', ''),
                 )
                 existing_keys.add(key)
+                building_report['added'] += 1
+
+        report['added'] = sum(br['added'] for br in report['buildings'].values())
+        report['skipped_existing'] = sum(br['skipped_existing'] for br in report['buildings'].values())
+        report['removed_replace'] = sum(br['removed_replace'] for br in report['buildings'].values())
+        for aggregate_key in ('missing', 'filtered_missing'):
+            aggregated_specs = []
+            for br in report['buildings'].values():
+                for spec in br[aggregate_key]:
+                    if spec not in aggregated_specs:
+                        aggregated_specs.append(spec)
+            report[aggregate_key] = aggregated_specs
+        return report
 
     def set_output_var_df_to_idf(
             self,
@@ -4252,11 +4371,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             DeprecationWarning,
             stacklevel=2,
         )
+        # Legacy behaviour: this wrapper never validated against a test simulation.
         return self.set_output_variables_to_idf(
             df_output_variable=outputs_df,
             output_variables=None,
             idf_scope=idf_scope,
             mode=mode,
+            validate=False,
         )
 
     def keep_only_outputs_in_idfs(
@@ -4454,51 +4575,71 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self,
             df_output_meter: Optional[pd.DataFrame] = None,
             output_meters: Optional[list[Union[str, dict]]] = None,
+            idf_scope: Any = 'all',
+            mode: Literal['append', 'replace'] = 'append',
             validate: bool = True,
             on_missing: Literal['warn', 'raise', 'ignore'] = 'warn',
             auto_filter: bool = True,
             reduce_sim_time: bool = True,
-            idf_scope: Any = 'all',
             validation_idf_scope: Any = None,
             keep_available_outputs: bool = False,
-            mode: Literal['append', 'replace'] = 'append',
-    ):
+    ) -> dict:
         """Adds Output:Meter objects from DataFrame and/or list.
 
         - ``mode='append'`` (default): keep existing objects and add only missing ones.
-        - ``mode='replace'``: remove all existing Output:Meter objects first, then add rows.
-        
-        :param df_output_meter: DataFrame opcional con columnas key_name y opcionalmente
-            frequency. Si frequency no está, se usan las frecuencias de self.output_freqs.
-        :param output_meters: lista opcional de medidores. Cada item puede ser:
-            - str: key_name (frecuencias desde self.output_freqs)
-            - dict: key_name (+ opcional frequency o Reporting_Frequency)
-        :param validate: when True, runs a lightweight test simulation to detect which meters
-            are actually available in the model, preventing silent typos/invalid meters.
+        - ``mode='replace'``: remove all existing Output:Meter objects in every scoped
+          IDF first, then add the requested rows. The removal happens even when the
+          requested selection ends up empty after validation (a warning is emitted).
+
+        Rows with an empty ``frequency`` are expanded using ``self.output_freqs``.
+
+        :param df_output_meter: optional DataFrame with a key_name column and optionally
+            frequency. When frequency is missing/empty, self.output_freqs is used.
+        :param output_meters: optional meter list. Each item can be:
+            - str: key_name (frequencies from self.output_freqs)
+            - dict: key_name (+ optional frequency or Reporting_Frequency)
+        :param validate: when True (default), validates requested meters against
+            discovered outputs from a lightweight test simulation (cached in
+            ``self.available_outputs_``) before modifying the IDFs.
         :param on_missing: behaviour when some requested meters are not available.
         :param auto_filter: when True and validate=True, skip missing meters instead of adding
             them to the IDF (avoids EnergyPlus warnings like "invalid Key Name - not found").
         :param reduce_sim_time: when validate=True, reduce runtime for the availability test.
         :param idf_scope: IDFs to modify. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to modify fewer IDFs.
-        :param validation_idf_scope: IDFs to use for the validation test simulation. Defaults
+        :param validation_idf_scope: IDFs to use for discovery/validation. Defaults
             to idf_scope. Use 'first' to validate once while applying to all IDFs.
+        :param keep_available_outputs: when validating, keep the temporary
+            ``available_outputs`` folder if True.
         :param mode: 'append' or 'replace'.
-        :return:
-        
-        Parameters
-        ----------
-        keep_available_outputs : Any
-            Boolean or mode flag controlling behaviour.
-        
+        :return: report dict with per-IDF counts (`added`, `skipped_existing`,
+            `removed_replace`, `missing`, `filtered_missing`) and aggregated totals.
+
         Usage
         -----
         Use `SimulationBase.set_output_meters_to_idf` within ACCIM parametric and optimisation workflows.
-        
+
         Examples
         --------
-        result = self.set_output_meters_to_idf(df_output_meter=..., output_meters=..., validate=..., ...)
+        result = self.set_output_meters_to_idf(df_output_meter=..., output_meters=..., idf_scope=..., ...)
         """
+        if mode not in {'append', 'replace'}:
+            raise ValueError("mode must be 'append' or 'replace'.")
+        if on_missing not in {'warn', 'raise', 'ignore'}:
+            raise ValueError("on_missing must be 'warn', 'raise', or 'ignore'.")
+
+        report: dict = {
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'mode': mode,
+            'validated': False,
+            'added': 0,
+            'skipped_existing': 0,
+            'removed_replace': 0,
+            'missing': [],
+            'filtered_missing': [],
+            'buildings': {},
+        }
+
         meter_input_df = pd.DataFrame(columns=['key_name', 'frequency'])
         if df_output_meter is not None and len(df_output_meter) > 0:
             meter_input_df = pd.concat([meter_input_df, df_output_meter.copy()], ignore_index=True)
@@ -4525,16 +4666,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 meter_input_df = pd.concat([meter_input_df, pd.DataFrame(meter_rows)], ignore_index=True)
 
         if len(meter_input_df) == 0:
-            return
-
-        if mode not in {'append', 'replace'}:
-            raise ValueError("mode must be 'append' or 'replace'.")
+            return report
 
         if 'key_name' not in meter_input_df.columns:
             raise ValueError("df_output_meter must contain a 'key_name' column.")
-
-        def _norm_meter(value: Any) -> str:
-            return ('' if value is None else str(value)).strip().upper()
 
         def _norm_freq(value: Any) -> str:
             return '' if value is None else str(value).strip()
@@ -4542,12 +4677,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         meter_input_df = meter_input_df.copy().fillna('')
         if 'frequency' not in meter_input_df.columns:
             meter_input_df['frequency'] = ''
-        meter_input_df['key_name'] = meter_input_df['key_name'].map(_norm_meter)
+        meter_input_df['key_name'] = meter_input_df['key_name'].map(self._norm_output_token)
         meter_input_df['frequency'] = meter_input_df['frequency'].map(_norm_freq)
         meter_input_df = meter_input_df[meter_input_df['key_name'] != '']
         meter_input_df = meter_input_df.drop_duplicates(subset=['key_name', 'frequency'], keep='first').reset_index(drop=True)
         if len(meter_input_df) == 0:
-            return
+            return report
 
         scoped_buildings = self._resolve_idf_scope(idf_scope)
         validation_scope = idf_scope if validation_idf_scope is None else validation_idf_scope
@@ -4557,71 +4692,40 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         available_by_idx: dict[int, set[str]] = {}
         if validate and len(requested_set) > 0:
-            cached = getattr(self, 'available_outputs_', None)
-            validation_scope_label = self._idf_scope_label(validation_scope)
-            if isinstance(cached, dict) and 'df_meters' in cached and 'meta' in cached:
-                cached_meta = dict(cached.get('meta', {}))
-                if cached_meta.get('idf_scope') == validation_scope_label:
-                    cached_meters = cached.get('df_meters', pd.DataFrame())
-                    if isinstance(cached_meters, pd.DataFrame) and 'key_name' in cached_meters.columns:
-                        if 'idf' in cached_meters.columns:
-                            idx_by_idf = {
-                                self._get_idf_identifier(b, i): i
-                                for (i, b) in validation_buildings
-                            }
-                            for idf_id, subset in cached_meters.groupby('idf', sort=False):
-                                idx = idx_by_idf.get(str(idf_id))
-                                if idx is not None:
-                                    available_by_idx[idx] = {
-                                        _norm_meter(k)
-                                        for k in subset['key_name'].tolist()
-                                        if _norm_meter(k)
-                                    }
-                        else:
-                            cached_set = {
-                                _norm_meter(k)
-                                for k in cached_meters['key_name'].tolist()
-                                if _norm_meter(k)
-                            }
-                            for val_idx, _ in validation_buildings:
-                                available_by_idx[val_idx] = set(cached_set)
+            discovered = self._get_available_outputs_for_validation(
+                validation_scope,
+                reduce_sim_time=reduce_sim_time,
+                keep_available_outputs=keep_available_outputs,
+            )
+            df_meters_available = discovered.get('meters', pd.DataFrame())
 
-        if validate and len(requested_set) > 0:
-            for val_idx, val_building in validation_buildings:
-                if val_idx in available_by_idx:
-                    continue
-                building_for_testsim = val_building
-                temp_path = None
-                try:
-                    if reduce_sim_time:
-                        from besos.eppy_funcs import get_building
-                        idf_id = self._get_idf_identifier(val_building, val_idx)
-                        safe_idf_id = re.sub(r'[^A-Za-z0-9_.-]+', '_', idf_id)
-                        temp_path = f'temp_reduced_runtime_meters_{val_idx}_{safe_idf_id}.idf'
-                        val_building.savecopy(temp_path)
-                        building_for_testsim = get_building(temp_path)
-                        reduce_runtime(
-                            idf_object=building_for_testsim,
-                            maximum_figures_in_shadow_overlap_calculations=200,
-                            timesteps=2,
-                        )
-                    available_outputs = print_available_outputs_mod(
-                        building_for_testsim,
-                        out_dir='available_outputs',
-                        keep_out_dir=keep_available_outputs,
-                    )
-                    available_by_idx[val_idx] = {
-                        _norm_meter(k)
-                        for (k, _freq) in available_outputs.meterreaderlist
-                        if _norm_meter(k)
+            if isinstance(df_meters_available, pd.DataFrame) and 'key_name' in df_meters_available.columns:
+                available_work = df_meters_available.copy().fillna('')
+                available_work['key_name'] = available_work['key_name'].map(self._norm_output_token)
+                available_work = available_work[available_work['key_name'] != '']
+
+                if 'idf' in available_work.columns:
+                    idx_by_idf = {
+                        self._get_idf_identifier(building, idx): idx
+                        for (idx, building) in validation_buildings
                     }
-                finally:
-                    if temp_path is not None:
-                        try:
-                            from os import remove
-                            remove(temp_path)
-                        except Exception:
-                            pass
+                    for idf_id, subset in available_work.groupby('idf', sort=False):
+                        idx = idx_by_idf.get(str(idf_id))
+                        if idx is None:
+                            continue
+                        available_by_idx[idx] = set(subset['key_name'].tolist())
+                else:
+                    meter_set = set(available_work['key_name'].tolist())
+                    for val_idx, _ in validation_buildings:
+                        available_by_idx[val_idx] = set(meter_set)
+
+            if len(available_by_idx) == 0:
+                warnings.warn(
+                    'Output validation was requested but no available Output:Meter outputs '
+                    'could be discovered; requested meters will be added without validation.'
+                )
+
+        report['validated'] = validate and len(available_by_idx) > 0
 
         fallback_available_set: set[str] = set()
         if len(available_by_idx) == 1:
@@ -4630,12 +4734,24 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             fallback_available_set = set.intersection(*available_by_idx.values())
 
         for idx, b in scoped_buildings:
+            idf_id = self._get_idf_identifier(b, idx)
+            building_report = {
+                'added': 0,
+                'skipped_existing': 0,
+                'removed_replace': 0,
+                'missing': [],
+                'filtered_missing': [],
+            }
+            report['buildings'][idf_id] = building_report
+
             available_set = available_by_idx.get(idx, fallback_available_set)
             has_validation_result = validate and len(requested_set) > 0 and len(available_by_idx) > 0
             if has_validation_result:
                 missing = sorted(requested_set - available_set)
                 if missing:
-                    idf_id = self._get_idf_identifier(b, idx)
+                    building_report['missing'] = missing
+                    if auto_filter:
+                        building_report['filtered_missing'] = missing
                     msg = (
                         "Some requested Output:Meter Key_Name values are not available in this model "
                         f"for IDF '{idf_id}' (and will be ignored={auto_filter}): {missing}"
@@ -4659,9 +4775,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 return [str(v) for v in self.output_freqs]
 
             if mode == 'replace':
-                allmeters = [meter for meter in b.idfobjects['Output:Meter']]
-                for existing in allmeters:
+                existing_meters = list(self._idfobjects_get_case(b, 'Output:Meter'))
+                for existing in existing_meters:
                     b.removeidfobject(existing)
+                building_report['removed_replace'] = len(existing_meters)
+                if len(meters_to_add) == 0:
+                    warnings.warn(
+                        f"mode='replace' removed all existing Output:Meter objects in IDF '{idf_id}' "
+                        'but no requested meters remained to be added.'
+                    )
 
             existing_meter_keys = {
                 self._meter_key_from_obj(existing)
@@ -4674,9 +4796,23 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         self._norm_output_token(freq),
                     )
                     if key in existing_meter_keys:
+                        building_report['skipped_existing'] += 1
                         continue
                     b.newidfobject(key='OUTPUT:METER', Key_Name=meter, Reporting_Frequency=freq)
                     existing_meter_keys.add(key)
+                    building_report['added'] += 1
+
+        report['added'] = sum(br['added'] for br in report['buildings'].values())
+        report['skipped_existing'] = sum(br['skipped_existing'] for br in report['buildings'].values())
+        report['removed_replace'] = sum(br['removed_replace'] for br in report['buildings'].values())
+        for aggregate_key in ('missing', 'filtered_missing'):
+            aggregated_specs = []
+            for br in report['buildings'].values():
+                for spec in br[aggregate_key]:
+                    if spec not in aggregated_specs:
+                        aggregated_specs.append(spec)
+            report[aggregate_key] = aggregated_specs
+        return report
 
     def set_output_met_objects_to_idf(
             self,
@@ -4831,34 +4967,71 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         idf_scope: Any = 'all',
         keep_available_outputs: bool = False,
     ) -> dict[str, pd.DataFrame]:
+        """Deprecated. Use discover_available_outputs instead.
+
+        Parameters
+        ----------
+        reduce_sim_time : bool
+            Forwarded to the internal test-simulation discovery helper.
+        idf_scope : Any
+            Forwarded to the internal test-simulation discovery helper.
+        keep_available_outputs : bool
+            Forwarded to the internal test-simulation discovery helper.
+
+        Usage
+        -----
+        Use `SimulationBase.discover_available_outputs` within ACCIM parametric and optimisation workflows.
+
+        Examples
+        --------
+        result = self.discover_available_outputs(reduce_sim_time=..., idf_scope=...)
+        """
+        warnings.warn(
+            "get_outputs_df_from_testsim is deprecated and will be removed in a future version. "
+            "Use discover_available_outputs(prefer='testsimeplus', ...) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._get_outputs_df_from_testsim(
+            reduce_sim_time=reduce_sim_time,
+            idf_scope=idf_scope,
+            keep_available_outputs=keep_available_outputs,
+        )
+
+    def _get_outputs_df_from_testsim(
+        self,
+        reduce_sim_time: bool = True,
+        idf_scope: Any = 'all',
+        keep_available_outputs: bool = False,
+    ) -> dict[str, pd.DataFrame]:
         """Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.
         Therefore, it won't contain wildcards such as '*'.
-        
+
         :param reduce_sim_time: True to reduce the simulation runtime
         :param idf_scope: IDFs to test. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to run fewer test simulations.
-        
+
         :return: dictionary with ``meters`` and ``variables`` DataFrames.
-        
+
         Parameters
         ----------
         keep_available_outputs : Any
             Boolean or mode flag controlling behaviour.
-        
+
         Usage
         -----
-        Use `SimulationBase.get_outputs_df_from_testsim` within ACCIM parametric and optimisation workflows.
-        
+        Internal discovery helper used by `discover_available_outputs`.
+
         Examples
         --------
-        result = self.get_outputs_df_from_testsim(reduce_sim_time=..., idf_scope=..., keep_available_outputs=...)
+        result = self._get_outputs_df_from_testsim(reduce_sim_time=..., idf_scope=..., keep_available_outputs=...)
         """
         scoped_buildings = self._resolve_idf_scope(idf_scope)
         if len(scoped_buildings) > 1:
             meter_dfs = []
             variable_dfs = []
             for idx, building in scoped_buildings:
-                scoped_outputs = self.get_outputs_df_from_testsim(
+                scoped_outputs = self._get_outputs_df_from_testsim(
                     reduce_sim_time=reduce_sim_time,
                     idf_scope=idx,
                     keep_available_outputs=keep_available_outputs,
@@ -5070,7 +5243,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         
         :param reduce_sim_time: when using EnergyPlus test-sim discovery, reduce runtime.
         :param prefer: 'testsimeplus' (default) uses a lightweight EnergyPlus run via
-            ``get_outputs_df_from_testsim``; 'rdd_mdd' reads `available_outputs/eplusout.rdd`
+            a lightweight EnergyPlus test simulation; 'rdd_mdd' reads `available_outputs/eplusout.rdd`
             and `available_outputs/eplusout.mdd` when available, otherwise generates
             them with a reduced test simulation and parses them directly.
         :param refresh: when False, reuse cached results in ``self.available_outputs_``.
@@ -5088,6 +5261,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self.discover_available_outputs(reduce_sim_time=..., prefer=..., refresh=..., ...)
         """
+        if prefer not in {'testsimeplus', 'rdd_mdd'}:
+            raise ValueError(
+                f"Invalid prefer value: {prefer!r}. Allowed values are: 'testsimeplus', 'rdd_mdd'."
+            )
         requested_prefer = prefer
         scope_label = self._idf_scope_label(idf_scope)
         if not refresh and hasattr(self, 'available_outputs_') and isinstance(getattr(self, 'available_outputs_'), dict):
@@ -5204,7 +5381,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             ].copy()
 
         if prefer == 'testsimeplus':
-            outputs_from_testsim = self.get_outputs_df_from_testsim(
+            outputs_from_testsim = self._get_outputs_df_from_testsim(
                 reduce_sim_time=reduce_sim_time,
                 idf_scope=idf_scope,
                 keep_available_outputs=keep_available_outputs,
@@ -5243,12 +5420,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         keep_available_outputs: bool = False,
     ) -> dict[str, Any]:
         """Validates and builds output selection DataFrames from a simple wishlist and/or DataFrames.
-        
+
         This method requires that available outputs are known. If not cached, it will
         run discovery (EnergyPlus test-sim by default).
-        
-        Returns DataFrames compatible with ``set_output_var_df_to_idf`` and
-        ``set_output_met_objects_to_idf``.
+
+        Returns DataFrames compatible with ``set_output_variables_to_idf`` and
+        ``set_output_meters_to_idf`` (or ``apply_outputs_preflight``).
         
         :param idf_scope: IDFs used for discovery/validation. Defaults to 'all'. Use
             'first' when you know all IDFs expose the same outputs.
@@ -5312,19 +5489,21 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             return _norm(s).upper()
 
         def _match_series(needle: str, series: pd.Series) -> pd.Series:
+            # Receives the original-case series; each mode handles its own casing.
             n = _norm(needle)
+            s = series.astype(str)
             if match == 'exact':
-                return series.astype(str) == n
+                return s == n
             if match == 'case_insensitive':
-                return series.astype(str).str.upper() == _norm_ci(n)
+                return s.str.upper() == _norm_ci(n)
             if match == 'contains':
-                return series.astype(str).str.upper().str.contains(_norm_ci(n), na=False)
+                return s.str.upper().str.contains(_norm_ci(n), regex=False, na=False)
             if match == 'regex':
                 try:
-                    return series.astype(str).str.contains(n, regex=True, na=False)
+                    return s.str.contains(n, regex=True, na=False)
                 except re.error:
                     # Treat invalid regex as no match.
-                    return series.astype(str).isin([])
+                    return s.isin([])
             raise ValueError(f"Unknown match mode: {match}")
 
         # ---------------------------
@@ -5337,24 +5516,30 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 raise ValueError("from_df_meters must contain a 'key_name' column.")
             meters_requested += [_norm(v) for v in from_df_meters['key_name'].tolist() if _norm(v)]
 
-        meters_requested_ci = [_norm_ci(m) for m in meters_requested if _norm_ci(m)]
-        meters_requested_ci = list(dict.fromkeys(meters_requested_ci))  # dedupe, preserve order
+        # Dedupe case-insensitively while preserving the original casing of each request.
+        seen_meter_requests: set[str] = set()
+        meters_requested_unique: list[str] = []
+        for requested_meter in meters_requested:
+            requested_meter_ci = _norm_ci(requested_meter)
+            if requested_meter_ci and requested_meter_ci not in seen_meter_requests:
+                seen_meter_requests.add(requested_meter_ci)
+                meters_requested_unique.append(requested_meter)
 
         df_meters_sel = pd.DataFrame(columns=['key_name', 'frequency'])
-        if len(meters_requested_ci) > 0 and not df_meters_av.empty:
+        if len(meters_requested_unique) > 0 and not df_meters_av.empty:
             av_key = df_meters_av['key_name'].astype(str)
-            av_key_ci = av_key.str.upper()
             selected_rows = []
             missing_m = []
-            for req_ci in meters_requested_ci:
-                mask = _match_series(req_ci, av_key_ci if match != 'regex' else av_key)
+            for req in meters_requested_unique:
+                mask = _match_series(req, av_key)
                 if mask.any():
                     selected_rows.append(df_meters_av.loc[mask].copy())
                 else:
-                    missing_m.append(req_ci)
+                    missing_m.append(req)
                     if suggest:
-                        choices = sorted(set(av_key.tolist()))
-                        report['suggestions']['meters'][req_ci] = difflib.get_close_matches(req_ci, [c.upper() for c in choices], n=5, cutoff=0.6)
+                        choices_by_upper = {c.upper(): c for c in sorted(set(av_key.tolist()))}
+                        close_upper = difflib.get_close_matches(_norm_ci(req), list(choices_by_upper.keys()), n=5, cutoff=0.6)
+                        report['suggestions']['meters'][req] = [choices_by_upper[c] for c in close_upper]
 
             if selected_rows:
                 df_meters_sel = pd.concat(selected_rows, ignore_index=True)
@@ -5403,37 +5588,38 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             selected_rows_v = []
             missing_v = []
 
+            vn_choices_by_upper = {v.upper(): v for v in sorted(set(av_vn.tolist()))}
+
+            def _suggest_variable_names(vn_req: str) -> list[str]:
+                close_upper = difflib.get_close_matches(
+                    _norm_ci(vn_req),
+                    list(vn_choices_by_upper.keys()),
+                    n=5,
+                    cutoff=0.6,
+                )
+                return [vn_choices_by_upper[v] for v in close_upper]
+
             # Pair selection
             for (kv_req, vn_req) in vars_requested_pairs:
-                kv_mask = _match_series(kv_req, av_kv.str.upper() if match != 'regex' else av_kv)
-                vn_mask = _match_series(vn_req, av_vn.str.upper() if match != 'regex' else av_vn)
+                kv_mask = _match_series(kv_req, av_kv)
+                vn_mask = _match_series(vn_req, av_vn)
                 mask = kv_mask & vn_mask
                 if mask.any():
                     selected_rows_v.append(df_vars_av.loc[mask].copy())
                 else:
                     missing_v.append((kv_req, vn_req))
                     if suggest:
-                        report['suggestions']['variables'][f'{kv_req}|{vn_req}'] = difflib.get_close_matches(
-                            _norm_ci(vn_req),
-                            sorted(set(av_vn.str.upper().tolist())),
-                            n=5,
-                            cutoff=0.6,
-                        )
+                        report['suggestions']['variables'][f'{kv_req}|{vn_req}'] = _suggest_variable_names(vn_req)
 
             # Name-only selection (match variable_name)
             for vn_req in vars_requested_names:
-                mask = _match_series(vn_req, av_vn.str.upper() if match != 'regex' else av_vn)
+                mask = _match_series(vn_req, av_vn)
                 if mask.any():
                     selected_rows_v.append(df_vars_av.loc[mask].copy())
                 else:
                     missing_v.append(('ANY', vn_req))
                     if suggest:
-                        report['suggestions']['variables'][f'ANY|{vn_req}'] = difflib.get_close_matches(
-                            _norm_ci(vn_req),
-                            sorted(set(av_vn.str.upper().tolist())),
-                            n=5,
-                            cutoff=0.6,
-                        )
+                        report['suggestions']['variables'][f'ANY|{vn_req}'] = _suggest_variable_names(vn_req)
 
             if selected_rows_v:
                 df_vars_sel = pd.concat(selected_rows_v, ignore_index=True)
@@ -5447,7 +5633,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 if on_missing == 'warn':
                     warnings.warn(msg)
 
-        # Ensure compatibility with set_output_var_df_to_idf (non-ACCIM expects schedule_name)
+        # Ensure compatibility with set_output_variables_to_idf (non-ACCIM expects schedule_name)
         if 'schedule_name' not in df_vars_sel.columns:
             df_vars_sel['schedule_name'] = ''
         else:
@@ -5484,22 +5670,38 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self.clear_outputs(mode=..., dry_run=..., idf_scope=...)
         """
+        if mode not in {'meters_vars', 'all'}:
+            raise ValueError("mode must be 'meters_vars' or 'all'.")
+
         report: dict = {'mode': mode, 'dry_run': dry_run, 'idf_scope': self._idf_scope_label(idf_scope), 'buildings': {}}
+
+        if mode == 'meters_vars':
+            # Single removal engine: an empty selection in keep_only_outputs_in_idfs
+            # removes every Output:Variable and Output:Meter object.
+            keep_report = self.keep_only_outputs_in_idfs(
+                output_variables=[],
+                output_meters=[],
+                idf_scope=idf_scope,
+                dry_run=dry_run,
+            )
+            for idf_id, building_report in keep_report['buildings'].items():
+                removed_counts = {
+                    'Output:Variable': building_report.get('variables', {}).get('removed', 0),
+                    'Output:Meter': building_report.get('meters', {}).get('removed', 0),
+                }
+                report['buildings'][idf_id] = {
+                    'removed': removed_counts,
+                    'keys': [k for (k, count) in removed_counts.items() if count > 0],
+                }
+            return report
 
         def _should_remove(obj_key: str) -> bool:
             k = str(obj_key).strip().upper()
             # OUTPUTCONTROL:FILES must never be removed (user requirement).
             if k == 'OUTPUTCONTROL:FILES':
                 return False
-            if mode == 'meters_vars':
-                return k in {'OUTPUT:VARIABLE', 'OUTPUT:METER'}
             # mode == 'all'
-            if k.startswith('OUTPUT:') or k.startswith('OUTPUTCONTROL:'):
-                return True
-            # Some output-adjacent keys are not prefixed consistently across versions
-            if k in {'OUTPUTCONTROL:REPORTINGTOLERANCES'}:
-                return True
-            return False
+            return k.startswith('OUTPUT:') or k.startswith('OUTPUTCONTROL:')
 
         for (idx, b) in self._resolve_idf_scope(idf_scope):
             idf_id = self._get_idf_identifier(b, idx)
@@ -5598,6 +5800,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 idf_scope=idf_scope,
             )
 
+        report['setter_reports'] = {'variables': None, 'meters': None}
+
         # Apply variables
         if df_vars_sel is not None:
             df_vars_apply = df_vars_sel.copy()
@@ -5606,7 +5810,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 df_vars_apply['frequency'] = df_vars_apply['frequency'].astype(str)
             if 'schedule_name' not in df_vars_apply.columns:
                 df_vars_apply['schedule_name'] = ''
-            self.set_output_variables_to_idf(
+            vars_setter_report = self.set_output_variables_to_idf(
                 df_output_variable=df_vars_apply,
                 validate=validate_before_apply,
                 on_missing=on_missing,
@@ -5615,15 +5819,18 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 idf_scope=idf_scope,
                 validation_idf_scope=validation_scope,
             )
-            report['applied']['variables'] = len(df_vars_apply)
+            report['setter_reports']['variables'] = vars_setter_report
+            # Rows effectively present in the IDF: newly added plus already existing.
+            report['applied']['variables'] = (
+                vars_setter_report.get('added', 0) + vars_setter_report.get('skipped_existing', 0)
+            )
 
-        # Apply meters
+        # Apply meters (the selection DataFrame keeps its own frequencies)
         if df_meters_sel is not None:
             if 'key_name' not in df_meters_sel.columns:
                 raise ValueError("df_meters_sel must contain a 'key_name' column.")
-            meters_list = [str(v) for v in df_meters_sel['key_name'].dropna().tolist()]
-            self.set_output_meters_to_idf(
-                output_meters=meters_list,
+            meters_setter_report = self.set_output_meters_to_idf(
+                df_output_meter=df_meters_sel,
                 validate=validate_before_apply,
                 on_missing=on_missing,
                 auto_filter=True,
@@ -5631,12 +5838,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 idf_scope=idf_scope,
                 validation_idf_scope=validation_scope,
             )
-            report['applied']['meters'] = len(meters_list)
+            report['setter_reports']['meters'] = meters_setter_report
+            report['applied']['meters'] = (
+                meters_setter_report.get('added', 0) + meters_setter_report.get('skipped_existing', 0)
+            )
 
         if validate_after_apply:
             # Verify meters & variables present in IDF match selection (best-effort).
-            df_vars_idf = self.get_output_var_df_from_idf(idf_scope=idf_scope)
-            df_meters_idf = self.get_output_meter_df_from_idf(idf_scope=idf_scope)
+            df_vars_idf = self.get_output_variables_df_from_idf(idf_scope=idf_scope)
+            df_meters_idf = self.get_output_meters_df_from_idf(idf_scope=idf_scope)
 
             def _keyify_vars(df: pd.DataFrame) -> set[tuple[str, str, str]]:
                 cols = df.columns
@@ -5661,6 +5871,28 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
             vars_expected = _keyify_vars(df_vars_sel) if df_vars_sel is not None else set()
             meters_expected = _keyify_meters(df_meters_sel) if df_meters_sel is not None else set()
+
+            # Items intentionally filtered out by auto_filter must not be reported
+            # as missing during verification.
+            vars_setter_report = report['setter_reports'].get('variables')
+            if isinstance(vars_setter_report, dict):
+                vars_filtered = {
+                    (str(kv).strip().upper(), str(vn).strip().upper())
+                    for (kv, vn) in vars_setter_report.get('filtered_missing', [])
+                }
+                if vars_filtered:
+                    vars_expected = {
+                        key for key in vars_expected if (key[0], key[1]) not in vars_filtered
+                    }
+            meters_setter_report = report['setter_reports'].get('meters')
+            if isinstance(meters_setter_report, dict):
+                meters_filtered = {
+                    str(m).strip().upper()
+                    for m in meters_setter_report.get('filtered_missing', [])
+                }
+                if meters_filtered:
+                    meters_expected = {key for key in meters_expected if key[0] not in meters_filtered}
+
             vars_actual = _keyify_vars(df_vars_idf)
             meters_actual = _keyify_meters(df_meters_idf)
 
@@ -5696,28 +5928,36 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         return report
 
-    def set_outputs_for_simulation(self, df_output_variable: pd.DataFrame=None, df_output_meter: pd.DataFrame=None):
-        """Sets the outputs for the parametric analysis or optimisation based on the input pandas DataFrames
-        for Output:Variable and/or Output:Meter objects. These DataFrames can include columns for the output name
+    def set_output_readers(self, df_output_variable: pd.DataFrame=None, df_output_meter: pd.DataFrame=None):
+        """Registers the besos output readers (VariableReader/MeterReader) used to collect
+        results during parametric or optimisation runs. This method does NOT modify the
+        IDFs; use ``set_output_variables_to_idf``/``set_output_meters_to_idf`` for that.
+
+        The input DataFrames can include columns for the output name
         and the aggregation function (see the 'func' argument of MeterReader and VariableReader classes in besos),
         respectively named 'name' and 'func'. If no 'name' and/or 'func' columns are provided,
         the names will be the variable and meter names, and the hourly values will be summed.
         The 'func' value can be either a callable or an import path string with format
         'module.submodule:callable_name'.
-        
+
         :param df_output_variable: a pandas DataFrame containing the Output:Variable objects, similar to that one
-            returned in key ``variables`` from method get_outputs_df_from_testsim()
+            returned in key ``variables`` from method discover_available_outputs()
         :param df_output_meter: a pandas DataFrame containing the Output:Meter objects, similar to that one
-            returned in key ``meters`` from method get_outputs_df_from_testsim()
-        
+            returned in key ``meters`` from method discover_available_outputs()
+
         Usage
         -----
-        Use `SimulationBase.set_outputs_for_simulation` within ACCIM parametric and optimisation workflows.
-        
+        Use `SimulationBase.set_output_readers` within ACCIM parametric and optimisation workflows.
+
         Examples
         --------
-        result = self.set_outputs_for_simulation(df_output_variable=..., df_output_meter=...)
+        result = self.set_output_readers(df_output_variable=..., df_output_meter=...)
         """
+        # Work on copies so the caller's DataFrames are never mutated.
+        if df_output_variable is not None:
+            df_output_variable = df_output_variable.copy()
+        if df_output_meter is not None:
+            df_output_meter = df_output_meter.copy()
         if df_output_variable is not None:
             df_output_variable['output_name'] = 'temp'
             if 'name' in df_output_variable.columns:
@@ -5751,6 +5991,35 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 else:
                     objs_variables.append(VariableReader(key_value=df_output_variable.loc[i, 'key_value'], variable_name=df_output_variable.loc[i, 'variable_name'], frequency=df_output_variable.loc[i, 'frequency'], name=df_output_variable.loc[i, 'output_name']))
         self.sim_outputs = objs_meters + objs_variables
+
+    def set_outputs_for_simulation(self, df_output_variable: pd.DataFrame=None, df_output_meter: pd.DataFrame=None):
+        """Deprecated alias. Use set_output_readers instead.
+
+        Parameters
+        ----------
+        df_output_variable : Any
+            Forwarded to `SimulationBase.set_output_readers`.
+        df_output_meter : Any
+            Forwarded to `SimulationBase.set_output_readers`.
+
+        Usage
+        -----
+        Use `SimulationBase.set_output_readers` within ACCIM parametric and optimisation workflows.
+
+        Examples
+        --------
+        result = self.set_output_readers(df_output_variable=..., df_output_meter=...)
+        """
+        warnings.warn(
+            "set_outputs_for_simulation is deprecated and will be removed in a future version. "
+            "Use set_output_readers instead (same arguments).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.set_output_readers(
+            df_output_variable=df_output_variable,
+            df_output_meter=df_output_meter,
+        )
 
     def get_available_parameters(self) -> list:
         """Returns a list containing the available parameters depending on the parameters_type argument previously input.
@@ -5998,7 +6267,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             converters: dict = None,
     ):
         """Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters
-        method, and for outputs, those set using the set_outputs_for_simulation method.
+        method, and for outputs, those set using the set_output_readers method.
         
         :param minimize_outputs: only used in optimisation; a list containing booleans to specify if the outputs must
             be minimized (True), maximized (False), or just show the output (None).

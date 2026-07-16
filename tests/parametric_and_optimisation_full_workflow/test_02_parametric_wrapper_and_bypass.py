@@ -74,13 +74,13 @@ wrapper_sim = AccimPredefModelsParamSim(
 )
 
 # Meters disponibles desde el IDF (el wrapper ya aplicó addAccis)
-wrapper_sim.set_output_met_objects_to_idf(['Heating:Electricity', 'Cooling:Electricity'])
-outputs_from_testsim = wrapper_sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+wrapper_sim.set_output_meters_to_idf(output_meters=['Heating:Electricity', 'Cooling:Electricity'])
+outputs_from_testsim = wrapper_sim.discover_available_outputs(reduce_sim_time=True)
 df_meters_ts = outputs_from_testsim['meters']
 df_meters_problem = df_meters_ts[
     df_meters_ts['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])
 ].drop_duplicates(subset=['key_name'])
-wrapper_sim.set_outputs_for_simulation(df_output_meter=df_meters_problem)
+wrapper_sim.set_output_readers(df_output_meter=df_meters_problem)
 
 # Parámetros
 wrapper_sim.set_parameters(accis_params_dict={'ComfStand': [0, 2]})   # CTE + ASHRAE55
@@ -167,13 +167,13 @@ bypass_sim = ParametricSimulation(
     bypass_addAccis=True,   # <-- NO re-aplica addAccis
 )
 
-bypass_sim.set_output_met_objects_to_idf(['Heating:Electricity', 'Cooling:Electricity'])
-outputs_from_testsim = bypass_sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+bypass_sim.set_output_meters_to_idf(output_meters=['Heating:Electricity', 'Cooling:Electricity'])
+outputs_from_testsim = bypass_sim.discover_available_outputs(reduce_sim_time=True)
 df_meters_bp = outputs_from_testsim['meters']
 df_meters_bp = df_meters_bp[
     df_meters_bp['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])
 ].drop_duplicates(subset=['key_name'])
-bypass_sim.set_outputs_for_simulation(df_output_meter=df_meters_bp)
+bypass_sim.set_output_readers(df_output_meter=df_meters_bp)
 
 bypass_sim.set_parameters(accis_params_dict={'ComfStand': [0, 1]})
 bypass_sim.sampling_full_set()
@@ -237,13 +237,13 @@ none_sim = ParametricSimulation(
 )
 
 # Añadir meters estándar directamente
-none_sim.set_output_met_objects_to_idf(['Heating:Electricity', 'Cooling:Electricity'])
-outputs_from_testsim = none_sim.get_outputs_df_from_testsim(reduce_sim_time=True)
+none_sim.set_output_meters_to_idf(output_meters=['Heating:Electricity', 'Cooling:Electricity'])
+outputs_from_testsim = none_sim.discover_available_outputs(reduce_sim_time=True)
 df_meters_none = outputs_from_testsim['meters']
 df_meters_none = df_meters_none[
     df_meters_none['key_name'].isin(['Heating:Electricity', 'Cooling:Electricity'])
 ].drop_duplicates(subset=['key_name'])
-none_sim.set_outputs_for_simulation(df_output_meter=df_meters_none)
+none_sim.set_output_readers(df_output_meter=df_meters_none)
 
 # Sin parámetros accim → set_parameters vacío
 none_sim.set_parameters()
