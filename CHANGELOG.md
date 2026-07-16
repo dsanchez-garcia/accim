@@ -126,6 +126,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added focused tests in `tests/parametric_and_optimisation/test_sim_file_cleanup.py`.
 
 ### Changed
+- **Custom-Model CustAST Defaulting Symmetry and Visibility**:
+  - `set_parameters(...)` for `parameters_type='accim custom model'` now applies a symmetric default-resolution flow for `ASTaul` and `ASTall` (both initialized to `0` and then resolved through `dflt_values` when omitted).
+  - Default values remain `ASTaul=33.5` and `ASTall=10` when those parameters are not explicitly provided.
+  - When defaults are applied, the user now receives a yellow console warning summarizing `parameter=value` pairs (for example `ASTaul=33.5, ASTall=10`).
 - **Output Retrieval API Explicitness and Constructor Defaults**:
   - `ParametricSimulation` wrappers (`get_hourly_df`, `get_output_df`, `get_monthly_df`, `get_daily_df`, `get_runperiod_df`) now expose advanced extraction arguments explicitly (for example `epw_filter`, `simulation_indices`, `output_columns`, `file_source`, `skip_confirmation`) without `**kwargs`, improving IDE discoverability.
   - Constructor default `output_keep_existing` is now aligned to `True` across `SimulationBase`, `ParametricSimulation`, `OptimisationSimulation`, and `AccimPredefModelsParamSim`.
@@ -163,6 +167,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Step 3 now plots from one combined optimisation object and forwards the selected MCDM segmentation flags.
 
 ### Fixed
+- **`set_parameters(...)` Robustness for Custom Models Without Parsed `CustAST` Args**:
+  - Added a safe fallback path when `get_accim_args(...)` does not expose a `CustAST` dictionary, avoiding `KeyError: 'CustAST'` during custom-model parameter setup.
 - **Per-DataFrame Normalization State Tracking in Output Post-Processing**:
   - Replaced fragile global-only normalization gating with per-dataset tracking (`parametric_hourly`, `parametric_monthly`, `optimisation_daily`, etc.) to avoid false skips or side effects when normalizing selected outputs.
   - Hourly/aggregated output builders now invalidate normalization state only for the datasets they overwrite, preventing stale normalization markers.

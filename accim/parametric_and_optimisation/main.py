@@ -5535,7 +5535,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 not_allowed_parameters.append(p)
         if len(not_allowed_parameters) > 0 and self.parameters_type is not None:
             raise ValueError(f'The following parameters are not allowed in parameters_type {self.parameters_type}: {not_allowed_parameters}')
-        if self.is_accim_custom_model and len(accis_params_dict) > 0:
+        if self.is_accim_custom_model:
             bf_accim.modify_ComfStand(self.building, 99)
             bf_accim.modify_ComfMod(self.building, 3)
             bf_accim.modify_CAT(self.building, 80)
@@ -5545,7 +5545,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             bf_accim.modify_CustAST_ASTaul(self.building, 0)
             bf_accim.modify_CustAST_ASTall(self.building, 0)
             args = accim.utils.get_accim_args(self.building)
-            parameters_to_check = [k for (k, v) in args['CustAST'].items() if 'CustAST_' + k not in parameters and v == 0]
+            custast_args = args.get('CustAST') if isinstance(args, dict) else None
+            if not isinstance(custast_args, dict):
+                custast_args = {
+                    'm': 0,
+                    'n': 0,
+                    'ACSToffset': 0,
+                    'AHSToffset': 0,
+                    'ACSTaul': 0,
+                    'AHSTaul': 0,
+                    'ACSTall': 0,
+                    'AHSTall': 0,
+                }
+            parameters_to_check = [k for (k, v) in custast_args.items() if 'CustAST_' + k not in parameters and v == 0]
             if 'CustAST_ASToffset' in parameters:
                 try:
                     parameters_to_check.remove('AHSToffset')
@@ -5566,15 +5578,33 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     pass
             parameters_to_be_defined = []
             for p in parameters_to_check:
-                if args['CustAST'][p] == 0:
+                if custast_args[p] == 0:
                     parameters_to_be_defined.append(p)
             if len(parameters_to_be_defined) > 0:
                 print(f'The following parameters are not included in the parameters to be set, and have not been defined yet (i.e. the value is 0): {parameters_to_be_defined}')
                 dflt_values = {'m': 0.31, 'n': 17.8, 'ACSToffset': 3.5, 'AHSToffset': -3.5, 'ACSTaul': 33.5, 'ACSTall': 10, 'AHSTaul': 33.5, 'AHSTall': 10}
+
+                def _emit_defaults_applied_warning(selected_params):
+                    if len(selected_params) == 0:
+                        return
+                    selected_set = set(selected_params)
+                    shown = set()
+                    formatted_items = []
+                    # Show compact aliases when both cooling/heating sides share the same default.
+                    if 'ACSTaul' in selected_set and 'AHSTaul' in selected_set and dflt_values['ACSTaul'] == dflt_values['AHSTaul']:
+                        formatted_items.append(f"ASTaul={dflt_values['ACSTaul']}")
+                        shown.update({'ACSTaul', 'AHSTaul'})
+                    if 'ACSTall' in selected_set and 'AHSTall' in selected_set and dflt_values['ACSTall'] == dflt_values['AHSTall']:
+                        formatted_items.append(f"ASTall={dflt_values['ACSTall']}")
+                        shown.update({'ACSTall', 'AHSTall'})
+                    for p in selected_params:
+                        if p in shown:
+                            continue
+                        formatted_items.append(f"{p}={dflt_values[p]}")
+                    warning_text = ', '.join(formatted_items)
+                    print(f"\033[93mWARNING: Default values applied -> {warning_text}\033[0m")
+
                 if use_dflt_values:
-                    print('Default values will be set for these parameters. The default values are:')
-                    for p in parameters_to_be_defined:
-                        print(f'{p}: {dflt_values[p]}')
                     if 'm' in parameters_to_be_defined:
                         bf_accim.modify_CustAST_m(self.building, dflt_values['m'])
                     if 'n' in parameters_to_be_defined:
@@ -5591,6 +5621,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         bf_accim.modify_CustAST_AHSTaul(self.building, dflt_values['AHSTaul'])
                     if 'AHSTall' in parameters_to_be_defined:
                         bf_accim.modify_CustAST_AHSTall(self.building, dflt_values['AHSTall'])
+                    _emit_defaults_applied_warning(parameters_to_be_defined)
                 else:
                     print('If you want, default values can be set for these parameters. The default values are:')
                     for p in parameters_to_be_defined:
@@ -5613,6 +5644,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             bf_accim.modify_CustAST_AHSTaul(self.building, dflt_values['AHSTaul'])
                         if 'AHSTall' in parameters_to_be_defined:
                             bf_accim.modify_CustAST_AHSTall(self.building, dflt_values['AHSTall'])
+                        _emit_defaults_applied_warning(parameters_to_be_defined)
                     else:
                         user_values = {}
                         for p in parameters_to_be_defined:
