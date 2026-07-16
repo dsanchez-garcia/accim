@@ -8,9 +8,11 @@ Tests del flujo de outputs preflight:
 """
 
 import inspect
+import os
 
 import pytest
 import pandas as pd
+from accim.parametric_and_optimisation import main as main_module
 from .. import test_setup as ts
 
 
@@ -28,6 +30,20 @@ def _idfobjects_get_case(building, key):
 def _remove_idfobjects_case(building, key):
     for obj in list(_idfobjects_get_case(building, key)):
         building.removeidfobject(obj)
+
+
+def _write_minimal_rdd_mdd(out_dir):
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, 'eplusout.rdd'), 'w', encoding='utf-8') as rdd_file:
+        rdd_file.write('Program Version,EnergyPlus\n')
+        rdd_file.write('Var Type (reported time step),Var Report Type\n')
+        rdd_file.write('Output:Variable,*,Zone Mean Air Temperature,hourly,[C]\n')
+        rdd_file.write('Output:Variable,*,Site Outdoor Air Drybulb Temperature,hourly,[C]\n')
+
+    with open(os.path.join(out_dir, 'eplusout.mdd'), 'w', encoding='utf-8') as mdd_file:
+        mdd_file.write('Program Version,EnergyPlus\n')
+        mdd_file.write('Var Type (reported time step),Meter Report Type\n')
+        mdd_file.write('Output:Meter,Heating:Electricity,hourly,[J]\n')
 
 
 def test_outputs_preflight_discover_and_select_with_suggestions():
@@ -73,6 +89,218 @@ def test_outputs_preflight_discover_and_select_with_suggestions():
         assert any('HEATNG' in str(m).upper() for m in report['missing']['meters'])
     assert len(df_vars_sel) >= 1
     assert 'schedule_name' in df_vars_sel.columns  # normalized for apply step
+
+
+def test_simulationbase_init_forwards_explicit_addaccis_kwargs(monkeypatch):
+    ts.print_section('TEST: addAccis passthrough explícito (eer/cop)')
+
+    captured_calls = []
+
+    def fake_addaccis(**kwargs):
+        captured_calls.append(kwargs)
+
+    monkeypatch.setattr(main_module.accis, 'addAccis', fake_addaccis)
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type='accim custom model',
+        bypass_addAccis=False,
+        verbosemode=False,
+        eer=4.42,
+        cop=4.95,
+    )
+
+    assert len(captured_calls) == 1
+    assert captured_calls[0]['eer'] == pytest.approx(4.42)
+    assert captured_calls[0]['cop'] == pytest.approx(4.95)
+
+
+def test_simulationbase_init_forwards_addaccis_defaults(monkeypatch):
+    ts.print_section('TEST: addAccis passthrough defaults')
+
+    captured_calls = []
+    addaccis_sig = inspect.signature(main_module.accis.addAccis)
+
+    def fake_addaccis(**kwargs):
+        captured_calls.append(kwargs)
+
+    monkeypatch.setattr(main_module.accis, 'addAccis', fake_addaccis)
+
+    replicated = [
+        'Output_take_dataframe',
+        'EnergyPlus_version',
+        'VRFschedule',
+        'eer',
+        'cop',
+        'hvac_zone_map',
+    ]
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type='accim custom model',
+        bypass_addAccis=False,
+        verbosemode=False,
+    )
+
+    assert len(captured_calls) == 1
+    for param_name in replicated:
+        assert captured_calls[0][param_name] == addaccis_sig.parameters[param_name].default
+
+
+def test_simulationbase_addaccis_default_sync_contract():
+    ts.print_section('TEST: sincronización de defaults SimulationBase vs addAccis')
+
+    replicated = [
+        'Output_take_dataframe',
+        'EnergyPlus_version',
+        'VRFschedule',
+        'eer',
+        'cop',
+        'hvac_zone_map',
+    ]
+    base_sig = inspect.signature(main_module.SimulationBase.__init__)
+    addaccis_sig = inspect.signature(main_module.accis.addAccis)
+
+    mismatches = []
+    for param_name in replicated:
+        if base_sig.parameters[param_name].default != addaccis_sig.parameters[param_name].default:
+            mismatches.append(
+                f"{param_name}: SimulationBase={base_sig.parameters[param_name].default!r}, "
+                f"addAccis={addaccis_sig.parameters[param_name].default!r}"
+            )
+
+    assert not mismatches, (
+        'Los defaults replicados en SimulationBase.__init__ no están sincronizados con addAccis:\n'
+        + '\n'.join(mismatches)
+    )
+
+
+def test_discover_available_outputs_rdd_mdd_uses_existing_files_without_simulation(monkeypatch, tmp_path):
+    ts.print_section("TEST: discover_available_outputs rdd_mdd usa RDD/MDD existentes")
+
+    monkeypatch.chdir(tmp_path)
+    _write_minimal_rdd_mdd(tmp_path / 'available_outputs')
+
+    run_calls = []
+
+    def fake_run_building(*args, **kwargs):
+        run_calls.append((args, kwargs))
+
+    monkeypatch.setattr('besos.eplus_funcs.run_building', fake_run_building)
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type=None,
+        verbosemode=False,
+    )
+
+    discovered = sim.discover_available_outputs(prefer='rdd_mdd', refresh=False)
+
+    assert len(run_calls) == 0
+    assert list(discovered['meters'].columns) == ['key_name', 'frequency']
+    assert list(discovered['variables'].columns) == ['key_value', 'variable_name', 'frequency']
+    assert discovered['meta']['source'] == 'rdd_mdd'
+
+
+def test_discover_available_outputs_rdd_mdd_generates_and_caches_without_testsimeplus(monkeypatch, tmp_path):
+    ts.print_section("TEST: discover_available_outputs rdd_mdd genera RDD/MDD sin ESO/testsimeplus")
+
+    monkeypatch.chdir(tmp_path)
+
+    call_counter = {
+        'runner': 0,
+        'print_available_outputs_mod': 0,
+        'read_eso_using_readvarseso': 0,
+    }
+
+    def fake_run_building(*args, **kwargs):
+        call_counter['runner'] += 1
+        _write_minimal_rdd_mdd(kwargs['out_dir'])
+        return {}
+
+    def fail_print_available_outputs(*args, **kwargs):
+        call_counter['print_available_outputs_mod'] += 1
+        raise AssertionError('print_available_outputs_mod no debe llamarse con prefer=\'rdd_mdd\'.')
+
+    def fail_read_eso(*args, **kwargs):
+        call_counter['read_eso_using_readvarseso'] += 1
+        raise AssertionError('No se debe parsear eplusout.eso con prefer=\'rdd_mdd\'.')
+
+    monkeypatch.setattr('besos.eplus_funcs.run_building', fake_run_building)
+    monkeypatch.setattr(main_module, 'print_available_outputs_mod', fail_print_available_outputs)
+    monkeypatch.setattr(main_module, 'read_eso_using_readvarseso', fail_read_eso)
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type=None,
+        verbosemode=False,
+    )
+
+    discovered = sim.discover_available_outputs(
+        prefer='rdd_mdd',
+        refresh=True,
+        keep_available_outputs=False,
+    )
+
+    assert call_counter['runner'] == 1
+    assert call_counter['print_available_outputs_mod'] == 0
+    assert call_counter['read_eso_using_readvarseso'] == 0
+    assert discovered['meta']['source'] == 'rdd_mdd_testsim'
+    assert not os.path.exists('available_outputs')
+
+    sim.set_output_meters_to_idf(
+        output_meters=['Heating:Electricity'],
+        validate=True,
+        on_missing='raise',
+        auto_filter=True,
+        reduce_sim_time=True,
+    )
+
+    assert call_counter['runner'] == 1
+    assert call_counter['print_available_outputs_mod'] == 0
+
+
+def test_discover_available_outputs_default_prefer_still_uses_testsimeplus(monkeypatch):
+    ts.print_section("TEST: discover_available_outputs mantiene testsimeplus por defecto")
+
+    calls = []
+
+    def fake_get_outputs_df_from_testsim(self, reduce_sim_time=True, idf_scope='all', keep_available_outputs=False):
+        calls.append(
+            {
+                'reduce_sim_time': reduce_sim_time,
+                'idf_scope': idf_scope,
+                'keep_available_outputs': keep_available_outputs,
+            }
+        )
+        return {
+            'meters': pd.DataFrame(columns=['key_name', 'frequency']),
+            'variables': pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
+        }
+
+    monkeypatch.setattr(main_module.SimulationBase, 'get_outputs_df_from_testsim', fake_get_outputs_df_from_testsim)
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['fast']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['fast']['epws'],
+        parameters_type=None,
+        verbosemode=False,
+    )
+
+    discovered = sim.discover_available_outputs()
+
+    assert len(calls) == 1
+    assert discovered['meta']['requested_prefer'] == 'testsimeplus'
+    assert discovered['meta']['source'] == 'testsimeplus'
 
 
 def test_apply_outputs_preflight_cleans_all_and_applies_selection():
@@ -503,6 +731,30 @@ def test_output_keep_existing_default_is_consistent_across_classes():
     assert param_default is True
     assert optim_default is True
     assert predef_default is True
+
+
+def test_addaccis_passthrough_params_are_exposed_in_all_constructors():
+    ts.print_section('TEST: parámetros addAccis expuestos en constructores')
+
+    expected = [
+        'Output_take_dataframe',
+        'EnergyPlus_version',
+        'VRFschedule',
+        'eer',
+        'cop',
+        'hvac_zone_map',
+    ]
+    classes_to_check = [
+        main_module.SimulationBase,
+        ts.ParametricSimulation,
+        ts.OptimisationSimulation,
+        ts.AccimPredefModelsParamSim,
+    ]
+
+    for cls in classes_to_check:
+        sig = inspect.signature(cls.__init__)
+        for param_name in expected:
+            assert param_name in sig.parameters, f"{cls.__name__}.__init__ no expone '{param_name}'."
 
 
 def test_parametric_output_wrappers_expose_explicit_advanced_arguments():

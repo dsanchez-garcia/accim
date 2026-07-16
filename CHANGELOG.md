@@ -126,6 +126,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added focused tests in `tests/parametric_and_optimisation/test_sim_file_cleanup.py`.
 
 ### Changed
+- **Explicit `addAccis` Constructor Passthrough (`parametric_and_optimisation`)**:
+  - `SimulationBase.__init__` now exposes and forwards explicit `addAccis` passthrough arguments (`Output_take_dataframe`, `EnergyPlus_version`, `VRFschedule`, `eer`, `cop`, `hvac_zone_map`) with defaults aligned to `accis.addAccis`.
+  - `ParametricSimulation`, `OptimisationSimulation`, and `AccimPredefModelsParamSim` constructors were updated to expose and forward the same explicit arguments.
+- **`discover_available_outputs(prefer='rdd_mdd')` Self-Sufficient Path**:
+  - The `rdd_mdd` path now generates `available_outputs/eplusout.rdd` and `available_outputs/eplusout.mdd` with a reduced test simulation when files are missing (or `refresh=True`), then parses those files directly.
+  - Removed silent fallback to `testsimeplus` for this path; failures now raise clear exceptions.
+  - Shared reduced test-simulation preparation was extracted to a private helper and reused by both discovery flows.
 - **Custom-Model CustAST Defaulting Symmetry and Visibility**:
   - `set_parameters(...)` for `parameters_type='accim custom model'` now applies a symmetric default-resolution flow for `ASTaul` and `ASTall` (both initialized to `0` and then resolved through `dflt_values` when omitted).
   - Default values remain `ASTaul=33.5` and `ASTall=10` when those parameters are not explicitly provided.

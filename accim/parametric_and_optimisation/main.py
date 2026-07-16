@@ -2894,6 +2894,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             make_averages: bool = False,
             debugging: bool = False,
             verbosemode: bool = True,
+            # Keep these defaults synchronized with accis.addAccis defaults.
+            Output_take_dataframe: pd.DataFrame = None,
+            EnergyPlus_version: str = None,
+            VRFschedule: str = 'On 24/7',
+            eer: float = 2,
+            cop: float = 2.1,
+            hvac_zone_map: dict = None,
             bypass_addAccis: bool = False,
             building: Any = None,
             accim_results_root: Optional[str] = None,
@@ -2912,6 +2919,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param make_averages: to make average outputs
         :param debugging: True to generate the .EDD file
         :param verbosemode: True to print addAccis progress messages
+        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
         :param bypass_addAccis: True to skip the internal addAccis execution
         :param building: legacy alias for buildings, accepted for backward compatibility
         :param accim_results_root: optional base directory used to resolve relative
@@ -2983,9 +2996,43 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if not bypass_addAccis:
                 if isinstance(buildings, list):
                     for b in buildings:
-                        accis.addAccis(idf=b, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=keep_existing_on_init, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
+                        accis.addAccis(
+                            idf=b,
+                            ScriptType=ScriptType,
+                            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+                            Output_type=output_type,
+                            Output_freqs=output_freqs,
+                            Output_keep_existing=keep_existing_on_init,
+                            Output_take_dataframe=Output_take_dataframe,
+                            EnergyPlus_version=EnergyPlus_version,
+                            TempCtrl=temp_ctrl,
+                            VRFschedule=VRFschedule,
+                            verboseMode=verbosemode,
+                            eer=eer,
+                            cop=cop,
+                            make_averages=make_averages,
+                            debugging=debugging,
+                            hvac_zone_map=hvac_zone_map,
+                        )
                 else:
-                    accis.addAccis(idf=buildings, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=keep_existing_on_init, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
+                    accis.addAccis(
+                        idf=buildings,
+                        ScriptType=ScriptType,
+                        SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+                        Output_type=output_type,
+                        Output_freqs=output_freqs,
+                        Output_keep_existing=keep_existing_on_init,
+                        Output_take_dataframe=Output_take_dataframe,
+                        EnergyPlus_version=EnergyPlus_version,
+                        TempCtrl=temp_ctrl,
+                        VRFschedule=VRFschedule,
+                        verboseMode=verbosemode,
+                        eer=eer,
+                        cop=cop,
+                        make_averages=make_averages,
+                        debugging=debugging,
+                        hvac_zone_map=hvac_zone_map,
+                    )
         elif is_apmv_setpoints:
             if not bypass_addAccis:
                 if isinstance(buildings, list):
@@ -4581,6 +4628,91 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             mode=mode,
         )
 
+    def _prepare_reduced_testsim_building(
+        self,
+        selected_idx: int,
+        selected_building: Any,
+        reduce_sim_time: bool = True,
+        temp_prefix: str = 'temp_reduced_runtime',
+        force_temp_copy: bool = False,
+    ) -> tuple[Any, Optional[str]]:
+        """Prepare an IDF for short test simulations and return (building, temp_path).
+
+        Parameters
+        ----------
+        selected_idx : int
+            Index of the selected IDF in `self.buildings`.
+        selected_building : Any
+            Building object selected from the resolved IDF scope.
+        reduce_sim_time : bool
+            Whether to apply runtime-reduction edits before running EnergyPlus.
+        temp_prefix : str
+            Prefix used when creating temporary reduced IDF copies.
+        force_temp_copy : bool
+            Forces copy-loading to avoid mutating the original in-memory IDF.
+
+        Returns
+        -------
+        tuple[Any, Optional[str]]
+            Prepared building and temporary path (or ``None`` when no temp file is created).
+
+        Usage
+        -----
+        Internal helper reused by output-discovery test-simulation paths.
+
+        Examples
+        --------
+        building, temp_path = self._prepare_reduced_testsim_building(...)
+        """
+        building_for_testsim = selected_building
+        temp_path = None
+
+        if reduce_sim_time or force_temp_copy:
+            from besos.eppy_funcs import get_building
+
+            idf_id = self._get_idf_identifier(selected_building, selected_idx)
+            safe_idf_id = re.sub(r'[^A-Za-z0-9_.-]+', '_', idf_id)
+            temp_path = f'{temp_prefix}_{selected_idx}_{safe_idf_id}.idf'
+            selected_building.savecopy(temp_path)
+            building_for_testsim = get_building(temp_path)
+
+        if reduce_sim_time:
+            reduce_runtime(
+                idf_object=building_for_testsim,
+                maximum_figures_in_shadow_overlap_calculations=200,
+                timesteps=2,
+            )
+            # Ensure autosizing paths (e.g., VRF) have at least one weather-file sizing period.
+            sizing_periods = building_for_testsim.idfobjects.get('SIZINGPERIOD:WEATHERFILEDAYS', [])
+            if len(sizing_periods) == 0:
+                runperiod = building_for_testsim.idfobjects['Runperiod'][0]
+                building_for_testsim.newidfobject(
+                    'SIZINGPERIOD:WEATHERFILEDAYS',
+                    Name='SizingPeriod',
+                    Begin_Month=int(runperiod.Begin_Month),
+                    Begin_Day_of_Month=int(runperiod.Begin_Day_of_Month),
+                    End_Month=int(runperiod.End_Month),
+                    End_Day_of_Month=int(runperiod.End_Day_of_Month),
+                    Day_of_Week_for_Start_Day='Sunday',
+                    Use_Weather_File_Daylight_Saving_Period='Yes',
+                    Use_Weather_File_Rain_and_Snow_Indicators='Yes',
+                )
+
+        return (building_for_testsim, temp_path)
+
+    @classmethod
+    def _ensure_output_variable_dictionary_for_building(
+        cls,
+        building: Any,
+        key_field: str = 'IDF',
+    ) -> None:
+        """Ensure a parse-friendly Output:VariableDictionary object exists."""
+        dictionaries = cls._idfobjects_get_case(building, 'Output:VariableDictionary')
+        if len(dictionaries) == 0:
+            building.newidfobject('OUTPUT:VARIABLEDICTIONARY', Key_Field=key_field)
+            return
+        dictionaries[0].Key_Field = key_field
+
     def get_outputs_df_from_testsim(
         self,
         reduce_sim_time: bool = True,
@@ -4638,40 +4770,25 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             }
 
         selected_idx, selected_building = scoped_buildings[0]
-        building_for_testsim = selected_building
-        temp_path = None
-        if reduce_sim_time:
-            from besos.eppy_funcs import get_building
-            idf_id = self._get_idf_identifier(selected_building, selected_idx)
-            safe_idf_id = re.sub(r'[^A-Za-z0-9_.-]+', '_', idf_id)
-            temp_path = f'temp_reduced_runtime_{selected_idx}_{safe_idf_id}.idf'
-            selected_building.savecopy(temp_path)
-            building_for_testsim = get_building(temp_path)
-            reduce_runtime(idf_object=building_for_testsim, maximum_figures_in_shadow_overlap_calculations=200, timesteps=2)
-            # Agregar período de sizing si no existe (requerido para autosizing de equipos como VRF)
-            sizing_periods = building_for_testsim.idfobjects.get('SIZINGPERIOD:WEATHERFILEDAYS', [])
-            if len(sizing_periods) == 0:
-                # Crear un período de sizing que coincida con el runperiod
-                runperiod = building_for_testsim.idfobjects['Runperiod'][0]
-                building_for_testsim.newidfobject(
-                    'SIZINGPERIOD:WEATHERFILEDAYS',
-                    Name='SizingPeriod',
-                    Begin_Month=int(runperiod.Begin_Month),
-                    Begin_Day_of_Month=int(runperiod.Begin_Day_of_Month),
-                    End_Month=int(runperiod.End_Month),
-                    End_Day_of_Month=int(runperiod.End_Day_of_Month),
-                    Day_of_Week_for_Start_Day='Sunday',
-                    Use_Weather_File_Daylight_Saving_Period='Yes',
-                    Use_Weather_File_Rain_and_Snow_Indicators='Yes'
-                )
-        available_outputs = print_available_outputs_mod(
-            building_for_testsim,
-            out_dir='available_outputs',
-            keep_out_dir=keep_available_outputs,
+        building_for_testsim, temp_path = self._prepare_reduced_testsim_building(
+            selected_idx=selected_idx,
+            selected_building=selected_building,
+            reduce_sim_time=reduce_sim_time,
+            temp_prefix='temp_reduced_runtime',
         )
-        if temp_path is not None:
-            from os import remove
-            remove(temp_path)
+        try:
+            available_outputs = print_available_outputs_mod(
+                building_for_testsim,
+                out_dir='available_outputs',
+                keep_out_dir=keep_available_outputs,
+            )
+        finally:
+            if temp_path is not None:
+                try:
+                    from os import remove
+                    remove(temp_path)
+                except Exception:
+                    pass
         df_outputmeters = pd.DataFrame(available_outputs.meterreaderlist, columns=['key_name', 'frequency'])
         df_outputvariables = pd.DataFrame(available_outputs.variablereaderlist, columns=['key_value', 'variable_name', 'frequency'])
 
@@ -4842,7 +4959,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param reduce_sim_time: when using EnergyPlus test-sim discovery, reduce runtime.
         :param prefer: 'testsimeplus' (default) uses a lightweight EnergyPlus run via
             ``get_outputs_df_from_testsim``; 'rdd_mdd' reads `available_outputs/eplusout.rdd`
-            and `available_outputs/eplusout.mdd` if present.
+            and `available_outputs/eplusout.mdd` when available, otherwise generates
+            them with a reduced test simulation and parses them directly.
         :param refresh: when False, reuse cached results in ``self.available_outputs_``.
         :param idf_scope: IDFs to discover. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to run fewer test simulations.
@@ -4884,25 +5002,94 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             'idf_scope': scope_label,
             'keep_available_outputs': keep_available_outputs,
         }
+        cleanup_generated_rdd_mdd_dir = False
 
         if prefer == 'rdd_mdd':
-            rdd_path = os.path.join('available_outputs', 'eplusout.rdd')
-            mdd_path = os.path.join('available_outputs', 'eplusout.mdd')
-            if os.path.exists(rdd_path) and os.path.exists(mdd_path):
-                df_rdd = get_rdd_file_as_df(out_dir='available_outputs')
-                df_mdd = get_mdd_file_as_df(out_dir='available_outputs')
+            out_dir = 'available_outputs'
+            rdd_path = os.path.join(out_dir, 'eplusout.rdd')
+            mdd_path = os.path.join(out_dir, 'eplusout.mdd')
+            files_exist = os.path.exists(rdd_path) and os.path.exists(mdd_path)
 
-                df_vars = df_rdd.rename(
-                    columns={'key_value': 'key_value', 'variable_name': 'variable_name', 'frequency': 'frequency'}
-                )[['key_value', 'variable_name', 'frequency']].copy()
-                df_meters = df_mdd.rename(columns={'meter_name': 'key_name', 'frequency': 'frequency'})[
-                    ['key_name', 'frequency']
-                ].copy()
+            if files_exist and not refresh:
+                df_rdd = get_rdd_file_as_df(out_dir=out_dir)
+                df_mdd = get_mdd_file_as_df(out_dir=out_dir)
                 meta.update({'source': 'rdd_mdd', 'paths': {'rdd': rdd_path, 'mdd': mdd_path}})
             else:
-                # Fallback to test-sim discovery.
-                prefer = 'testsimeplus'
-                meta['prefer_fallback'] = 'testsimeplus'
+                scoped_buildings = self._resolve_idf_scope(idf_scope)
+                if len(scoped_buildings) == 0:
+                    raise RuntimeError(
+                        "Cannot generate RDD/MDD outputs because no IDFs are available in the requested idf_scope."
+                    )
+                if len(self.epws) == 0:
+                    raise RuntimeError(
+                        "Cannot generate RDD/MDD outputs because 'self.epws' is empty; provide at least one EPW file."
+                    )
+
+                selected_idx, selected_building = scoped_buildings[0]
+                building_for_testsim, temp_path = self._prepare_reduced_testsim_building(
+                    selected_idx=selected_idx,
+                    selected_building=selected_building,
+                    reduce_sim_time=reduce_sim_time,
+                    temp_prefix='temp_reduced_runtime_rdd_mdd',
+                    force_temp_copy=True,
+                )
+                try:
+                    import shutil
+                    from besos.eplus_funcs import run_building
+
+                    if os.path.isdir(out_dir):
+                        shutil.rmtree(out_dir, ignore_errors=True)
+
+                    # IDF mode keeps RDD/MDD rows parseable by get_rdd_file_as_df/get_mdd_file_as_df.
+                    self._ensure_output_variable_dictionary_for_building(
+                        building=building_for_testsim,
+                        key_field='IDF',
+                    )
+
+                    run_error = None
+                    try:
+                        run_building(
+                            building_for_testsim,
+                            out_dir=out_dir,
+                            epw=self.epws[0],
+                            stdout_mode='Verbose',
+                        )
+                    except Exception as exc:
+                        run_error = exc
+
+                    if not (os.path.exists(rdd_path) and os.path.exists(mdd_path)):
+                        message = (
+                            "Failed to generate 'available_outputs/eplusout.rdd' and "
+                            "'available_outputs/eplusout.mdd' with prefer='rdd_mdd'."
+                        )
+                        if run_error is not None:
+                            raise RuntimeError(message) from run_error
+                        raise RuntimeError(message)
+
+                    try:
+                        df_rdd = get_rdd_file_as_df(out_dir=out_dir)
+                        df_mdd = get_mdd_file_as_df(out_dir=out_dir)
+                    except Exception as exc:
+                        raise RuntimeError(
+                            "Failed to parse generated RDD/MDD files with prefer='rdd_mdd'."
+                        ) from exc
+                    cleanup_generated_rdd_mdd_dir = not keep_available_outputs
+                finally:
+                    if temp_path is not None:
+                        try:
+                            from os import remove
+                            remove(temp_path)
+                        except Exception:
+                            pass
+
+                meta.update({'source': 'rdd_mdd_testsim', 'paths': {'rdd': rdd_path, 'mdd': mdd_path}})
+
+            df_vars = df_rdd.rename(
+                columns={'key_value': 'key_value', 'variable_name': 'variable_name', 'frequency': 'frequency'}
+            )[['key_value', 'variable_name', 'frequency']].copy()
+            df_meters = df_mdd.rename(columns={'meter_name': 'key_name', 'frequency': 'frequency'})[
+                ['key_name', 'frequency']
+            ].copy()
 
         if prefer == 'testsimeplus':
             outputs_from_testsim = self.get_outputs_df_from_testsim(
@@ -4921,6 +5108,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     df[c] = df[c].astype(str)
 
         self.available_outputs_ = {'df_meters': df_meters.copy(), 'df_vars': df_vars.copy(), 'meta': dict(meta)}
+        if cleanup_generated_rdd_mdd_dir:
+            import shutil
+            shutil.rmtree('available_outputs', ignore_errors=True)
         return {
             'meters': df_meters,
             'variables': df_vars,
@@ -11377,6 +11567,12 @@ class ParametricSimulation(SimulationBase):
             make_averages: bool = False,
             debugging: bool = False,
             verbosemode: bool = True,
+            Output_take_dataframe: pd.DataFrame = None,
+            EnergyPlus_version: str = None,
+            VRFschedule: str = 'On 24/7',
+            eer: float = 2,
+            cop: float = 2.1,
+            hvac_zone_map: dict = None,
             bypass_addAccis: bool = False,
             building: Any = None,
             accim_results_root: Optional[str] = None,
@@ -11396,6 +11592,12 @@ class ParametricSimulation(SimulationBase):
         :param make_averages: create average outputs in addAccis.
         :param debugging: create EnergyPlus EDD debugging output.
         :param verbosemode: print addAccis progress messages.
+        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
         :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
@@ -11423,6 +11625,12 @@ class ParametricSimulation(SimulationBase):
             make_averages=make_averages,
             debugging=debugging,
             verbosemode=verbosemode,
+            Output_take_dataframe=Output_take_dataframe,
+            EnergyPlus_version=EnergyPlus_version,
+            VRFschedule=VRFschedule,
+            eer=eer,
+            cop=cop,
+            hvac_zone_map=hvac_zone_map,
             bypass_addAccis=bypass_addAccis,
             building=building,
             accim_results_root=accim_results_root,
@@ -11525,6 +11733,12 @@ class OptimisationSimulation(SimulationBase):
             make_averages: bool = False,
             debugging: bool = False,
             verbosemode: bool = True,
+            Output_take_dataframe: pd.DataFrame = None,
+            EnergyPlus_version: str = None,
+            VRFschedule: str = 'On 24/7',
+            eer: float = 2,
+            cop: float = 2.1,
+            hvac_zone_map: dict = None,
             bypass_addAccis: bool = False,
             building: Any = None,
             accim_results_root: Optional[str] = None,
@@ -11544,6 +11758,12 @@ class OptimisationSimulation(SimulationBase):
         :param make_averages: create average outputs in addAccis.
         :param debugging: create EnergyPlus EDD debugging output.
         :param verbosemode: print addAccis progress messages.
+        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
         :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
@@ -11571,6 +11791,12 @@ class OptimisationSimulation(SimulationBase):
             make_averages=make_averages,
             debugging=debugging,
             verbosemode=verbosemode,
+            Output_take_dataframe=Output_take_dataframe,
+            EnergyPlus_version=EnergyPlus_version,
+            VRFschedule=VRFschedule,
+            eer=eer,
+            cop=cop,
+            hvac_zone_map=hvac_zone_map,
             bypass_addAccis=bypass_addAccis,
             building=building,
             accim_results_root=accim_results_root,
@@ -11799,6 +12025,12 @@ class AccimPredefModelsParamSim(ParametricSimulation):
             ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
             SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
             debugging: bool = False,
+            Output_take_dataframe: pd.DataFrame = None,
+            EnergyPlus_version: str = None,
+            VRFschedule: str = 'On 24/7',
+            eer: float = 2,
+            cop: float = 2.1,
+            hvac_zone_map: dict = None,
             building: Any = None,
             accim_results_root: Optional[str] = None,
             remove_output_tables: bool = True,
@@ -11813,6 +12045,12 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         :param ScriptType: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
         :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
         :param debugging: create EnergyPlus EDD debugging output.
+        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
         :param building: legacy alias for buildings, accepted for backward compatibility.
         :param accim_results_root: optional base directory used to resolve
             relative output directories.
@@ -11829,7 +12067,25 @@ class AccimPredefModelsParamSim(ParametricSimulation):
         """
         if buildings is None and building is not None:
             buildings = building
-        super().__init__(buildings=buildings, epws=epws, parameters_type='accim predefined model', output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging, accim_results_root=accim_results_root, remove_output_tables=remove_output_tables)
+        super().__init__(
+            buildings=buildings,
+            epws=epws,
+            parameters_type='accim predefined model',
+            output_type=output_type,
+            output_keep_existing=output_keep_existing,
+            output_freqs=output_freqs,
+            ScriptType=ScriptType,
+            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+            debugging=debugging,
+            Output_take_dataframe=Output_take_dataframe,
+            EnergyPlus_version=EnergyPlus_version,
+            VRFschedule=VRFschedule,
+            eer=eer,
+            cop=cop,
+            hvac_zone_map=hvac_zone_map,
+            accim_results_root=accim_results_root,
+            remove_output_tables=remove_output_tables,
+        )
         for b in self.buildings:
             accis.modifyAccis(idf=b, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)
 
