@@ -126,6 +126,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added focused tests in `tests/parametric_and_optimisation/test_sim_file_cleanup.py`.
 
 ### Changed
+- **Output Variable API Symmetry with Meters**:
+  - `set_output_variables_to_idf(...)` now exposes validation controls aligned with `set_output_meters_to_idf(...)`: `validate`, `on_missing`, `auto_filter`, `reduce_sim_time`, `validation_idf_scope`, and `keep_available_outputs`.
+  - Variable application can now pre-validate availability via `discover_available_outputs(...)`, with consistent missing-output handling (`warn`/`raise`/`ignore`) and optional auto-filtering.
+  - Removed the keyword-only separator in `set_output_variables_to_idf(...)` so all arguments are directly visible in IDE call hints when opening the method parenthesis.
+  - `apply_outputs_preflight(...)` now forwards the same validation-policy inputs when applying selected variables.
+  - Added regression coverage in `tests/parametric_and_optimisation/10_test_outputs_preflight.py`.
 - **Explicit `addAccis` Constructor Passthrough (`parametric_and_optimisation`)**:
   - `SimulationBase.__init__` now exposes and forwards explicit `addAccis` passthrough arguments (`Output_take_dataframe`, `EnergyPlus_version`, `VRFschedule`, `eer`, `cop`, `hvac_zone_map`) with defaults aligned to `accis.addAccis`.
   - `ParametricSimulation`, `OptimisationSimulation`, and `AccimPredefModelsParamSim` constructors were updated to expose and forward the same explicit arguments.

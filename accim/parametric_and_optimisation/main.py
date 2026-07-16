@@ -3988,8 +3988,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             output_variables: Optional[list[Union[str, tuple, dict]]] = None,
             idf_scope: Any = 'all',
             mode: Literal['append', 'replace'] = 'append',
+            validate: bool = False,
+            on_missing: Literal['warn', 'raise', 'ignore'] = 'warn',
+            auto_filter: bool = True,
+            reduce_sim_time: bool = True,
+            validation_idf_scope: Any = None,
+            keep_available_outputs: bool = False,
     ):
-        """Adds Output:Variable objects from a DataFrame.
+        """Adds Output:Variable objects from DataFrame and/or list.
         
         - ``mode='append'`` (default): keep existing objects and add only missing ones.
         - ``mode='replace'``: remove all existing Output:Variable objects first, then add rows.
@@ -4000,8 +4006,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             - str: variable_name (con key_value='*' y frecuencias self.output_freqs)
             - tuple/list de 2 elementos: (key_value, variable_name)
             - dict: variable_name (+ opcionales key_value, frequency, schedule_name)
+        :param validate: when True, validates requested variables against discovered outputs
+            from a lightweight test simulation before modifying the IDFs.
+            Defaults to False for backward compatibility.
+        :param on_missing: behaviour when some requested variables are not available.
+        :param auto_filter: when True and validate=True, skip missing variables instead
+            of adding them to the IDF.
+        :param reduce_sim_time: when validate=True, reduce runtime for the discovery test.
         :param idf_scope: IDFs to modify. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to modify fewer IDFs.
+        :param validation_idf_scope: IDFs to use for discovery/validation. Defaults
+            to idf_scope. Use 'first' to validate once while applying to all IDFs.
+        :param keep_available_outputs: when validating, keep the temporary
+            ``available_outputs`` folder if True.
         :param mode: 'append' or 'replace'.
         :return:
         
@@ -4015,6 +4032,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         """
         if mode not in {'append', 'replace'}:
             raise ValueError("mode must be 'append' or 'replace'.")
+        if on_missing not in {'warn', 'raise', 'ignore'}:
+            raise ValueError("on_missing must be 'warn', 'raise', or 'ignore'.")
 
         outputs_df = pd.DataFrame(columns=['key_value', 'variable_name', 'frequency', 'schedule_name'])
         if df_output_variable is not None and len(df_output_variable) > 0:
@@ -4062,6 +4081,69 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if missing_cols:
             raise ValueError(f"outputs_df must contain columns: {sorted(required_cols)}. Missing: {missing_cols}")
 
+        available_pairs_by_idx: dict[int, set[tuple[str, str]]] = {}
+        available_names_by_idx: dict[int, set[str]] = {}
+        fallback_available_pairs: set[tuple[str, str]] = set()
+        fallback_available_names: set[str] = set()
+
+        validation_scope = idf_scope if validation_idf_scope is None else validation_idf_scope
+        if validate:
+            discovered = self.discover_available_outputs(
+                reduce_sim_time=reduce_sim_time,
+                prefer='testsimeplus',
+                refresh=False,
+                idf_scope=validation_scope,
+                keep_available_outputs=keep_available_outputs,
+            )
+            validation_buildings = self._resolve_idf_scope(validation_scope)
+            df_vars_available = discovered.get('variables', pd.DataFrame())
+
+            if isinstance(df_vars_available, pd.DataFrame) and 'variable_name' in df_vars_available.columns:
+                available_work = df_vars_available.copy().fillna('')
+                if 'key_value' not in available_work.columns:
+                    available_work['key_value'] = ''
+
+                available_work['key_value'] = available_work['key_value'].map(self._norm_output_token)
+                available_work['variable_name'] = available_work['variable_name'].map(self._norm_output_token)
+                available_work = available_work[available_work['variable_name'] != '']
+
+                if 'idf' in available_work.columns:
+                    idx_by_idf = {
+                        self._get_idf_identifier(building, idx): idx
+                        for (idx, building) in validation_buildings
+                    }
+                    for idf_id, subset in available_work.groupby('idf', sort=False):
+                        idx = idx_by_idf.get(str(idf_id))
+                        if idx is None:
+                            continue
+                        pair_set = set(subset[['key_value', 'variable_name']].itertuples(index=False, name=None))
+                        available_pairs_by_idx[idx] = pair_set
+                        available_names_by_idx[idx] = {
+                            str(v) for v in subset['variable_name'].tolist() if str(v).strip() != ''
+                        }
+                else:
+                    pair_set = set(available_work[['key_value', 'variable_name']].itertuples(index=False, name=None))
+                    name_set = {str(v) for v in available_work['variable_name'].tolist() if str(v).strip() != ''}
+                    for val_idx, _ in validation_buildings:
+                        available_pairs_by_idx[val_idx] = set(pair_set)
+                        available_names_by_idx[val_idx] = set(name_set)
+
+            if len(available_pairs_by_idx) == 1:
+                fallback_available_pairs = next(iter(available_pairs_by_idx.values()))
+                fallback_available_names = next(iter(available_names_by_idx.values()))
+            elif len(available_pairs_by_idx) > 1:
+                fallback_available_pairs = set.intersection(*available_pairs_by_idx.values())
+                fallback_available_names = set.intersection(*available_names_by_idx.values())
+
+        def _is_available_variable(row: pd.Series, available_pairs: set[tuple[str, str]], available_names: set[str]) -> bool:
+            variable_name = self._norm_output_token(row.get('variable_name', ''))
+            if variable_name == '':
+                return False
+            key_value = self._norm_output_token(row.get('key_value', ''))
+            if key_value in {'', '*'}:
+                return variable_name in available_names
+            return (key_value, variable_name) in available_pairs
+
         scoped_buildings = self._resolve_idf_scope(idf_scope)
         for idx, b in scoped_buildings:
             outputs_for_building = outputs_df
@@ -4081,6 +4163,36 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 subset=['key_value', 'variable_name', 'frequency', 'schedule_name'],
                 keep='first',
             )
+
+            available_pairs = available_pairs_by_idx.get(idx, fallback_available_pairs)
+            available_names = available_names_by_idx.get(idx, fallback_available_names)
+            has_validation_result = validate and len(available_pairs_by_idx) > 0
+
+            if has_validation_result:
+                availability_mask = outputs_for_building.apply(
+                    lambda row: _is_available_variable(row, available_pairs, available_names),
+                    axis=1,
+                )
+                missing_rows = outputs_for_building.loc[~availability_mask, ['key_value', 'variable_name']].drop_duplicates()
+                if len(missing_rows) > 0:
+                    idf_id = self._get_idf_identifier(b, idx)
+                    missing_specs = [
+                        (str(r['key_value']), str(r['variable_name']))
+                        for (_, r) in missing_rows.iterrows()
+                    ]
+                    msg = (
+                        "Some requested Output:Variable (key_value, variable_name) values are not available in this model "
+                        f"for IDF '{idf_id}' (and will be ignored={auto_filter}): {missing_specs}"
+                    )
+                    if on_missing == 'raise':
+                        raise ValueError(msg)
+                    if on_missing == 'warn':
+                        warnings.warn(msg)
+
+                if auto_filter:
+                    outputs_for_building = outputs_for_building.loc[availability_mask]
+                    if len(outputs_for_building) == 0:
+                        continue
 
             if mode == 'replace':
                 alloutputs = [output for output in b.idfobjects['Output:Variable']]
@@ -5494,7 +5606,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 df_vars_apply['frequency'] = df_vars_apply['frequency'].astype(str)
             if 'schedule_name' not in df_vars_apply.columns:
                 df_vars_apply['schedule_name'] = ''
-            self.set_output_variables_to_idf(df_output_variable=df_vars_apply, idf_scope=idf_scope)
+            self.set_output_variables_to_idf(
+                df_output_variable=df_vars_apply,
+                validate=validate_before_apply,
+                on_missing=on_missing,
+                auto_filter=True,
+                reduce_sim_time=reduce_sim_time,
+                idf_scope=idf_scope,
+                validation_idf_scope=validation_scope,
+            )
             report['applied']['variables'] = len(df_vars_apply)
 
         # Apply meters

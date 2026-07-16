@@ -437,6 +437,91 @@ def test_set_output_meters_to_idf_mode_replace_replaces_existing_meters():
         assert all(str(obj.Reporting_Frequency).lower() == 'hourly' for obj in meters)
 
 
+def test_set_output_variables_to_idf_signature_exposes_validation_arguments():
+    ts.print_section("TEST: firma set_output_variables_to_idf expone argumentos de validacion")
+
+    signature = inspect.signature(main_module.SimulationBase.set_output_variables_to_idf)
+    for expected in [
+        'validate',
+        'on_missing',
+        'auto_filter',
+        'reduce_sim_time',
+        'validation_idf_scope',
+        'keep_available_outputs',
+    ]:
+        assert expected in signature.parameters
+
+
+def test_set_output_variables_to_idf_validate_autofilter_skips_missing(monkeypatch):
+    ts.print_section("TEST: set_output_variables_to_idf validate + auto_filter")
+
+    buildings = ts.prepare_buildings(ts.TEST_CATEGORIES['medium']['idfs'])
+    sim = ts.ParametricSimulation(
+        buildings=buildings,
+        epws=ts.TEST_CATEGORIES['medium']['epws'][:1],
+        parameters_type=None,
+        output_freqs=['hourly'],
+        verbosemode=False,
+    )
+
+    sim.clear_outputs(mode='meters_vars', idf_scope='all')
+
+    discover_calls = []
+    available_rows = []
+    for idx, building in enumerate(buildings):
+        available_rows.append(
+            {
+                'idf': sim._get_idf_identifier(building, idx),
+                'key_value': '*',
+                'variable_name': 'Zone Mean Air Temperature',
+                'frequency': 'Hourly',
+            }
+        )
+
+    def fake_discover(self, reduce_sim_time=True, prefer='testsimeplus', refresh=False, idf_scope='all', keep_available_outputs=False):
+        discover_calls.append(
+            {
+                'reduce_sim_time': reduce_sim_time,
+                'prefer': prefer,
+                'refresh': refresh,
+                'idf_scope': idf_scope,
+                'keep_available_outputs': keep_available_outputs,
+            }
+        )
+        return {
+            'meters': pd.DataFrame(columns=['key_name', 'frequency']),
+            'variables': pd.DataFrame(available_rows),
+            'meta': {'source': 'testsimeplus'},
+        }
+
+    monkeypatch.setattr(main_module.SimulationBase, 'discover_available_outputs', fake_discover)
+
+    with pytest.warns(UserWarning, match='Output:Variable'):
+        sim.set_output_variables_to_idf(
+            output_variables=[
+                {'key_value': '*', 'variable_name': 'Zone Mean Air Temperature', 'frequency': 'Hourly'},
+                {'key_value': '*', 'variable_name': 'Definitely Missing Variable', 'frequency': 'Hourly'},
+            ],
+            validate=True,
+            on_missing='warn',
+            auto_filter=True,
+            reduce_sim_time=False,
+            idf_scope='all',
+            validation_idf_scope='all',
+            mode='replace',
+        )
+
+    assert len(discover_calls) == 1
+    assert discover_calls[0]['prefer'] == 'testsimeplus'
+    assert discover_calls[0]['idf_scope'] == 'all'
+
+    for building in buildings:
+        variables = _idfobjects_get_case(building, 'Output:Variable')
+        assert len(variables) == 1
+        assert str(variables[0].Variable_Name) == 'Zone Mean Air Temperature'
+        assert str(variables[0].Reporting_Frequency).lower() == 'hourly'
+
+
 @pytest.mark.parametrize('sim_cls', [ts.ParametricSimulation, ts.OptimisationSimulation])
 @pytest.mark.parametrize('precreate_outputcontrol', [False, True])
 def test_simulation_init_ensures_outputcontrol_files(sim_cls, precreate_outputcontrol):
