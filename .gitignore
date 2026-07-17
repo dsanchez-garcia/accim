@@ -1,6 +1,8 @@
 .spyproject/
 .idea/
 .pytest_cache/
+__pycache__/
+*.pyc
 dist/
 *.egg-info/
 tests_sim/
