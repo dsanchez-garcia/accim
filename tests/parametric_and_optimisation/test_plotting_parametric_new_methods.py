@@ -6,6 +6,7 @@ import pytest
 
 matplotlib.use('Agg')
 
+from accim.parametric_and_optimisation.main import ParametricSimulation
 from accim.parametric_and_optimisation.plotting import PlottingMixin
 
 
@@ -342,5 +343,55 @@ def test_plot_categorical_boxplots_filename_template_with_mapping_placeholders(t
     expected_path = tmp_path / 'boxplot_type-residential_city-seville.png'
     assert grid is not None
     assert expected_path.exists()
+
+
+def test_plot_methods_resolve_column_renamed_by_normalize_outputs(tmp_path):
+    """Reproduces the user-reported KeyError.
+
+    After `normalize_outputs()` renames an energy column (e.g.
+    'Electricity:HVAC' -> 'Electricity:HVAC_kWh/m2'), plotting calls that
+    still reference the ORIGINAL column name must keep working thanks to
+    `PlottingMixin._resolve_plot_axis_column`, instead of raising KeyError.
+    """
+    sim = ParametricSimulation(buildings=None, epws=['Test.epw'], parameters_type=None, bypass_addAccis=True)
+    sim.building_floor_area = 100.0
+    sim.outputs_param_simulation = pd.DataFrame({
+        'CustAST_ASToffset': [1.0, 2.0, 3.0, 4.0],
+        'Electricity:HVAC': [10_000_000.0, 12_000_000.0, 9_000_000.0, 11_000_000.0],
+        'epw': ['Present', 'Present', 'Future', 'Future'],
+        'idf': ['bldg'] * 4,
+    })
+
+    assert 'Electricity:HVAC' in sim.outputs_param_simulation.columns
+
+    sim.normalize_outputs(df_types=['parametric'])
+
+    # normalize_outputs() renamed the column: this is what caused the
+    # KeyError when the rest of the script kept using the original name.
+    assert 'Electricity:HVAC' not in sim.outputs_param_simulation.columns
+    assert 'Electricity:HVAC_kWh/m2' in sim.outputs_param_simulation.columns
+
+    # groupby with the resolved name still works (sanity check on the data).
+    described = sim.outputs_param_simulation.groupby('epw')['Electricity:HVAC_kWh/m2'].describe()
+    assert len(described) == 2
+
+    # Plotting methods called with the ORIGINAL (pre-normalization) column
+    # name must resolve it automatically instead of raising KeyError.
+    grid = sim.plot_parametric_scatter(
+        x='CustAST_ASToffset', y='Electricity:HVAC', df_source='parametric',
+        hue='epw', out_dir=str(tmp_path),
+    )
+    assert grid is not None
+
+    ecdf_path = sim.plot_parametric_ecdf(
+        x='Electricity:HVAC', df_source='parametric', out_dir=str(tmp_path),
+    )
+    assert ecdf_path
+
+    saved = sim.plot_parametric_distributions(
+        x='epw', y_vars=['Electricity:HVAC'], df_source='parametric',
+        out_dir=str(tmp_path),
+    )
+    assert len(saved) > 0
 
 

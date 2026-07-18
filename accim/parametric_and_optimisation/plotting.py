@@ -531,6 +531,56 @@ class PlottingMixin:
 
         return (df, unit_map)
 
+    def _resolve_plot_axis_column(self, requested_name: Optional[str], available_columns: list) -> Optional[str]:
+        """Resolve a requested axis/column name against available columns.
+
+        Falls back to the energy-aware fuzzy matcher `_resolve_output_columns`
+        (already used by optimisation/Pareto plotting) so callers can keep
+        referring to a "logical" output name (for example ``'Electricity:HVAC'``)
+        even after :meth:`normalize_outputs` has renamed the column (for
+        example to ``'Electricity:HVAC_kWh/m2'``).
+
+        Parameters
+        ----------
+        requested_name : Optional[str]
+            Column name requested by the caller (``x``, ``y``, or an item of
+            ``y_vars``). ``None`` is returned unchanged.
+        available_columns : list
+            Columns actually present in the dataframe about to be plotted.
+
+        Returns
+        -------
+        Optional[str]
+            ``requested_name`` unchanged when it already matches (or cannot be
+            resolved); otherwise the resolved column name actually present in
+            the dataframe. Validation right after this call still raises a
+            clear ``KeyError`` when no match is found at all.
+
+        Usage
+        -----
+        Internal helper used by `plot_parametric_scatter`, `plot_parametric_ecdf`,
+        and `plot_parametric_distributions` before validating required columns.
+
+        Examples
+        --------
+        x = self._resolve_plot_axis_column(x, list(df.columns))
+        """
+        if requested_name is None or requested_name in available_columns:
+            return requested_name
+        if not hasattr(self, '_resolve_output_columns'):
+            return requested_name
+        try:
+            resolved = self._resolve_output_columns([requested_name], available_columns, strict=False)
+        except Exception:
+            return requested_name
+        if len(resolved) == 1 and resolved[0] != requested_name:
+            print(
+                f"  [info] Resolved plot column '{requested_name}' -> '{resolved[0]}' "
+                "(likely renamed by normalize_outputs())."
+            )
+            return resolved[0]
+        return requested_name
+
     @staticmethod
     def _filter_epw_rows(df: pd.DataFrame, epw_filter=None) -> pd.DataFrame:
         """Filter dataframe rows by EPW substring(s).
@@ -2499,6 +2549,8 @@ class PlottingMixin:
             raise ValueError("add_trend must be one of: None, 'linear', 'lowess'")
 
         df = self._get_plot_source_df(df_source=df_source)
+        x = self._resolve_plot_axis_column(x, list(df.columns))
+        y = self._resolve_plot_axis_column(y, list(df.columns))
         required_cols = [x, y]
         optional_cols = [hue, style, size, col, row]
 
@@ -3336,6 +3388,7 @@ class PlottingMixin:
             raise ValueError(f"kind must be one of {sorted(allowed_kinds)}")
 
         df = self._get_plot_source_df(df_source=df_source)
+        x = self._resolve_plot_axis_column(x, list(df.columns))
         if x not in df.columns:
             raise KeyError(f"Column '{x}' not found in dataframe.")
 
@@ -3345,6 +3398,8 @@ class PlottingMixin:
             y_vars = [c for c in [heating_col, cooling_col] if c is not None]
             if not y_vars:
                 raise ValueError('Heating/Cooling columns not found and y_vars was not provided.')
+        else:
+            y_vars = [self._resolve_plot_axis_column(y_var, list(df.columns)) for y_var in y_vars]
 
         missing_y = [y_var for y_var in y_vars if y_var not in df.columns]
         if missing_y:
@@ -3528,6 +3583,7 @@ class PlottingMixin:
             return ''
 
         df = self._get_plot_source_df(df_source=df_source)
+        x = self._resolve_plot_axis_column(x, list(df.columns))
         if x not in df.columns:
             raise KeyError(f"Column '{x}' not found in dataframe.")
         if not pd.api.types.is_numeric_dtype(df[x]):

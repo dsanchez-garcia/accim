@@ -7897,6 +7897,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     'legacy_results_df': None,
                     'total_tasks': None,
                     'completed_tasks': None,
+                    'input_plan': None,
                 }
 
             legacy_df['_accim_task_signature'] = legacy_df['_accim_task_signature'].astype(str)
@@ -7910,6 +7911,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 'legacy_results_df': legacy_df,
                 'total_tasks': None,
                 'completed_tasks': int(len(legacy_df)),
+                'input_plan': None,
             }
 
         if not isinstance(payload, dict):
@@ -7940,13 +7942,73 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if isinstance(entry, (str, os.PathLike)):
                 batch_pickles.append(os.path.abspath(os.fspath(entry)))
 
+        input_plan_raw = payload.get('input_plan')
+        input_plan = input_plan_raw.copy() if isinstance(input_plan_raw, pd.DataFrame) else None
+
         return {
             'completed_signatures': completed_signatures,
             'batch_pickles': batch_pickles,
             'legacy_results_df': None,
             'total_tasks': payload.get('total_tasks'),
             'completed_tasks': payload.get('completed_tasks'),
+            'input_plan': input_plan,
         }
+
+    @staticmethod
+    def _parametric_plans_match(
+        provided_df: Optional[pd.DataFrame],
+        checkpoint_df: Optional[pd.DataFrame],
+    ) -> bool:
+        """Best-effort comparison of two parametric sampling plans.
+
+        Used to detect whether the ``df`` passed to
+        :meth:`run_parametric_simulation` is the exact same sampling plan
+        that was stored in a resume checkpoint. Non-deterministic samplers
+        (for example :meth:`sampling_lhs`, which has no fixed random seed)
+        produce different values on every call, so this comparison is what
+        allows accim to detect that mismatch instead of silently failing to
+        resume.
+
+        Parameters
+        ----------
+        provided_df : Any
+            The DataFrame passed by the caller (or resolved from
+            ``self.parameters_values_df``).
+        checkpoint_df : Any
+            The sampling plan previously stored inside a checkpoint.
+
+        Returns
+        -------
+        bool
+            True when both plans have the same columns, shape and values
+            (within floating-point tolerance). False otherwise, including
+            when either input is not a DataFrame.
+
+        Usage
+        -----
+        Internal helper for resume/checkpoint plan-reconciliation.
+        """
+        if not isinstance(provided_df, pd.DataFrame) or not isinstance(checkpoint_df, pd.DataFrame):
+            return False
+        if provided_df.shape != checkpoint_df.shape:
+            return False
+        try:
+            left = provided_df.reset_index(drop=True)
+            right = checkpoint_df.reset_index(drop=True)
+            if sorted(map(str, left.columns)) != sorted(map(str, right.columns)):
+                return False
+            right = right[left.columns]
+            pd.testing.assert_frame_equal(
+                left,
+                right,
+                check_dtype=False,
+                check_exact=False,
+                rtol=1e-09,
+                atol=1e-12,
+            )
+            return True
+        except Exception:
+            return False
 
     @staticmethod
     def _merge_parametric_batch_pickles(batch_pickles: list) -> pd.DataFrame:
@@ -8004,6 +8066,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         completed_tasks: int,
         completed_signatures: Optional[set] = None,
         batch_pickles: Optional[list] = None,
+        input_plan: Optional[pd.DataFrame] = None,
     ) -> int:
         """Persist current parametric results state for crash-safe resume.
         
@@ -8021,6 +8084,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             Argument used by `SimulationBase._save_parametric_checkpoint`.
         batch_pickles : Any
             Argument used by `SimulationBase._save_parametric_checkpoint`.
+        input_plan : Any
+            Optional sampling plan (the ``df`` used for this run) persisted
+            alongside the checkpoint so a later session can detect and
+            recover from a non-deterministic re-sample (see
+            `SimulationBase._parametric_plans_match`).
         
         Usage
         -----
@@ -8054,6 +8122,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 'batch_pickles': normalized_pickles,
                 'completed_tasks': int(completed_tasks),
                 'total_tasks': int(total_tasks),
+                'input_plan': input_plan.copy() if isinstance(input_plan, pd.DataFrame) else None,
             }
             pd.to_pickle(payload, checkpoint_tmp_path)
             meta_rows = int(len(signatures_list))
@@ -8807,6 +8876,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         batch_size: Optional[int] = None,
         checkpoint_every_batch: bool = False,
         resume_from_checkpoint: Union[bool, str] = False,
+        resume_plan_source: Literal['auto', 'checkpoint', 'provided'] = 'auto',
         export_summary_json: bool = False,
         summary_json_path: Optional[str] = None,
         accim_results_root: Optional[str] = None,
@@ -8837,6 +8907,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             batch at ``<out_dir>/outputs_param_simulation_checkpoint_latest.pkl``.
         :param resume_from_checkpoint: False (default) runs from scratch. Use True to
             resume from the default checkpoint path, or provide a checkpoint pickle path.
+        :param resume_plan_source: controls what happens when ``resume_from_checkpoint``
+            finds a checkpoint whose stored sampling plan does not match the ``df``
+            passed to this call (this typically happens when a non-deterministic
+            sampler such as :meth:`sampling_lhs` was called again in a new session,
+            producing different random values). ``'auto'`` (default) transparently
+            reuses the ORIGINAL plan stored in the checkpoint whenever it differs
+            from the provided ``df``, so resume keeps working without any extra
+            action. ``'checkpoint'`` behaves like ``'auto'`` (explicit opt-in).
+            ``'provided'`` always uses the newly provided ``df`` even if it differs
+            from the checkpoint, emitting a warning that resume may re-run every
+            task because signatures will not match. Ignored when there is no
+            checkpoint to compare against (fresh runs, or checkpoints saved before
+            this option existed).
         :param export_summary_json: when True, exports ``self.simulation_summary``
             automatically to a JSON file at the end of the run.
         :param summary_json_path: optional path for the summary JSON export. Ignored
@@ -8853,6 +8936,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             - This cleanup only touches files inside each simulation subdirectory;
               it does **not** remove IDF backups such as ``accim_idf_backup_*``
               stored in the run root ``out_dir``.
+            - Task signatures used for resume are based on (idf, epw, exact
+              parameter values). Because ``resume_plan_source='auto'`` reconciles
+              the sampling plan automatically, calling a sampler again (e.g.
+              ``sim.sampling_lhs(...)``) before a resumed call no longer breaks
+              resume: the checkpoint's original plan silently takes precedence.
         
         Example::
         
@@ -8913,6 +9001,93 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         # Update the IDF backup with the exact building state used for this run
         self._save_idf_backup(label='pre_parametric', out_dir=out_dir)
 
+        checkpoint_completed_signatures = set()
+        checkpoint_batch_pickles = []
+        legacy_checkpoint_seed_df = None
+        checkpoint_input_plan = None
+        resume_requested = bool(resume_from_checkpoint)
+        if resume_requested:
+            if os.path.exists(checkpoint_path):
+                try:
+                    checkpoint_state = self._load_parametric_checkpoint_state(checkpoint_path=checkpoint_path)
+                except Exception as exc:
+                    warnings.warn(
+                        f'Could not read checkpoint at {checkpoint_path}: {exc}. Resume will start from scratch.',
+                        UserWarning,
+                    )
+                    checkpoint_state = {
+                        'completed_signatures': set(),
+                        'batch_pickles': [],
+                        'legacy_results_df': None,
+                        'input_plan': None,
+                    }
+
+                checkpoint_completed_signatures = set(
+                    checkpoint_state.get('completed_signatures', set()) or set()
+                )
+                checkpoint_batch_pickles = []
+                for pickle_path in (checkpoint_state.get('batch_pickles', []) or []):
+                    if os.path.exists(pickle_path):
+                        checkpoint_batch_pickles.append(os.path.abspath(os.fspath(pickle_path)))
+                    else:
+                        warnings.warn(
+                            f'Checkpoint references missing batch pickle: {pickle_path}',
+                            UserWarning,
+                        )
+
+                legacy_checkpoint_seed_df = checkpoint_state.get('legacy_results_df')
+                checkpoint_input_plan = checkpoint_state.get('input_plan')
+            elif isinstance(resume_from_checkpoint, str):
+                raise FileNotFoundError(
+                    f"Checkpoint file not found: {checkpoint_path}"
+                )
+            else:
+                warnings.warn(
+                    f'resume_from_checkpoint=True but no checkpoint was found at {checkpoint_path}. '
+                    'Starting a fresh run.',
+                    UserWarning,
+                )
+
+        # Reconcile the provided 'df' with the sampling plan stored in the
+        # checkpoint (if any). Samplers such as sampling_lhs() are NOT
+        # deterministic: calling them again in a new session produces
+        # different parameter values, so task signatures would never match
+        # the checkpoint and resume_from_checkpoint would silently re-run
+        # everything. 'resume_plan_source' controls which plan wins when
+        # they differ (default 'auto' reuses the checkpoint's original plan
+        # so resume keeps working transparently across sessions).
+        if (
+            resume_requested
+            and isinstance(checkpoint_input_plan, pd.DataFrame)
+            and len(checkpoint_input_plan) > 0
+        ):
+            plans_match = self._parametric_plans_match(df, checkpoint_input_plan)
+            if not plans_match:
+                if resume_plan_source == 'provided':
+                    warnings.warn(
+                        "The provided 'df' does not match the sampling plan stored in the "
+                        f"checkpoint at {checkpoint_path} (e.g. a sampling method such as "
+                        "sampling_lhs() was called again and produced new random values). "
+                        "Because resume_plan_source='provided', the newly provided 'df' will "
+                        "be used, but task signatures likely will NOT match previously "
+                        "completed tasks, so resume may re-run everything. Use "
+                        "resume_plan_source='checkpoint' or 'auto' (default) to reuse the "
+                        "original plan and make resume work reliably.",
+                        UserWarning,
+                    )
+                else:
+                    warnings.warn(
+                        "The provided 'df' does not match the sampling plan stored in the "
+                        f"checkpoint at {checkpoint_path} (e.g. a sampling method such as "
+                        "sampling_lhs() was called again and produced new random values). "
+                        "To make resume_from_checkpoint work correctly, accim is reusing the "
+                        "ORIGINAL sampling plan stored in the checkpoint instead of the newly "
+                        "provided 'df'. Pass resume_plan_source='provided' to force using the "
+                        "new 'df' instead (this will likely make resume re-run everything).",
+                        UserWarning,
+                    )
+                    df = checkpoint_input_plan
+
         grouped_dfs = self._prepare_dataframe_for_buildings(df=df, epws=epws)
         
         problem_names_inputs = self._get_problem_input_names()
@@ -8934,51 +9109,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     UserWarning,
                 )
         
-        checkpoint_completed_signatures = set()
-        checkpoint_batch_pickles = []
-        legacy_checkpoint_seed_df = None
         task_signatures = set()
         total_tasks = 0
-        resume_requested = bool(resume_from_checkpoint)
-        if resume_requested:
-            if os.path.exists(checkpoint_path):
-                try:
-                    checkpoint_state = self._load_parametric_checkpoint_state(checkpoint_path=checkpoint_path)
-                except Exception as exc:
-                    warnings.warn(
-                        f'Could not read checkpoint at {checkpoint_path}: {exc}. Resume will start from scratch.',
-                        UserWarning,
-                    )
-                    checkpoint_state = {
-                        'completed_signatures': set(),
-                        'batch_pickles': [],
-                        'legacy_results_df': None,
-                    }
-
-                checkpoint_completed_signatures = set(
-                    checkpoint_state.get('completed_signatures', set()) or set()
-                )
-                checkpoint_batch_pickles = []
-                for pickle_path in (checkpoint_state.get('batch_pickles', []) or []):
-                    if os.path.exists(pickle_path):
-                        checkpoint_batch_pickles.append(os.path.abspath(os.fspath(pickle_path)))
-                    else:
-                        warnings.warn(
-                            f'Checkpoint references missing batch pickle: {pickle_path}',
-                            UserWarning,
-                        )
-
-                legacy_checkpoint_seed_df = checkpoint_state.get('legacy_results_df')
-            elif isinstance(resume_from_checkpoint, str):
-                raise FileNotFoundError(
-                    f"Checkpoint file not found: {checkpoint_path}"
-                )
-            else:
-                warnings.warn(
-                    f'resume_from_checkpoint=True but no checkpoint was found at {checkpoint_path}. '
-                    'Starting a fresh run.',
-                    UserWarning,
-                )
 
         if isinstance(legacy_checkpoint_seed_df, pd.DataFrame) and len(legacy_checkpoint_seed_df) > 0:
             seed_pickle = self._save_parametric_batch_chunk(
@@ -9129,6 +9261,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         completed_tasks=len(completed_signatures),
                         completed_signatures=completed_signatures,
                         batch_pickles=batch_pickles,
+                        input_plan=df,
                     )
                     print(
                         '[run_parametric_simulation] Checkpoint saved '
@@ -9162,6 +9295,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         completed_tasks=len(completed_signatures),
                         completed_signatures=completed_signatures,
                         batch_pickles=batch_pickles,
+                        input_plan=df,
                     )
                     print(
                         '[run_parametric_simulation] Checkpoint saved '
@@ -9179,6 +9313,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 completed_tasks=len(completed_signatures),
                 completed_signatures=completed_signatures,
                 batch_pickles=batch_pickles,
+                input_plan=df,
             )
 
         outputs_param_simulation = self._merge_parametric_batch_pickles(

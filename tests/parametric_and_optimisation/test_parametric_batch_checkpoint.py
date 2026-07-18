@@ -85,9 +85,16 @@ def test_parametric_batch_checkpoint_roundtrip(tmp_path, monkeypatch):
     checkpoint_path = out_dir / 'outputs_param_simulation_checkpoint_latest.pkl'
     assert checkpoint_path.exists()
 
-    checkpoint_df = pd.read_pickle(checkpoint_path)
-    assert '_accim_task_signature' in checkpoint_df.columns
-    assert len(checkpoint_df) == 5
+    # The checkpoint is persisted in the 'state_v2' dict format (not a plain
+    # DataFrame): completed task signatures + pointers to batch pickle files.
+    checkpoint_state = sim._load_parametric_checkpoint_state(checkpoint_path=str(checkpoint_path))
+    assert len(checkpoint_state['completed_signatures']) == 5
+
+    merged_checkpoint_df = sim._merge_parametric_batch_pickles(
+        batch_pickles=checkpoint_state['batch_pickles'],
+    )
+    assert '_accim_task_signature' in merged_checkpoint_df.columns
+    assert len(merged_checkpoint_df) == 5
 
 
 def test_parametric_resume_from_checkpoint_skips_completed_tasks(tmp_path, monkeypatch):
@@ -143,9 +150,16 @@ def test_parametric_resume_from_checkpoint_skips_completed_tasks(tmp_path, monke
     assert len(results) == 4
     assert sorted(results['x'].tolist()) == [1, 2, 3, 4]
 
-    refreshed_checkpoint_df = pd.read_pickle(checkpoint_path)
-    assert len(refreshed_checkpoint_df) == 4
-    assert sorted(refreshed_checkpoint_df['x'].tolist()) == [1, 2, 3, 4]
+    # The checkpoint is persisted in the 'state_v2' dict format (not a plain
+    # DataFrame): reconstruct the full results via the batch pickle pointers.
+    refreshed_checkpoint_state = sim._load_parametric_checkpoint_state(checkpoint_path=str(checkpoint_path))
+    assert len(refreshed_checkpoint_state['completed_signatures']) == 4
+
+    refreshed_merged_df = sim._merge_parametric_batch_pickles(
+        batch_pickles=refreshed_checkpoint_state['batch_pickles'],
+    )
+    assert len(refreshed_merged_df) == 4
+    assert sorted(refreshed_merged_df['x'].tolist()) == [1, 2, 3, 4]
 
 
 def test_parametric_batch_size_validation(tmp_path):
@@ -172,4 +186,127 @@ def test_parametric_resume_missing_checkpoint_raises_when_path_is_explicit(tmp_p
             batch_size=1,
             resume_from_checkpoint=str(missing_path),
         )
+
+
+def test_parametric_plans_match_helper():
+    sim = _make_lightweight_parametric(epw='Test.epw')
+    a = pd.DataFrame({'x': [1.0, 2.0], 'y': [3.0, 4.0]})
+    b = a.copy()
+    assert sim._parametric_plans_match(a, b) is True
+
+    different_values = pd.DataFrame({'x': [1.0, 9.0], 'y': [3.0, 4.0]})
+    assert sim._parametric_plans_match(a, different_values) is False
+
+    different_shape = pd.DataFrame({'x': [1.0, 2.0, 3.0], 'y': [3.0, 4.0, 5.0]})
+    assert sim._parametric_plans_match(a, different_shape) is False
+
+    assert sim._parametric_plans_match(a, None) is False
+    assert sim._parametric_plans_match(None, None) is False
+
+
+def test_parametric_resume_auto_reconciles_changed_sampling_plan(tmp_path, monkeypatch):
+    """Reproduces re-running a non-deterministic sampler (e.g. sampling_lhs())
+    in a new session: resume_from_checkpoint should still recognise previously
+    completed tasks by transparently falling back to the ORIGINAL plan stored
+    in the checkpoint (default resume_plan_source='auto')."""
+    calls = []
+
+    def _counting_worker(*args, **kwargs):
+        row_dict = args[10]
+        calls.append(float(row_dict['x']))
+        return _fake_worker(*args, **kwargs)
+
+    monkeypatch.setattr(main_module, '_run_single_evaluation_worker', _counting_worker)
+    monkeypatch.setattr(pd.DataFrame, 'to_excel', lambda self, *args, **kwargs: None, raising=False)
+
+    sim = _make_lightweight_parametric(epw='Test.epw')
+    original_plan = pd.DataFrame({'x': [1.0, 2.0, 3.0, 4.0]})
+
+    out_dir = tmp_path / 'resume_reconcile_out'
+
+    # First run: no prior checkpoint, everything is simulated and the ORIGINAL
+    # plan is stored inside the checkpoint.
+    sim.run_parametric_simulation(
+        out_dir=str(out_dir),
+        df=original_plan,
+        processes=1,
+        batch_size=2,
+        checkpoint_every_batch=True,
+        resume_from_checkpoint=True,
+        keep_dirs=False,
+        keep_input=True,
+    )
+    assert sorted(calls) == [1.0, 2.0, 3.0, 4.0]
+    calls.clear()
+
+    # Simulate a NEW session where a non-deterministic sampler produced a
+    # completely different set of values.
+    new_plan = pd.DataFrame({'x': [10.0, 20.0, 30.0, 40.0]})
+
+    with pytest.warns(UserWarning, match='does not match the sampling plan'):
+        results = sim.run_parametric_simulation(
+            out_dir=str(out_dir),
+            df=new_plan,
+            processes=1,
+            batch_size=2,
+            checkpoint_every_batch=True,
+            resume_from_checkpoint=True,
+            keep_dirs=False,
+            keep_input=True,
+        )
+
+    # Nothing should have been re-simulated: the checkpoint plan (original_plan)
+    # was reused, so all 4 tasks were already completed.
+    assert calls == []
+    assert sorted(results['x'].tolist()) == [1.0, 2.0, 3.0, 4.0]
+
+
+def test_parametric_resume_plan_source_provided_forces_new_plan(tmp_path, monkeypatch):
+    """resume_plan_source='provided' is the explicit opt-out: the newly
+    provided df is used even if it does not match the checkpoint, at the cost
+    of not recognising previously completed tasks."""
+    calls = []
+
+    def _counting_worker(*args, **kwargs):
+        row_dict = args[10]
+        calls.append(float(row_dict['x']))
+        return _fake_worker(*args, **kwargs)
+
+    monkeypatch.setattr(main_module, '_run_single_evaluation_worker', _counting_worker)
+    monkeypatch.setattr(pd.DataFrame, 'to_excel', lambda self, *args, **kwargs: None, raising=False)
+
+    sim = _make_lightweight_parametric(epw='Test.epw')
+    original_plan = pd.DataFrame({'x': [1.0, 2.0, 3.0, 4.0]})
+
+    out_dir = tmp_path / 'resume_provided_out'
+    sim.run_parametric_simulation(
+        out_dir=str(out_dir),
+        df=original_plan,
+        processes=1,
+        batch_size=2,
+        checkpoint_every_batch=True,
+        resume_from_checkpoint=True,
+        keep_dirs=False,
+        keep_input=True,
+    )
+    calls.clear()
+
+    new_plan = pd.DataFrame({'x': [10.0, 20.0, 30.0, 40.0]})
+    with pytest.warns(UserWarning, match="resume_plan_source='provided'"):
+        sim.run_parametric_simulation(
+            out_dir=str(out_dir),
+            df=new_plan,
+            processes=1,
+            batch_size=2,
+            checkpoint_every_batch=True,
+            resume_from_checkpoint=True,
+            resume_plan_source='provided',
+            keep_dirs=False,
+            keep_input=True,
+        )
+
+    # With resume_plan_source='provided' the new plan wins, so none of its
+    # task signatures match the checkpoint and all 4 tasks run again.
+    assert sorted(calls) == [10.0, 20.0, 30.0, 40.0]
+
 
