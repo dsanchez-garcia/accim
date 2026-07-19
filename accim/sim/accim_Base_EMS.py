@@ -1060,12 +1060,34 @@ def addEMSPCMBase(self, verboseMode: bool = True):
     # SetAST_Master is invoked by SetAST via 'run SetAST_Master'.
     subroutine_programs = {p for p in programlist if p.startswith('SetAST_CS') or p == 'SetAST_Master'}
 
-    priority_programs = ['SetInputData', 'SetVOFinputData', 'SetAppLimits', 'ApplyCAT']
-    top_level_programs = [p for p in programlist if p not in subroutine_programs]
-    top_level_programs = sorted(
-        top_level_programs,
-        key=lambda x: priority_programs.index(x) if x in priority_programs else len(priority_programs)
+    # Programs that SET base/geometry/season/comfort variables must run
+    # BEFORE any program that CONSUMES them (SetAST, SetASTnoTol, ApplyAST_*,
+    # SetVST, SetMyVOF_*, SetWindowOperation_*, CountHoursNoApp_*, ...).
+    # All these ProgramCallingManagers share the same EnergyPlus Model Calling
+    # Point (BeginTimestepBeforePredictor); EnergyPlus executes managers that
+    # share a calling point in the order they appear in the IDF, so the order
+    # in which they are created below directly controls execution order.
+    #
+    # Fix (bug report: EMS globals such as CoolingSeason or ACST could be read
+    # as "not initialized" on the very first warmup timestep for certain
+    # ComfStand/CAT/ComfMod combinations, because SetGeoVar<zone>/SetComfTemp/
+    # CountHours_<zone> - which are NOT in the original priority list - could
+    # end up created AFTER SetAST/SetASTnoTol, i.e. running after them on the
+    # shared calling point). Prefixes (not exact names) are used because some
+    # setter programs are per-zone (e.g. 'SetGeoVar'+zonename).
+    priority_prefixes = (
+        'SetInputData', 'SetVOFinputData', 'SetAppLimits', 'ApplyCAT',
+        'SetGeoVar', 'SetComfTemp', 'CountHours_',
     )
+
+    def _pcm_priority(name):
+        for idx, prefix in enumerate(priority_prefixes):
+            if name.startswith(prefix):
+                return idx
+        return len(priority_prefixes)
+
+    top_level_programs = [p for p in programlist if p not in subroutine_programs]
+    top_level_programs = sorted(top_level_programs, key=_pcm_priority)
 
     for i in top_level_programs:
         if i in pcmlist:
@@ -1253,6 +1275,15 @@ def addGlobVarList(self, ScriptType: str = None, verboseMode: bool = True):
         Erl_Variable_21_Name='CoolSeasonEnd',
         Erl_Variable_22_Name='m',
         Erl_Variable_23_Name='n',
+        # NOTE: 'CoolingSeason' is computed by SetAST_Master (modular SetAST
+        # refactor) and read by the per-ComfStand SetAST_CS{N}_{chunk}
+        # subprograms it calls via 'run'. Without declaring it here as a
+        # GlobalVariable, EnergyPlus treats it as a variable local to EACH
+        # program, so the value set in SetAST_Master never reaches
+        # SetAST_CS{N}_{chunk}, causing:
+        # "EvaluateExpression: Variable = 'COOLINGSEASON' used in expression
+        # has not been initialized!" on the very first warmup timestep.
+        Erl_Variable_24_Name='CoolingSeason',
     )
 
     for zonename in self.ems_objs_name:

@@ -2111,6 +2111,25 @@ def get_SetAST_subprogram_chunk(comf_stand, chunk_idx, chunk_comf_mods):
     }
 
 def get_valid_combinations():
+    # NOTE: this dict controls which 'if (ComfMod==X)' branches get included
+    # in each modular SetAST_CS{N}_{chunk} subprogram (see
+    # get_SetAST_subprogram_chunk / get_SetAST_Master_program below). It MUST
+    # stay in sync with the 'valid_params' ComfMod lists in
+    # accim.parametric_and_optimisation.funcs_for_besos.param_accis.
+    # drop_invalid_param_combinations(), which decides which (ComfStand, CAT,
+    # ComfMod) rows are kept in the sampled parameter table.
+    #
+    # Bug fix: ComfStand 6, 8, 9, 10, 11, 16, 18, 19, 20 were missing some
+    # ComfMod values here (silently dropped from code generation) even though
+    # (a) drop_invalid_param_combinations() considers them valid and lets
+    # them through, and (b) get_SetAST_lines() DOES generate correct 'set
+    # ACST'/'set AHST' code for them. Because the branch was missing, the
+    # generated SetAST_CS{N}_{chunk} subprogram had no matching
+    # 'if (ComfMod==X)' for these rows, so ACST/AHST were silently never
+    # assigned - causing EnergyPlus to fail with "Variable = 'ACST' used in
+    # expression has not been initialized!" in the (always-running)
+    # SetASTnoTol program (ACSTnoTol = ACST - ACSTtol) for e.g.
+    # ComfStand=16, CAT=80, ComfMod=0.
     return {
         0:  [0],
         1:  [0, 1, 2, 3],
@@ -2118,24 +2137,25 @@ def get_valid_combinations():
         3:  [0, 1, 2, 3],
         4:  [3],
         5:  [3],
-        6:  [2, 3],
+        6:  [0, 1, 2, 3],
         7:  [0, 1, 2, 3],
-        8:  [1, 2, 3],
-        9:  [1, 2, 3],
-        10: [1, 2, 3],
-        11: [1, 2, 3],
+        8:  [0, 1, 2, 3],
+        9:  [0, 1, 2, 3],
+        10: [0, 1, 2, 3],
+        11: [0, 1, 2, 3],
         12: [0, 1, 2, 3],
         13: [0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5, 2, 3],
         14: [0.1, 0.2, 0.3, 0.4, 0.5, 1.1, 1.2, 1.3, 1.4, 1.5, 2, 3],
         15: [0, 1, 2, 3],
-        16: [1, 2, 3],
+        16: [0, 1, 2, 3],
         17: [0, 1, 2, 3],
-        18: [1, 2, 3],
-        19: [1, 2, 3],
-        20: [1, 2, 3],
+        18: [0, 1, 2, 3],
+        19: [0, 1, 2, 3],
+        20: [0, 1, 2, 3],
         21: [2, 3],
         22: [0],
         99: [3],
+
     }
 
 def get_all_SetAST_modular_programs():
