@@ -150,9 +150,52 @@ def expand_to_hourly_dataframe(
             return list(value)
         return []
 
-    # Function to expand each simulation row to hourly rows.
-    # It supports sparse/variable output columns by using the first non-empty
-    # hourly list as the row length and filling missing columns with NaN.
+    df_subset = df_subset.reset_index(drop=True)
+    n_rows = len(df_subset)
+
+    # Pre-extract every hourly series once (avoids re-parsing/re-checking types
+    # per row inside the slow fallback path below).
+    row_series = {col: [_as_hourly_series(v) for v in df_subset[col]] for col in hourly_columns}
+    row_lengths = []
+    for i in range(n_rows):
+        lengths_i = [len(row_series[col][i]) for col in hourly_columns if len(row_series[col][i]) > 0]
+        row_lengths.append(max(lengths_i) if lengths_i else 0)
+
+    # FAST PATH (vectorised): triggers for the common case where every row
+    # reports the same number of hourly steps (e.g. 8760 for a full-year run)
+    # and every hourly column has that exact length in every row. This avoids
+    # pandas' row-wise .apply(axis=1) (which builds one small DataFrame per
+    # row via a Python-level loop) and the per-row Python `timedelta` loop,
+    # both of which scale very poorly (minutes to hours) for large batches of
+    # parametric/optimisation simulations.
+    is_regular = (
+        n_rows > 0
+        and len(set(row_lengths)) == 1
+        and row_lengths[0] > 0
+        and all(len(row_series[col][i]) == row_lengths[0] for col in hourly_columns for i in range(n_rows))
+    )
+
+    if is_regular:
+        num_hours = row_lengths[0]
+        datetimes = pd.date_range(start=start_datetime, periods=num_hours, freq='h').to_numpy()
+        hours = np.arange(1, num_hours + 1)
+
+        data = {}
+        for col in parameter_columns:
+            data[col] = np.repeat(df_subset[col].to_numpy(), num_hours)
+        data['hour'] = np.tile(hours, n_rows)
+        data['datetime'] = np.tile(datetimes, n_rows)
+        for col in hourly_columns:
+            data[col] = np.concatenate([
+                np.asarray(row_series[col][i], dtype=float) for i in range(n_rows)
+            ])
+
+        return pd.DataFrame(data)
+
+    # FALLBACK PATH (row-by-row): required to correctly support sparse/variable
+    # hourly outputs (e.g. different zone counts across IDFs), where some rows
+    # or columns have a different length and must be padded with NaN. See
+    # CHANGELOG entry "Sparse Hourly Expansion with Variable Output Columns".
     def expand_hourly_data(row):
         hourly_values = {col: _as_hourly_series(row[col]) for col in hourly_columns}
         lengths = [len(vals) for vals in hourly_values.values() if len(vals) > 0]
