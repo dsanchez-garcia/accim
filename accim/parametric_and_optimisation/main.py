@@ -9186,20 +9186,56 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 batch_results = []
                 if processes > 1 and len(tasks_for_batch) > 1:
                     import concurrent.futures
-                    with concurrent.futures.ProcessPoolExecutor(max_workers=processes) as executor:
-                        futures = {}
-                        for task in tasks_for_batch:
-                            future = executor.submit(_run_single_evaluation_worker, *task['worker_args'])
-                            futures[future] = str(task.get('signature'))
-                        for future in tqdm(
-                            concurrent.futures.as_completed(futures),
-                            total=len(tasks_for_batch),
-                            desc=f"Executing parametric simulations (batch {current_batch_idx}/{n_batches})",
-                            unit='row',
-                        ):
-                            result = future.result()
-                            result['_accim_task_signature'] = futures[future]
-                            batch_results.append(result)
+                    import time as _time
+
+                    max_retries = 2
+                    remaining_tasks = list(tasks_for_batch)
+                    attempt = 0
+                    while remaining_tasks:
+                        attempt += 1
+                        completed_this_attempt = set()
+                        try:
+                            with concurrent.futures.ProcessPoolExecutor(max_workers=processes) as executor:
+                                futures = {}
+                                for task in remaining_tasks:
+                                    future = executor.submit(_run_single_evaluation_worker, *task['worker_args'])
+                                    futures[future] = str(task.get('signature'))
+                                for future in tqdm(
+                                    concurrent.futures.as_completed(futures),
+                                    total=len(remaining_tasks),
+                                    desc=f"Executing parametric simulations (batch {current_batch_idx}/{n_batches})",
+                                    unit='row',
+                                ):
+                                    task_signature = futures[future]
+                                    result = future.result()
+                                    result['_accim_task_signature'] = task_signature
+                                    batch_results.append(result)
+                                    completed_this_attempt.add(task_signature)
+                            # All tasks in this attempt finished without the pool breaking.
+                            remaining_tasks = []
+                        except concurrent.futures.process.BrokenProcessPool:
+                            remaining_tasks = [
+                                task for task in remaining_tasks
+                                if str(task.get('signature')) not in completed_this_attempt
+                            ]
+                            if attempt > max_retries or not remaining_tasks:
+                                warnings.warn(
+                                    f"A worker process died unexpectedly (BrokenProcessPool) in batch "
+                                    f"{current_batch_idx}/{n_batches} and the retry budget ({max_retries}) "
+                                    "was exhausted. Re-raising so the caller can rely on "
+                                    "checkpoint_every_batch/resume_from_checkpoint to resume later.",
+                                    UserWarning,
+                                )
+                                raise
+                            warnings.warn(
+                                "A worker process died unexpectedly (BrokenProcessPool), likely due to "
+                                "a transient OS/EnergyPlus crash, in batch "
+                                f"{current_batch_idx}/{n_batches} (attempt {attempt}/{max_retries + 1}). "
+                                f"Retrying the {len(remaining_tasks)} pending task(s) in this batch with a "
+                                "fresh process pool...",
+                                UserWarning,
+                            )
+                            _time.sleep(2)
                 else:
                     for task in tqdm(
                         tasks_for_batch,

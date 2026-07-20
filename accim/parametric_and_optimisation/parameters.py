@@ -127,7 +127,10 @@ def accis_parameter(parameter_name, values):
 
     if desc_has_options:
         parameter = Parameter(
-            name=name,
+            # NOTE: 'name' is intentionally NOT passed here: it's already set on
+            # the value_descriptors below. Passing it in both places triggers a
+            # spurious "This parameter's descriptor is already named ..." UserWarning
+            # from besos (harmless, since both names are identical, but noisy).
             # selector=GenericSelector(set=change_adaptive_coeff),
             selector=GenericSelector(set=params_dicts.all_params[name]),
             # value_descriptors=RangeParameter(name='CustAST_m', min_val=0, max_val=0.7),
@@ -138,7 +141,7 @@ def accis_parameter(parameter_name, values):
         ),
     else:
         parameter = Parameter(
-            name=name,
+            # NOTE: see comment above; 'name' is set via value_descriptors only.
             # selector=GenericSelector(set=change_adaptive_coeff),
             selector=GenericSelector(set=params_dicts.all_params[name]),
             # value_descriptors=RangeParameter(name='CustAST_m', min_val=0, max_val=0.7),
