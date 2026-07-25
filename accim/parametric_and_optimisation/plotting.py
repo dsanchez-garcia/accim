@@ -2148,6 +2148,9 @@ class PlottingMixin:
             height: float=4,
             aspect: float=1.2,
             figsize: tuple=None,
+            legend_bbox_to_anchor: tuple = (0.82, 0.5),
+            legend_loc: str = 'center left',
+            subplots_right: Optional[float] = 0.80,
             subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
             subplot_order_custom: Optional[dict] = None,
             subplot_order_case_sensitive: bool = False,
@@ -2184,6 +2187,24 @@ class PlottingMixin:
             figure size calculated from height and aspect. Applied after the
             FacetGrid is built, so it always takes precedence.
             Example: figsize=(20, 8).
+        :param legend_bbox_to_anchor: (x, y) figure-fraction coordinates used to
+            anchor the combined legend (hue categories + highlight markers) when
+            ``highlight_dict`` is provided. Only takes effect if there is at
+            least one highlighted value. Default ``(0.82, 0.5)``: just to the
+            right of the default ``subplots_right=0.80``, so there is no
+            visible gap between the plots and the legend. Increase the first
+            value (and/or ``subplots_right``) to add breathing room, or
+            decrease both together to bring the legend closer to the plots.
+        :param legend_loc: Matplotlib ``loc`` string used together with
+            ``legend_bbox_to_anchor`` to anchor the legend box. Default
+            ``'center left'`` anchors the legend's left-center point at
+            ``legend_bbox_to_anchor``, so the legend grows rightwards instead
+            of overlapping the plots.
+        :param subplots_right: Right margin (0-1, figure-fraction) reserved for
+            the combined legend via ``Figure.subplots_adjust(right=...)``. Only
+            applied when ``highlight_dict`` produces at least one legend entry.
+            Set to ``None`` to skip this adjustment entirely (e.g. if you plan
+            to reposition the legend manually afterwards). Default ``0.80``.
         
         Parameters
         ----------
@@ -2423,8 +2444,8 @@ class PlottingMixin:
                     handles=combined_handles,
                     labels=combined_labels,
                     title=legend_title,
-                    loc='center right',
-                    bbox_to_anchor=(1.0, 0.5),
+                    loc=legend_loc,
+                    bbox_to_anchor=legend_bbox_to_anchor,
                     frameon=True,
                     fontsize='small',
                     title_fontsize='small',
@@ -2434,6 +2455,15 @@ class PlottingMixin:
                     if text.get_text().startswith('―'):
                         text.set_fontweight('bold')
                 g._legend = new_legend
+                # Reserve room on the right so the combined legend (original hue
+                # handles + highlight markers, which is wider/taller than
+                # seaborn's default legend) doesn't overlap the rightmost facet
+                # column. Both this margin and the legend anchor are caller
+                # -configurable via subplots_right / legend_bbox_to_anchor /
+                # legend_loc so the gap (or lack thereof) between the plots and
+                # the legend can be tuned directly from the call site.
+                if subplots_right is not None:
+                    g.fig.subplots_adjust(right=subplots_right)
 
         g.set_axis_labels('Energy Type', f'Energy ({unit_str})')
         g.fig.subplots_adjust(top=0.9)
