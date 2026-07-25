@@ -10678,8 +10678,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         other_sc = dict(getattr(other, 'epw_suffix_categories', {}) or {})
         self.epw_suffix_categories = {**other_sc, **self_sc}
 
-        n_self  = len(getattr(self,  'outputs_param_simulation', None) or [])
-        n_other = len(getattr(other, 'outputs_param_simulation', None) or [])
+        _self_pdf  = getattr(self,  'outputs_param_simulation', None)
+        _other_pdf = getattr(other, 'outputs_param_simulation', None)
+        n_self  = len(_self_pdf)  if _self_pdf  is not None else 0
+        n_other = len(_other_pdf) if _other_pdf is not None else 0
         print(
             f'  [info] merge: now {n_self} parametric rows '
             f'(+{n_other} from other).'
