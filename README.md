@@ -15,6 +15,17 @@ The figure below clearly explains the aim of adaptive setpoint temperatures: int
 
 ![Use of adaptive setpoint](https://github.com/dsanchez-garcia/accim/blob/master/docs/source/images/NV_vs_MM.png?raw=true)
 
+# 0. Development workflow files
+
+This repository uses the following Markdown files for project tracking:
+
+- `CHANGELOG.md`: user-facing release notes.
+- `DEVLOG.md`: internal log of completed technical work.
+- `TODO.md`: active short-term tasks and priorities.
+- `ROADMAP.md`: medium- and long-term initiatives.
+
+Recommended flow: track active work in `TODO.md`, move completed outcomes to `DEVLOG.md`, and promote user-facing changes to `CHANGELOG.md` during release preparation.
+
 # 1. Citation
 
 If you use this package, please cite us:
@@ -219,6 +230,70 @@ You can apply aPMV setpoints to a building using the following function:
         dflt_for_tolerance_heating_sp_heating_season=float, # dflt_for_tolerance_heating_sp_heating_season: Default tolerance value if key is missing. Default is 0.1.
         verbose_mode=bool # verbose_mode: True to print detailed progress messages (added objects) and warnings to the console. Default is True.
     )
+
+### 2.2.7 Faster floor-area setup with representative IDFs
+
+When you have many IDFs with repeated typologies, you can avoid loading every file to
+compute floor area for normalization:
+
+    sim.set_building_floor_area(
+        mode='air-conditioned',
+        representative_mode='by_idf_mapping_category',
+        representative_category='building_type',
+    )
+
+You can also provide an explicit map from category value to representative IDF:
+
+    sim.set_building_floor_area(
+        mode='air-conditioned',
+        representative_mode='custom_map',
+        representative_category='building_type',
+        representative_map={
+            'residential': 'OSM_Res_A',
+            'office': 'OSM_Office_A',
+        },
+    )
+
+### 2.2.8 Quick simulation summary inspection
+
+After running or loading parametric outputs, ACCIM now updates a compact in-memory
+summary (`sim.simulation_summary`) so you can quickly inspect what was executed.
+
+```python
+# Build/refresh summary explicitly
+summary = sim.build_simulation_summary(df_source='parametric')
+print(summary['total_rows'])
+print(summary['n_unique'])
+
+# Pretty print in console
+sim.print_simulation_summary(df_source='parametric')
+
+# Optional: force explicit category columns
+summary_custom = sim.build_simulation_summary(
+    df_source='parametric',
+    category_columns=['weather_type', 'city', 'building_type'],
+)
+
+# Optional: export summary for audit/reproducibility
+summary_json = sim.export_simulation_summary_json(
+    df_source='parametric',
+    json_path='param_results/simulation_summary_parametric.json',
+)
+print(summary_json)
+
+# Optional: auto-export at the end of each run
+sim.run_parametric_simulation(
+    out_dir='param_results',
+    export_summary_json=True,
+)
+sim.run_optimisation(
+    out_dir='optim_results',
+    export_summary_json=True,
+)
+```
+
+Category detection is dynamic: if `epw_mapping_rules`/`idf_mapping_rules` exist,
+their keys are used first; otherwise ACCIM infers category columns from the DataFrame.
 
 # 3. Documentation
 

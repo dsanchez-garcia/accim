@@ -7,58 +7,264 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.7.8] - 2026-04-18
-
 ### Added
-- **EMS Results Verification Utility**: Added `AccimSimulationVerifier` to `accim.utils`.
-  - Replaces the former procedural function with a robust Object-Oriented class.
-  - Reads an EnergyPlus simulation output (direct `.csv` parsing prioritize to bypass heavy `ReadVarsESO` operations) and verifies that the ACCIS EMS scripts injected by `AddAccis` operate correctly.
-  - **Check 1 — HVAC Setpoint Adherence**: Verifies adaptive cooling (`ACST_Sch`) and heating (`AHST_Sch`) setpoint parameters natively. Features anti-bounce mask logic to mathematically pardon 1-timestep transient threshold shocks naturally occurring in simulations.
-  - **Check 2 — Window Operation Logic**: Replicates the conditional logic of `SetWindowOperation_<windowname>`. Features dynamic parameter mapping directly from EMS evaluation series (`MinOutTemp` and `VST`) per-timestep instead of using static references.
-  - **Intelligent Timestep Filtering**: Implements frequency-agnostic design-day stripping logic, automatically slicing simulation warmup buffers natively using `DatetimeIndex` logic.
-  - **Leniency Models**: Integrates advanced 1-timestep window closing masks and mid-hour toggle aggregations (`open_transit`, `close_transit`) that mathematically excuse transition false positives inherently logged by EnergyPlus due to control lag or fractional overlapping in `Hourly` resolutions.
-- **Operative Temperature Control Utility**: Added a new function `set_operative_temp_control` inside `accim.utils` that allows users to easily update IDFs to use operative temperature control by appending `ZoneControl:Thermostat:OperativeTemperature` configurations dynamically to all zone thermostats.
-- **Global `update_idf_version` Utility**: Added an automated function inside `accim.utils.py` to seamlessly upgrade the defined EnergyPlus version of target IDF files.
-- **Sizing Error Prevention**: Implemented automatic initialization of standard autosizing constraints within the `SimulationControl` object (via `setSimulationControlSizing` in `accim.sim.accim_Base`). This fully resolves strict EnergyPlus fatal sizing errors when modifying or autosizing components in exported skeleton environments.
-- **Scheduled Natural Ventilation Support**: `accim` now supports mixed-mode simulations using `ZoneVentilation:WindandStackOpenArea` and `ZoneVentilation:DesignFlowRate` objects as an alternative to the Airflow Network (AFN). The ventilation type is automatically detected from the IDF:
-  - If `AirflowNetwork:SimulationControl` is present, the existing AFN-based logic is used.
-  - Otherwise, if `ZoneVentilation` objects are found for occupied zones, `Schedule:Constant` objects (named `Vent_Sch_{ZoneName}`) are automatically injected and linked to the ventilation objects.
-  - EMS actuators target the `Schedule Value` of these schedules to modulate natural ventilation, preserving the full adaptive comfort control logic.
-- **Ventilation Output Variables for Scheduled Mode**: When using scheduled natural ventilation, `Output:Variable` objects are automatically added for `Zone Ventilation Standard Density Air Change Rate` (ACH) and `Schedule Value` for each `Vent_Sch_` schedule, enabling direct verification of mixed-mode operation.
-- **Optimisation Simulation Estimator**: Added `estimate_optimisation_sims()` method to `OptimParamSimulation` in `accim.parametric_and_optimisation.main`.
-  - Calculates and prints the exact number of EnergyPlus simulations that `run_optimisation()` will execute before launching it, taking into account that NSGA-II (and other platypus algorithms) always complete a full generation before checking the `evaluations` stopping criterion.
-  - Formula: `sims_per_epw = population_size × ⌈evaluations / population_size⌉`; `total = sims_per_epw × len(epws)`.
-- **Parallel Evaluation in Optimisation**: Added `processes` parameter to `run_optimisation()` in `OptimParamSimulation`.
-  - When `processes > 1`, uses `platypus.ProcessPoolEvaluator` to evaluate the individuals within each generation concurrently across the specified number of CPU cores.
-  - The process pool is always safely closed via a `finally` block, even if an error occurs mid-run.
-  - Default is `1` (sequential), preserving existing behaviour.
-- **Sensitivity Analysis Integration**: Added internal support for Morris and Sobol sensitivity analysis natively using `SALib` via `sampling_sobol` and `sampling_morris`. To quickly deploy robust SA workflows per-EPW climate, the high-level method `run_sensitivity_analysis_by_epw` natively outputs bar-charts (`mu*` vs `sigma`, `S1` vs `ST`) and summaries inside a target directory automatically.
-- **Multi-Criteria Decision Making (MCDM)**: Included automated detection of compromise optimal solutions (e.g., knee point and TOPSIS methods) from `outputs_optimisation`. The new `plot_best_compromise_solutions` enables users to instantly isolate and map ideal solutions atop per-EPW clustered Pareto-front scatter distributions using tailored weight combinations.
-- **Session Resumption & State Persistence**: The `OptimParamSimulation` class now automatically generates `.pkl` and `.json` files alongside the standard `.csv` outputs at the end of both `run_optimisation` and `run_parametric_simulation` executions. This preserves simulation configuration metadata (e.g., parameters, outputs) directly inside the dataframe attributes.
-- **Enhanced Load Methods**: `load_outputs_optimisation` and `load_outputs_parametric` have been upgraded to support `.pkl` and `.json` paths natively. Loading from these formats automatically reconstructs the internal problem object state, enabling instant post-processing analysis without requiring heavy `addAccis` reinjections.
-- **IDF Backup Management**: Implemented automated backup routines that save the structural state of the IDF model (`accim_idf_backup_...`) within the simulation output directory. The exact backup path is serialized into the metadata of the output files and auto-loaded gracefully during downstream methods (e.g. `set_building_floor_area`) to prevent missing building references when resuming analytical sessions.
-- **Energy Normalization**: Added `set_building_floor_area` to intelligently calculate or assign total building area (by all zones, occupied zones, custom list, or static value). Downstream analytical visualizations (`plot_pareto_front`, `run_robustness_analysis`, etc.) now feature `normalize_per_m2` arguments to auto-scale results into specific kWh/m2 metrics dynamically.
-- **Optimisation Workflow Hourly Support**: The `get_hourly_df_columns` utility now natively supports optimisation contexts by scanning the first available EnergyPlus `.csv` simulation output directly.
-- **Hourly Data Expansion API Overhaul**: Completely redesigned `get_hourly_df_optimisation` to provide intuitive, granular control over hourly data extraction. It replaces manual dataframe manipulation with high-level parameters (`only_pareto_optimal`, `epw_filter`, `simulation_indices`, `output_columns`). It also features automatic `start_date` extraction from EnergyPlus CSVs and an interactive `dry_run` size-estimation prompt to prevent memory saturation on massive expansion tasks.
-- **Simulation Workflow Safeguards**: Added robust contextual tracking (`last_run_type`) to `OptimParamSimulation` to natively enforce correct analytical sequencing. All post-simulation analysis methods (such as `plot_best_compromise_solutions`, `run_sensitivity_analysis`) now validate the executed simulation context, raising `ValueError` exceptions immediately if applied to incompatible data types (e.g. attempting to run sensitivity analysis over NSGA-II populations).
+- **Template-based Plot Filenames with Category Placeholders**: Added `filename_template` support across plotting helpers in `PlottingMixin` (hourly, parametric, categorical, Pareto/MCDM, pairwise, and radar workflows).
+  - Filenames can be customized via `str.format(...)` placeholders, including category labels sourced from `epw_mapping_rules` and `idf_mapping_rules` when those columns are present in the filtered plotting DataFrame.
+  - Added method-specific placeholders (for example, `epw_tag`, `x`, `y`, `y_var`, `kind`, `df_source`) and automatic `.png` suffix completion when omitted.
+  - Added collision protection for multi-file plotting methods (`plot_parametric_lines`, `plot_parametric_distributions`, EPW-loop methods) to raise a clear error when a template resolves to duplicate output paths.
+  - Expanded plotting docstrings with `filename_template` usage guidance and examples.
+  - Added regression tests in `tests/parametric_and_optimisation/test_plotting_parametric_new_methods.py` and `tests/parametric_and_optimisation/test_plotting_hourly_methods.py`.
+- **Configurable Subplot Ordering Across Plotting/Analysis**: Added a shared subplot-ordering API to control panel/facet order in plotting methods that use `FacetGrid`, `catplot`/`relplot`/`displot`, `PairGrid`, and `matplotlib` subplot grids.
+  - Added common arguments with backward-compatible defaults: `subplot_order_mode=('auto'|'alphabetical'|'ascending'|'descending'|'custom')`, `subplot_order_custom`, and `subplot_order_case_sensitive`.
+  - Added reusable helpers in `accim.parametric_and_optimisation.utils`: `resolve_subplot_order(...)` and `resolve_subplot_orders(...)`.
+  - Integrated ordering support in subplot-producing methods of `PlottingMixin` (including hourly, parametric, categorical, MCDM, heatmap/contour/density, and pairwise matrix visualisations) and in `run_sensitivity_analysis_by_epw(...)` for output-panel ordering.
+  - Added consistent validations and explicit errors for unsupported dimension requests, missing `custom` configuration for active dimensions, and invalid custom labels with available-value hints.
+  - Added dedicated tests in `tests/parametric_and_optimisation/test_subplot_ordering.py` (unit + integration + error cases).
+- **Transversal Data Filtering for Tables and Visualisation**: Added a shared row-filter API to include/exclude/query simulation outputs before building tables or plots.
+  - Added reusable helper `apply_data_filter(...)` in `accim.parametric_and_optimisation.utils` with support for `include`, `exclude`, and `query` filters, case-sensitivity control, strict/non-strict missing-column behavior, and configurable empty-result handling.
+  - Added `get_filtered_results_table(...)` in `PlottingMixin` to produce filtered DataFrames for tabular review/export.
+  - Integrated filtering arguments across plotting methods (hourly, parametric, categorical, optimisation visualisations, and radar) and in `run_sensitivity_analysis_by_epw(...)`.
+  - Added tests in `tests/parametric_and_optimisation/test_data_filtering_api.py` for helper behavior, table filtering, plotting integration, and error paths.
+- **Area Normalization and Floor Area Configuration**: Extended `set_building_floor_area` and related normalisation workflows for multi-IDF studies.
+  - Added `mode='air-conditioned'` to calculate floor area from zones served or controlled by HVAC-related IDF objects such as `ZoneControl:*`, `ZoneHVAC:*`, `ZoneHVAC:EquipmentConnections`, `HVACTemplate:Zone:*`, and `AirTerminal:*`. The alias `mode='air-condicioned'` is also accepted.
+  - `zones_list` can now be either a global list applied to every IDF or a dictionary mapping each IDF to its own list of zones.
+  - `custom_area` can now be a global float/string value or a dictionary mapping each IDF to its own value.
+  - Dictionary keys are normalized against IDF names and validated to prevent silent mismatches.
+  - Multi-IDF area maps, `normalize_outputs()`, `normalize_per_m2` in dataframe extraction methods, and double-normalisation safeguards are supported consistently.
+  - Added representative-IDF modes to reduce floor-area setup cost in large campaigns:
+    - `representative_mode='all'` keeps legacy behavior.
+    - `representative_mode='by_idf_mapping_category'` groups IDFs by a user-selected category (`representative_category`) and loads one deterministic representative IDF per category value.
+    - `representative_mode='custom_map'` accepts explicit `representative_map={category_value: representative_idf}` with strict coverage and route validation.
+  - Added validation and explicit errors for representative workflows:
+    - Invalid `representative_category` now reports available categories from `idf_mapping_rules`.
+    - Missing category columns in `outputs_param_simulation` now raise clear errors including available categories.
+    - `custom_map` now validates missing/unknown category values and representative IDF membership per category group.
+  - Added informative logs for floor-area representative workflows (total IDFs, representative IDFs loaded, and final mapping coverage).
+- **Simulation Input Traceability (`in.idf`)**: Parametric and optimisation workflows now preserve the exact transient IDF executed by BESOS/EnergyPlus inside each simulation result directory.
+- **Outputs Preflight Workflow (`parametric_and_optimisation`)**: Added `discover_available_outputs(...)`, `select_outputs(...)`, `clear_outputs(...)`, and `apply_outputs_preflight(...)` to discover, validate, clean, and apply output requests before running simulations.
+- **Scoped Multi-IDF Output Preflight**: Added `idf_scope`/`validation_idf_scope` support across output discovery, selection, cleanup, application, and IDF output DataFrame helpers, plus `keep_only_outputs_in_idfs(...)` to prune existing `Output:Meter` and `Output:Variable` objects without adding missing outputs.
+  - Multi-IDF output reads now include an `idf` column, cache entries are scoped to the validation target, temporary test-simulation IDFs use unique names per source IDF, and preflight verification reports include per-IDF details.
+- **Constructor-Level Output Object Safeguards (`parametric_and_optimisation`)**: Simulation constructors now enforce essential output objects in each loaded IDF.
+  - `ParametricSimulation` and `OptimisationSimulation` now ensure `OutputControl:Files` exists and sets `Output_CSV`, `Output_MTR`, and `Output_ESO` to `Yes`.
+  - Added constructor argument `remove_output_tables` (default `True`) to `SimulationBase`, `ParametricSimulation`, `OptimisationSimulation`, and `AccimPredefModelsParamSim`.
+  - When enabled, initialization removes `Output:Table:Monthly` and `Output:Table:Annual` objects from each IDF.
+  - Added regression coverage in `tests/parametric_and_optimisation/10_test_outputs_preflight.py` for constructor enforcement and optional table-retention mode.
+- **Category-Split Hourly Outputs and Multi-Frequency Aggregation**: Added output post-processing controls for variable CSV output schemas across IDFs.
+  - `get_hourly_df_parametric(...)` / `get_hourly_df(...)` now accept `split_by` to return a dictionary of DataFrames grouped by category (e.g. `building_type`), with optional `drop_all_empty_output_columns=True` to remove all-empty output columns per group.
+  - `get_hourly_df_optimisation(...)` now supports the same `split_by` dictionary workflow.
+  - Added generic aggregation methods `get_output_df(...)` and `get_output_df_optimisation(...)` with `frequency=('daily'|'monthly'|'runperiod')`.
+  - `get_monthly_df(...)` and `get_monthly_df_optimisation(...)` are kept as monthly wrappers for backward compatibility.
+  - `OptimisationSimulation` now exposes unified method names (`get_hourly_df`, `get_output_df`, `get_monthly_df`, `get_daily_df`, `get_runperiod_df`) so post-processing calls can match `ParametricSimulation` naming.
+  - Added convenience wrappers: `get_daily_df(...)`, `get_runperiod_df(...)`, `get_daily_df_optimisation(...)`, and `get_runperiod_df_optimisation(...)`.
+  - Added support in `normalize_outputs(...)` for new aggregated DataFrames: `parametric_daily`, `parametric_runperiod`, `optimisation_daily`, and `optimisation_runperiod`.
+  - Added regression coverage in `tests/parametric_and_optimisation/10_test_outputs_preflight.py` for category-split hourly outputs and daily/monthly/runperiod aggregation.
+- **Plotting and Category Utilities**: Added categorical energy boxplots, highlight overlays, subplot sizing controls, keyword-based category mapping, category previews, and EPW suffix category persistence.
+- **Advanced Parametric Visualisation Suite**: Added eight new plotting helpers in `PlottingMixin` for both `ParametricSimulation` and optimisation datasets (`df_source='parametric'|'optimisation'`).
+  - New methods: `plot_parametric_scatter`, `plot_parametric_lines`, `plot_parametric_heatmap`, `plot_parametric_contour`, `plot_parametric_distributions`, `plot_parametric_ecdf`, `plot_parametric_density_2d`, and `plot_parametric_radar`.
+  - Added shared plotting helpers for dataframe source resolution, filename-safe tokens, and normalization-aware axis-unit handling.
+  - Added compatibility and resilience fallbacks (for example, seaborn `errorbar` vs legacy `ci`, and contour/KDE fallback to scatter when data is insufficient).
+  - Added dedicated tests in `tests/parametric_and_optimisation/test_plotting_parametric_new_methods.py` covering all new visualisation methods.
+- **Simulation Planning and Routing**: Added `sampling_custom()`, native multi-IDF/multi-EPW handling, IDF as an explicit input variable, per-row EPW routing, and a multi-IDF validation script.
+- **Data Extraction and Persistence**: Added monthly aggregation methods, automatic hourly CSV fallback, optimisation hourly column discovery, hourly optimisation expansion controls, `.pkl`/`.json` session persistence, enhanced load methods, IDF backups, and session merging.
+- **Optimisation and Analysis Tools**: Added optimisation run estimation, parallel optimisation evaluation via `processes`, Morris/Sobol sensitivity analysis integration, and MCDM compromise-solution helpers.
+- **Model Utilities and Runtime Support**: Added `AccimSimulationVerifier`, `set_operative_temp_control`, `update_idf_version`, scheduled natural ventilation support, scheduled ventilation output variables, and automatic standard autosizing constraint initialization.
+- **Consistent Output Management API (`parametric_and_optimisation`)**: Added `set_output_variables_to_idf(...)` and `set_output_meters_to_idf(...)` with aligned signatures and behavior.
+  - Variables now accept both DataFrame (`df_output_variable`) and list (`output_variables`) inputs.
+  - Meters now accept both list (`output_meters`) and DataFrame (`df_output_meter`) inputs, including per-row `frequency` overrides when present.
+  - `set_output_meters_to_idf(...)` now supports `mode=('append'|'replace')`, matching the variable API: `replace` removes existing `Output:Meter` objects in the selected IDF scope before adding the requested meters.
+  - Legacy wrapper `set_output_met_objects_to_idf(...)` now forwards the new `mode` argument for backward-compatible migration.
+  - Added regression coverage in `tests/parametric_and_optimisation/10_test_outputs_preflight.py` for meter replacement behavior.
+  - Added symmetric read aliases: `get_output_variables_df_from_idf(...)` and `get_output_meters_df_from_idf(...)`.
+- **Importable Custom Output Reducers in Multiprocessing**: `set_outputs_for_simulation(...)` now accepts `func` values as callables or import-path strings (`"module.submodule:callable_name"`).
+  - Reader reducer functions are serialized/resolved for worker processes so custom aggregation logic can be reused with `processes > 1` in parametric simulations.
+  - Added user warnings when a reducer cannot be serialized as an importable path and may fail under Windows `spawn` multiprocessing.
+- **XLSX Result Exports**: Parametric and optimisation result tables are now also saved as `.xlsx` files alongside existing `.csv`, `.pkl`, and `.json` exports.
+- **Legacy Parametric Output Alias**: Added `outputs_param_sim` as a backward-compatible alias of `outputs_param_simulation`.
+- **Workspace Artifact Cleanup Utility**: Added `WorkspaceArtifactCleaner` in `accim.utils` to snapshot workspace files, detect generated artifacts, preview deletion plans (`dry_run`), and safely remove selected outputs with allow/deny glob patterns.
+- **Simulation Comparison Utilities**: Promoted simulation-result comparison helpers into the public `accim.parametric_and_optimisation` namespace.
+  - Added/Exported `SimulationComparisonSession`, `compare_simulation_instances(...)`, `compare_latest_pickles_in_folders(...)`, and `compare_multiple_pickles_with_reference(...)` for strict/relaxed parity checks across DataFrames, simulation instances, and persisted files.
+  - Added regression tests covering strict vs relaxed comparison modes, folder-latest pickle comparison, mixed source discovery, and session history/report persistence.
+- **Pickle Comparison Tutorial Docs**: Added `docs/source/9_pickle_comparison_tutorial.md` and linked it in the docs index for end-to-end guidance on validating simulation output equivalence.
+- **Project Tracking Workflow Files**: Added `DEVLOG.md`, `TODO.md`, and `ROADMAP.md` and documented the workflow in `README.md` to separate release notes, completed work logs, active tasks, and longer-term planning.
+- **Operations Tooling for Notebooks and Campaign Runs**: Added helper scripts under `tools/` for custom output reducers, robust custom-plan parametric execution, batch notebook execution, and reruns of failed notebooks.
+- **Smoke/Resume Validation Tooling**: Added `tools/smoke_resume_runner.py` plus quick guides (`tools/README_smoke_resume_runner.md`, `tools/CHECKLIST_smoke_resume.md`) to validate checkpoint-resume behavior and `accim_results_root` routing with small test campaigns.
+- **Regression Coverage for Optimisation Output Handling**: Added focused tests in `tests/parametric_and_optimisation/test_analysis_output_resolution.py` and `tests/parametric_and_optimisation/test_pareto_grouping.py`.
+  - Covers robust objective-column resolution when optimisation outputs are normalized/renamed.
+  - Covers configurable Pareto grouping by EPW and/or IDF and MCDM grouping behavior in plotting.
+- **Parametric Batch Execution with Checkpoint Resume**: `run_parametric_simulation(...)` now supports large campaigns using incremental batches and crash-safe resume.
+  - Added `batch_size`, `checkpoint_every_batch`, and `resume_from_checkpoint` arguments for memory-aware execution and recovery after interruptions.
+  - Added deterministic task signatures and a default checkpoint artifact (`outputs_param_simulation_checkpoint_latest.pkl` + metadata JSON) in the run output directory.
+  - Added focused tests in `tests/parametric_and_optimisation/test_parametric_batch_checkpoint.py` covering batch checkpoints, resume behavior, validation, and explicit missing-checkpoint errors.
+- **Parametric Resume Now Survives Non-Deterministic Re-Sampling**: `run_parametric_simulation(...)` persists the exact sampling plan (`df`) inside the checkpoint and reconciles it automatically on resume.
+  - Task signatures for resume are based on exact `(idf, epw, parameter values)`, so calling a non-deterministic sampler again (e.g. `sampling_lhs()`, which has no fixed random seed) in a new session used to produce a completely different plan and made `resume_from_checkpoint=True` silently re-run every task.
+  - Added `resume_plan_source=('auto'|'checkpoint'|'provided')` (default `'auto'`): when the provided `df` does not match the plan stored in the checkpoint, accim now reuses the ORIGINAL checkpoint plan by default (with a `UserWarning`), so resume keeps skipping already-completed tasks without any extra action. `'provided'` restores the previous opt-in behavior of always using the newly supplied `df`.
+  - Added internal helper `SimulationBase._parametric_plans_match(...)` for tolerant DataFrame comparison, and extended the checkpoint payload/loader (`_save_parametric_checkpoint`, `_load_parametric_checkpoint_state`) with an `input_plan` entry.
+  - Fixed two pre-existing checkpoint tests that asserted a legacy plain-DataFrame checkpoint format no longer produced by `_save_parametric_checkpoint` (`state_v2` dict format), and added regression tests in `tests/parametric_and_optimisation/test_parametric_batch_checkpoint.py` covering plan reconciliation, the `resume_plan_source='provided'` opt-out, and the `_parametric_plans_match` helper.
+- **Parametric Plotting Methods Resolve Columns Renamed by `normalize_outputs()`**: `plot_parametric_scatter(...)`, `plot_parametric_ecdf(...)`, and `plot_parametric_distributions(...)` no longer raise a `KeyError` for energy columns renamed by `normalize_outputs()` (for example `'Electricity:HVAC'` -> `'Electricity:HVAC_kWh/m2'`).
+  - Added shared helper `PlottingMixin._resolve_plot_axis_column(...)`, reusing the existing energy-aware fuzzy matcher `_resolve_output_columns(...)` (previously only wired into optimisation/Pareto plotting) for `x`/`y`/`y_vars` axis arguments before the "missing column" validation.
+  - When a requested axis name is resolved to a different (renamed) column, an informational message is printed so the substitution is not silent.
+  - Note: this only covers accim plotting methods; plain pandas calls on `outputs_param_simulation` (e.g. `df.groupby('epw')['Electricity:HVAC']...`) still need the post-normalization column name, since they do not go through accim's column resolution.
+  - Added regression test `test_plot_methods_resolve_column_renamed_by_normalize_outputs` in `tests/parametric_and_optimisation/test_plotting_parametric_new_methods.py`.
+- **Interactive Parametric Preflight Diagnostics**: Added `preflight_report(...)` and `preflight_report_parametric(...)` to validate simulation plans before launching heavy runs.
+  - Reports missing required input columns, null counts, unknown IDF/EPW labels, duplicate task signatures, and estimated total simulations.
+  - Provides conservative recommendations for `processes` and `batch_size` using a lightweight system CPU/RAM snapshot.
+  - Added tests in `tests/parametric_and_optimisation/test_parametric_preflight_report.py` for task estimation, validation checks, and wrapper behavior.
+- **Optimisation Case Checkpoint Resume**: `run_optimisation(...)` now supports case-level recovery for long multi-IDF/multi-EPW campaigns.
+  - Added `checkpoint_every_case` and `resume_from_checkpoint` arguments.
+  - Added a default checkpoint artifact (`outputs_optimisation_checkpoint_latest.pkl` + metadata JSON) and automatic reuse of completed `IDF::EPW` cases.
+  - Added a run-configuration compatibility signature in checkpoint metadata so incompatible checkpoints are skipped safely.
+  - Added tests in `tests/parametric_and_optimisation/test_optimisation_checkpoint_resume.py` for checkpoint reuse and memory-mode behavior.
+- **Interactive Optimisation Preflight Diagnostics**: Added `preflight_report_optimisation(...)` and expanded `preflight_report(...)` to support `mode='optimisation'` and auto-selection.
+  - Reports case count, generations, estimated simulations, CPU/RAM snapshot, and conservative run kwargs including checkpoint-resume defaults.
+  - Added tests in `tests/parametric_and_optimisation/test_optimisation_preflight_report.py` for estimation and wrapper mode routing.
+- **Parametric Lazy Task Streaming and Atomic Checkpoints**: `run_parametric_simulation(...)` now iterates tasks lazily to reduce planning-memory pressure and writes checkpoints atomically (`.tmp` + replace).
+  - Added a final checkpoint synchronization step when resuming, even if `checkpoint_every_batch=False`.
+  - Extended tests in `tests/parametric_and_optimisation/test_parametric_batch_checkpoint.py` to verify refreshed checkpoints after resume.
+- **Global Simulation Summary API (`parametric_and_optimisation`)**: Added structured summary inspection for parametric/optimisation outputs.
+  - Added persistent attribute `simulation_summary` plus public methods `build_simulation_summary(...)` and `print_simulation_summary(...)` in `SimulationBase`.
+  - Summary includes dynamic category detection (rule-driven via `epw_mapping_rules`/`idf_mapping_rules` when available, otherwise inferred), key uniques (`idf`, `epw`, `output_dir`), numeric/energy column detection, and per-category counts.
+  - Added strict validation for explicit `category_columns` with detailed invalid/available/auto-detected diagnostics.
+  - Added optional JSON export API `export_simulation_summary_json(...)` for reproducibility/audit workflows.
+  - Added automatic summary refresh after `run_parametric_simulation(...)`, `load_outputs_parametric(...)`, `run_optimisation(...)`, and `load_outputs_optimisation(...)`.
+  - Added optional run flags `export_summary_json` and `summary_json_path` to auto-export summary JSON at the end of parametric and optimisation runs.
+  - Added focused tests in `tests/parametric_and_optimisation/test_simulation_summary.py` covering rules/inference/validation, run/load auto-refresh, and manual/automatic JSON export.
+- **Per-Extension Simulation File Cleanup (`parametric_and_optimisation`)**: Added file-level cleanup controls for retained simulation folders.
+  - Added `sim_files_extensions` and `sim_files_policy=('keep'|'delete')` to `run_parametric_simulation(...)` and `run_optimisation(...)`.
+  - Extension selectors accept tokens like `csv`, `.csv`, and `*.csv` (case-insensitive) and are applied within each simulation subdirectory under `BESOS_Output*`.
+  - Added warnings when a selected policy can remove `.csv` outputs used by hourly/monthly post-processing.
+  - Clarified in API docstrings that this cleanup does **not** delete run-level backups such as `accim_idf_backup_*`.
+  - Added focused tests in `tests/parametric_and_optimisation/test_sim_file_cleanup.py`.
 
 ### Changed
-- **Optimisation Memory and Disk Usage Management**: Completely overhauled how the `OptimParamSimulation.run_optimisation` method manages raw simulation outputs. The legacy `keep_dirs` argument was removed in favor of `keep_sim_files`, `keep_sim_files_batch_size`, and `keep_df`. This enables "on-the-fly" batch cleanups of dominated simulation results during the optimization loop (reducing peak disk storage required for massive optimizations) and allows memory-efficient final DataFrames by selectively discarding dominated solutions. Furthermore, `get_hourly_df_optimisation` now gracefully ignores missing/deleted simulation directories natively instead of failing.
-- **Unified Object Identification**: Globalized the robust hierarchy resolution logic from `apmv_setpoints._resolve_targets` into the central pipeline (`accim.sim.utils.scan_zones`). The overarching dataset map is meticulously managed across all hierarchical relationships for `People`, `Space`, `SpaceList`, and `ZoneList` objects universally without duplicate clashes.
-- **Optimisation Plot Aesthetics & Clustering Integrity**: Upgraded the `plot_pareto_front` method to output publication-ready visualizations supporting `RdYlGn` colormaps (via `color_by`), dynamic scatter sizes (via `size_by`), and representative legend handles, additionally auto-encoding configurations into filenames to prevent overwriting. Furthermore, `run_clustering` now natively persists its generated `Cluster_ID` column directly back to the `outputs_optimisation` object so subsequent analytical plots can seamlessly access it without requiring manual DataFrame merges.
-- **File Naming & Timestamping**: Hardened all internal naming conventions for output dataframes, json state files, and idf backups to use universally chronological timestamp suffixes (`YYYYMMDD_HHMMSS`) instead of transient system Process IDs, preventing file collisions in highly parallelized environments and improving readability.
+- **Consolidated Output-Objects API (`parametric_and_optimisation`)**: reduced the Output:Variable/Output:Meter method surface to a canonical set (read: `get_output_variables_df_from_idf`/`get_output_meters_df_from_idf`/`scan_output_objects`; discover: `discover_available_outputs`; write: `set_output_variables_to_idf`/`set_output_meters_to_idf`; prune: `keep_only_outputs_in_idfs`/`clear_outputs`/`autocorrect_output_duplicates`; orchestrate: `select_outputs`/`apply_outputs_preflight`/`set_output_readers`).
+  - `set_output_variables_to_idf(...)` and `set_output_meters_to_idf(...)` now share the same argument order and defaults, including `validate=True` (behaviour change for variables, which previously defaulted to `False`); the deprecated `set_output_var_df_to_idf(...)` wrapper pins `validate=False` to preserve legacy behaviour.
+  - Both setters share unified semantics: rows with empty `frequency` are expanded using `self.output_freqs`; `mode='replace'` always removes existing objects of the type in every scoped IDF (with a warning when nothing remains to add); object access is case-tolerant.
+  - Both setters now return a report dict with per-IDF counts (`added`, `skipped_existing`, `removed_replace`, `missing`, `filtered_missing`) and aggregated totals.
+  - Meter validation no longer re-implements discovery inline: both setters delegate to a shared helper that reuses any cached discovery matching the validation scope (including `prefer='rdd_mdd'` caches) and otherwise runs `discover_available_outputs(prefer='testsimeplus')`. This also gives meter validation the VRF-autosizing `SizingPeriod:WeatherFileDays` safeguard, and makes the number of test simulations independent of call order.
+  - `clear_outputs(mode='meters_vars')` is now implemented on top of `keep_only_outputs_in_idfs(...)` so a single removal engine exists; unreachable dead code in the `'all'` filter was removed and invalid `mode` values now raise `ValueError`.
+  - `apply_outputs_preflight(...)` now reports the actually-applied counts from the setter reports (exposed under `setter_reports`), applies meters from the selection DataFrame (preserving per-row frequencies), and its verification step no longer flags auto-filtered outputs as missing.
+  - Tests and sample notebooks were migrated to the canonical API.
+- **Output Variable API Symmetry with Meters**:
+  - `set_output_variables_to_idf(...)` now exposes validation controls aligned with `set_output_meters_to_idf(...)`: `validate`, `on_missing`, `auto_filter`, `reduce_sim_time`, `validation_idf_scope`, and `keep_available_outputs`.
+  - Variable application can now pre-validate availability via `discover_available_outputs(...)`, with consistent missing-output handling (`warn`/`raise`/`ignore`) and optional auto-filtering.
+  - Removed the keyword-only separator in `set_output_variables_to_idf(...)` so all arguments are directly visible in IDE call hints when opening the method parenthesis.
+  - `apply_outputs_preflight(...)` now forwards the same validation-policy inputs when applying selected variables.
+  - Added regression coverage in `tests/parametric_and_optimisation/10_test_outputs_preflight.py`.
+- **Explicit `addAccis` Constructor Passthrough (`parametric_and_optimisation`)**:
+  - `SimulationBase.__init__` now exposes and forwards explicit `addAccis` passthrough arguments (`Output_take_dataframe`, `EnergyPlus_version`, `VRFschedule`, `eer`, `cop`, `hvac_zone_map`) with defaults aligned to `accis.addAccis`.
+  - `ParametricSimulation`, `OptimisationSimulation`, and `AccimPredefModelsParamSim` constructors were updated to expose and forward the same explicit arguments.
+- **`discover_available_outputs(prefer='rdd_mdd')` Self-Sufficient Path**:
+  - The `rdd_mdd` path now generates `available_outputs/eplusout.rdd` and `available_outputs/eplusout.mdd` with a reduced test simulation when files are missing (or `refresh=True`), then parses those files directly.
+  - Removed silent fallback to `testsimeplus` for this path; failures now raise clear exceptions.
+  - Shared reduced test-simulation preparation was extracted to a private helper and reused by both discovery flows.
+- **Custom-Model CustAST Defaulting Symmetry and Visibility**:
+  - `set_parameters(...)` for `parameters_type='accim custom model'` now applies a symmetric default-resolution flow for `ASTaul` and `ASTall` (both initialized to `0` and then resolved through `dflt_values` when omitted).
+  - Default values remain `ASTaul=33.5` and `ASTall=10` when those parameters are not explicitly provided.
+  - When defaults are applied, the user now receives a yellow console warning summarizing `parameter=value` pairs (for example `ASTaul=33.5, ASTall=10`).
+- **Output Retrieval API Explicitness and Constructor Defaults**:
+  - `ParametricSimulation` wrappers (`get_hourly_df`, `get_output_df`, `get_monthly_df`, `get_daily_df`, `get_runperiod_df`) now expose advanced extraction arguments explicitly (for example `epw_filter`, `simulation_indices`, `output_columns`, `file_source`, `skip_confirmation`) without `**kwargs`, improving IDE discoverability.
+  - Constructor default `output_keep_existing` is now aligned to `True` across `SimulationBase`, `ParametricSimulation`, `OptimisationSimulation`, and `AccimPredefModelsParamSim`.
+- **Custom Subplot Ordering Semantics (`subplot_order_mode='custom'`)**: Active subplot dimensions no longer require exhaustive `subplot_order_custom` entries.
+  - Unspecified active dimensions now preserve their current data order (equivalent to `auto`) instead of raising an error.
+  - Validation for unsupported/custom dimensions remains strict and unchanged.
+- **Breaking API Change in Output Discovery/Selection Returns**: `get_outputs_df_from_testsim(...)`, `discover_available_outputs(...)`, and `select_outputs(...)` now return a single dictionary instead of tuples.
+  - New contracts are:
+    - `get_outputs_df_from_testsim(...) -> {'meters': DataFrame, 'variables': DataFrame}`
+    - `discover_available_outputs(...) -> {'meters': DataFrame, 'variables': DataFrame, 'meta': dict}`
+    - `select_outputs(...) -> {'meters': DataFrame, 'variables': DataFrame, 'report': dict}`
+  - Internal consumers, tests, and notebook workflows were updated to stop tuple unpacking and read values by explicit keys.
+- **Floor Area Mode Semantics**: `mode='occupied'` remains strictly tied to `People` objects and their referenced `ZoneList`, `SpaceList`, or `Space` hierarchy. Use `mode='air-conditioned'` when normalisation should include all conditioned zones instead of only occupied zones.
+- **SetAST EMS Program Refactoring**: Extracted the monolithic `SetAST` conditional block into a modular injection system. Generated EnergyPlus `SetAST` EMS program blocks are now much smaller and resolve model-specific comfort logic dynamically during IDF generation.
+- **BESOS-style Parametric Flexibility**: `OptimParamSimulation` can now run without ACCIM-specific parameters, allowing generic BESOS parameters or zero internal parameters.
+- **Top-Level Parametric Parallelization**: `run_parametric_simulation` now evaluates iterations across all EPW and IDF combinations via `concurrent.futures.ProcessPoolExecutor`.
+- **Optimisation Storage Management**: Replaced the legacy `keep_dirs` argument with `keep_sim_files`, `keep_sim_files_batch_size`, and `keep_df`, enabling batch cleanup and memory-efficient final DataFrames.
+- **Unified Object Identification**: Centralized hierarchy resolution for `People`, `Space`, `SpaceList`, and `ZoneList` objects through `accim.sim.utils.scan_zones`.
+- **Optimisation Plotting and Clustering**: Improved Pareto-front plotting aesthetics and persisted `Cluster_ID` back into optimisation outputs for downstream plots.
+- **File Naming and Timestamping**: Standardized output dataframe, JSON state, and IDF backup names with chronological `YYYYMMDD_HHMMSS` timestamps.
+- **Explicit Parametric and Optimisation API Signatures**: Replaced public `*args`/`**kwargs` signatures in `parametric_and_optimisation` classes and methods with named arguments and expanded docstrings for clearer IDE hover help, while preserving the legacy `building` alias and routing algorithm-specific options through `algorithm_options`.
+- **Output Workflow Defaults and Migration Path**:
+  - `apply_outputs_preflight(...)` now defaults to `clean_mode='none'` to preserve user-defined `Output:*` objects unless cleanup is explicitly requested.
+  - Legacy methods `set_output_var_df_to_idf(...)` and `set_output_met_objects_to_idf(...)` are preserved as wrappers and now emit `DeprecationWarning` messages that point to the new consistent methods.
+  - Updated `tools/output_workflow_notebook_style.py` to use the new API and include the advanced meter DataFrame frequency path.
+- **Configurable Results Root Routing**: Added optional `accim_results_root` support in simulation constructors and run methods to resolve relative `out_dir` paths without relying on global environment variables.
+  - Supported in `SimulationBase`, `ParametricSimulation`, `OptimisationSimulation`, and `AccimPredefModelsParamSim` constructors.
+  - Supported as a per-run override in `run_parametric_simulation(...)` and `run_optimisation(...)`.
+  - Resolution precedence is now: absolute `out_dir` > method `accim_results_root` > instance `accim_results_root` > `ACCIM_RESULTS_ROOT` environment variable > legacy relative behavior.
+- **Parametric Checkpoint Internals for Long Runs**: `run_parametric_simulation(...)` now persists batch chunks to disk and merges them at the end instead of keeping the full run payload in memory.
+  - Added batch artifact directory `outputs_param_simulation_batches`.
+  - Added stateful checkpoint payload support (`completed_signatures`, `batch_pickles`) while keeping backward compatibility with legacy DataFrame checkpoints.
+- **Notebook 14 Multi-IDF Workflow (without loop)**: Updated `14_main_optimisationsimulation_accim_custom_model_without_idf_loop.ipynb` to run a single `OptimisationSimulation` instance with `buildings=[...]` and explicit Pareto controls.
+  - Step 2 now avoids per-IDF instantiation loops and prepares IDFs once before creating the optimisation object.
+  - Step 3 now plots from one combined optimisation object and forwards the selected MCDM segmentation flags.
+
+### Deprecated
+- **Output-Objects API legacy names (`parametric_and_optimisation`)**: the following methods now emit `DeprecationWarning` and delegate to their canonical replacements; they will be removed in a future version.
+  - `get_output_var_df_from_idf(...)` → `get_output_variables_df_from_idf(...)`
+  - `get_output_meter_df_from_idf(...)` → `get_output_meters_df_from_idf(...)`
+  - `get_outputs_df_from_testsim(...)` → `discover_available_outputs(...)` (the test-simulation implementation is now the internal helper `_get_outputs_df_from_testsim`)
+  - `set_outputs_for_simulation(...)` → `set_output_readers(...)` (renamed because it registers besos readers and does not modify the IDFs)
+  - `set_output_var_df_to_idf(...)` and `set_output_met_objects_to_idf(...)` remain deprecated wrappers of `set_output_variables_to_idf(...)` / `set_output_meters_to_idf(...)`.
 
 ### Fixed
-- **NSGA-II Pareto Status Annotation**: Fixed a bug in `OptimParamSimulation` where non-dominated points from earlier generations were incorrectly marked as dominated (`False`) due to strict matching against only the final optimizer population. The logic has been rewritten to deterministically recompute the Pareto front from scratch using the objective values across the full evaluation history, grouped by EPW.
-- **Pandas Groupby Compatibility**: Resolved a `ValueError` (`Cannot set a DataFrame with multiple columns to the single column pareto-optimal`) triggered in Pandas 2.2+ by refactoring the `_annotate_pareto_status` method to use an explicit iterative grouping approach, completely bypassing unstable `groupby().apply()` DataFrame return shape variations.
-- **Legacy Object Conflicts**: Eliminated an unstable hack inside `accim.sim.accim_Base` where duplicate dummy `People` objects were injected whenever it encountered `ZONELIST` configurations, thereby securing EnergyPlus engine safety.
-- **EMS Occupant Count Sensor Key**: Fixed a bug in `addEMSSensorsBase` where the `People Occupant Count` sensor was built with a hardcoded `'People ' + zonename` key. The sensor now correctly resolves the exact internal EnergyPlus key from the model hierarchy (e.g. `SpaceName PeopleName`), preventing fatal EMS sensor errors during simulation.
-- **EMS Coil Variable Initialization**: Resolved fatal EnergyPlus initialization array crashes (`Variable ... used in expression has not been initialized!`) in mixed-mode ExistingHVAC (`ex_mm`) simulations. Realigned EMS code injection to map coil variables to `ems_objs_name` and safely spawn a `BeginNewEnvironment` initialization program (`InitExisHVACCoils`) to explicitly pre-initialize actuator nodes to `0` prior to any timestep prediction executions.
-- **Accis Simulation Spillage Error**: Resolved an `IndexError` raised during the batch-creation of IDFs under the internal `genIDF` utility in `accim.sim.accis`. The model-loop has been robustified so it actively maps newly generated instance IDFs natively to memory, safely skipping stale or orphaned temporary `_pymod.idf` files left over physically on the drive by previous crashes.
-- **Dangling Working Directories in Optimisations**: Fixed a file spillage bug inside `run_optimisation` where using `keep_sim_files='none'` correctly stripped EnergyPlus results from DataFrames but left the base worker execution folders (`out_dir_{pid}`) physically present on the disk containing the last evaluated step. These are now forcefully purged as intended.
-- **Problem Setup Overwrite Bug**: Resolved a severe flaw where `load_outputs_optimisation` and `load_outputs_parametric` forcefully overwrote pre-configured, valid `besos.problem.EPProblem` instances with static `MockProblem` stubs. Users can now securely load legacy results into pre-defined simulation architectures to launch new executions (e.g. `run_robustness_analysis` or Morris sensitivity analysis).
-- **Session Context Persistence (`epws`)**: Fixed an omission where the original climate files list (`epws`) was not passed down into the dataframe serialization properties. Metadata payloads (JSON/Pickle) now safely persist this array, preventing `NameError` exceptions downstream when post-processing scripts attempt to re-access the initial EPW context list organically.
-- **Normalization Plotting Artifacts**: Fixed an `UnboundLocalError` linked to the variable `divisor` during normalization conversions and a `NoneType` attribute error when parsing `parameters_type` inside `plot_pareto_front` visualization executions.
+- **Output-Objects API fixes (`parametric_and_optimisation`)**:
+  - `select_outputs(match='exact')` now matches correctly for variables (the needle was previously compared against an upper-cased series, so mixed-case requests never matched); for meters, `'exact'` is now truly exact instead of behaving case-insensitively. `'contains'` no longer interprets the needle as a regex, and missing/suggestion reports preserve the original casing of requested and available names.
+  - `set_output_readers(...)` (formerly `set_outputs_for_simulation`) no longer mutates the caller's DataFrames when adding the internal `output_name` column.
+  - `discover_available_outputs(...)` now raises an early `ValueError` for invalid `prefer` values instead of failing later with `NameError`.
+  - Output setters now emit an explicit warning when validation is requested but discovery yields no available outputs, instead of silently adding everything.
+  - `SimulationBase.__init__` no longer shares the mutable default `output_freqs` list across instances.
+- **`set_parameters(...)` Robustness for Custom Models Without Parsed `CustAST` Args**:
+  - Added a safe fallback path when `get_accim_args(...)` does not expose a `CustAST` dictionary, avoiding `KeyError: 'CustAST'` during custom-model parameter setup.
+- **Per-DataFrame Normalization State Tracking in Output Post-Processing**:
+  - Replaced fragile global-only normalization gating with per-dataset tracking (`parametric_hourly`, `parametric_monthly`, `optimisation_daily`, etc.) to avoid false skips or side effects when normalizing selected outputs.
+  - Hourly/aggregated output builders now invalidate normalization state only for the datasets they overwrite, preventing stale normalization markers.
+- **Default Aggregation Heuristic Diagnostics**:
+  - `get_output_df(...)` / `get_output_df_optimisation(...)` now emit a warning when numeric output columns do not match known `mean`/`sum` keyword heuristics and therefore default to `sum`, making aggregation assumptions explicit.
+- **Output Preflight Variable Verification in ACCIM Models**: `get_output_var_df_from_idf` now reads `Output:Variable` objects directly from the current IDF state (side-effect free), preventing false `missing_in_idf` reports after `apply_outputs_preflight(...)`.
+- **`run_optimisation()` Return Value**: Restored the method return so it consistently returns the full optimisation `DataFrame` (`self.outputs_optimisation`) instead of `None`, fixing downstream errors like `TypeError: object of type 'NoneType' has no len()`.
+- **Consistent Simulation Returns**: `run_parametric_simulation()` and `run_optimisation()` now consistently return their result DataFrames (`self.outputs_param_simulation` and `self.outputs_optimisation`) so downstream code can safely use `len(...)` and chaining without receiving `None`.
+- **Temporary `available_outputs` Cleanup Control**: Output-discovery workflows now clean up the generated `available_outputs` folder by default, with a new opt-in flag (`keep_available_outputs=True`) to keep it when users need to inspect `rdd/mdd` artifacts.
+- **Python 3.9 Type Union Syntax in `_run_single_evaluation_worker`**: Replaced `list | None` (Python 3.10+ syntax) with `Optional[list]` in `main.py` to restore Python 3.9 compatibility.
+- **Matplotlib 3.9+ `cm.get_cmap()` Removal**: Replaced the removed `cm.get_cmap('coolwarm')` call in `plotting.py` with `plt.colormaps['coolwarm']` and a safe fallback for older Matplotlib versions.
+- **`estimate_optimisation_sims()` Copy-Paste Bug**: The method erroneously accessed `self.outputs_param_simulation` (only set after a parametric run) and set `last_run_type` to `'parametric'`. Fixed to use the `epws` argument directly and set `last_run_type = 'optimisation'`.
+- **Chained Comparison Logic Bug in `drop_invalid_param_combinations`**: The condition `MinTempDiffVOF >= MaxTempDiffVOF <= 0` in `param_accis.py` was always False (since `MaxTempDiffVOF` is validated to be positive), silently skipping invalid parameter combinations. Simplified to `MinTempDiffVOF >= MaxTempDiffVOF`.
+- **`KeyError: 'reporting_frequency'` in `takeOutputDataFrame`**: The new `select_outputs()` / `apply_outputs_preflight()` workflow produces DataFrames with a `'frequency'` column, while `takeOutputDataFrame` in `accim_Base_EMS.py` expected `'reporting_frequency'`. Added an automatic column rename for backward compatibility.
+- **aPMV Parametric Setters in E+ 25.2**: Added compatibility with modern `People` schemas that use `Zone_or_ZoneList_or_Space_or_SpaceList_Name`.
+- **aPMV Parametric Worker `IndexError` in OSM/Space-based Models**: Replaced fragile `People`-derived name matching with robust discovery of real EMS targets.
+- **Thermal Comfort Thermostat Wiring for Existing OSM Controls**: Existing thermal comfort thermostats now update the actively referenced Fanger setpoint object and guarantee a valid thermal comfort control type schedule.
+- **DualSetPointWithDeadBand Fatal Error**: Corrected EMS Calling Manager sequencing so foundational variables are initialized before `SetAST` is evaluated.
+- **Custom ACCIS Parameters in Parametric Multiprocessing**: Worker-local IDFs now receive sampled row-level parameter writes before EnergyPlus evaluation.
+- **`set_parameters(use_dflt_values=True)` in Custom ACCIS Models**: Default `CustAST` values are now physically written into the IDF/EMS.
+- **EPW/IDF Category Name Collision**: `apply_category_mapping` now detects conflicting EPW and IDF category names and renames conflicting EPW categories with an `epw_` prefix.
+- **Boxplot Highlight Legend Placement**: Highlight handles now merge into the figure-level legend instead of overlapping the first subplot.
+- **Multi-IDF Session Restore for `set_building_floor_area`**: `idf_backup_path` lists are now loaded correctly when restoring multi-IDF runs.
+- **Normalization with Scalar Area**: `normalize_outputs` now handles scalar `building_floor_area` values from `mode='custom'`.
+- **Category Mapping Persistence**: Mapping rules are now stored in dataframe metadata and restored when loading parametric or optimisation outputs.
+- **Zero-input BESOS Compatibility**: Parametric runs now work when the BESOS problem has no native inputs and only external routing such as `idf`.
+- **Python 3.9 Type Hint Compatibility**: Relaxed internal `IDF_class` annotations for environments where `besos.IDF_class` resolves as a module.
+- **NSGA-II Pareto Status Annotation**: Pareto status is recomputed from the full evaluation history instead of matching only the final optimizer population.
+- **Pandas Groupby Compatibility**: Avoided unstable `groupby().apply()` shapes when annotating Pareto status.
+- **Legacy Object Conflicts**: Removed duplicate dummy `People` injection for `ZONELIST` configurations.
+- **EMS Occupant Count Sensor Key**: EMS sensors now resolve the exact internal EnergyPlus occupant-count key.
+- **EMS Coil Variable Initialization**: ExistingHVAC mixed-mode coil variables are initialized safely before timestep prediction logic.
+- **Accis Simulation Spillage Error**: `genIDF` now skips stale or orphaned temporary `_pymod.idf` files.
+- **Dangling Working Directories in Optimisations**: `keep_sim_files='none'` now removes remaining worker execution folders.
+- **Problem Setup Overwrite Bug**: Loading outputs no longer overwrites pre-configured BESOS `EPProblem` instances with static mock stubs.
+- **Session Context Persistence (`epws`)**: Original EPW lists are now persisted in JSON/Pickle metadata.
+- **Normalization Plotting Artifacts**: Fixed divisor handling and `parameters_type` parsing errors in normalization-aware plotting.
+- **Parametric Multiprocessing Output Readers**: Workers now preserve serialized meter/variable reader specifications, including frequency and aggregation behavior.
+- **Output Deduplication Across IDF Key Casing**: Output scanning/insertion now resolves `Output:*` object keys robustly across casing variants (for example, `Output:Meter` vs `OUTPUT:METER`), preventing missed duplicate detection in mixed IDD environments.
+- **Case-Robust Filtering in `keep_only_outputs_in_idfs(...)`**: Output pruning now reads `Output:Meter` and `Output:Variable` objects with casing-tolerant key access, so objects created as `OUTPUT:*` are correctly matched and removed when not selected.
+- **Sparse Hourly Expansion with Variable Output Columns**: `expand_to_hourly_dataframe(...)` now handles rows where some hourly outputs are missing (e.g. different zone counts by IDF) by using the first non-empty series length and padding missing columns with `NaN` instead of silently dropping rows.
+- **aPMV Output Re-application Duplicates**: `_add_apmv_outputs(...)` now checks full `Output:Variable` keys (`Key_Value`, `Variable_Name`, `Reporting_Frequency`) before insertion, including `Schedule Value` rows.
+- **Parametric `add_outputs` Visibility in Multiprocessing**: `run_parametric_simulation(...)` now reconstructs and evaluates BESOS `add_outputs` readers in worker processes, so callable-derived columns are persisted in `outputs_param_simulation`/`outputs_param_sim`.
+- **Optimisation `add_outputs` Persistence in Worker Logs**: Patched BESOS evaluation records now include `add_outputs_values` in JSONL logs, improving reconstruction of full optimisation histories.
+- **MCDM Output-Column Resolution in Optimisation Analysis**: `get_best_compromise_solution()` now resolves output columns against available dataframe names before indexing, avoiding `KeyError` when stored column labels differ from canonical output names.
+- **EPW-Specific Sensitivity Output Paths**: `run_sensitivity_analysis_by_epw()` now sanitizes EPW labels (including full paths and `.epw` suffixes) before using them in directory/file names, preventing invalid path errors during result export.
+- **Optimisation Execution per EPW in Multi-IDF Runs**: `run_optimisation()` now executes the selected algorithm inside the `EPW` loop for each `IDF × EPW` pair, fixing cases where only the last EPW was effectively optimized.
+- **Configurable Pareto/MCDM Segmentation Across IDF and EPW**:
+  - Added `pareto_separate_by_epw` and `pareto_separate_by_idf` to `run_optimisation(...)`, persisted in output `attrs`.
+  - `_annotate_pareto_status(...)` now supports explicit grouping columns instead of hardcoding EPW-only behavior.
+  - `plot_best_compromise_solutions(...)` now accepts `separate_by_epw` and `separate_by_idf` (defaulting from optimisation `attrs`) to avoid unintended cross-IDF or cross-EPW mixing.
 
 ## [0.7.7] - 2026-04-11
 
@@ -128,8 +334,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 A detailed changelog for versions prior to 0.7.5 was not formally maintained in this file.
 
 ---
-[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v0.7.8...HEAD
-[0.7.8]: https://github.com/dsanchez-garcia/accim/compare/v0.7.7...v0.7.8
+[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v0.7.7...HEAD
 [0.7.7]: https://github.com/dsanchez-garcia/accim/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/dsanchez-garcia/accim/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/dsanchez-garcia/accim/releases/tag/v0.7.5

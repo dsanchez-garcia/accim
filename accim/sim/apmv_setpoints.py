@@ -533,13 +533,22 @@ def _ensure_infrastructure(building: IDF, unique_zones: List[str], verbose_mode:
             # Warning is issued regardless of verbose_mode
             warnings.warn(f"Thermal Comfort Thermostat already exists for zone '{zone}'. Updating configuration.")
 
+            # Ensure the control type schedule exists and is linked correctly.
+            sch_name = _ensure_tc_control_schedule(building, zone, verbose_mode)
+            tc_t.Thermal_Comfort_Control_Type_Schedule_Name = sch_name
+
             # Ensure the control type is Fanger DualSetpoint
             if tc_t.Thermal_Comfort_Control_1_Object_Type != 'ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint':
                 tc_t.Thermal_Comfort_Control_1_Object_Type = 'ThermostatSetpoint:ThermalComfort:Fanger:DualSetpoint'
-                tc_t.Thermal_Comfort_Control_1_Name = f'Fanger Setpoint {zone}'
+
+            # Reuse the currently referenced Fanger object when present.
+            # Some input files use names like "<Zone> Dual Comfort Setpoint",
+            # and updating a different object would leave active control unchanged.
+            fanger_name = getattr(tc_t, 'Thermal_Comfort_Control_1_Name', '') or f'Fanger Setpoint {zone}'
+            tc_t.Thermal_Comfort_Control_1_Name = fanger_name
 
             # Update the referenced Fanger object
-            _update_fanger_object(building, f'Fanger Setpoint {zone}', zone, verbose_mode)
+            _update_fanger_object(building, fanger_name, zone, verbose_mode)
 
 
 def _create_tc_thermostat(building: IDF, zone: str, verbose_mode: bool):
@@ -551,18 +560,7 @@ def _create_tc_thermostat(building: IDF, zone: str, verbose_mode: bool):
     :param verbose_mode: If True, prints success messages.
     """
     # 1. Create the Control Type Schedule (Type 4 = Thermal Comfort)
-    sch_name = f'Thermal Comfort Control Type Schedule Name {zone}'
-    if not any(s.Name == sch_name for s in building.idfobjects['Schedule:Compact']):
-        building.newidfobject(
-            'Schedule:Compact',
-            Name=sch_name,
-            Schedule_Type_Limits_Name="Any Number",
-            Field_1='Through: 12/31',
-            Field_2='For: AllDays',
-            Field_3='Until: 24:00,4'  # 4 maps to 'Thermal Comfort' control type in E+
-        )
-        if verbose_mode:
-            print(f"Added Control Type Schedule: {sch_name}")
+    sch_name = _ensure_tc_control_schedule(building, zone, verbose_mode)
 
     # 2. Create the Thermostat Object linking the zone to the Fanger object
     building.newidfobject(
@@ -578,6 +576,23 @@ def _create_tc_thermostat(building: IDF, zone: str, verbose_mode: bool):
 
     # 3. Create the Fanger Setpoint object
     _update_fanger_object(building, f'Fanger Setpoint {zone}', zone, verbose_mode)
+
+
+def _ensure_tc_control_schedule(building: IDF, zone: str, verbose_mode: bool) -> str:
+    """Ensure thermal comfort control schedule exists for a zone and return its name."""
+    sch_name = f'Thermal Comfort Control Type Schedule Name {zone}'
+    if not any(s.Name == sch_name for s in building.idfobjects['Schedule:Compact']):
+        building.newidfobject(
+            'Schedule:Compact',
+            Name=sch_name,
+            Schedule_Type_Limits_Name="Any Number",
+            Field_1='Through: 12/31',
+            Field_2='For: AllDays',
+            Field_3='Until: 24:00,4'  # 4 maps to 'Thermal Comfort' control type in E+
+        )
+        if verbose_mode:
+            print(f"Added Control Type Schedule: {sch_name}")
+    return sch_name
 
 
 def _update_fanger_object(building: IDF, obj_name: str, zone: str, verbose_mode: bool):
@@ -957,36 +972,64 @@ def _add_apmv_outputs(building: IDF, outputs_freq: List[str], other_PMV_related_
             else:
                 warnings.warn(f"EMS Output Variable '{out_name}' already exists. Skipping.")
 
+    def _norm(value: Any) -> str:
+        return '' if value is None else str(value).strip().upper()
+
+    def _var_key(key_value: Any, variable_name: Any, frequency: Any) -> tuple[str, str, str]:
+        return (_norm(key_value), _norm(variable_name), _norm(frequency))
+
     # 2. Add Standard Output:Variables for reporting
     for freq in outputs_freq:
-        current_outputs = [o.Variable_Name for o in building.idfobjects['Output:Variable'] if o.Reporting_Frequency == freq.capitalize()]
+        freq_cap = str(freq).capitalize()
+        existing_output_keys = {
+            _var_key(getattr(o, 'Key_Value', ''), getattr(o, 'Variable_Name', ''), getattr(o, 'Reporting_Frequency', ''))
+            for o in building.idfobjects['Output:Variable']
+        }
 
         # Add all EMS variables created above
         for outvar in [v.Name for v in building.idfobjects['EnergyManagementSystem:OutputVariable']]:
-            if outvar not in current_outputs and not outvar.startswith("WIP"):
-                building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=outvar, Reporting_Frequency=freq.capitalize())
+            key = _var_key('*', outvar, freq_cap)
+            if key not in existing_output_keys and not outvar.startswith("WIP"):
+                building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=outvar, Reporting_Frequency=freq_cap)
+                existing_output_keys.add(key)
                 if verbose_mode: print(f"Added Output:Variable for {outvar} ({freq})")
+            elif key in existing_output_keys:
+                warnings.warn(f"Output:Variable already exists for '{outvar}' ({freq_cap}). Skipping.")
 
         # Add Schedule Values (using RAW zone names)
-        sanitized_zones = {z: _sanitize_ems_name(z) for z in unique_zones}
         for i in ['PMV_H_SP', 'PMV_C_SP']:
             for zone in unique_zones:
                 sch_name = f'{i}_{zone}'
-                building.newidfobject('Output:Variable', Key_Value=sch_name, Variable_Name='Schedule Value', Reporting_Frequency=freq.capitalize())
-                if verbose_mode: print(f"Added Output:Variable for Schedule {sch_name} ({freq})")
+                key = _var_key(sch_name, 'Schedule Value', freq_cap)
+                if key not in existing_output_keys:
+                    building.newidfobject('Output:Variable', Key_Value=sch_name, Variable_Name='Schedule Value', Reporting_Frequency=freq_cap)
+                    existing_output_keys.add(key)
+                    if verbose_mode: print(f"Added Output:Variable for Schedule {sch_name} ({freq})")
+                else:
+                    warnings.warn(f"Output:Variable already exists for Schedule '{sch_name}' ({freq_cap}). Skipping.")
 
         # Add additional comfort outputs if requested
         if other_PMV_related_outputs:
             additional = ['Zone Operative Temperature', 'Zone Thermal Comfort Fanger Model PMV', 'Zone Thermal Comfort Fanger Model PPD', 'Zone Mean Air Temperature']
             for item in additional:
-                if item not in current_outputs:
-                    building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=item, Reporting_Frequency=freq.capitalize())
+                key = _var_key('*', item, freq_cap)
+                if key not in existing_output_keys:
+                    building.newidfobject('Output:Variable', Key_Value='*', Variable_Name=item, Reporting_Frequency=freq_cap)
+                    existing_output_keys.add(key)
                     if verbose_mode: print(f"Added Output:Variable for {item} ({freq})")
+                else:
+                    warnings.warn(f"Output:Variable already exists for '{item}' ({freq_cap}). Skipping.")
 
         # 3. Add Output:Meter objects
         meter_objects = [
             'EnergyTransfer:HVAC',
-            'Electricity:HVAC'
+            'Heating:EnergyTransfer',
+            'Cooling:EnergyTransfer',
+            'Heating:Electricity',
+            'Cooling:Electricity',
+            'Electricity:HVAC',
+            'DistrictHeating:Facility',
+            'DistrictCooling:Facility'
         ]
 
         for freq in outputs_freq:

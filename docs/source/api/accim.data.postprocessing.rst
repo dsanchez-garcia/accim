@@ -9,21 +9,21 @@ accim.data.postprocessing.main module
 
 .. automodule:: accim.data.postprocessing.main
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 accim.data.postprocessing.utils module
 --------------------------------------
 
 .. automodule:: accim.data.postprocessing.utils
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:
 
 Module contents
 ---------------
 
 .. automodule:: accim.data.postprocessing
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

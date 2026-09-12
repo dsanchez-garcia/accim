@@ -1,54 +1,1529 @@
+"""Plotting mixin utilities for ACCIM parametric and optimisation workflows.
+
+This module provides reusable helpers for filtering result dataframes,
+normalizing energy outputs, resolving subplot ordering, and generating
+safe/output-stable filenames for figures.
+
+Usage
+-----
+Use `<module>` within ACCIM parametric and optimisation workflows.
+
+Examples
+--------
+result = <module>()
+"""
+
 import os
+import re
+from typing import Literal, Optional
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 import seaborn as sns
+from accim.parametric_and_optimisation.utils import apply_data_filter, resolve_subplot_orders
 
 class PlottingMixin:
+    """Shared plotting helpers used by simulation classes.
+    
+        The mixin centralizes dataframe selection/filtering, filename resolution,
+        and subplot-order utilities so higher-level plotting methods stay concise.
+    
+    Usage
+    -----
+    Use `PlottingMixin` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    obj = PlottingMixin()
+    """
 
-    def plot_best_compromise_solutions(self, out_dir: str='.', mcdm_configs: list=None, normalize_per_m2: bool=False) -> pd.DataFrame:
+    @staticmethod
+    def _safe_plot_token(value: str) -> str:
+        """Convert arbitrary values into filename-safe tokens.
+
+        Parameters
+        ----------
+        value : str
+            Raw value to sanitize.
+
+        Returns
+        -------
+        str
+            Safe token containing only letters, digits, `_`, `-`, and `.`.
+
+        Usage
+        -----
+        Internal helper for deterministic plot filenames and placeholders.
+
+        Examples
+        --------
+        token = PlottingMixin._safe_plot_token('Sydney 2024.epw')
         """
-        Identifies the best compromise solution(s) from the Pareto front for
+        token = re.sub(r'[^A-Za-z0-9_.-]+', '_', str(value).strip())
+        return token.strip('_') or 'unknown'
+
+    @staticmethod
+    def _summarise_placeholder_values(values: list) -> str:
+        """Summarize multiple placeholder values into one compact token.
+
+        Parameters
+        ----------
+        values : list
+            Distinct candidate values from a dataframe column.
+
+        Returns
+        -------
+        str
+            Concise token suitable for filename placeholders.
+
+        Usage
+        -----
+        Used when one placeholder must represent multiple filtered categories.
+
+        Examples
+        --------
+        label = PlottingMixin._summarise_placeholder_values(['Seville', 'Sydney'])
+        """
+        tokens = []
+        for value in values:
+            token = PlottingMixin._safe_plot_token(value)
+            if token not in tokens:
+                tokens.append(token)
+
+        if len(tokens) == 0:
+            return 'na'
+        if len(tokens) <= 4:
+            return '_'.join(tokens)
+        return '_'.join(tokens[:4]) + f'_plus{len(tokens) - 4}'
+
+    def _get_mapping_placeholder_columns(self, df: pd.DataFrame) -> list:
+        """Collect dataframe columns eligible as mapping-based placeholders.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Filtered dataframe used to resolve available placeholders.
+
+        Returns
+        -------
+        list
+            Ordered placeholder column names found in `df`.
+
+        Usage
+        -----
+        Internal helper used by filename-template context generation.
+
+        Examples
+        --------
+        cols = self._get_mapping_placeholder_columns(df)
+        """
+        df_attrs = getattr(df, 'attrs', {}) if hasattr(df, 'attrs') else {}
+
+        epw_rules = {}
+        idf_rules = {}
+
+        for rules in [
+            getattr(self, 'epw_mapping_rules', None),
+            df_attrs.get('epw_mapping_rules') if isinstance(df_attrs, dict) else None,
+        ]:
+            if isinstance(rules, dict):
+                epw_rules.update(rules)
+
+        for rules in [
+            getattr(self, 'idf_mapping_rules', None),
+            df_attrs.get('idf_mapping_rules') if isinstance(df_attrs, dict) else None,
+        ]:
+            if isinstance(rules, dict):
+                idf_rules.update(rules)
+
+        epw_categories = [str(category) for category in epw_rules.keys()]
+        idf_categories = [str(category) for category in idf_rules.keys()]
+        collisions = set(epw_categories) & set(idf_categories)
+
+        candidates = []
+        for category in epw_categories:
+            collision_safe_name = f'epw_{category}' if category in collisions else category
+            candidates.append(collision_safe_name)
+            candidates.append(category)
+        candidates.extend(idf_categories)
+
+        available_columns = {str(col) for col in df.columns}
+        placeholder_columns = []
+        seen = set()
+        for column_name in candidates:
+            if column_name in available_columns and column_name not in seen:
+                placeholder_columns.append(column_name)
+                seen.add(column_name)
+
+        return placeholder_columns
+
+    def _build_filename_template_context(
+            self,
+            df: Optional[pd.DataFrame] = None,
+            extra_context: Optional[dict] = None,
+    ) -> dict:
+        """Build a sanitized context dictionary for filename templates.
+
+        Parameters
+        ----------
+        df : Optional[pd.DataFrame]
+            Optional dataframe used to infer mapping-category placeholders.
+        extra_context : Optional[dict]
+            Extra key/value pairs injected into template context.
+
+        Returns
+        -------
+        dict
+            Placeholder dictionary safe for `str.format` rendering.
+
+        Usage
+        -----
+        Called before resolving plot output filenames from templates.
+
+        Examples
+        --------
+        ctx = self._build_filename_template_context(df=df, extra_context={'plot': 'pareto'})
+        """
+        context = {}
+        for (key, value) in (extra_context or {}).items():
+            context[str(key)] = self._safe_plot_token(value)
+
+        if df is None:
+            return context
+
+        for column_name in self._get_mapping_placeholder_columns(df=df):
+            unique_values = list(pd.unique(df[column_name].dropna()))
+            context[column_name] = self._summarise_placeholder_values(unique_values)
+
+        return context
+
+    def _resolve_output_filename(
+            self,
+            out_dir: str,
+            default_filename: str,
+            filename_template: Optional[str] = None,
+            template_context: Optional[dict] = None,
+            context: str = 'plot',
+    ) -> str:
+        """Resolve final output path from default name or filename template.
+
+        Parameters
+        ----------
+        out_dir : str
+            Base output directory.
+        default_filename : str
+            Fallback filename when no template is provided.
+        filename_template : Optional[str]
+            Optional `str.format` template for output naming.
+        template_context : Optional[dict]
+            Context values used to render `filename_template`.
+        context : str
+            Label used in error messages.
+
+        Returns
+        -------
+        str
+            Resolved output file path.
+
+        Usage
+        -----
+        Internal helper used by all plot save operations.
+
+        Examples
+        --------
+        path = self._resolve_output_filename('plots', 'default.png', '{plot}_{epw}.png', {'plot': 'pf', 'epw': 'sev'})
+        """
+        filename = default_filename
+        if filename_template is not None:
+            template = str(filename_template).strip()
+            if len(template) == 0:
+                raise ValueError(f'{context}: filename_template cannot be empty.')
+
+            try:
+                filename = template.format(**(template_context or {}))
+            except KeyError as err:
+                missing_key = str(err).strip("'")
+                available_placeholders = sorted((template_context or {}).keys())
+                raise ValueError(
+                    f"{context}: filename_template uses unknown placeholder '{missing_key}'. "
+                    f'Available placeholders: {available_placeholders}'
+                ) from err
+            except Exception as err:
+                raise ValueError(f'{context}: invalid filename_template. {err}') from err
+
+            filename = str(filename).strip()
+            if len(filename) == 0:
+                raise ValueError(f'{context}: filename_template rendered an empty filename.')
+            if not filename.lower().endswith('.png'):
+                filename = f'{filename}.png'
+
+        return os.path.join(out_dir, filename)
+
+    @staticmethod
+    def _ensure_unique_output_path(output_path: str, seen_output_paths: set, context: str) -> None:
+        """Validate that a generated output path is unique in current run.
+
+        Parameters
+        ----------
+        output_path : str
+            Candidate output path.
+        seen_output_paths : set
+            Set of already-resolved normalized paths.
+        context : str
+            Label used in raised error messages.
+
+        Returns
+        -------
+        None
+            Adds path to `seen_output_paths` or raises on duplicate.
+
+        Usage
+        -----
+        Used by plotting methods that save one file per subgroup.
+
+        Examples
+        --------
+        PlottingMixin._ensure_unique_output_path(path, seen, 'plot_pareto_front')
+        """
+        normalised_path = os.path.normcase(os.path.abspath(output_path))
+        if normalised_path in seen_output_paths:
+            raise ValueError(
+                f"{context}: filename_template produced duplicate output path '{output_path}'. "
+                "Include placeholders that vary per generated figure (for example: {epw_tag}, {y_var})."
+            )
+        seen_output_paths.add(normalised_path)
+
+    @staticmethod
+    def _is_energy_like_column(column_name: str) -> bool:
+        """Heuristically identify energy-related columns by name.
+
+        Parameters
+        ----------
+        column_name : str
+            Column label to evaluate.
+
+        Returns
+        -------
+        bool
+            `True` when the column appears energy-like.
+
+        Usage
+        -----
+        Internal helper used before unit conversion/normalization.
+
+        Examples
+        --------
+        ok = PlottingMixin._is_energy_like_column('Heating:Electricity [J](Annual)')
+        """
+        keywords = ('heating', 'cooling', 'energy', 'electricity', 'gas', 'facility')
+        lowered = str(column_name).lower()
+        return any(k in lowered for k in keywords)
+
+    def _get_plot_source_df(self, df_source: str = 'parametric') -> pd.DataFrame:
+        """Select and copy the dataframe identified by a source alias.
+
+        Parameters
+        ----------
+        df_source : str
+            Data source alias (`parametric`, `optimisation`, hourly variants).
+
+        Returns
+        -------
+        pd.DataFrame
+            Selected results dataframe copy.
+
+        Usage
+        -----
+        Internal helper used as first step in plotting pipelines.
+
+        Examples
+        --------
+        df = self._get_plot_source_df('optimisation')
+        """
+        source_map = {
+            'parametric': 'outputs_param_simulation',
+            'optimisation': 'outputs_optimisation',
+            'parametric_hourly': 'outputs_param_simulation_hourly',
+            'optimisation_hourly': 'outputs_optimisation_hourly',
+        }
+        if df_source not in source_map:
+            allowed = ', '.join([f"'{k}'" for k in source_map.keys()])
+            raise ValueError(f'df_source must be one of: {allowed}')
+        df = getattr(self, source_map[df_source], None)
+        if df is None or df.empty:
+            raise ValueError(f'No results found for {df_source}. Please run the simulation first.')
+        return df.copy()
+
+    @staticmethod
+    def _apply_plot_data_filter(
+            df: pd.DataFrame,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            context: str = 'Plot data filter',
+    ) -> tuple[pd.DataFrame, dict]:
+        """Apply unified dataframe filtering settings for plotting methods.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Source dataframe to filter.
+        data_filter : Optional[dict]
+            Column/value filtering definition.
+        data_filter_case_sensitive : bool
+            Whether string matching should be case-sensitive.
+        data_filter_strict : bool
+            When `True`, unknown columns/values raise immediately.
+        data_filter_on_empty : Literal['error', 'warn', 'ignore']
+            Behavior when filtering yields no rows.
+        context : str
+            Label attached to filter diagnostics.
+
+        Returns
+        -------
+        tuple[pd.DataFrame, dict]
+            Filtered dataframe plus metadata from filter operation.
+
+        Usage
+        -----
+        Thin wrapper around `apply_data_filter` to standardize options.
+
+        Examples
+        --------
+        df_f, meta = PlottingMixin._apply_plot_data_filter(df, {'epw': 'Seville'})
+        """
+        return apply_data_filter(
+            df=df,
+            data_filter=data_filter,
+            case_sensitive=data_filter_case_sensitive,
+            strict=data_filter_strict,
+            on_empty=data_filter_on_empty,
+            context=context,
+        )
+
+    def get_filtered_results_table(
+            self,
+            df_source: str = 'parametric',
+            data_filter: Optional[dict] = None,
+            columns: Optional[list] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+    ) -> pd.DataFrame:
+        """Build a filtered results table ready for display or export.
+        
+        Parameters
+        ----------
+        df_source : Any
+            Input dataframe used by this routine.
+        data_filter : Any
+            Argument used by `PlottingMixin.get_filtered_results_table`.
+        columns : Any
+            Argument used by `PlottingMixin.get_filtered_results_table`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.get_filtered_results_table`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.get_filtered_results_table`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.get_filtered_results_table`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.get_filtered_results_table` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_filtered_results_table(df_source=..., data_filter=..., columns=..., ...)
+        """
+        df = self._get_plot_source_df(df_source=df_source)
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'get_filtered_results_table[{df_source}]',
+        )
+
+        if columns is not None:
+            missing_cols = [c for c in columns if c not in df.columns]
+            if missing_cols:
+                raise KeyError(
+                    f"Columns from 'columns' not found in dataframe: {missing_cols}. "
+                    f'Available columns: {list(df.columns)}'
+                )
+            df = df[list(columns)].copy()
+
+        return df.reset_index(drop=True)
+
+    def _normalise_plot_columns(self, df: pd.DataFrame, columns: list, normalize_per_m2: bool = False) -> tuple[pd.DataFrame, dict]:
+        """Normalize selected energy-like columns and report output units.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe containing plot columns.
+        columns : list
+            Candidate columns to normalize when energy-like.
+        normalize_per_m2 : bool
+            Whether values should be converted to per-area basis.
+
+        Returns
+        -------
+        tuple[pd.DataFrame, dict]
+            Updated dataframe and unit map (`column -> unit or None`).
+
+        Usage
+        -----
+        Internal helper used by generic scatter/line plot wrappers.
+
+        Examples
+        --------
+        df_n, unit_map = self._normalise_plot_columns(df, [x, y], normalize_per_m2=True)
+        """
+        outputs_normalized = getattr(self, 'outputs_normalized', False)
+        area_attr = getattr(self, 'building_floor_area', None)
+
+        if outputs_normalized:
+            if normalize_per_m2:
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+            normalize_per_m2 = False
+            base_divisor = 1.0
+            energy_unit = 'kWh/m2'
+        else:
+            base_divisor = 3600000.0
+            energy_unit = 'kWh/m2' if normalize_per_m2 else 'kWh'
+            if normalize_per_m2 and not area_attr:
+                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                normalize_per_m2 = False
+                energy_unit = 'kWh'
+
+        unit_map = {}
+        for column in list(dict.fromkeys(columns)):
+            if column not in df.columns:
+                continue
+            if not pd.api.types.is_numeric_dtype(df[column]):
+                unit_map[column] = None
+                continue
+            if not self._is_energy_like_column(column):
+                unit_map[column] = None
+                continue
+
+            if outputs_normalized:
+                unit_map[column] = energy_unit
+                continue
+
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in df.columns:
+                    divisors = df['idf'].map(area_attr).fillna(1.0) * base_divisor
+                else:
+                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    divisors = base_divisor * area_val
+            else:
+                divisors = base_divisor
+
+            df[column] = df[column] / divisors
+            unit_map[column] = energy_unit
+
+        return (df, unit_map)
+
+    def _resolve_plot_axis_column(self, requested_name: Optional[str], available_columns: list) -> Optional[str]:
+        """Resolve a requested axis/column name against available columns.
+
+        Falls back to the energy-aware fuzzy matcher `_resolve_output_columns`
+        (already used by optimisation/Pareto plotting) so callers can keep
+        referring to a "logical" output name (for example ``'Electricity:HVAC'``)
+        even after :meth:`normalize_outputs` has renamed the column (for
+        example to ``'Electricity:HVAC_kWh/m2'``).
+
+        Parameters
+        ----------
+        requested_name : Optional[str]
+            Column name requested by the caller (``x``, ``y``, or an item of
+            ``y_vars``). ``None`` is returned unchanged.
+        available_columns : list
+            Columns actually present in the dataframe about to be plotted.
+
+        Returns
+        -------
+        Optional[str]
+            ``requested_name`` unchanged when it already matches (or cannot be
+            resolved); otherwise the resolved column name actually present in
+            the dataframe. Validation right after this call still raises a
+            clear ``KeyError`` when no match is found at all.
+
+        Usage
+        -----
+        Internal helper used by `plot_parametric_scatter`, `plot_parametric_ecdf`,
+        and `plot_parametric_distributions` before validating required columns.
+
+        Examples
+        --------
+        x = self._resolve_plot_axis_column(x, list(df.columns))
+        """
+        if requested_name is None or requested_name in available_columns:
+            return requested_name
+        if not hasattr(self, '_resolve_output_columns'):
+            return requested_name
+        try:
+            resolved = self._resolve_output_columns([requested_name], available_columns, strict=False)
+        except Exception:
+            return requested_name
+        if len(resolved) == 1 and resolved[0] != requested_name:
+            print(
+                f"  [info] Resolved plot column '{requested_name}' -> '{resolved[0]}' "
+                "(likely renamed by normalize_outputs())."
+            )
+            return resolved[0]
+        return requested_name
+
+    @staticmethod
+    def _filter_epw_rows(df: pd.DataFrame, epw_filter=None) -> pd.DataFrame:
+        """Filter dataframe rows by EPW substring(s).
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input dataframe that may include an `epw` column.
+        epw_filter : Any
+            String or iterable of strings used as case-insensitive substrings.
+
+        Returns
+        -------
+        pd.DataFrame
+            Filtered dataframe copy.
+
+        Usage
+        -----
+        Internal helper for hourly plots that support EPW filtering.
+
+        Examples
+        --------
+        df_epw = PlottingMixin._filter_epw_rows(df, epw_filter=['Seville', 'Sydney'])
+        """
+        if epw_filter is None:
+            return df.copy()
+        if 'epw' not in df.columns:
+            raise KeyError("Column 'epw' is required when epw_filter is used.")
+        filters = [epw_filter] if isinstance(epw_filter, str) else list(epw_filter)
+        filters = [str(f).strip().lower() for f in filters if str(f).strip()]
+        if len(filters) == 0:
+            return df.copy()
+        mask = df['epw'].astype(str).str.lower().apply(lambda x: any((flt in x for flt in filters)))
+        return df.loc[mask].copy()
+
+    @staticmethod
+    def _find_first_column_contains(columns: list, pattern: str):
+        """Find the first column whose name contains the requested pattern.
+
+        Parameters
+        ----------
+        columns : list
+            Candidate column labels.
+        pattern : str
+            Case-insensitive substring pattern.
+
+        Returns
+        -------
+        Any
+            First matching column value, or `None` when no match exists.
+
+        Usage
+        -----
+        Used to auto-detect RMOT-like columns for hourly visualizations.
+
+        Examples
+        --------
+        rmot_col = PlottingMixin._find_first_column_contains(df.columns, 'Running Average')
+        """
+        if pattern is None:
+            return None
+        pattern_l = str(pattern).lower()
+        for col in columns:
+            if pattern_l in str(col).lower():
+                return col
+        return None
+
+    @staticmethod
+    def _collect_subplot_dimension_values(df: pd.DataFrame, row: str = None, col: str = None) -> dict:
+        """Collect unique row/col facet values for subplot ordering.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe used to extract facet levels.
+        row : str, optional
+            Row facet column name.
+        col : str, optional
+            Column facet column name.
+
+        Returns
+        -------
+        dict
+            Dictionary with keys `row` and/or `col` and unique values.
+
+        Usage
+        -----
+        Prepares dimension values for `_resolve_subplot_dimension_orders`.
+
+        Examples
+        --------
+        dims = PlottingMixin._collect_subplot_dimension_values(df, row='scenario', col='city')
+        """
+        values = {}
+        if row is not None and row in df.columns:
+            values['row'] = list(pd.unique(df[row].dropna()))
+        if col is not None and col in df.columns:
+            values['col'] = list(pd.unique(df[col].dropna()))
+        return values
+
+    @staticmethod
+    def _resolve_subplot_dimension_orders(
+            dimension_values: dict,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            context: str = 'Subplot ordering',
+    ) -> dict:
+        """Resolve subplot row/col order according to configured ordering mode.
+
+        Parameters
+        ----------
+        dimension_values : dict
+            Available facet values by dimension (`row`, `col`).
+        subplot_order_mode : Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom']
+            Ordering strategy.
+        subplot_order_custom : Optional[dict]
+            Explicit custom order values when mode is `custom`.
+        subplot_order_case_sensitive : bool
+            Whether textual order resolution should be case-sensitive.
+        context : str
+            Label used in error messages.
+
+        Returns
+        -------
+        dict
+            Resolved row/col orders; returns `{}` when mode is `auto`.
+
+        Usage
+        -----
+        Shared helper for all faceted plotting APIs.
+
+        Examples
+        --------
+        orders = PlottingMixin._resolve_subplot_dimension_orders({'col': ['b', 'a']}, subplot_order_mode='alphabetical')
+        """
+        resolved_orders = resolve_subplot_orders(
+            dimension_values=dimension_values,
+            mode=subplot_order_mode,
+            custom=subplot_order_custom,
+            case_sensitive=subplot_order_case_sensitive,
+            context=context,
+        )
+        if subplot_order_mode == 'auto':
+            return {}
+        return resolved_orders
+
+    def prepare_hourly_long_df(
+            self,
+            df_source: str = 'parametric_hourly',
+            id_vars: list = None,
+            value_vars: list = None,
+            value_tokens: list = None,
+            epw_filter=None,
+            rmot_pattern: str = 'Running Average',
+            drop_constant_columns: bool = True,
+            drop_hour_column: bool = True,
+            datetime_col: str = 'datetime',
+            categorical_orders: dict = None,
+            variable_col: str = 'variable',
+            value_col: str = 'value',
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+    ) -> pd.DataFrame:
+        """Prepares an hourly dataframe for plotting by applying filters and a melt
+        transformation into long format.
+        
+        This method is designed to replace repetitive notebook preprocessing code.
+        
+        Parameters
+        ----------
+        df_source : Any
+            Input dataframe used by this routine.
+        id_vars : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        value_vars : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        value_tokens : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        epw_filter : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        rmot_pattern : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        drop_constant_columns : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        drop_hour_column : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        datetime_col : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        categorical_orders : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        variable_col : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        value_col : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        data_filter : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.prepare_hourly_long_df` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.prepare_hourly_long_df(df_source=..., id_vars=..., value_vars=..., ...)
+        """
+        df = self._get_plot_source_df(df_source=df_source)
+        df = self._filter_epw_rows(df=df, epw_filter=epw_filter)
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'prepare_hourly_long_df[{df_source}]',
+        )
+
+        if df.empty:
+            raise ValueError('No hourly rows available after applying filters.')
+
+        if datetime_col in df.columns:
+            df[datetime_col] = pd.to_datetime(df[datetime_col], errors='coerce')
+
+        rmot_col = self._find_first_column_contains(columns=list(df.columns), pattern=rmot_pattern)
+
+        if id_vars is None:
+            default_id_vars = [datetime_col, 'CustAST_m', 'CustAST_n', 'epw']
+            if rmot_col is not None:
+                default_id_vars.append(rmot_col)
+            id_vars = [c for c in default_id_vars if c in df.columns]
+        else:
+            missing_id = [c for c in id_vars if c not in df.columns]
+            if missing_id:
+                raise KeyError(f'Missing id_vars columns in hourly dataframe: {missing_id}')
+
+        if drop_hour_column and 'hour' in df.columns and 'hour' not in id_vars:
+            df = df.drop(columns=['hour'])
+
+        if drop_constant_columns:
+            protected = set(id_vars)
+            if value_vars is not None:
+                protected.update(value_vars)
+            cols_to_drop = [
+                c for c in df.columns
+                if c not in protected and df[c].nunique(dropna=False) <= 1
+            ]
+            if len(cols_to_drop) > 0:
+                df = df.drop(columns=cols_to_drop)
+
+        if categorical_orders is not None:
+            for (cat_col, cat_order) in categorical_orders.items():
+                if cat_col in df.columns:
+                    df[cat_col] = pd.Categorical(df[cat_col], categories=list(cat_order), ordered=True)
+
+        if value_vars is None:
+            if value_tokens is None:
+                value_tokens = [
+                    'Zone Operative Temperature',
+                    'Setpoint Temperature_No Tolerance',
+                    'Zone Thermal Comfort Fanger Model PMV',
+                ]
+            candidate_cols = [c for c in df.columns if c not in id_vars]
+            lowered_tokens = [str(token).lower() for token in value_tokens]
+            value_vars = [
+                c for c in candidate_cols
+                if any((token in str(c).lower() for token in lowered_tokens))
+            ]
+            if len(value_vars) == 0:
+                value_vars = [c for c in candidate_cols if pd.api.types.is_numeric_dtype(df[c])]
+        else:
+            missing_values = [c for c in value_vars if c not in df.columns]
+            if missing_values:
+                raise KeyError(f'Missing value_vars columns in hourly dataframe: {missing_values}')
+
+        if len(value_vars) == 0:
+            raise ValueError('No hourly value columns found for melt(). Use value_vars or value_tokens.')
+
+        df_long = (
+            df.melt(
+                id_vars=id_vars,
+                value_vars=value_vars,
+                var_name=variable_col,
+                value_name=value_col,
+            )
+            .dropna(subset=[value_col])
+            .reset_index(drop=True)
+        )
+
+        if df_long.empty:
+            raise ValueError('Hourly long dataframe is empty after melt/dropna.')
+
+        return df_long
+
+    def plot_hourly_scatter(
+            self,
+            df_long: pd.DataFrame = None,
+            df_source: str = 'parametric_hourly',
+            x: str = None,
+            y: str = 'value',
+            hue: str = 'variable',
+            row: str = 'CustAST_m',
+            col: str = 'CustAST_n',
+            epw_filter=None,
+            id_vars: list = None,
+            value_vars: list = None,
+            value_tokens: list = None,
+            categorical_orders: dict = None,
+            rmot_pattern: str = 'Running Average',
+            x_label: str = None,
+            y_label: str = None,
+            out_dir: str = '.',
+            filename: str = None,
+            height: float = 3.2,
+            aspect: float = 1.25,
+            marker_size: float = 1.0,
+            marker_alpha: float = None,
+            legend_loc: str = 'upper center',
+            legend_bbox_to_anchor: tuple = (0.5, 0),
+            facet_kws: dict = None,
+            scatter_kws: dict = None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ):
+        """Creates faceted hourly scatter plots, using RMOT on x-axis by default.
+        
+        :param filename: Optional explicit output filename. If provided,
+            ``filename_template`` is ignored.
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example ``'hourly_scatter_{epw_filter}_{x}.png'``).
+            Mapping-category placeholders from ``epw_mapping_rules`` and
+            ``idf_mapping_rules`` are available when present in the filtered data.
+        
+        Parameters
+        ----------
+        df_long : Any
+            Input dataframe used by this routine.
+        df_source : Any
+            Input dataframe used by this routine.
+        y : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        hue : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        row : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        col : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        id_vars : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        value_vars : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        value_tokens : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        categorical_orders : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        rmot_pattern : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        x_label : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        y_label : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        out_dir : Any
+            Path-like value used by this routine.
+        height : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        aspect : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        marker_size : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        marker_alpha : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        legend_loc : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        legend_bbox_to_anchor : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        facet_kws : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        scatter_kws : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_hourly_scatter`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_hourly_scatter` within ACCIM parametric and optimisation workflows.
+        """
+        if df_long is None:
+            df_plot = self.prepare_hourly_long_df(
+                df_source=df_source,
+                id_vars=id_vars,
+                value_vars=value_vars,
+                value_tokens=value_tokens,
+                epw_filter=epw_filter,
+                categorical_orders=categorical_orders,
+                rmot_pattern=rmot_pattern,
+                data_filter=data_filter,
+                data_filter_case_sensitive=data_filter_case_sensitive,
+                data_filter_strict=data_filter_strict,
+                data_filter_on_empty=data_filter_on_empty,
+            )
+        else:
+            df_plot = self._filter_epw_rows(df=df_long.copy(), epw_filter=epw_filter)
+            (df_plot, _) = self._apply_plot_data_filter(
+                df=df_plot,
+                data_filter=data_filter,
+                data_filter_case_sensitive=data_filter_case_sensitive,
+                data_filter_strict=data_filter_strict,
+                data_filter_on_empty=data_filter_on_empty,
+                context='plot_hourly_scatter[df_long]',
+            )
+
+        if df_plot.empty:
+            raise ValueError('No rows available for hourly scatter plotting.')
+
+        if x is None:
+            x = self._find_first_column_contains(columns=list(df_plot.columns), pattern=rmot_pattern)
+            if x is None:
+                raise ValueError('x was not provided and no RMOT-like column was found. Pass x explicitly.')
+
+        if row is not None and row not in df_plot.columns:
+            row = None
+        if col is not None and col not in df_plot.columns:
+            col = None
+        if hue is not None and hue not in df_plot.columns:
+            hue = None
+
+        required_cols = [x, y]
+        missing = [c for c in required_cols if c not in df_plot.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for hourly scatter: {missing}')
+
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df_plot, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_hourly_scatter',
+        )
+
+        grid_kwargs = {
+            'data': df_plot,
+            'row': row,
+            'col': col,
+            'height': height,
+            'aspect': aspect,
+        }
+        if facet_kws is not None:
+            grid_kwargs.update(dict(facet_kws))
+        if 'row' in subplot_orders:
+            grid_kwargs['row_order'] = subplot_orders['row']
+        if 'col' in subplot_orders:
+            grid_kwargs['col_order'] = subplot_orders['col']
+        g = sns.FacetGrid(**grid_kwargs)
+
+        plot_kwargs = {'x': x, 'y': y}
+        if hue is not None:
+            plot_kwargs['hue'] = hue
+        if scatter_kws is not None:
+            plot_kwargs.update(dict(scatter_kws))
+        if 's' not in plot_kwargs:
+            plot_kwargs['s'] = marker_size
+        if marker_alpha is not None and 'alpha' not in plot_kwargs:
+            plot_kwargs['alpha'] = marker_alpha
+
+        g.map_dataframe(sns.scatterplot, **plot_kwargs)
+        g.set_axis_labels(x_label or x, y_label or y)
+
+        if hue is not None:
+            g.add_legend(loc=legend_loc, bbox_to_anchor=legend_bbox_to_anchor)
+            if g._legend is not None and hasattr(g._legend, 'legend_handles'):
+                for handle in g._legend.legend_handles:
+                    if hasattr(handle, 'set_markersize'):
+                        handle.set_markersize(max(4.0, marker_size * 4.0))
+
+        g.figure.tight_layout()
+
+        os.makedirs(out_dir, exist_ok=True)
+        if epw_filter is None:
+            epw_token = 'all_epw'
+        elif isinstance(epw_filter, str):
+            epw_token = self._safe_plot_token(epw_filter)
+        else:
+            epw_token = self._safe_plot_token('_'.join([str(v) for v in epw_filter]))
+
+        if filename is not None and filename_template is not None:
+            raise ValueError("plot_hourly_scatter: use either filename or filename_template, not both.")
+
+        if filename is not None:
+            output_path = os.path.join(out_dir, filename)
+        else:
+            filename_context = self._build_filename_template_context(
+                df=df_plot,
+                extra_context={
+                    'plot': 'hourly_scatter',
+                    'df_source': df_source,
+                    'x': x,
+                    'y': y,
+                    'row_dim': row or 'none',
+                    'col_dim': col or 'none',
+                    'hue_dim': hue or 'none',
+                    'epw_filter': epw_token,
+                },
+            )
+            output_path = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f'plot_hourly_scatter_{self._safe_plot_token(x)}_{epw_token}.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_hourly_scatter',
+            )
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        g.figure.savefig(output_path, dpi=300, bbox_inches='tight')
+        g.saved_path = output_path
+        print(f'  Hourly scatter plot saved: {output_path}')
+        plt.close(g.figure)
+        return g
+
+    def plot_hourly_lines(
+            self,
+            df_long: pd.DataFrame = None,
+            df_source: str = 'parametric_hourly',
+            x: str = 'datetime',
+            y: str = 'value',
+            hue: str = 'variable',
+            row: str = 'CustAST_m',
+            col: str = 'CustAST_n',
+            epw_filter=None,
+            id_vars: list = None,
+            value_vars: list = None,
+            value_tokens: list = None,
+            categorical_orders: dict = None,
+            x_label: str = None,
+            y_label: str = None,
+            estimator='mean',
+            errorbar=None,
+            out_dir: str = '.',
+            filename: str = None,
+            height: float = 3.2,
+            aspect: float = 1.25,
+            legend_loc: str = 'upper center',
+            legend_bbox_to_anchor: tuple = (0.5, 0),
+            facet_kws: dict = None,
+            line_kws: dict = None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ):
+        """Creates faceted hourly line plots (time series by default).
+        
+        :param filename: Optional explicit output filename. If provided,
+            ``filename_template`` is ignored.
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example ``'hourly_lines_{epw_filter}_{x}.png'``).
+            Mapping-category placeholders from ``epw_mapping_rules`` and
+            ``idf_mapping_rules`` are available when present in the filtered data.
+        
+        Parameters
+        ----------
+        df_long : Any
+            Input dataframe used by this routine.
+        df_source : Any
+            Input dataframe used by this routine.
+        y : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        hue : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        row : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        col : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        id_vars : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        value_vars : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        value_tokens : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        categorical_orders : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        x_label : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        y_label : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        estimator : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        errorbar : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        out_dir : Any
+            Path-like value used by this routine.
+        height : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        aspect : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        legend_loc : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        legend_bbox_to_anchor : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        facet_kws : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        line_kws : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_hourly_lines`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_hourly_lines` within ACCIM parametric and optimisation workflows.
+        """
+        if df_long is None:
+            df_plot = self.prepare_hourly_long_df(
+                df_source=df_source,
+                id_vars=id_vars,
+                value_vars=value_vars,
+                value_tokens=value_tokens,
+                epw_filter=epw_filter,
+                categorical_orders=categorical_orders,
+                data_filter=data_filter,
+                data_filter_case_sensitive=data_filter_case_sensitive,
+                data_filter_strict=data_filter_strict,
+                data_filter_on_empty=data_filter_on_empty,
+            )
+        else:
+            df_plot = self._filter_epw_rows(df=df_long.copy(), epw_filter=epw_filter)
+            (df_plot, _) = self._apply_plot_data_filter(
+                df=df_plot,
+                data_filter=data_filter,
+                data_filter_case_sensitive=data_filter_case_sensitive,
+                data_filter_strict=data_filter_strict,
+                data_filter_on_empty=data_filter_on_empty,
+                context='plot_hourly_lines[df_long]',
+            )
+
+        if df_plot.empty:
+            raise ValueError('No rows available for hourly line plotting.')
+
+        if row is not None and row not in df_plot.columns:
+            row = None
+        if col is not None and col not in df_plot.columns:
+            col = None
+        if hue is not None and hue not in df_plot.columns:
+            hue = None
+
+        required_cols = [x, y]
+        missing = [c for c in required_cols if c not in df_plot.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for hourly line plot: {missing}')
+
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df_plot, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_hourly_lines',
+        )
+
+        grid_kwargs = {
+            'data': df_plot,
+            'row': row,
+            'col': col,
+            'height': height,
+            'aspect': aspect,
+        }
+        if facet_kws is not None:
+            grid_kwargs.update(dict(facet_kws))
+        if 'row' in subplot_orders:
+            grid_kwargs['row_order'] = subplot_orders['row']
+        if 'col' in subplot_orders:
+            grid_kwargs['col_order'] = subplot_orders['col']
+        g = sns.FacetGrid(**grid_kwargs)
+
+        plot_kwargs = {'x': x, 'y': y}
+        if hue is not None:
+            plot_kwargs['hue'] = hue
+        if estimator is not None:
+            plot_kwargs['estimator'] = estimator
+        if errorbar is not None:
+            plot_kwargs['errorbar'] = errorbar
+        if line_kws is not None:
+            plot_kwargs.update(dict(line_kws))
+
+        try:
+            g.map_dataframe(sns.lineplot, **plot_kwargs)
+        except TypeError as err:
+            if 'errorbar' not in str(err):
+                raise
+            plot_kwargs.pop('errorbar', None)
+            if errorbar is not None:
+                if isinstance(errorbar, tuple) and len(errorbar) == 2 and str(errorbar[0]).lower() == 'ci':
+                    plot_kwargs['ci'] = errorbar[1]
+                elif isinstance(errorbar, (int, float)):
+                    plot_kwargs['ci'] = errorbar
+            g.map_dataframe(sns.lineplot, **plot_kwargs)
+
+        g.set_axis_labels(x_label or x, y_label or y)
+
+        if hue is not None:
+            g.add_legend(loc=legend_loc, bbox_to_anchor=legend_bbox_to_anchor)
+
+        g.figure.tight_layout()
+
+        os.makedirs(out_dir, exist_ok=True)
+        if epw_filter is None:
+            epw_token = 'all_epw'
+        elif isinstance(epw_filter, str):
+            epw_token = self._safe_plot_token(epw_filter)
+        else:
+            epw_token = self._safe_plot_token('_'.join([str(v) for v in epw_filter]))
+
+        if filename is not None and filename_template is not None:
+            raise ValueError("plot_hourly_lines: use either filename or filename_template, not both.")
+
+        if filename is not None:
+            output_path = os.path.join(out_dir, filename)
+        else:
+            filename_context = self._build_filename_template_context(
+                df=df_plot,
+                extra_context={
+                    'plot': 'hourly_lines',
+                    'df_source': df_source,
+                    'x': x,
+                    'y': y,
+                    'row_dim': row or 'none',
+                    'col_dim': col or 'none',
+                    'hue_dim': hue or 'none',
+                    'epw_filter': epw_token,
+                },
+            )
+            output_path = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f'plot_hourly_lines_{self._safe_plot_token(x)}_{epw_token}.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_hourly_lines',
+            )
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        g.figure.savefig(output_path, dpi=300, bbox_inches='tight')
+        g.saved_path = output_path
+        print(f'  Hourly line plot saved: {output_path}')
+        plt.close(g.figure)
+        return g
+
+    def plot_best_compromise_solutions(
+        self,
+        out_dir: str='.',
+        mcdm_configs: list=None,
+        normalize_per_m2: bool=False,
+        separate_by_epw=None,
+        separate_by_idf=None,
+        subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+        subplot_order_custom: Optional[dict] = None,
+        subplot_order_case_sensitive: bool = False,
+        data_filter: Optional[dict] = None,
+        data_filter_case_sensitive: bool = False,
+        data_filter_strict: bool = True,
+        data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+        filename_template: str = None,
+    ) -> pd.DataFrame:
+        """Identifies the best compromise solution(s) from the Pareto front for
         each EPW found in ``outputs_optimisation``, saves the results to a
         CSV and a scatter-plot PNG, and returns the combined DataFrame.
-
+        
         :param out_dir: directory where output files will be saved.
         :param mcdm_configs: list of dicts, each specifying one MCDM run.
             Each dict must have a ``'method'`` key (``'knee_point'`` or
             ``'topsis'``) and may optionally have:
-
+        
             - ``'weights'``: list of per-objective weights (TOPSIS only).
             - ``'label'``: string label used in the legend and CSV column
               (auto-generated if omitted).
-
+        
             Default (when ``None``)::
-
+        
                 [
                     {'method': 'knee_point'},
                     {'method': 'topsis'},
                     {'method': 'topsis', 'weights': [0.7, 0.3], 'label': 'topsis_w70_30'},
                 ]
-
+        
+        :param separate_by_epw: whether MCDM is computed independently by EPW.
+            If ``None``, the value is taken from ``outputs_optimisation.attrs``
+            (fallback: ``True``).
+        :param separate_by_idf: whether MCDM is computed independently by IDF.
+            If ``None``, the value is taken from ``outputs_optimisation.attrs``
+            (fallback: ``False``).
+        :param filename_template: Optional output filename pattern for the PNG
+            figure using ``str.format`` (for example
+            ``'mcdm_{building_type}_{city}.png'``). Mapping-category placeholders
+            from ``epw_mapping_rules`` and ``idf_mapping_rules`` are available
+            when present in the filtered data.
         :return: pandas DataFrame with all best solutions (one row per
-            EPW × MCDM method), also saved to CSV.
+            group × MCDM method), also saved to CSV.
+        
+        Parameters
+        ----------
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_best_compromise_solutions`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_best_compromise_solutions` within ACCIM parametric and optimisation workflows.
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('MCDM best compromise solutions can only be evaluated after an optimisation simulation. Please ensure you run run_optimisation() first.')
         import matplotlib.pyplot as plt
-        unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
-        divisor = 3600000.0
-        if normalize_per_m2:
-            area = getattr(self, 'building_floor_area', None)
-            if not area:
-                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
-                unit_str = 'kWh'
-            else:
-                divisor *= area
+        area_attr = getattr(self, 'building_floor_area', None)
+        if getattr(self, 'outputs_normalized', False):
+            if normalize_per_m2:
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+            normalize_per_m2 = False
+            unit_str = 'kWh/m2'
+            base_divisor = 1.0
+        else:
+            unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+            base_divisor = 3600000.0
+            if normalize_per_m2:
+                area_attr = getattr(self, 'building_floor_area', None)
+                if not area_attr:
+                    print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                    unit_str = 'kWh'
+                    normalize_per_m2 = False
         if getattr(self, 'outputs_optimisation', None) is None or self.outputs_optimisation.empty:
             raise ValueError('No optimisation results found. Run run_optimisation (or load via load_outputs_optimisation) first.')
         os.makedirs(out_dir, exist_ok=True)
+        original_optim = self.outputs_optimisation
+        filtered_optim = original_optim.copy()
+        (filtered_optim, _) = self._apply_plot_data_filter(
+            df=filtered_optim,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context='plot_best_compromise_solutions',
+        )
+        if filtered_optim.empty:
+            raise ValueError('No optimisation rows available for MCDM plotting after filtering.')
+
+        attrs = getattr(original_optim, 'attrs', {}) if hasattr(original_optim, 'attrs') else {}
+        if separate_by_epw is None:
+            separate_by_epw = attrs.get('pareto_separate_by_epw', True)
+        if separate_by_idf is None:
+            separate_by_idf = attrs.get('pareto_separate_by_idf', False)
+        separate_by_epw = bool(separate_by_epw)
+        separate_by_idf = bool(separate_by_idf)
+
+        group_cols = []
+        if separate_by_epw and 'epw' in original_optim.columns:
+            group_cols.append('epw')
+        if separate_by_idf and 'idf' in original_optim.columns:
+            group_cols.append('idf')
+
+        def _build_group_specs(df: pd.DataFrame) -> list:
+            if len(group_cols) == 0:
+                return [{'selector': {}, 'label': 'all', 'df': df.copy()}]
+            specs = []
+            for (group_key, group_df) in df.groupby(group_cols, sort=False, dropna=False):
+                values = group_key if isinstance(group_key, tuple) else (group_key,)
+                selector = {col: val for (col, val) in zip(group_cols, values)}
+                label = ' | '.join(
+                    f"{col}={self._safe_plot_token(val)}"
+                    for (col, val) in selector.items()
+                )
+                specs.append({'selector': selector, 'label': label, 'df': group_df.copy()})
+            return specs
+
+        def _compute_divisors(df_local: pd.DataFrame):
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in df_local.columns:
+                    return df_local['idf'].map(area_attr).fillna(1.0) * base_divisor
+                area_val = area_attr if not isinstance(area_attr, dict) else (list(area_attr.values())[0] if area_attr else 1.0)
+                return base_divisor * area_val
+            return base_divisor
+
+        def _first_divisor(df_local: pd.DataFrame) -> float:
+            divisors = _compute_divisors(df_local)
+            if isinstance(divisors, pd.Series):
+                val = divisors.iloc[0] if len(divisors) > 0 else base_divisor
+            else:
+                val = divisors
+            try:
+                val = float(val)
+            except Exception:
+                val = float(base_divisor)
+            if val == 0:
+                return 1.0
+            return val
+
         if mcdm_configs is None:
             output_names = self.problem.names('outputs')
             n_obj = len(output_names)
@@ -63,72 +1538,163 @@ class PlottingMixin:
         _marker_cycle = ['*', 'D', 's', '^', 'P', 'X', 'v', 'o']
         _colour_cycle = ['#e63946', '#f4a261', '#2a9d8f', '#e9c46a', '#264653', '#a8dadc', '#457b9d', '#6d6875']
         _size_cycle = [220, 120, 120, 120, 120, 120, 120, 120]
-        epw_labels = self.outputs_optimisation['epw'].unique()
         output_names = self.problem.names('outputs')
-        heating_col = next((c for c in output_names if 'Heating' in c), output_names[0])
-        _fallback_cool = output_names[-1] if len(output_names) > 1 else output_names[0]
-        cooling_col = next((c for c in output_names if 'Cooling' in c), _fallback_cool)
+        resolved_outputs = output_names
+        if hasattr(self, '_resolve_output_columns'):
+            try:
+                resolved_outputs = self._resolve_output_columns(output_names, list(filtered_optim.columns), strict=False)
+            except Exception:
+                resolved_outputs = output_names
+        if len(resolved_outputs) == 0:
+            raise ValueError('Could not resolve objective columns for MCDM plotting.')
+        heating_col = next((c for c in resolved_outputs if 'Heating' in str(c)), resolved_outputs[0])
+        if len(resolved_outputs) > 1:
+            cooling_col = next((c for c in resolved_outputs if 'Cooling' in str(c) and c != heating_col), resolved_outputs[1])
+        else:
+            cooling_col = heating_col
+
+        group_specs = _build_group_specs(filtered_optim)
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values={'col': [spec['label'] for spec in group_specs]},
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_best_compromise_solutions',
+        )
+        if 'col' in subplot_orders:
+            order_lookup = {label: idx for (idx, label) in enumerate(subplot_orders['col'])}
+            group_specs = sorted(group_specs, key=lambda spec: order_lookup[spec['label']])
+
         all_mcdm_rows = []
-        original_optim = self.outputs_optimisation
-        for epw_label in epw_labels:
-            epw_tag = str(epw_label).replace(' ', '_')
-            self.outputs_optimisation = original_optim[original_optim['epw'] == epw_label].copy()
-            print(f'\n  [{epw_tag}] Best compromise solutions:')
-            for cfg in mcdm_configs:
-                method = cfg['method']
-                weights = cfg.get('weights', None)
-                label = cfg['label']
-                row_df = self.get_best_compromise_solution(method=method, weights=weights)
-                row_df = row_df.copy()
-                row_df['mcdm_method'] = label
-                row_df['epw'] = epw_tag
-                all_mcdm_rows.append(row_df)
-                h_kwh = row_df[heating_col].iloc[0] / divisor
-                c_kwh = row_df[cooling_col].iloc[0] / divisor
-                print(f'    {label:25s} | {heating_col}={h_kwh:.1f} {unit_str} | {cooling_col}={c_kwh:.1f} {unit_str}')
+        try:
+            for group_spec in group_specs:
+                group_label = group_spec['label']
+                self.outputs_optimisation = group_spec['df']
+                print(f'\n  [{group_label}] Best compromise solutions:')
+                for cfg in mcdm_configs:
+                    method = cfg['method']
+                    weights = cfg.get('weights', None)
+                    label = cfg['label']
+                    row_df = self.get_best_compromise_solution(method=method, weights=weights)
+                    row_df = row_df.copy()
+                    row_df['mcdm_method'] = label
+                    row_df['mcdm_group'] = group_label
+                    for (key, value) in group_spec['selector'].items():
+                        if key not in row_df.columns:
+                            row_df[key] = value
+                    all_mcdm_rows.append(row_df)
+
+                    div = _first_divisor(row_df)
+                    h_kwh = row_df[heating_col].iloc[0] / div
+                    c_kwh = row_df[cooling_col].iloc[0] / div
+                    print(f'    {label:25s} | {heating_col}={h_kwh:.1f} {unit_str} | {cooling_col}={c_kwh:.1f} {unit_str}')
+        finally:
             self.outputs_optimisation = original_optim
+
+        if len(all_mcdm_rows) == 0:
+            raise ValueError('Could not compute any best-compromise row for the configured groups.')
         mcdm_df = pd.concat(all_mcdm_rows, ignore_index=True)
         fname_csv = os.path.join(out_dir, 'results_mcdm_best_solutions.csv')
         mcdm_df.to_csv(fname_csv, index=False)
         print(f'\n  MCDM summary saved: {fname_csv}')
-        (fig, axes) = plt.subplots(1, len(epw_labels), figsize=(8 * len(epw_labels), 6), squeeze=False)
-        for (ax_idx, epw_label) in enumerate(epw_labels):
-            epw_tag = str(epw_label).replace(' ', '_')
+        (fig, axes) = plt.subplots(1, len(group_specs), figsize=(8 * len(group_specs), 6), squeeze=False)
+        for (ax_idx, group_spec) in enumerate(group_specs):
+            group_label = group_spec['label']
             ax_m = axes[0][ax_idx]
-            df_epw = original_optim[original_optim['epw'] == epw_label].copy()
-            df_epw['_h'] = df_epw[heating_col] / divisor
-            df_epw['_c'] = df_epw[cooling_col] / divisor
+            df_epw = group_spec['df'].copy()
+            divs = _compute_divisors(df_epw)
+            df_epw['_h'] = df_epw[heating_col] / divs
+            df_epw['_c'] = df_epw[cooling_col] / divs
             dom = df_epw[~df_epw['pareto-optimal']]
             par = df_epw[df_epw['pareto-optimal']]
             ax_m.scatter(dom['_h'], dom['_c'], c='#cccccc', alpha=0.3, s=15, zorder=1)
             ax_m.scatter(par['_h'], par['_c'], c='#457b9d', alpha=0.6, s=40, edgecolors='k', linewidths=0.4, zorder=2, label='Pareto-optimal')
             for (i, cfg) in enumerate(mcdm_configs):
                 label = cfg['label']
-                row = mcdm_df[(mcdm_df['epw'] == epw_tag) & (mcdm_df['mcdm_method'] == label)]
+                row = mcdm_df[(mcdm_df['mcdm_group'] == group_label) & (mcdm_df['mcdm_method'] == label)]
                 if row.empty:
                     continue
-                h = row[heating_col].iloc[0] / divisor
-                c = row[cooling_col].iloc[0] / divisor
+                div = _first_divisor(row)
+                h = row[heating_col].iloc[0] / div
+                c = row[cooling_col].iloc[0] / div
                 ax_m.scatter(h, c, marker=_marker_cycle[i % len(_marker_cycle)], c=_colour_cycle[i % len(_colour_cycle)], s=_size_cycle[i % len(_size_cycle)], zorder=5, edgecolors='k', linewidths=0.6, label=label)
             ax_m.set_xlabel(f'{heating_col} ({unit_str})', fontsize=11)
             ax_m.set_ylabel(f'{cooling_col} ({unit_str})', fontsize=11)
-            ax_m.set_title(f'Pareto Front + MCDM best solutions\n[{epw_tag}]', fontsize=11)
+            ax_m.set_title(f'Pareto Front + MCDM best solutions\n[{group_label}]', fontsize=11)
             ax_m.legend(fontsize=9)
         plt.tight_layout()
-        fname_plot = os.path.join(out_dir, 'plot_mcdm_best_solutions.png')
+
+        filename_context = self._build_filename_template_context(
+            df=filtered_optim,
+            extra_context={
+                'plot': 'mcdm_best_solutions',
+                'heating_col': heating_col,
+                'cooling_col': cooling_col,
+            },
+        )
+        fname_plot = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename='plot_mcdm_best_solutions.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_best_compromise_solutions',
+        )
+        os.makedirs(os.path.dirname(fname_plot), exist_ok=True)
         plt.savefig(fname_plot, dpi=300, bbox_inches='tight')
         plt.close()
         print(f'  MCDM plot saved: {fname_plot}')
         return mcdm_df
 
-    def plot_pareto_front(self, color_by: str=None, size_by: str=None, out_dir: str='.', normalize_per_m2: bool=False):
-        """
-        if getattr(self, 'last_run_type', None) != 'optimisation':
-            raise ValueError('This method can only be run after an optimisation simulation. Ensure you run run_optimisation() first.')
+    def plot_pareto_front(
+            self,
+            color_by: str=None,
+            size_by: str=None,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ):
+        """Plot Pareto-front scatter figures for each EPW subset.
 
-        Plots the Pareto front scatter for each EPW.
-        If color_by is provided a colorbar is added. If size_by is provided,
-        representative size handles appear in the legend.
+        Parameters
+        ----------
+        color_by : str, optional
+            Numeric column used to color Pareto-optimal points.
+        size_by : str, optional
+            Numeric column used to scale Pareto-optimal marker size.
+        out_dir : str
+            Directory where output figures are written.
+        normalize_per_m2 : bool
+            Whether to convert energy outputs to kWh/m2 when floor area is available.
+        data_filter : Optional[dict]
+            Optional filter rules applied before plotting.
+        data_filter_case_sensitive : bool
+            Case-sensitivity flag forwarded to the filter utility.
+        data_filter_strict : bool
+            When True, invalid filter rules raise an exception.
+        data_filter_on_empty : Literal['error', 'warn', 'ignore']
+            Behaviour when filtering produces no rows.
+        filename_template : str, optional
+            Optional str.format template for output filenames. Include varying
+            placeholders such as ``{epw_tag}`` because one figure is generated
+            per EPW subset.
+
+        Returns
+        -------
+        None
+            Saves one PNG figure per EPW and prints saved paths.
+
+        Usage
+        -----
+        Run after optimisation results are available to visualize dominated and
+        Pareto-optimal solutions per weather file.
+
+        Examples
+        --------
+        self.plot_pareto_front(color_by='Total_Energy', size_by='discomfort')
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('Pareto front scatter plot can only be generated after an optimisation simulation. Please ensure you run run_optimisation() first.')
@@ -138,30 +1704,66 @@ class PlottingMixin:
         from matplotlib.colors import Normalize
         from matplotlib.lines import Line2D
         import pandas as pd
-        unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
-        divisor = 3600000.0
-        if normalize_per_m2:
-            area = getattr(self, 'building_floor_area', None)
-            if not area:
-                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
-                unit_str = 'kWh'
-            else:
-                divisor *= area
+        area_attr = getattr(self, 'building_floor_area', None)
+        if getattr(self, 'outputs_normalized', False):
+            if normalize_per_m2:
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+            normalize_per_m2 = False
+            unit_str = 'kWh/m2'
+            base_divisor = 1.0
+        else:
+            unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+            base_divisor = 3600000.0
+            if normalize_per_m2:
+                area_attr = getattr(self, 'building_floor_area', None)
+                if not area_attr:
+                    print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                    unit_str = 'kWh'
+                    normalize_per_m2 = False
         os.makedirs(out_dir, exist_ok=True)
         df = self.outputs_optimisation.copy()
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context='plot_pareto_front',
+        )
+        if df.empty:
+            raise ValueError('No optimisation rows available for Pareto plotting after filtering.')
         epw_labels = df['epw'].unique()
         heating_col = next((c for c in df.columns if 'Heating:Electricity' in c), None)
         cooling_col = next((c for c in df.columns if 'Cooling:Electricity' in c), None)
         if not heating_col or not cooling_col:
             print('[!] Heating or Cooling electricity columns not found.')
             return
+
+        seen_output_paths = set()
         for epw_label in epw_labels:
             epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
             df_epw = df[df['epw'] == epw_label].copy()
             pareto_epw = df_epw[df_epw['pareto-optimal']].copy()
             dominated_epw = df_epw[~df_epw['pareto-optimal']].copy()
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in df_epw.columns:
+                    areas = df_epw['idf'].map(area_attr).fillna(1.0)
+                    divs = base_divisor * areas
+                    
+                    dom_divs = dominated_epw['idf'].map(area_attr).fillna(1.0) * base_divisor
+                    par_divs = pareto_epw['idf'].map(area_attr).fillna(1.0) * base_divisor
+                else:
+                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    divs = base_divisor * area_val
+                    dom_divs = divs
+                    par_divs = divs
+            else:
+                divs = base_divisor
+                dom_divs = base_divisor
+                par_divs = base_divisor
+                
             (fig, ax) = plt.subplots(figsize=(8, 6))
-            ax.scatter(dominated_epw[heating_col] / divisor, dominated_epw[cooling_col] / divisor, c='#cccccc', alpha=0.3, s=15, zorder=1)
+            ax.scatter(dominated_epw[heating_col] / dom_divs, dominated_epw[cooling_col] / dom_divs, c='#cccccc', alpha=0.3, s=15, zorder=1)
             if size_by and size_by in pareto_epw.columns:
                 sizes = pareto_epw[size_by] * 300
             else:
@@ -171,13 +1773,19 @@ class PlottingMixin:
                 vmin = df_epw[color_by].min()
                 vmax = df_epw[color_by].max()
                 norm = Normalize(vmin=vmin, vmax=vmax)
-                sc = ax.scatter(pareto_epw[heating_col] / divisor, pareto_epw[cooling_col] / divisor, c=pareto_epw[color_by], cmap='RdYlGn', norm=norm, s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
+                sc = ax.scatter(pareto_epw[heating_col] / par_divs, pareto_epw[cooling_col] / par_divs, c=pareto_epw[color_by], cmap='RdYlGn', norm=norm, s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
                 cbar = fig.colorbar(sc, ax=ax, pad=0.02, shrink=0.85)
                 cbar.set_label(color_by, fontsize=10)
             else:
-                sc = ax.scatter(pareto_epw[heating_col] / divisor, pareto_epw[cooling_col] / divisor, c='#e63946', s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
+                sc = ax.scatter(pareto_epw[heating_col] / par_divs, pareto_epw[cooling_col] / par_divs, c='#e63946', s=sizes, alpha=0.85, edgecolors='k', linewidths=0.4, zorder=3)
             pf_epw = pareto_epw.sort_values(heating_col)
-            ax.plot(pf_epw[heating_col] / divisor, pf_epw[cooling_col] / divisor, '--', color='grey', lw=0.8, zorder=2)
+            
+            if normalize_per_m2 and isinstance(area_attr, dict) and 'idf' in pf_epw.columns:
+                pf_divs = pf_epw['idf'].map(area_attr).fillna(1.0) * base_divisor
+            else:
+                pf_divs = divs
+                
+            ax.plot(pf_epw[heating_col] / pf_divs, pf_epw[cooling_col] / pf_divs, '--', color='grey', lw=0.8, zorder=2)
             legend_handles = [Line2D([0], [0], marker='o', color='w', markerfacecolor='#cccccc', markersize=7, alpha=0.6, label='Dominated')]
             if use_colormap:
                 if size_by and size_by in pareto_epw.columns:
@@ -209,17 +1817,75 @@ class PlottingMixin:
                 fname_suffix += '_c_' + color_by
             if size_by:
                 fname_suffix += '_s_' + size_by
-            fname_pareto = os.path.join(out_dir, 'plot_pareto_front_' + fname_suffix + '.png')
+
+            filename_context = self._build_filename_template_context(
+                df=df_epw,
+                extra_context={
+                    'plot': 'pareto_front',
+                    'df_source': 'optimisation',
+                    'epw': epw_label,
+                    'epw_tag': epw_tag,
+                    'color_by': color_by or 'none',
+                    'size_by': size_by or 'none',
+                },
+            )
+            fname_pareto = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename='plot_pareto_front_' + fname_suffix + '.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_pareto_front',
+            )
+            self._ensure_unique_output_path(
+                output_path=fname_pareto,
+                seen_output_paths=seen_output_paths,
+                context='plot_pareto_front',
+            )
+            os.makedirs(os.path.dirname(fname_pareto), exist_ok=True)
             plt.savefig(fname_pareto, dpi=300, bbox_inches='tight')
             plt.close()
             print('  Pareto front plot saved: ' + fname_pareto)
 
-    def plot_parallel_coordinates(self, out_dir: str='.'):
-        """
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
+    def plot_parallel_coordinates(
+            self,
+            out_dir: str='.',
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ):
+        """Plot parallel-coordinates charts for optimisation parameter space.
 
-        Plots a multivariate parallel coordinates visualization of the parameter space.
+        Parameters
+        ----------
+        out_dir : str
+            Directory where output figures are written.
+        data_filter : Optional[dict]
+            Optional filter rules applied before plotting.
+        data_filter_case_sensitive : bool
+            Case-sensitivity flag forwarded to the filter utility.
+        data_filter_strict : bool
+            When True, invalid filter rules raise an exception.
+        data_filter_on_empty : Literal['error', 'warn', 'ignore']
+            Behaviour when filtering produces no rows.
+        filename_template : str, optional
+            Optional str.format template for output filenames. Include
+            ``{epw_tag}`` because one figure is generated per EPW subset.
+
+        Returns
+        -------
+        None
+            Saves one PNG figure per EPW and prints saved paths.
+
+        Usage
+        -----
+        Run after optimisation results are available to inspect parameter
+        distributions for dominated versus Pareto-optimal solutions.
+
+        Examples
+        --------
+        self.plot_parallel_coordinates(filename_template='parallel_{epw_tag}.png')
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('Parallel coordinates plot requires either a parametric or optimisation simulation to be run first.')
@@ -228,9 +1894,20 @@ class PlottingMixin:
         from matplotlib.lines import Line2D
         os.makedirs(out_dir, exist_ok=True)
         df = self.outputs_optimisation.copy()
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context='plot_parallel_coordinates',
+        )
+        if df.empty:
+            raise ValueError('No optimisation rows available for parallel coordinates plotting after filtering.')
         epw_labels = df['epw'].unique()
         param_cols = self.problem.names('inputs')
         df['pareto_str'] = df['pareto-optimal'].map({True: 'Pareto-optimal', False: 'Dominated'})
+        seen_output_paths = set()
         for epw_label in epw_labels:
             epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
             df_epw = df[df['epw'] == epw_label].copy()
@@ -255,17 +1932,85 @@ class PlottingMixin:
             legend_elements = [Line2D([0], [0], color='#e63946', lw=1.5, label='Pareto-optimal'), Line2D([0], [0], color='#adb5bd', lw=1.0, label='Dominated')]
             ax.legend(handles=legend_elements, loc='upper right', fontsize=9)
             plt.tight_layout()
-            fname_parallel = os.path.join(out_dir, f'plot_parallel_coordinates_{epw_tag}.png')
+
+            filename_context = self._build_filename_template_context(
+                df=df_epw,
+                extra_context={
+                    'plot': 'parallel_coordinates',
+                    'df_source': 'optimisation',
+                    'epw': epw_label,
+                    'epw_tag': epw_tag,
+                },
+            )
+            fname_parallel = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f'plot_parallel_coordinates_{epw_tag}.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_parallel_coordinates',
+            )
+            self._ensure_unique_output_path(
+                output_path=fname_parallel,
+                seen_output_paths=seen_output_paths,
+                context='plot_parallel_coordinates',
+            )
+            os.makedirs(os.path.dirname(fname_parallel), exist_ok=True)
             plt.savefig(fname_parallel, dpi=300, bbox_inches='tight')
             plt.close()
             print(f'  Parallel coordinates plot saved: {fname_parallel}')
 
-    def plot_pairwise_scatter_matrix(self, out_dir: str='.', normalize_per_m2: bool=False):
-        """
-        if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
-            raise ValueError('This method requires either a parametric or optimisation simulation to be run first.')
+    def plot_pairwise_scatter_matrix(
+            self,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ):
+        """Plot pairwise scatter matrices for Pareto-optimal solutions per EPW.
 
-        Plots a pairwise scatter matrix using seaborn.PairGrid for Pareto-optimal solutions.
+        Parameters
+        ----------
+        out_dir : str
+            Directory where output figures are written.
+        normalize_per_m2 : bool
+            Whether to convert energy outputs to kWh/m2 when floor area is available.
+        subplot_order_mode : Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom']
+            Ordering strategy applied to parameter columns.
+        subplot_order_custom : Optional[dict]
+            Custom order definitions used when ``subplot_order_mode='custom'``.
+        subplot_order_case_sensitive : bool
+            Whether text ordering should be case-sensitive.
+        data_filter : Optional[dict]
+            Optional filter rules applied before plotting.
+        data_filter_case_sensitive : bool
+            Case-sensitivity flag forwarded to the filter utility.
+        data_filter_strict : bool
+            When True, invalid filter rules raise an exception.
+        data_filter_on_empty : Literal['error', 'warn', 'ignore']
+            Behaviour when filtering produces no rows.
+        filename_template : str, optional
+            Optional str.format template for output filenames. Include
+            ``{epw_tag}`` because one figure is generated per EPW subset.
+
+        Returns
+        -------
+        None
+            Saves one PNG figure per EPW and prints saved paths.
+
+        Usage
+        -----
+        Run after optimisation results are available to inspect pairwise
+        parameter relationships among Pareto-optimal points.
+
+        Examples
+        --------
+        self.plot_pairwise_scatter_matrix(normalize_per_m2=True)
         """
         if getattr(self, 'last_run_type', None) not in ['parametric', 'optimisation']:
             raise ValueError('Pairwise scatter matrix requires either a parametric or optimisation simulation to be run first.')
@@ -273,15 +2018,22 @@ class PlottingMixin:
         import matplotlib.pyplot as plt
         import matplotlib.cm as cm
         from matplotlib.colors import Normalize
-        unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
-        divisor = 3600000.0
-        if normalize_per_m2:
-            area = getattr(self, 'building_floor_area', None)
-            if not area:
-                print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
-                unit_str = 'kWh'
-            else:
-                divisor *= area
+        area_attr = getattr(self, 'building_floor_area', None)
+        if getattr(self, 'outputs_normalized', False):
+            if normalize_per_m2:
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+            normalize_per_m2 = False
+            unit_str = 'kWh/m2'
+            base_divisor = 1.0
+        else:
+            unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+            base_divisor = 3600000.0
+            if normalize_per_m2:
+                area_attr = getattr(self, 'building_floor_area', None)
+                if not area_attr:
+                    print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                    unit_str = 'kWh'
+                    normalize_per_m2 = False
         try:
             import seaborn as sns
         except ImportError:
@@ -289,14 +2041,43 @@ class PlottingMixin:
             return
         os.makedirs(out_dir, exist_ok=True)
         df = self.outputs_optimisation.copy()
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context='plot_pairwise_scatter_matrix',
+        )
+        if df.empty:
+            raise ValueError('No optimisation rows available for pairwise scatter matrix after filtering.')
         heating_col = next((c for c in df.columns if 'Heating:Electricity' in c), None)
         cooling_col = next((c for c in df.columns if 'Cooling:Electricity' in c), None)
         if heating_col and cooling_col:
-            df['Total_Energy'] = (df[heating_col] + df[cooling_col]) / divisor
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in df.columns:
+                    divs = df['idf'].map(area_attr).fillna(1.0) * base_divisor
+                else:
+                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    divs = base_divisor * area_val
+            else:
+                divs = base_divisor
+            df['Total_Energy'] = (df[heating_col] + df[cooling_col]) / divs
         else:
             df['Total_Energy'] = 0
         epw_labels = df['epw'].unique()
         param_cols = self.problem.names('inputs')
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values={'col': list(param_cols)},
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_pairwise_scatter_matrix',
+        )
+        if 'col' in subplot_orders:
+            param_cols = subplot_orders['col']
+
+        seen_output_paths = set()
         for epw_label in epw_labels:
             epw_tag = epw_label.replace('\\', '/').split('/')[-1].replace('.epw', '').replace(' ', '_')
             pareto_epw = df[(df['epw'] == epw_label) & df['pareto-optimal']].copy()
@@ -304,7 +2085,10 @@ class PlottingMixin:
                 print(f'  [!] Skipping PairGrid for {epw_tag}: fewer than 2 Pareto-optimal points.')
                 continue
             norm_e = Normalize(pareto_epw['Total_Energy'].min(), pareto_epw['Total_Energy'].max())
-            cmap_e = cm.get_cmap('coolwarm')
+            try:
+                cmap_e = plt.colormaps['coolwarm']
+            except AttributeError:
+                cmap_e = cm.get_cmap('coolwarm')
 
             def _pairplot_scatter(x, y, **kwargs):
                 ax_pg = plt.gca()
@@ -321,7 +2105,1988 @@ class PlottingMixin:
             cbar = g.figure.colorbar(sm, ax=g.axes, shrink=0.6, pad=0.02)
             cbar.set_label(f'Total HVAC Energy ({unit_str})', fontsize=9)
             g.figure.suptitle(f'Pairwise Parameter Space – Pareto-Optimal Solutions [{epw_tag}]', y=1.01, fontsize=11)
-            fname_pair = os.path.join(out_dir, f'plot_pairwise_scatter_matrix_{epw_tag}.png')
+
+            filename_context = self._build_filename_template_context(
+                df=pareto_epw,
+                extra_context={
+                    'plot': 'pairwise_scatter_matrix',
+                    'df_source': 'optimisation',
+                    'epw': epw_label,
+                    'epw_tag': epw_tag,
+                },
+            )
+            fname_pair = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f'plot_pairwise_scatter_matrix_{epw_tag}.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_pairwise_scatter_matrix',
+            )
+            self._ensure_unique_output_path(
+                output_path=fname_pair,
+                seen_output_paths=seen_output_paths,
+                context='plot_pairwise_scatter_matrix',
+            )
+            os.makedirs(os.path.dirname(fname_pair), exist_ok=True)
             g.figure.savefig(fname_pair, dpi=300, bbox_inches='tight')
             plt.close('all')
             print(f'  Pairwise scatter matrix saved: {fname_pair}')
+
+    def plot_categorical_boxplots(
+            self,
+            df_source: str='parametric',
+            y_vars: list=None,
+            col: str=None,
+            row: str=None,
+            hue: str=None,
+            highlight_dict: dict=None,
+            out_dir: str='.',
+            filename_template: str=None,
+            normalize_per_m2: bool=False,
+            sharey: bool=True,
+            show_points: bool=True,
+            height: float=4,
+            aspect: float=1.2,
+            figsize: tuple=None,
+            legend_bbox_to_anchor: tuple = (0.82, 0.5),
+            legend_loc: str = 'center left',
+            subplots_right: Optional[float] = 0.80,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+    ):
+        """Generates categorical boxplots from simulation results, automatically melting
+        specified energy columns (or detecting Heating/Cooling by default) so they share
+        the Y-axis and appear side-by-side on the X-axis for each FacetGrid subplot.
+        
+        :param df_source: 'parametric' (uses outputs_param_simulation) or 'optimisation'
+            (uses outputs_optimisation).
+        :param y_vars: List of column names to plot on the Y-axis. If None, it attempts
+            to find 'Heating' and 'Cooling' electricity columns.
+        :param col: Category mapping variable to use for grid columns.
+        :param row: Category mapping variable to use for grid rows.
+        :param hue: Category mapping variable to use for color coding.
+        :param highlight_dict: Dictionary of category columns and values to highlight 
+            as overlaid points (e.g., {'weather_type': ['tmy', 'met']}).
+        :param out_dir: Output directory for saving the plot.
+        :param filename_template: Optional output filename pattern using ``str.format``
+            placeholders. Category placeholders from ``epw_mapping_rules`` and
+            ``idf_mapping_rules`` are available when the corresponding columns exist
+            in the filtered DataFrame (for example ``{city}``, ``{building_type}``).
+        :param normalize_per_m2: If True, values will be divided by building floor area.
+        :param sharey: If True, all subplots will share the same Y-axis scale.
+        :param show_points: If True, overlays all underlying simulation data points on the boxplots.
+        :param height: Height (in inches) of each individual facet subplot. Default 4.
+        :param aspect: Width/height ratio of each facet. The subplot width is
+            height * aspect. Default 1.2.
+        :param figsize: Optional (width, height) tuple (in inches) to override the
+            figure size calculated from height and aspect. Applied after the
+            FacetGrid is built, so it always takes precedence.
+            Example: figsize=(20, 8).
+        :param legend_bbox_to_anchor: (x, y) figure-fraction coordinates used to
+            anchor the combined legend (hue categories + highlight markers) when
+            ``highlight_dict`` is provided. Only takes effect if there is at
+            least one highlighted value. Default ``(0.82, 0.5)``: just to the
+            right of the default ``subplots_right=0.80``, so there is no
+            visible gap between the plots and the legend. Increase the first
+            value (and/or ``subplots_right``) to add breathing room, or
+            decrease both together to bring the legend closer to the plots.
+        :param legend_loc: Matplotlib ``loc`` string used together with
+            ``legend_bbox_to_anchor`` to anchor the legend box. Default
+            ``'center left'`` anchors the legend's left-center point at
+            ``legend_bbox_to_anchor``, so the legend grows rightwards instead
+            of overlapping the plots.
+        :param subplots_right: Right margin (0-1, figure-fraction) reserved for
+            the combined legend via ``Figure.subplots_adjust(right=...)``. Only
+            applied when ``highlight_dict`` produces at least one legend entry.
+            Set to ``None`` to skip this adjustment entirely (e.g. if you plan
+            to reposition the legend manually afterwards). Default ``0.80``.
+        
+        Parameters
+        ----------
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_categorical_boxplots`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_categorical_boxplots` within ACCIM parametric and optimisation workflows.
+        """
+        import os
+        import pandas as pd
+        import matplotlib.pyplot as plt
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_categorical_boxplots. Please pip install seaborn.')
+            return
+
+        df = self._get_plot_source_df(df_source=df_source)
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_categorical_boxplots[{df_source}]',
+        )
+        
+        if getattr(self, 'outputs_normalized', False):
+            if normalize_per_m2:
+                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+            normalize_per_m2 = False
+            unit_str = 'kWh/m2'
+            base_divisor = 1.0
+        else:
+            unit_str = 'kWh/m2' if normalize_per_m2 else 'kWh'
+            base_divisor = 3600000.0
+            if normalize_per_m2:
+                area_attr = getattr(self, 'building_floor_area', None)
+                if not area_attr:
+                    print('[!] normalize_per_m2 is True but building_floor_area is not set. Call set_building_floor_area() first. Falling back to kWh.')
+                    unit_str = 'kWh'
+                    normalize_per_m2 = False
+
+        if y_vars is None:
+            heating_col = next((c for c in df.columns if 'Heating' in c), None)
+            cooling_col = next((c for c in df.columns if 'Cooling' in c), None)
+            y_vars = []
+            if heating_col: y_vars.append(heating_col)
+            if cooling_col: y_vars.append(cooling_col)
+            if not y_vars:
+                print('[!] Heating or Cooling columns not found and y_vars not provided.')
+                return
+
+        # Apply Normalization
+        for y_var in y_vars:
+            if normalize_per_m2:
+                if isinstance(area_attr, dict) and 'idf' in df.columns:
+                    divs = df['idf'].map(area_attr).fillna(1.0) * base_divisor
+                else:
+                    area_val = area_attr if not isinstance(area_attr, dict) else list(area_attr.values())[0]
+                    divs = base_divisor * area_val
+                df[y_var] = df[y_var] / divs
+            else:
+                df[y_var] = df[y_var] / base_divisor
+
+        # Build id_vars in a stable order without duplicates to avoid pandas.melt KeyError.
+        id_vars = []
+        for candidate in [col, row, hue, 'idf', 'epw']:
+            if candidate and candidate in df.columns and candidate not in id_vars:
+                id_vars.append(candidate)
+        if highlight_dict:
+            for k in highlight_dict.keys():
+                if k in df.columns and k not in id_vars:
+                    id_vars.append(k)
+                    
+        df_melt = df.melt(
+            id_vars=id_vars,
+            value_vars=y_vars,
+            var_name='Energy_Type',
+            value_name='Energy_Value'
+        )
+
+        # Clean variable names for the legend
+        df_melt['Energy_Type'] = df_melt['Energy_Type'].apply(lambda x: 'Heating' if 'Heating' in x else ('Cooling' if 'Cooling' in x else x))
+
+        os.makedirs(out_dir, exist_ok=True)
+
+        order = df_melt['Energy_Type'].unique().tolist()
+        hue_order = sorted(df_melt[hue].dropna().unique()) if hue else None
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df_melt, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_categorical_boxplots',
+        )
+
+        catplot_kwargs = {
+            'data': df_melt,
+            'x': 'Energy_Type',
+            'y': 'Energy_Value',
+            'col': col,
+            'row': row,
+            'hue': hue,
+            'kind': 'box',
+            'order': order,
+            'hue_order': hue_order,
+            'sharex': True,
+            'sharey': sharey,
+            'palette': 'Set2',
+            'height': height,
+            'aspect': aspect,
+        }
+        if 'row' in subplot_orders:
+            catplot_kwargs['row_order'] = subplot_orders['row']
+        if 'col' in subplot_orders:
+            catplot_kwargs['col_order'] = subplot_orders['col']
+
+        g = sns.catplot(**catplot_kwargs)
+
+        # Apply explicit figsize override if requested
+        if figsize is not None:
+            g.fig.set_size_inches(figsize)
+        
+        # Overlay all points if requested
+        if show_points:
+            def plot_all_points(data, **kwargs):
+                if data.empty:
+                    return
+                sns.stripplot(
+                    data=data,
+                    x='Energy_Type',
+                    y='Energy_Value',
+                    hue=hue,
+                    order=order,
+                    hue_order=hue_order,
+                    dodge=True if hue else False,
+                    palette=['#555555']*len(hue_order) if hue else None,
+                    color='#555555' if not hue else None,
+                    alpha=0.6,
+                    jitter=True,
+                    size=4,
+                    ax=plt.gca(),
+                    legend=False
+                )
+            g.map_dataframe(plot_all_points)
+        
+        # Overlay highlights if requested
+        if highlight_dict:
+            axes_dict = g.axes_dict
+            markers = ['*', 'X', 'D', '^', 'v', 'p']
+            legend_handles = []
+            
+            for k, v in highlight_dict.items():
+                if k not in df_melt.columns:
+                    print(f"[!] Highlight column '{k}' not found in dataframe.")
+                    continue
+                v_list = v if isinstance(v, list) else [v]
+                
+                for i, val in enumerate(v_list):
+                    marker = markers[i % len(markers)]
+                    df_val = df_melt[df_melt[k] == val]
+                    if df_val.empty:
+                        continue
+                        
+                    # Add to legend handles
+                    from matplotlib.lines import Line2D
+                    legend_handles.append(Line2D([0], [0], marker=marker, color='w', markerfacecolor='black', markersize=9, label=f"{k}: {val}"))
+                    
+                    for facet_key, ax in axes_dict.items():
+                        mask = pd.Series(True, index=df_val.index)
+                        if row and col:
+                            # Seaborn uses a tuple (row_val, col_val) for row and col
+                            mask &= (df_val[row] == facet_key[0]) & (df_val[col] == facet_key[1])
+                        elif row:
+                            mask &= (df_val[row] == facet_key)
+                        elif col:
+                            mask &= (df_val[col] == facet_key)
+                            
+                        df_facet = df_val[mask]
+                        if not df_facet.empty:
+                            sns.stripplot(
+                                data=df_facet,
+                                x='Energy_Type',
+                                y='Energy_Value',
+                                hue=hue,
+                                order=order,
+                                hue_order=hue_order,
+                                dodge=True if hue else False,
+                                marker=marker,
+                                palette=['black']*len(hue_order) if hue else None,
+                                color='black' if not hue else None,
+                                size=8,
+                                linewidth=0.5,
+                                edgecolor='white',
+                                ax=ax,
+                                jitter=False,
+                                legend=False
+                            )
+            
+            # Merge highlight handles into the FacetGrid's figure-level legend
+            if legend_handles and g.axes.size > 0:
+                from matplotlib.patches import Patch
+                existing_handles, existing_labels, legend_title = [], [], (hue or '')
+                _fg_legend = getattr(g, '_legend', None)
+                if _fg_legend is not None:
+                    existing_handles = list(_fg_legend.legend_handles)
+                    existing_labels = [t.get_text() for t in _fg_legend.get_texts()]
+                    legend_title = _fg_legend.get_title().get_text()
+                    # Remove the seaborn-placed legend before rebuilding it
+                    _fg_legend.remove()
+                    g._legend = None
+                # Blank patch used as a visual section separator
+                blank = Patch(visible=False, label='')
+                divider = Patch(visible=False, label='― Highlights ―')
+                combined_handles = existing_handles + [blank, divider] + legend_handles
+                combined_labels = (
+                    existing_labels
+                    + ['', '― Highlights ―']
+                    + [h.get_label() for h in legend_handles]
+                )
+                new_legend = g.fig.legend(
+                    handles=combined_handles,
+                    labels=combined_labels,
+                    title=legend_title,
+                    loc=legend_loc,
+                    bbox_to_anchor=legend_bbox_to_anchor,
+                    frameon=True,
+                    fontsize='small',
+                    title_fontsize='small',
+                )
+                # Bold the section-divider text
+                for text in new_legend.get_texts():
+                    if text.get_text().startswith('―'):
+                        text.set_fontweight('bold')
+                g._legend = new_legend
+                # Reserve room on the right so the combined legend (original hue
+                # handles + highlight markers, which is wider/taller than
+                # seaborn's default legend) doesn't overlap the rightmost facet
+                # column. Both this margin and the legend anchor are caller
+                # -configurable via subplots_right / legend_bbox_to_anchor /
+                # legend_loc so the gap (or lack thereof) between the plots and
+                # the legend can be tuned directly from the call site.
+                if subplots_right is not None:
+                    g.fig.subplots_adjust(right=subplots_right)
+
+        g.set_axis_labels('Energy Type', f'Energy ({unit_str})')
+        g.fig.subplots_adjust(top=0.9)
+        g.fig.suptitle(f"Categorical Energy Boxplots ({df_source.capitalize()})", fontsize=14)
+
+        fname_suffix = f"col_{col}" if col else ""
+        fname_suffix += f"_row_{row}" if row else ""
+        fname_suffix += f"_hue_{hue}" if hue else ""
+
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'categorical_boxplots',
+                'df_source': df_source,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'hue_dim': hue or 'none',
+            },
+        )
+        fname_plot = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_categorical_boxplots_{df_source}_{fname_suffix}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_categorical_boxplots',
+        )
+        os.makedirs(os.path.dirname(fname_plot), exist_ok=True)
+        g.savefig(fname_plot, dpi=300, bbox_inches='tight')
+        g.saved_path = fname_plot
+        plt.close(g.fig)
+        print(f'  Categorical boxplot saved: {fname_plot}')
+        return g
+
+    def plot_parametric_scatter(
+            self,
+            x: str,
+            y: str,
+            df_source: str='parametric',
+            hue: str=None,
+            style: str=None,
+            size: str=None,
+            col: str=None,
+            row: str=None,
+            add_trend: str=None,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            alpha: float=0.75,
+            height: float=4,
+            aspect: float=1.2,
+            figsize: tuple=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ):
+        """Generates a scatter plot (optionally faceted) for parametric/optimisation outputs.
+        
+        :param x: Column name for the X axis.
+        :param y: Column name for the Y axis.
+        :param df_source: 'parametric' or 'optimisation'.
+        :param hue: Optional grouping column for point colour.
+        :param style: Optional grouping column for point marker.
+        :param size: Optional grouping column for point size.
+        :param col: Optional faceting column.
+        :param row: Optional faceting row.
+        :param add_trend: Optional trend line ('linear' or 'lowess').
+        :param out_dir: Output directory for saving the figure.
+        :param normalize_per_m2: Normalize energy-like axes to kWh/m2 (if possible).
+        :param alpha: Point transparency.
+        :param height: Height (inches) of each facet.
+        :param aspect: Width/height ratio of each facet.
+        :param figsize: Optional full-figure size override (width, height).
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'scatter_{df_source}_{x}_vs_{y}_{building_type}.png'``).
+            Mapping-category placeholders are available when present in the
+            filtered data.
+        :return: seaborn FacetGrid.
+        
+        Parameters
+        ----------
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_scatter`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_scatter` within ACCIM parametric and optimisation workflows.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_scatter. Please pip install seaborn.')
+            return
+
+        allowed_trends = {None, 'linear', 'lowess'}
+        if add_trend not in allowed_trends:
+            raise ValueError("add_trend must be one of: None, 'linear', 'lowess'")
+
+        df = self._get_plot_source_df(df_source=df_source)
+        x = self._resolve_plot_axis_column(x, list(df.columns))
+        y = self._resolve_plot_axis_column(y, list(df.columns))
+        required_cols = [x, y]
+        optional_cols = [hue, style, size, col, row]
+
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for scatter plot: {missing}')
+
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for scatter plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_scatter[{df_source}]',
+        )
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y], normalize_per_m2=normalize_per_m2)
+
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_scatter',
+        )
+
+        os.makedirs(out_dir, exist_ok=True)
+        relplot_kwargs = {
+            'data': df,
+            'x': x,
+            'y': y,
+            'hue': hue,
+            'style': style,
+            'size': size,
+            'col': col,
+            'row': row,
+            'kind': 'scatter',
+            'alpha': alpha,
+            'height': height,
+            'aspect': aspect,
+        }
+        if 'row' in subplot_orders:
+            relplot_kwargs['row_order'] = subplot_orders['row']
+        if 'col' in subplot_orders:
+            relplot_kwargs['col_order'] = subplot_orders['col']
+
+        g = sns.relplot(**relplot_kwargs)
+
+        if figsize is not None:
+            g.fig.set_size_inches(figsize)
+
+        if add_trend is not None and pd.api.types.is_numeric_dtype(df[x]) and pd.api.types.is_numeric_dtype(df[y]):
+            if g.axes_dict:
+                for facet_key, ax in g.axes_dict.items():
+                    mask = pd.Series(True, index=df.index)
+                    if row and col:
+                        mask &= (df[row] == facet_key[0]) & (df[col] == facet_key[1])
+                    elif row:
+                        mask &= (df[row] == facet_key)
+                    elif col:
+                        mask &= (df[col] == facet_key)
+                    df_facet = df[mask]
+                    if len(df_facet) < 2:
+                        continue
+                    sns.regplot(
+                        data=df_facet,
+                        x=x,
+                        y=y,
+                        scatter=False,
+                        lowess=(add_trend == 'lowess'),
+                        ax=ax,
+                        line_kws={'color': '#111111', 'lw': 1.2, 'alpha': 0.9},
+                    )
+            else:
+                sns.regplot(
+                    data=df,
+                    x=x,
+                    y=y,
+                    scatter=False,
+                    lowess=(add_trend == 'lowess'),
+                    ax=g.ax,
+                    line_kws={'color': '#111111', 'lw': 1.2, 'alpha': 0.9},
+                )
+
+        x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+        y_label = f"{y} ({unit_map[y]})" if unit_map.get(y) else y
+        g.set_axis_labels(x_label, y_label)
+
+        title = f"Scatter Plot ({df_source.capitalize()})"
+        if add_trend:
+            title += f" | Trend: {add_trend}"
+        g.fig.subplots_adjust(top=0.9)
+        g.fig.suptitle(title, fontsize=13)
+
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'parametric_scatter',
+                'df_source': df_source,
+                'x': x,
+                'y': y,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'hue_dim': hue or 'none',
+                'style_dim': style or 'none',
+                'size_dim': size or 'none',
+                'trend': add_trend or 'none',
+            },
+        )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f"plot_parametric_scatter_{df_source}_{self._safe_plot_token(x)}_vs_{self._safe_plot_token(y)}.png",
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_scatter',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+        g.savefig(fname, dpi=300, bbox_inches='tight')
+        g.saved_path = fname
+        plt.close(g.fig)
+        print(f'  Parametric scatter plot saved: {fname}')
+        return g
+
+    def plot_parametric_lines(
+            self,
+            x: str,
+            y_vars: list=None,
+            df_source: str='parametric',
+            hue: str='epw',
+            style: str=None,
+            units: str=None,
+            col: str='idf',
+            row: str=None,
+            estimator: str='mean',
+            errorbar=('ci', 95),
+            markers: bool=True,
+            dashes: bool=False,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            height: float=4,
+            aspect: float=1.2,
+            figsize: tuple=None,
+            sort_x: bool=True,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ) -> dict:
+        """Generates one or more line plots to inspect trends against a swept parameter.
+        
+        :param x: Column name for the X axis.
+        :param y_vars: List of output columns to plot. If None, Heating/Cooling are auto-detected.
+        :param df_source: 'parametric' or 'optimisation'.
+        :param hue: Optional grouping column for colour.
+        :param style: Optional grouping column for line style.
+        :param units: Optional column used as line units (useful when estimator=None).
+        :param col: Optional faceting column.
+        :param row: Optional faceting row.
+        :param estimator: Aggregation estimator (e.g., 'mean', 'median') or None for raw traces.
+        :param errorbar: Seaborn errorbar specification. Falls back to legacy ci= when needed.
+        :param markers: Show markers at sampled X locations.
+        :param dashes: Use dashed lines for style groups.
+        :param out_dir: Output directory for saving figures.
+        :param normalize_per_m2: Normalize energy-like Y columns to kWh/m2 (if possible).
+        :param height: Height (inches) of each facet.
+        :param aspect: Width/height ratio of each facet.
+        :param figsize: Optional full-figure size override (width, height).
+        :param sort_x: Sort X values before plotting lines.
+        :param filename_template: Optional output filename pattern using
+            ``str.format``. Because this method can save multiple figures (one
+            per ``y_var``), include ``{y_var}`` (for example
+            ``'lines_{df_source}_{y_var}_by_{x}_{city}.png'``).
+        :return: dict mapping each y_var to its saved PNG file path.
+        
+        Parameters
+        ----------
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_lines`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_lines` within ACCIM parametric and optimisation workflows.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_lines. Please pip install seaborn.')
+            return {}
+
+        df = self._get_plot_source_df(df_source=df_source)
+        if x not in df.columns:
+            raise KeyError(f"Column '{x}' not found in dataframe.")
+
+        if y_vars is None:
+            heating_col = next((c for c in df.columns if 'Heating' in c), None)
+            cooling_col = next((c for c in df.columns if 'Cooling' in c), None)
+            y_vars = [c for c in [heating_col, cooling_col] if c is not None]
+            if not y_vars:
+                raise ValueError('Heating/Cooling columns not found and y_vars was not provided.')
+
+        missing_y = [y_var for y_var in y_vars if y_var not in df.columns]
+        if missing_y:
+            raise KeyError(f'Missing y_vars columns: {missing_y}')
+
+        optional_cols = [hue, style, units, col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for line plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_lines[{df_source}]',
+        )
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2)
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_lines',
+        )
+        os.makedirs(out_dir, exist_ok=True)
+
+        saved = {}
+        seen_output_paths = set()
+        for y_var in y_vars:
+            relplot_kwargs = {
+                'data': df,
+                'x': x,
+                'y': y_var,
+                'hue': hue,
+                'style': style,
+                'units': units,
+                'col': col,
+                'row': row,
+                'kind': 'line',
+                'estimator': estimator,
+                'markers': markers,
+                'dashes': dashes,
+                'sort': sort_x,
+                'height': height,
+                'aspect': aspect,
+            }
+            if 'row' in subplot_orders:
+                relplot_kwargs['row_order'] = subplot_orders['row']
+            if 'col' in subplot_orders:
+                relplot_kwargs['col_order'] = subplot_orders['col']
+
+            if errorbar is not None:
+                relplot_kwargs['errorbar'] = errorbar
+
+            try:
+                g = sns.relplot(**relplot_kwargs)
+            except TypeError as err:
+                # Compatibility fallback for seaborn<0.12 where errorbar= is unavailable.
+                if 'errorbar' not in str(err):
+                    raise
+                relplot_kwargs.pop('errorbar', None)
+                if errorbar is not None:
+                    if isinstance(errorbar, tuple) and len(errorbar) == 2 and str(errorbar[0]).lower() == 'ci':
+                        relplot_kwargs['ci'] = errorbar[1]
+                    elif isinstance(errorbar, (int, float)):
+                        relplot_kwargs['ci'] = errorbar
+                g = sns.relplot(**relplot_kwargs)
+
+            if figsize is not None:
+                g.fig.set_size_inches(figsize)
+
+            x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+            y_label = f"{y_var} ({unit_map[y_var]})" if unit_map.get(y_var) else y_var
+            g.set_axis_labels(x_label, y_label)
+            g.fig.subplots_adjust(top=0.9)
+            g.fig.suptitle(f"Parametric Line Plot ({df_source.capitalize()}) - {y_var}", fontsize=13)
+
+            filename_context = self._build_filename_template_context(
+                df=df,
+                extra_context={
+                    'plot': 'parametric_lines',
+                    'df_source': df_source,
+                    'x': x,
+                    'y_var': y_var,
+                    'row_dim': row or 'none',
+                    'col_dim': col or 'none',
+                    'hue_dim': hue or 'none',
+                    'style_dim': style or 'none',
+                },
+            )
+            fname = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f"plot_parametric_lines_{df_source}_{self._safe_plot_token(y_var)}_by_{self._safe_plot_token(x)}.png",
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_parametric_lines',
+            )
+            self._ensure_unique_output_path(
+                output_path=fname,
+                seen_output_paths=seen_output_paths,
+                context='plot_parametric_lines',
+            )
+            os.makedirs(os.path.dirname(fname), exist_ok=True)
+            g.savefig(fname, dpi=300, bbox_inches='tight')
+            plt.close(g.fig)
+            print(f'  Parametric line plot saved: {fname}')
+            saved[y_var] = fname
+
+        return saved
+
+    def plot_parametric_heatmap(
+            self,
+            x: str,
+            y: str,
+            z: str,
+            df_source: str='parametric',
+            aggfunc: str='mean',
+            col: str=None,
+            row: str=None,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            cmap: str='viridis',
+            annot: bool=False,
+            fmt: str='.2f',
+            figsize: tuple=None,
+            vmin: float=None,
+            vmax: float=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ) -> str:
+        """Creates one or more heatmaps from (x, y) parameter combinations and z values.
+        
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'heatmap_{df_source}_{z}_by_{x}_{y}_{building_type}.png'``).
+        
+        Parameters
+        ----------
+        aggfunc : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        col : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        row : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        cmap : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        annot : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        fmt : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        vmin : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        vmax : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_heatmap`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_heatmap` within ACCIM parametric and optimisation workflows.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_heatmap. Please pip install seaborn.')
+            return ''
+
+        df = self._get_plot_source_df(df_source=df_source)
+        required_cols = [x, y, z]
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for heatmap: {missing}')
+
+        optional_cols = [col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for heatmap: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_heatmap[{df_source}]',
+        )
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y, z], normalize_per_m2=normalize_per_m2)
+        os.makedirs(out_dir, exist_ok=True)
+
+        row_values = list(pd.unique(df[row].dropna())) if row else [None]
+        col_values = list(pd.unique(df[col].dropna())) if col else [None]
+        if len(row_values) == 0:
+            row_values = [None]
+        if len(col_values) == 0:
+            col_values = [None]
+
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values={
+                'row': row_values if row else None,
+                'col': col_values if col else None,
+            },
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_heatmap',
+        )
+        if row and 'row' in subplot_orders:
+            row_values = subplot_orders['row']
+        if col and 'col' in subplot_orders:
+            col_values = subplot_orders['col']
+
+        n_rows = len(row_values)
+        n_cols = len(col_values)
+        if figsize is None:
+            figsize = (4.8 * n_cols, 4.2 * n_rows)
+
+        (fig, axes) = plt.subplots(n_rows, n_cols, figsize=figsize, squeeze=False)
+        for (i, row_val) in enumerate(row_values):
+            for (j, col_val) in enumerate(col_values):
+                ax = axes[i][j]
+                mask = pd.Series(True, index=df.index)
+                if row:
+                    mask &= df[row] == row_val
+                if col:
+                    mask &= df[col] == col_val
+
+                df_facet = df.loc[mask, [x, y, z]].dropna()
+                if df_facet.empty:
+                    ax.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax.transAxes)
+                    ax.set_axis_off()
+                    continue
+
+                pivot_df = pd.pivot_table(df_facet, index=y, columns=x, values=z, aggfunc=aggfunc)
+                if pivot_df.empty:
+                    ax.text(0.5, 0.5, 'No pivot data', ha='center', va='center', transform=ax.transAxes)
+                    ax.set_axis_off()
+                    continue
+
+                pivot_df = pivot_df.sort_index(axis=0).sort_index(axis=1)
+                sns.heatmap(
+                    pivot_df,
+                    ax=ax,
+                    cmap=cmap,
+                    annot=annot,
+                    fmt=fmt,
+                    vmin=vmin,
+                    vmax=vmax,
+                    cbar=True,
+                )
+
+                x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+                y_label = f"{y} ({unit_map[y]})" if unit_map.get(y) else y
+                ax.set_xlabel(x_label)
+                ax.set_ylabel(y_label)
+
+                title_parts = []
+                if row:
+                    title_parts.append(f'{row}={row_val}')
+                if col:
+                    title_parts.append(f'{col}={col_val}')
+                if title_parts:
+                    ax.set_title(' | '.join(title_parts), fontsize=10)
+
+        z_label = f"{z} ({unit_map[z]})" if unit_map.get(z) else z
+        fig.suptitle(f'Parametric Heatmap ({df_source.capitalize()}) - {z_label}', fontsize=13)
+        fig.tight_layout(rect=(0, 0, 1, 0.96))
+
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'parametric_heatmap',
+                'df_source': df_source,
+                'x': x,
+                'y': y,
+                'z': z,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'aggfunc': aggfunc,
+            },
+        )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_parametric_heatmap_{df_source}_{self._safe_plot_token(z)}_by_{self._safe_plot_token(x)}_{self._safe_plot_token(y)}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_heatmap',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+        fig.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f'  Parametric heatmap saved: {fname}')
+        return fname
+
+    def plot_parametric_contour(
+            self,
+            x: str,
+            y: str,
+            z: str,
+            df_source: str='parametric',
+            col: str=None,
+            row: str=None,
+            levels: int=12,
+            filled: bool=True,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            cmap: str='viridis',
+            scatter_overlay: bool=True,
+            figsize: tuple=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ) -> str:
+        """Creates contour (or filled contour) plots from numeric x, y, z columns.
+        
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'contour_{df_source}_{z}_by_{x}_{y}_{building_type}.png'``).
+        
+        Parameters
+        ----------
+        col : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        row : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        levels : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        cmap : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        scatter_overlay : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_contour`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_contour` within ACCIM parametric and optimisation workflows.
+        """
+        df = self._get_plot_source_df(df_source=df_source)
+        required_cols = [x, y, z]
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for contour plot: {missing}')
+
+        for c in required_cols:
+            if not pd.api.types.is_numeric_dtype(df[c]):
+                raise TypeError(f"Column '{c}' must be numeric for contour plotting.")
+
+        optional_cols = [col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for contour plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_contour[{df_source}]',
+        )
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y, z], normalize_per_m2=normalize_per_m2)
+        os.makedirs(out_dir, exist_ok=True)
+
+        row_values = list(pd.unique(df[row].dropna())) if row else [None]
+        col_values = list(pd.unique(df[col].dropna())) if col else [None]
+        if len(row_values) == 0:
+            row_values = [None]
+        if len(col_values) == 0:
+            col_values = [None]
+
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values={
+                'row': row_values if row else None,
+                'col': col_values if col else None,
+            },
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_contour',
+        )
+        if row and 'row' in subplot_orders:
+            row_values = subplot_orders['row']
+        if col and 'col' in subplot_orders:
+            col_values = subplot_orders['col']
+
+        n_rows = len(row_values)
+        n_cols = len(col_values)
+        if figsize is None:
+            figsize = (5.2 * n_cols, 4.6 * n_rows)
+
+        (fig, axes) = plt.subplots(n_rows, n_cols, figsize=figsize, squeeze=False)
+        for (i, row_val) in enumerate(row_values):
+            for (j, col_val) in enumerate(col_values):
+                ax = axes[i][j]
+                mask = pd.Series(True, index=df.index)
+                if row:
+                    mask &= df[row] == row_val
+                if col:
+                    mask &= df[col] == col_val
+                df_facet = df.loc[mask, [x, y, z]].dropna()
+
+                if df_facet.empty:
+                    ax.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax.transAxes)
+                    ax.set_axis_off()
+                    continue
+
+                if len(df_facet) < 3 or df_facet[x].nunique() < 2 or df_facet[y].nunique() < 2:
+                    sc = ax.scatter(df_facet[x], df_facet[y], c=df_facet[z], cmap=cmap, s=35, alpha=0.85)
+                    fig.colorbar(sc, ax=ax, pad=0.02, shrink=0.85)
+                    ax.set_title('Fallback scatter (insufficient points)', fontsize=9)
+                else:
+                    try:
+                        if filled:
+                            contour = ax.tricontourf(df_facet[x], df_facet[y], df_facet[z], levels=levels, cmap=cmap)
+                        else:
+                            contour = ax.tricontour(df_facet[x], df_facet[y], df_facet[z], levels=levels, cmap=cmap)
+                        fig.colorbar(contour, ax=ax, pad=0.02, shrink=0.85)
+                        if scatter_overlay:
+                            ax.scatter(df_facet[x], df_facet[y], c='#111111', s=14, alpha=0.5)
+                    except Exception:
+                        sc = ax.scatter(df_facet[x], df_facet[y], c=df_facet[z], cmap=cmap, s=35, alpha=0.85)
+                        fig.colorbar(sc, ax=ax, pad=0.02, shrink=0.85)
+                        ax.set_title('Fallback scatter', fontsize=9)
+
+                x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+                y_label = f"{y} ({unit_map[y]})" if unit_map.get(y) else y
+                ax.set_xlabel(x_label)
+                ax.set_ylabel(y_label)
+
+                facet_title_parts = []
+                if row:
+                    facet_title_parts.append(f'{row}={row_val}')
+                if col:
+                    facet_title_parts.append(f'{col}={col_val}')
+                if facet_title_parts:
+                    base_title = ax.get_title()
+                    prefix = ' | '.join(facet_title_parts)
+                    ax.set_title(f'{prefix}\n{base_title}' if base_title else prefix, fontsize=9)
+
+        z_label = f"{z} ({unit_map[z]})" if unit_map.get(z) else z
+        fig.suptitle(f'Parametric Contour ({df_source.capitalize()}) - {z_label}', fontsize=13)
+        fig.tight_layout(rect=(0, 0, 1, 0.96))
+
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'parametric_contour',
+                'df_source': df_source,
+                'x': x,
+                'y': y,
+                'z': z,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'filled': 'true' if filled else 'false',
+            },
+        )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_parametric_contour_{df_source}_{self._safe_plot_token(z)}_by_{self._safe_plot_token(x)}_{self._safe_plot_token(y)}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_contour',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+        fig.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f'  Parametric contour plot saved: {fname}')
+        return fname
+
+    def plot_parametric_distributions(
+            self,
+            x: str,
+            y_vars: list=None,
+            kind: str='violin',
+            df_source: str='parametric',
+            hue: str=None,
+            col: str=None,
+            row: str=None,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            inner: str='box',
+            cut: float=0,
+            sharey: bool=True,
+            show_points: bool=False,
+            legend_out: bool=False,
+            height: float=4,
+            aspect: float=1.2,
+            figsize: tuple=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ) -> dict:
+        """Creates categorical distribution plots (violin, boxen, or box) for one or more outputs.
+        
+        :param filename_template: Optional output filename pattern using
+            ``str.format``. Because this method can save multiple figures (one
+            per ``y_var``), include ``{y_var}`` (for example
+            ``'distribution_{kind}_{y_var}_by_{x}_{city}.png'``).
+        
+        Parameters
+        ----------
+        y_vars : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        df_source : Any
+            Input dataframe used by this routine.
+        hue : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        col : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        row : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        inner : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        cut : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        sharey : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        show_points : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        legend_out : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        height : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        aspect : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_distributions`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_distributions` within ACCIM parametric and optimisation workflows.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_distributions. Please pip install seaborn.')
+            return {}
+
+        allowed_kinds = {'violin', 'boxen', 'box'}
+        if kind not in allowed_kinds:
+            raise ValueError(f"kind must be one of {sorted(allowed_kinds)}")
+
+        df = self._get_plot_source_df(df_source=df_source)
+        x = self._resolve_plot_axis_column(x, list(df.columns))
+        if x not in df.columns:
+            raise KeyError(f"Column '{x}' not found in dataframe.")
+
+        if y_vars is None:
+            heating_col = next((c for c in df.columns if 'Heating' in c), None)
+            cooling_col = next((c for c in df.columns if 'Cooling' in c), None)
+            y_vars = [c for c in [heating_col, cooling_col] if c is not None]
+            if not y_vars:
+                raise ValueError('Heating/Cooling columns not found and y_vars was not provided.')
+        else:
+            y_vars = [self._resolve_plot_axis_column(y_var, list(df.columns)) for y_var in y_vars]
+
+        missing_y = [y_var for y_var in y_vars if y_var not in df.columns]
+        if missing_y:
+            raise KeyError(f'Missing y_vars columns: {missing_y}')
+
+        optional_cols = [hue, col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for distribution plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_distributions[{df_source}]',
+        )
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2)
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_distributions',
+        )
+        os.makedirs(out_dir, exist_ok=True)
+
+        saved = {}
+        seen_output_paths = set()
+        for y_var in y_vars:
+            catplot_kwargs = {
+                'data': df,
+                'x': x,
+                'y': y_var,
+                'hue': hue,
+                'col': col,
+                'row': row,
+                'kind': kind,
+                'sharey': sharey,
+                'legend_out': legend_out,
+                'height': height,
+                'aspect': aspect,
+            }
+            if 'row' in subplot_orders:
+                catplot_kwargs['row_order'] = subplot_orders['row']
+            if 'col' in subplot_orders:
+                catplot_kwargs['col_order'] = subplot_orders['col']
+            if kind == 'violin':
+                catplot_kwargs['inner'] = inner
+                catplot_kwargs['cut'] = cut
+
+            g = sns.catplot(**catplot_kwargs)
+            if figsize is not None:
+                g.fig.set_size_inches(figsize)
+
+            if show_points:
+                g.map_dataframe(
+                    sns.stripplot,
+                    x=x,
+                    y=y_var,
+                    hue=hue,
+                    dodge=True if hue else False,
+                    alpha=0.45,
+                    jitter=True,
+                    size=3,
+                    color='#4d4d4d' if hue is None else None,
+                )
+
+            x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+            y_label = f"{y_var} ({unit_map[y_var]})" if unit_map.get(y_var) else y_var
+            g.set_axis_labels(x_label, y_label)
+            g.fig.subplots_adjust(top=0.9)
+            g.fig.suptitle(f'Parametric {kind.title()} Plot ({df_source.capitalize()}) - {y_var}', fontsize=13)
+
+            filename_context = self._build_filename_template_context(
+                df=df,
+                extra_context={
+                    'plot': 'parametric_distribution',
+                    'df_source': df_source,
+                    'kind': kind,
+                    'x': x,
+                    'y_var': y_var,
+                    'row_dim': row or 'none',
+                    'col_dim': col or 'none',
+                    'hue_dim': hue or 'none',
+                },
+            )
+            fname = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f'plot_parametric_{kind}_{df_source}_{self._safe_plot_token(y_var)}_by_{self._safe_plot_token(x)}.png',
+                filename_template=filename_template,
+                template_context=filename_context,
+                context='plot_parametric_distributions',
+            )
+            self._ensure_unique_output_path(
+                output_path=fname,
+                seen_output_paths=seen_output_paths,
+                context='plot_parametric_distributions',
+            )
+            os.makedirs(os.path.dirname(fname), exist_ok=True)
+            g.savefig(fname, dpi=300, bbox_inches='tight')
+            plt.close(g.fig)
+            print(f'  Parametric {kind} plot saved: {fname}')
+            saved[y_var] = fname
+
+        return saved
+
+    def plot_parametric_ecdf(
+            self,
+            x: str,
+            df_source: str='parametric',
+            hue: str=None,
+            col: str=None,
+            row: str=None,
+            complementary: bool=False,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            height: float=4,
+            aspect: float=1.2,
+            figsize: tuple=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ) -> str:
+        """Creates an ECDF plot to compare cumulative distributions across scenarios.
+        
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'ecdf_{df_source}_{x}_{building_type}.png'``).
+        
+        Parameters
+        ----------
+        hue : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        col : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        row : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        complementary : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        height : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        aspect : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_ecdf`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_ecdf` within ACCIM parametric and optimisation workflows.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_ecdf. Please pip install seaborn.')
+            return ''
+
+        df = self._get_plot_source_df(df_source=df_source)
+        x = self._resolve_plot_axis_column(x, list(df.columns))
+        if x not in df.columns:
+            raise KeyError(f"Column '{x}' not found in dataframe.")
+        if not pd.api.types.is_numeric_dtype(df[x]):
+            raise TypeError(f"Column '{x}' must be numeric for ECDF plotting.")
+
+        optional_cols = [hue, col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for ECDF plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_ecdf[{df_source}]',
+        )
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x], normalize_per_m2=normalize_per_m2)
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_ecdf',
+        )
+        os.makedirs(out_dir, exist_ok=True)
+
+        displot_kwargs = {
+            'data': df,
+            'x': x,
+            'hue': hue,
+            'col': col,
+            'row': row,
+            'kind': 'ecdf',
+            'height': height,
+            'aspect': aspect,
+        }
+        if 'row' in subplot_orders:
+            displot_kwargs['row_order'] = subplot_orders['row']
+        if 'col' in subplot_orders:
+            displot_kwargs['col_order'] = subplot_orders['col']
+
+        if complementary:
+            displot_kwargs['complementary'] = True
+
+        try:
+            g = sns.displot(**displot_kwargs)
+        except TypeError:
+            # Compatibility fallback for older seaborn versions.
+            displot_kwargs.pop('complementary', None)
+            g = sns.displot(**displot_kwargs)
+
+        if figsize is not None:
+            g.fig.set_size_inches(figsize)
+
+        x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+        y_label = '1 - F(x)' if complementary else 'F(x)'
+        g.set_axis_labels(x_label, y_label)
+        g.fig.subplots_adjust(top=0.9)
+        g.fig.suptitle(f'Parametric ECDF ({df_source.capitalize()}) - {x_label}', fontsize=13)
+
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'parametric_ecdf',
+                'df_source': df_source,
+                'x': x,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'hue_dim': hue or 'none',
+                'complementary': 'true' if complementary else 'false',
+            },
+        )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_parametric_ecdf_{df_source}_{self._safe_plot_token(x)}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_ecdf',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+        g.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(g.fig)
+        print(f'  Parametric ECDF plot saved: {fname}')
+        return fname
+
+    def plot_parametric_density_2d(
+            self,
+            x: str,
+            y: str,
+            kind: str='hexbin',
+            df_source: str='parametric',
+            hue: str=None,
+            col: str=None,
+            row: str=None,
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            cmap: str='viridis',
+            gridsize: int=28,
+            mincnt: int=1,
+            levels: int=12,
+            fill: bool=True,
+            alpha: float=0.85,
+            scatter_overlay: bool=False,
+            figsize: tuple=None,
+            subplot_order_mode: Literal['auto', 'alphabetical', 'ascending', 'descending', 'custom'] = 'auto',
+            subplot_order_custom: Optional[dict] = None,
+            subplot_order_case_sensitive: bool = False,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ) -> str:
+        """Creates 2D density visualizations using either hexbin or KDE.
+        
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'density2d_{kind}_{x}_vs_{y}_{building_type}.png'``).
+        
+        Parameters
+        ----------
+        df_source : Any
+            Input dataframe used by this routine.
+        hue : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        col : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        row : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        cmap : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        gridsize : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        mincnt : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        levels : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        fill : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        alpha : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        scatter_overlay : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        subplot_order_mode : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        subplot_order_custom : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        subplot_order_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_density_2d`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_density_2d` within ACCIM parametric and optimisation workflows.
+        """
+        try:
+            import seaborn as sns
+        except ImportError:
+            print('[!] Seaborn is required for plot_parametric_density_2d. Please pip install seaborn.')
+            return ''
+
+        allowed_kinds = {'hexbin', 'kde'}
+        if kind not in allowed_kinds:
+            raise ValueError(f"kind must be one of {sorted(allowed_kinds)}")
+
+        df = self._get_plot_source_df(df_source=df_source)
+        required_cols = [x, y]
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            raise KeyError(f'Missing required columns for 2D density plot: {missing}')
+
+        for c in required_cols:
+            if not pd.api.types.is_numeric_dtype(df[c]):
+                raise TypeError(f"Column '{c}' must be numeric for 2D density plotting.")
+
+        optional_cols = [hue, col, row]
+        missing_optional = [c for c in optional_cols if c and c not in df.columns]
+        if missing_optional:
+            raise KeyError(f'Missing optional columns for 2D density plot: {missing_optional}')
+
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_density_2d[{df_source}]',
+        )
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y], normalize_per_m2=normalize_per_m2)
+        os.makedirs(out_dir, exist_ok=True)
+
+        row_values = list(pd.unique(df[row].dropna())) if row else [None]
+        col_values = list(pd.unique(df[col].dropna())) if col else [None]
+        if len(row_values) == 0:
+            row_values = [None]
+        if len(col_values) == 0:
+            col_values = [None]
+
+        subplot_orders = self._resolve_subplot_dimension_orders(
+            dimension_values={
+                'row': row_values if row else None,
+                'col': col_values if col else None,
+            },
+            subplot_order_mode=subplot_order_mode,
+            subplot_order_custom=subplot_order_custom,
+            subplot_order_case_sensitive=subplot_order_case_sensitive,
+            context='plot_parametric_density_2d',
+        )
+        if row and 'row' in subplot_orders:
+            row_values = subplot_orders['row']
+        if col and 'col' in subplot_orders:
+            col_values = subplot_orders['col']
+
+        n_rows = len(row_values)
+        n_cols = len(col_values)
+        if figsize is None:
+            figsize = (5.0 * n_cols, 4.5 * n_rows)
+
+        (fig, axes) = plt.subplots(n_rows, n_cols, figsize=figsize, squeeze=False)
+        for (i, row_val) in enumerate(row_values):
+            for (j, col_val) in enumerate(col_values):
+                ax = axes[i][j]
+                mask = pd.Series(True, index=df.index)
+                if row:
+                    mask &= df[row] == row_val
+                if col:
+                    mask &= df[col] == col_val
+                df_facet = df.loc[mask].copy()
+
+                if df_facet.empty:
+                    ax.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax.transAxes)
+                    ax.set_axis_off()
+                    continue
+
+                if kind == 'hexbin':
+                    hb = ax.hexbin(
+                        df_facet[x],
+                        df_facet[y],
+                        gridsize=gridsize,
+                        mincnt=mincnt,
+                        cmap=cmap,
+                        alpha=alpha,
+                    )
+                    fig.colorbar(hb, ax=ax, pad=0.02, shrink=0.85, label='Count')
+                    if hue:
+                        ax.text(0.01, 0.98, 'hue ignored for hexbin', transform=ax.transAxes, va='top', fontsize=8)
+                else:
+                    kde_kwargs = {
+                        'data': df_facet,
+                        'x': x,
+                        'y': y,
+                        'fill': fill,
+                        'levels': levels,
+                        'ax': ax,
+                    }
+                    if hue:
+                        kde_kwargs['hue'] = hue
+                        kde_kwargs['common_norm'] = False
+                        kde_kwargs['alpha'] = alpha
+                    else:
+                        kde_kwargs['cmap'] = cmap
+                    try:
+                        sns.kdeplot(**kde_kwargs)
+                    except Exception:
+                        sc = ax.scatter(df_facet[x], df_facet[y], c='#1f77b4', s=22, alpha=0.75)
+                        ax.set_title('Fallback scatter', fontsize=9)
+
+                if scatter_overlay:
+                    ax.scatter(df_facet[x], df_facet[y], c='#111111', s=10, alpha=0.35)
+
+                x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
+                y_label = f"{y} ({unit_map[y]})" if unit_map.get(y) else y
+                ax.set_xlabel(x_label)
+                ax.set_ylabel(y_label)
+
+                title_parts = []
+                if row:
+                    title_parts.append(f'{row}={row_val}')
+                if col:
+                    title_parts.append(f'{col}={col_val}')
+                if title_parts:
+                    ax.set_title(' | '.join(title_parts), fontsize=10)
+
+        fig.suptitle(f'Parametric 2D Density ({kind}) - {df_source.capitalize()}', fontsize=13)
+        fig.tight_layout(rect=(0, 0, 1, 0.96))
+
+        filename_context = self._build_filename_template_context(
+            df=df,
+            extra_context={
+                'plot': 'parametric_density_2d',
+                'df_source': df_source,
+                'kind': kind,
+                'x': x,
+                'y': y,
+                'row_dim': row or 'none',
+                'col_dim': col or 'none',
+                'hue_dim': hue or 'none',
+            },
+        )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_parametric_density2d_{kind}_{df_source}_{self._safe_plot_token(x)}_vs_{self._safe_plot_token(y)}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_density_2d',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+        fig.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f'  Parametric 2D density plot saved: {fname}')
+        return fname
+
+    def plot_parametric_radar(
+            self,
+            metrics: list=None,
+            group_by: str='epw',
+            df_source: str='parametric',
+            aggfunc: str='mean',
+            out_dir: str='.',
+            normalize_per_m2: bool=False,
+            figsize: tuple=(8, 8),
+            fill_alpha: float=0.12,
+            data_filter: Optional[dict] = None,
+            data_filter_case_sensitive: bool = False,
+            data_filter_strict: bool = True,
+            data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            filename_template: str = None,
+    ) -> pd.DataFrame:
+        """Creates a radar chart from aggregated groups and returns the aggregated values.
+        
+        :param filename_template: Optional output filename pattern using
+            ``str.format`` (for example
+            ``'radar_{df_source}_group_{group_by}_{city}.png'``).
+        
+        Parameters
+        ----------
+        metrics : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        aggfunc : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        out_dir : Any
+            Path-like value used by this routine.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        figsize : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        fill_alpha : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        data_filter : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        data_filter_case_sensitive : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        data_filter_strict : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        data_filter_on_empty : Any
+            Argument used by `PlottingMixin.plot_parametric_radar`.
+        
+        Usage
+        -----
+        Use `PlottingMixin.plot_parametric_radar` within ACCIM parametric and optimisation workflows.
+        """
+        df = self._get_plot_source_df(df_source=df_source)
+        (df, _) = self._apply_plot_data_filter(
+            df=df,
+            data_filter=data_filter,
+            data_filter_case_sensitive=data_filter_case_sensitive,
+            data_filter_strict=data_filter_strict,
+            data_filter_on_empty=data_filter_on_empty,
+            context=f'plot_parametric_radar[{df_source}]',
+        )
+        if group_by not in df.columns:
+            raise KeyError(f"Column '{group_by}' not found in dataframe.")
+
+        if metrics is None:
+            numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+            energy_cols = [c for c in numeric_cols if self._is_energy_like_column(c)]
+            if len(energy_cols) >= 3:
+                metrics = energy_cols[:6]
+            else:
+                metrics = numeric_cols[:6]
+
+        if not metrics:
+            raise ValueError('No numeric metrics found for radar plotting.')
+
+        missing_metrics = [m for m in metrics if m not in df.columns]
+        if missing_metrics:
+            raise KeyError(f'Missing metric columns for radar plot: {missing_metrics}')
+
+        non_numeric = [m for m in metrics if not pd.api.types.is_numeric_dtype(df[m])]
+        if non_numeric:
+            raise TypeError(f'All metrics must be numeric for radar plotting: {non_numeric}')
+
+        if len(metrics) < 3:
+            raise ValueError('Radar plot requires at least 3 metrics.')
+
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=list(metrics), normalize_per_m2=normalize_per_m2)
+        agg_df = df.groupby(group_by, dropna=False)[metrics].agg(aggfunc).reset_index()
+        if agg_df.empty:
+            raise ValueError('No aggregated rows available for radar plotting.')
+
+        normalised_df = agg_df.copy()
+        for metric in metrics:
+            col_min = normalised_df[metric].min()
+            col_max = normalised_df[metric].max()
+            if pd.isna(col_min) or pd.isna(col_max):
+                normalised_df[metric] = 0.0
+            elif col_max > col_min:
+                normalised_df[metric] = (normalised_df[metric] - col_min) / (col_max - col_min)
+            else:
+                normalised_df[metric] = 0.5
+
+        os.makedirs(out_dir, exist_ok=True)
+        angles = np.linspace(0, 2 * np.pi, len(metrics), endpoint=False).tolist()
+        angles += angles[:1]
+
+        (fig, ax) = plt.subplots(figsize=figsize, subplot_kw={'polar': True})
+        for idx in range(len(normalised_df)):
+            values = normalised_df.loc[idx, metrics].tolist()
+            values += values[:1]
+            label = str(agg_df[group_by].iloc[idx])
+            ax.plot(angles, values, linewidth=1.8, label=label)
+            ax.fill(angles, values, alpha=fill_alpha)
+
+        metric_labels = [f"{m}\n({unit_map[m]})" if unit_map.get(m) else m for m in metrics]
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(metric_labels, fontsize=9)
+        ax.set_ylim(0, 1)
+        ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
+        ax.set_yticklabels(['0.00', '0.25', '0.50', '0.75', '1.00'], fontsize=8)
+        ax.set_title(
+            f'Parametric Radar ({df_source.capitalize()})\nGroup: {group_by} | Agg: {aggfunc} | Normalized [0, 1]',
+            fontsize=11,
+            va='bottom',
+        )
+        ax.legend(loc='upper right', bbox_to_anchor=(1.35, 1.10), fontsize=8)
+
+        filename_context = self._build_filename_template_context(
+            df=agg_df,
+            extra_context={
+                'plot': 'parametric_radar',
+                'df_source': df_source,
+                'group_by': group_by,
+                'aggfunc': aggfunc,
+            },
+        )
+        fname = self._resolve_output_filename(
+            out_dir=out_dir,
+            default_filename=f'plot_parametric_radar_{df_source}_group_{self._safe_plot_token(group_by)}.png',
+            filename_template=filename_template,
+            template_context=filename_context,
+            context='plot_parametric_radar',
+        )
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+        fig.tight_layout()
+        fig.savefig(fname, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+        print(f'  Parametric radar plot saved: {fname}')
+        return agg_df
+

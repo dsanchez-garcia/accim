@@ -598,6 +598,14 @@ class addAccis:
         self.SetAST.Program_Line_2 = 'set m = ' + str(CustAST_m)
         self.SetAST.Program_Line_3 = 'set n = ' + str(CustAST_n)
 
+        # Dynamic injection: trim to the 16 base lines then append model-specific lines
+        while len(self.SetAST.obj) > 18:
+            self.SetAST.obj.pop()
+        from accim.sim.setAST_models import get_SetAST_lines
+        dynamic_lines = get_SetAST_lines(ComfStand, ComfMod)
+        for dline in dynamic_lines:
+            self.SetAST.obj.append(dline)
+
         self.SetVOFinputData.Program_Line_1 = 'set MaxTempDiffVOF = ' + str(MaxTempDiffVOF)
         self.SetVOFinputData.Program_Line_2 = 'set MinTempDiffVOF = ' + str(MinTempDiffVOF)
         self.SetVOFinputData.Program_Line_3 = 'set MultiplierVOF = ' + str(MultiplierVOF)

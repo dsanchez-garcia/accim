@@ -1,10 +1,30 @@
+"""Core workflows for ACCIM parametric and optimisation simulations.
+
+This module defines simulation session classes, worker helpers, and utility
+functions for running EnergyPlus evaluations and post-processing results.
+
+Usage
+-----
+Instantiate `ParametricSimulation` or `OptimisationSimulation` and run the
+corresponding simulation methods.
+
+Examples
+--------
+sim = ParametricSimulation(buildings=[idf], epws=['Seville.epw'])
+sim.run_parametric_simulation(parameters_values_df=my_samples)
+"""
+
 import os
 import re
 import json
+import hashlib
+import importlib
 import glob as pyglob
-from typing import Literal, List, Union, Optional
+import gc
+from typing import Literal, List, Union, Optional, Any, Sequence
 import warnings
 import functools
+import difflib
 import accim
 import numpy as np
 import pandas as pd
@@ -25,27 +45,52 @@ import accim.parametric_and_optimisation.funcs_for_besos.param_apmv as bf_apmv
 import accim.parametric_and_optimisation.parameters as params
 from accim.parametric_and_optimisation.analysis import AnalysisMixin
 from accim.parametric_and_optimisation.plotting import PlottingMixin
-from accim.parametric_and_optimisation.patches import GlobalAllCapsDict, _patched_eval_func, _patched_to_platypus
+from accim.parametric_and_optimisation.patches import GlobalAllCapsDict, _patched_eval_func, _patched_to_platypus, _ensure_run_energyplus_copies_in_idf
+from accim.parametric_and_optimisation.file_cleanup import normalize_sim_file_cleanup_options, sim_file_policy_will_remove_extension, prune_simulation_output_files
 import accim.parametric_and_optimisation.params_dicts as params_dicts
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
 
-def get_rdd_file_as_df():
-    """
-    Returns the .rdd file from the test simulation as a pandas DataFrame
-
+def get_rdd_file_as_df(out_dir: str = 'available_outputs'):
+    """Returns the .rdd file from the test simulation as a pandas DataFrame
+    
     :return: a pandas DataFrame containing the .rdd file from the test simulation
+    
+    Parameters
+    ----------
+    out_dir : Any
+        Path-like value used by this routine.
+    
+    Usage
+    -----
+    Use `get_rdd_file_as_df` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = get_rdd_file_as_df(out_dir=...)
     """
-    rdd_df = pd.read_csv(filepath_or_buffer='available_outputs/eplusout.rdd', sep=',|;', skiprows=2, names=['object', 'key_value', 'variable_name', 'frequency', 'units'], engine='python')
+    rdd_df = pd.read_csv(filepath_or_buffer=os.path.join(out_dir, 'eplusout.rdd'), sep=',|;', skiprows=2, names=['object', 'key_value', 'variable_name', 'frequency', 'units'], engine='python')
     return rdd_df
 
-def parse_mtd_file() -> list[Union[dict[str, Union[str, None, list[str]]], dict[str, Union[str, None, list[str]]]]]:
-    """
-    Returns a list of the objects in the .mtd file from the test simulation.
-
+def parse_mtd_file(out_dir: str = 'available_outputs') -> list[Union[dict[str, Union[str, None, list[str]]], dict[str, Union[str, None, list[str]]]]]:
+    """Returns a list of the objects in the .mtd file from the test simulation.
+    
     :return: a list of the objects in the .mtd file from the test simulation
+    
+    Parameters
+    ----------
+    out_dir : Any
+        Path-like value used by this routine.
+    
+    Usage
+    -----
+    Use `parse_mtd_file` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = parse_mtd_file(out_dir=...)
     """
     meter_list = []
-    with open('available_outputs/eplusout.mtd', 'r') as file:
+    with open(os.path.join(out_dir, 'eplusout.mtd'), 'r') as file:
         lines = file.readlines()
     (meter_id, description) = (None, None)
     on_meters = []
@@ -65,38 +110,2852 @@ def parse_mtd_file() -> list[Union[dict[str, Union[str, None, list[str]]], dict[
         meter_list.append({'meter_id': meter_id, 'description': description, 'on_meters': on_meters})
     return meter_list
 
-def get_mdd_file_as_df():
-    """
-    Returns the .mdd file from the test simulation as a pandas DataFrame
-
+def get_mdd_file_as_df(out_dir: str = 'available_outputs'):
+    """Returns the .mdd file from the test simulation as a pandas DataFrame
+    
     :return: a pandas DataFrame containing the .mdd file from the test simulation
+    
+    Parameters
+    ----------
+    out_dir : Any
+        Path-like value used by this routine.
+    
+    Usage
+    -----
+    Use `get_mdd_file_as_df` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = get_mdd_file_as_df(out_dir=...)
     """
-    mdd_df = pd.read_csv(filepath_or_buffer='available_outputs/eplusout.mdd', sep=',|;', skiprows=2, names=['object', 'meter_name', 'frequency', 'units'], engine='python')
+    mdd_df = pd.read_csv(filepath_or_buffer=os.path.join(out_dir, 'eplusout.mdd'), sep=',|;', skiprows=2, names=['object', 'meter_name', 'frequency', 'units'], engine='python')
     return mdd_df
 
-class OptimParamSimulation(AnalysisMixin, PlottingMixin):
+def _serialize_output_func(func_spec: Any):
+    """Serialize output reducer functions so they can be safely sent to workers.
+    
+    Parameters
+    ----------
+    func_spec : Any
+        Argument used by `_serialize_output_func`.
+    
+    Usage
+    -----
+    Use `_serialize_output_func` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = _serialize_output_func(func_spec=...)
+    """
+    if func_spec is None:
+        return None
+    if isinstance(func_spec, str):
+        return func_spec
+    if not callable(func_spec):
+        return func_spec
 
-    def __init__(self, building: IDF_class=None, parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None]=None, output_type: Literal['standard', 'custom', 'detailed', 'simplified']='standard', output_keep_existing: bool=False, output_freqs: List[allowed_output_freqs]=['hourly'], ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac']='vrf_mm', SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature']='temperature difference', make_averages: bool=False, debugging: bool=False, verbosemode: bool=True, bypass_addAccis: bool=False):
+    module_name = getattr(func_spec, '__module__', None)
+    qualname = getattr(func_spec, '__qualname__', None)
+    if module_name and qualname and '<locals>' not in qualname and module_name != '__main__':
+        return f"{module_name}:{qualname}"
+    return func_spec
+
+
+def _resolve_output_func(func_spec: Any):
+    """Resolve reducer specs to callables; supports 'module.submodule:callable_name'.
+    
+    Parameters
+    ----------
+    func_spec : Any
+        Argument used by `_resolve_output_func`.
+    
+    Usage
+    -----
+    Use `_resolve_output_func` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = _resolve_output_func(func_spec=...)
+    """
+    if func_spec is None or callable(func_spec):
+        return func_spec
+    if not isinstance(func_spec, str):
+        return func_spec
+    if ':' not in func_spec:
+        raise ValueError(
+            "Invalid function spec for output reducer. Use 'module.submodule:callable_name'."
+        )
+
+    (module_name, attr_path) = func_spec.split(':', 1)
+    module = importlib.import_module(module_name)
+    resolved = module
+    for attr in attr_path.split('.'):
+        resolved = getattr(resolved, attr)
+    if not callable(resolved):
+        raise TypeError(f"Resolved output reducer '{func_spec}' is not callable.")
+    return resolved
+
+
+def _run_single_evaluation_worker(
+    idf_path: str,
+    epw: str,
+    epwname: str,
+    idf_basename: str,
+    out_dir: str,
+    problem_names_inputs: list,
+    problem_names_outputs: list,
+    output_specs: Optional[list],
+    add_output_specs: Optional[list],
+    add_output_names: list,
+    row_dict: dict,
+    keep_dirs: bool,
+    keep_input: bool,
+    sim_files_extensions: Optional[tuple[str, ...]],
+    sim_files_policy: str,
+) -> dict:
+    """Run one evaluation in a worker process and return output values.
+
+    Parameters
+    ----------
+    idf_path : str
+        Path to the IDF file loaded by the worker.
+    epw : str
+        EPW path passed to BESOS evaluator.
+    epwname : str
+        EPW label stored in returned metadata.
+    idf_basename : str
+        Base IDF name stored in returned metadata.
+    out_dir : str
+        Output directory used for simulation artifacts.
+    problem_names_inputs : list
+        Ordered list of input variable names.
+    problem_names_outputs : list
+        Ordered list of primary output names.
+    output_specs : Optional[list]
+        Serialized output reader specifications for primary outputs.
+    add_output_specs : Optional[list]
+        Serialized output reader specifications for additional outputs.
+    add_output_names : list
+        Names of additional outputs expected in the result tuple.
+    row_dict : dict
+        Input values to write into the worker IDF before simulation.
+    keep_dirs : bool
+        Whether BESOS simulation directories should be preserved.
+    keep_input : bool
+        Whether input values should be copied into the output dictionary.
+    sim_files_extensions : Optional[tuple[str, ...]]
+        Optional simulation-file extension policy for post-run cleanup.
+    sim_files_policy : str
+        File cleanup strategy used when pruning worker output folders.
+
+    Returns
+    -------
+    dict
+        Dictionary with requested outputs and worker metadata (`epw`, `idf`,
+        optional `output_dir`, and optional input columns).
+
+    Usage
+    -----
+    Internal helper invoked by multiprocessing evaluation paths.
+
+    Examples
+    --------
+    result = _run_single_evaluation_worker(...)
+    """
+    import warnings
+    warnings.filterwarnings('ignore')
+    from besos.evaluator import EvaluatorEP
+    from besos.problem import EPProblem
+    from besos.parameters import Parameter
+    from besos.objectives import MeterReader, VariableReader
+
+    _ensure_run_energyplus_copies_in_idf()
+
+    print(f"[WORKER] Loading IDF: {idf_path}")
+    from accim.utils import get_building
+    try:
+        b = get_building(idf_path)
+    except Exception as e:
+        print(f"[WORKER] Crash while loading {idf_path}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+
+    # Ensure each sampled value is really written into the IDF/EMS before the run.
+    # In multiprocessing mode we reconstruct a lightweight EPProblem in the worker;
+    # applying setters here guarantees custom ACCIS parameters are not lost.
+    available_setters = {k.lower(): v for (k, v) in params_dicts.all_params.items()}
+    for (param_name, param_value) in row_dict.items():
+        setter = available_setters.get(str(param_name).lower())
+        if setter is not None:
+            setter(b, param_value)
+        
+    dummy_inputs = [Parameter(name=n) for n in problem_names_inputs]
+    if output_specs or add_output_specs:
+        outputs_objs = []
+        for spec in output_specs:
+            kind = str(spec.get('kind', '')).lower()
+            output_name = spec.get('output_name')
+            output_func = spec.get('func')
+            if output_func is not None:
+                output_func = _resolve_output_func(output_func)
+            if kind == 'meter':
+                kwargs = {
+                    'key_name': spec.get('key_name'),
+                    'frequency': spec.get('frequency'),
+                    'name': output_name,
+                }
+                if output_func is not None:
+                    kwargs['func'] = output_func
+                outputs_objs.append(MeterReader(**kwargs))
+            elif kind == 'variable':
+                kwargs = {
+                    'key_value': spec.get('key_value'),
+                    'variable_name': spec.get('variable_name'),
+                    'frequency': spec.get('frequency'),
+                    'name': output_name,
+                }
+                if output_func is not None:
+                    kwargs['func'] = output_func
+                outputs_objs.append(VariableReader(**kwargs))
+            else:
+                # Fallback for unexpected entries
+                outputs_objs.append(spec.get('output_name'))
+        add_outputs_objs = []
+        for spec in (add_output_specs or []):
+            kind = str(spec.get('kind', '')).lower()
+            output_name = spec.get('output_name')
+            output_func = spec.get('func')
+            if output_func is not None:
+                output_func = _resolve_output_func(output_func)
+            if kind == 'meter':
+                kwargs = {
+                    'key_name': spec.get('key_name'),
+                    'frequency': spec.get('frequency'),
+                    'name': output_name,
+                }
+                if output_func is not None:
+                    kwargs['func'] = output_func
+                add_outputs_objs.append(MeterReader(**kwargs))
+            elif kind == 'variable':
+                kwargs = {
+                    'key_value': spec.get('key_value'),
+                    'variable_name': spec.get('variable_name'),
+                    'frequency': spec.get('frequency'),
+                    'name': output_name,
+                }
+                if output_func is not None:
+                    kwargs['func'] = output_func
+                add_outputs_objs.append(VariableReader(**kwargs))
+
+        prob = EPProblem(
+            inputs=dummy_inputs,
+            outputs=outputs_objs if output_specs else problem_names_outputs,
+            add_outputs=add_outputs_objs if len(add_outputs_objs) > 0 else None,
+        )
+    else:
+        prob = EPProblem(inputs=dummy_inputs, outputs=problem_names_outputs)
+    
+    evaluator = EvaluatorEP(problem=prob, building=b, epw=epw, out_dir=out_dir)
+    row_values = [row_dict[n] for n in problem_names_inputs]
+    
+    result = evaluator(row_values, keep_dirs=keep_dirs)
+    if not isinstance(result, (list, tuple)):
+        result = (result,)
+        
+    result_dict = {
+        problem_names_outputs[idx]: result[idx]
+        for idx in range(len(problem_names_outputs))
+    }
+
+    n_main_outputs = len(problem_names_outputs)
+    n_add_outputs = len(add_output_names)
+    for idx, add_output_name in enumerate(add_output_names):
+        result_dict[add_output_name] = result[n_main_outputs + idx] if (n_main_outputs + idx) < len(result) else pd.NA
+    
+    if keep_dirs and len(result) > (n_main_outputs + n_add_outputs):
+        sim_dir = result[-1]
+        result_dict['output_dir'] = sim_dir
+        if sim_files_extensions is not None and sim_dir not in (None, ''):
+            try:
+                prune_simulation_output_files(
+                    sim_dir=sim_dir,
+                    sim_files_extensions=sim_files_extensions,
+                    sim_files_policy=sim_files_policy,
+                )
+            except Exception:
+                # Never fail a simulation because post-run file cleanup failed.
+                pass
+        
+    if keep_input:
+        result_dict.update(row_dict)
+        
+    result_dict['epw'] = epwname
+    result_dict['idf'] = idf_basename
+    
+    return result_dict
+
+
+def compare_simulation_instances(
+    left: Union[Any, pd.DataFrame, str, os.PathLike],
+    right: Union[Any, pd.DataFrame, str, os.PathLike],
+    input_columns: Optional[list[str]] = None,
+    output_columns: Optional[list[str]] = None,
+    ignore_columns: Optional[list[str]] = None,
+    compare_attrs: bool = True,
+    ignore_attr_keys: Optional[list[str]] = None,
+    inputs_mismatch_strategy: Literal['strict', 'auto', 'nearest', 'row_order'] = 'auto',
+    reference_columns: Optional[list[str]] = None,
+    reference_max_distance: Optional[float] = None,
+    equal_mode: Literal['strict', 'relaxed'] = 'strict',
+    numeric_atol: float = 1e-6,
+    numeric_rtol: float = 1e-5,
+    max_examples: int = 5,
+    prefer_pickle_from_instances: bool = True,
+) -> dict:
+    """Compare two simulation-result sources and report if they are equivalent.
+    
+    Supported sources for ``left`` and ``right``:
+    - ``ParametricSimulation`` / ``OptimisationSimulation`` instances
+    - ``pandas.DataFrame`` objects
+    - file paths to ``.pkl/.pickle``, ``.csv`` or ``.json`` outputs
+    
+    The comparison is oriented to common workflows where both runs should contain
+    the same simulation battery (same input combinations) and equivalent results.
+    If possible, outputs are aligned by input columns before value comparison.
+    
+    :param left: first source to compare.
+    :param right: second source to compare.
+    :param input_columns: explicit input columns used as comparison keys.
+        When ``None``, they are inferred from ``df.attrs['parameters_names']`` plus
+        ``epw``/``idf`` when present.
+    :param output_columns: explicit output columns to compare. When ``None``, they
+        are inferred from ``df.attrs['outputs_names']``.
+    :param ignore_columns: columns to drop before comparing.
+    :param compare_attrs: when ``True``, compare ``DataFrame.attrs`` metadata.
+    :param ignore_attr_keys: attr keys ignored when ``compare_attrs=True``.
+    :param inputs_mismatch_strategy: fallback strategy when input batteries differ.
+        - ``strict``: do not attempt fallback matching.
+        - ``auto``: prefer nearest matching by reference columns; fallback to row order.
+        - ``nearest``: nearest matching between non-common input rows.
+        - ``row_order``: pair non-common rows by deterministic order.
+    :param reference_columns: optional columns used by nearest/reference matching.
+        When ``None``, inferred from input columns (preferring non ``idf``/``epw``).
+    :param reference_max_distance: optional max normalized distance allowed for
+        nearest matches. Pairs above threshold are ignored.
+    :param equal_mode: how ``report['equal']`` is computed.
+        - ``strict`` (default): requires identical input sets.
+        - ``relaxed``: allows different input sets if fallback/reference matching
+          finds equivalent output behaviour.
+    :param numeric_atol: absolute tolerance for numeric value comparison.
+    :param numeric_rtol: relative tolerance for numeric value comparison.
+    :param max_examples: maximum number of mismatch examples to return.
+    :param prefer_pickle_from_instances: when ``True``, and an instance has a saved
+        file path, the corresponding pickle is loaded first to compare persisted data.
+    :return: dictionary report with schema, input-set and output-difference details.
+    
+    Usage
+    -----
+    Use `compare_simulation_instances` within ACCIM parametric and optimisation workflows.
+    """
+    from collections import Counter, defaultdict
+
+    def _derive_pickle_candidate(path: str) -> str:
+        root, ext = os.path.splitext(path)
+        if ext.lower() in {'.pkl', '.pickle'}:
+            return path
+        return f'{root}.pkl'
+
+    def _load_df_from_path(pathlike: Union[str, os.PathLike]) -> pd.DataFrame:
+        path = os.path.abspath(os.fspath(pathlike))
+        ext = os.path.splitext(path)[1].lower()
+        if ext in {'.pkl', '.pickle'}:
+            return pd.read_pickle(path)
+        if ext == '.csv':
+            return pd.read_csv(path)
+        if ext == '.json':
+            with open(path, 'r', encoding='utf-8') as f:
+                payload = json.load(f)
+            if isinstance(payload, dict) and 'data' in payload:
+                df = pd.DataFrame(payload['data'])
+                attrs = payload.get('attrs', {}) if isinstance(payload.get('attrs', {}), dict) else {}
+                for (k, v) in attrs.items():
+                    df.attrs[k] = v
+                return df
+            return pd.read_json(path)
+        raise ValueError(f'Unsupported file extension for comparison source: {path}')
+
+    def _infer_run_type(df: pd.DataFrame) -> str:
+        if 'pareto-optimal' in df.columns:
+            return 'optimisation'
+        if isinstance(df.attrs.get('minimize_outputs'), list):
+            return 'optimisation'
+        return 'parametric'
+
+    def _candidate_file_from_instance(instance: Any, run_type: str) -> Optional[str]:
+        if run_type == 'parametric':
+            raw = getattr(instance, 'outputs_param_simulation_filepath', None)
+        else:
+            raw = getattr(instance, 'outputs_optimisation_filepath', None)
+        if raw in (None, ''):
+            return None
+        raw_path = os.path.abspath(os.fspath(raw))
+        candidates = []
+        pkl_candidate = _derive_pickle_candidate(raw_path)
+        if prefer_pickle_from_instances and os.path.exists(pkl_candidate):
+            candidates.append(pkl_candidate)
+        if os.path.exists(raw_path):
+            candidates.append(raw_path)
+        if len(candidates) == 0:
+            return None
+        return candidates[0]
+
+    def _resolve_source(source: Union[Any, pd.DataFrame, str, os.PathLike]) -> tuple[pd.DataFrame, dict]:
+        if isinstance(source, pd.DataFrame):
+            return source.copy(), {
+                'source_type': 'dataframe',
+                'path': None,
+                'run_type': _infer_run_type(source),
+            }
+
+        if isinstance(source, (str, os.PathLike)):
+            df = _load_df_from_path(source)
+            return df, {
+                'source_type': 'file',
+                'path': os.path.abspath(os.fspath(source)),
+                'run_type': _infer_run_type(df),
+            }
+
+        has_param_attr = hasattr(source, 'outputs_param_simulation')
+        has_optim_attr = hasattr(source, 'outputs_optimisation')
+        if not (has_param_attr or has_optim_attr):
+            raise TypeError(
+                'Comparison source must be a simulation instance, DataFrame, or a valid file path.'
+            )
+
+        param_df = getattr(source, 'outputs_param_simulation', None)
+        optim_df = getattr(source, 'outputs_optimisation', None)
+        has_param_df = isinstance(param_df, pd.DataFrame)
+        has_optim_df = isinstance(optim_df, pd.DataFrame)
+        last_run_type = str(getattr(source, 'last_run_type', '')).strip().lower()
+
+        selected_run_type = None
+        selected_df = None
+
+        if has_param_df and has_optim_df:
+            if last_run_type in {'parametric', 'optimisation'}:
+                selected_run_type = last_run_type
+            else:
+                raise ValueError(
+                    'The instance has both parametric and optimisation outputs loaded. '
+                    'Set instance.last_run_type or pass an explicit results file path.'
+                )
+        elif has_param_df:
+            selected_run_type = 'parametric'
+            selected_df = param_df
+        elif has_optim_df:
+            selected_run_type = 'optimisation'
+            selected_df = optim_df
+
+        if selected_run_type is not None and selected_df is None:
+            selected_df = param_df if selected_run_type == 'parametric' else optim_df
+
+        if selected_run_type is not None and prefer_pickle_from_instances:
+            candidate_path = _candidate_file_from_instance(source, selected_run_type)
+            if candidate_path is not None:
+                df = _load_df_from_path(candidate_path)
+                return df, {
+                    'source_type': 'instance_file',
+                    'path': candidate_path,
+                    'run_type': selected_run_type,
+                }
+
+        if selected_df is not None:
+            return selected_df.copy(), {
+                'source_type': 'instance_memory',
+                'path': None,
+                'run_type': selected_run_type,
+            }
+
+        candidate_order = []
+        if last_run_type in {'parametric', 'optimisation'}:
+            candidate_order.append(last_run_type)
+        for kind in ('parametric', 'optimisation'):
+            if kind not in candidate_order:
+                candidate_order.append(kind)
+
+        for run_type in candidate_order:
+            candidate_path = _candidate_file_from_instance(source, run_type)
+            if candidate_path is not None:
+                df = _load_df_from_path(candidate_path)
+                return df, {
+                    'source_type': 'instance_file',
+                    'path': candidate_path,
+                    'run_type': run_type,
+                }
+
+        raise ValueError(
+            'The provided simulation instance has no loaded outputs and no readable output files.'
+        )
+
+    def _as_attr_list(value: Any) -> list[str]:
+        if isinstance(value, (list, tuple)):
+            return [str(i) for i in value]
+        return []
+
+    def _is_na(value: Any) -> bool:
+        try:
+            return bool(pd.isna(value))
+        except Exception:
+            return False
+
+    try:
+        if numeric_atol is None or float(numeric_atol) <= 0:
+            round_decimals = 10
+        else:
+            round_decimals = int(max(2, min(12, abs(np.floor(np.log10(float(numeric_atol)))) + 2)))
+    except Exception:
+        round_decimals = 10
+
+    def _normalise_scalar(value: Any) -> Any:
+        if isinstance(value, (bool, np.bool_)):
+            return bool(value)
+        if isinstance(value, (pd.Timestamp, np.datetime64)):
+            return str(pd.Timestamp(value))
+        if _is_na(value):
+            return '<NA>'
+        if isinstance(value, (np.integer, int)):
+            return int(value)
+        if isinstance(value, (np.floating, float)):
+            return round(float(value), round_decimals)
+        if isinstance(value, (list, tuple)):
+            return tuple(_normalise_scalar(v) for v in value)
+        if isinstance(value, dict):
+            return tuple(
+                (str(k), _normalise_scalar(v))
+                for (k, v) in sorted(value.items(), key=lambda item: str(item[0]))
+            )
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    def _normalise_attr_value(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                str(k): _normalise_attr_value(v)
+                for (k, v) in sorted(value.items(), key=lambda item: str(item[0]))
+            }
+        if isinstance(value, (list, tuple, set)):
+            return [_normalise_attr_value(v) for v in value]
+        if isinstance(value, np.ndarray):
+            return _normalise_attr_value(value.tolist())
+        if isinstance(value, (pd.Timestamp, np.datetime64)):
+            return str(pd.Timestamp(value))
+        if isinstance(value, (np.floating, float)):
+            try:
+                if np.isnan(float(value)):
+                    return '<NA>'
+            except Exception:
+                pass
+            return round(float(value), round_decimals)
+        return value
+
+    def _build_key_tuples(df: pd.DataFrame, columns: list[str]) -> list[tuple]:
+        if len(columns) == 0:
+            return [tuple() for _ in range(len(df))]
+        keys = []
+        for row in df[columns].itertuples(index=False, name=None):
+            keys.append(tuple(_normalise_scalar(v) for v in row))
+        return keys
+
+    def _tuples_to_examples(values: set[tuple], columns: list[str]) -> list[dict]:
+        if len(values) == 0:
+            return []
+        ordered = sorted(values, key=lambda item: repr(item))
+        examples = []
+        for row in ordered[:max_examples]:
+            examples.append({
+                col: row[idx] if idx < len(row) else None
+                for (idx, col) in enumerate(columns)
+            })
+        return examples
+
+    def _compare_series_values(left_series: pd.Series, right_series: pd.Series) -> tuple[pd.Series, Optional[float]]:
+        if not left_series.index.equals(right_series.index):
+            right_series = right_series.reindex(left_series.index)
+
+        left_na = left_series.isna()
+        right_na = right_series.isna()
+        both_na = left_na & right_na
+        eq_mask = pd.Series(False, index=left_series.index, dtype=bool)
+        eq_mask.loc[both_na] = True
+
+        left_num = pd.to_numeric(left_series, errors='coerce')
+        right_num = pd.to_numeric(right_series, errors='coerce')
+        numeric_mask = left_num.notna() & right_num.notna() & (~both_na)
+
+        max_abs_diff = None
+        if numeric_mask.any():
+            numeric_equal = np.isclose(
+                left_num.loc[numeric_mask].astype(float),
+                right_num.loc[numeric_mask].astype(float),
+                rtol=numeric_rtol,
+                atol=numeric_atol,
+                equal_nan=True,
+            )
+            eq_mask.loc[numeric_mask] = numeric_equal
+            diffs = (
+                left_num.loc[numeric_mask].astype(float)
+                - right_num.loc[numeric_mask].astype(float)
+            ).abs()
+            if len(diffs) > 0:
+                max_abs_diff = float(diffs.max())
+
+        text_mask = ~(both_na | numeric_mask)
+        if text_mask.any():
+            left_txt = left_series.loc[text_mask].map(lambda v: '' if _is_na(v) else str(v).strip())
+            right_txt = right_series.loc[text_mask].map(lambda v: '' if _is_na(v) else str(v).strip())
+            eq_mask.loc[text_mask] = left_txt == right_txt
+
+        return eq_mask, max_abs_diff
+
+    def _safe_float(value: Any) -> float:
+        coerced = pd.to_numeric(pd.Series([value]), errors='coerce').iloc[0]
+        if pd.isna(coerced):
+            return np.nan
+        return float(coerced)
+
+    def _split_reference_columns(
+        left_df_ref: pd.DataFrame,
+        right_df_ref: pd.DataFrame,
+        ref_cols: list[str],
+    ) -> tuple[list[str], list[str], dict[str, float]]:
+        numeric_cols: list[str] = []
+        categorical_cols: list[str] = []
+        numeric_ranges: dict[str, float] = {}
+
+        for col in ref_cols:
+            left_num = pd.to_numeric(left_df_ref[col], errors='coerce')
+            right_num = pd.to_numeric(right_df_ref[col], errors='coerce')
+            if left_num.notna().any() and right_num.notna().any():
+                numeric_cols.append(col)
+                combined = pd.concat([left_num, right_num], ignore_index=True)
+                try:
+                    range_value = float(combined.max() - combined.min())
+                except Exception:
+                    range_value = 0.0
+                numeric_ranges[col] = range_value if range_value > 0 else 1.0
+            else:
+                categorical_cols.append(col)
+
+        return numeric_cols, categorical_cols, numeric_ranges
+
+    def _reference_distance(
+        left_row: pd.Series,
+        right_row: pd.Series,
+        numeric_cols: list[str],
+        categorical_cols: list[str],
+        numeric_ranges: dict[str, float],
+    ) -> float:
+        terms: list[float] = []
+
+        for col in numeric_cols:
+            lv = _safe_float(left_row.get(col, pd.NA))
+            rv = _safe_float(right_row.get(col, pd.NA))
+            if np.isnan(lv) and np.isnan(rv):
+                terms.append(0.0)
+            elif np.isnan(lv) or np.isnan(rv):
+                terms.append(1.0)
+            else:
+                terms.append(abs(lv - rv) / float(numeric_ranges.get(col, 1.0)))
+
+        for col in categorical_cols:
+            lv = _normalise_scalar(left_row.get(col, pd.NA))
+            rv = _normalise_scalar(right_row.get(col, pd.NA))
+            terms.append(0.0 if lv == rv else 1.0)
+
+        if len(terms) == 0:
+            return 0.0
+        return float(sum(terms) / len(terms))
+
+    def _pair_rows_by_row_order(
+        left_df_ref: pd.DataFrame,
+        right_df_ref: pd.DataFrame,
+        ref_cols: list[str],
+    ) -> list[tuple[int, int, Optional[float]]]:
+        left_temp = left_df_ref.copy()
+        right_temp = right_df_ref.copy()
+
+        if len(ref_cols) > 0:
+            left_temp['__sort_key__'] = left_temp[ref_cols].astype(str).agg('|'.join, axis=1)
+            right_temp['__sort_key__'] = right_temp[ref_cols].astype(str).agg('|'.join, axis=1)
+        else:
+            left_temp['__sort_key__'] = left_temp['__input_key__'].map(repr)
+            right_temp['__sort_key__'] = right_temp['__input_key__'].map(repr)
+
+        left_order = left_temp.sort_values('__sort_key__').index.tolist()
+        right_order = right_temp.sort_values('__sort_key__').index.tolist()
+        pair_count = min(len(left_order), len(right_order))
+        return [(left_order[i], right_order[i], None) for i in range(pair_count)]
+
+    def _pair_rows_by_nearest_reference(
+        left_df_ref: pd.DataFrame,
+        right_df_ref: pd.DataFrame,
+        ref_cols: list[str],
+        max_distance: Optional[float],
+    ) -> list[tuple[int, int, Optional[float]]]:
+        if len(left_df_ref) == 0 or len(right_df_ref) == 0:
+            return []
+
+        numeric_cols, categorical_cols, numeric_ranges = _split_reference_columns(
+            left_df_ref=left_df_ref,
+            right_df_ref=right_df_ref,
+            ref_cols=ref_cols,
+        )
+
+        candidates: list[tuple[float, int, int]] = []
+        for left_idx in left_df_ref.index:
+            left_row = left_df_ref.loc[left_idx]
+            for right_idx in right_df_ref.index:
+                right_row = right_df_ref.loc[right_idx]
+                distance = _reference_distance(
+                    left_row=left_row,
+                    right_row=right_row,
+                    numeric_cols=numeric_cols,
+                    categorical_cols=categorical_cols,
+                    numeric_ranges=numeric_ranges,
+                )
+                if max_distance is None or distance <= float(max_distance):
+                    candidates.append((distance, left_idx, right_idx))
+
+        candidates.sort(key=lambda item: (item[0], item[1], item[2]))
+        pairs: list[tuple[int, int, Optional[float]]] = []
+        used_left: set[int] = set()
+        used_right: set[int] = set()
+
+        max_pairs = min(len(left_df_ref), len(right_df_ref))
+        for distance, left_idx, right_idx in candidates:
+            if left_idx in used_left or right_idx in used_right:
+                continue
+            pairs.append((left_idx, right_idx, float(distance)))
+            used_left.add(left_idx)
+            used_right.add(right_idx)
+            if len(pairs) >= max_pairs:
+                break
+
+        return pairs
+
+    def _evaluate_reference_pairs(
+        left_df_ref: pd.DataFrame,
+        right_df_ref: pd.DataFrame,
+        pairs: list[tuple[int, int, Optional[float]]],
+        output_cols: list[str],
+        input_cols: list[str],
+    ) -> dict:
+        evaluation = {
+            'pairs_compared': int(len(pairs)),
+            'column_mismatch_counts': {},
+            'max_abs_diff_by_column': {},
+            'mismatched_pairs_count': 0,
+            'mismatched_pairs_examples': [],
+            'all_pairs_equal': False,
+            'paired_left_indices': {left_idx for left_idx, _, _ in pairs},
+            'paired_right_indices': {right_idx for _, right_idx, _ in pairs},
+        }
+
+        if len(pairs) == 0:
+            return evaluation
+
+        left_pair_index = [left_idx for left_idx, _, _ in pairs]
+        right_pair_index = [right_idx for _, right_idx, _ in pairs]
+        left_pair_outputs = left_df_ref.loc[left_pair_index, output_cols].reset_index(drop=True)
+        right_pair_outputs = right_df_ref.loc[right_pair_index, output_cols].reset_index(drop=True)
+
+        pair_mismatch_mask = pd.Series(False, index=left_pair_outputs.index, dtype=bool)
+        for col in output_cols:
+            eq_mask, max_abs_diff = _compare_series_values(left_pair_outputs[col], right_pair_outputs[col])
+            mismatch_count = int((~eq_mask).sum())
+            evaluation['column_mismatch_counts'][col] = mismatch_count
+            if max_abs_diff is not None:
+                evaluation['max_abs_diff_by_column'][col] = max_abs_diff
+            pair_mismatch_mask = pair_mismatch_mask | (~eq_mask)
+
+        mismatched_positions = pair_mismatch_mask[pair_mismatch_mask].index.tolist()
+        evaluation['mismatched_pairs_count'] = int(len(mismatched_positions))
+
+        mismatch_examples = []
+        for pos in mismatched_positions[:max_examples]:
+            left_idx, right_idx, distance = pairs[pos]
+            row_example = {
+                'distance': distance,
+                'left_input': {
+                    col: left_df_ref.at[left_idx, col]
+                    for col in input_cols
+                    if col in left_df_ref.columns
+                },
+                'right_input': {
+                    col: right_df_ref.at[right_idx, col]
+                    for col in input_cols
+                    if col in right_df_ref.columns
+                },
+            }
+            for out_col in output_cols:
+                row_example[f'{out_col}_left'] = left_df_ref.at[left_idx, out_col]
+                row_example[f'{out_col}_right'] = right_df_ref.at[right_idx, out_col]
+            mismatch_examples.append(row_example)
+
+        evaluation['mismatched_pairs_examples'] = mismatch_examples
+        evaluation['all_pairs_equal'] = evaluation['mismatched_pairs_count'] == 0
+        return evaluation
+
+    left_df, left_info = _resolve_source(left)
+    right_df, right_info = _resolve_source(right)
+
+    if max_examples < 1:
+        max_examples = 1
+
+    valid_mismatch_strategies = {'strict', 'auto', 'nearest', 'row_order'}
+    if inputs_mismatch_strategy not in valid_mismatch_strategies:
+        raise ValueError(
+            f"inputs_mismatch_strategy must be one of {sorted(valid_mismatch_strategies)}."
+        )
+
+    valid_equal_modes = {'strict', 'relaxed'}
+    if equal_mode not in valid_equal_modes:
+        raise ValueError(f"equal_mode must be one of {sorted(valid_equal_modes)}.")
+
+    if ignore_columns is None:
+        ignore_columns = [
+            'simulation_output_csv_path',
+            'simulation_directory',
+            'output_dir',
+        ]
+    ignore_columns_set = {str(c) for c in ignore_columns}
+
+    left_work = left_df.drop(columns=[c for c in ignore_columns_set if c in left_df.columns], errors='ignore').copy()
+    right_work = right_df.drop(columns=[c for c in ignore_columns_set if c in right_df.columns], errors='ignore').copy()
+
+    left_columns = list(left_work.columns)
+    right_columns = list(right_work.columns)
+    common_columns = [c for c in left_columns if c in right_columns]
+    columns_only_left = [c for c in left_columns if c not in right_columns]
+    columns_only_right = [c for c in right_columns if c not in left_columns]
+
+    if len(common_columns) == 0:
+        raise ValueError('No common columns found between both sources after applying ignore_columns.')
+
+    left_attr_inputs = _as_attr_list(left_df.attrs.get('parameters_names'))
+    right_attr_inputs = _as_attr_list(right_df.attrs.get('parameters_names'))
+    left_attr_outputs = _as_attr_list(left_df.attrs.get('outputs_names'))
+    right_attr_outputs = _as_attr_list(right_df.attrs.get('outputs_names'))
+
+    if input_columns is None:
+        inferred_input_columns = list(dict.fromkeys(left_attr_inputs + right_attr_inputs))
+        for extra in ('epw', 'idf'):
+            if extra in common_columns and extra not in inferred_input_columns:
+                inferred_input_columns.append(extra)
+    else:
+        inferred_input_columns = [str(c) for c in input_columns]
+    input_columns_used = [
+        c for c in inferred_input_columns
+        if c in common_columns and c not in ignore_columns_set
+    ]
+
+    if output_columns is None:
+        inferred_output_columns = list(dict.fromkeys(left_attr_outputs + right_attr_outputs))
+    else:
+        inferred_output_columns = [str(c) for c in output_columns]
+    output_columns_used = [
+        c for c in inferred_output_columns
+        if c in common_columns and c not in ignore_columns_set
+    ]
+
+    if len(input_columns_used) == 0 and len(output_columns_used) == 0:
+        fallback_cols = [c for c in common_columns if c != 'pareto-optimal']
+        input_columns_used = fallback_cols
+
+    if len(input_columns_used) == 0:
+        input_columns_used = [
+            c for c in common_columns
+            if c not in output_columns_used and c != 'pareto-optimal'
+        ]
+    if len(input_columns_used) == 0:
+        input_columns_used = common_columns.copy()
+
+    if len(output_columns_used) == 0:
+        output_columns_used = [
+            c for c in common_columns
+            if c not in input_columns_used and c != 'pareto-optimal'
+        ]
+
+    left_input_keys = _build_key_tuples(left_work, input_columns_used)
+    right_input_keys = _build_key_tuples(right_work, input_columns_used)
+
+    left_input_key_set = set(left_input_keys)
+    right_input_key_set = set(right_input_keys)
+    missing_inputs_in_right = left_input_key_set - right_input_key_set
+    missing_inputs_in_left = right_input_key_set - left_input_key_set
+    same_input_set = len(missing_inputs_in_right) == 0 and len(missing_inputs_in_left) == 0
+
+    left_duplicate_input_rows = int(pd.Series(left_input_keys).duplicated(keep=False).sum())
+    right_duplicate_input_rows = int(pd.Series(right_input_keys).duplicated(keep=False).sum())
+
+    inputs_report = {
+        'columns_used': input_columns_used,
+        'left_rows': int(len(left_work)),
+        'right_rows': int(len(right_work)),
+        'left_unique_rows': int(len(left_input_key_set)),
+        'right_unique_rows': int(len(right_input_key_set)),
+        'same_input_set': same_input_set,
+        'missing_in_right_count': int(len(missing_inputs_in_right)),
+        'missing_in_left_count': int(len(missing_inputs_in_left)),
+        'missing_in_right_examples': _tuples_to_examples(missing_inputs_in_right, input_columns_used),
+        'missing_in_left_examples': _tuples_to_examples(missing_inputs_in_left, input_columns_used),
+        'duplicate_input_rows_left': left_duplicate_input_rows,
+        'duplicate_input_rows_right': right_duplicate_input_rows,
+    }
+
+    output_report = {
+        'columns_used': output_columns_used,
+        'compared': len(output_columns_used) > 0,
+        'comparison_mode': 'not_compared',
+        'rows_compared': 0,
+        'same_for_common_inputs': True,
+        'keys_missing_in_right_count': int(len(missing_inputs_in_right)),
+        'keys_missing_in_left_count': int(len(missing_inputs_in_left)),
+        'column_mismatch_counts': {},
+        'max_abs_diff_by_column': {},
+        'mismatched_rows_count': 0,
+        'mismatched_rows_examples': [],
+    }
+
+    common_input_keys = left_input_key_set & right_input_key_set
+    if len(output_columns_used) > 0:
+        if left_duplicate_input_rows == 0 and right_duplicate_input_rows == 0:
+            output_report['comparison_mode'] = 'unique_inputs'
+
+            left_outputs = left_work[output_columns_used].copy().reset_index(drop=True)
+            right_outputs = right_work[output_columns_used].copy().reset_index(drop=True)
+            left_outputs['__input_key__'] = left_input_keys
+            right_outputs['__input_key__'] = right_input_keys
+
+            left_outputs = left_outputs.drop_duplicates(subset=['__input_key__'], keep='first').set_index('__input_key__')
+            right_outputs = right_outputs.drop_duplicates(subset=['__input_key__'], keep='first').set_index('__input_key__')
+
+            ordered_common_keys = sorted(common_input_keys, key=lambda item: repr(item))
+            output_report['rows_compared'] = int(len(ordered_common_keys))
+
+            if len(ordered_common_keys) > 0:
+                left_aligned = left_outputs.loc[ordered_common_keys, output_columns_used]
+                right_aligned = right_outputs.loc[ordered_common_keys, output_columns_used]
+
+                row_mismatch_mask = pd.Series(False, index=left_aligned.index, dtype=bool)
+                for col in output_columns_used:
+                    eq_mask, max_abs_diff = _compare_series_values(left_aligned[col], right_aligned[col])
+                    mismatch_count = int((~eq_mask).sum())
+                    output_report['column_mismatch_counts'][col] = mismatch_count
+                    if max_abs_diff is not None:
+                        output_report['max_abs_diff_by_column'][col] = max_abs_diff
+                    row_mismatch_mask = row_mismatch_mask | (~eq_mask)
+
+                mismatched_keys = list(row_mismatch_mask[row_mismatch_mask].index)
+                output_report['mismatched_rows_count'] = int(len(mismatched_keys))
+
+                mismatch_examples = []
+                for key in mismatched_keys[:max_examples]:
+                    row = {
+                        col: key[idx] if idx < len(key) else None
+                        for (idx, col) in enumerate(input_columns_used)
+                    }
+                    for out_col in output_columns_used:
+                        row[f'{out_col}_left'] = left_aligned.at[key, out_col]
+                        row[f'{out_col}_right'] = right_aligned.at[key, out_col]
+                    mismatch_examples.append(row)
+                output_report['mismatched_rows_examples'] = mismatch_examples
+            output_report['same_for_common_inputs'] = (
+                len(missing_inputs_in_right) == 0
+                and len(missing_inputs_in_left) == 0
+                and output_report['mismatched_rows_count'] == 0
+            )
+        else:
+            output_report['comparison_mode'] = 'multiset_per_input'
+
+            left_output_tuples = _build_key_tuples(left_work, output_columns_used)
+            right_output_tuples = _build_key_tuples(right_work, output_columns_used)
+            left_grouped = defaultdict(Counter)
+            right_grouped = defaultdict(Counter)
+
+            for (key, out_tuple) in zip(left_input_keys, left_output_tuples):
+                left_grouped[key][out_tuple] += 1
+            for (key, out_tuple) in zip(right_input_keys, right_output_tuples):
+                right_grouped[key][out_tuple] += 1
+
+            mismatched_keys = []
+            for key in common_input_keys:
+                if left_grouped[key] != right_grouped[key]:
+                    mismatched_keys.append(key)
+
+            output_report['rows_compared'] = int(len(common_input_keys))
+            output_report['mismatched_rows_count'] = int(len(mismatched_keys))
+            output_report['same_for_common_inputs'] = (
+                len(missing_inputs_in_right) == 0
+                and len(missing_inputs_in_left) == 0
+                and len(mismatched_keys) == 0
+            )
+            output_report['mismatched_rows_examples'] = [
+                {
+                    **{
+                        col: key[idx] if idx < len(key) else None
+                        for (idx, col) in enumerate(input_columns_used)
+                    },
+                    'left_rows_for_input': int(sum(left_grouped[key].values())),
+                    'right_rows_for_input': int(sum(right_grouped[key].values())),
+                }
+                for key in sorted(mismatched_keys, key=lambda item: repr(item))[:max_examples]
+            ]
+
+    reference_report = {
+        'enabled': False,
+        'strategy_requested': inputs_mismatch_strategy,
+        'strategy_used': 'none',
+        'reference_columns_used': [],
+        'left_unmatched_rows': 0,
+        'right_unmatched_rows': 0,
+        'pairs_compared': 0,
+        'unpaired_left_count': 0,
+        'unpaired_right_count': 0,
+        'column_mismatch_counts': {},
+        'max_abs_diff_by_column': {},
+        'mismatched_pairs_count': 0,
+        'mismatched_pairs_examples': [],
+        'all_pairs_equal': None,
+        'notes': [],
+    }
+
+    if len(output_columns_used) == 0:
+        reference_report['notes'].append('Fallback matching skipped because no output columns are available.')
+    elif same_input_set:
+        reference_report['notes'].append('Fallback matching not needed because input sets are identical.')
+    elif inputs_mismatch_strategy == 'strict':
+        reference_report['notes'].append("Fallback matching disabled by inputs_mismatch_strategy='strict'.")
+    else:
+        left_with_key = left_work.copy()
+        right_with_key = right_work.copy()
+        left_with_key['__input_key__'] = left_input_keys
+        right_with_key['__input_key__'] = right_input_keys
+
+        left_unmatched = left_with_key[left_with_key['__input_key__'].isin(missing_inputs_in_right)].copy()
+        right_unmatched = right_with_key[right_with_key['__input_key__'].isin(missing_inputs_in_left)].copy()
+
+        reference_report['enabled'] = True
+        reference_report['left_unmatched_rows'] = int(len(left_unmatched))
+        reference_report['right_unmatched_rows'] = int(len(right_unmatched))
+
+        requested_reference_columns = [str(c) for c in (reference_columns or [])]
+        if len(requested_reference_columns) == 0:
+            requested_reference_columns = [
+                c for c in input_columns_used
+                if str(c).strip().lower() not in {'idf', 'epw'}
+            ]
+            if len(requested_reference_columns) == 0:
+                requested_reference_columns = list(input_columns_used)
+
+        reference_columns_used = [
+            c for c in requested_reference_columns
+            if c in left_unmatched.columns and c in right_unmatched.columns
+        ]
+        reference_report['reference_columns_used'] = reference_columns_used
+
+        strategy_candidates: list[str] = []
+        if inputs_mismatch_strategy == 'auto':
+            if len(reference_columns_used) > 0:
+                strategy_candidates.append('nearest')
+            strategy_candidates.append('row_order')
+        elif inputs_mismatch_strategy == 'nearest':
+            if len(reference_columns_used) == 0:
+                strategy_candidates.append('row_order')
+                reference_report['notes'].append(
+                    'No usable reference columns found for nearest matching; fallback to row_order.'
+                )
+            else:
+                strategy_candidates.append('nearest')
+        else:
+            strategy_candidates.append('row_order')
+
+        candidate_reports = []
+        for candidate_strategy in strategy_candidates:
+            if candidate_strategy == 'nearest':
+                candidate_pairs = _pair_rows_by_nearest_reference(
+                    left_df_ref=left_unmatched,
+                    right_df_ref=right_unmatched,
+                    ref_cols=reference_columns_used,
+                    max_distance=reference_max_distance,
+                )
+                if len(candidate_pairs) == 0 and len(left_unmatched) > 0 and len(right_unmatched) > 0:
+                    reference_report['notes'].append(
+                        'Nearest matching produced zero pairs for one candidate evaluation.'
+                    )
+            else:
+                candidate_pairs = _pair_rows_by_row_order(
+                    left_df_ref=left_unmatched,
+                    right_df_ref=right_unmatched,
+                    ref_cols=reference_columns_used,
+                )
+
+            candidate_eval = _evaluate_reference_pairs(
+                left_df_ref=left_unmatched,
+                right_df_ref=right_unmatched,
+                pairs=candidate_pairs,
+                output_cols=output_columns_used,
+                input_cols=input_columns_used,
+            )
+            unpaired_left = int(max(0, len(left_unmatched) - len(candidate_eval['paired_left_indices'])))
+            unpaired_right = int(max(0, len(right_unmatched) - len(candidate_eval['paired_right_indices'])))
+            candidate_reports.append(
+                {
+                    'strategy': candidate_strategy,
+                    'pairs': candidate_pairs,
+                    'evaluation': candidate_eval,
+                    'unpaired_left': unpaired_left,
+                    'unpaired_right': unpaired_right,
+                }
+            )
+
+        if len(candidate_reports) == 0:
+            reference_report['all_pairs_equal'] = False
+            reference_report['notes'].append('No fallback reference strategy could be evaluated.')
+        else:
+            # Pick the best candidate by mismatch quality, then coverage.
+            best = min(
+                candidate_reports,
+                key=lambda item: (
+                    item['evaluation']['mismatched_pairs_count'],
+                    item['unpaired_left'] + item['unpaired_right'],
+                    -item['evaluation']['pairs_compared'],
+                ),
+            )
+
+            strategy_used = best['strategy']
+            if inputs_mismatch_strategy == 'auto' and len(candidate_reports) > 1:
+                reference_report['notes'].append(
+                    f"Auto strategy selected '{strategy_used}' after evaluating fallback candidates."
+                )
+
+            reference_report['strategy_used'] = strategy_used
+            reference_report['pairs_compared'] = int(best['evaluation']['pairs_compared'])
+            reference_report['column_mismatch_counts'] = dict(best['evaluation']['column_mismatch_counts'])
+            reference_report['max_abs_diff_by_column'] = dict(best['evaluation']['max_abs_diff_by_column'])
+            reference_report['mismatched_pairs_count'] = int(best['evaluation']['mismatched_pairs_count'])
+            reference_report['mismatched_pairs_examples'] = list(best['evaluation']['mismatched_pairs_examples'])
+            reference_report['unpaired_left_count'] = int(best['unpaired_left'])
+            reference_report['unpaired_right_count'] = int(best['unpaired_right'])
+            reference_report['all_pairs_equal'] = (
+                best['evaluation']['all_pairs_equal']
+                and best['unpaired_left'] == 0
+                and best['unpaired_right'] == 0
+            )
+
+            if reference_report['pairs_compared'] == 0:
+                reference_report['notes'].append('No fallback reference pairs could be built.')
+
+    attrs_report = {
+        'compared': bool(compare_attrs),
+        'equal': True,
+        'keys_only_left': [],
+        'keys_only_right': [],
+        'different_values_count': 0,
+        'different_values_examples': [],
+    }
+    if compare_attrs:
+        if ignore_attr_keys is None:
+            ignore_attr_keys = ['idf_backup_path']
+        ignore_attr_keys_set = {str(k) for k in ignore_attr_keys}
+
+        left_attrs = {
+            str(k): v
+            for (k, v) in left_df.attrs.items()
+            if str(k) not in ignore_attr_keys_set
+        }
+        right_attrs = {
+            str(k): v
+            for (k, v) in right_df.attrs.items()
+            if str(k) not in ignore_attr_keys_set
+        }
+
+        left_attr_keys = set(left_attrs.keys())
+        right_attr_keys = set(right_attrs.keys())
+        keys_only_left = sorted(left_attr_keys - right_attr_keys)
+        keys_only_right = sorted(right_attr_keys - left_attr_keys)
+
+        different_values = []
+        for key in sorted(left_attr_keys & right_attr_keys):
+            left_value = _normalise_attr_value(left_attrs[key])
+            right_value = _normalise_attr_value(right_attrs[key])
+            if left_value != right_value:
+                different_values.append({
+                    'key': key,
+                    'left': left_value,
+                    'right': right_value,
+                })
+
+        attrs_report['keys_only_left'] = keys_only_left[:max_examples]
+        attrs_report['keys_only_right'] = keys_only_right[:max_examples]
+        attrs_report['different_values_count'] = int(len(different_values))
+        attrs_report['different_values_examples'] = different_values[:max_examples]
+        attrs_report['equal'] = (
+            len(keys_only_left) == 0
+            and len(keys_only_right) == 0
+            and len(different_values) == 0
+        )
+
+    messages = []
+    if len(columns_only_left) > 0 or len(columns_only_right) > 0:
+        messages.append(
+            'Schemas differ between sources (see schema.columns_only_left / columns_only_right).'
+        )
+    if len(output_columns_used) == 0:
+        messages.append(
+            'No output columns were inferred; only input-set consistency was checked.'
+        )
+    if left_duplicate_input_rows > 0 or right_duplicate_input_rows > 0:
+        messages.append(
+            'Duplicated input rows detected; output comparison used multiset-per-input mode.'
+        )
+
+    if reference_report.get('enabled'):
+        messages.append(
+            f"Fallback reference comparison executed using strategy '{reference_report.get('strategy_used')}'."
+        )
+
+    equal_strict = bool(
+        same_input_set
+        and output_report['same_for_common_inputs']
+        and (attrs_report['equal'] if compare_attrs else True)
+    )
+    equal_relaxed = bool(
+        output_report['mismatched_rows_count'] == 0
+        and (
+            same_input_set
+            or (
+                reference_report.get('enabled')
+                and reference_report.get('all_pairs_equal') is True
+            )
+        )
+        and (attrs_report['equal'] if compare_attrs else True)
+    )
+    equal = equal_relaxed if equal_mode == 'relaxed' else equal_strict
+
+    return {
+        'equal': equal,
+        'equal_mode': equal_mode,
+        'equal_strict': equal_strict,
+        'equal_relaxed': equal_relaxed,
+        'left': {
+            'source_type': left_info['source_type'],
+            'path': left_info['path'],
+            'run_type': left_info['run_type'],
+            'rows': int(len(left_df)),
+        },
+        'right': {
+            'source_type': right_info['source_type'],
+            'path': right_info['path'],
+            'run_type': right_info['run_type'],
+            'rows': int(len(right_df)),
+        },
+        'schema': {
+            'left_columns_count': int(len(left_columns)),
+            'right_columns_count': int(len(right_columns)),
+            'common_columns_count': int(len(common_columns)),
+            'columns_only_left': columns_only_left,
+            'columns_only_right': columns_only_right,
+            'same_columns': len(columns_only_left) == 0 and len(columns_only_right) == 0,
+        },
+        'inputs': inputs_report,
+        'outputs': output_report,
+        'reference': reference_report,
+        'attrs': attrs_report,
+        'messages': messages,
+        'settings': {
+            'inputs_mismatch_strategy': inputs_mismatch_strategy,
+            'reference_columns': [str(c) for c in (reference_columns or [])],
+            'reference_max_distance': reference_max_distance,
+            'equal_mode': equal_mode,
+            'numeric_atol': numeric_atol,
+            'numeric_rtol': numeric_rtol,
+            'max_examples': max_examples,
+            'prefer_pickle_from_instances': prefer_pickle_from_instances,
+            'ignore_columns': sorted(ignore_columns_set),
+            'compare_attrs': compare_attrs,
+        },
+    }
+
+
+def _collect_pickle_files(
+    pickle_sources: Optional[list[Union[str, os.PathLike]]] = None,
+    pickle_paths: Optional[list[Union[str, os.PathLike]]] = None,
+    directory: Union[str, os.PathLike, None] = None,
+    glob_pattern: str = '*.pkl',
+    recursive: bool = False,
+) -> list[str]:
+    """Collect pickle files from files, directories and/or glob patterns.
+    
+    Parameters
+    ----------
+    pickle_sources : Any
+        Argument used by `_collect_pickle_files`.
+    pickle_paths : Any
+        Path-like value used by this routine.
+    directory : Any
+        Path-like value used by this routine.
+    glob_pattern : Any
+        Argument used by `_collect_pickle_files`.
+    recursive : Any
+        Argument used by `_collect_pickle_files`.
+    
+    Usage
+    -----
+    Use `_collect_pickle_files` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = _collect_pickle_files(pickle_sources=..., pickle_paths=..., directory=..., ...)
+    """
+    collected: list[str] = []
+    valid_exts = {'.pkl', '.pickle'}
+
+    def _add_pickle_file(file_path: str):
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext not in valid_exts:
+            raise ValueError(f'File is not a pickle (.pkl/.pickle): {file_path}')
+        collected.append(file_path)
+
+    def _collect_from_directory(base_dir: str):
+        if not os.path.isdir(base_dir):
+            raise ValueError(f'Directory not found: {base_dir}')
+        pattern = os.path.join(base_dir, '**', glob_pattern) if recursive else os.path.join(base_dir, glob_pattern)
+        discovered = [
+            os.path.abspath(path)
+            for path in pyglob.glob(pattern, recursive=recursive)
+            if os.path.isfile(path) and os.path.splitext(path)[1].lower() in valid_exts
+        ]
+        collected.extend(discovered)
+
+    for raw_path in (pickle_paths or []):
+        file_path = os.path.abspath(os.fspath(raw_path))
+        if not os.path.isfile(file_path):
+            raise ValueError(f'Pickle file not found: {file_path}')
+        _add_pickle_file(file_path)
+
+    for source in (pickle_sources or []):
+        source_text = os.fspath(source)
+        source_abs = os.path.abspath(source_text)
+
+        if os.path.isfile(source_abs):
+            _add_pickle_file(source_abs)
+            continue
+
+        if os.path.isdir(source_abs):
+            _collect_from_directory(source_abs)
+            continue
+
+        # Treat unknown/non-existing entries as glob patterns.
+        matches = pyglob.glob(source_text, recursive=recursive)
+        if len(matches) == 0:
+            raise ValueError(
+                f'Pickle source did not match any files: {source_text}. '
+                'Use an existing file, directory, or a valid glob pattern.'
+            )
+        for match in matches:
+            match_abs = os.path.abspath(match)
+            if os.path.isfile(match_abs):
+                ext = os.path.splitext(match_abs)[1].lower()
+                if ext in valid_exts:
+                    collected.append(match_abs)
+
+    if directory is not None:
+        base_dir = os.path.abspath(os.fspath(directory))
+        _collect_from_directory(base_dir)
+
+    # Deduplicate while preserving order.
+    deduped = list(dict.fromkeys(collected))
+    if len(deduped) == 0:
+        raise ValueError(
+            'No pickle files were found. Provide valid pickle_sources/pickle_paths and/or directory.'
+        )
+    return deduped
+
+
+def _order_pickle_files(
+    pickle_files: list[str],
+    order_by: Literal['mtime', 'name'] = 'mtime',
+    descending: bool = True,
+) -> list[str]:
+    """Sort pickle files with deterministic tie-breaking.
+    
+    Parameters
+    ----------
+    pickle_files : Any
+        Argument used by `_order_pickle_files`.
+    order_by : Any
+        Argument used by `_order_pickle_files`.
+    descending : Any
+        Argument used by `_order_pickle_files`.
+    
+    Usage
+    -----
+    Use `_order_pickle_files` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = _order_pickle_files(pickle_files=..., order_by=..., descending=...)
+    """
+    if order_by == 'mtime':
+        return sorted(
+            pickle_files,
+            key=lambda path: (os.path.getmtime(path), os.path.basename(path).lower()),
+            reverse=descending,
+        )
+    if order_by == 'name':
+        return sorted(
+            pickle_files,
+            key=lambda path: os.path.basename(path).lower(),
+            reverse=descending,
+        )
+    raise ValueError("order_by must be either 'mtime' or 'name'.")
+
+
+def _resolve_reference_pickle(
+    ordered_pickles: list[str],
+    reference: Optional[Union[int, str, os.PathLike]] = None,
+) -> tuple[str, int]:
+    """Resolve a reference pickle from index, path, or basename.
+    
+    Parameters
+    ----------
+    ordered_pickles : Any
+        Argument used by `_resolve_reference_pickle`.
+    
+    Usage
+    -----
+    Use `_resolve_reference_pickle` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = _resolve_reference_pickle(ordered_pickles=..., reference=...)
+    """
+    if len(ordered_pickles) == 0:
+        raise ValueError('No pickle files available to resolve a reference.')
+
+    if reference is None:
+        return ordered_pickles[0], 0
+
+    if isinstance(reference, int):
+        if reference < 0 or reference >= len(ordered_pickles):
+            raise IndexError(
+                f'reference index out of range: {reference}. Valid range: 0..{len(ordered_pickles)-1}'
+            )
+        return ordered_pickles[reference], reference
+
+    reference_text = str(reference).strip()
+    reference_abs = os.path.abspath(os.fspath(reference))
+    normalized_ref = os.path.normcase(reference_abs)
+
+    for idx, file_path in enumerate(ordered_pickles):
+        if os.path.normcase(file_path) == normalized_ref:
+            return file_path, idx
+
+    basename = os.path.basename(reference_text).lower()
+    basename_matches = [
+        (idx, file_path)
+        for idx, file_path in enumerate(ordered_pickles)
+        if os.path.basename(file_path).lower() == basename
+    ]
+    if len(basename_matches) == 1:
+        idx, file_path = basename_matches[0]
+        return file_path, idx
+    if len(basename_matches) > 1:
+        raise ValueError(
+            f"reference '{reference}' is ambiguous by basename. Use full path or index."
+        )
+
+    raise ValueError(
+        f"reference '{reference}' was not found among selected pickle files."
+    )
+
+
+def compare_latest_pickles_in_folders(
+    left_dir: Union[str, os.PathLike],
+    right_dir: Union[str, os.PathLike],
+    glob_pattern: str = '*.pkl',
+    recursive: bool = False,
+    input_columns: Optional[list[str]] = None,
+    output_columns: Optional[list[str]] = None,
+    ignore_columns: Optional[list[str]] = None,
+    compare_attrs: bool = True,
+    ignore_attr_keys: Optional[list[str]] = None,
+    inputs_mismatch_strategy: Literal['strict', 'auto', 'nearest', 'row_order'] = 'auto',
+    reference_columns: Optional[list[str]] = None,
+    reference_max_distance: Optional[float] = None,
+    equal_mode: Literal['strict', 'relaxed'] = 'strict',
+    numeric_atol: float = 1e-6,
+    numeric_rtol: float = 1e-5,
+    max_examples: int = 5,
+) -> dict:
+    """Compare the newest pickle in each directory.
+    
+    This is useful when each simulation batch saves timestamped pickle files and you
+    want a quick comparison between the latest parametric/optimisation run outputs.
+    
+    Flexible mismatch handling is delegated to :func:`compare_simulation_instances`
+    through ``inputs_mismatch_strategy``, ``reference_columns`` and ``equal_mode``.
+    
+    Parameters
+    ----------
+    left_dir : Any
+        Path-like value used by this routine.
+    right_dir : Any
+        Path-like value used by this routine.
+    glob_pattern : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    recursive : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    input_columns : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    output_columns : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    ignore_columns : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    compare_attrs : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    ignore_attr_keys : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    reference_max_distance : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    numeric_atol : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    numeric_rtol : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    max_examples : Any
+        Argument used by `compare_latest_pickles_in_folders`.
+    
+    Usage
+    -----
+    Use `compare_latest_pickles_in_folders` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = compare_latest_pickles_in_folders(left_dir=..., right_dir=..., glob_pattern=..., ...)
+    """
+    left_pickles = _collect_pickle_files(directory=left_dir, glob_pattern=glob_pattern, recursive=recursive)
+    right_pickles = _collect_pickle_files(directory=right_dir, glob_pattern=glob_pattern, recursive=recursive)
+
+    left_latest = max(left_pickles, key=lambda path: os.path.getmtime(path))
+    right_latest = max(right_pickles, key=lambda path: os.path.getmtime(path))
+
+    comparison = compare_simulation_instances(
+        left=left_latest,
+        right=right_latest,
+        input_columns=input_columns,
+        output_columns=output_columns,
+        ignore_columns=ignore_columns,
+        compare_attrs=compare_attrs,
+        ignore_attr_keys=ignore_attr_keys,
+        inputs_mismatch_strategy=inputs_mismatch_strategy,
+        reference_columns=reference_columns,
+        reference_max_distance=reference_max_distance,
+        equal_mode=equal_mode,
+        numeric_atol=numeric_atol,
+        numeric_rtol=numeric_rtol,
+        max_examples=max_examples,
+    )
+
+    return {
+        'equal': bool(comparison.get('equal', False)),
+        'left_dir': os.path.abspath(os.fspath(left_dir)),
+        'right_dir': os.path.abspath(os.fspath(right_dir)),
+        'glob_pattern': glob_pattern,
+        'recursive': recursive,
+        'left_pickles_found': int(len(left_pickles)),
+        'right_pickles_found': int(len(right_pickles)),
+        'left_latest_pickle': left_latest,
+        'right_latest_pickle': right_latest,
+        'comparison': comparison,
+    }
+
+
+def compare_multiple_pickles_with_reference(
+    pickle_sources: Optional[list[Union[str, os.PathLike]]] = None,
+    pickle_paths: Optional[list[Union[str, os.PathLike]]] = None,
+    pickle_list: Optional[list[Union[str, os.PathLike]]] = None,
+    directory: Union[str, os.PathLike, None] = None,
+    glob_pattern: str = '*.pkl',
+    recursive: bool = False,
+    reference: Optional[Union[int, str, os.PathLike]] = None,
+    order_by: Literal['mtime', 'name'] = 'mtime',
+    descending: bool = True,
+    input_columns: Optional[list[str]] = None,
+    output_columns: Optional[list[str]] = None,
+    ignore_columns: Optional[list[str]] = None,
+    compare_attrs: bool = True,
+    ignore_attr_keys: Optional[list[str]] = None,
+    inputs_mismatch_strategy: Literal['strict', 'auto', 'nearest', 'row_order'] = 'auto',
+    reference_columns: Optional[list[str]] = None,
+    reference_max_distance: Optional[float] = None,
+    equal_mode: Literal['strict', 'relaxed'] = 'strict',
+    numeric_atol: float = 1e-6,
+    numeric_rtol: float = 1e-5,
+    max_examples: int = 5,
+) -> dict:
+    """Compare multiple pickle files against one reference pickle.
+    
+    ``reference`` can be:
+    - ``None``: first file in ordered list (default)
+    - ``int``: index in ordered list
+    - ``str/path``: absolute path or basename present in the ordered list
+    
+    File selection options:
+    - ``pickle_sources``: mixed list of files, directories, and/or glob patterns.
+    - ``pickle_paths`` / ``pickle_list``: explicit file list (aliases).
+    - ``directory`` + ``glob_pattern``: directory scan.
+    
+    Flexible mismatch/reference behaviour can be controlled with
+    ``inputs_mismatch_strategy``, ``reference_columns``, ``reference_max_distance``
+    and ``equal_mode``.
+    
+    Parameters
+    ----------
+    recursive : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    order_by : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    descending : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    input_columns : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    output_columns : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    ignore_columns : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    compare_attrs : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    ignore_attr_keys : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    numeric_atol : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    numeric_rtol : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    max_examples : Any
+        Argument used by `compare_multiple_pickles_with_reference`.
+    
+    Usage
+    -----
+    Use `compare_multiple_pickles_with_reference` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    result = compare_multiple_pickles_with_reference(pickle_sources=..., pickle_paths=..., pickle_list=..., ...)
+    """
+    explicit_pickle_paths = list(pickle_paths or []) + list(pickle_list or [])
+    selected_pickles = _collect_pickle_files(
+        pickle_sources=pickle_sources,
+        pickle_paths=explicit_pickle_paths,
+        directory=directory,
+        glob_pattern=glob_pattern,
+        recursive=recursive,
+    )
+    ordered_pickles = _order_pickle_files(
+        pickle_files=selected_pickles,
+        order_by=order_by,
+        descending=descending,
+    )
+
+    reference_pickle, reference_index = _resolve_reference_pickle(
+        ordered_pickles=ordered_pickles,
+        reference=reference,
+    )
+
+    comparisons = []
+    for idx, candidate_pickle in enumerate(ordered_pickles):
+        if idx == reference_index:
+            continue
+        comparison = compare_simulation_instances(
+            left=reference_pickle,
+            right=candidate_pickle,
+            input_columns=input_columns,
+            output_columns=output_columns,
+            ignore_columns=ignore_columns,
+            compare_attrs=compare_attrs,
+            ignore_attr_keys=ignore_attr_keys,
+            inputs_mismatch_strategy=inputs_mismatch_strategy,
+            reference_columns=reference_columns,
+            reference_max_distance=reference_max_distance,
+            equal_mode=equal_mode,
+            numeric_atol=numeric_atol,
+            numeric_rtol=numeric_rtol,
+            max_examples=max_examples,
+        )
+        comparisons.append(
+            {
+                'index': idx,
+                'pickle': candidate_pickle,
+                'equal': bool(comparison.get('equal', False)),
+                'comparison': comparison,
+            }
+        )
+
+    equal_count = int(sum(1 for item in comparisons if item['equal']))
+    different_count = int(len(comparisons) - equal_count)
+
+    return {
+        'reference_pickle': reference_pickle,
+        'reference_index': int(reference_index),
+        'ordered_pickles': ordered_pickles,
+        'total_pickles': int(len(ordered_pickles)),
+        'compared_pickles_count': int(len(comparisons)),
+        'equal_count': equal_count,
+        'different_count': different_count,
+        'equal_all': different_count == 0,
+        'order_by': order_by,
+        'descending': descending,
+        'comparisons': comparisons,
+    }
+
+
+def preflight_report(
+    simulation: Any,
+    mode: Optional[Literal['auto', 'parametric', 'optimisation']] = 'auto',
+    **kwargs,
+) -> dict:
+    """Convenience wrapper for interactive preflight diagnostics.
+    
+    Example::
+    
+        report = preflight_report(sim)  # auto mode
+        print(report['recommendation'])
+    
+    Parameters
+    ----------
+    simulation : Any
+        Argument used by `preflight_report`.
+    kwargs : Any
+        Additional keyword arguments forwarded internally.
+    
+    Usage
+    -----
+    Use `preflight_report` within ACCIM parametric and optimisation workflows.
+    """
+    if simulation is None:
+        raise TypeError('preflight_report expects a valid simulation instance.')
+
+    mode_value = str(mode or 'auto').strip().lower()
+    if mode_value not in {'auto', 'parametric', 'optimisation'}:
+        raise ValueError("Argument 'mode' must be one of: 'auto', 'parametric', 'optimisation'.")
+
+    supports_parametric = hasattr(simulation, 'preflight_report_parametric')
+    supports_optimisation = hasattr(simulation, 'preflight_report_optimisation')
+
+    if mode_value == 'parametric':
+        if not supports_parametric:
+            raise TypeError(
+                "preflight_report(mode='parametric') expects an instance that "
+                "implements 'preflight_report_parametric(...)'."
+            )
+        return simulation.preflight_report_parametric(**kwargs)
+
+    if mode_value == 'optimisation':
+        if not supports_optimisation:
+            raise TypeError(
+                "preflight_report(mode='optimisation') expects an instance that "
+                "implements 'preflight_report_optimisation(...)'."
+            )
+        return simulation.preflight_report_optimisation(**kwargs)
+
+    simulation_class_name = type(simulation).__name__.strip().lower()
+    if supports_optimisation and ('optim' in simulation_class_name):
+        return simulation.preflight_report_optimisation(**kwargs)
+    if supports_parametric:
+        return simulation.preflight_report_parametric(**kwargs)
+    if supports_optimisation:
+        return simulation.preflight_report_optimisation(**kwargs)
+
+    raise TypeError(
+        "preflight_report expects a simulation instance that implements "
+        "'preflight_report_parametric(...)' or 'preflight_report_optimisation(...)'."
+    )
+
+
+class SimulationComparisonSession:
+    """Stateful helper to compare simulation outputs and inspect reports via attributes.
+    
+    This class wraps the functional API and stores the latest comparison artifacts
+    (inputs, outputs, reference matching, attrs and full report) for quick inspection.
+    
+    Usage
+    -----
+    Use `SimulationComparisonSession` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    obj = SimulationComparisonSession()
+    """
+
+    def __init__(
+        self,
+        input_columns: Optional[list[str]] = None,
+        output_columns: Optional[list[str]] = None,
+        ignore_columns: Optional[list[str]] = None,
+        compare_attrs: bool = True,
+        ignore_attr_keys: Optional[list[str]] = None,
+        inputs_mismatch_strategy: Literal['strict', 'auto', 'nearest', 'row_order'] = 'auto',
+        reference_columns: Optional[list[str]] = None,
+        reference_max_distance: Optional[float] = None,
+        equal_mode: Literal['strict', 'relaxed'] = 'strict',
+        numeric_atol: float = 1e-6,
+        numeric_rtol: float = 1e-5,
+        max_examples: int = 5,
+    ):
+        """Initialize a stateful comparison session with reusable defaults.
+
+        Parameters
+        ----------
+        input_columns : Optional[list[str]]
+            Columns treated as simulation inputs for equality checks.
+        output_columns : Optional[list[str]]
+            Columns treated as simulation outputs for comparison.
+        ignore_columns : Optional[list[str]]
+            Columns excluded from comparison operations.
+        compare_attrs : bool
+            Whether to compare dataframe/object attrs in reports.
+        ignore_attr_keys : Optional[list[str]]
+            Attr keys excluded when `compare_attrs` is enabled.
+        inputs_mismatch_strategy : Literal['strict', 'auto', 'nearest', 'row_order']
+            Strategy used when input rows are not aligned.
+        reference_columns : Optional[list[str]]
+            Optional columns used for row matching and diagnostics.
+        reference_max_distance : Optional[float]
+            Optional threshold for nearest-reference matching.
+        equal_mode : Literal['strict', 'relaxed']
+            Equality policy for comparison checks.
+        numeric_atol : float
+            Absolute tolerance for numeric relaxed comparisons.
+        numeric_rtol : float
+            Relative tolerance for numeric relaxed comparisons.
+        max_examples : int
+            Maximum mismatch examples stored in reports.
+
+        Returns
+        -------
+        None
+            Initializes session state and empty history containers.
+
+        Usage
+        -----
+        Create one session and reuse it across multiple comparisons.
+
+        Examples
+        --------
+        session = SimulationComparisonSession(equal_mode='relaxed')
         """
-        Creates a class instance to run parametric simulations and optimisation.
+        self.input_columns = input_columns
+        self.output_columns = output_columns
+        self.ignore_columns = ignore_columns
+        self.compare_attrs = compare_attrs
+        self.ignore_attr_keys = ignore_attr_keys
+        self.inputs_mismatch_strategy = inputs_mismatch_strategy
+        self.reference_columns = reference_columns
+        self.reference_max_distance = reference_max_distance
+        self.equal_mode = equal_mode
+        self.numeric_atol = numeric_atol
+        self.numeric_rtol = numeric_rtol
+        self.max_examples = max_examples
 
-        :param building: the besos.IDF_class returned from method get_building(idfpath)
-        :param parameters_type: to specify the type of parameters that should be used:
-            can be 'accim custom model', 'accim predefined model', or 'apmv setpoints'
-        :param output_type: to specify the outputs that are going to be requested;
-            only used in accim predefined and custom models
-        :param output_keep_existing: to keep or remove existing outputs;
-            only used in accim predefined and custom models
-        :param output_freqs: to specify the frequency or frequencies for the outputs; must be a list containing any of
-            the following strings: 'timestep', 'hourly', 'daily', 'monthly', 'runperiod'
-        :param ScriptType: to specify the ScriptType; must one of the following strings: 'vrf_mm', 'vrf_ac', 'ex_ac';
-            for more information, please refer to addAccis()
-        :param SupplyAirTempInputMethod: in case 'vrf_mm' or 'vrf_ac' ScriptTypes are used, specifies the supply air
-            temperature input method for the VRF systems
-        :param make_averages: to make average outputs of hour-counting and operative temperature related outputs
+        self.last_operation: Optional[str] = None
+        self.last_report: Optional[dict] = None
+        self.last_comparison: Optional[dict] = None
+        self.last_schema: Optional[dict] = None
+        self.last_inputs: Optional[dict] = None
+        self.last_outputs: Optional[dict] = None
+        self.last_reference: Optional[dict] = None
+        self.last_attrs: Optional[dict] = None
+        self.last_report_path: Optional[str] = None
+        self.last_left_source: Optional[str] = None
+        self.last_right_source: Optional[str] = None
+        self._last_left_input: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None
+        self._last_right_input: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None
+        self.last_output_changes: Optional[dict] = None
+        self.last_output_changes_by_case: Optional[pd.DataFrame] = None
+        self.last_output_changes_by_categories: Optional[pd.DataFrame] = None
+        self.history: list[dict] = []
+
+    def _effective_kwargs(self, **overrides) -> dict:
+        """Merge session defaults with call-time overrides.
+
+        Parameters
+        ----------
+        **overrides : dict
+            Optional keyword overrides for comparison settings.
+
+        Returns
+        -------
+        dict
+            Effective keyword arguments sent to comparison helpers.
+
+        Usage
+        -----
+        Internal helper used by public comparison methods.
+
+        Examples
+        --------
+        kwargs = self._effective_kwargs(equal_mode='relaxed')
+        """
+        kwargs = {
+            'input_columns': self.input_columns,
+            'output_columns': self.output_columns,
+            'ignore_columns': self.ignore_columns,
+            'compare_attrs': self.compare_attrs,
+            'ignore_attr_keys': self.ignore_attr_keys,
+            'inputs_mismatch_strategy': self.inputs_mismatch_strategy,
+            'reference_columns': self.reference_columns,
+            'reference_max_distance': self.reference_max_distance,
+            'equal_mode': self.equal_mode,
+            'numeric_atol': self.numeric_atol,
+            'numeric_rtol': self.numeric_rtol,
+            'max_examples': self.max_examples,
+        }
+        for key, value in overrides.items():
+            if value is not None:
+                kwargs[key] = value
+        return kwargs
+
+    def _capture(self, operation: str, report: dict) -> dict:
+        """Store report artifacts in session state and history.
+
+        Parameters
+        ----------
+        operation : str
+            Operation name associated with the report.
+        report : dict
+            Report payload returned by comparison helpers.
+
+        Returns
+        -------
+        dict
+            Same report dictionary after session attributes are updated.
+
+        Usage
+        -----
+        Internal helper called after each comparison operation.
+
+        Examples
+        --------
+        captured = self._capture('compare', report)
+        """
+        self.last_operation = operation
+        self.last_report = report
+        self.last_report_path = None
+        self.last_output_changes = None
+        self.last_output_changes_by_case = None
+        self.last_output_changes_by_categories = None
+
+        comparison = report.get('comparison') if isinstance(report, dict) else None
+        if comparison is None and isinstance(report, dict) and 'equal' in report and 'inputs' in report:
+            comparison = report
+
+        if isinstance(comparison, dict):
+            self.last_comparison = comparison
+            self.last_schema = comparison.get('schema')
+            self.last_inputs = comparison.get('inputs')
+            self.last_outputs = comparison.get('outputs')
+            self.last_reference = comparison.get('reference')
+            self.last_attrs = comparison.get('attrs')
+            if isinstance(comparison.get('left'), dict):
+                self.last_left_source = comparison['left'].get('path')
+            if isinstance(comparison.get('right'), dict):
+                self.last_right_source = comparison['right'].get('path')
+        else:
+            self.last_comparison = None
+            self.last_schema = None
+            self.last_inputs = None
+            self.last_outputs = None
+            self.last_reference = None
+            self.last_attrs = None
+
+        self.history.append(
+            {
+                'operation': operation,
+                'equal': bool(comparison.get('equal')) if isinstance(comparison, dict) else None,
+                'report': report,
+            }
+        )
+        return report
+
+    def compare(
+        self,
+        left: Union[Any, pd.DataFrame, str, os.PathLike],
+        right: Union[Any, pd.DataFrame, str, os.PathLike],
+        prefer_pickle_from_instances: bool = True,
+        **overrides,
+    ) -> dict:
+        """Compare two simulation sources and store the resulting report.
+
+        Parameters
+        ----------
+        left : Union[Any, pd.DataFrame, str, os.PathLike]
+            Left simulation source (instance, dataframe, or file path).
+        right : Union[Any, pd.DataFrame, str, os.PathLike]
+            Right simulation source (instance, dataframe, or file path).
+        prefer_pickle_from_instances : bool
+            Whether instance-backed comparisons should prefer pickle outputs.
+        **overrides : dict
+            Optional overrides for configured comparison defaults.
+
+        Returns
+        -------
+        dict
+            Comparison report with equality flags and mismatch details.
+
+        Usage
+        -----
+        Main session method for one-to-one source comparison.
+
+        Examples
+        --------
+        report = session.compare(left='run_a.pkl', right='run_b.pkl')
+        """
+        self._last_left_input = left
+        self._last_right_input = right
+        report = compare_simulation_instances(
+            left=left,
+            right=right,
+            prefer_pickle_from_instances=prefer_pickle_from_instances,
+            **self._effective_kwargs(**overrides),
+        )
+        return self._capture('compare', report)
+
+    def compare_latest_in_folders(
+        self,
+        left_dir: Union[str, os.PathLike],
+        right_dir: Union[str, os.PathLike],
+        glob_pattern: str = '*.pkl',
+        recursive: bool = False,
+        **overrides,
+    ) -> dict:
+        """Compare latest pickle artifacts found in two folders.
+
+        Parameters
+        ----------
+        left_dir : Union[str, os.PathLike]
+            Folder scanned for the latest left pickle.
+        right_dir : Union[str, os.PathLike]
+            Folder scanned for the latest right pickle.
+        glob_pattern : str
+            File pattern used during folder scan.
+        recursive : bool
+            Whether folder scanning should recurse into subdirectories.
+        **overrides : dict
+            Optional overrides for configured comparison defaults.
+
+        Returns
+        -------
+        dict
+            Folder-level report including selected files and comparison output.
+
+        Usage
+        -----
+        Convenience method for notebook/session workflows with periodic exports.
+
+        Examples
+        --------
+        report = session.compare_latest_in_folders('run_a', 'run_b')
+        """
+        report = compare_latest_pickles_in_folders(
+            left_dir=left_dir,
+            right_dir=right_dir,
+            glob_pattern=glob_pattern,
+            recursive=recursive,
+            **self._effective_kwargs(**overrides),
+        )
+        self._last_left_input = report.get('left_latest_pickle')
+        self._last_right_input = report.get('right_latest_pickle')
+        return self._capture('compare_latest_in_folders', report)
+
+    def compare_latest_sources_in_folders(
+        self,
+        left_dir: Union[str, os.PathLike],
+        right_dir: Union[str, os.PathLike],
+        glob_pattern: str = '*.pkl',
+        recursive: bool = False,
+        preferred_name_tokens: Optional[list[str]] = None,
+        **overrides,
+    ) -> dict:
+        """Compare latest files in two folders for any supported source pattern.
+        
+        Unlike ``compare_latest_in_folders`` (pickle-focused), this method can
+        target ``*.csv``/``*.json``/``*.pkl`` and is useful for notebook-style
+        workflows with a single method call.
+        
+        Parameters
+        ----------
+        left_dir : Any
+            Path-like value used by this routine.
+        right_dir : Any
+            Path-like value used by this routine.
+        glob_pattern : Any
+            Argument used by `SimulationComparisonSession.compare_latest_sources_in_folders`.
+        recursive : Any
+            Argument used by `SimulationComparisonSession.compare_latest_sources_in_folders`.
+        preferred_name_tokens : Any
+            Argument used by `SimulationComparisonSession.compare_latest_sources_in_folders`.
+        overrides : Any
+            Argument used by `SimulationComparisonSession.compare_latest_sources_in_folders`.
+        
+        Usage
+        -----
+        Use `SimulationComparisonSession.compare_latest_sources_in_folders` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.compare_latest_sources_in_folders(left_dir=..., right_dir=..., glob_pattern=..., ...)
+        """
+
+        def _pick_latest_source(folder: Union[str, os.PathLike]) -> tuple[str, int, int]:
+            base_dir = os.path.abspath(os.fspath(folder))
+            if not os.path.isdir(base_dir):
+                raise ValueError(f'Directory not found: {base_dir}')
+
+            pattern = os.path.join(base_dir, '**', glob_pattern) if recursive else os.path.join(base_dir, glob_pattern)
+            candidates = [
+                os.path.abspath(path)
+                for path in pyglob.glob(pattern, recursive=recursive)
+                if os.path.isfile(path)
+            ]
+            if len(candidates) == 0:
+                raise ValueError(
+                    f"No files found in '{base_dir}' with pattern '{glob_pattern}'."
+                )
+
+            tokens = [str(t).strip().lower() for t in (preferred_name_tokens or []) if str(t).strip()]
+            preferred = []
+            if len(tokens) > 0:
+                preferred = [
+                    path for path in candidates
+                    if any(token in os.path.basename(path).lower() for token in tokens)
+                ]
+            pool = preferred if len(preferred) > 0 else candidates
+            latest = max(pool, key=lambda path: os.path.getmtime(path))
+            return latest, int(len(candidates)), int(len(preferred))
+
+        left_source, left_total, left_preferred = _pick_latest_source(left_dir)
+        right_source, right_total, right_preferred = _pick_latest_source(right_dir)
+
+        comparison = compare_simulation_instances(
+            left=left_source,
+            right=right_source,
+            **self._effective_kwargs(**overrides),
+        )
+
+        report = {
+            'equal': bool(comparison.get('equal', False)),
+            'left_dir': os.path.abspath(os.fspath(left_dir)),
+            'right_dir': os.path.abspath(os.fspath(right_dir)),
+            'glob_pattern': glob_pattern,
+            'recursive': recursive,
+            'preferred_name_tokens': list(preferred_name_tokens or []),
+            'left_sources_found': left_total,
+            'right_sources_found': right_total,
+            'left_preferred_matches': left_preferred,
+            'right_preferred_matches': right_preferred,
+            'left_source': left_source,
+            'right_source': right_source,
+            'comparison': comparison,
+        }
+        self._last_left_input = left_source
+        self._last_right_input = right_source
+        return self._capture('compare_latest_sources_in_folders', report)
+
+    @staticmethod
+    def _load_source_dataframe(
+        source: Union[Any, pd.DataFrame, str, os.PathLike],
+        prefer_pickle_from_instances: bool = True,
+    ) -> pd.DataFrame:
+        """Load a dataframe from a path, dataframe, or simulation-like instance.
+
+        Parameters
+        ----------
+        source : Union[Any, pd.DataFrame, str, os.PathLike]
+            Data source to resolve. It can be a dataframe, a file path, or an
+            instance exposing ACCIM output attributes.
+        prefer_pickle_from_instances : bool
+            When ``True``, instance file paths prefer sibling ``.pkl`` files
+            when available.
+
+        Returns
+        -------
+        pd.DataFrame
+            Loaded dataframe ready for comparison/output analysis.
+
+        Usage
+        -----
+        Internal helper used by output-delta analysis methods.
+
+        Examples
+        --------
+        df = SimulationComparisonSession._load_source_dataframe('results.pkl')
+        """
+        def _load_path(pathlike: Union[str, os.PathLike]) -> pd.DataFrame:
+            path = os.path.abspath(os.fspath(pathlike))
+            ext = os.path.splitext(path)[1].lower()
+            if ext in {'.pkl', '.pickle'}:
+                return pd.read_pickle(path)
+            if ext == '.csv':
+                return pd.read_csv(path)
+            if ext == '.json':
+                with open(path, 'r', encoding='utf-8') as f:
+                    payload = json.load(f)
+                if isinstance(payload, dict) and 'data' in payload:
+                    df = pd.DataFrame(payload['data'])
+                    attrs = payload.get('attrs') if isinstance(payload.get('attrs'), dict) else {}
+                    for key, value in attrs.items():
+                        df.attrs[key] = value
+                    return df
+                return pd.read_json(path)
+            raise ValueError(f'Unsupported source extension for output analysis: {path}')
+
+        def _candidate_paths(raw_path: Union[str, os.PathLike]) -> list[str]:
+            absolute = os.path.abspath(os.fspath(raw_path))
+            root, ext = os.path.splitext(absolute)
+            candidates = []
+            if prefer_pickle_from_instances and ext.lower() not in {'.pkl', '.pickle'}:
+                pickle_candidate = f'{root}.pkl'
+                if os.path.isfile(pickle_candidate):
+                    candidates.append(pickle_candidate)
+            if os.path.isfile(absolute):
+                candidates.append(absolute)
+            return candidates
+
+        if isinstance(source, pd.DataFrame):
+            return source.copy()
+
+        if isinstance(source, (str, os.PathLike)):
+            return _load_path(source)
+
+        has_param_attr = hasattr(source, 'outputs_param_simulation')
+        has_optim_attr = hasattr(source, 'outputs_optimisation')
+        if not (has_param_attr or has_optim_attr):
+            raise TypeError(
+                'Source must be a DataFrame, file path, or simulation instance-like object.'
+            )
+
+        param_df = getattr(source, 'outputs_param_simulation', None)
+        optim_df = getattr(source, 'outputs_optimisation', None)
+        has_param_df = isinstance(param_df, pd.DataFrame)
+        has_optim_df = isinstance(optim_df, pd.DataFrame)
+        last_run_type = str(getattr(source, 'last_run_type', '')).strip().lower()
+
+        if has_param_df and has_optim_df:
+            if last_run_type == 'parametric':
+                return param_df.copy()
+            if last_run_type == 'optimisation':
+                return optim_df.copy()
+            raise ValueError(
+                'Instance has both parametric and optimisation outputs loaded. '
+                'Set instance.last_run_type or pass an explicit source path/DataFrame.'
+            )
+        if has_param_df:
+            return param_df.copy()
+        if has_optim_df:
+            return optim_df.copy()
+
+        file_attrs = [
+            ('parametric', 'outputs_param_simulation_filepath'),
+            ('optimisation', 'outputs_optimisation_filepath'),
+        ]
+        if last_run_type in {'parametric', 'optimisation'}:
+            file_attrs = sorted(file_attrs, key=lambda item: 0 if item[0] == last_run_type else 1)
+
+        for _, attr_name in file_attrs:
+            raw_path = getattr(source, attr_name, None)
+            if raw_path in (None, ''):
+                continue
+            for candidate in _candidate_paths(raw_path):
+                return _load_path(candidate)
+
+        raise ValueError(
+            'Could not resolve data from instance. Load outputs in memory or provide a readable file path.'
+        )
+
+    @staticmethod
+    def _resolve_case_insensitive_column(df: pd.DataFrame, requested: str) -> str:
+        """Resolve one dataframe column name with case-insensitive matching.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe containing candidate columns.
+        requested : str
+            Requested column label.
+
+        Returns
+        -------
+        str
+            Resolved column name as it exists in ``df``.
+
+        Usage
+        -----
+        Internal helper for robust output/category column resolution.
+
+        Examples
+        --------
+        col = SimulationComparisonSession._resolve_case_insensitive_column(df, 'epw')
+        """
+        request = str(requested).strip()
+        if request in df.columns:
+            return request
+
+        matches = [col for col in df.columns if str(col).lower() == request.lower()]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ValueError(
+                f"Column '{requested}' is ambiguous (case-insensitive matches: {matches})."
+            )
+
+        suggestions = difflib.get_close_matches(request, [str(c) for c in df.columns], n=3, cutoff=0.55)
+        if len(suggestions) > 0:
+            raise ValueError(
+                f"Column '{requested}' was not found. Suggestions: {suggestions}."
+            )
+        raise ValueError(f"Column '{requested}' was not found.")
+
+    def _resolve_sources_for_output_analysis(
+        self,
+        left: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None,
+        right: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None,
+    ) -> tuple[Union[Any, pd.DataFrame, str, os.PathLike], Union[Any, pd.DataFrame, str, os.PathLike]]:
+        """Resolve left/right sources for output change analysis.
+
+        Parameters
+        ----------
+        left : Optional[Union[Any, pd.DataFrame, str, os.PathLike]]
+            Optional explicit left source.
+        right : Optional[Union[Any, pd.DataFrame, str, os.PathLike]]
+            Optional explicit right source.
+
+        Returns
+        -------
+        tuple[Union[Any, pd.DataFrame, str, os.PathLike], Union[Any, pd.DataFrame, str, os.PathLike]]
+            Pair ``(left_source, right_source)`` with resolved values.
+
+        Usage
+        -----
+        Called before computing selected-output deltas.
+
+        Examples
+        --------
+        left_src, right_src = self._resolve_sources_for_output_analysis()
+        """
+        left_source = left
+        right_source = right
+
+        if left_source is None:
+            left_source = self._last_left_input
+        if right_source is None:
+            right_source = self._last_right_input
+
+        if left_source is None and isinstance(self.last_report, dict):
+            left_source = self.last_report.get('left_source') or self.last_report.get('left_latest_pickle')
+        if right_source is None and isinstance(self.last_report, dict):
+            right_source = self.last_report.get('right_source') or self.last_report.get('right_latest_pickle')
+
+        if left_source is None and isinstance(self.last_comparison, dict):
+            left_meta = self.last_comparison.get('left')
+            if isinstance(left_meta, dict):
+                left_source = left_meta.get('path')
+        if right_source is None and isinstance(self.last_comparison, dict):
+            right_meta = self.last_comparison.get('right')
+            if isinstance(right_meta, dict):
+                right_source = right_meta.get('path')
+
+        if left_source is None or right_source is None:
+            raise ValueError(
+                'Could not resolve left/right sources automatically. '
+                'Pass left=... and right=... or run a comparison first.'
+            )
+
+        return left_source, right_source
+
+    def compare_selected_outputs(
+        self,
+        outputs: list[str],
+        category_columns: Optional[list[str]] = None,
+        left: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None,
+        right: Optional[Union[Any, pd.DataFrame, str, os.PathLike]] = None,
+        aggregate_metrics: Optional[list[str]] = None,
+        groupby_dropna: bool = False,
+        prefer_pickle_from_instances: bool = True,
+    ) -> dict:
+        """Compare selected output columns and return case-level and category-level deltas.
+        
+        The method is notebook-friendly: run one comparison first, then call this
+        method with only ``outputs=[...]`` to inspect how those outputs changed.
+        
+        :param outputs: output names to compare (case-insensitive resolution).
+        :param category_columns: grouping columns. If ``None``, uses the latest
+            comparison input columns when available.
+        :param left: optional explicit left source (DataFrame/path/instance).
+        :param right: optional explicit right source (DataFrame/path/instance).
+        :param aggregate_metrics: metrics for aggregated deltas. Defaults to
+            ``['mean', 'sum', 'min', 'max']``.
+        :param groupby_dropna: forwarded to ``DataFrame.groupby(..., dropna=...)``.
+        :param prefer_pickle_from_instances: when ``True``, instance-backed sources
+            prefer sibling ``.pkl`` files if available.
+        :return: dictionary with ``changes_by_case`` and ``changes_by_categories``.
+        
+        Usage
+        -----
+        Use `SimulationComparisonSession.compare_selected_outputs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.compare_selected_outputs(outputs=..., category_columns=..., left=..., ...)
+        """
+        if not isinstance(outputs, (list, tuple)) or len(outputs) == 0:
+            raise ValueError("'outputs' must be a non-empty list of column names.")
+
+        left_source, right_source = self._resolve_sources_for_output_analysis(left=left, right=right)
+        left_df = self._load_source_dataframe(
+            source=left_source,
+            prefer_pickle_from_instances=prefer_pickle_from_instances,
+        )
+        right_df = self._load_source_dataframe(
+            source=right_source,
+            prefer_pickle_from_instances=prefer_pickle_from_instances,
+        )
+
+        output_mappings = []
+        output_aliases_used: set[str] = set()
+        for raw_output in outputs:
+            requested = str(raw_output).strip()
+            if requested == '':
+                continue
+            left_col = self._resolve_case_insensitive_column(left_df, requested)
+            right_col = self._resolve_case_insensitive_column(right_df, requested)
+
+            alias = requested
+            alias_i = 2
+            while alias in output_aliases_used:
+                alias = f'{requested} ({alias_i})'
+                alias_i += 1
+            output_aliases_used.add(alias)
+
+            output_mappings.append(
+                {
+                    'requested': requested,
+                    'left': left_col,
+                    'right': right_col,
+                    'alias': alias,
+                    'left_alias': f'{alias}_left',
+                    'right_alias': f'{alias}_right',
+                    'delta_alias': f'{alias}_delta',
+                    'changed_alias': f'{alias}_changed',
+                }
+            )
+
+        if len(output_mappings) == 0:
+            raise ValueError('No valid output columns were provided in outputs=[...].')
+
+        explicit_category_columns = category_columns is not None
+        if explicit_category_columns:
+            requested_categories = [str(c).strip() for c in category_columns if str(c).strip()]
+        else:
+            requested_categories = []
+            if isinstance(self.last_inputs, dict):
+                requested_categories = [
+                    str(c).strip()
+                    for c in (self.last_inputs.get('columns_used') or [])
+                    if str(c).strip()
+                ]
+            if len(requested_categories) == 0 and isinstance(self.last_comparison, dict):
+                last_inputs = self.last_comparison.get('inputs')
+                if isinstance(last_inputs, dict):
+                    requested_categories = [
+                        str(c).strip()
+                        for c in (last_inputs.get('columns_used') or [])
+                        if str(c).strip()
+                    ]
+            if len(requested_categories) == 0:
+                output_cols_lower = {
+                    str(mapping['left']).lower() for mapping in output_mappings
+                } | {
+                    str(mapping['right']).lower() for mapping in output_mappings
+                }
+                requested_categories = [
+                    str(col)
+                    for col in left_df.columns
+                    if str(col) in right_df.columns and str(col).lower() not in output_cols_lower
+                ]
+
+        requested_categories = list(dict.fromkeys(requested_categories))
+        category_mappings = []
+        category_aliases_used: set[str] = set()
+        for requested in requested_categories:
+            try:
+                left_col = self._resolve_case_insensitive_column(left_df, requested)
+                right_col = self._resolve_case_insensitive_column(right_df, requested)
+            except ValueError:
+                if explicit_category_columns:
+                    raise
+                continue
+
+            alias = requested
+            alias_i = 2
+            while alias in category_aliases_used:
+                alias = f'{requested} ({alias_i})'
+                alias_i += 1
+            category_aliases_used.add(alias)
+
+            category_mappings.append(
+                {
+                    'requested': requested,
+                    'left': left_col,
+                    'right': right_col,
+                    'alias': alias,
+                }
+            )
+
+        category_aliases = [mapping['alias'] for mapping in category_mappings]
+
+        left_case = pd.DataFrame(index=left_df.index)
+        right_case = pd.DataFrame(index=right_df.index)
+
+        for mapping in category_mappings:
+            left_case[mapping['alias']] = left_df[mapping['left']]
+            right_case[mapping['alias']] = right_df[mapping['right']]
+        for mapping in output_mappings:
+            left_case[mapping['left_alias']] = left_df[mapping['left']]
+            right_case[mapping['right_alias']] = right_df[mapping['right']]
+
+        if len(category_aliases) > 0:
+            left_case['__pair_order__'] = left_case.groupby(category_aliases, dropna=groupby_dropna).cumcount()
+            right_case['__pair_order__'] = right_case.groupby(category_aliases, dropna=groupby_dropna).cumcount()
+            merge_keys = category_aliases + ['__pair_order__']
+        else:
+            left_case['__pair_order__'] = np.arange(len(left_case), dtype=int)
+            right_case['__pair_order__'] = np.arange(len(right_case), dtype=int)
+            merge_keys = ['__pair_order__']
+
+        merged = left_case.merge(right_case, on=merge_keys, how='inner', sort=False)
+        left_unmatched_rows = int(max(0, len(left_case) - len(merged)))
+        right_unmatched_rows = int(max(0, len(right_case) - len(merged)))
+
+        changes_by_case = merged.copy().rename(columns={'__pair_order__': 'pair_order'})
+        for mapping in output_mappings:
+            left_values = pd.to_numeric(changes_by_case[mapping['left_alias']], errors='coerce')
+            right_values = pd.to_numeric(changes_by_case[mapping['right_alias']], errors='coerce')
+            changes_by_case[mapping['delta_alias']] = right_values - left_values
+            equal_mask = (
+                (changes_by_case[mapping['left_alias']] == changes_by_case[mapping['right_alias']])
+                | (
+                    changes_by_case[mapping['left_alias']].isna()
+                    & changes_by_case[mapping['right_alias']].isna()
+                )
+            )
+            changes_by_case[mapping['changed_alias']] = ~equal_mask
+
+        metrics_used = [str(metric).strip() for metric in (aggregate_metrics or ['mean', 'sum', 'min', 'max']) if str(metric).strip()]
+        if len(metrics_used) == 0:
+            raise ValueError('aggregate_metrics must contain at least one valid aggregation name.')
+
+        delta_columns = [mapping['delta_alias'] for mapping in output_mappings]
+        flat_agg_columns = [f'{delta_col}_{metric}' for delta_col in delta_columns for metric in metrics_used]
+        if len(changes_by_case) == 0:
+            category_cols_for_empty = list(category_aliases) if len(category_aliases) > 0 else []
+            changes_by_categories = pd.DataFrame(columns=category_cols_for_empty + flat_agg_columns)
+        else:
+            try:
+                if len(category_aliases) > 0:
+                    grouped = changes_by_case.groupby(category_aliases, dropna=groupby_dropna)[delta_columns].agg(metrics_used)
+                    grouped.columns = [f'{col}_{metric}' for col, metric in grouped.columns]
+                    changes_by_categories = grouped.reset_index()
+                else:
+                    aggregated = changes_by_case[delta_columns].agg(metrics_used)
+                    flat_values = {
+                        f'{delta_col}_{metric}': aggregated.loc[metric, delta_col]
+                        for delta_col in delta_columns
+                        for metric in metrics_used
+                    }
+                    changes_by_categories = pd.DataFrame([flat_values])
+            except Exception as exc:
+                raise ValueError(
+                    f'Invalid aggregate_metrics={metrics_used}. Use valid pandas agg names (e.g. mean, sum, min, max).'
+                ) from exc
+
+        left_source_path = None
+        right_source_path = None
+        if isinstance(left_source, (str, os.PathLike)):
+            left_source_path = os.path.abspath(os.fspath(left_source))
+        if isinstance(right_source, (str, os.PathLike)):
+            right_source_path = os.path.abspath(os.fspath(right_source))
+
+        report = {
+            'left_source': left_source_path,
+            'right_source': right_source_path,
+            'outputs_requested': [mapping['requested'] for mapping in output_mappings],
+            'output_columns': [
+                {
+                    'requested': mapping['requested'],
+                    'left': mapping['left'],
+                    'right': mapping['right'],
+                    'left_case_column': mapping['left_alias'],
+                    'right_case_column': mapping['right_alias'],
+                    'delta_column': mapping['delta_alias'],
+                    'changed_column': mapping['changed_alias'],
+                }
+                for mapping in output_mappings
+            ],
+            'category_columns_used': list(category_aliases),
+            'rows_left': int(len(left_case)),
+            'rows_right': int(len(right_case)),
+            'rows_compared': int(len(changes_by_case)),
+            'left_unmatched_rows': left_unmatched_rows,
+            'right_unmatched_rows': right_unmatched_rows,
+            'aggregate_metrics': list(metrics_used),
+            'groupby_dropna': bool(groupby_dropna),
+            'changes_by_case': changes_by_case,
+            'changes_by_categories': changes_by_categories,
+        }
+
+        self.last_output_changes = report
+        self.last_output_changes_by_case = changes_by_case
+        self.last_output_changes_by_categories = changes_by_categories
+        return report
+
+    def compare_multiple_with_reference(
+        self,
+        pickle_sources: Optional[list[Union[str, os.PathLike]]] = None,
+        pickle_paths: Optional[list[Union[str, os.PathLike]]] = None,
+        pickle_list: Optional[list[Union[str, os.PathLike]]] = None,
+        directory: Union[str, os.PathLike, None] = None,
+        glob_pattern: str = '*.pkl',
+        recursive: bool = False,
+        reference: Optional[Union[int, str, os.PathLike]] = None,
+        order_by: Literal['mtime', 'name'] = 'mtime',
+        descending: bool = True,
+        **overrides,
+    ) -> dict:
+        """Compare multiple pickle sources against a chosen reference source.
+
+        Parameters
+        ----------
+        pickle_sources : Optional[list[Union[str, os.PathLike]]]
+            Explicit source list to compare.
+        pickle_paths : Optional[list[Union[str, os.PathLike]]]
+            Alias for ``pickle_sources``.
+        pickle_list : Optional[list[Union[str, os.PathLike]]]
+            Additional alias for backward compatibility.
+        directory : Union[str, os.PathLike, None]
+            Directory scanned when source lists are not provided.
+        glob_pattern : str
+            File pattern used in directory scan.
+        recursive : bool
+            Whether directory scanning is recursive.
+        reference : Optional[Union[int, str, os.PathLike]]
+            Reference selector (index/path/name) used for comparisons.
+        order_by : Literal['mtime', 'name']
+            Ordering strategy before choosing default reference.
+        descending : bool
+            Ordering direction for ``order_by``.
+        **overrides : dict
+            Optional override settings for comparison behavior.
+
+        Returns
+        -------
+        dict
+            Multi-source comparison report captured in session state.
+
+        Usage
+        -----
+        Use when validating many run artifacts against one baseline run.
+
+        Examples
+        --------
+        report = session.compare_multiple_with_reference(directory='outputs')
+        """
+        report = compare_multiple_pickles_with_reference(
+            pickle_sources=pickle_sources,
+            pickle_paths=pickle_paths,
+            pickle_list=pickle_list,
+            directory=directory,
+            glob_pattern=glob_pattern,
+            recursive=recursive,
+            reference=reference,
+            order_by=order_by,
+            descending=descending,
+            **self._effective_kwargs(**overrides),
+        )
+        return self._capture('compare_multiple_with_reference', report)
+
+    def save_last_report_json(self, output_path: Union[str, os.PathLike]) -> str:
+        """Persist the latest captured report as a JSON file.
+
+        Parameters
+        ----------
+        output_path : Union[str, os.PathLike]
+            Destination path for JSON export.
+
+        Returns
+        -------
+        str
+            Absolute path to the saved JSON report.
+
+        Usage
+        -----
+        Call after any comparison method that fills ``self.last_report``.
+
+        Examples
+        --------
+        path = session.save_last_report_json('comparison_report.json')
+        """
+        if self.last_report is None:
+            raise ValueError('No report available. Run a comparison first.')
+        path = os.path.abspath(os.fspath(output_path))
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(self.last_report, f, indent=2, default=str)
+        self.last_report_path = path
+        return path
+
+    def get_last_summary(self) -> dict:
+        """Build a compact summary for the last captured comparison.
+
+        Parameters
+        ----------
+        None
+            This method does not require explicit arguments.
+
+        Returns
+        -------
+        dict
+            Summary dictionary with key equality and matching indicators.
+
+        Usage
+        -----
+        Useful for quick notebook checks without inspecting full reports.
+
+        Examples
+        --------
+        summary = session.get_last_summary()
+        """
+        if not isinstance(self.last_comparison, dict):
+            return {
+                'operation': self.last_operation,
+                'equal': None,
+                'message': 'No comparison data captured yet.',
+            }
+        return {
+            'operation': self.last_operation,
+            'equal': self.last_comparison.get('equal'),
+            'equal_strict': self.last_comparison.get('equal_strict'),
+            'equal_relaxed': self.last_comparison.get('equal_relaxed'),
+            'equal_mode': self.last_comparison.get('equal_mode'),
+            'same_input_set': self.last_inputs.get('same_input_set') if isinstance(self.last_inputs, dict) else None,
+            'mismatched_rows_count': self.last_outputs.get('mismatched_rows_count') if isinstance(self.last_outputs, dict) else None,
+            'reference_strategy': self.last_reference.get('strategy_used') if isinstance(self.last_reference, dict) else None,
+        }
+
+class SimulationBase(AnalysisMixin, PlottingMixin):
+    """Base class for parametric simulations and multi-objective optimization.
+    
+    Contains shared functionality for managing buildings, EPWs, parameters, outputs,
+    and IDF backup operations. Subclasses should override simulation-specific methods.
+    
+    .. versionadded:: 0.8.0
+        Introduced as the shared base class for dedicated parametric and
+        optimisation workflows.
+    
+    Usage
+    -----
+    Use `SimulationBase` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    obj = SimulationBase()
+    """
+
+    def __init__(
+            self,
+            buildings: Union[Any, List] = None,
+            epws: list = None,
+            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
+            output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
+            output_keep_existing: bool = True,
+            output_freqs: List[allowed_output_freqs] = ['hourly'],
+            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            make_averages: bool = False,
+            debugging: bool = False,
+            verbosemode: bool = True,
+            # Keep these defaults synchronized with accis.addAccis defaults.
+            Output_take_dataframe: pd.DataFrame = None,
+            EnergyPlus_version: str = None,
+            VRFschedule: str = 'On 24/7',
+            eer: float = 2,
+            cop: float = 2.1,
+            hvac_zone_map: dict = None,
+            bypass_addAccis: bool = False,
+            building: Any = None,
+            accim_results_root: Optional[str] = None,
+            remove_output_tables: bool = True,
+    ):
+        """Initialize the simulation base instance.
+        
+        :param buildings: the besos.IDF_class returned from method get_building(idfpath)
+        :param epws: a list of .epw filenames
+        :param parameters_type: to specify the type of parameters that should be used
+        :param output_type: to specify the outputs that are going to be requested
+        :param output_keep_existing: to keep or remove existing outputs
+        :param output_freqs: output frequency specification
+        :param ScriptType: 'vrf_mm', 'vrf_ac', or 'ex_ac'
+        :param SupplyAirTempInputMethod: supply air temperature input method
+        :param make_averages: to make average outputs
         :param debugging: True to generate the .EDD file
-        :param bypass_addAccis: True to skip the internal addAccis execution (useful when loading previous sessions)
+        :param verbosemode: True to print addAccis progress messages
+        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param bypass_addAccis: True to skip the internal addAccis execution
+        :param building: legacy alias for buildings, accepted for backward compatibility
+        :param accim_results_root: optional base directory used to resolve relative
+            out_dir paths for simulation outputs.
+        :param remove_output_tables: when True, removes Output:Table:Monthly and
+            Output:Table:Annual objects from each IDF during initialization.
+        
+        Usage
+        -----
+        Use `SimulationBase.__init__` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        obj = SimulationBase(buildings=..., epws=..., parameters_type=..., ...)
         """
+        if buildings is None and building is not None:
+            buildings = building
+
+        if not isinstance(remove_output_tables, bool):
+            raise TypeError("Argument 'remove_output_tables' must be a boolean value.")
+
+        self.building = buildings[0] if isinstance(buildings, list) and len(buildings) > 0 else buildings
+        self.buildings = buildings if isinstance(buildings, list) else ([buildings] if buildings is not None else [])
+        self.epws = epws if isinstance(epws, list) else ([epws] if epws is not None else [])
+        # Copy to avoid sharing (and mutating) the default list across instances.
+        self.output_freqs = list(output_freqs) if isinstance(output_freqs, (list, tuple)) else output_freqs
+        self.parameters_type = parameters_type
+        self.remove_output_tables = remove_output_tables
+        self.outputs_inventory_initial_ = self.scan_output_objects(idf_scope='all') if len(self.buildings) > 0 else {}
+        self.outputs_duplicates_initial_ = self.autocorrect_output_duplicates(idf_scope='all', warn=True) if len(self.buildings) > 0 else {}
+            
         is_accim_predef_model = False
         is_accim_custom_model = False
         is_apmv_setpoints = False
@@ -129,10 +2988,59 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.output_keep_existing = output_keep_existing
             self.output_type = output_type
             self.make_averages = make_averages
+            keep_existing_on_init = True
+            if output_keep_existing is False:
+                warnings.warn(
+                    'During class initialization, existing output objects are preserved by design. '
+                    'Use clear_outputs(...) later if you want to remove them explicitly.'
+                )
             if not bypass_addAccis:
-                accis.addAccis(idf=building, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, Output_keep_existing=output_keep_existing, Output_type=output_type, Output_freqs=output_freqs, TempCtrl=temp_ctrl, make_averages=make_averages, debugging=debugging, verboseMode=verbosemode)
+                if isinstance(buildings, list):
+                    for b in buildings:
+                        accis.addAccis(
+                            idf=b,
+                            ScriptType=ScriptType,
+                            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+                            Output_type=output_type,
+                            Output_freqs=output_freqs,
+                            Output_keep_existing=keep_existing_on_init,
+                            Output_take_dataframe=Output_take_dataframe,
+                            EnergyPlus_version=EnergyPlus_version,
+                            TempCtrl=temp_ctrl,
+                            VRFschedule=VRFschedule,
+                            verboseMode=verbosemode,
+                            eer=eer,
+                            cop=cop,
+                            make_averages=make_averages,
+                            debugging=debugging,
+                            hvac_zone_map=hvac_zone_map,
+                        )
+                else:
+                    accis.addAccis(
+                        idf=buildings,
+                        ScriptType=ScriptType,
+                        SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+                        Output_type=output_type,
+                        Output_freqs=output_freqs,
+                        Output_keep_existing=keep_existing_on_init,
+                        Output_take_dataframe=Output_take_dataframe,
+                        EnergyPlus_version=EnergyPlus_version,
+                        TempCtrl=temp_ctrl,
+                        VRFschedule=VRFschedule,
+                        verboseMode=verbosemode,
+                        eer=eer,
+                        cop=cop,
+                        make_averages=make_averages,
+                        debugging=debugging,
+                        hvac_zone_map=hvac_zone_map,
+                    )
         elif is_apmv_setpoints:
-            apmv.apply_apmv_setpoints(building=building, outputs_freq=output_freqs)
+            if not bypass_addAccis:
+                if isinstance(buildings, list):
+                    for b in buildings:
+                        apmv.apply_apmv_setpoints(building=b, outputs_freq=output_freqs)
+                else:
+                    apmv.apply_apmv_setpoints(building=buildings, outputs_freq=output_freqs)
             print('Arguments output_type, output_keep_existing, ScriptType, and SupplyAirTempInputMethod are only used in accim predefined and custom models, therefore these will not have any effect in this case.')
         elif parameters_type is None:
             self.ScriptType = None
@@ -141,145 +3049,2915 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.output_keep_existing = None
             self.output_type = None
             self.make_averages = None
-        self.building = building
-        self.output_freqs = output_freqs
-        self.parameters_type = parameters_type
         self.is_accim_custom_model = is_accim_custom_model
         self.is_accim_predef_model = is_accim_predef_model
         self.is_apmv_setpoints = is_apmv_setpoints
+        self.bypass_addAccis = bypass_addAccis
+
+        for b in self.buildings:
+            self._ensure_output_control_files_for_building(b)
+            if self.remove_output_tables:
+                self._remove_tabular_outputs_for_building(b)
+
+        self.outputs_inventory_after_injection_ = self.scan_output_objects(idf_scope='all') if len(self.buildings) > 0 else {}
+        self.outputs_duplicates_after_injection_ = self.autocorrect_output_duplicates(idf_scope='all', warn=True) if len(self.buildings) > 0 else {}
         self.last_run_type = None
-        self.outputs_optimisation = None
-        self.outputs_optimisation_filepath = None
-        self.optimisation_csv_paths_non_dominated = []
-        self.optimisation_csv_paths_dominated = []
-        self.optimisation_csv_paths_non_dominated_by_epw = {}
-        self.optimisation_csv_paths_dominated_by_epw = {}
+        self.simulation_summary: Optional[dict] = None
         # Save an initial IDF backup right after addAccis/apply_apmv_setpoints so the
         # modified IDF (with EMS scripts and outputs already injected) is always
         # recoverable, even if run_parametric_simulation / run_optimisation are not called yet.
         self.idf_backup_path: str = None
-        if parameters_type is not None and not bypass_addAccis:
-            self._save_idf_backup(label='post_setup')
+        self.accim_results_root = self._normalize_results_root_path(accim_results_root)
+        # NOTE: IDF backup is deferred until run_parametric_simulation /
+        # run_optimisation are called, so the backup is always written to the
+        # results folder (out_dir) rather than creating a separate
+        # 'accim_idf_backups' directory in the working directory.
+
+    @staticmethod
+    def _normalize_results_root_path(path_value: Optional[Union[str, os.PathLike]]) -> Optional[str]:
+        """Normalize optional root paths used to resolve relative output directories.
+        
+        Parameters
+        ----------
+        path_value : Any
+            Path-like value used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._normalize_results_root_path` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._normalize_results_root_path(path_value=...)
+        """
+        if path_value is None:
+            return None
+        if not isinstance(path_value, (str, os.PathLike)):
+            raise TypeError(
+                "Argument 'accim_results_root' must be a string/path-like value or None."
+            )
+        normalized = os.fspath(path_value).strip()
+        if len(normalized) == 0:
+            return None
+        return os.path.abspath(normalized)
+
+    def _resolve_results_out_dir(
+        self,
+        out_dir: Union[str, os.PathLike],
+        accim_results_root: Optional[Union[str, os.PathLike]] = None,
+    ) -> str:
+        """Resolve output directory with the following precedence:
+        1) absolute out_dir,
+        2) explicit method accim_results_root,
+        3) instance accim_results_root,
+        4) ACCIM_RESULTS_ROOT environment variable,
+        5) fallback to legacy relative out_dir behavior.
+        
+        Usage
+        -----
+        Use `SimulationBase._resolve_results_out_dir` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._resolve_results_out_dir(out_dir=..., accim_results_root=...)
+        """
+        if not isinstance(out_dir, (str, os.PathLike)):
+            raise TypeError("Argument 'out_dir' must be a string/path-like value.")
+
+        out_dir_text = os.fspath(out_dir).strip()
+        if len(out_dir_text) == 0:
+            raise ValueError("Argument 'out_dir' cannot be empty.")
+
+        if os.path.isabs(out_dir_text):
+            return os.path.abspath(out_dir_text)
+
+        for candidate in (
+            accim_results_root,
+            getattr(self, 'accim_results_root', None),
+            os.environ.get('ACCIM_RESULTS_ROOT'),
+        ):
+            normalized_root = self._normalize_results_root_path(candidate)
+            if normalized_root is not None:
+                return os.path.abspath(os.path.join(normalized_root, out_dir_text))
+
+        return out_dir_text
+
+    @staticmethod
+    def _warn_if_sim_file_cleanup_can_remove_csv(
+        sim_files_extensions: Optional[tuple[str, ...]],
+        sim_files_policy: str,
+        context: str,
+    ) -> None:
+        """Warn when configured cleanup may delete CSV outputs.
+
+        Parameters
+        ----------
+        sim_files_extensions : Optional[tuple[str, ...]]
+            Extensions targeted by simulation-file cleanup.
+        sim_files_policy : str
+            Cleanup policy applied to extension filtering.
+        context : str
+            Context label used in the warning message.
+
+        Returns
+        -------
+        None
+            Emits a warning when CSV files are at risk.
+
+        Usage
+        -----
+        Internal helper invoked before simulation runs with file cleanup enabled.
+
+        Examples
+        --------
+        SimulationBase._warn_if_sim_file_cleanup_can_remove_csv(exts, 'keep', 'run')
+        """
+        if sim_files_extensions is None:
+            return
+        if sim_file_policy_will_remove_extension(
+            sim_files_extensions=sim_files_extensions,
+            sim_files_policy=sim_files_policy,
+            extension='.csv',
+        ):
+            warnings.warn(
+                "Configured sim_files_extensions/sim_files_policy may remove '.csv' files "
+                f"during {context}. Methods that read hourly CSV outputs (for example "
+                "get_hourly_df/get_monthly_df) may fail unless '.csv' is retained.",
+                UserWarning,
+            )
+
+    @staticmethod
+    def _cleanup_simulation_output_directories(
+        sim_dirs: Sequence[Any],
+        sim_files_extensions: Optional[tuple[str, ...]],
+        sim_files_policy: str,
+    ) -> dict:
+        """Apply post-run cleanup policy to a sequence of simulation folders.
+
+        Parameters
+        ----------
+        sim_dirs : Sequence[Any]
+            Candidate simulation directories to process.
+        sim_files_extensions : Optional[tuple[str, ...]]
+            Extension policy used by cleanup helper.
+        sim_files_policy : str
+            Cleanup policy forwarded to pruning logic.
+
+        Returns
+        -------
+        dict
+            Aggregated cleanup statistics across processed directories.
+
+        Usage
+        -----
+        Internal helper used after evaluator runs when directory retention is on.
+
+        Examples
+        --------
+        stats = SimulationBase._cleanup_simulation_output_directories(sim_dirs, exts, policy)
+        """
+        stats = {
+            'processed_dirs': 0,
+            'removed_files': 0,
+            'remove_errors': 0,
+            'removed_empty_dirs': 0,
+        }
+        if sim_files_extensions is None:
+            return stats
+
+        seen_dirs = set()
+        for sim_dir in sim_dirs:
+            if sim_dir in (None, ''):
+                continue
+            try:
+                if pd.isna(sim_dir):
+                    continue
+            except Exception:
+                pass
+
+            try:
+                sim_dir_path = os.path.abspath(os.fspath(sim_dir))
+            except TypeError:
+                continue
+            if sim_dir_path in seen_dirs:
+                continue
+            seen_dirs.add(sim_dir_path)
+
+            cleanup_stats = prune_simulation_output_files(
+                sim_dir=sim_dir_path,
+                sim_files_extensions=sim_files_extensions,
+                sim_files_policy=sim_files_policy,
+            )
+            stats['processed_dirs'] += int(cleanup_stats.get('processed', False))
+            stats['removed_files'] += int(cleanup_stats.get('removed_files', 0))
+            stats['remove_errors'] += int(cleanup_stats.get('remove_errors', 0))
+            stats['removed_empty_dirs'] += int(cleanup_stats.get('removed_empty_dirs', 0))
+
+        return stats
 
     # ------------------------------------------------------------------
     # IDF backup helpers
     # ------------------------------------------------------------------
 
     def _save_idf_backup(self, label: str = '', out_dir: str = None) -> str:
-        """
-        Saves a copy of ``self.building`` to disk as an IDF file and stores
+        """Saves a copy of ``self.buildings`` to disk as an IDF file and stores
         the path in ``self.idf_backup_path``.
-
+        
         :param label: optional suffix to embed in the filename.
-        :param out_dir: optional directory where the backup should be saved.
+        :param out_dir: directory where the backup should be saved.  Must be
+            provided; backups are always written inside the simulation results
+            folder so that no extra ``accim_idf_backups`` directory is created
+            in the working directory.
         :return: absolute path to the saved IDF.
+        
+        Usage
+        -----
+        Use `SimulationBase._save_idf_backup` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._save_idf_backup(label=..., out_dir=...)
         """
         import datetime
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         if out_dir is None:
-            backup_dir = os.path.join(os.getcwd(), 'accim_idf_backups')
-        else:
-            backup_dir = out_dir
+            raise ValueError(
+                "'out_dir' must be specified when saving an IDF backup. "
+                "Pass the simulation results directory (e.g. 'param_results' "
+                "or 'optim_results') so the backup lands there instead of "
+                "creating a separate 'accim_idf_backups' folder."
+            )
+        backup_dir = out_dir
         os.makedirs(backup_dir, exist_ok=True)
         suffix = f'_{label}' if label else ''
-        filename = f'accim_idf_backup{suffix}_{timestamp}.idf'
-        backup_path = os.path.join(backup_dir, filename)
-        self.building.savecopy(backup_path)
-        self.idf_backup_path = os.path.abspath(backup_path)
+        self.idf_backup_path = []
+        for i, b in enumerate(self.buildings):
+            idf_basename = os.path.basename(b.idfname).replace('.idf', '') if hasattr(b, 'idfname') and b.idfname else f'unknown_idf_{i}'
+            filename = f'accim_idf_backup_{idf_basename}{suffix}_{timestamp}.idf'
+            backup_path = os.path.join(backup_dir, filename)
+            b.savecopy(backup_path)
+            self.idf_backup_path.append(os.path.abspath(backup_path))
+        if len(self.idf_backup_path) == 1:
+            self.idf_backup_path = self.idf_backup_path[0]
         return self.idf_backup_path
 
-    def get_output_var_df_from_idf(self) -> pd.DataFrame:
-        """
-        Gets a pandas DataFrame which contains the Output:Variable objects from the idf.
+    def get_output_variables_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
+        """Gets a pandas DataFrame which contains the Output:Variable objects from the idf.
         Therefore, it may contain wildcards such as '*', which means the variable is requested
         for all zones.
 
+        :param idf_scope: which IDFs to read. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to read fewer IDFs.
         :return: a pandas DataFrame which contains the Output:Variable objects from the idf
+
+        Usage
+        -----
+        Use `SimulationBase.get_output_variables_df_from_idf` within ACCIM parametric and optimisation workflows.
+
+        Examples
+        --------
+        result = self.get_output_variables_df_from_idf(idf_scope=...)
         """
-        if self.is_accim_custom_model or self.is_accim_predef_model:
-            output_variable_df = accis.gen_outputs_df(idf=self.building, ScriptType=self.ScriptType, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, verboseMode=False)
-        else:
-            output_var_dict = {'key_value': [i.Key_Value for i in self.building.idfobjects['Output:Variable']], 'variable_name': [i.Variable_Name for i in self.building.idfobjects['Output:Variable']], 'frequency': [i.Reporting_Frequency for i in self.building.idfobjects['Output:Variable']], 'schedule_name': [i.Schedule_Name for i in self.building.idfobjects['Output:Variable']]}
+        scoped_buildings = self._resolve_idf_scope(idf_scope)
+        output_dfs = []
+        include_idf = len(scoped_buildings) > 1
+
+        for idx, building in scoped_buildings:
+            # Read current Output:Variable objects directly from the IDF.
+            # This method must be side-effect free (no output regeneration).
+            output_var_dict = {
+                'key_value': [i.Key_Value for i in building.idfobjects['Output:Variable']],
+                'variable_name': [i.Variable_Name for i in building.idfobjects['Output:Variable']],
+                'frequency': [i.Reporting_Frequency for i in building.idfobjects['Output:Variable']],
+                'schedule_name': [i.Schedule_Name for i in building.idfobjects['Output:Variable']],
+            }
             output_variable_df = pd.DataFrame.from_dict(output_var_dict)
-        return output_variable_df
+            if include_idf:
+                output_variable_df.insert(0, 'idf', self._get_idf_identifier(building, idx))
+            output_dfs.append(output_variable_df)
 
-    def get_output_meter_df_from_idf(self) -> pd.DataFrame:
-        """
-        Gets a pandas DataFrame which contains the Output:Meter objects from the idf.
+        if output_dfs:
+            return pd.concat(output_dfs, ignore_index=True)
+        return pd.DataFrame(columns=['key_value', 'variable_name', 'frequency', 'schedule_name'])
 
-        :return: a pandas DataFrame which contains the Output:Meter objects from the idf
-        """
-        output_meter_dict = {'key_name': [i.Key_Name for i in self.building.idfobjects['Output:Meter']], 'frequency': [i.Reporting_Frequency for i in self.building.idfobjects['Output:Meter']]}
-        output_meter_df = pd.DataFrame.from_dict(output_meter_dict)
-        return output_meter_df
+    def _get_idf_identifier(self, building: Any, index: int = None) -> str:
+        """Build a stable identifier for an IDF object.
 
-    def set_output_var_df_to_idf(self, outputs_df: pd.DataFrame=None):
-        """
-        Keeps the Output:Variable objects contained in the input pandas DataFrame and removes
-        all others. This is important to save space if thousands of simulations with heavy outputs
-        are run.
+        Parameters
+        ----------
+        building : Any
+            IDF object candidate.
+        index : int, optional
+            Fallback index used when the IDF has no filename.
 
-        :type outputs_df: pd.DataFrame
-        :param outputs_df: the DataFrame containing Output:Variable objects to be kept
-        :return:
+        Returns
+        -------
+        str
+            Identifier derived from `idfname` or a deterministic fallback name.
+
+        Usage
+        -----
+        Used by IDF-scope and grouping utilities.
+
+        Examples
+        --------
+        idf_name = self._get_idf_identifier(building, index=0)
         """
-        if self.is_accim_custom_model or self.is_accim_predef_model:
-            accis.addAccis(idf=self.building, ScriptType=self.ScriptType, SupplyAirTempInputMethod=self.SupplyAirTempInputMethod, Output_keep_existing=self.output_keep_existing, Output_type=self.output_type, Output_take_dataframe=outputs_df, Output_freqs=self.output_freqs, TempCtrl=self.temp_ctrl, make_averages=self.make_averages, verboseMode=False)
+        if hasattr(building, 'idfname') and building.idfname:
+            return os.path.basename(building.idfname).replace('.idf', '')
+        if index is not None:
+            return f'unknown_idf_{index}'
+        return 'unknown_idf'
+
+    def _resolve_idf_scope(self, idf_scope: Any = 'all') -> list[tuple[int, Any]]:
+        """Resolve an IDF scope into ``(index, building)`` pairs.
+        
+        Accepted values:
+        - 'all' (default): every IDF in ``self.buildings``.
+        - 'first': only the first IDF.
+        - int: zero-based IDF index.
+        - str: IDF identifier, file stem, or file name.
+        - list/tuple/set: any mix of the previous selectors.
+        
+        Parameters
+        ----------
+        idf_scope : Any
+            Argument used by `SimulationBase._resolve_idf_scope`.
+        
+        Usage
+        -----
+        Use `SimulationBase._resolve_idf_scope` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._resolve_idf_scope(idf_scope=...)
+        """
+        if not getattr(self, 'buildings', None):
+            return []
+
+        indexed_buildings = list(enumerate(self.buildings))
+        if idf_scope is None:
+            idf_scope = 'all'
+
+        if isinstance(idf_scope, str):
+            scope_norm = idf_scope.strip().lower()
+            if scope_norm in {'all', '*'}:
+                return indexed_buildings
+            if scope_norm in {'first', 'one', 'single', 'reference'}:
+                return [indexed_buildings[0]]
+
+        selectors = idf_scope if isinstance(idf_scope, (list, tuple, set)) else [idf_scope]
+
+        names_to_buildings: dict[str, tuple[int, Any]] = {}
+        for idx, building in indexed_buildings:
+            names = {self._get_idf_identifier(building, idx)}
+            idfname = getattr(building, 'idfname', None)
+            if idfname:
+                basename = os.path.basename(str(idfname))
+                names.add(basename)
+                names.add(os.path.splitext(basename)[0])
+            for name in names:
+                names_to_buildings.setdefault(str(name).strip().lower(), (idx, building))
+
+        selected: list[tuple[int, Any]] = []
+        seen_indices: set[int] = set()
+        for selector in selectors:
+            if isinstance(selector, int):
+                if selector < 0 or selector >= len(indexed_buildings):
+                    raise IndexError(f'idf_scope index out of range: {selector}')
+                pair = indexed_buildings[selector]
+            else:
+                selector_key = str(selector).strip().lower()
+                if selector_key in {'all', '*'}:
+                    for pair in indexed_buildings:
+                        if pair[0] not in seen_indices:
+                            selected.append(pair)
+                            seen_indices.add(pair[0])
+                    continue
+                if selector_key in {'first', 'one', 'single', 'reference'}:
+                    pair = indexed_buildings[0]
+                elif selector_key in names_to_buildings:
+                    pair = names_to_buildings[selector_key]
+                else:
+                    available = [self._get_idf_identifier(b, i) for (i, b) in indexed_buildings]
+                    raise ValueError(
+                        f'Unknown idf_scope selector: {selector}. '
+                        f'Available IDFs: {available}'
+                    )
+
+            if pair[0] not in seen_indices:
+                selected.append(pair)
+                seen_indices.add(pair[0])
+
+        return selected
+
+    def _idf_scope_label(self, idf_scope: Any = 'all') -> str:
+        """Build a human-readable label representing a resolved IDF scope.
+
+        Parameters
+        ----------
+        idf_scope : Any
+            Scope selector accepted by `_resolve_idf_scope`.
+
+        Returns
+        -------
+        str
+            Pipe-separated IDF identifiers.
+
+        Usage
+        -----
+        Used in scan/autocorrect reports for traceability.
+
+        Examples
+        --------
+        label = self._idf_scope_label('all')
+        """
+        return '|'.join(
+            self._get_idf_identifier(building, idx)
+            for (idx, building) in self._resolve_idf_scope(idf_scope)
+        )
+
+    @staticmethod
+    def _idfobjects_get_case(building: Any, key: str) -> list:
+        """Fetch IDF objects by key with tolerant case variants.
+
+        Parameters
+        ----------
+        building : Any
+            IDF object exposing an `idfobjects` mapping.
+        key : str
+            Object type key to retrieve.
+
+        Returns
+        -------
+        list
+            Matching IDF objects, or an empty list when absent.
+
+        Usage
+        -----
+        Internal helper used by output-object scanning and deduplication.
+
+        Examples
+        --------
+        vars_objs = SimulationBase._idfobjects_get_case(building, 'Output:Variable')
+        """
+        objs = list(getattr(building, 'idfobjects', {}).get(key, []))
+        if len(objs) == 0:
+            objs = list(getattr(building, 'idfobjects', {}).get(str(key).upper(), []))
+        if len(objs) == 0:
+            objs = list(getattr(building, 'idfobjects', {}).get(str(key).title(), []))
+        return objs
+
+    @classmethod
+    def _ensure_output_control_files_for_building(cls, building: Any) -> None:
+        """Ensure OutputControl:Files exists and enables CSV/MTR/ESO outputs."""
+        output_control_files = cls._idfobjects_get_case(building, 'OutputControl:Files')
+        if len(output_control_files) > 0:
+            output_control_file = output_control_files[0]
         else:
-            alloutputs = [output for output in self.building.idfobjects['Output:Variable']]
-            for i in alloutputs:
-                self.building.removeidfobject(i)
-            for i in outputs_df.index:
-                self.building.newidfobject('Output:Variable', Key_Value=outputs_df.loc[i, 'key_value'], Variable_Name=outputs_df.loc[i, 'variable_name'], Reporting_Frequency=outputs_df.loc[i, 'frequency'].capitalize(), Schedule_Name=outputs_df.loc[i, 'schedule_name'])
+            output_control_file = building.newidfobject(key='OUTPUTCONTROL:FILES')
 
-    def set_output_met_objects_to_idf(self, output_meters: list):
-        """
-        Adds the Output:Meter objects from the output_meters argument.
+        output_control_file.Output_CSV = 'Yes'
+        output_control_file.Output_MTR = 'Yes'
+        output_control_file.Output_ESO = 'Yes'
 
-        :type output_meters: list
-        :param output_meters: a list containing Output:Meter objects to be added
-        :return:
-        """
-        for meter in output_meters:
-            for freq in self.output_freqs:
-                self.building.newidfobject(key='OUTPUT:METER', Key_Name=meter, Reporting_Frequency=freq)
+    @classmethod
+    def _remove_tabular_outputs_for_building(cls, building: Any) -> None:
+        """Remove monthly/annual tabular outputs that can trigger heavy output artifacts."""
+        for obj_type in ('Output:Table:Monthly', 'Output:Table:Annual'):
+            for obj in list(cls._idfobjects_get_case(building, obj_type)):
+                building.removeidfobject(obj)
 
-    def get_outputs_df_from_testsim(self, reduce_sim_time: bool=True) -> tuple[pd.DataFrame, pd.DataFrame]:
+    @staticmethod
+    def _norm_output_token(value: Any) -> str:
+        """Normalize output-object tokens for deterministic comparisons.
+
+        Parameters
+        ----------
+        value : Any
+            Raw token value from IDF objects.
+
+        Returns
+        -------
+        str
+            Uppercase normalized token, or empty string for missing values.
+
+        Usage
+        -----
+        Used to build duplicate-detection keys for outputs/meters.
+
+        Examples
+        --------
+        token = SimulationBase._norm_output_token(' hourly ')
         """
-        Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.
+        try:
+            if pd.isna(value):
+                return ''
+        except Exception:
+            pass
+        return str(value).strip().upper()
+
+    def _variable_key_from_obj(self, obj: Any) -> tuple[str, str, str, str]:
+        """Build a duplicate-detection key for an `Output:Variable` object.
+
+        Parameters
+        ----------
+        obj : Any
+            Output-variable IDF object.
+
+        Returns
+        -------
+        tuple[str, str, str, str]
+            Normalized key tuple `(key_value, variable_name, frequency, schedule_name)`.
+
+        Usage
+        -----
+        Internal helper used by output deduplication routines.
+
+        Examples
+        --------
+        key = self._variable_key_from_obj(obj)
+        """
+        return (
+            self._norm_output_token(getattr(obj, 'Key_Value', '')),
+            self._norm_output_token(getattr(obj, 'Variable_Name', '')),
+            self._norm_output_token(getattr(obj, 'Reporting_Frequency', '')),
+            self._norm_output_token(getattr(obj, 'Schedule_Name', '')),
+        )
+
+    def _meter_key_from_obj(self, obj: Any) -> tuple[str, str]:
+        """Build a duplicate-detection key for an `Output:Meter` object.
+
+        Parameters
+        ----------
+        obj : Any
+            Output-meter IDF object.
+
+        Returns
+        -------
+        tuple[str, str]
+            Normalized key tuple `(key_name, frequency)`.
+
+        Usage
+        -----
+        Internal helper used by output deduplication routines.
+
+        Examples
+        --------
+        key = self._meter_key_from_obj(obj)
+        """
+        return (
+            self._norm_output_token(getattr(obj, 'Key_Name', '')),
+            self._norm_output_token(getattr(obj, 'Reporting_Frequency', '')),
+        )
+
+    def scan_output_objects(self, idf_scope: Any = 'all') -> dict:
+        """Inspect current output objects and duplicate counts without modifying IDFs.
+        
+        Parameters
+        ----------
+        idf_scope : Any
+            Argument used by `SimulationBase.scan_output_objects`.
+        
+        Usage
+        -----
+        Use `SimulationBase.scan_output_objects` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.scan_output_objects(idf_scope=...)
+        """
+        df_vars = self.get_output_variables_df_from_idf(idf_scope=idf_scope)
+        df_meters = self.get_output_meters_df_from_idf(idf_scope=idf_scope)
+
+        vars_work = df_vars.copy()
+        meters_work = df_meters.copy()
+
+        for col in ['key_value', 'variable_name', 'frequency', 'schedule_name']:
+            if col not in vars_work.columns:
+                vars_work[col] = ''
+            vars_work[col] = vars_work[col].map(self._norm_output_token)
+
+        for col in ['key_name', 'frequency']:
+            if col not in meters_work.columns:
+                meters_work[col] = ''
+            meters_work[col] = meters_work[col].map(self._norm_output_token)
+
+        subset_vars = ['key_value', 'variable_name', 'frequency', 'schedule_name']
+        subset_meters = ['key_name', 'frequency']
+        if 'idf' in vars_work.columns:
+            subset_vars = ['idf'] + subset_vars
+        if 'idf' in meters_work.columns:
+            subset_meters = ['idf'] + subset_meters
+
+        dup_vars = vars_work[vars_work.duplicated(subset=subset_vars, keep=False)]
+        dup_meters = meters_work[meters_work.duplicated(subset=subset_meters, keep=False)]
+
+        return {
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'variables_total': len(df_vars),
+            'meters_total': len(df_meters),
+            'variables_duplicate_rows': len(dup_vars),
+            'meters_duplicate_rows': len(dup_meters),
+            'variables': df_vars,
+            'meters': df_meters,
+            'duplicates_variables': dup_vars,
+            'duplicates_meters': dup_meters,
+        }
+
+    def autocorrect_output_duplicates(self, idf_scope: Any = 'all', warn: bool = True) -> dict:
+        """Remove duplicate Output:Variable/Output:Meter objects and optionally warn.
+        
+        Parameters
+        ----------
+        idf_scope : Any
+            Argument used by `SimulationBase.autocorrect_output_duplicates`.
+        
+        Usage
+        -----
+        Use `SimulationBase.autocorrect_output_duplicates` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.autocorrect_output_duplicates(idf_scope=..., warn=...)
+        """
+        report = {
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'buildings': {},
+            'removed_variables': 0,
+            'removed_meters': 0,
+        }
+
+        for idx, building in self._resolve_idf_scope(idf_scope):
+            idf_id = self._get_idf_identifier(building, idx)
+            removed_vars = 0
+            removed_meters = 0
+
+            seen_var_keys: set[tuple[str, str, str, str]] = set()
+            for obj in self._idfobjects_get_case(building, 'Output:Variable'):
+                key = self._variable_key_from_obj(obj)
+                if key in seen_var_keys:
+                    building.removeidfobject(obj)
+                    removed_vars += 1
+                else:
+                    seen_var_keys.add(key)
+
+            seen_meter_keys: set[tuple[str, str]] = set()
+            for obj in self._idfobjects_get_case(building, 'Output:Meter'):
+                key = self._meter_key_from_obj(obj)
+                if key in seen_meter_keys:
+                    building.removeidfobject(obj)
+                    removed_meters += 1
+                else:
+                    seen_meter_keys.add(key)
+
+            report['buildings'][idf_id] = {
+                'removed_variables': removed_vars,
+                'removed_meters': removed_meters,
+            }
+            report['removed_variables'] += removed_vars
+            report['removed_meters'] += removed_meters
+
+            if warn and (removed_vars > 0 or removed_meters > 0):
+                warnings.warn(
+                    f"Detected and removed duplicated output objects in IDF '{idf_id}': "
+                    f"Output:Variable={removed_vars}, Output:Meter={removed_meters}"
+                )
+
+        return report
+
+    def _get_buildings_by_idf(self) -> dict:
+        """Map IDF identifiers to loaded building objects.
+
+        Parameters
+        ----------
+        None
+            This method uses `self.buildings`.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping IDF identifier strings to building objects.
+
+        Usage
+        -----
+        Internal helper for validating dataframe `idf` selectors.
+
+        Examples
+        --------
+        by_idf = self._get_buildings_by_idf()
+        """
+        buildings_by_idf = {}
+        for (idx, building) in enumerate(self.buildings):
+            idf_name = self._get_idf_identifier(building=building, index=idx)
+            if idf_name in buildings_by_idf:
+                raise ValueError(
+                    f'Duplicate IDF identifier detected: {idf_name}. '
+                    f'Please provide buildings with unique file names.'
+                )
+            buildings_by_idf[idf_name] = building
+        return buildings_by_idf
+
+    def _get_problem_input_names(self) -> list:
+        """List input names defined by the active problem/parameter set.
+
+        Parameters
+        ----------
+        None
+            Uses instance attributes (`problem`, `parameters_list`).
+
+        Returns
+        -------
+        list
+            Input variable names expected by evaluators.
+
+        Usage
+        -----
+        Internal helper for dataframe validation and ordering.
+
+        Examples
+        --------
+        input_names = self._get_problem_input_names()
+        """
+        if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+            return list(self.problem.names('inputs'))
+        if hasattr(self, 'parameters_list'):
+            return [parameter.name for parameter in self.parameters_list]
+        return []
+
+    def _get_external_input_names(self) -> list:
+        """List extra evaluator input columns required by session context.
+
+        Parameters
+        ----------
+        None
+            Uses the count of loaded buildings.
+
+        Returns
+        -------
+        list
+            External input names (for example `idf` in multi-IDF sessions).
+
+        Usage
+        -----
+        Internal helper for dataframe schema checks.
+
+        Examples
+        --------
+        external_cols = self._get_external_input_names()
+        """
+        return ['idf'] if len(self.buildings) > 1 else []
+
+    def _get_all_input_names(self) -> list:
+        """List combined problem and external input column names.
+
+        Parameters
+        ----------
+        None
+            Uses helper methods from the current simulation instance.
+
+        Returns
+        -------
+        list
+            Concatenated input names required by evaluators.
+
+        Usage
+        -----
+        Internal helper used while preparing evaluation dataframes.
+
+        Examples
+        --------
+        all_inputs = self._get_all_input_names()
+        """
+        return self._get_problem_input_names() + self._get_external_input_names()
+
+    def _prepare_dataframe_for_buildings(self, df: pd.DataFrame, epws: list = None) -> dict:
+        """Validate and split an input dataframe per target building.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Input samples dataframe.
+        epws : list, optional
+            Allowed EPW labels used to validate optional `epw` column.
+
+        Returns
+        -------
+        dict
+            Mapping `{idf_name: dataframe_subset}` ready for evaluator dispatch.
+
+        Usage
+        -----
+        Internal helper used by dataframe-driven simulation execution.
+
+        Examples
+        --------
+        grouped = self._prepare_dataframe_for_buildings(df=samples_df, epws=self.epws)
+        """
+        if df is None:
+            raise ValueError('Argument df must be a pandas DataFrame.')
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError('Argument df must be a pandas DataFrame.')
+
+        prepared_df = df.copy()
+        buildings_by_idf = self._get_buildings_by_idf()
+        input_names = self._get_problem_input_names()
+        allowed_external_columns = self._get_external_input_names()
+        if epws is not None:
+            allowed_external_columns = allowed_external_columns + ['epw']
+
+        if len(self.buildings) > 1:
+            if 'idf' in prepared_df.columns:
+                unknown_idfs = sorted(set(prepared_df['idf'].dropna().astype(str)) - set(buildings_by_idf.keys()))
+                if unknown_idfs:
+                    raise ValueError(
+                        f'The following IDFs in df are not part of this {self.__class__.__name__} instance: {unknown_idfs}'
+                    )
+                prepared_df['idf'] = prepared_df['idf'].astype(str)
+            else:
+                if len(prepared_df) == 0:
+                    prepared_df = pd.DataFrame({'idf': list(buildings_by_idf.keys())})
+                else:
+                    prepared_df = pd.concat(
+                        [prepared_df.assign(idf=idf_name) for idf_name in buildings_by_idf.keys()],
+                        ignore_index=True,
+                    )
+        elif 'idf' in prepared_df.columns:
+            prepared_df = prepared_df.drop(columns=['idf'])
+
+        if 'epw' in prepared_df.columns:
+            allowed_epws = {str(epw) for epw in epws or []}
+            unknown_epws = sorted(set(prepared_df['epw'].dropna().astype(str)) - allowed_epws)
+            if unknown_epws:
+                raise ValueError(
+                    f'The following EPWs in df are not part of the epws argument: {unknown_epws}'
+                )
+            prepared_df['epw'] = prepared_df['epw'].astype(str)
+
+        missing_columns = [column for column in input_names if column not in prepared_df.columns]
+        if missing_columns:
+            raise ValueError(f'The following input columns are missing in df: {missing_columns}')
+
+        extra_columns = [column for column in prepared_df.columns if column not in input_names + allowed_external_columns]
+        if extra_columns:
+            warnings.warn(
+                f'The following columns in df are not used by the evaluator and will be ignored: {extra_columns}',
+                UserWarning,
+            )
+
+        grouped = {}
+        if len(self.buildings) > 1:
+            for idf_name, subset in prepared_df.groupby('idf', sort=False):
+                grouped[idf_name] = subset.reset_index(drop=True)
+        else:
+            grouped[self._get_idf_identifier(self.building, 0)] = prepared_df.reset_index(drop=True)
+
+        return grouped
+
+    def get_output_meters_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
+        """Gets a pandas DataFrame which contains the Output:Meter objects from the idf.
+
+        :param idf_scope: which IDFs to read. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to read fewer IDFs.
+        :return: a pandas DataFrame which contains the Output:Meter objects from the idf
+
+        Usage
+        -----
+        Use `SimulationBase.get_output_meters_df_from_idf` within ACCIM parametric and optimisation workflows.
+
+        Examples
+        --------
+        result = self.get_output_meters_df_from_idf(idf_scope=...)
+        """
+        scoped_buildings = self._resolve_idf_scope(idf_scope)
+        output_dfs = []
+        include_idf = len(scoped_buildings) > 1
+
+        for idx, building in scoped_buildings:
+            output_meter_dict = {
+                'key_name': [i.Key_Name for i in building.idfobjects['Output:Meter']],
+                'frequency': [i.Reporting_Frequency for i in building.idfobjects['Output:Meter']],
+            }
+            output_meter_df = pd.DataFrame.from_dict(output_meter_dict)
+            if include_idf:
+                output_meter_df.insert(0, 'idf', self._get_idf_identifier(building, idx))
+            output_dfs.append(output_meter_df)
+
+        if output_dfs:
+            return pd.concat(output_dfs, ignore_index=True)
+        return pd.DataFrame(columns=['key_name', 'frequency'])
+
+    def get_output_var_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
+        """Deprecated alias. Use get_output_variables_df_from_idf instead.
+
+        Parameters
+        ----------
+        idf_scope : Any
+            Argument forwarded to `SimulationBase.get_output_variables_df_from_idf`.
+
+        Usage
+        -----
+        Use `SimulationBase.get_output_variables_df_from_idf` within ACCIM parametric and optimisation workflows.
+
+        Examples
+        --------
+        result = self.get_output_variables_df_from_idf(idf_scope=...)
+        """
+        warnings.warn(
+            "get_output_var_df_from_idf is deprecated and will be removed in a future version. "
+            "Use get_output_variables_df_from_idf instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_output_variables_df_from_idf(idf_scope=idf_scope)
+
+    def get_output_meter_df_from_idf(self, idf_scope: Any = 'all') -> pd.DataFrame:
+        """Deprecated alias. Use get_output_meters_df_from_idf instead.
+
+        Parameters
+        ----------
+        idf_scope : Any
+            Argument forwarded to `SimulationBase.get_output_meters_df_from_idf`.
+
+        Usage
+        -----
+        Use `SimulationBase.get_output_meters_df_from_idf` within ACCIM parametric and optimisation workflows.
+
+        Examples
+        --------
+        result = self.get_output_meters_df_from_idf(idf_scope=...)
+        """
+        warnings.warn(
+            "get_output_meter_df_from_idf is deprecated and will be removed in a future version. "
+            "Use get_output_meters_df_from_idf instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_output_meters_df_from_idf(idf_scope=idf_scope)
+
+    def _get_available_outputs_for_validation(
+        self,
+        validation_scope: Any,
+        reduce_sim_time: bool = True,
+        keep_available_outputs: bool = False,
+    ) -> dict:
+        """Return available outputs for setter validation, reusing cached discovery.
+
+        Unlike ``discover_available_outputs`` (which re-runs when the requested
+        ``prefer`` differs from the cached one), validation only needs availability
+        lists, so any cached discovery matching the IDF scope is accepted
+        (e.g. a previous ``prefer='rdd_mdd'`` run).
+
+        Usage
+        -----
+        Internal helper used by set_output_variables_to_idf / set_output_meters_to_idf.
+
+        Examples
+        --------
+        discovered = self._get_available_outputs_for_validation(validation_scope)
+        """
+        cached = getattr(self, 'available_outputs_', None)
+        if isinstance(cached, dict) and 'df_meters' in cached and 'df_vars' in cached and 'meta' in cached:
+            cached_meta = dict(cached.get('meta', {}))
+            if cached_meta.get('idf_scope') == self._idf_scope_label(validation_scope):
+                return {
+                    'meters': cached['df_meters'].copy(),
+                    'variables': cached['df_vars'].copy(),
+                    'meta': cached_meta,
+                }
+        return self.discover_available_outputs(
+            reduce_sim_time=reduce_sim_time,
+            prefer='testsimeplus',
+            refresh=False,
+            idf_scope=validation_scope,
+            keep_available_outputs=keep_available_outputs,
+        )
+
+    def set_output_variables_to_idf(
+            self,
+            df_output_variable: Optional[pd.DataFrame] = None,
+            output_variables: Optional[list[Union[str, tuple, dict]]] = None,
+            idf_scope: Any = 'all',
+            mode: Literal['append', 'replace'] = 'append',
+            validate: bool = True,
+            on_missing: Literal['warn', 'raise', 'ignore'] = 'warn',
+            auto_filter: bool = True,
+            reduce_sim_time: bool = True,
+            validation_idf_scope: Any = None,
+            keep_available_outputs: bool = False,
+    ) -> dict:
+        """Adds Output:Variable objects from DataFrame and/or list.
+
+        - ``mode='append'`` (default): keep existing objects and add only missing ones.
+        - ``mode='replace'``: remove all existing Output:Variable objects in every scoped
+          IDF first, then add the requested rows. The removal happens even when the
+          requested selection ends up empty after validation (a warning is emitted).
+
+        Rows with an empty ``frequency`` are expanded using ``self.output_freqs``.
+
+        :param df_output_variable: DataFrame with columns key_value, variable_name,
+            frequency and optionally schedule_name.
+        :param output_variables: alternative list to define variables. Supports:
+            - str: variable_name (with key_value='*' and frequencies from self.output_freqs)
+            - tuple/list of 2 elements: (key_value, variable_name)
+            - dict: variable_name (+ optional key_value, frequency, schedule_name)
+        :param validate: when True (default), validates requested variables against
+            discovered outputs from a lightweight test simulation (cached in
+            ``self.available_outputs_``) before modifying the IDFs.
+        :param on_missing: behaviour when some requested variables are not available.
+        :param auto_filter: when True and validate=True, skip missing variables instead
+            of adding them to the IDF.
+        :param reduce_sim_time: when validate=True, reduce runtime for the discovery test.
+        :param idf_scope: IDFs to modify. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to modify fewer IDFs.
+        :param validation_idf_scope: IDFs to use for discovery/validation. Defaults
+            to idf_scope. Use 'first' to validate once while applying to all IDFs.
+        :param keep_available_outputs: when validating, keep the temporary
+            ``available_outputs`` folder if True.
+        :param mode: 'append' or 'replace'.
+        :return: report dict with per-IDF counts (`added`, `skipped_existing`,
+            `removed_replace`, `missing`, `filtered_missing`) and aggregated totals.
+
+        Usage
+        -----
+        Use `SimulationBase.set_output_variables_to_idf` within ACCIM parametric and optimisation workflows.
+
+        Examples
+        --------
+        result = self.set_output_variables_to_idf(df_output_variable=..., output_variables=..., idf_scope=..., ...)
+        """
+        if mode not in {'append', 'replace'}:
+            raise ValueError("mode must be 'append' or 'replace'.")
+        if on_missing not in {'warn', 'raise', 'ignore'}:
+            raise ValueError("on_missing must be 'warn', 'raise', or 'ignore'.")
+
+        report: dict = {
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'mode': mode,
+            'validated': False,
+            'added': 0,
+            'skipped_existing': 0,
+            'removed_replace': 0,
+            'missing': [],
+            'filtered_missing': [],
+            'buildings': {},
+        }
+
+        outputs_df = pd.DataFrame(columns=['key_value', 'variable_name', 'frequency', 'schedule_name'])
+        if df_output_variable is not None and len(df_output_variable) > 0:
+            outputs_df = pd.concat([outputs_df, df_output_variable.copy()], ignore_index=True)
+
+        if output_variables is not None:
+            variable_rows = []
+            for item in output_variables:
+                if isinstance(item, dict):
+                    variable_name = item.get('variable_name', item.get('Variable_Name', ''))
+                    key_value = item.get('key_value', item.get('Key_Value', '*'))
+                    schedule_name = item.get('schedule_name', item.get('Schedule_Name', ''))
+                    if 'frequency' in item:
+                        freqs = [item.get('frequency')]
+                    elif 'Reporting_Frequency' in item:
+                        freqs = [item.get('Reporting_Frequency')]
+                    else:
+                        freqs = list(self.output_freqs)
+                elif isinstance(item, (tuple, list)) and len(item) == 2:
+                    key_value, variable_name = item
+                    schedule_name = ''
+                    freqs = list(self.output_freqs)
+                else:
+                    key_value = '*'
+                    variable_name = item
+                    schedule_name = ''
+                    freqs = list(self.output_freqs)
+
+                for freq in freqs:
+                    variable_rows.append({
+                        'key_value': key_value,
+                        'variable_name': variable_name,
+                        'frequency': freq,
+                        'schedule_name': schedule_name,
+                    })
+
+            if len(variable_rows) > 0:
+                outputs_df = pd.concat([outputs_df, pd.DataFrame(variable_rows)], ignore_index=True)
+
+        if len(outputs_df) == 0:
+            return report
+
+        required_cols = {'key_value', 'variable_name', 'frequency'}
+        missing_cols = [col for col in required_cols if col not in outputs_df.columns]
+        if missing_cols:
+            raise ValueError(f"outputs_df must contain columns: {sorted(required_cols)}. Missing: {missing_cols}")
+
+        # Normalize once and expand empty frequencies using self.output_freqs
+        # (same rule applied by set_output_meters_to_idf).
+        if 'schedule_name' not in outputs_df.columns:
+            outputs_df['schedule_name'] = ''
+        outputs_df = outputs_df.fillna('')
+        expanded_rows = []
+        for _, row in outputs_df.iterrows():
+            freq_value = str(row.get('frequency', '')).strip()
+            row_freqs = [freq_value] if freq_value != '' else [str(f) for f in self.output_freqs]
+            for row_freq in row_freqs:
+                expanded_row = row.copy()
+                expanded_row['frequency'] = row_freq
+                expanded_rows.append(expanded_row)
+        if len(expanded_rows) == 0:
+            return report
+        outputs_df = pd.DataFrame(expanded_rows).reset_index(drop=True)
+
+        available_pairs_by_idx: dict[int, set[tuple[str, str]]] = {}
+        available_names_by_idx: dict[int, set[str]] = {}
+        fallback_available_pairs: set[tuple[str, str]] = set()
+        fallback_available_names: set[str] = set()
+
+        validation_scope = idf_scope if validation_idf_scope is None else validation_idf_scope
+        if validate:
+            discovered = self._get_available_outputs_for_validation(
+                validation_scope,
+                reduce_sim_time=reduce_sim_time,
+                keep_available_outputs=keep_available_outputs,
+            )
+            validation_buildings = self._resolve_idf_scope(validation_scope)
+            df_vars_available = discovered.get('variables', pd.DataFrame())
+
+            if isinstance(df_vars_available, pd.DataFrame) and 'variable_name' in df_vars_available.columns:
+                available_work = df_vars_available.copy().fillna('')
+                if 'key_value' not in available_work.columns:
+                    available_work['key_value'] = ''
+
+                available_work['key_value'] = available_work['key_value'].map(self._norm_output_token)
+                available_work['variable_name'] = available_work['variable_name'].map(self._norm_output_token)
+                available_work = available_work[available_work['variable_name'] != '']
+
+                if 'idf' in available_work.columns:
+                    idx_by_idf = {
+                        self._get_idf_identifier(building, idx): idx
+                        for (idx, building) in validation_buildings
+                    }
+                    for idf_id, subset in available_work.groupby('idf', sort=False):
+                        idx = idx_by_idf.get(str(idf_id))
+                        if idx is None:
+                            continue
+                        pair_set = set(subset[['key_value', 'variable_name']].itertuples(index=False, name=None))
+                        available_pairs_by_idx[idx] = pair_set
+                        available_names_by_idx[idx] = {
+                            str(v) for v in subset['variable_name'].tolist() if str(v).strip() != ''
+                        }
+                else:
+                    pair_set = set(available_work[['key_value', 'variable_name']].itertuples(index=False, name=None))
+                    name_set = {str(v) for v in available_work['variable_name'].tolist() if str(v).strip() != ''}
+                    for val_idx, _ in validation_buildings:
+                        available_pairs_by_idx[val_idx] = set(pair_set)
+                        available_names_by_idx[val_idx] = set(name_set)
+
+            if len(available_pairs_by_idx) == 1:
+                fallback_available_pairs = next(iter(available_pairs_by_idx.values()))
+                fallback_available_names = next(iter(available_names_by_idx.values()))
+            elif len(available_pairs_by_idx) > 1:
+                fallback_available_pairs = set.intersection(*available_pairs_by_idx.values())
+                fallback_available_names = set.intersection(*available_names_by_idx.values())
+
+            if len(available_pairs_by_idx) == 0:
+                warnings.warn(
+                    'Output validation was requested but no available Output:Variable outputs '
+                    'could be discovered; requested variables will be added without validation.'
+                )
+
+        report['validated'] = validate and len(available_pairs_by_idx) > 0
+
+        def _is_available_variable(row: pd.Series, available_pairs: set[tuple[str, str]], available_names: set[str]) -> bool:
+            variable_name = self._norm_output_token(row.get('variable_name', ''))
+            if variable_name == '':
+                return False
+            key_value = self._norm_output_token(row.get('key_value', ''))
+            if key_value in {'', '*'}:
+                return variable_name in available_names
+            # RDD/MDD-based discovery reports pairs with '*' as key_value, so a
+            # wildcard availability entry also validates specific-key requests.
+            return (key_value, variable_name) in available_pairs or ('*', variable_name) in available_pairs
+
+        scoped_buildings = self._resolve_idf_scope(idf_scope)
+        for idx, b in scoped_buildings:
+            idf_id = self._get_idf_identifier(b, idx)
+            building_report = {
+                'added': 0,
+                'skipped_existing': 0,
+                'removed_replace': 0,
+                'missing': [],
+                'filtered_missing': [],
+            }
+            report['buildings'][idf_id] = building_report
+
+            outputs_for_building = outputs_df
+            if 'idf' in outputs_df.columns:
+                outputs_for_building = outputs_df[outputs_df['idf'].astype(str) == idf_id].drop(columns=['idf'])
+
+            outputs_for_building = outputs_for_building.copy()
+            outputs_for_building['frequency'] = outputs_for_building['frequency'].astype(str)
+            outputs_for_building = outputs_for_building.drop_duplicates(
+                subset=['key_value', 'variable_name', 'frequency', 'schedule_name'],
+                keep='first',
+            )
+
+            available_pairs = available_pairs_by_idx.get(idx, fallback_available_pairs)
+            available_names = available_names_by_idx.get(idx, fallback_available_names)
+            has_validation_result = validate and len(available_pairs_by_idx) > 0
+
+            if has_validation_result and len(outputs_for_building) > 0:
+                availability_mask = outputs_for_building.apply(
+                    lambda row: _is_available_variable(row, available_pairs, available_names),
+                    axis=1,
+                )
+                missing_rows = outputs_for_building.loc[~availability_mask, ['key_value', 'variable_name']].drop_duplicates()
+                if len(missing_rows) > 0:
+                    missing_specs = [
+                        (str(r['key_value']), str(r['variable_name']))
+                        for (_, r) in missing_rows.iterrows()
+                    ]
+                    building_report['missing'] = missing_specs
+                    if auto_filter:
+                        building_report['filtered_missing'] = missing_specs
+                    msg = (
+                        "Some requested Output:Variable (key_value, variable_name) values are not available in this model "
+                        f"for IDF '{idf_id}' (and will be ignored={auto_filter}): {missing_specs}"
+                    )
+                    if on_missing == 'raise':
+                        raise ValueError(msg)
+                    if on_missing == 'warn':
+                        warnings.warn(msg)
+
+                if auto_filter:
+                    outputs_for_building = outputs_for_building.loc[availability_mask]
+
+            if mode == 'replace':
+                existing_variables = list(self._idfobjects_get_case(b, 'Output:Variable'))
+                for existing in existing_variables:
+                    b.removeidfobject(existing)
+                building_report['removed_replace'] = len(existing_variables)
+                if len(outputs_for_building) == 0:
+                    warnings.warn(
+                        f"mode='replace' removed all existing Output:Variable objects in IDF '{idf_id}' "
+                        'but no requested variables remained to be added.'
+                    )
+
+            if len(outputs_for_building) == 0:
+                continue
+
+            existing_keys = {
+                self._variable_key_from_obj(existing)
+                for existing in self._idfobjects_get_case(b, 'Output:Variable')
+            }
+            for _, row in outputs_for_building.iterrows():
+                key = (
+                    self._norm_output_token(row.get('key_value', '')),
+                    self._norm_output_token(row.get('variable_name', '')),
+                    self._norm_output_token(str(row.get('frequency', ''))),
+                    self._norm_output_token(row.get('schedule_name', '')),
+                )
+                if key in existing_keys:
+                    building_report['skipped_existing'] += 1
+                    continue
+                b.newidfobject(
+                    'Output:Variable',
+                    Key_Value=row.get('key_value', ''),
+                    Variable_Name=row.get('variable_name', ''),
+                    Reporting_Frequency=str(row.get('frequency', '')).capitalize(),
+                    Schedule_Name=row.get('schedule_name', ''),
+                )
+                existing_keys.add(key)
+                building_report['added'] += 1
+
+        report['added'] = sum(br['added'] for br in report['buildings'].values())
+        report['skipped_existing'] = sum(br['skipped_existing'] for br in report['buildings'].values())
+        report['removed_replace'] = sum(br['removed_replace'] for br in report['buildings'].values())
+        for aggregate_key in ('missing', 'filtered_missing'):
+            aggregated_specs = []
+            for br in report['buildings'].values():
+                for spec in br[aggregate_key]:
+                    if spec not in aggregated_specs:
+                        aggregated_specs.append(spec)
+            report[aggregate_key] = aggregated_specs
+        return report
+
+    def set_output_var_df_to_idf(
+            self,
+            outputs_df: pd.DataFrame = None,
+            idf_scope: Any = 'all',
+            mode: Literal['append', 'replace'] = 'append',
+    ):
+        """Legacy wrapper. Use set_output_variables_to_idf instead.
+        
+        Parameters
+        ----------
+        outputs_df : Any
+            Argument used by `SimulationBase.set_output_var_df_to_idf`.
+        idf_scope : Any
+            Argument used by `SimulationBase.set_output_var_df_to_idf`.
+        mode : Any
+            Argument used by `SimulationBase.set_output_var_df_to_idf`.
+        
+        Usage
+        -----
+        Use `SimulationBase.set_output_var_df_to_idf` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_output_var_df_to_idf(outputs_df=..., idf_scope=..., mode=...)
+        """
+        warnings.warn(
+            "set_output_var_df_to_idf is deprecated and will be removed in a future version. "
+            "Use set_output_variables_to_idf(df_output_variable=..., output_variables=..., ...) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        # Legacy behaviour: this wrapper never validated against a test simulation.
+        return self.set_output_variables_to_idf(
+            df_output_variable=outputs_df,
+            output_variables=None,
+            idf_scope=idf_scope,
+            mode=mode,
+            validate=False,
+        )
+
+    def keep_only_outputs_in_idfs(
+            self,
+            df_output_variable: Optional[pd.DataFrame] = None,
+            df_output_meter: Optional[pd.DataFrame] = None,
+            output_variables: Optional[Union[list[str], list[tuple[str, str]], list[dict]]] = None,
+            output_meters: Optional[list[Union[str, dict]]] = None,
+            match: Literal['exact', 'case_insensitive', 'contains', 'regex'] = 'case_insensitive',
+            idf_scope: Any = 'all',
+            dry_run: bool = False,
+    ) -> dict:
+        """Remove Output:Meter and/or Output:Variable objects not matching the requested selection.
+        
+        This method edits existing IDF output objects only; it does not run EnergyPlus and it does
+        not add missing outputs. ``None`` means "do not filter this output type"; an empty list or
+        empty DataFrame means "remove all objects of this output type".
+        
+        :param df_output_variable: optional DataFrame with columns such as key_value,
+            variable_name, frequency and schedule_name.
+        :param df_output_meter: optional DataFrame with key_name and optionally frequency.
+        :param output_variables: variable wishlist. Items can be variable names, (key_value,
+            variable_name) tuples, or dictionaries with key_value, variable_name and frequency.
+        :param output_meters: meter wishlist. Items can be key names or dictionaries with key_name
+            and frequency.
+        :param match: matching mode for text fields.
+        :param idf_scope: IDFs to filter. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to filter fewer IDFs.
+        :param dry_run: when True, return the report without modifying the IDFs.
+        :return: report dict with kept/removed counts per IDF.
+        
+        Usage
+        -----
+        Use `SimulationBase.keep_only_outputs_in_idfs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.keep_only_outputs_in_idfs(df_output_variable=..., df_output_meter=..., output_variables=..., ...)
+        """
+        filter_meters = df_output_meter is not None or output_meters is not None
+        filter_variables = df_output_variable is not None or output_variables is not None
+
+        if not filter_meters and not filter_variables:
+            raise ValueError(
+                'At least one output selection must be provided. '
+                'Use an empty list/DataFrame to remove all objects of a type.'
+            )
+
+        def _clean(value: Any) -> str:
+            try:
+                if pd.isna(value):
+                    return ''
+            except (TypeError, ValueError):
+                pass
+            return str(value).strip()
+
+        def _field_matches(actual: Any, expected: Any) -> bool:
+            expected_clean = _clean(expected)
+            if expected_clean == '':
+                return True
+            actual_clean = _clean(actual)
+            if match == 'exact':
+                return actual_clean == expected_clean
+            if match == 'case_insensitive':
+                return actual_clean.upper() == expected_clean.upper()
+            if match == 'contains':
+                return expected_clean.upper() in actual_clean.upper()
+            if match == 'regex':
+                return re.search(expected_clean, actual_clean) is not None
+            raise ValueError(f"Unknown match mode: {match}")
+
+        def _spec_matches(fields: dict[str, Any], specs: list[dict[str, Any]]) -> bool:
+            if not specs:
+                return False
+            for spec in specs:
+                if all(_field_matches(fields.get(key, ''), value) for key, value in spec.items()):
+                    return True
+            return False
+
+        def _meter_specs(idf_id: Optional[str] = None) -> list[dict[str, Any]]:
+            specs: list[dict[str, Any]] = []
+            if df_output_meter is not None:
+                if 'key_name' not in df_output_meter.columns and len(df_output_meter) > 0:
+                    raise ValueError("df_output_meter must contain a 'key_name' column.")
+                df_source = df_output_meter
+                if idf_id is not None and 'idf' in df_output_meter.columns:
+                    df_source = df_output_meter[df_output_meter['idf'].astype(str) == idf_id]
+                for _, row in df_source.iterrows():
+                    spec = {'key_name': row.get('key_name', '')}
+                    if 'frequency' in df_output_meter.columns:
+                        spec['frequency'] = row.get('frequency', '')
+                    specs.append(spec)
+            if output_meters is not None:
+                for meter in output_meters:
+                    if isinstance(meter, dict):
+                        spec = {'key_name': meter.get('key_name', meter.get('Key_Name', ''))}
+                        if 'frequency' in meter:
+                            spec['frequency'] = meter.get('frequency', '')
+                        elif 'Reporting_Frequency' in meter:
+                            spec['frequency'] = meter.get('Reporting_Frequency', '')
+                    else:
+                        spec = {'key_name': meter}
+                    specs.append(spec)
+            return specs
+
+        def _variable_specs(idf_id: Optional[str] = None) -> list[dict[str, Any]]:
+            specs: list[dict[str, Any]] = []
+            if df_output_variable is not None:
+                if 'variable_name' not in df_output_variable.columns and len(df_output_variable) > 0:
+                    raise ValueError("df_output_variable must contain a 'variable_name' column.")
+                df_source = df_output_variable
+                if idf_id is not None and 'idf' in df_output_variable.columns:
+                    df_source = df_output_variable[df_output_variable['idf'].astype(str) == idf_id]
+                for _, row in df_source.iterrows():
+                    spec = {'variable_name': row.get('variable_name', '')}
+                    if 'key_value' in df_output_variable.columns:
+                        spec['key_value'] = row.get('key_value', '')
+                    if 'frequency' in df_output_variable.columns:
+                        spec['frequency'] = row.get('frequency', '')
+                    if 'schedule_name' in df_output_variable.columns:
+                        spec['schedule_name'] = row.get('schedule_name', '')
+                    specs.append(spec)
+            if output_variables is not None:
+                for variable in output_variables:
+                    if isinstance(variable, dict):
+                        spec = {'variable_name': variable.get('variable_name', variable.get('Variable_Name', ''))}
+                        if 'key_value' in variable:
+                            spec['key_value'] = variable.get('key_value', '')
+                        elif 'Key_Value' in variable:
+                            spec['key_value'] = variable.get('Key_Value', '')
+                        if 'frequency' in variable:
+                            spec['frequency'] = variable.get('frequency', '')
+                        elif 'Reporting_Frequency' in variable:
+                            spec['frequency'] = variable.get('Reporting_Frequency', '')
+                    elif isinstance(variable, (tuple, list)) and len(variable) == 2:
+                        spec = {'key_value': variable[0], 'variable_name': variable[1]}
+                    else:
+                        spec = {'variable_name': variable}
+                    specs.append(spec)
+            return specs
+
+        report: dict = {
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'dry_run': dry_run,
+            'buildings': {},
+        }
+
+        for idx, building in self._resolve_idf_scope(idf_scope):
+            idf_id = self._get_idf_identifier(building, idx)
+            building_report = {}
+            meter_specs = _meter_specs(idf_id)
+            variable_specs = _variable_specs(idf_id)
+
+            if filter_meters:
+                meter_objects = list(self._idfobjects_get_case(building, 'Output:Meter'))
+                removed = 0
+                kept = 0
+                for obj in meter_objects:
+                    fields = {
+                        'key_name': getattr(obj, 'Key_Name', ''),
+                        'frequency': getattr(obj, 'Reporting_Frequency', ''),
+                    }
+                    if _spec_matches(fields, meter_specs):
+                        kept += 1
+                    else:
+                        removed += 1
+                        if not dry_run:
+                            building.removeidfobject(obj)
+                building_report['meters'] = {'kept': kept, 'removed': removed}
+
+            if filter_variables:
+                variable_objects = list(self._idfobjects_get_case(building, 'Output:Variable'))
+                removed = 0
+                kept = 0
+                for obj in variable_objects:
+                    fields = {
+                        'key_value': getattr(obj, 'Key_Value', ''),
+                        'variable_name': getattr(obj, 'Variable_Name', ''),
+                        'frequency': getattr(obj, 'Reporting_Frequency', ''),
+                        'schedule_name': getattr(obj, 'Schedule_Name', ''),
+                    }
+                    if _spec_matches(fields, variable_specs):
+                        kept += 1
+                    else:
+                        removed += 1
+                        if not dry_run:
+                            building.removeidfobject(obj)
+                building_report['variables'] = {'kept': kept, 'removed': removed}
+
+            report['buildings'][idf_id] = building_report
+
+        return report
+
+    def set_output_meters_to_idf(
+            self,
+            df_output_meter: Optional[pd.DataFrame] = None,
+            output_meters: Optional[list[Union[str, dict]]] = None,
+            idf_scope: Any = 'all',
+            mode: Literal['append', 'replace'] = 'append',
+            validate: bool = True,
+            on_missing: Literal['warn', 'raise', 'ignore'] = 'warn',
+            auto_filter: bool = True,
+            reduce_sim_time: bool = True,
+            validation_idf_scope: Any = None,
+            keep_available_outputs: bool = False,
+    ) -> dict:
+        """Adds Output:Meter objects from DataFrame and/or list.
+
+        - ``mode='append'`` (default): keep existing objects and add only missing ones.
+        - ``mode='replace'``: remove all existing Output:Meter objects in every scoped
+          IDF first, then add the requested rows. The removal happens even when the
+          requested selection ends up empty after validation (a warning is emitted).
+
+        Rows with an empty ``frequency`` are expanded using ``self.output_freqs``.
+
+        :param df_output_meter: optional DataFrame with a key_name column and optionally
+            frequency. When frequency is missing/empty, self.output_freqs is used.
+        :param output_meters: optional meter list. Each item can be:
+            - str: key_name (frequencies from self.output_freqs)
+            - dict: key_name (+ optional frequency or Reporting_Frequency)
+        :param validate: when True (default), validates requested meters against
+            discovered outputs from a lightweight test simulation (cached in
+            ``self.available_outputs_``) before modifying the IDFs.
+        :param on_missing: behaviour when some requested meters are not available.
+        :param auto_filter: when True and validate=True, skip missing meters instead of adding
+            them to the IDF (avoids EnergyPlus warnings like "invalid Key Name - not found").
+        :param reduce_sim_time: when validate=True, reduce runtime for the availability test.
+        :param idf_scope: IDFs to modify. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to modify fewer IDFs.
+        :param validation_idf_scope: IDFs to use for discovery/validation. Defaults
+            to idf_scope. Use 'first' to validate once while applying to all IDFs.
+        :param keep_available_outputs: when validating, keep the temporary
+            ``available_outputs`` folder if True.
+        :param mode: 'append' or 'replace'.
+        :return: report dict with per-IDF counts (`added`, `skipped_existing`,
+            `removed_replace`, `missing`, `filtered_missing`) and aggregated totals.
+
+        Usage
+        -----
+        Use `SimulationBase.set_output_meters_to_idf` within ACCIM parametric and optimisation workflows.
+
+        Examples
+        --------
+        result = self.set_output_meters_to_idf(df_output_meter=..., output_meters=..., idf_scope=..., ...)
+        """
+        if mode not in {'append', 'replace'}:
+            raise ValueError("mode must be 'append' or 'replace'.")
+        if on_missing not in {'warn', 'raise', 'ignore'}:
+            raise ValueError("on_missing must be 'warn', 'raise', or 'ignore'.")
+
+        report: dict = {
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'mode': mode,
+            'validated': False,
+            'added': 0,
+            'skipped_existing': 0,
+            'removed_replace': 0,
+            'missing': [],
+            'filtered_missing': [],
+            'buildings': {},
+        }
+
+        meter_input_df = pd.DataFrame(columns=['key_name', 'frequency'])
+        if df_output_meter is not None and len(df_output_meter) > 0:
+            meter_input_df = pd.concat([meter_input_df, df_output_meter.copy()], ignore_index=True)
+
+        if output_meters is not None:
+            meter_rows = []
+            for item in output_meters:
+                if isinstance(item, dict):
+                    key_name = item.get('key_name', item.get('Key_Name', ''))
+                    if 'frequency' in item:
+                        freqs = [item.get('frequency')]
+                    elif 'Reporting_Frequency' in item:
+                        freqs = [item.get('Reporting_Frequency')]
+                    else:
+                        freqs = list(self.output_freqs)
+                else:
+                    key_name = item
+                    freqs = list(self.output_freqs)
+
+                for freq in freqs:
+                    meter_rows.append({'key_name': key_name, 'frequency': freq})
+
+            if len(meter_rows) > 0:
+                meter_input_df = pd.concat([meter_input_df, pd.DataFrame(meter_rows)], ignore_index=True)
+
+        if len(meter_input_df) == 0:
+            return report
+
+        if 'key_name' not in meter_input_df.columns:
+            raise ValueError("df_output_meter must contain a 'key_name' column.")
+
+        def _norm_freq(value: Any) -> str:
+            return '' if value is None else str(value).strip()
+
+        meter_input_df = meter_input_df.copy().fillna('')
+        if 'frequency' not in meter_input_df.columns:
+            meter_input_df['frequency'] = ''
+        meter_input_df['key_name'] = meter_input_df['key_name'].map(self._norm_output_token)
+        meter_input_df['frequency'] = meter_input_df['frequency'].map(_norm_freq)
+        meter_input_df = meter_input_df[meter_input_df['key_name'] != '']
+        meter_input_df = meter_input_df.drop_duplicates(subset=['key_name', 'frequency'], keep='first').reset_index(drop=True)
+        if len(meter_input_df) == 0:
+            return report
+
+        scoped_buildings = self._resolve_idf_scope(idf_scope)
+        validation_scope = idf_scope if validation_idf_scope is None else validation_idf_scope
+        validation_buildings = self._resolve_idf_scope(validation_scope)
+        requested = sorted(set(meter_input_df['key_name'].tolist()))
+        requested_set = set(requested)
+
+        available_by_idx: dict[int, set[str]] = {}
+        if validate and len(requested_set) > 0:
+            discovered = self._get_available_outputs_for_validation(
+                validation_scope,
+                reduce_sim_time=reduce_sim_time,
+                keep_available_outputs=keep_available_outputs,
+            )
+            df_meters_available = discovered.get('meters', pd.DataFrame())
+
+            if isinstance(df_meters_available, pd.DataFrame) and 'key_name' in df_meters_available.columns:
+                available_work = df_meters_available.copy().fillna('')
+                available_work['key_name'] = available_work['key_name'].map(self._norm_output_token)
+                available_work = available_work[available_work['key_name'] != '']
+
+                if 'idf' in available_work.columns:
+                    idx_by_idf = {
+                        self._get_idf_identifier(building, idx): idx
+                        for (idx, building) in validation_buildings
+                    }
+                    for idf_id, subset in available_work.groupby('idf', sort=False):
+                        idx = idx_by_idf.get(str(idf_id))
+                        if idx is None:
+                            continue
+                        available_by_idx[idx] = set(subset['key_name'].tolist())
+                else:
+                    meter_set = set(available_work['key_name'].tolist())
+                    for val_idx, _ in validation_buildings:
+                        available_by_idx[val_idx] = set(meter_set)
+
+            if len(available_by_idx) == 0:
+                warnings.warn(
+                    'Output validation was requested but no available Output:Meter outputs '
+                    'could be discovered; requested meters will be added without validation.'
+                )
+
+        report['validated'] = validate and len(available_by_idx) > 0
+
+        fallback_available_set: set[str] = set()
+        if len(available_by_idx) == 1:
+            fallback_available_set = next(iter(available_by_idx.values()))
+        elif len(available_by_idx) > 1:
+            fallback_available_set = set.intersection(*available_by_idx.values())
+
+        for idx, b in scoped_buildings:
+            idf_id = self._get_idf_identifier(b, idx)
+            building_report = {
+                'added': 0,
+                'skipped_existing': 0,
+                'removed_replace': 0,
+                'missing': [],
+                'filtered_missing': [],
+            }
+            report['buildings'][idf_id] = building_report
+
+            available_set = available_by_idx.get(idx, fallback_available_set)
+            has_validation_result = validate and len(requested_set) > 0 and len(available_by_idx) > 0
+            if has_validation_result:
+                missing = sorted(requested_set - available_set)
+                if missing:
+                    building_report['missing'] = missing
+                    if auto_filter:
+                        building_report['filtered_missing'] = missing
+                    msg = (
+                        "Some requested Output:Meter Key_Name values are not available in this model "
+                        f"for IDF '{idf_id}' (and will be ignored={auto_filter}): {missing}"
+                    )
+                    if on_missing == 'raise':
+                        raise ValueError(msg)
+                    if on_missing == 'warn':
+                        warnings.warn(msg)
+
+            meters_to_add = requested
+            if has_validation_result and auto_filter:
+                meters_to_add = [m for m in requested if m in available_set]
+
+            meter_rows_for_building = meter_input_df[meter_input_df['key_name'].isin(meters_to_add)]
+
+            def _freqs_for_meter(meter_name: str) -> list[str]:
+                subset = meter_rows_for_building[meter_rows_for_building['key_name'] == meter_name]
+                explicit = [str(v).strip() for v in subset['frequency'].tolist() if str(v).strip() != '']
+                if len(explicit) > 0:
+                    return explicit
+                return [str(v) for v in self.output_freqs]
+
+            if mode == 'replace':
+                existing_meters = list(self._idfobjects_get_case(b, 'Output:Meter'))
+                for existing in existing_meters:
+                    b.removeidfobject(existing)
+                building_report['removed_replace'] = len(existing_meters)
+                if len(meters_to_add) == 0:
+                    warnings.warn(
+                        f"mode='replace' removed all existing Output:Meter objects in IDF '{idf_id}' "
+                        'but no requested meters remained to be added.'
+                    )
+
+            existing_meter_keys = {
+                self._meter_key_from_obj(existing)
+                for existing in self._idfobjects_get_case(b, 'Output:Meter')
+            }
+            for meter in meters_to_add:
+                for freq in _freqs_for_meter(meter):
+                    key = (
+                        self._norm_output_token(meter),
+                        self._norm_output_token(freq),
+                    )
+                    if key in existing_meter_keys:
+                        building_report['skipped_existing'] += 1
+                        continue
+                    b.newidfobject(key='OUTPUT:METER', Key_Name=meter, Reporting_Frequency=freq)
+                    existing_meter_keys.add(key)
+                    building_report['added'] += 1
+
+        report['added'] = sum(br['added'] for br in report['buildings'].values())
+        report['skipped_existing'] = sum(br['skipped_existing'] for br in report['buildings'].values())
+        report['removed_replace'] = sum(br['removed_replace'] for br in report['buildings'].values())
+        for aggregate_key in ('missing', 'filtered_missing'):
+            aggregated_specs = []
+            for br in report['buildings'].values():
+                for spec in br[aggregate_key]:
+                    if spec not in aggregated_specs:
+                        aggregated_specs.append(spec)
+            report[aggregate_key] = aggregated_specs
+        return report
+
+    def set_output_met_objects_to_idf(
+            self,
+            output_meters: list,
+            validate: bool = True,
+            on_missing: Literal['warn', 'raise', 'ignore'] = 'warn',
+            auto_filter: bool = True,
+            reduce_sim_time: bool = True,
+            idf_scope: Any = 'all',
+            validation_idf_scope: Any = None,
+            keep_available_outputs: bool = False,
+            mode: Literal['append', 'replace'] = 'append',
+    ):
+        """Legacy wrapper. Use set_output_meters_to_idf instead.
+        
+        Parameters
+        ----------
+        output_meters : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        validate : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        on_missing : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        auto_filter : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        reduce_sim_time : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        idf_scope : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        validation_idf_scope : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        keep_available_outputs : Any
+            Boolean or mode flag controlling behaviour.
+        mode : Any
+            Argument used by `SimulationBase.set_output_met_objects_to_idf`.
+        
+        Usage
+        -----
+        Use `SimulationBase.set_output_met_objects_to_idf` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_output_met_objects_to_idf(output_meters=..., validate=..., on_missing=..., ...)
+        """
+        warnings.warn(
+            "set_output_met_objects_to_idf is deprecated and will be removed in a future version. "
+            "Use set_output_meters_to_idf(df_output_meter=..., output_meters=..., ...) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.set_output_meters_to_idf(
+            df_output_meter=None,
+            output_meters=output_meters,
+            validate=validate,
+            on_missing=on_missing,
+            auto_filter=auto_filter,
+            reduce_sim_time=reduce_sim_time,
+            idf_scope=idf_scope,
+            validation_idf_scope=validation_idf_scope,
+            keep_available_outputs=keep_available_outputs,
+            mode=mode,
+        )
+
+    def _prepare_reduced_testsim_building(
+        self,
+        selected_idx: int,
+        selected_building: Any,
+        reduce_sim_time: bool = True,
+        temp_prefix: str = 'temp_reduced_runtime',
+        force_temp_copy: bool = False,
+    ) -> tuple[Any, Optional[str]]:
+        """Prepare an IDF for short test simulations and return (building, temp_path).
+
+        Parameters
+        ----------
+        selected_idx : int
+            Index of the selected IDF in `self.buildings`.
+        selected_building : Any
+            Building object selected from the resolved IDF scope.
+        reduce_sim_time : bool
+            Whether to apply runtime-reduction edits before running EnergyPlus.
+        temp_prefix : str
+            Prefix used when creating temporary reduced IDF copies.
+        force_temp_copy : bool
+            Forces copy-loading to avoid mutating the original in-memory IDF.
+
+        Returns
+        -------
+        tuple[Any, Optional[str]]
+            Prepared building and temporary path (or ``None`` when no temp file is created).
+
+        Usage
+        -----
+        Internal helper reused by output-discovery test-simulation paths.
+
+        Examples
+        --------
+        building, temp_path = self._prepare_reduced_testsim_building(...)
+        """
+        building_for_testsim = selected_building
+        temp_path = None
+
+        if reduce_sim_time or force_temp_copy:
+            from besos.eppy_funcs import get_building
+
+            idf_id = self._get_idf_identifier(selected_building, selected_idx)
+            safe_idf_id = re.sub(r'[^A-Za-z0-9_.-]+', '_', idf_id)
+            temp_path = f'{temp_prefix}_{selected_idx}_{safe_idf_id}.idf'
+            selected_building.savecopy(temp_path)
+            building_for_testsim = get_building(temp_path)
+
+        if reduce_sim_time:
+            reduce_runtime(
+                idf_object=building_for_testsim,
+                maximum_figures_in_shadow_overlap_calculations=200,
+                timesteps=2,
+            )
+            # Ensure autosizing paths (e.g., VRF) have at least one weather-file sizing period.
+            sizing_periods = building_for_testsim.idfobjects.get('SIZINGPERIOD:WEATHERFILEDAYS', [])
+            if len(sizing_periods) == 0:
+                runperiod = building_for_testsim.idfobjects['Runperiod'][0]
+                building_for_testsim.newidfobject(
+                    'SIZINGPERIOD:WEATHERFILEDAYS',
+                    Name='SizingPeriod',
+                    Begin_Month=int(runperiod.Begin_Month),
+                    Begin_Day_of_Month=int(runperiod.Begin_Day_of_Month),
+                    End_Month=int(runperiod.End_Month),
+                    End_Day_of_Month=int(runperiod.End_Day_of_Month),
+                    Day_of_Week_for_Start_Day='Sunday',
+                    Use_Weather_File_Daylight_Saving_Period='Yes',
+                    Use_Weather_File_Rain_and_Snow_Indicators='Yes',
+                )
+
+        return (building_for_testsim, temp_path)
+
+    @classmethod
+    def _ensure_output_variable_dictionary_for_building(
+        cls,
+        building: Any,
+        key_field: str = 'IDF',
+    ) -> None:
+        """Ensure a parse-friendly Output:VariableDictionary object exists."""
+        dictionaries = cls._idfobjects_get_case(building, 'Output:VariableDictionary')
+        if len(dictionaries) == 0:
+            building.newidfobject('OUTPUT:VARIABLEDICTIONARY', Key_Field=key_field)
+            return
+        dictionaries[0].Key_Field = key_field
+
+    def get_outputs_df_from_testsim(
+        self,
+        reduce_sim_time: bool = True,
+        idf_scope: Any = 'all',
+        keep_available_outputs: bool = False,
+    ) -> dict[str, pd.DataFrame]:
+        """Deprecated. Use discover_available_outputs instead.
+
+        Parameters
+        ----------
+        reduce_sim_time : bool
+            Forwarded to the internal test-simulation discovery helper.
+        idf_scope : Any
+            Forwarded to the internal test-simulation discovery helper.
+        keep_available_outputs : bool
+            Forwarded to the internal test-simulation discovery helper.
+
+        Usage
+        -----
+        Use `SimulationBase.discover_available_outputs` within ACCIM parametric and optimisation workflows.
+
+        Examples
+        --------
+        result = self.discover_available_outputs(reduce_sim_time=..., idf_scope=...)
+        """
+        warnings.warn(
+            "get_outputs_df_from_testsim is deprecated and will be removed in a future version. "
+            "Use discover_available_outputs(prefer='testsimeplus', ...) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._get_outputs_df_from_testsim(
+            reduce_sim_time=reduce_sim_time,
+            idf_scope=idf_scope,
+            keep_available_outputs=keep_available_outputs,
+        )
+
+    def _get_outputs_df_from_testsim(
+        self,
+        reduce_sim_time: bool = True,
+        idf_scope: Any = 'all',
+        keep_available_outputs: bool = False,
+    ) -> dict[str, pd.DataFrame]:
+        """Gets two pandas DataFrames which contain the Output:Variable and Output:Meter objects from a test simulation.
         Therefore, it won't contain wildcards such as '*'.
 
         :param reduce_sim_time: True to reduce the simulation runtime
+        :param idf_scope: IDFs to test. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to run fewer test simulations.
 
-        :return: a tuple containing the DataFrames containing Output:Variable and Output:Meter
+        :return: dictionary with ``meters`` and ``variables`` DataFrames.
+
+        Parameters
+        ----------
+        keep_available_outputs : Any
+            Boolean or mode flag controlling behaviour.
+
+        Usage
+        -----
+        Internal discovery helper used by `discover_available_outputs`.
+
+        Examples
+        --------
+        result = self._get_outputs_df_from_testsim(reduce_sim_time=..., idf_scope=..., keep_available_outputs=...)
         """
-        building_for_testsim = self.building
-        if reduce_sim_time:
-            from besos.eppy_funcs import get_building
-            self.building.savecopy('temp_reduced_runtime.idf')
-            building_for_testsim = get_building('temp_reduced_runtime.idf')
-            reduce_runtime(idf_object=building_for_testsim, maximum_figures_in_shadow_overlap_calculations=200, timesteps=2)
-        available_outputs = print_available_outputs_mod(building_for_testsim)
-        if reduce_sim_time:
-            from os import remove
-            remove('temp_reduced_runtime.idf')
+        scoped_buildings = self._resolve_idf_scope(idf_scope)
+        if len(scoped_buildings) > 1:
+            meter_dfs = []
+            variable_dfs = []
+            for idx, building in scoped_buildings:
+                scoped_outputs = self._get_outputs_df_from_testsim(
+                    reduce_sim_time=reduce_sim_time,
+                    idf_scope=idx,
+                    keep_available_outputs=keep_available_outputs,
+                )
+                df_meters = scoped_outputs['meters']
+                df_vars = scoped_outputs['variables']
+                idf_id = self._get_idf_identifier(building, idx)
+                df_meters.insert(0, 'idf', idf_id)
+                df_vars.insert(0, 'idf', idf_id)
+                meter_dfs.append(df_meters)
+                variable_dfs.append(df_vars)
+            return {
+                'meters': pd.concat(meter_dfs, ignore_index=True) if meter_dfs else pd.DataFrame(columns=['key_name', 'frequency']),
+                'variables': pd.concat(variable_dfs, ignore_index=True) if variable_dfs else pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
+            }
+
+        if len(scoped_buildings) == 0:
+            return {
+                'meters': pd.DataFrame(columns=['key_name', 'frequency']),
+                'variables': pd.DataFrame(columns=['key_value', 'variable_name', 'frequency']),
+            }
+
+        selected_idx, selected_building = scoped_buildings[0]
+        building_for_testsim, temp_path = self._prepare_reduced_testsim_building(
+            selected_idx=selected_idx,
+            selected_building=selected_building,
+            reduce_sim_time=reduce_sim_time,
+            temp_prefix='temp_reduced_runtime',
+        )
+        try:
+            available_outputs = print_available_outputs_mod(
+                building_for_testsim,
+                out_dir='available_outputs',
+                keep_out_dir=keep_available_outputs,
+            )
+        finally:
+            if temp_path is not None:
+                try:
+                    from os import remove
+                    remove(temp_path)
+                except Exception:
+                    pass
         df_outputmeters = pd.DataFrame(available_outputs.meterreaderlist, columns=['key_name', 'frequency'])
         df_outputvariables = pd.DataFrame(available_outputs.variablereaderlist, columns=['key_value', 'variable_name', 'frequency'])
-        return (df_outputmeters, df_outputvariables)
 
-    def set_outputs_for_simulation(self, df_output_variable: pd.DataFrame=None, df_output_meter: pd.DataFrame=None):
+        # --------------------------------------------------------------
+        # Add an "object" column to ease filtering/grouping.
+        #
+        # Rules:
+        # - People-instance outputs: map instance key (e.g. "Floor_1 PeopleName")
+        #   to the underlying Space (or Zone-derived Space) using the IDF hierarchy.
+        # - EMS outputs: try to infer the related Zone/Space from variable_name.
+        # - Everything else: default to key_value/key_name.
+        # --------------------------------------------------------------
+        def _norm_token(value: Any) -> str:
+            s = '' if value is None else str(value)
+            return s.upper().replace(':', '_').replace(' ', '_')
+
+        # Build candidates from IDF names.
+        # If the model defines Spaces, prefer Spaces only (avoid zone/ems substrings);
+        # otherwise fall back to Zones.
+        space_candidates: list[str] = []
+        zone_candidates: list[str] = []
+        try:
+            for obj in building_for_testsim.idfobjects.get('SPACE', []):
+                name = getattr(obj, 'Name', None)
+                if name:
+                    space_candidates.append(str(name))
+        except Exception:
+            pass
+        try:
+            for obj in building_for_testsim.idfobjects.get('ZONE', []):
+                name = getattr(obj, 'Name', None)
+                if name:
+                    zone_candidates.append(str(name))
+        except Exception:
+            pass
+
+        candidates: list[str] = space_candidates if len(space_candidates) > 0 else zone_candidates
+
+        # Deduplicate while preserving order
+        seen = set()
+        candidates = [c for c in candidates if not (c.upper() in seen or seen.add(c.upper()))]
+        candidates_norm = sorted({_norm_token(c) for c in candidates if c}, key=len, reverse=True)
+        candidates_norm_to_original = { _norm_token(c): c for c in candidates if c }
+
+        # Build mapping of People instance key_value -> Space name using IDF hierarchy
+        try:
+            from accim.utils import get_people_hierarchy, get_people_names_for_ems
+            people_hierarchy = get_people_hierarchy(building_for_testsim)
+            people_instances = get_people_names_for_ems(building_for_testsim, output_format='dict')
+            instance_to_space: dict[str, str] = {}
+            for (people_name, _instances) in people_instances.items():
+                affected_spaces = people_hierarchy.get(people_name, {}).get('affected_spaces', [])
+                for space in affected_spaces:
+                    generated = f"{str(space).strip()} {str(people_name).strip()}"
+                    instance_to_space[_norm_token(generated)] = str(space)
+        except Exception:
+            people_hierarchy = {}
+            instance_to_space = {}
+
+        # Output:Variable -> object
+        if not df_outputvariables.empty:
+            objects_out: list[str] = []
+            for (_, r) in df_outputvariables.iterrows():
+                key_value = r.get('key_value', None)
+                var_name = r.get('variable_name', None)
+                kv_norm = _norm_token(key_value)
+
+                # People instance: map to Space
+                if kv_norm in instance_to_space:
+                    objects_out.append(instance_to_space[kv_norm])
+                    continue
+
+                # EMS: infer from variable_name if possible
+                if kv_norm == 'EMS':
+                    vn_norm = _norm_token(var_name)
+                    matched = None
+                    for cand_norm in candidates_norm:
+                        if cand_norm and cand_norm in vn_norm:
+                            matched = cand_norm
+                            break
+                    if matched is not None:
+                        # Recover original casing if possible
+                        original = candidates_norm_to_original.get(matched, str(key_value))
+                        objects_out.append(original)
+                    else:
+                        objects_out.append(str(key_value))
+                    continue
+
+                # Other objects:
+                # If the model defines Spaces, prefer returning ONLY Space names by
+                # extracting a Space substring from key_value when present.
+                # If no Spaces exist, do the same with Zones.
+                if len(space_candidates) > 0:
+                    matched = None
+                    for cand_norm in candidates_norm:
+                        if cand_norm and cand_norm in kv_norm:
+                            matched = cand_norm
+                            break
+                    if matched is not None:
+                        objects_out.append(candidates_norm_to_original.get(matched, str(key_value)))
+                    else:
+                        objects_out.append(str(key_value))
+                else:
+                    # No Spaces in the model → fallback to Zones (already in candidates)
+                    matched = None
+                    for cand_norm in candidates_norm:
+                        if cand_norm and cand_norm in kv_norm:
+                            matched = cand_norm
+                            break
+                    if matched is not None:
+                        objects_out.append(candidates_norm_to_original.get(matched, str(key_value)))
+                    else:
+                        objects_out.append(str(key_value))
+
+            df_outputvariables['object'] = objects_out
+
+        # Output:Meter -> object
+        if not df_outputmeters.empty:
+            meter_objects: list[str] = []
+            for (_, r) in df_outputmeters.iterrows():
+                key_name = r.get('key_name', None)
+                kn_norm = _norm_token(key_name)
+                matched = None
+                for cand_norm in candidates_norm:
+                    if cand_norm and cand_norm in kn_norm:
+                        matched = cand_norm
+                        break
+                if matched is not None:
+                    original = next((c for c in candidates if _norm_token(c) == matched), str(key_name))
+                    meter_objects.append(original)
+                else:
+                    meter_objects.append(str(key_name))
+            df_outputmeters['object'] = meter_objects
+
+        # Light validation: object should not be a People name nor a People instance key
+        try:
+            people_names_upper = {str(k).upper() for k in (people_hierarchy or {}).keys()}
+            if not df_outputvariables.empty and people_names_upper:
+                _obj_upper = df_outputvariables['object'].astype(str).str.upper()
+                # Avoid false positives by only checking exact equality
+                if _obj_upper.isin(people_names_upper).any():
+                    raise ValueError("Detected People object name(s) in df_outputvariables['object']; expected only Space/Zone or non-People objects.")
+        except Exception:
+            # Do not fail output discovery if validation can't be performed
+            pass
+
+        return {
+            'meters': df_outputmeters,
+            'variables': df_outputvariables,
+        }
+
+    # ------------------------------------------------------------------
+    # Outputs preflight (discover → select → clear → apply)
+    # ------------------------------------------------------------------
+
+    def discover_available_outputs(
+        self,
+        reduce_sim_time: bool = True,
+        prefer: Literal['testsimeplus', 'rdd_mdd'] = 'testsimeplus',
+        refresh: bool = False,
+        idf_scope: Any = 'all',
+        keep_available_outputs: bool = False,
+    ) -> dict[str, Any]:
+        """Discovers which outputs are actually available for this model.
+        
+        This is intended as a preflight step before choosing outputs.
+        
+        :param reduce_sim_time: when using EnergyPlus test-sim discovery, reduce runtime.
+        :param prefer: 'testsimeplus' (default) uses a lightweight EnergyPlus run via
+            a lightweight EnergyPlus test simulation; 'rdd_mdd' reads `available_outputs/eplusout.rdd`
+            and `available_outputs/eplusout.mdd` when available, otherwise generates
+            them with a reduced test simulation and parses them directly.
+        :param refresh: when False, reuse cached results in ``self.available_outputs_``.
+        :param idf_scope: IDFs to discover. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to run fewer test simulations.
+        :param keep_available_outputs: when False (default), removes the temporary
+            ``available_outputs`` directory once discovery is done.
+        :return: dictionary with keys ``meters``, ``variables`` and ``meta``.
+        
+        Usage
+        -----
+        Use `SimulationBase.discover_available_outputs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.discover_available_outputs(reduce_sim_time=..., prefer=..., refresh=..., ...)
         """
-        Sets the outputs for the parametric analysis or optimisation based on the input pandas DataFrames
-        for Output:Variable and/or Output:Meter objects. These DataFrames can include columns for the output name
+        if prefer not in {'testsimeplus', 'rdd_mdd'}:
+            raise ValueError(
+                f"Invalid prefer value: {prefer!r}. Allowed values are: 'testsimeplus', 'rdd_mdd'."
+            )
+        requested_prefer = prefer
+        scope_label = self._idf_scope_label(idf_scope)
+        if not refresh and hasattr(self, 'available_outputs_') and isinstance(getattr(self, 'available_outputs_'), dict):
+            cached = self.available_outputs_
+            if 'df_meters' in cached and 'df_vars' in cached and 'meta' in cached:
+                cached_meta = dict(cached['meta'])
+                cached_prefer = cached_meta.get('requested_prefer', cached_meta.get('prefer'))
+                if (
+                    cached_meta.get('idf_scope') == scope_label
+                    and cached_prefer == requested_prefer
+                    and cached_meta.get('reduce_sim_time') == reduce_sim_time
+                    and cached_meta.get('keep_available_outputs', False) == keep_available_outputs
+                ):
+                    return {
+                        'meters': cached['df_meters'].copy(),
+                        'variables': cached['df_vars'].copy(),
+                        'meta': cached_meta,
+                    }
+
+        meta: dict = {
+            'prefer': prefer,
+            'requested_prefer': requested_prefer,
+            'reduce_sim_time': reduce_sim_time,
+            'idf_scope': scope_label,
+            'keep_available_outputs': keep_available_outputs,
+        }
+        cleanup_generated_rdd_mdd_dir = False
+
+        if prefer == 'rdd_mdd':
+            out_dir = 'available_outputs'
+            rdd_path = os.path.join(out_dir, 'eplusout.rdd')
+            mdd_path = os.path.join(out_dir, 'eplusout.mdd')
+            files_exist = os.path.exists(rdd_path) and os.path.exists(mdd_path)
+
+            if files_exist and not refresh:
+                df_rdd = get_rdd_file_as_df(out_dir=out_dir)
+                df_mdd = get_mdd_file_as_df(out_dir=out_dir)
+                meta.update({'source': 'rdd_mdd', 'paths': {'rdd': rdd_path, 'mdd': mdd_path}})
+            else:
+                scoped_buildings = self._resolve_idf_scope(idf_scope)
+                if len(scoped_buildings) == 0:
+                    raise RuntimeError(
+                        "Cannot generate RDD/MDD outputs because no IDFs are available in the requested idf_scope."
+                    )
+                if len(self.epws) == 0:
+                    raise RuntimeError(
+                        "Cannot generate RDD/MDD outputs because 'self.epws' is empty; provide at least one EPW file."
+                    )
+
+                selected_idx, selected_building = scoped_buildings[0]
+                building_for_testsim, temp_path = self._prepare_reduced_testsim_building(
+                    selected_idx=selected_idx,
+                    selected_building=selected_building,
+                    reduce_sim_time=reduce_sim_time,
+                    temp_prefix='temp_reduced_runtime_rdd_mdd',
+                    force_temp_copy=True,
+                )
+                try:
+                    import shutil
+                    from besos.eplus_funcs import run_building
+
+                    if os.path.isdir(out_dir):
+                        shutil.rmtree(out_dir, ignore_errors=True)
+
+                    # IDF mode keeps RDD/MDD rows parseable by get_rdd_file_as_df/get_mdd_file_as_df.
+                    self._ensure_output_variable_dictionary_for_building(
+                        building=building_for_testsim,
+                        key_field='IDF',
+                    )
+
+                    run_error = None
+                    try:
+                        run_building(
+                            building_for_testsim,
+                            out_dir=out_dir,
+                            epw=self.epws[0],
+                            stdout_mode='Verbose',
+                        )
+                    except Exception as exc:
+                        run_error = exc
+
+                    if not (os.path.exists(rdd_path) and os.path.exists(mdd_path)):
+                        message = (
+                            "Failed to generate 'available_outputs/eplusout.rdd' and "
+                            "'available_outputs/eplusout.mdd' with prefer='rdd_mdd'."
+                        )
+                        if run_error is not None:
+                            raise RuntimeError(message) from run_error
+                        raise RuntimeError(message)
+
+                    try:
+                        df_rdd = get_rdd_file_as_df(out_dir=out_dir)
+                        df_mdd = get_mdd_file_as_df(out_dir=out_dir)
+                    except Exception as exc:
+                        raise RuntimeError(
+                            "Failed to parse generated RDD/MDD files with prefer='rdd_mdd'."
+                        ) from exc
+                    cleanup_generated_rdd_mdd_dir = not keep_available_outputs
+                finally:
+                    if temp_path is not None:
+                        try:
+                            from os import remove
+                            remove(temp_path)
+                        except Exception:
+                            pass
+
+                meta.update({'source': 'rdd_mdd_testsim', 'paths': {'rdd': rdd_path, 'mdd': mdd_path}})
+
+            df_vars = df_rdd.rename(
+                columns={'key_value': 'key_value', 'variable_name': 'variable_name', 'frequency': 'frequency'}
+            )[['key_value', 'variable_name', 'frequency']].copy()
+            df_meters = df_mdd.rename(columns={'meter_name': 'key_name', 'frequency': 'frequency'})[
+                ['key_name', 'frequency']
+            ].copy()
+
+        if prefer == 'testsimeplus':
+            outputs_from_testsim = self._get_outputs_df_from_testsim(
+                reduce_sim_time=reduce_sim_time,
+                idf_scope=idf_scope,
+                keep_available_outputs=keep_available_outputs,
+            )
+            df_meters = outputs_from_testsim['meters']
+            df_vars = outputs_from_testsim['variables']
+            meta.update({'source': 'testsimeplus', 'out_dir': 'available_outputs'})
+
+        # Normalize column dtypes minimally
+        for df, cols in ((df_meters, ['key_name', 'frequency']), (df_vars, ['key_value', 'variable_name', 'frequency'])):
+            for c in cols:
+                if c in df.columns:
+                    df[c] = df[c].astype(str)
+
+        self.available_outputs_ = {'df_meters': df_meters.copy(), 'df_vars': df_vars.copy(), 'meta': dict(meta)}
+        if cleanup_generated_rdd_mdd_dir:
+            import shutil
+            shutil.rmtree('available_outputs', ignore_errors=True)
+        return {
+            'meters': df_meters,
+            'variables': df_vars,
+            'meta': meta,
+        }
+
+    def select_outputs(
+        self,
+        meters: Optional[list[str]] = None,
+        variables: Optional[Union[list[tuple[str, str]], list[str]]] = None,
+        from_df_vars: Optional[pd.DataFrame] = None,
+        from_df_meters: Optional[pd.DataFrame] = None,
+        match: Literal['exact', 'case_insensitive', 'contains', 'regex'] = 'case_insensitive',
+        on_missing: Literal['raise', 'warn', 'ignore'] = 'warn',
+        suggest: bool = True,
+        reduce_sim_time: bool = True,
+        idf_scope: Any = 'all',
+        keep_available_outputs: bool = False,
+    ) -> dict[str, Any]:
+        """Validates and builds output selection DataFrames from a simple wishlist and/or DataFrames.
+
+        This method requires that available outputs are known. If not cached, it will
+        run discovery (EnergyPlus test-sim by default).
+
+        Returns DataFrames compatible with ``set_output_variables_to_idf`` and
+        ``set_output_meters_to_idf`` (or ``apply_outputs_preflight``).
+        
+        :param idf_scope: IDFs used for discovery/validation. Defaults to 'all'. Use
+            'first' when you know all IDFs expose the same outputs.
+        
+        Parameters
+        ----------
+        meters : Any
+            Argument used by `SimulationBase.select_outputs`.
+        variables : Any
+            Argument used by `SimulationBase.select_outputs`.
+        from_df_vars : Any
+            Argument used by `SimulationBase.select_outputs`.
+        from_df_meters : Any
+            Argument used by `SimulationBase.select_outputs`.
+        match : Any
+            Argument used by `SimulationBase.select_outputs`.
+        on_missing : Any
+            Argument used by `SimulationBase.select_outputs`.
+        suggest : Any
+            Argument used by `SimulationBase.select_outputs`.
+        reduce_sim_time : Any
+            Argument used by `SimulationBase.select_outputs`.
+        keep_available_outputs : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.select_outputs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.select_outputs(meters=..., variables=..., from_df_vars=..., ...)
+        """
+        if meters is None:
+            meters = []
+        if variables is None:
+            variables = []
+
+        available_outputs = self.discover_available_outputs(
+            reduce_sim_time=reduce_sim_time,
+            prefer='testsimeplus',
+            refresh=False,
+            idf_scope=idf_scope,
+            keep_available_outputs=keep_available_outputs,
+        )
+        df_meters_av = available_outputs['meters']
+        df_vars_av = available_outputs['variables']
+        meta = available_outputs['meta']
+
+        report: dict = {
+            'meta': meta,
+            'missing': {'meters': [], 'variables': []},
+            'suggestions': {'meters': {}, 'variables': {}},
+            'selected_counts': {'meters': 0, 'variables': 0},
+        }
+
+        def _norm(s: Any) -> str:
+            return ('' if s is None else str(s)).strip()
+
+        def _norm_ci(s: Any) -> str:
+            return _norm(s).upper()
+
+        def _match_series(needle: str, series: pd.Series) -> pd.Series:
+            # Receives the original-case series; each mode handles its own casing.
+            n = _norm(needle)
+            s = series.astype(str)
+            if match == 'exact':
+                return s == n
+            if match == 'case_insensitive':
+                return s.str.upper() == _norm_ci(n)
+            if match == 'contains':
+                return s.str.upper().str.contains(_norm_ci(n), regex=False, na=False)
+            if match == 'regex':
+                try:
+                    return s.str.contains(n, regex=True, na=False)
+                except re.error:
+                    # Treat invalid regex as no match.
+                    return s.isin([])
+            raise ValueError(f"Unknown match mode: {match}")
+
+        # ---------------------------
+        # Select meters
+        # ---------------------------
+        meters_requested: list[str] = []
+        meters_requested += [_norm(m) for m in meters if _norm(m)]
+        if from_df_meters is not None and not from_df_meters.empty:
+            if 'key_name' not in from_df_meters.columns:
+                raise ValueError("from_df_meters must contain a 'key_name' column.")
+            meters_requested += [_norm(v) for v in from_df_meters['key_name'].tolist() if _norm(v)]
+
+        # Dedupe case-insensitively while preserving the original casing of each request.
+        seen_meter_requests: set[str] = set()
+        meters_requested_unique: list[str] = []
+        for requested_meter in meters_requested:
+            requested_meter_ci = _norm_ci(requested_meter)
+            if requested_meter_ci and requested_meter_ci not in seen_meter_requests:
+                seen_meter_requests.add(requested_meter_ci)
+                meters_requested_unique.append(requested_meter)
+
+        df_meters_sel = pd.DataFrame(columns=['key_name', 'frequency'])
+        if len(meters_requested_unique) > 0 and not df_meters_av.empty:
+            av_key = df_meters_av['key_name'].astype(str)
+            selected_rows = []
+            missing_m = []
+            for req in meters_requested_unique:
+                mask = _match_series(req, av_key)
+                if mask.any():
+                    selected_rows.append(df_meters_av.loc[mask].copy())
+                else:
+                    missing_m.append(req)
+                    if suggest:
+                        choices_by_upper = {c.upper(): c for c in sorted(set(av_key.tolist()))}
+                        close_upper = difflib.get_close_matches(_norm_ci(req), list(choices_by_upper.keys()), n=5, cutoff=0.6)
+                        report['suggestions']['meters'][req] = [choices_by_upper[c] for c in close_upper]
+
+            if selected_rows:
+                df_meters_sel = pd.concat(selected_rows, ignore_index=True)
+                df_meters_sel = df_meters_sel.drop_duplicates(subset=['key_name', 'frequency']).reset_index(drop=True)
+
+            report['missing']['meters'] = missing_m
+            if missing_m:
+                msg = f"Missing meters: {missing_m}"
+                if on_missing == 'raise':
+                    raise ValueError(msg)
+                if on_missing == 'warn':
+                    warnings.warn(msg)
+
+        # ---------------------------
+        # Select variables
+        # ---------------------------
+        # Variables can be:
+        # - list[tuple[key_value, variable_name]] (exact-ish)
+        # - list[str] meaning variable_name wishlist/patterns
+        vars_requested_pairs: list[tuple[str, str]] = []
+        vars_requested_names: list[str] = []
+
+        if isinstance(variables, list) and len(variables) > 0:
+            if all(isinstance(v, (tuple, list)) and len(v) == 2 for v in variables):
+                vars_requested_pairs = [(_norm(v[0]), _norm(v[1])) for v in variables if _norm(v[1])]
+            else:
+                vars_requested_names = [_norm(v) for v in variables if _norm(v)]
+
+        if from_df_vars is not None and not from_df_vars.empty:
+            if 'variable_name' not in from_df_vars.columns:
+                raise ValueError("from_df_vars must contain a 'variable_name' column.")
+            if 'key_value' in from_df_vars.columns:
+                vars_requested_pairs += [
+                    (_norm(kv), _norm(vn))
+                    for (kv, vn) in zip(from_df_vars['key_value'].tolist(), from_df_vars['variable_name'].tolist())
+                    if _norm(vn)
+                ]
+            else:
+                vars_requested_names += [_norm(vn) for vn in from_df_vars['variable_name'].tolist() if _norm(vn)]
+
+        df_vars_sel = pd.DataFrame(columns=['key_value', 'variable_name', 'frequency', 'schedule_name'])
+
+        if not df_vars_av.empty and (vars_requested_pairs or vars_requested_names):
+            av_kv = df_vars_av['key_value'].astype(str)
+            av_vn = df_vars_av['variable_name'].astype(str)
+            selected_rows_v = []
+            missing_v = []
+
+            vn_choices_by_upper = {v.upper(): v for v in sorted(set(av_vn.tolist()))}
+
+            def _suggest_variable_names(vn_req: str) -> list[str]:
+                close_upper = difflib.get_close_matches(
+                    _norm_ci(vn_req),
+                    list(vn_choices_by_upper.keys()),
+                    n=5,
+                    cutoff=0.6,
+                )
+                return [vn_choices_by_upper[v] for v in close_upper]
+
+            # Pair selection
+            for (kv_req, vn_req) in vars_requested_pairs:
+                kv_mask = _match_series(kv_req, av_kv)
+                vn_mask = _match_series(vn_req, av_vn)
+                mask = kv_mask & vn_mask
+                if mask.any():
+                    selected_rows_v.append(df_vars_av.loc[mask].copy())
+                else:
+                    missing_v.append((kv_req, vn_req))
+                    if suggest:
+                        report['suggestions']['variables'][f'{kv_req}|{vn_req}'] = _suggest_variable_names(vn_req)
+
+            # Name-only selection (match variable_name)
+            for vn_req in vars_requested_names:
+                mask = _match_series(vn_req, av_vn)
+                if mask.any():
+                    selected_rows_v.append(df_vars_av.loc[mask].copy())
+                else:
+                    missing_v.append(('ANY', vn_req))
+                    if suggest:
+                        report['suggestions']['variables'][f'ANY|{vn_req}'] = _suggest_variable_names(vn_req)
+
+            if selected_rows_v:
+                df_vars_sel = pd.concat(selected_rows_v, ignore_index=True)
+                df_vars_sel = df_vars_sel.drop_duplicates(subset=['key_value', 'variable_name', 'frequency']).reset_index(drop=True)
+
+            report['missing']['variables'] = missing_v
+            if missing_v:
+                msg = f"Missing variables: {missing_v}"
+                if on_missing == 'raise':
+                    raise ValueError(msg)
+                if on_missing == 'warn':
+                    warnings.warn(msg)
+
+        # Ensure compatibility with set_output_variables_to_idf (non-ACCIM expects schedule_name)
+        if 'schedule_name' not in df_vars_sel.columns:
+            df_vars_sel['schedule_name'] = ''
+        else:
+            df_vars_sel['schedule_name'] = df_vars_sel['schedule_name'].fillna('').astype(str)
+
+        report['selected_counts']['meters'] = len(df_meters_sel)
+        report['selected_counts']['variables'] = len(df_vars_sel)
+        return {
+            'meters': df_meters_sel,
+            'variables': df_vars_sel,
+            'report': report,
+        }
+
+    def clear_outputs(
+        self,
+        mode: Literal['meters_vars', 'all'] = 'all',
+        dry_run: bool = False,
+        idf_scope: Any = 'all',
+    ) -> dict:
+        """Removes existing output-related objects from the IDF(s) prior to simulation.
+        
+        :param mode: 'meters_vars' removes only Output:Variable and Output:Meter; 'all' removes
+            all object types starting with Output:* and OutputControl:* (and a few common diagnostics).
+        :param dry_run: when True, do not modify the IDFs; only return what would be removed.
+        :param idf_scope: IDFs to clean. Defaults to 'all'. Use 'first', an index,
+            an IDF name, or a list of selectors to clean fewer IDFs.
+        :return: report dict with counts by building and object type.
+        
+        Usage
+        -----
+        Use `SimulationBase.clear_outputs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.clear_outputs(mode=..., dry_run=..., idf_scope=...)
+        """
+        if mode not in {'meters_vars', 'all'}:
+            raise ValueError("mode must be 'meters_vars' or 'all'.")
+
+        report: dict = {'mode': mode, 'dry_run': dry_run, 'idf_scope': self._idf_scope_label(idf_scope), 'buildings': {}}
+
+        if mode == 'meters_vars':
+            # Single removal engine: an empty selection in keep_only_outputs_in_idfs
+            # removes every Output:Variable and Output:Meter object.
+            keep_report = self.keep_only_outputs_in_idfs(
+                output_variables=[],
+                output_meters=[],
+                idf_scope=idf_scope,
+                dry_run=dry_run,
+            )
+            for idf_id, building_report in keep_report['buildings'].items():
+                removed_counts = {
+                    'Output:Variable': building_report.get('variables', {}).get('removed', 0),
+                    'Output:Meter': building_report.get('meters', {}).get('removed', 0),
+                }
+                report['buildings'][idf_id] = {
+                    'removed': removed_counts,
+                    'keys': [k for (k, count) in removed_counts.items() if count > 0],
+                }
+            return report
+
+        def _should_remove(obj_key: str) -> bool:
+            k = str(obj_key).strip().upper()
+            # OUTPUTCONTROL:FILES must never be removed (user requirement).
+            if k == 'OUTPUTCONTROL:FILES':
+                return False
+            # mode == 'all'
+            return k.startswith('OUTPUT:') or k.startswith('OUTPUTCONTROL:')
+
+        for (idx, b) in self._resolve_idf_scope(idf_scope):
+            idf_id = self._get_idf_identifier(b, idx)
+            removed_counts: dict[str, int] = {}
+
+            # eppy uses b.idfobjects dict keyed by object type (case-sensitive access supported)
+            available_keys = list(getattr(b, 'idfobjects', {}).keys())
+            keys_to_remove = [k for k in available_keys if _should_remove(k)]
+
+            for k in keys_to_remove:
+                objs = list(b.idfobjects.get(k, []))
+                removed_counts[str(k)] = len(objs)
+                if not dry_run and len(objs) > 0:
+                    for obj in objs:
+                        try:
+                            b.removeidfobject(obj)
+                        except Exception:
+                            # Best-effort removal; continue.
+                            pass
+
+            report['buildings'][idf_id] = {'removed': removed_counts, 'keys': keys_to_remove}
+
+        return report
+
+    def apply_outputs_preflight(
+        self,
+        df_vars_sel: Optional[pd.DataFrame] = None,
+        df_meters_sel: Optional[pd.DataFrame] = None,
+        clean_mode: Literal['none', 'meters_vars', 'all'] = 'none',
+        validate_before_apply: bool = True,
+        validate_after_apply: bool = True,
+        on_missing: Literal['raise', 'warn', 'ignore'] = 'warn',
+        reduce_sim_time: bool = True,
+        idf_scope: Any = 'all',
+        validation_idf_scope: Any = None,
+    ) -> dict:
+        """Orchestrates a complete outputs preflight:
+        - (optional) discover/validate available outputs
+        - (optional) clear existing output objects in the IDF(s)
+        - apply selected Output:Variable and Output:Meter
+        - (optional) verify IDF state matches selection
+        
+        ``idf_scope`` controls which IDFs are cleaned/applied/verified. ``validation_idf_scope``
+        controls which IDFs are used for EnergyPlus test-sim validation; set it to 'first'
+        when all IDFs are known to expose the same outputs.
+        
+        Parameters
+        ----------
+        df_vars_sel : Any
+            Input dataframe used by this routine.
+        df_meters_sel : Any
+            Input dataframe used by this routine.
+        clean_mode : Any
+            Argument used by `SimulationBase.apply_outputs_preflight`.
+        validate_before_apply : Any
+            Argument used by `SimulationBase.apply_outputs_preflight`.
+        validate_after_apply : Any
+            Argument used by `SimulationBase.apply_outputs_preflight`.
+        on_missing : Any
+            Argument used by `SimulationBase.apply_outputs_preflight`.
+        reduce_sim_time : Any
+            Argument used by `SimulationBase.apply_outputs_preflight`.
+        
+        Usage
+        -----
+        Use `SimulationBase.apply_outputs_preflight` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.apply_outputs_preflight(df_vars_sel=..., df_meters_sel=..., clean_mode=..., ...)
+        """
+        validation_scope = idf_scope if validation_idf_scope is None else validation_idf_scope
+        report: dict = {
+            'clean_mode': clean_mode,
+            'validate_before_apply': validate_before_apply,
+            'validate_after_apply': validate_after_apply,
+            'idf_scope': self._idf_scope_label(idf_scope),
+            'validation_idf_scope': self._idf_scope_label(validation_scope),
+            'cleared': None,
+            'applied': {'variables': 0, 'meters': 0},
+            'verification': {},
+        }
+
+        if validate_before_apply:
+            self.discover_available_outputs(
+                reduce_sim_time=reduce_sim_time,
+                prefer='testsimeplus',
+                refresh=False,
+                idf_scope=validation_scope,
+            )
+
+        if clean_mode in {'meters_vars', 'all'}:
+            report['cleared'] = self.clear_outputs(
+                mode='all' if clean_mode == 'all' else 'meters_vars',
+                dry_run=False,
+                idf_scope=idf_scope,
+            )
+
+        report['setter_reports'] = {'variables': None, 'meters': None}
+
+        # Apply variables
+        if df_vars_sel is not None:
+            df_vars_apply = df_vars_sel.copy()
+            # Minimal normalization for downstream method
+            if 'frequency' in df_vars_apply.columns:
+                df_vars_apply['frequency'] = df_vars_apply['frequency'].astype(str)
+            if 'schedule_name' not in df_vars_apply.columns:
+                df_vars_apply['schedule_name'] = ''
+            vars_setter_report = self.set_output_variables_to_idf(
+                df_output_variable=df_vars_apply,
+                validate=validate_before_apply,
+                on_missing=on_missing,
+                auto_filter=True,
+                reduce_sim_time=reduce_sim_time,
+                idf_scope=idf_scope,
+                validation_idf_scope=validation_scope,
+            )
+            report['setter_reports']['variables'] = vars_setter_report
+            # Rows effectively present in the IDF: newly added plus already existing.
+            report['applied']['variables'] = (
+                vars_setter_report.get('added', 0) + vars_setter_report.get('skipped_existing', 0)
+            )
+
+        # Apply meters (the selection DataFrame keeps its own frequencies)
+        if df_meters_sel is not None:
+            if 'key_name' not in df_meters_sel.columns:
+                raise ValueError("df_meters_sel must contain a 'key_name' column.")
+            meters_setter_report = self.set_output_meters_to_idf(
+                df_output_meter=df_meters_sel,
+                validate=validate_before_apply,
+                on_missing=on_missing,
+                auto_filter=True,
+                reduce_sim_time=reduce_sim_time,
+                idf_scope=idf_scope,
+                validation_idf_scope=validation_scope,
+            )
+            report['setter_reports']['meters'] = meters_setter_report
+            report['applied']['meters'] = (
+                meters_setter_report.get('added', 0) + meters_setter_report.get('skipped_existing', 0)
+            )
+
+        if validate_after_apply:
+            # Verify meters & variables present in IDF match selection (best-effort).
+            df_vars_idf = self.get_output_variables_df_from_idf(idf_scope=idf_scope)
+            df_meters_idf = self.get_output_meters_df_from_idf(idf_scope=idf_scope)
+
+            def _keyify_vars(df: pd.DataFrame) -> set[tuple[str, str, str]]:
+                cols = df.columns
+                if not {'key_value', 'variable_name'}.issubset(set(cols)):
+                    return set()
+                freq_col = 'frequency' if 'frequency' in cols else ('reporting_frequency' if 'reporting_frequency' in cols else None)
+                if freq_col is None:
+                    return set()
+                return {
+                    (str(r['key_value']).strip().upper(), str(r['variable_name']).strip().upper(), str(r[freq_col]).strip().upper())
+                    for (_, r) in df[['key_value', 'variable_name', freq_col]].dropna().iterrows()
+                }
+
+            def _keyify_meters(df: pd.DataFrame) -> set[tuple[str, str]]:
+                cols = df.columns
+                if not {'key_name', 'frequency'}.issubset(set(cols)):
+                    return set()
+                return {
+                    (str(r['key_name']).strip().upper(), str(r['frequency']).strip().upper())
+                    for (_, r) in df[['key_name', 'frequency']].dropna().iterrows()
+                }
+
+            vars_expected = _keyify_vars(df_vars_sel) if df_vars_sel is not None else set()
+            meters_expected = _keyify_meters(df_meters_sel) if df_meters_sel is not None else set()
+
+            # Items intentionally filtered out by auto_filter must not be reported
+            # as missing during verification.
+            vars_setter_report = report['setter_reports'].get('variables')
+            if isinstance(vars_setter_report, dict):
+                vars_filtered = {
+                    (str(kv).strip().upper(), str(vn).strip().upper())
+                    for (kv, vn) in vars_setter_report.get('filtered_missing', [])
+                }
+                if vars_filtered:
+                    vars_expected = {
+                        key for key in vars_expected if (key[0], key[1]) not in vars_filtered
+                    }
+            meters_setter_report = report['setter_reports'].get('meters')
+            if isinstance(meters_setter_report, dict):
+                meters_filtered = {
+                    str(m).strip().upper()
+                    for m in meters_setter_report.get('filtered_missing', [])
+                }
+                if meters_filtered:
+                    meters_expected = {key for key in meters_expected if key[0] not in meters_filtered}
+
+            vars_actual = _keyify_vars(df_vars_idf)
+            meters_actual = _keyify_meters(df_meters_idf)
+
+            def _by_idf(df: pd.DataFrame, expected: set, keyify_func) -> dict:
+                if 'idf' not in df.columns:
+                    return {}
+                out = {}
+                for idf_id, subset in df.groupby('idf', sort=False):
+                    actual = keyify_func(subset)
+                    out[str(idf_id)] = {
+                        'actual': len(actual),
+                        'missing_in_idf': sorted(list(expected - actual))[:50],
+                        'extra_in_idf': sorted(list(actual - expected))[:50],
+                    }
+                return out
+
+            report['verification'] = {
+                'vars': {
+                    'expected': len(vars_expected),
+                    'actual': len(vars_actual),
+                    'missing_in_idf': sorted(list(vars_expected - vars_actual))[:50],
+                    'extra_in_idf': sorted(list(vars_actual - vars_expected))[:50],
+                    'by_idf': _by_idf(df_vars_idf, vars_expected, _keyify_vars),
+                },
+                'meters': {
+                    'expected': len(meters_expected),
+                    'actual': len(meters_actual),
+                    'missing_in_idf': sorted(list(meters_expected - meters_actual))[:50],
+                    'extra_in_idf': sorted(list(meters_actual - meters_expected))[:50],
+                    'by_idf': _by_idf(df_meters_idf, meters_expected, _keyify_meters),
+                },
+            }
+
+        return report
+
+    def set_output_readers(self, df_output_variable: pd.DataFrame=None, df_output_meter: pd.DataFrame=None):
+        """Registers the besos output readers (VariableReader/MeterReader) used to collect
+        results during parametric or optimisation runs. This method does NOT modify the
+        IDFs; use ``set_output_variables_to_idf``/``set_output_meters_to_idf`` for that.
+
+        The input DataFrames can include columns for the output name
         and the aggregation function (see the 'func' argument of MeterReader and VariableReader classes in besos),
         respectively named 'name' and 'func'. If no 'name' and/or 'func' columns are provided,
         the names will be the variable and meter names, and the hourly values will be summed.
+        The 'func' value can be either a callable or an import path string with format
+        'module.submodule:callable_name'.
 
         :param df_output_variable: a pandas DataFrame containing the Output:Variable objects, similar to that one
-            returned from method get_outputs_df_from_testsim()
+            returned in key ``variables`` from method discover_available_outputs()
         :param df_output_meter: a pandas DataFrame containing the Output:Meter objects, similar to that one
-            returned from method get_outputs_df_from_testsim()
+            returned in key ``meters`` from method discover_available_outputs()
+
+        Usage
+        -----
+        Use `SimulationBase.set_output_readers` within ACCIM parametric and optimisation workflows.
+
+        Examples
+        --------
+        result = self.set_output_readers(df_output_variable=..., df_output_meter=...)
         """
+        # Work on copies so the caller's DataFrames are never mutated.
+        if df_output_variable is not None:
+            df_output_variable = df_output_variable.copy()
+        if df_output_meter is not None:
+            df_output_meter = df_output_meter.copy()
         if df_output_variable is not None:
             df_output_variable['output_name'] = 'temp'
             if 'name' in df_output_variable.columns:
@@ -295,24 +5973,66 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         objs_meters = []
         if df_output_meter is not None:
             for i in df_output_meter.index:
+                output_func = None
                 if 'func' in [c for c in df_output_meter.columns]:
-                    objs_meters.append(MeterReader(key_name=df_output_meter.loc[i, 'key_name'], frequency=df_output_meter.loc[i, 'frequency'], name=df_output_meter.loc[i, 'output_name'], func=df_output_meter.loc[i, 'func']))
+                    output_func = _resolve_output_func(df_output_meter.loc[i, 'func'])
+                if output_func is not None:
+                    objs_meters.append(MeterReader(key_name=df_output_meter.loc[i, 'key_name'], frequency=df_output_meter.loc[i, 'frequency'], name=df_output_meter.loc[i, 'output_name'], func=output_func))
                 else:
                     objs_meters.append(MeterReader(key_name=df_output_meter.loc[i, 'key_name'], frequency=df_output_meter.loc[i, 'frequency'], name=df_output_meter.loc[i, 'output_name']))
         objs_variables = []
         if df_output_variable is not None:
             for i in df_output_variable.index:
+                output_func = None
                 if 'func' in [c for c in df_output_variable.columns]:
-                    objs_variables.append(VariableReader(key_value=df_output_variable.loc[i, 'key_value'], variable_name=df_output_variable.loc[i, 'variable_name'], frequency=df_output_variable.loc[i, 'frequency'], name=df_output_variable.loc[i, 'output_name'], func=df_output_variable.loc[i, 'func']))
+                    output_func = _resolve_output_func(df_output_variable.loc[i, 'func'])
+                if output_func is not None:
+                    objs_variables.append(VariableReader(key_value=df_output_variable.loc[i, 'key_value'], variable_name=df_output_variable.loc[i, 'variable_name'], frequency=df_output_variable.loc[i, 'frequency'], name=df_output_variable.loc[i, 'output_name'], func=output_func))
                 else:
                     objs_variables.append(VariableReader(key_value=df_output_variable.loc[i, 'key_value'], variable_name=df_output_variable.loc[i, 'variable_name'], frequency=df_output_variable.loc[i, 'frequency'], name=df_output_variable.loc[i, 'output_name']))
         self.sim_outputs = objs_meters + objs_variables
 
-    def get_available_parameters(self) -> list:
-        """
-        Returns a list containing the available parameters depending on the parameters_type argument previously input.
+    def set_outputs_for_simulation(self, df_output_variable: pd.DataFrame=None, df_output_meter: pd.DataFrame=None):
+        """Deprecated alias. Use set_output_readers instead.
 
+        Parameters
+        ----------
+        df_output_variable : Any
+            Forwarded to `SimulationBase.set_output_readers`.
+        df_output_meter : Any
+            Forwarded to `SimulationBase.set_output_readers`.
+
+        Usage
+        -----
+        Use `SimulationBase.set_output_readers` within ACCIM parametric and optimisation workflows.
+
+        Examples
+        --------
+        result = self.set_output_readers(df_output_variable=..., df_output_meter=...)
+        """
+        warnings.warn(
+            "set_outputs_for_simulation is deprecated and will be removed in a future version. "
+            "Use set_output_readers instead (same arguments).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.set_output_readers(
+            df_output_variable=df_output_variable,
+            df_output_meter=df_output_meter,
+        )
+
+    def get_available_parameters(self) -> list:
+        """Returns a list containing the available parameters depending on the parameters_type argument previously input.
+        
         :return: a list containing the available parameters depending on the parameters_type argument previously input
+        
+        Usage
+        -----
+        Use `SimulationBase.get_available_parameters` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_available_parameters()
         """
         if self.is_accim_predef_model:
             available_params = [i for i in params_dicts.accim_predef_model_params.keys()]
@@ -320,12 +6040,13 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             available_params = [i for i in params_dicts.accim_custom_model_params.keys()]
         elif self.is_apmv_setpoints:
             available_params = [i for i in params_dicts.apmv_setpoints_params.keys()]
+        else:
+            available_params = []
         return available_params
 
-    def set_parameters(self, accis_params_dict: dict, additional_params: list=None, use_dflt_values: bool=True):
-        """
-        Sets the parameters for the parametric analysis or optimisation.
-
+    def set_parameters(self, accis_params_dict: dict = None, additional_params: list=None, use_dflt_values: bool=True):
+        """Sets the parameters for the parametric analysis or optimisation.
+        
         :param accis_params_dict: a dictionary containing the parameters names in the keys,
             and in the values, the options or range of values using respectively
             a list or tuple with min and max values.
@@ -334,11 +6055,26 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             for more information, refer to addAccis
         :param VentCtrl: only used in accim predefined and custom models; sets the VentCtrl argument;
             for more information, refer to addAccis
+        
+        Parameters
+        ----------
+        use_dflt_values : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.set_parameters` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_parameters(accis_params_dict=..., additional_params=..., use_dflt_values=...)
         """
+        if accis_params_dict is None:
+            accis_params_dict = {}
         accis_descriptors_has_options = False
         add_descriptors_has_options = False
         descriptors_has_options = False
-        if all([type(v) == list for v in accis_params_dict.values()]):
+        if len(accis_params_dict) > 0 and all([type(v) == list for v in accis_params_dict.values()]):
             accis_descriptors_has_options = True
         if additional_params is not None:
             if all([type(additional_params[i].value_descriptor) == CategoryParameter for i in range(len(additional_params))]):
@@ -355,7 +6091,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         accis_descriptors_has_range = False
         add_descriptors_has_range = False
         descriptors_has_range = False
-        if all([type(v) == tuple for v in accis_params_dict.values()]):
+        if len(accis_params_dict) > 0 and all([type(v) == tuple for v in accis_params_dict.values()]):
             accis_descriptors_has_range = True
         if additional_params is not None:
             if all([type(additional_params[i].value_descriptor) == RangeParameter for i in range(len(additional_params))]):
@@ -366,7 +6102,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                     descriptors_has_range = True
             else:
                 descriptors_has_range = True
-        if descriptors_has_options is False and descriptors_has_range is False:
+        if descriptors_has_options is False and descriptors_has_range is False and additional_params is None and len(accis_params_dict) == 0:
+            parameters_list = []
+        elif descriptors_has_options is False and descriptors_has_range is False:
             raise TypeError('All Descriptors are not CategoryParameters or RangeParameters.')
         parameters = [k for k in accis_params_dict.keys()]
         available_parameters = self.get_available_parameters()
@@ -374,7 +6112,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         for p in parameters:
             if p not in available_parameters:
                 not_allowed_parameters.append(p)
-        if len(not_allowed_parameters) > 0:
+        if len(not_allowed_parameters) > 0 and self.parameters_type is not None:
             raise ValueError(f'The following parameters are not allowed in parameters_type {self.parameters_type}: {not_allowed_parameters}')
         if self.is_accim_custom_model:
             bf_accim.modify_ComfStand(self.building, 99)
@@ -386,7 +6124,19 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             bf_accim.modify_CustAST_ASTaul(self.building, 0)
             bf_accim.modify_CustAST_ASTall(self.building, 0)
             args = accim.utils.get_accim_args(self.building)
-            parameters_to_check = [k for (k, v) in args['CustAST'].items() if 'CustAST_' + k not in parameters and v == 0]
+            custast_args = args.get('CustAST') if isinstance(args, dict) else None
+            if not isinstance(custast_args, dict):
+                custast_args = {
+                    'm': 0,
+                    'n': 0,
+                    'ACSToffset': 0,
+                    'AHSToffset': 0,
+                    'ACSTaul': 0,
+                    'AHSTaul': 0,
+                    'ACSTall': 0,
+                    'AHSTall': 0,
+                }
+            parameters_to_check = [k for (k, v) in custast_args.items() if 'CustAST_' + k not in parameters and v == 0]
             if 'CustAST_ASToffset' in parameters:
                 try:
                     parameters_to_check.remove('AHSToffset')
@@ -407,15 +6157,50 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                     pass
             parameters_to_be_defined = []
             for p in parameters_to_check:
-                if args['CustAST'][p] == 0:
+                if custast_args[p] == 0:
                     parameters_to_be_defined.append(p)
             if len(parameters_to_be_defined) > 0:
                 print(f'The following parameters are not included in the parameters to be set, and have not been defined yet (i.e. the value is 0): {parameters_to_be_defined}')
                 dflt_values = {'m': 0.31, 'n': 17.8, 'ACSToffset': 3.5, 'AHSToffset': -3.5, 'ACSTaul': 33.5, 'ACSTall': 10, 'AHSTaul': 33.5, 'AHSTall': 10}
+
+                def _emit_defaults_applied_warning(selected_params):
+                    if len(selected_params) == 0:
+                        return
+                    selected_set = set(selected_params)
+                    shown = set()
+                    formatted_items = []
+                    # Show compact aliases when both cooling/heating sides share the same default.
+                    if 'ACSTaul' in selected_set and 'AHSTaul' in selected_set and dflt_values['ACSTaul'] == dflt_values['AHSTaul']:
+                        formatted_items.append(f"ASTaul={dflt_values['ACSTaul']}")
+                        shown.update({'ACSTaul', 'AHSTaul'})
+                    if 'ACSTall' in selected_set and 'AHSTall' in selected_set and dflt_values['ACSTall'] == dflt_values['AHSTall']:
+                        formatted_items.append(f"ASTall={dflt_values['ACSTall']}")
+                        shown.update({'ACSTall', 'AHSTall'})
+                    for p in selected_params:
+                        if p in shown:
+                            continue
+                        formatted_items.append(f"{p}={dflt_values[p]}")
+                    warning_text = ', '.join(formatted_items)
+                    print(f"\033[93mWARNING: Default values applied -> {warning_text}\033[0m")
+
                 if use_dflt_values:
-                    print('Default values will be set for these parameters. The default values are:')
-                    for p in parameters_to_be_defined:
-                        print(f'{p}: {dflt_values[p]}')
+                    if 'm' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_m(self.building, dflt_values['m'])
+                    if 'n' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_n(self.building, dflt_values['n'])
+                    if 'ACSToffset' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSToffset(self.building, dflt_values['ACSToffset'])
+                    if 'AHSToffset' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSToffset(self.building, dflt_values['AHSToffset'])
+                    if 'ACSTaul' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSTaul(self.building, dflt_values['ACSTaul'])
+                    if 'ACSTall' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_ACSTall(self.building, dflt_values['ACSTall'])
+                    if 'AHSTaul' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSTaul(self.building, dflt_values['AHSTaul'])
+                    if 'AHSTall' in parameters_to_be_defined:
+                        bf_accim.modify_CustAST_AHSTall(self.building, dflt_values['AHSTall'])
+                    _emit_defaults_applied_warning(parameters_to_be_defined)
                 else:
                     print('If you want, default values can be set for these parameters. The default values are:')
                     for p in parameters_to_be_defined:
@@ -438,6 +6223,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                             bf_accim.modify_CustAST_AHSTaul(self.building, dflt_values['AHSTaul'])
                         if 'AHSTall' in parameters_to_be_defined:
                             bf_accim.modify_CustAST_AHSTall(self.building, dflt_values['AHSTall'])
+                        _emit_defaults_applied_warning(parameters_to_be_defined)
                     else:
                         user_values = {}
                         for p in parameters_to_be_defined:
@@ -459,81 +6245,210 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                             bf_accim.modify_CustAST_AHSTaul(self.building, user_values['AHSTaul'])
                         if 'AHSTall' in parameters_to_be_defined:
                             bf_accim.modify_CustAST_AHSTall(self.building, user_values['AHSTall'])
-        elif self.is_accim_predef_model:
+        elif self.is_accim_predef_model and len(accis_params_dict) > 0:
             if descriptors_has_range:
                 raise KeyError('Accim predefined models approach is only valid with options descriptors.')
-        parameters_list = [params.accis_parameter(k, v) for (k, v) in accis_params_dict.items()]
+        if not (descriptors_has_options or descriptors_has_range):
+            parameters_list = []
+        else:
+            parameters_list = [params.accis_parameter(k, v) for (k, v) in accis_params_dict.items()]
         if additional_params is not None:
             parameters_list.extend(additional_params)
         self.parameters_list = parameters_list
         self.descriptors_has_options = descriptors_has_options
         self.descriptors_has_range = descriptors_has_range
 
-    def set_problem(self, minimize_outputs: list=None, constraints: list=None, constraint_bounds: list=None, **kwargs):
-        """
-        Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters
-        method, and for outputs, those set using the set_outputs_for_simulation method.
-
+    def set_problem(
+            self,
+            minimize_outputs: list = None,
+            constraints: list = None,
+            constraint_bounds: list = None,
+            add_outputs: Union[int, list] = None,
+            converters: dict = None,
+    ):
+        """Sets the besos EPProblem class instance, using for inputs the parameters previously set in the set_parameters
+        method, and for outputs, those set using the set_output_readers method.
+        
         :param minimize_outputs: only used in optimisation; a list containing booleans to specify if the outputs must
             be minimized (True), maximized (False), or just show the output (None).
         :param constraints: only used in optimisation;
             a list containing the Output:Meter key names to be considered as constraints
         :param constraint_bounds: only used in optimisation;
             a list containing the logical expressions for the constraints
+        :param add_outputs: BESOS outputs that should be reported but not optimized
+        :param converters: BESOS converters for outputs and constraints
+        
+        Usage
+        -----
+        Use `SimulationBase.set_problem` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_problem(minimize_outputs=..., constraints=..., constraint_bounds=..., ...)
         """
-        problem = EPProblem(inputs=self.parameters_list, outputs=self.sim_outputs, minimize_outputs=minimize_outputs, constraints=constraints, constraint_bounds=constraint_bounds, **kwargs)
+        problem = EPProblem(
+            inputs=self.parameters_list,
+            outputs=self.sim_outputs,
+            minimize_outputs=minimize_outputs,
+            constraints=constraints,
+            constraint_bounds=constraint_bounds,
+            add_outputs=add_outputs,
+            converters=converters,
+        )
         self.problem = problem
 
     def sampling_full_set(self):
-        """
-        Combines all values from all parameters and saves it into a pandas DataFrame, stored in an internal variable
+        """Combines all values from all parameters and saves it into a pandas DataFrame, stored in an internal variable
         named parameters_values_df.
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_full_set` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.sampling_full_set()
         """
         from accim.parametric_and_optimisation.utils import make_all_combinations
-        if self.descriptors_has_options:
-            num_samples = 1
-            parameters_values = {}
-            for p in self.parameters_list:
-                num_samples = num_samples * len(p.value_descriptors[0].options)
-                parameters_values.update({p.value_descriptors[0].name: p.value_descriptors[0].options})
-            parameters_values_df = make_all_combinations(parameters_values)
-        else:
+        
+        has_params = hasattr(self, 'parameters_list') and len(self.parameters_list) > 0
+        if has_params and not getattr(self, 'descriptors_has_options', False):
             raise KeyError('sampling_full_set method can only be used with option (i.e. category) descriptors.')
-        if self.is_accim_predef_model:
-            parameters_values_df = bf_accim.drop_invalid_param_combinations(parameters_values_df)
+            
+        parameters_values = {}
+        if has_params:
+            for p in self.parameters_list:
+                parameters_values.update({p.value_descriptors[0].name: p.value_descriptors[0].options})
+                
+        if hasattr(self, 'buildings') and len(self.buildings) > 0:
+            idf_names = [self._get_idf_identifier(b, i) for i, b in enumerate(self.buildings)]
+            parameters_values['idf'] = idf_names
+            
+        if hasattr(self, 'epws') and len(self.epws) > 0:
+            parameters_values['epw'] = self.epws
+            
+        if not parameters_values:
+            parameters_values_df = pd.DataFrame()
+        else:
+            parameters_values_df = make_all_combinations(parameters_values)
+            if self.is_accim_predef_model:
+                parameters_values_df = bf_accim.drop_invalid_param_combinations(parameters_values_df)
         self.parameters_values_df = parameters_values_df
 
-    def sampling_full_factorial(self, level: int):
+    def sampling_custom(self, custom_plan: Union[List[dict], dict, pd.DataFrame]):
+        """Sets a custom simulation plan.
+        :param custom_plan: A pandas DataFrame, a list of dictionaries, or a dictionary mapping IDFs to EPWs.
+            Example list: [{'idf': 'Building_A', 'epw': 'seville.epw'}, {'idf': 'Building_B', 'epw': 'madrid.epw'}]
+            Example dict: {'Building_A': 'seville.epw', 'Building_B': ['madrid_2024.epw', 'madrid_2025.epw']}
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_custom` within ACCIM parametric and optimisation workflows.
         """
-        Split the range of every parameter in the number of parts specified in argument level,
+        import pandas as pd
+        if isinstance(custom_plan, pd.DataFrame):
+            self.parameters_values_df = custom_plan.copy()
+        elif isinstance(custom_plan, list):
+            self.parameters_values_df = pd.DataFrame(custom_plan)
+        elif isinstance(custom_plan, dict):
+            rows = []
+            for idf, epws in custom_plan.items():
+                if isinstance(epws, str):
+                    epws = [epws]
+                for epw in epws:
+                    rows.append({'idf': idf, 'epw': epw})
+            self.parameters_values_df = pd.DataFrame(rows)
+        else:
+            raise TypeError('custom_plan must be a pandas DataFrame, a list of dicts, or a dict.')
+
+    def _expand_samples_with_buildings_and_epws(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Expands a parameter samples DataFrame with cartesian products for IDFs and EPWs.
+        
+        Parameters
+        ----------
+        df : Any
+            Input dataframe used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._expand_samples_with_buildings_and_epws` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._expand_samples_with_buildings_and_epws(df=...)
+        """
+        if df is None or df.empty:
+            return df
+            
+        dfs_to_concat = []
+        idf_names = [self._get_idf_identifier(b, i) for i, b in enumerate(self.buildings)] if hasattr(self, 'buildings') and self.buildings else [None]
+        epw_names = self.epws if hasattr(self, 'epws') and self.epws else [None]
+        
+        for idf_name in idf_names:
+            for epw_name in epw_names:
+                temp_df = df.copy()
+                if idf_name is not None and len(self.buildings) > 1:
+                    temp_df['idf'] = idf_name
+                if epw_name is not None and len(self.epws) > 0:
+                    temp_df['epw'] = epw_name
+                dfs_to_concat.append(temp_df)
+                
+        if dfs_to_concat:
+            return pd.concat(dfs_to_concat, ignore_index=True)
+        return df
+
+    def sampling_full_factorial(self, level: int):
+        """Split the range of every parameter in the number of parts specified in argument level,
         and saves it into a pandas DataFrame, stored in an internal variable named parameters_values_df.
         For more information, see besos.sampling.dist_sampler and besos.sampling.full_factorial
-
+        
         :param level: an integer; represents the number of parts to split each parameter's range
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_full_factorial` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.sampling_full_factorial(level=...)
         """
         if self.descriptors_has_range:
             parameters_values_df = sampling.dist_sampler(sampling.full_factorial, self.problem, num_samples=2, level=level)
         else:
             raise KeyError('sampling_full_factorial method can only be used with range descriptors.')
-        self.parameters_values_df = parameters_values_df
+        self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
     def sampling_lhs(self, num_samples: int):
-        """
-        Uses Latin Hypercube Sampling to make samples, where the total number is specified in the num_samples argument,
+        """Uses Latin Hypercube Sampling to make samples, where the total number is specified in the num_samples argument,
         and saves it into a pandas DataFrame, stored in an internal variable named parameters_values_df.
         For more information, see besos.sampling.dist_sampler and besos.sampling.lhs
-
+        
         :param num_samples: an integer; represents the total number of samples
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_lhs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.sampling_lhs(num_samples=...)
         """
         if self.descriptors_has_range:
             parameters_values_df = sampling.dist_sampler(sampling.lhs, self.problem, num_samples=num_samples)
         else:
             raise KeyError('sampling_lhs method can only be used with range descriptors.')
-        self.parameters_values_df = parameters_values_df
+        self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
     def _get_salib_problem(self) -> dict:
-        """
-        Internal method to build the SALib problem dictionary based on besos parameters.
+        """Internal method to build the SALib problem dictionary based on besos parameters.
+        
+        Usage
+        -----
+        Use `SimulationBase._get_salib_problem` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._get_salib_problem()
         """
         names = self.problem.names('inputs')
         bounds = []
@@ -547,14 +6462,21 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         return problem
 
     def sampling_sobol(self, num_samples: int=128):
-        """
-        Uses Saltelli's extension of the Sobol sequence to generate samples for Sensitivity Analysis.
+        """Uses Saltelli's extension of the Sobol sequence to generate samples for Sensitivity Analysis.
         The samples are saved into a pandas DataFrame, stored in an internal variable named parameters_values_df.
         Requires SALib to be installed.
-
+        
         :param num_samples: an integer; represents the number of samples to generate.
             The total number of samples generated will be num_samples * (2 * num_vars + 2).
             For Sobol, num_samples should preferably be a power of 2 (e.g. 64, 128, 256, 512, 1024).
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_sobol` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.sampling_sobol(num_samples=...)
         """
         if not self.descriptors_has_range:
             raise KeyError('sampling_sobol method can only be used with range descriptors.')
@@ -564,17 +6486,25 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             raise ImportError('SALib is required for Sensitivity Analysis. Install it with: pip install SALib')
         problem = self._get_salib_problem()
         samples = saltelli.sample(problem, num_samples)
-        self.parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
+        parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
+        self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
     def sampling_morris(self, num_samples: int=100, num_levels: int=4):
-        """
-        Uses Morris' method to generate samples for Sensitivity Analysis.
+        """Uses Morris' method to generate samples for Sensitivity Analysis.
         The samples are saved into a pandas DataFrame, stored in an internal variable named parameters_values_df.
         Requires SALib to be installed.
-
+        
         :param num_samples: an integer; represents the number of trajectories (N).
             The total number of samples generated will be num_samples * (num_vars + 1).
         :param num_levels: number of grid levels.
+        
+        Usage
+        -----
+        Use `SimulationBase.sampling_morris` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.sampling_morris(num_samples=..., num_levels=...)
         """
         if not self.descriptors_has_range:
             raise KeyError('sampling_morris method can only be used with range descriptors.')
@@ -584,78 +6514,2948 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             raise ImportError('SALib is required for Sensitivity Analysis. Install it with: pip install SALib')
         problem = self._get_salib_problem()
         samples = morris_sampler.sample(problem, N=num_samples, num_levels=num_levels)
-        self.parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
+        parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
+        self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
 
-    def set_evaluator(self, epw: str, out_dir: str) -> besos.evaluator.EvaluatorEP:
+    # ------------------------------------------------------------------
+    # Category mapping helpers
+    # ------------------------------------------------------------------
+
+    def set_category_mapping(self, epw_mapping_rules: dict = None, idf_mapping_rules: dict = None) -> None:
+        """Defines keyword-based mapping rules to automatically assign category labels to EPW
+        and/or IDF files in the simulation results. Once set, categories are applied
+        automatically at the end of ``run_parametric_simulation`` and ``run_optimisation``,
+        and can be re-applied manually at any time with :meth:`apply_category_mapping`.
+        
+        The format follows the pyfwg convention:
+        
+        .. code-block:: python
+        
+            epw_mapping_rules = {
+                'city': {
+                    'seville': ['sevilla', 'SVQ'],
+                    'london': ['london', 'gatwick'],
+                },
+                'scenario': {
+                    'historical': 'hist',
+                    'future': ['rcp45', 'rcp85'],
+                },
+            }
+        
+            idf_mapping_rules = {
+                'typology': {
+                    'residential': ['res', 'house'],
+                    'office': ['office', 'ofic'],
+                },
+            }
+        
+        Matching is **case-insensitive substring search** on the file basename (without path
+        or extension). The first matching keyword wins. If no keyword matches, the category
+        value for that row will be ``None``.
+        
+        :param epw_mapping_rules: dict of ``{category_name: {category_value: keyword_or_list}}``.
+            Applied to the ``epw`` column of result DataFrames.
+        :param idf_mapping_rules: dict of ``{category_name: {category_value: keyword_or_list}}``.
+            Applied to the ``idf`` column of result DataFrames.
+        
+        Usage
+        -----
+        Use `SimulationBase.set_category_mapping` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_category_mapping(epw_mapping_rules=..., idf_mapping_rules=...)
         """
-        Used internally for setting the evaluator in run_parametric_simulation and run_optimisation methods.
+        def _validate_rules(rules: dict, name: str):
+            if rules is None:
+                return
+            if not isinstance(rules, dict):
+                raise TypeError(f'{name} must be a dict, got {type(rules).__name__}.')
+            for category, mapping in rules.items():
+                if not isinstance(mapping, dict):
+                    raise TypeError(
+                        f'{name}[{category!r}] must be a dict mapping category values to keywords, '
+                        f'got {type(mapping).__name__}.'
+                    )
+                for value, keywords in mapping.items():
+                    if not isinstance(keywords, (str, list)):
+                        raise TypeError(
+                            f'{name}[{category!r}][{value!r}] must be a str or list of str, '
+                            f'got {type(keywords).__name__}.'
+                        )
 
+        _validate_rules(epw_mapping_rules, 'epw_mapping_rules')
+        _validate_rules(idf_mapping_rules, 'idf_mapping_rules')
+        self.epw_mapping_rules = epw_mapping_rules or {}
+        self.idf_mapping_rules = idf_mapping_rules or {}
+        print(f'  [info] Category mapping set: '
+              f'{len(self.epw_mapping_rules)} EPW categor{"y" if len(self.epw_mapping_rules)==1 else "ies"}, '
+              f'{len(self.idf_mapping_rules)} IDF categor{"y" if len(self.idf_mapping_rules)==1 else "ies"}.')
+
+    @staticmethod
+    def _resolve_category_for_value(filename: str, category_rules: dict):
+        """Returns the category value for *filename* based on *category_rules*, or ``None``
+        if no keyword matches.
+        
+        :param filename: the EPW or IDF basename (without path or extension).
+        :param category_rules: a ``{category_value: keyword_or_list}`` dict for one category.
+        :return: matched category value string, or ``None``.
+        
+        Usage
+        -----
+        Use `SimulationBase._resolve_category_for_value` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._resolve_category_for_value(filename=..., category_rules=...)
+        """
+        name_lower = os.path.basename(filename).lower()
+        # Strip common extensions so matching works on the stem
+        for ext in ('.epw', '.idf'):
+            if name_lower.endswith(ext):
+                name_lower = name_lower[:-len(ext)]
+                break
+        for cat_value, keywords in category_rules.items():
+            if isinstance(keywords, str):
+                keywords = [keywords]
+            for kw in keywords:
+                if kw.lower() in name_lower:
+                    return cat_value
+        return None
+
+    def apply_category_mapping(self, df_types: list = None) -> None:
+        """Applies the category mapping rules (previously set via :meth:`set_category_mapping`)
+        to the specified result DataFrames, adding one new column per category.
+        
+        Columns are inserted immediately after the ``epw`` or ``idf`` column they derive from.
+        If a category column already exists it is overwritten with a warning.
+        
+        .. note::
+            If an EPW category and an IDF category share the same name (e.g. both called
+            ``'type'``), the EPW category is automatically renamed to ``'epw_<name>'``
+            (e.g. ``'epw_type'``) to prevent the IDF values from silently overwriting the
+            EPW values.  A ``UserWarning`` is emitted in that case.
+        
+        :param df_types: list of strings specifying which DataFrames to process.
+            Valid values: ``'parametric'``, ``'parametric_hourly'``, ``'parametric_monthly'``,
+            ``'optimisation'``, ``'optimisation_hourly'``, ``'optimisation_monthly'``.
+            If ``None``, all available DataFrames are processed.
+        
+        Usage
+        -----
+        Use `SimulationBase.apply_category_mapping` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.apply_category_mapping(df_types=...)
+        """
+        epw_rules = getattr(self, 'epw_mapping_rules', {})
+        idf_rules = getattr(self, 'idf_mapping_rules', {})
+        if not epw_rules and not idf_rules:
+            return  # Nothing to do — preserve existing behaviour
+
+        if df_types is None:
+            df_types = [
+                'parametric', 'parametric_hourly', 'parametric_monthly',
+                'optimisation', 'optimisation_hourly', 'optimisation_monthly',
+            ]
+
+        df_attr_map = {
+            'parametric':            'outputs_param_simulation',
+            'parametric_hourly':     'outputs_param_simulation_hourly',
+            'parametric_monthly':    'outputs_param_simulation_monthly',
+            'optimisation':          'outputs_optimisation',
+            'optimisation_hourly':   'outputs_optimisation_hourly',
+            'optimisation_monthly':  'outputs_optimisation_monthly',
+        }
+
+        # Detect name collisions between EPW and IDF categories and build a
+        # safe rename map for EPW categories that conflict with IDF ones.
+        epw_idf_collisions = set(epw_rules.keys()) & set(idf_rules.keys())
+        if epw_idf_collisions:
+            warnings.warn(
+                f"[apply_category_mapping] The following category name(s) are used for "
+                f"BOTH EPW and IDF mappings: {sorted(epw_idf_collisions)}. "
+                f"The EPW categories will be automatically renamed with an 'epw_' prefix "
+                f"(e.g. 'type' → 'epw_type') to avoid silent data loss. "
+                f"Update your highlight_dict / col / row / hue arguments accordingly.",
+                UserWarning,
+                stacklevel=2,
+            )
+        # Build the effective EPW rules dict with collision-safe names
+        safe_epw_rules = {
+            (f'epw_{cat}' if cat in epw_idf_collisions else cat): rules
+            for cat, rules in epw_rules.items()
+        }
+
+        for df_key in df_types:
+            attr = df_attr_map.get(df_key)
+            if not attr:
+                continue
+            df = getattr(self, attr, None)
+            if df is None or df.empty:
+                continue
+
+            # ---- EPW categories ----
+            if safe_epw_rules and 'epw' in df.columns:
+                epw_insert_pos = df.columns.get_loc('epw') + 1
+                for category, rules in safe_epw_rules.items():
+                    col_values = df['epw'].apply(
+                        lambda v: self._resolve_category_for_value(str(v), rules)
+                    )
+                    if category in df.columns:
+                        warnings.warn(
+                            f"Column '{category}' already exists in {attr} and will be overwritten.",
+                            UserWarning,
+                        )
+                        df[category] = col_values
+                    else:
+                        df.insert(epw_insert_pos, category, col_values)
+                        epw_insert_pos += 1  # keep inserting after previous new column
+
+            # ---- IDF categories ----
+            if idf_rules and 'idf' in df.columns:
+                idf_insert_pos = df.columns.get_loc('idf') + 1
+                for category, rules in idf_rules.items():
+                    col_values = df['idf'].apply(
+                        lambda v: self._resolve_category_for_value(str(v), rules)
+                    )
+                    if category in df.columns:
+                        warnings.warn(
+                            f"Column '{category}' already exists in {attr} and will be overwritten.",
+                            UserWarning,
+                        )
+                        df[category] = col_values
+                    else:
+                        df.insert(idf_insert_pos, category, col_values)
+                        idf_insert_pos += 1
+
+            setattr(self, attr, df)
+            n_new = len(safe_epw_rules) + len(idf_rules)
+            print(f'  [info] apply_category_mapping: added/updated {n_new} category column(s) in {attr}.')
+
+            # --- Persist mapping rules in DataFrame.attrs so they survive pickle/load ---
+            df.attrs['epw_mapping_rules'] = epw_rules
+            df.attrs['idf_mapping_rules'] = idf_rules
+
+            # Overwrite the last saved .pkl on disk with the updated data
+            for pkl_attr in ('outputs_param_simulation_filepath', 'outputs_optimisation_filepath'):
+                last_path = getattr(self, pkl_attr, None)
+                if last_path and last_path.endswith('.csv'):
+                    pkl_path = last_path.replace('.csv', '.pkl')
+                    if os.path.isfile(pkl_path):
+                        try:
+                            getattr(self, attr).to_pickle(pkl_path)
+                            print(f'  [info] Mapping rules persisted to {pkl_path}')
+                        except Exception as _e:
+                            print(f'  [!] Could not update {pkl_path}: {_e}')
+
+    def add_epw_suffix_category(
+        self,
+        col_name: str,
+        suffix_map: dict,
+        fallback: str = 'historical',
+        df_types: list = None,
+    ) -> None:
+        """Adds a new category column derived from the last ``'_'``-separated suffix
+        of each EPW value and persists the rule in ``DataFrame.attrs`` so it is
+        automatically re-applied every time results are loaded from a pickle.
+        
+        This is the recommended way to create EPW-based derived categories that are
+        **not** covered by the keyword rules of :meth:`set_category_mapping` (e.g.
+        distinguishing TMY/MET/historical based on a filename suffix).
+        
+        The rule is stored both on the instance (``self.epw_suffix_categories``) and
+        inside ``df.attrs['epw_suffix_categories']``, which survives ``DataFrame.to_pickle``
+        / ``pd.read_pickle`` round-trips.  When :meth:`load_outputs_parametric` or
+        :meth:`load_outputs_optimisation` loads a pickle that contains these attrs, it
+        automatically re-derives the columns without requiring any manual intervention.
+        
+        Example::
+        
+            # Call once after loading results:
+            sim.add_epw_suffix_category(
+                col_name='weather_type',
+                suffix_map={'tmy': 'tmy', 'met': 'met'},
+                fallback='historical',
+            )
+            # From now on, every sim.load_outputs_parametric(...) will automatically
+            # recreate the 'weather_type' column.
+        
+        :param col_name: Name of the new column to create / overwrite.
+        :param suffix_map: Mapping from EPW filename suffix (the last ``'_'``-delimited
+            token) to the desired category label.
+            Example: ``{'tmy': 'tmy', 'met': 'met'}``.
+        :param fallback: Label assigned when the suffix is not found in ``suffix_map``.
+            Default ``'historical'``.
+        :param df_types: List of DataFrame keys to process.  Same values accepted as
+            in :meth:`apply_category_mapping`.  ``None`` processes all available DFs.
+        
+        Usage
+        -----
+        Use `SimulationBase.add_epw_suffix_category` within ACCIM parametric and optimisation workflows.
+        """
+        if not hasattr(self, 'epw_suffix_categories'):
+            self.epw_suffix_categories = {}
+        self.epw_suffix_categories[col_name] = {
+            'suffix_map': suffix_map,
+            'fallback': fallback,
+        }
+
+        if df_types is None:
+            df_types = [
+                'parametric', 'parametric_hourly', 'parametric_monthly',
+                'optimisation', 'optimisation_hourly', 'optimisation_monthly',
+            ]
+
+        df_attr_map = {
+            'parametric':            'outputs_param_simulation',
+            'parametric_hourly':     'outputs_param_simulation_hourly',
+            'parametric_monthly':    'outputs_param_simulation_monthly',
+            'optimisation':          'outputs_optimisation',
+            'optimisation_hourly':   'outputs_optimisation_hourly',
+            'optimisation_monthly':  'outputs_optimisation_monthly',
+        }
+
+        def _resolve(epw_value: str) -> str:
+            suffix = str(epw_value).rsplit('_', 1)[-1]
+            return suffix_map.get(suffix, fallback)
+
+        for df_key in df_types:
+            attr = df_attr_map.get(df_key)
+            if not attr:
+                continue
+            df = getattr(self, attr, None)
+            if df is None or (hasattr(df, 'empty') and df.empty):
+                continue
+            if 'epw' not in df.columns:
+                continue
+
+            df[col_name] = df['epw'].apply(_resolve)
+
+            # Persist rule in DataFrame.attrs so it survives pickle/load
+            if 'epw_suffix_categories' not in df.attrs:
+                df.attrs['epw_suffix_categories'] = {}
+            df.attrs['epw_suffix_categories'][col_name] = {
+                'suffix_map': suffix_map,
+                'fallback': fallback,
+            }
+            setattr(self, attr, df)
+            print(
+                f'  [info] add_epw_suffix_category: column "{col_name}" added to {attr} '
+                f'({df[col_name].value_counts().to_dict()}).'
+            )
+
+        # Overwrite the last saved .pkl on disk so the rule persists there too
+        for pkl_attr in ('outputs_param_simulation_filepath', 'outputs_optimisation_filepath'):
+            last_path = getattr(self, pkl_attr, None)
+            if not last_path:
+                continue
+            pkl_path = (
+                last_path.replace('.csv', '.pkl')
+                if last_path.endswith('.csv')
+                else last_path
+            )
+            if pkl_path.endswith('.pkl') and os.path.isfile(pkl_path):
+                df_attr = (
+                    'outputs_param_simulation'
+                    if 'param' in pkl_attr
+                    else 'outputs_optimisation'
+                )
+                _df = getattr(self, df_attr, None)
+                if _df is not None:
+                    try:
+                        _df.to_pickle(pkl_path)
+                        print(f'  [info] epw_suffix_categories persisted to {pkl_path}')
+                    except Exception as _e:
+                        print(f'  [!] Could not update {pkl_path}: {_e}')
+
+    def preview_category_mapping(self) -> dict:
+        """Returns a dictionary containing DataFrames showing the category labels that would be assigned to each
+        EPW and IDF currently registered in this instance, based on the rules defined
+        via :meth:`set_category_mapping`. The DataFrames are also saved in the attribute
+        `category_mapping_preview_dfs`.
+        
+        Use this **before running any simulation** to verify that the mapping rules
+        produce the expected results.
+        
+        :return: a dictionary with keys ``'epw'`` and ``'idf'``, where each value is a pandas DataFrame.
+            Returns empty DataFrames if no mapping rules have been set.
+        
+        Example::
+        
+            preview = parametric.preview_category_mapping()
+            print(preview['epw'].to_string(index=False))
+            # file                       city      scenario
+            # seville_2024.epw           seville   historical
+            # london_gatwick_rcp85.epw   london    future
+            print(preview['idf'].to_string(index=False))
+            # file                       typology
+            # office_building_A.idf      None
+        
+        Usage
+        -----
+        Use `SimulationBase.preview_category_mapping` within ACCIM parametric and optimisation workflows.
+        """
+        epw_rules = getattr(self, 'epw_mapping_rules', {})
+        idf_rules = getattr(self, 'idf_mapping_rules', {})
+        
+        epw_rows = []
+        idf_rows = []
+
+        # EPW rows
+        if epw_rules:
+            epws = getattr(self, 'epws', [])
+            for epw in epws:
+                row = {'file': os.path.basename(epw)}
+                for category, rules in epw_rules.items():
+                    row[category] = self._resolve_category_for_value(str(epw), rules)
+                epw_rows.append(row)
+
+        # IDF rows
+        if idf_rules:
+            buildings = getattr(self, 'buildings', [])
+            for idx, b in enumerate(buildings):
+                idf_name = self._get_idf_identifier(b, idx)
+                row = {'file': idf_name}
+                for category, rules in idf_rules.items():
+                    row[category] = self._resolve_category_for_value(idf_name, rules)
+                idf_rows.append(row)
+
+        epw_df = pd.DataFrame(epw_rows)
+        idf_df = pd.DataFrame(idf_rows)
+
+        if not epw_rules and not idf_rules:
+            print('  [info] No category mapping rules are defined. Call set_category_mapping() first.')
+
+        # Warn about any files that didn't match any category
+        unmatched = []
+        if epw_rules and not epw_df.empty:
+            category_cols = list(epw_rules.keys())
+            for _, r in epw_df.iterrows():
+                unmatched_cats = [c for c in category_cols if c in r and r[c] is None]
+                if unmatched_cats:
+                    unmatched.append(f"  EPW '{r['file']}' -> no match for: {unmatched_cats}")
+
+        if idf_rules and not idf_df.empty:
+            category_cols = list(idf_rules.keys())
+            for _, r in idf_df.iterrows():
+                unmatched_cats = [c for c in category_cols if c in r and r[c] is None]
+                if unmatched_cats:
+                    unmatched.append(f"  IDF '{r['file']}' -> no match for: {unmatched_cats}")
+
+        if unmatched:
+            print('[!] Warning: the following files did not match any keyword for some categories:')
+            for msg in unmatched:
+                print(msg)
+
+        self.category_mapping_preview_dfs = {'epw': epw_df, 'idf': idf_df}
+        return self.category_mapping_preview_dfs
+
+    @staticmethod
+    def _simulation_df_source_map() -> dict:
+        """Maps public df_source aliases to canonical source keys and DataFrame attributes.
+        
+        Usage
+        -----
+        Use `SimulationBase._simulation_df_source_map` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._simulation_df_source_map()
+        """
+        return {
+            'parametric': ('parametric', 'outputs_param_simulation'),
+            'outputs_param_simulation': ('parametric', 'outputs_param_simulation'),
+            'parametric_hourly': ('parametric_hourly', 'outputs_param_simulation_hourly'),
+            'outputs_param_simulation_hourly': ('parametric_hourly', 'outputs_param_simulation_hourly'),
+            'parametric_monthly': ('parametric_monthly', 'outputs_param_simulation_monthly'),
+            'outputs_param_simulation_monthly': ('parametric_monthly', 'outputs_param_simulation_monthly'),
+            'optimisation': ('optimisation', 'outputs_optimisation'),
+            'optimization': ('optimisation', 'outputs_optimisation'),
+            'outputs_optimisation': ('optimisation', 'outputs_optimisation'),
+            'optimisation_hourly': ('optimisation_hourly', 'outputs_optimisation_hourly'),
+            'optimization_hourly': ('optimisation_hourly', 'outputs_optimisation_hourly'),
+            'outputs_optimisation_hourly': ('optimisation_hourly', 'outputs_optimisation_hourly'),
+            'optimisation_monthly': ('optimisation_monthly', 'outputs_optimisation_monthly'),
+            'optimization_monthly': ('optimisation_monthly', 'outputs_optimisation_monthly'),
+            'outputs_optimisation_monthly': ('optimisation_monthly', 'outputs_optimisation_monthly'),
+        }
+
+    def _resolve_simulation_df_source(self, df_source: str = 'parametric') -> tuple[str, str, Any]:
+        """Resolve a df_source alias into ``(canonical_source, attr_name, dataframe)``.
+        
+        Usage
+        -----
+        Use `SimulationBase._resolve_simulation_df_source` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._resolve_simulation_df_source(df_source=...)
+        """
+        source_key = str(df_source).strip().lower()
+        source_map = self._simulation_df_source_map()
+        if source_key not in source_map:
+            raise ValueError(
+                f"Unsupported df_source '{df_source}'. "
+                f"Valid options are: {sorted(source_map.keys())}"
+            )
+        (canonical_source, attr_name) = source_map[source_key]
+        return canonical_source, attr_name, getattr(self, attr_name, None)
+
+    @staticmethod
+    def _normalise_summary_count_key(value: Any) -> str:
+        """Normalize category labels so summary dictionaries are print/JSON friendly.
+        
+        Parameters
+        ----------
+        value : Any
+            Argument used by `SimulationBase._normalise_summary_count_key`.
+        
+        Usage
+        -----
+        Use `SimulationBase._normalise_summary_count_key` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._normalise_summary_count_key(value=...)
+        """
+        try:
+            if pd.isna(value):
+                return '<NA>'
+        except Exception:
+            pass
+        return str(value)
+
+    @staticmethod
+    def _detect_energy_columns_from_numeric(numeric_columns: list[str]) -> list[str]:
+        """Heuristic detection of energy-related numeric columns based on column names.
+        
+        Parameters
+        ----------
+        numeric_columns : Any
+            Argument used by `SimulationBase._detect_energy_columns_from_numeric`.
+        
+        Usage
+        -----
+        Use `SimulationBase._detect_energy_columns_from_numeric` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._detect_energy_columns_from_numeric(numeric_columns=...)
+        """
+        energy_pattern = re.compile(
+            r'energy|heating|cooling|electric(?:ity)?|gas|fuel|demand|consumption|load|'
+            r'kwh|mwh|gj|mj|kj|btu|therm|eui|end[_\s-]?use',
+            flags=re.IGNORECASE,
+        )
+        return [column for column in numeric_columns if energy_pattern.search(str(column))]
+
+    def _get_rule_based_category_candidates(self, df_columns: list[str]) -> list[str]:
+        """Returns category columns requested by mapping rules and available in the DataFrame.
+        
+        Parameters
+        ----------
+        df_columns : Any
+            Input dataframe used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._get_rule_based_category_candidates` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._get_rule_based_category_candidates(df_columns=...)
+        """
+        epw_rules = getattr(self, 'epw_mapping_rules', {}) or {}
+        idf_rules = getattr(self, 'idf_mapping_rules', {}) or {}
+
+        candidates = []
+        for category in epw_rules.keys():
+            category_name = str(category)
+            candidates.append(category_name)
+            candidates.append(f'epw_{category_name}')
+        for category in idf_rules.keys():
+            candidates.append(str(category))
+
+        filtered = []
+        seen = set()
+        for column in candidates:
+            if column in df_columns and column not in seen:
+                filtered.append(column)
+                seen.add(column)
+        return filtered
+
+    def _infer_category_columns(
+        self,
+        df: pd.DataFrame,
+        energy_columns: list[str],
+    ) -> list[str]:
+        """Infer category columns dynamically when explicit category rules are unavailable.
+        
+        Parameters
+        ----------
+        df : Any
+            Input dataframe used by this routine.
+        energy_columns : Any
+            Argument used by `SimulationBase._infer_category_columns`.
+        
+        Usage
+        -----
+        Use `SimulationBase._infer_category_columns` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._infer_category_columns(df=..., energy_columns=...)
+        """
+        rule_based_columns = self._get_rule_based_category_candidates(df_columns=list(df.columns))
+        if len(rule_based_columns) > 0:
+            return rule_based_columns
+
+        excluded_exact = {
+            'idf',
+            'epw',
+            'output_dir',
+            'simulation_directory',
+            'simulation_output_csv_path',
+            '_accim_task_signature',
+            'pareto-optimal',
+        }
+
+        inferred = []
+        for column in df.columns:
+            column_name = str(column)
+            column_name_lower = column_name.lower()
+
+            if column_name_lower in excluded_exact:
+                continue
+            if column_name in energy_columns:
+                continue
+            if column_name_lower.endswith('_path') or column_name_lower.endswith('_dir'):
+                continue
+
+            dtype = df[column].dtype
+            is_textual_or_categorical = (
+                pd.api.types.is_object_dtype(dtype)
+                or pd.api.types.is_string_dtype(dtype)
+                or isinstance(dtype, pd.CategoricalDtype)
+                or pd.api.types.is_bool_dtype(dtype)
+            )
+            if not is_textual_or_categorical:
+                continue
+
+            non_na = df[column].dropna()
+            if len(non_na) == 0:
+                continue
+
+            unique_ratio = float(non_na.nunique(dropna=True)) / float(len(non_na))
+            avg_len = float(non_na.astype(str).str.len().mean())
+            if unique_ratio >= 0.98 and avg_len > 24:
+                continue
+
+            inferred.append(column_name)
+
+        return inferred
+
+    def build_simulation_summary(
+        self,
+        df_source: str = 'parametric',
+        category_columns: Optional[list] = None,
+        include_na: bool = True,
+    ) -> dict:
+        """Builds a compact summary for a simulation outputs DataFrame and stores it in
+        ``self.simulation_summary``.
+        
+        :param df_source: DataFrame source alias. Supported values include
+            ``'parametric'``, ``'optimisation'``, and hourly/monthly variants.
+        :param category_columns: optional explicit list of category columns.
+            If provided, automatic detection is skipped after validation.
+        :param include_na: when ``True``, missing values are included in category
+            counts and unique counts.
+        :return: summary dictionary with general metrics and category counts.
+        
+        Usage
+        -----
+        Use `SimulationBase.build_simulation_summary` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.build_simulation_summary(df_source=..., category_columns=..., include_na=...)
+        """
+        (canonical_source, attr_name, df) = self._resolve_simulation_df_source(df_source=df_source)
+        if df is None:
+            raise ValueError(
+                f"DataFrame '{attr_name}' is not available for df_source='{df_source}'. "
+                'Run or load results first.'
+            )
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError(
+                f"Attribute '{attr_name}' is not a pandas DataFrame (got {type(df).__name__})."
+            )
+        if df.empty:
+            raise ValueError(
+                f"DataFrame '{attr_name}' is empty for df_source='{df_source}'."
+            )
+
+        total_rows = int(len(df))
+        total_columns = int(len(df.columns))
+        n_unique = {
+            column: int(df[column].nunique(dropna=not include_na))
+            for column in ['idf', 'epw', 'output_dir']
+            if column in df.columns
+        }
+
+        numeric_columns = [
+            str(column)
+            for column in df.columns
+            if pd.api.types.is_numeric_dtype(df[column].dtype)
+            and not pd.api.types.is_bool_dtype(df[column].dtype)
+        ]
+        energy_columns = self._detect_energy_columns_from_numeric(numeric_columns=numeric_columns)
+
+        detected_categories = self._infer_category_columns(df=df, energy_columns=energy_columns)
+
+        if category_columns is not None:
+            if isinstance(category_columns, str):
+                category_columns = [category_columns]
+            if not isinstance(category_columns, list):
+                raise TypeError("Argument 'category_columns' must be a list of strings or None.")
+
+            requested_columns = []
+            for column in category_columns:
+                if not isinstance(column, str):
+                    raise TypeError("All items in 'category_columns' must be strings.")
+                if column not in requested_columns:
+                    requested_columns.append(column)
+
+            invalid_columns = [column for column in requested_columns if column not in df.columns]
+            if invalid_columns:
+                raise ValueError(
+                    'Invalid category_columns provided. '
+                    f'Invalid: {invalid_columns}. '
+                    f'Available columns: {list(df.columns)}. '
+                    f'Automatically detected categories: {detected_categories}.'
+                )
+            detected_categories = requested_columns
+
+        category_counts = {}
+        for column in detected_categories:
+            counts_series = df[column].value_counts(dropna=not include_na)
+            category_counts[column] = {
+                self._normalise_summary_count_key(value): int(count)
+                for (value, count) in counts_series.items()
+            }
+
+        import datetime
+        summary = {
+            'df_source': canonical_source,
+            'df_attr': attr_name,
+            'generated_at': datetime.datetime.now().isoformat(timespec='seconds'),
+            'total_rows': total_rows,
+            'total_columns': total_columns,
+            'n_unique': n_unique,
+            'detected_category_columns': detected_categories,
+            'category_counts': category_counts,
+            'numeric_columns': numeric_columns,
+            'energy_columns': energy_columns,
+        }
+        self.simulation_summary = summary
+        return summary
+
+    def print_simulation_summary(
+        self,
+        df_source: str = 'parametric',
+        refresh: bool = False,
+    ) -> None:
+        """Prints the summary generated by :meth:`build_simulation_summary`.
+        
+        :param df_source: DataFrame source alias.
+        :param refresh: when ``True``, rebuilds the summary before printing.
+        
+        Usage
+        -----
+        Use `SimulationBase.print_simulation_summary` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.print_simulation_summary(df_source=..., refresh=...)
+        """
+        (canonical_source, _, _) = self._resolve_simulation_df_source(df_source=df_source)
+        cached_summary = self.simulation_summary if isinstance(self.simulation_summary, dict) else None
+
+        needs_rebuild = (
+            refresh
+            or cached_summary is None
+            or cached_summary.get('df_source') != canonical_source
+        )
+        if needs_rebuild:
+            try:
+                cached_summary = self.build_simulation_summary(df_source=canonical_source)
+            except Exception as exc:
+                print(f'  [info] Could not build simulation summary: {exc}')
+                self.simulation_summary = None
+                return
+
+        summary = cached_summary
+
+        def _preview(columns: list[str], max_items: int = 12) -> list[str]:
+            if len(columns) <= max_items:
+                return columns
+            return columns[:max_items] + [f'...(+{len(columns) - max_items} more)']
+
+        print(f"=== Simulation summary: {summary['df_source']} ===")
+        print(f"generated_at  : {summary.get('generated_at')}")
+        print(f"total_rows    : {summary.get('total_rows')}")
+        print(f"total_columns : {summary.get('total_columns')}")
+
+        unique_counts = summary.get('n_unique', {})
+        if unique_counts:
+            print('n_unique:')
+            for (column, value) in unique_counts.items():
+                print(f'  - {column}: {value}')
+        else:
+            print('n_unique: (no key columns found)')
+
+        detected_categories = summary.get('detected_category_columns', [])
+        print(f'detected_category_columns ({len(detected_categories)}): {detected_categories}')
+
+        category_counts = summary.get('category_counts', {})
+        if category_counts:
+            print('category_counts:')
+            for column in detected_categories:
+                print(f"  - {column}: {category_counts.get(column, {})}")
+        else:
+            print('category_counts: {}')
+
+        numeric_columns = summary.get('numeric_columns', [])
+        energy_columns = summary.get('energy_columns', [])
+        print(f'numeric_columns ({len(numeric_columns)}): {_preview(numeric_columns)}')
+        print(f'energy_columns ({len(energy_columns)}): {_preview(energy_columns)}')
+
+    def _get_default_simulation_summary_json_path(self, df_source: str) -> str:
+        """Build a default JSON path for simulation summary exports.
+        
+        Parameters
+        ----------
+        df_source : Any
+            Input dataframe used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._get_default_simulation_summary_json_path` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._get_default_simulation_summary_json_path(df_source=...)
+        """
+        import datetime
+
+        (canonical_source, _, _) = self._resolve_simulation_df_source(df_source=df_source)
+        if canonical_source.startswith('parametric'):
+            reference_output_path = getattr(self, 'outputs_param_simulation_filepath', None)
+        else:
+            reference_output_path = getattr(self, 'outputs_optimisation_filepath', None)
+
+        base_dir = os.getcwd()
+        if isinstance(reference_output_path, str) and len(reference_output_path.strip()) > 0:
+            base_dir = os.path.dirname(os.path.abspath(reference_output_path))
+
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'simulation_summary_{canonical_source}_{timestamp}.json'
+        return os.path.abspath(os.path.join(base_dir, filename))
+
+    def export_simulation_summary_json(
+        self,
+        json_path: str = None,
+        df_source: str = 'parametric',
+        refresh: bool = False,
+        category_columns: Optional[list] = None,
+        include_na: bool = True,
+    ) -> str:
+        """Exports ``self.simulation_summary`` to a JSON file.
+        
+        :param json_path: optional destination path. If ``None``, a default path is
+            generated in the latest results directory when available.
+        :param df_source: DataFrame source alias used to resolve/build the summary.
+        :param refresh: when ``True``, rebuilds the summary before exporting.
+        :param category_columns: optional explicit category columns when rebuilding.
+        :param include_na: controls NA handling when rebuilding the summary.
+        :return: absolute path to the exported JSON file.
+        
+        Usage
+        -----
+        Use `SimulationBase.export_simulation_summary_json` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.export_simulation_summary_json(json_path=..., df_source=..., refresh=..., ...)
+        """
+        (canonical_source, _, _) = self._resolve_simulation_df_source(df_source=df_source)
+        cached_summary = self.simulation_summary if isinstance(self.simulation_summary, dict) else None
+        needs_rebuild = (
+            refresh
+            or cached_summary is None
+            or cached_summary.get('df_source') != canonical_source
+        )
+        if needs_rebuild:
+            cached_summary = self.build_simulation_summary(
+                df_source=canonical_source,
+                category_columns=category_columns,
+                include_na=include_na,
+            )
+
+        target_path = (
+            os.path.abspath(json_path)
+            if isinstance(json_path, str) and len(json_path.strip()) > 0
+            else self._get_default_simulation_summary_json_path(df_source=canonical_source)
+        )
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+
+        import datetime
+        payload = dict(cached_summary)
+        payload['exported_at'] = datetime.datetime.now().isoformat(timespec='seconds')
+        payload['summary_json_path'] = target_path
+
+        with open(target_path, 'w', encoding='utf-8') as handle:
+            json.dump(payload, handle, indent=2, ensure_ascii=True, default=str)
+
+        self.simulation_summary = payload
+        print(f'  [info] simulation_summary exported to {target_path}')
+        return target_path
+
+    def _refresh_simulation_summary_after_results_change(
+        self,
+        df_source: str = 'parametric',
+        context: str = '',
+    ) -> None:
+        """Safely refreshes ``self.simulation_summary`` after run/load operations.
+        
+        This helper never raises, preserving backward compatibility in existing
+        workflows even if summary generation fails.
+        
+        Parameters
+        ----------
+        df_source : Any
+            Input dataframe used by this routine.
+        context : Any
+            Label or identifier used for diagnostics and reporting.
+        
+        Usage
+        -----
+        Use `SimulationBase._refresh_simulation_summary_after_results_change` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._refresh_simulation_summary_after_results_change(df_source=..., context=...)
+        """
+        try:
+            (_, _, df) = self._resolve_simulation_df_source(df_source=df_source)
+        except Exception as exc:
+            self.simulation_summary = None
+            if context:
+                print(f'  [info] simulation_summary cleared after {context}: {exc}')
+            return
+
+        if df is None or (hasattr(df, 'empty') and df.empty):
+            self.simulation_summary = None
+            detail = f' after {context}' if context else ''
+            print(f'  [info] simulation_summary cleared for {df_source}{detail}: no data available.')
+            return
+
+        try:
+            self.build_simulation_summary(df_source=df_source)
+            if context:
+                print(f'  [info] simulation_summary updated for {df_source} after {context}.')
+        except Exception as exc:
+            self.simulation_summary = None
+            print(f'  [info] simulation_summary could not be updated for {df_source}: {exc}')
+
+    def set_evaluator(self, epw: str, out_dir: str, building: Any = None) -> besos.evaluator.EvaluatorEP:
+        """Used internally for setting the evaluator in run_parametric_simulation and run_optimisation methods.
+        
         :param epw: The epw file name
         :param out_dir: The name of the output directory to save the results.
+        :param building: Optional building to evaluate (if multiple are simulated)
         :return: the besos.evaluator.EvaluatorEP class instance
+        
+        Usage
+        -----
+        Use `SimulationBase.set_evaluator` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.set_evaluator(epw=..., out_dir=..., building=...)
         """
-        evaluator = EvaluatorEP(problem=self.problem, building=self.building, epw=epw, out_dir=out_dir)
+        b = building if building is not None else self.building
+        evaluator = EvaluatorEP(problem=self.problem, building=b, epw=epw, out_dir=out_dir)
         return evaluator
 
-    def run_parametric_simulation(self, epws: list, out_dir: str, df: pd.DataFrame, processes: int=2, keep_input: bool=True, keep_dirs: bool=True) -> pd.DataFrame:
-        """
-        Runs the parametric simulation.
+    def _run_evaluator_df_apply(
+        self,
+        evaluator: EvaluatorEP,
+        df: pd.DataFrame,
+        keep_input: bool,
+        keep_dirs: bool,
+        processes: int,
+    ) -> pd.DataFrame:
+        """Run evaluator dataframe application with/without explicit inputs.
 
+        Parameters
+        ----------
+        evaluator : EvaluatorEP
+            BESOS evaluator configured for the target case.
+        df : pd.DataFrame
+            Input dataframe passed to evaluator execution.
+        keep_input : bool
+            Whether original input columns are included in returned rows.
+        keep_dirs : bool
+            Whether BESOS simulation folders are preserved.
+        processes : int
+            Number of processes used by `evaluator.df_apply` when applicable.
+
+        Returns
+        -------
+        pd.DataFrame
+            Evaluator outputs as a dataframe.
+
+        Usage
+        -----
+        Internal helper used by parametric and optimisation execution paths.
+
+        Examples
+        --------
+        outputs = self._run_evaluator_df_apply(evaluator, df, keep_input=True, keep_dirs=False, processes=1)
+        """
+        if len(self._get_problem_input_names()) > 0:
+            return evaluator.df_apply(
+                df=df,
+                keep_input=keep_input,
+                keep_dirs=keep_dirs,
+                processes=processes,
+            )
+
+        rows = []
+        output_names = evaluator.problem.names('outputs')
+        for (_, row) in df.iterrows():
+            result = evaluator(row, keep_dirs=keep_dirs)
+            if not isinstance(result, (list, tuple)):
+                result = (result,)
+            result_dict = {
+                output_names[idx]: result[idx]
+                for idx in range(len(output_names))
+            }
+            if keep_dirs and len(result) > len(output_names):
+                result_dict['output_dir'] = result[-1]
+            if keep_input:
+                result_dict.update(row.to_dict())
+            rows.append(result_dict)
+        return pd.DataFrame(rows)
+
+    def _serialize_problem_outputs(self) -> list[dict]:
+        """Serialize outputs/readers so worker processes can reconstruct MeterReader/
+        VariableReader objects instead of losing type information.
+        
+        Usage
+        -----
+        Use `SimulationBase._serialize_problem_outputs` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._serialize_problem_outputs()
+        """
+        output_names = self.problem.names('outputs') if hasattr(self, 'problem') and hasattr(self.problem, 'names') else []
+        sim_outputs = getattr(self, 'sim_outputs', None)
+        return self._serialize_output_readers(sim_outputs, output_names)
+
+    def _serialize_problem_add_outputs(self) -> list[dict]:
+        """Serialize `problem.add_outputs` readers for worker-safe transport.
+
+        Parameters
+        ----------
+        None
+            Uses `self.problem.add_outputs` and derived output names.
+
+        Returns
+        -------
+        list[dict]
+            Serialized add-output reader specifications.
+
+        Usage
+        -----
+        Internal helper used by multiprocessing worker dispatch.
+
+        Examples
+        --------
+        add_specs = self._serialize_problem_add_outputs()
+        """
+        add_outputs = getattr(getattr(self, 'problem', None), 'add_outputs', None)
+        add_output_names = self._get_problem_add_output_names()
+        return self._serialize_output_readers(add_outputs, add_output_names)
+
+    def _get_problem_add_output_names(self) -> list:
+        """List names defined for `problem.add_outputs` readers.
+
+        Parameters
+        ----------
+        None
+            Uses `self.problem.add_outputs`.
+
+        Returns
+        -------
+        list
+            Add-output names in current problem order.
+
+        Usage
+        -----
+        Internal helper used by serialization and worker output mapping.
+
+        Examples
+        --------
+        names = self._get_problem_add_output_names()
+        """
+        add_outputs = getattr(getattr(self, 'problem', None), 'add_outputs', None)
+        if not isinstance(add_outputs, list):
+            return []
+        names = []
+        for obj in add_outputs:
+            names.append(getattr(obj, 'name', None))
+        return names
+
+    @staticmethod
+    def _serialize_output_readers(readers: Any, output_names: Optional[list] = None) -> list[dict]:
+        """Serialize output-reader objects into transportable dictionaries.
+
+        Parameters
+        ----------
+        readers : Any
+            Reader list (MeterReader/VariableReader) or compatible objects.
+        output_names : Optional[list]
+            Optional fallback names aligned with reader order.
+
+        Returns
+        -------
+        list[dict]
+            Serialized reader descriptors with kind, identifiers and reducer.
+
+        Usage
+        -----
+        Used by worker-based execution to reconstruct reader objects remotely.
+
+        Examples
+        --------
+        specs = SimulationBase._serialize_output_readers(readers, output_names)
+        """
+        specs: list[dict] = []
+        if output_names is None:
+            output_names = []
+        if not isinstance(readers, list) or len(readers) == 0:
+            return specs
+
+        for idx, obj in enumerate(readers):
+            output_name = output_names[idx] if idx < len(output_names) else getattr(obj, 'name', None)
+            # BESOS EPReader stores the reducer in `_process` (not `func`).
+            # Keep fallbacks for compatibility with any custom reader wrappers.
+            func_attr = getattr(obj, '_process', None)
+            if func_attr is None:
+                func_attr = getattr(obj, 'func', None)
+            if func_attr is None and hasattr(obj, '_func'):
+                func_attr = getattr(obj, '_func')
+
+            serialized_func = _serialize_output_func(func_attr)
+
+            if hasattr(obj, 'key_name'):
+                specs.append({
+                    'kind': 'meter',
+                    'key_name': getattr(obj, 'key_name', None),
+                    'frequency': getattr(obj, 'frequency', None),
+                    'output_name': output_name,
+                    'func': serialized_func,
+                })
+            elif hasattr(obj, 'key_value') and hasattr(obj, 'variable_name'):
+                specs.append({
+                    'kind': 'variable',
+                    'key_value': getattr(obj, 'key_value', None),
+                    'variable_name': getattr(obj, 'variable_name', None),
+                    'frequency': getattr(obj, 'frequency', None),
+                    'output_name': output_name,
+                    'func': serialized_func,
+                })
+            else:
+                specs.append({
+                    'kind': 'unknown',
+                    'output_name': output_name,
+                })
+        return specs
+
+    @staticmethod
+    def _normalize_signature_value(value: Any) -> Any:
+        """Normalize values so task signatures are stable across runs/processes.
+        
+        Parameters
+        ----------
+        value : Any
+            Argument used by `SimulationBase._normalize_signature_value`.
+        
+        Usage
+        -----
+        Use `SimulationBase._normalize_signature_value` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._normalize_signature_value(value=...)
+        """
+        if isinstance(value, dict):
+            return {
+                str(k): SimulationBase._normalize_signature_value(v)
+                for (k, v) in sorted(value.items(), key=lambda kv: str(kv[0]))
+            }
+        if isinstance(value, (list, tuple)):
+            return [SimulationBase._normalize_signature_value(v) for v in value]
+        if isinstance(value, os.PathLike):
+            return os.fspath(value)
+        if isinstance(value, np.generic):
+            return value.item()
+        try:
+            if pd.isna(value):
+                return None
+        except Exception:
+            pass
+        return value
+
+    @staticmethod
+    def _build_parametric_task_signature(
+        idf_basename: str,
+        epw: str,
+        problem_names_inputs: list,
+        row_dict: dict,
+    ) -> str:
+        """Build a deterministic signature for a parametric task row.
+        
+        Parameters
+        ----------
+        idf_basename : Any
+            Argument used by `SimulationBase._build_parametric_task_signature`.
+        epw : Any
+            Argument used by `SimulationBase._build_parametric_task_signature`.
+        problem_names_inputs : Any
+            Argument used by `SimulationBase._build_parametric_task_signature`.
+        row_dict : Any
+            Argument used by `SimulationBase._build_parametric_task_signature`.
+        
+        Usage
+        -----
+        Use `SimulationBase._build_parametric_task_signature` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._build_parametric_task_signature(idf_basename=..., epw=..., problem_names_inputs=..., ...)
+        """
+        payload_inputs = {
+            str(name): SimulationBase._normalize_signature_value(row_dict.get(name))
+            for name in problem_names_inputs
+        }
+        payload = {
+            'idf': str(idf_basename),
+            'epw': str(epw),
+            'inputs': payload_inputs,
+        }
+        serialized = json.dumps(payload, sort_keys=True, ensure_ascii=True, default=str)
+        return hashlib.sha1(serialized.encode('utf-8')).hexdigest()
+
+    @staticmethod
+    def _default_parametric_checkpoint_path(out_dir: str) -> str:
+        """Build the default parametric checkpoint path.
+
+        Parameters
+        ----------
+        out_dir : str
+            Base output directory of the parametric run.
+
+        Returns
+        -------
+        str
+            Absolute checkpoint path for latest parametric state.
+
+        Usage
+        -----
+        Internal helper for resume/checkpoint workflows.
+
+        Examples
+        --------
+        checkpoint = SimulationBase._default_parametric_checkpoint_path('param_results')
+        """
+        return os.path.abspath(
+            os.path.join(out_dir, 'outputs_param_simulation_checkpoint_latest.pkl')
+        )
+
+    @staticmethod
+    def _default_parametric_batches_dir(out_dir: str) -> str:
+        """Build the default directory for parametric batch chunks.
+
+        Parameters
+        ----------
+        out_dir : str
+            Base output directory of the parametric run.
+
+        Returns
+        -------
+        str
+            Absolute path to the batch-chunk folder.
+
+        Usage
+        -----
+        Internal helper for batch persistence during long runs.
+
+        Examples
+        --------
+        batches_dir = SimulationBase._default_parametric_batches_dir('param_results')
+        """
+        return os.path.abspath(
+            os.path.join(out_dir, 'outputs_param_simulation_batches')
+        )
+
+    @staticmethod
+    def _save_parametric_batch_chunk(
+        batch_results: Union[pd.DataFrame, list],
+        batches_dir: str,
+        batch_idx: int,
+        file_prefix: str = 'outputs_param_simulation_batch',
+    ) -> Optional[str]:
+        """Persist a batch chunk to disk and return its absolute pickle path.
+        
+        Parameters
+        ----------
+        batch_results : Any
+            Argument used by `SimulationBase._save_parametric_batch_chunk`.
+        batches_dir : Any
+            Path-like value used by this routine.
+        batch_idx : Any
+            Argument used by `SimulationBase._save_parametric_batch_chunk`.
+        file_prefix : Any
+            Argument used by `SimulationBase._save_parametric_batch_chunk`.
+        
+        Usage
+        -----
+        Use `SimulationBase._save_parametric_batch_chunk` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._save_parametric_batch_chunk(batch_results=..., batches_dir=..., batch_idx=..., ...)
+        """
+        if isinstance(batch_results, pd.DataFrame):
+            batch_df = batch_results.copy()
+        else:
+            batch_df = pd.DataFrame(batch_results)
+
+        if len(batch_df) == 0:
+            return None
+
+        if '_accim_task_signature' in batch_df.columns:
+            batch_df['_accim_task_signature'] = batch_df['_accim_task_signature'].astype(str)
+            batch_df = batch_df.drop_duplicates(
+                subset=['_accim_task_signature'],
+                keep='last',
+            ).reset_index(drop=True)
+
+        os.makedirs(batches_dir, exist_ok=True)
+        import datetime
+
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        chunk_name = f'{file_prefix}_{int(batch_idx):05d}_{timestamp}.pkl'
+        chunk_path = os.path.abspath(os.path.join(batches_dir, chunk_name))
+        chunk_tmp_path = f'{chunk_path}.tmp'
+        batch_df.to_pickle(chunk_tmp_path)
+        os.replace(chunk_tmp_path, chunk_path)
+        return chunk_path
+
+    @staticmethod
+    def _load_parametric_checkpoint_state(checkpoint_path: str) -> dict:
+        """Load parametric checkpoint in either legacy-DataFrame format or the
+        new state-dict format.
+        
+        Parameters
+        ----------
+        checkpoint_path : Any
+            Path-like value used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._load_parametric_checkpoint_state` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._load_parametric_checkpoint_state(checkpoint_path=...)
+        """
+        payload = pd.read_pickle(checkpoint_path)
+
+        if isinstance(payload, pd.DataFrame):
+            legacy_df = payload.copy()
+            if '_accim_task_signature' not in legacy_df.columns:
+                return {
+                    'completed_signatures': set(),
+                    'batch_pickles': [],
+                    'legacy_results_df': None,
+                    'total_tasks': None,
+                    'completed_tasks': None,
+                    'input_plan': None,
+                }
+
+            legacy_df['_accim_task_signature'] = legacy_df['_accim_task_signature'].astype(str)
+            legacy_df = legacy_df.drop_duplicates(
+                subset=['_accim_task_signature'],
+                keep='last',
+            ).reset_index(drop=True)
+            return {
+                'completed_signatures': set(legacy_df['_accim_task_signature'].tolist()),
+                'batch_pickles': [],
+                'legacy_results_df': legacy_df,
+                'total_tasks': None,
+                'completed_tasks': int(len(legacy_df)),
+                'input_plan': None,
+            }
+
+        if not isinstance(payload, dict):
+            raise ValueError(
+                'Parametric checkpoint must contain a DataFrame (legacy) or a dictionary payload.'
+            )
+
+        completed_signatures_raw = payload.get('completed_signatures', [])
+        if isinstance(completed_signatures_raw, (set, tuple)):
+            completed_signatures_raw = list(completed_signatures_raw)
+        if not isinstance(completed_signatures_raw, list):
+            completed_signatures_raw = []
+
+        completed_signatures = {
+            str(signature)
+            for signature in completed_signatures_raw
+            if signature is not None and str(signature).strip() != ''
+        }
+
+        batch_pickles_raw = payload.get('batch_pickles', [])
+        if isinstance(batch_pickles_raw, (set, tuple)):
+            batch_pickles_raw = list(batch_pickles_raw)
+        if not isinstance(batch_pickles_raw, list):
+            batch_pickles_raw = []
+
+        batch_pickles = []
+        for entry in batch_pickles_raw:
+            if isinstance(entry, (str, os.PathLike)):
+                batch_pickles.append(os.path.abspath(os.fspath(entry)))
+
+        input_plan_raw = payload.get('input_plan')
+        input_plan = input_plan_raw.copy() if isinstance(input_plan_raw, pd.DataFrame) else None
+
+        return {
+            'completed_signatures': completed_signatures,
+            'batch_pickles': batch_pickles,
+            'legacy_results_df': None,
+            'total_tasks': payload.get('total_tasks'),
+            'completed_tasks': payload.get('completed_tasks'),
+            'input_plan': input_plan,
+        }
+
+    @staticmethod
+    def _parametric_plans_match(
+        provided_df: Optional[pd.DataFrame],
+        checkpoint_df: Optional[pd.DataFrame],
+    ) -> bool:
+        """Best-effort comparison of two parametric sampling plans.
+
+        Used to detect whether the ``df`` passed to
+        :meth:`run_parametric_simulation` is the exact same sampling plan
+        that was stored in a resume checkpoint. Non-deterministic samplers
+        (for example :meth:`sampling_lhs`, which has no fixed random seed)
+        produce different values on every call, so this comparison is what
+        allows accim to detect that mismatch instead of silently failing to
+        resume.
+
+        Parameters
+        ----------
+        provided_df : Any
+            The DataFrame passed by the caller (or resolved from
+            ``self.parameters_values_df``).
+        checkpoint_df : Any
+            The sampling plan previously stored inside a checkpoint.
+
+        Returns
+        -------
+        bool
+            True when both plans have the same columns, shape and values
+            (within floating-point tolerance). False otherwise, including
+            when either input is not a DataFrame.
+
+        Usage
+        -----
+        Internal helper for resume/checkpoint plan-reconciliation.
+        """
+        if not isinstance(provided_df, pd.DataFrame) or not isinstance(checkpoint_df, pd.DataFrame):
+            return False
+        if provided_df.shape != checkpoint_df.shape:
+            return False
+        try:
+            left = provided_df.reset_index(drop=True)
+            right = checkpoint_df.reset_index(drop=True)
+            if sorted(map(str, left.columns)) != sorted(map(str, right.columns)):
+                return False
+            right = right[left.columns]
+            pd.testing.assert_frame_equal(
+                left,
+                right,
+                check_dtype=False,
+                check_exact=False,
+                rtol=1e-09,
+                atol=1e-12,
+            )
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def _merge_parametric_batch_pickles(batch_pickles: list) -> pd.DataFrame:
+        """Merge persisted parametric batch pickle files into a single DataFrame.
+        
+        Parameters
+        ----------
+        batch_pickles : Any
+            Argument used by `SimulationBase._merge_parametric_batch_pickles`.
+        
+        Usage
+        -----
+        Use `SimulationBase._merge_parametric_batch_pickles` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._merge_parametric_batch_pickles(batch_pickles=...)
+        """
+        if len(batch_pickles) == 0:
+            return pd.DataFrame()
+
+        frames = []
+        for pickle_path in batch_pickles:
+            if not isinstance(pickle_path, (str, os.PathLike)):
+                continue
+            path = os.path.abspath(os.fspath(pickle_path))
+            if not os.path.exists(path):
+                warnings.warn(
+                    f'Batch pickle not found during merge: {path}',
+                    UserWarning,
+                )
+                continue
+            chunk_df = pd.read_pickle(path)
+            if isinstance(chunk_df, pd.DataFrame) and len(chunk_df) > 0:
+                frames.append(chunk_df)
+
+        if len(frames) == 0:
+            return pd.DataFrame()
+
+        merged_df = pd.concat(frames, ignore_index=True)
+        if '_accim_task_signature' in merged_df.columns:
+            merged_df['_accim_task_signature'] = merged_df['_accim_task_signature'].astype(str)
+            merged_df = merged_df.drop_duplicates(
+                subset=['_accim_task_signature'],
+                keep='last',
+            ).reset_index(drop=True)
+
+        return merged_df
+
+    @staticmethod
+    def _save_parametric_checkpoint(
+        all_results: list,
+        checkpoint_path: str,
+        total_tasks: int,
+        completed_tasks: int,
+        completed_signatures: Optional[set] = None,
+        batch_pickles: Optional[list] = None,
+        input_plan: Optional[pd.DataFrame] = None,
+    ) -> int:
+        """Persist current parametric results state for crash-safe resume.
+        
+        Parameters
+        ----------
+        all_results : Any
+            Argument used by `SimulationBase._save_parametric_checkpoint`.
+        checkpoint_path : Any
+            Path-like value used by this routine.
+        total_tasks : Any
+            Argument used by `SimulationBase._save_parametric_checkpoint`.
+        completed_tasks : Any
+            Argument used by `SimulationBase._save_parametric_checkpoint`.
+        completed_signatures : Any
+            Argument used by `SimulationBase._save_parametric_checkpoint`.
+        batch_pickles : Any
+            Argument used by `SimulationBase._save_parametric_checkpoint`.
+        input_plan : Any
+            Optional sampling plan (the ``df`` used for this run) persisted
+            alongside the checkpoint so a later session can detect and
+            recover from a non-deterministic re-sample (see
+            `SimulationBase._parametric_plans_match`).
+        
+        Usage
+        -----
+        Use `SimulationBase._save_parametric_checkpoint` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._save_parametric_checkpoint(all_results=..., checkpoint_path=..., total_tasks=..., ...)
+        """
+        import datetime
+
+        checkpoint_tmp_path = f'{checkpoint_path}.tmp'
+        meta_rows = 0
+        if completed_signatures is not None or batch_pickles is not None:
+            signatures_list = sorted(
+                {
+                    str(signature)
+                    for signature in (completed_signatures or set())
+                    if signature is not None and str(signature).strip() != ''
+                }
+            )
+            normalized_pickles = []
+            for pickle_path in (batch_pickles or []):
+                if isinstance(pickle_path, (str, os.PathLike)):
+                    normalized_pickles.append(os.path.abspath(os.fspath(pickle_path)))
+            payload = {
+                'saved_at': datetime.datetime.now().isoformat(timespec='seconds'),
+                'checkpoint_path': checkpoint_path,
+                'checkpoint_format': 'state_v2',
+                'completed_signatures': signatures_list,
+                'batch_pickles': normalized_pickles,
+                'completed_tasks': int(completed_tasks),
+                'total_tasks': int(total_tasks),
+                'input_plan': input_plan.copy() if isinstance(input_plan, pd.DataFrame) else None,
+            }
+            pd.to_pickle(payload, checkpoint_tmp_path)
+            meta_rows = int(len(signatures_list))
+        else:
+            checkpoint_df = pd.DataFrame(all_results)
+            if '_accim_task_signature' in checkpoint_df.columns:
+                checkpoint_df = checkpoint_df.drop_duplicates(
+                    subset=['_accim_task_signature'],
+                    keep='last',
+                ).reset_index(drop=True)
+            checkpoint_df.to_pickle(checkpoint_tmp_path)
+            meta_rows = int(len(checkpoint_df))
+
+        os.replace(checkpoint_tmp_path, checkpoint_path)
+
+        meta_payload = {
+            'saved_at': datetime.datetime.now().isoformat(timespec='seconds'),
+            'checkpoint_path': checkpoint_path,
+            'rows_in_checkpoint': int(meta_rows),
+            'completed_tasks': int(completed_tasks),
+            'total_tasks': int(total_tasks),
+        }
+        meta_path = f'{checkpoint_path}.meta.json'
+        meta_tmp_path = f'{meta_path}.tmp'
+        with open(meta_tmp_path, 'w', encoding='utf-8') as meta_file:
+            json.dump(meta_payload, meta_file, indent=2)
+        os.replace(meta_tmp_path, meta_path)
+        return int(meta_rows)
+
+    @staticmethod
+    def _default_optimisation_checkpoint_path(out_dir: str) -> str:
+        """Build the default optimisation checkpoint path.
+
+        Parameters
+        ----------
+        out_dir : str
+            Base output directory of the optimisation run.
+
+        Returns
+        -------
+        str
+            Absolute checkpoint path for latest optimisation state.
+
+        Usage
+        -----
+        Internal helper for optimisation resume support.
+
+        Examples
+        --------
+        checkpoint = SimulationBase._default_optimisation_checkpoint_path('optim_results')
+        """
+        return os.path.abspath(
+            os.path.join(out_dir, 'outputs_optimisation_checkpoint_latest.pkl')
+        )
+
+    @staticmethod
+    def _save_optimisation_checkpoint(
+        checkpoint_cases: dict,
+        checkpoint_path: str,
+        total_cases: int,
+        completed_cases: int,
+        resume_signature: Optional[str] = None,
+    ) -> int:
+        """Persist optimisation case-level checkpoint state atomically.
+        
+        Parameters
+        ----------
+        checkpoint_cases : Any
+            Argument used by `SimulationBase._save_optimisation_checkpoint`.
+        checkpoint_path : Any
+            Path-like value used by this routine.
+        total_cases : Any
+            Argument used by `SimulationBase._save_optimisation_checkpoint`.
+        completed_cases : Any
+            Argument used by `SimulationBase._save_optimisation_checkpoint`.
+        resume_signature : Any
+            Argument used by `SimulationBase._save_optimisation_checkpoint`.
+        
+        Usage
+        -----
+        Use `SimulationBase._save_optimisation_checkpoint` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._save_optimisation_checkpoint(checkpoint_cases=..., checkpoint_path=..., total_cases=..., ...)
+        """
+        import datetime
+
+        payload = {
+            'saved_at': datetime.datetime.now().isoformat(timespec='seconds'),
+            'checkpoint_path': checkpoint_path,
+            'total_cases': int(total_cases),
+            'completed_cases': int(completed_cases),
+            'case_count': int(len(checkpoint_cases)),
+            'resume_signature': resume_signature,
+            'cases': checkpoint_cases,
+        }
+
+        checkpoint_tmp_path = f'{checkpoint_path}.tmp'
+        pd.to_pickle(payload, checkpoint_tmp_path)
+        os.replace(checkpoint_tmp_path, checkpoint_path)
+
+        meta_payload = {
+            'saved_at': payload['saved_at'],
+            'checkpoint_path': checkpoint_path,
+            'total_cases': int(total_cases),
+            'completed_cases': int(completed_cases),
+            'case_count': int(len(checkpoint_cases)),
+            'resume_signature': resume_signature,
+        }
+        meta_path = f'{checkpoint_path}.meta.json'
+        meta_tmp_path = f'{meta_path}.tmp'
+        with open(meta_tmp_path, 'w', encoding='utf-8') as meta_file:
+            json.dump(meta_payload, meta_file, indent=2)
+        os.replace(meta_tmp_path, meta_path)
+        return int(len(checkpoint_cases))
+
+    @staticmethod
+    def _load_optimisation_checkpoint(checkpoint_path: str) -> dict:
+        """Load optimisation checkpoint payload and normalize expected schema.
+        
+        Parameters
+        ----------
+        checkpoint_path : Any
+            Path-like value used by this routine.
+        
+        Usage
+        -----
+        Use `SimulationBase._load_optimisation_checkpoint` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._load_optimisation_checkpoint(checkpoint_path=...)
+        """
+        payload = pd.read_pickle(checkpoint_path)
+        if not isinstance(payload, dict):
+            raise ValueError(
+                'Optimisation checkpoint must contain a dictionary payload.'
+            )
+
+        cases = payload.get('cases', payload)
+        if not isinstance(cases, dict):
+            raise ValueError(
+                "Optimisation checkpoint payload key 'cases' must be a dictionary."
+            )
+
+        return {
+            'saved_at': payload.get('saved_at'),
+            'checkpoint_path': payload.get('checkpoint_path', checkpoint_path),
+            'total_cases': payload.get('total_cases'),
+            'completed_cases': payload.get('completed_cases'),
+            'case_count': payload.get('case_count', len(cases)),
+            'resume_signature': payload.get('resume_signature'),
+            'cases': cases,
+        }
+
+    def _iter_parametric_task_blueprints(
+        self,
+        grouped_dfs: dict,
+        epws: list,
+        out_dir: str,
+        problem_names_inputs: list,
+        problem_names_outputs: list,
+        output_specs: list,
+        add_output_specs: list,
+        add_output_names: list,
+        keep_dirs: bool,
+        keep_input: bool,
+        sim_files_extensions: Optional[tuple[str, ...]] = None,
+        sim_files_policy: Literal['keep', 'delete'] = 'keep',
+    ):
+        """Yield parametric tasks lazily to avoid building the full plan in memory.
+        
+        Parameters
+        ----------
+        grouped_dfs : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        epws : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        out_dir : Any
+            Path-like value used by this routine.
+        problem_names_inputs : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        problem_names_outputs : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        output_specs : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        add_output_specs : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        add_output_names : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        keep_dirs : Any
+            Boolean or mode flag controlling behaviour.
+        keep_input : Any
+            Boolean or mode flag controlling behaviour.
+        sim_files_extensions : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        sim_files_policy : Any
+            Argument used by `SimulationBase._iter_parametric_task_blueprints`.
+        
+        Usage
+        -----
+        Use `SimulationBase._iter_parametric_task_blueprints` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._iter_parametric_task_blueprints(grouped_dfs=..., epws=..., out_dir=..., ...)
+        """
+        backup_paths = []
+        if hasattr(self, 'idf_backup_path') and self.idf_backup_path:
+            backup_paths = self.idf_backup_path if isinstance(self.idf_backup_path, list) else [self.idf_backup_path]
+
+        for (idf_basename, df_for_idf) in grouped_dfs.items():
+            idf_backup_file = None
+            for path in backup_paths:
+                basename = os.path.basename(path)
+                if f'_{idf_basename}_' in basename or f'_{idf_basename}.' in basename:
+                    idf_backup_file = path
+                    break
+
+            if not idf_backup_file:
+                idf_backup_file = idf_basename if idf_basename.lower().endswith('.idf') else f'{idf_basename}.idf'
+
+            epws_for_idf = df_for_idf['epw'].drop_duplicates().tolist() if 'epw' in df_for_idf.columns else epws
+            for epw in epws_for_idf:
+                epwname = epw.split('.epw')[0]
+                if 'epw' in df_for_idf.columns:
+                    evaluator_input_df = df_for_idf.loc[df_for_idf['epw'] == epw, problem_names_inputs]
+                else:
+                    evaluator_input_df = df_for_idf[problem_names_inputs]
+
+                evaluator_df = evaluator_input_df.reset_index(drop=True).copy()
+                for (_, row) in evaluator_df.iterrows():
+                    row_dict = row.to_dict()
+                    task_signature = self._build_parametric_task_signature(
+                        idf_basename=idf_basename,
+                        epw=epw,
+                        problem_names_inputs=problem_names_inputs,
+                        row_dict=row_dict,
+                    )
+                    yield {
+                        'signature': task_signature,
+                        'worker_args': (
+                            idf_backup_file,
+                            epw,
+                            epwname,
+                            idf_basename,
+                            out_dir,
+                            problem_names_inputs,
+                            problem_names_outputs,
+                            output_specs,
+                            add_output_specs,
+                            add_output_names,
+                            row_dict,
+                            keep_dirs,
+                            keep_input,
+                            sim_files_extensions,
+                            sim_files_policy,
+                        ),
+                    }
+
+    @staticmethod
+    def _get_system_resource_snapshot() -> dict:
+        """Best-effort system snapshot for CPU/RAM-based recommendations.
+        
+        Usage
+        -----
+        Use `SimulationBase._get_system_resource_snapshot` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._get_system_resource_snapshot()
+        """
+        snapshot = {
+            'logical_cpus': int(os.cpu_count() or 1),
+            'total_ram_gb': None,
+            'available_ram_gb': None,
+        }
+
+        try:
+            if os.name == 'nt':
+                import ctypes
+
+                class _MemoryStatus(ctypes.Structure):
+                    _fields_ = [
+                        ('dwLength', ctypes.c_ulong),
+                        ('dwMemoryLoad', ctypes.c_ulong),
+                        ('ullTotalPhys', ctypes.c_ulonglong),
+                        ('ullAvailPhys', ctypes.c_ulonglong),
+                        ('ullTotalPageFile', ctypes.c_ulonglong),
+                        ('ullAvailPageFile', ctypes.c_ulonglong),
+                        ('ullTotalVirtual', ctypes.c_ulonglong),
+                        ('ullAvailVirtual', ctypes.c_ulonglong),
+                        ('ullAvailExtendedVirtual', ctypes.c_ulonglong),
+                    ]
+
+                mem_status = _MemoryStatus()
+                mem_status.dwLength = ctypes.sizeof(_MemoryStatus)
+                ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(mem_status))
+                snapshot['total_ram_gb'] = round(mem_status.ullTotalPhys / (1024 ** 3), 1)
+                snapshot['available_ram_gb'] = round(mem_status.ullAvailPhys / (1024 ** 3), 1)
+            elif hasattr(os, 'sysconf'):
+                page_size = int(os.sysconf('SC_PAGE_SIZE'))
+                total_pages = int(os.sysconf('SC_PHYS_PAGES'))
+                available_pages = int(os.sysconf('SC_AVPHYS_PAGES'))
+                snapshot['total_ram_gb'] = round((page_size * total_pages) / (1024 ** 3), 1)
+                snapshot['available_ram_gb'] = round((page_size * available_pages) / (1024 ** 3), 1)
+        except Exception:
+            # Keep None values when runtime cannot provide RAM stats.
+            pass
+
+        return snapshot
+
+    def preflight_report_parametric(
+        self,
+        df: Optional[pd.DataFrame] = None,
+        epws: Optional[list] = None,
+        target_batches: int = 60,
+        verbose: bool = True,
+    ) -> dict:
+        """Builds a lightweight preflight report before calling
+        :meth:`run_parametric_simulation`.
+        
+        The report focuses on:
+        - plan shape/validation (missing columns, nulls, unknown IDF/EPW labels),
+        - estimated number of simulation tasks,
+        - duplicate task signatures,
+        - conservative recommendations for ``processes`` and ``batch_size``.
+        
+        Parameters
+        ----------
+        df : Any
+            Input dataframe used by this routine.
+        epws : Any
+            Argument used by `SimulationBase.preflight_report_parametric`.
+        target_batches : Any
+            Argument used by `SimulationBase.preflight_report_parametric`.
+        verbose : Any
+            Argument used by `SimulationBase.preflight_report_parametric`.
+        
+        Usage
+        -----
+        Use `SimulationBase.preflight_report_parametric` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.preflight_report_parametric(df=..., epws=..., target_batches=..., ...)
+        """
+        import math
+
+        if target_batches <= 0:
+            raise ValueError("Argument 'target_batches' must be a positive integer.")
+
+        if df is None:
+            df = getattr(self, 'parameters_values_df', None)
+        if df is None:
+            raise ValueError(
+                "No DataFrame was provided and 'self.parameters_values_df' is empty. "
+                "Run a sampling method first or pass 'df'."
+            )
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError("Argument 'df' must be a pandas DataFrame.")
+
+        plan_df = df.copy()
+        if epws is None:
+            epws = list(getattr(self, 'epws', []) or [])
+        elif isinstance(epws, list):
+            epws = list(epws)
+        else:
+            epws = [epws]
+        epws = [str(epw) for epw in epws]
+
+        problem_names_inputs = self._get_problem_input_names()
+        missing_required_columns = [
+            column for column in problem_names_inputs
+            if column not in plan_df.columns
+        ]
+        null_counts_required_inputs = {
+            column: int(plan_df[column].isna().sum())
+            for column in problem_names_inputs
+            if column in plan_df.columns
+        }
+
+        epw_counts_in_plan = {}
+        if 'epw' in plan_df.columns:
+            epw_counts_in_plan = (
+                plan_df['epw']
+                .fillna('<NA>')
+                .astype(str)
+                .value_counts(dropna=False)
+                .to_dict()
+            )
+
+        idf_counts_in_plan = {}
+        if 'idf' in plan_df.columns:
+            idf_counts_in_plan = (
+                plan_df['idf']
+                .fillna('<NA>')
+                .astype(str)
+                .value_counts(dropna=False)
+                .to_dict()
+            )
+
+        unknown_epws_in_plan = []
+        if 'epw' in plan_df.columns and len(epws) > 0:
+            unknown_epws_in_plan = sorted(
+                set(plan_df['epw'].dropna().astype(str)) - set(epws)
+            )
+
+        allowed_idfs = []
+        if len(getattr(self, 'buildings', []) or []) > 0:
+            try:
+                allowed_idfs = list(self._get_buildings_by_idf().keys())
+            except Exception:
+                allowed_idfs = []
+
+        unknown_idfs_in_plan = []
+        if len(getattr(self, 'buildings', []) or []) > 1 and 'idf' in plan_df.columns:
+            unknown_idfs_in_plan = sorted(
+                set(plan_df['idf'].dropna().astype(str)) - set(allowed_idfs)
+            )
+
+        prepare_error = None
+        grouped_dfs = {}
+        estimated_total_tasks = None
+        duplicate_task_signatures = None
+
+        if len(epws) == 0:
+            prepare_error = 'No EPWs provided (pass epws=... or set self.epws before running).'
+        elif len(missing_required_columns) == 0:
+            try:
+                grouped_dfs = self._prepare_dataframe_for_buildings(df=plan_df, epws=epws)
+                estimated_total_tasks = 0
+                for (_, df_for_idf) in grouped_dfs.items():
+                    if 'epw' in df_for_idf.columns:
+                        for epw in df_for_idf['epw'].drop_duplicates().tolist():
+                            estimated_total_tasks += int(len(df_for_idf.loc[df_for_idf['epw'] == epw]))
+                    else:
+                        estimated_total_tasks += int(len(df_for_idf) * len(epws))
+
+                signatures_seen = set()
+                duplicate_task_signatures = 0
+                for (idf_basename, df_for_idf) in grouped_dfs.items():
+                    epws_for_idf = df_for_idf['epw'].drop_duplicates().tolist() if 'epw' in df_for_idf.columns else epws
+                    for epw in epws_for_idf:
+                        if 'epw' in df_for_idf.columns:
+                            evaluator_input_df = df_for_idf.loc[df_for_idf['epw'] == epw, problem_names_inputs]
+                        else:
+                            evaluator_input_df = df_for_idf[problem_names_inputs]
+                        for (_, row) in evaluator_input_df.iterrows():
+                            signature = self._build_parametric_task_signature(
+                                idf_basename=idf_basename,
+                                epw=epw,
+                                problem_names_inputs=problem_names_inputs,
+                                row_dict=row.to_dict(),
+                            )
+                            if signature in signatures_seen:
+                                duplicate_task_signatures += 1
+                            else:
+                                signatures_seen.add(signature)
+            except Exception as exc:
+                prepare_error = str(exc)
+
+        system_snapshot = self._get_system_resource_snapshot()
+        logical_cpus = max(1, int(system_snapshot.get('logical_cpus') or 1))
+        available_ram_gb = system_snapshot.get('available_ram_gb')
+
+        cpu_cap = max(1, logical_cpus - 1)
+        if available_ram_gb is None:
+            recommended_processes = max(1, min(cpu_cap, 2))
+            min_batch_size = 20
+            max_batch_size = 80
+        elif available_ram_gb < 4:
+            recommended_processes = 1
+            min_batch_size = 10
+            max_batch_size = 20
+        elif available_ram_gb < 8:
+            recommended_processes = min(cpu_cap, 2)
+            min_batch_size = 20
+            max_batch_size = 40
+        elif available_ram_gb < 12:
+            recommended_processes = min(cpu_cap, 3)
+            min_batch_size = 30
+            max_batch_size = 60
+        else:
+            recommended_processes = min(cpu_cap, 4)
+            min_batch_size = 40
+            max_batch_size = 120
+
+        if estimated_total_tasks is None or estimated_total_tasks == 0:
+            recommended_batch_size = min_batch_size
+            estimated_n_batches = None
+        else:
+            tasks_per_target_batch = max(1, math.ceil(estimated_total_tasks / target_batches))
+            recommended_batch_size = min(
+                max(tasks_per_target_batch, min_batch_size),
+                max_batch_size,
+            )
+            estimated_n_batches = int(math.ceil(estimated_total_tasks / recommended_batch_size))
+
+        issues = []
+        if len(missing_required_columns) > 0:
+            issues.append('missing_required_columns')
+        if any(v > 0 for v in null_counts_required_inputs.values()):
+            issues.append('null_values_in_required_inputs')
+        if len(unknown_epws_in_plan) > 0:
+            issues.append('unknown_epws_in_plan')
+        if len(unknown_idfs_in_plan) > 0:
+            issues.append('unknown_idfs_in_plan')
+        if prepare_error is not None:
+            issues.append('prepare_dataframe_failed')
+
+        report = {
+            'status': 'ok' if len(issues) == 0 else 'check',
+            'issues': issues,
+            'rows_in_df': int(len(plan_df)),
+            'estimated_total_tasks': int(estimated_total_tasks) if estimated_total_tasks is not None else None,
+            'target_batches': int(target_batches),
+            'estimated_n_batches': estimated_n_batches,
+            'required_input_columns': list(problem_names_inputs),
+            'missing_required_columns': missing_required_columns,
+            'null_counts_required_inputs': null_counts_required_inputs,
+            'duplicate_task_signatures': duplicate_task_signatures,
+            'epws_for_run': epws,
+            'allowed_idfs_for_run': allowed_idfs,
+            'epw_counts_in_plan': epw_counts_in_plan,
+            'idf_counts_in_plan': idf_counts_in_plan,
+            'unknown_epws_in_plan': unknown_epws_in_plan,
+            'unknown_idfs_in_plan': unknown_idfs_in_plan,
+            'prepare_error': prepare_error,
+            'system': system_snapshot,
+            'recommendation': {
+                'processes': int(recommended_processes),
+                'batch_size': int(recommended_batch_size),
+                'checkpoint_every_batch': True,
+                'resume_from_checkpoint': True,
+            },
+            'recommended_run_kwargs': {
+                'processes': int(recommended_processes),
+                'batch_size': int(recommended_batch_size),
+                'checkpoint_every_batch': True,
+                'resume_from_checkpoint': True,
+            },
+        }
+
+        if verbose:
+            print('[preflight_report_parametric]')
+            print(f"  Rows in plan          : {report['rows_in_df']}")
+            print(f"  Estimated total tasks : {report['estimated_total_tasks']}")
+            print(f"  Missing input cols    : {report['missing_required_columns']}")
+            print(f"  Nulls in inputs       : {report['null_counts_required_inputs']}")
+            print(f"  Unknown EPWs          : {report['unknown_epws_in_plan']}")
+            print(f"  Unknown IDFs          : {report['unknown_idfs_in_plan']}")
+            print(f"  Duplicate tasks       : {report['duplicate_task_signatures']}")
+            print(
+                '  System snapshot       : '
+                f"CPUs={system_snapshot.get('logical_cpus')}, "
+                f"RAM(total/free GB)={system_snapshot.get('total_ram_gb')}/{system_snapshot.get('available_ram_gb')}"
+            )
+            print(
+                '  Recommended run       : '
+                f"processes={report['recommendation']['processes']}, "
+                f"batch_size={report['recommendation']['batch_size']}, "
+                'checkpoint_every_batch=True, resume_from_checkpoint=True'
+            )
+            if prepare_error is not None:
+                print(f'  Prepare error         : {prepare_error}')
+
+        return report
+
+    def preflight_report_optimisation(
+        self,
+        epws: Optional[list] = None,
+        evaluations: int = 20,
+        population_size: int = 10,
+        processes: Optional[int] = None,
+        keep_sim_files: Literal['all', 'non-dominated', 'none'] = 'all',
+        verbose: bool = True,
+    ) -> dict:
+        """Builds a lightweight preflight report before calling
+        :meth:`run_optimisation`.
+        
+        The report focuses on:
+        - simulation budget estimation,
+        - basic input validation (EPWs/processes),
+        - conservative recommendations for CPU/RAM usage,
+        - checkpoint-resume flags for safer long runs.
+        
+        Parameters
+        ----------
+        evaluations : Any
+            Argument used by `SimulationBase.preflight_report_optimisation`.
+        population_size : Any
+            Argument used by `SimulationBase.preflight_report_optimisation`.
+        keep_sim_files : Any
+            Boolean or mode flag controlling behaviour.
+        verbose : Any
+            Argument used by `SimulationBase.preflight_report_optimisation`.
+        
+        Examples
+        --------
+        result = self.preflight_report_optimisation(epws=..., evaluations=..., population_size=..., ...)
+        """
+        import math
+
+        if evaluations <= 0:
+            raise ValueError("Argument 'evaluations' must be a positive integer.")
+        if population_size <= 0:
+            raise ValueError("Argument 'population_size' must be a positive integer.")
+        if processes is not None and processes <= 0:
+            raise ValueError("Argument 'processes' must be a positive integer when provided.")
+
+        if epws is None:
+            epws = list(getattr(self, 'epws', []) or [])
+        elif isinstance(epws, list):
+            epws = list(epws)
+        else:
+            epws = [epws]
+        epws = [str(epw) for epw in epws]
+
+        idf_identifiers = []
+        try:
+            idf_identifiers = list(self._get_buildings_by_idf().keys())
+        except Exception:
+            idf_identifiers = []
+
+        n_cases = int(len(idf_identifiers) * len(epws))
+        generations = int(math.ceil(evaluations / population_size))
+        sims_per_case = int(population_size * generations)
+        estimated_total_simulations = int(sims_per_case * n_cases)
+
+        system_snapshot = self._get_system_resource_snapshot()
+        logical_cpus = max(1, int(system_snapshot.get('logical_cpus') or 1))
+        available_ram_gb = system_snapshot.get('available_ram_gb')
+        cpu_cap = max(1, logical_cpus - 1)
+
+        if available_ram_gb is None:
+            recommended_processes = max(1, min(cpu_cap, 2, population_size))
+            recommended_population_cap = max(8, population_size)
+            recommended_keep_sim_files_batch_size = 40
+        elif available_ram_gb < 4:
+            recommended_processes = 1
+            recommended_population_cap = 4
+            recommended_keep_sim_files_batch_size = 20
+        elif available_ram_gb < 8:
+            recommended_processes = min(cpu_cap, 2, population_size)
+            recommended_population_cap = 8
+            recommended_keep_sim_files_batch_size = 30
+        elif available_ram_gb < 12:
+            recommended_processes = min(cpu_cap, 3, population_size)
+            recommended_population_cap = 12
+            recommended_keep_sim_files_batch_size = 40
+        else:
+            recommended_processes = min(cpu_cap, 4, population_size)
+            recommended_population_cap = 24
+            recommended_keep_sim_files_batch_size = 60
+
+        recommended_population_size = int(max(1, min(population_size, recommended_population_cap)))
+        recommended_keep_sim_files = keep_sim_files
+        if available_ram_gb is not None and available_ram_gb < 8 and keep_sim_files == 'all':
+            recommended_keep_sim_files = 'none'
+
+        issues = []
+        notes = []
+        if len(epws) == 0:
+            issues.append('no_epws_configured')
+        if len(idf_identifiers) == 0:
+            issues.append('no_buildings_configured')
+        if processes is not None and processes > population_size:
+            issues.append('processes_exceed_population_size')
+        if processes is not None and processes > recommended_processes:
+            notes.append(
+                f"Requested processes={processes} is above conservative recommendation={recommended_processes} for current RAM snapshot."
+            )
+        if keep_sim_files == 'non-dominated':
+            notes.append(
+                "keep_sim_files='non-dominated' may retain extra in-memory evaluation history to perform local Pareto cleanup."
+            )
+
+        report = {
+            'run_type': 'optimisation',
+            'status': 'ok' if len(issues) == 0 else 'check',
+            'issues': issues,
+            'notes': notes,
+            'epws_for_run': epws,
+            'idf_cases_for_run': idf_identifiers,
+            'estimated_cases': n_cases,
+            'evaluations': int(evaluations),
+            'population_size': int(population_size),
+            'estimated_generations_per_case': generations,
+            'estimated_simulations_per_case': sims_per_case,
+            'estimated_total_simulations': estimated_total_simulations,
+            'requested_processes': None if processes is None else int(processes),
+            'system': system_snapshot,
+            'recommendation': {
+                'processes': int(recommended_processes),
+                'population_size': int(recommended_population_size),
+                'keep_sim_files': recommended_keep_sim_files,
+                'keep_sim_files_batch_size': int(recommended_keep_sim_files_batch_size),
+                'checkpoint_every_case': True,
+                'resume_from_checkpoint': True,
+            },
+            'recommended_run_kwargs': {
+                'processes': int(recommended_processes),
+                'keep_sim_files': recommended_keep_sim_files,
+                'keep_sim_files_batch_size': int(recommended_keep_sim_files_batch_size),
+                'checkpoint_every_case': True,
+                'resume_from_checkpoint': True,
+                'evaluations': int(evaluations),
+                'population_size': int(population_size),
+            },
+        }
+
+        if verbose:
+            print('[preflight_report_optimisation]')
+            print(f"  Cases (IDF x EPW)     : {report['estimated_cases']}")
+            print(f"  Evaluations requested : {report['evaluations']}")
+            print(f"  Population size       : {report['population_size']}")
+            print(f"  Generations/case      : {report['estimated_generations_per_case']}")
+            print(f"  Sims per case         : {report['estimated_simulations_per_case']}")
+            print(f"  Estimated total sims  : {report['estimated_total_simulations']}")
+            print(
+                '  System snapshot       : '
+                f"CPUs={system_snapshot.get('logical_cpus')}, "
+                f"RAM(total/free GB)={system_snapshot.get('total_ram_gb')}/{system_snapshot.get('available_ram_gb')}"
+            )
+            print(
+                '  Recommended run       : '
+                f"processes={report['recommendation']['processes']}, "
+                f"keep_sim_files={report['recommendation']['keep_sim_files']}, "
+                f"keep_sim_files_batch_size={report['recommendation']['keep_sim_files_batch_size']}, "
+                'checkpoint_every_case=True, resume_from_checkpoint=True'
+            )
+            if len(issues) > 0:
+                print(f"  Issues                : {issues}")
+            if len(notes) > 0:
+                print(f"  Notes                 : {notes}")
+
+        return report
+
+    def run_parametric_simulation(
+        self,
+        epws: list = None,
+        out_dir: str = 'param_results',
+        df: pd.DataFrame = None,
+        processes: int = 2,
+        keep_input: bool = True,
+        keep_dirs: bool = True,
+        sim_files_extensions: Optional[Union[str, Sequence[str]]] = None,
+        sim_files_policy: Literal['keep', 'delete'] = 'keep',
+        batch_size: Optional[int] = None,
+        checkpoint_every_batch: bool = False,
+        resume_from_checkpoint: Union[bool, str] = False,
+        resume_plan_source: Literal['auto', 'checkpoint', 'provided'] = 'auto',
+        export_summary_json: bool = False,
+        summary_json_path: Optional[str] = None,
+        accim_results_root: Optional[str] = None,
+    ) -> pd.DataFrame:
+        """Runs the parametric simulation.
+        
+        This method refreshes ``self.simulation_summary`` for ``df_source='parametric'``
+        once the final outputs DataFrame is generated.
+        
         :param epws: a list of .epw filenames
         :param out_dir: the name of the directory to store the outputs
         :param df: a pandas DataFrame which contains the values of the parameters to simulate
         :param processes: the number of CPUs to be used in simulation
         :param keep_input: True to keep the input DataFrame in the results
         :param keep_dirs: True to keep the simulation results
+        :param sim_files_extensions: optional extension selector applied inside each
+            per-simulation subdirectory generated by BESOS (typically inside
+            ``BESOS_Output*``). Accepts one string or a list/tuple of strings.
+            Supported token formats per extension are ``'csv'``, ``'.csv'`` and
+            ``'*.csv'`` (case-insensitive). When ``None`` (default), no per-file
+            cleanup is performed.
+        :param sim_files_policy: cleanup mode used with ``sim_files_extensions``.
+            ``'keep'`` preserves only the listed extensions and removes all others.
+            ``'delete'`` removes only the listed extensions and keeps the rest.
+        :param batch_size: optional number of evaluations to execute per batch.
+            When None (default), all pending evaluations run in one batch.
+        :param checkpoint_every_batch: when True, save a checkpoint pickle after each
+            batch at ``<out_dir>/outputs_param_simulation_checkpoint_latest.pkl``.
+        :param resume_from_checkpoint: False (default) runs from scratch. Use True to
+            resume from the default checkpoint path, or provide a checkpoint pickle path.
+        :param resume_plan_source: controls what happens when ``resume_from_checkpoint``
+            finds a checkpoint whose stored sampling plan does not match the ``df``
+            passed to this call (this typically happens when a non-deterministic
+            sampler such as :meth:`sampling_lhs` was called again in a new session,
+            producing different random values). ``'auto'`` (default) transparently
+            reuses the ORIGINAL plan stored in the checkpoint whenever it differs
+            from the provided ``df``, so resume keeps working without any extra
+            action. ``'checkpoint'`` behaves like ``'auto'`` (explicit opt-in).
+            ``'provided'`` always uses the newly provided ``df`` even if it differs
+            from the checkpoint, emitting a warning that resume may re-run every
+            task because signatures will not match. Ignored when there is no
+            checkpoint to compare against (fresh runs, or checkpoints saved before
+            this option existed).
+        :param export_summary_json: when True, exports ``self.simulation_summary``
+            automatically to a JSON file at the end of the run.
+        :param summary_json_path: optional path for the summary JSON export. Ignored
+            unless ``export_summary_json=True``.
+        :param accim_results_root: optional root folder used to resolve ``out_dir``
+            when ``out_dir`` is provided as a relative path.
         :return: a pandas DataFrame
+        
+        Notes::
+        
+            - Per-file cleanup is applied only when ``keep_dirs=True``.
+              If ``keep_dirs=False``, BESOS does not retain simulation folders and
+              ``sim_files_extensions``/``sim_files_policy`` are ignored.
+            - This cleanup only touches files inside each simulation subdirectory;
+              it does **not** remove IDF backups such as ``accim_idf_backup_*``
+              stored in the run root ``out_dir``.
+            - Task signatures used for resume are based on (idf, epw, exact
+              parameter values). Because ``resume_plan_source='auto'`` reconciles
+              the sampling plan automatically, calling a sampler again (e.g.
+              ``sim.sampling_lhs(...)``) before a resumed call no longer breaks
+              resume: the checkpoint's original plan silently takes precedence.
+        
+        Example::
+        
+            sim.run_parametric_simulation(
+                out_dir='param_results',
+                keep_dirs=True,
+                sim_files_extensions=['.csv', '.idf'],
+                sim_files_policy='keep',
+            )
+        
+        Usage
+        -----
+        Use `SimulationBase.run_parametric_simulation` within ACCIM parametric and optimisation workflows.
         """
-        outputs_dict = {}
-        evaluators = {}
-        for epw in epws:
-            epwname = epw.split('.epw')[0]
-            evaluator = self.set_evaluator(epw=epw, out_dir=out_dir)
-            outputs = evaluator.df_apply(df=df, keep_input=keep_input, keep_dirs=keep_dirs, processes=processes)
-            outputs['epw'] = epwname
-            outputs_dict.update({epwname: outputs})
-            evaluators.update({epwname: evaluator})
-        outputs_param_simulation = pd.concat([df for df in outputs_dict.values()])
-        if len(epws) > 1:
-            outputs_param_simulation = outputs_param_simulation.reset_index()
-        if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
-            outputs_param_simulation.attrs['parameters_names'] = self.problem.names('inputs')
-            outputs_param_simulation.attrs['outputs_names'] = self.problem.names('outputs')
-        elif hasattr(self, 'parameters_names') and hasattr(self, 'outputs_names'):
-            outputs_param_simulation.attrs['parameters_names'] = self.parameters_names
-            outputs_param_simulation.attrs['outputs_names'] = self.outputs_names
-        self.outputs_param_simulation = outputs_param_simulation
-        self.evaluators = evaluators
+        if batch_size is not None and (not isinstance(batch_size, int) or batch_size <= 0):
+            raise ValueError("Argument 'batch_size' must be a positive integer or None.")
+        (sim_files_extensions_normalized, sim_files_policy_normalized) = normalize_sim_file_cleanup_options(
+            sim_files_extensions=sim_files_extensions,
+            sim_files_policy=sim_files_policy,
+        )
+        if sim_files_extensions_normalized is not None:
+            if not keep_dirs:
+                warnings.warn(
+                    "sim_files_extensions/sim_files_policy were provided but keep_dirs=False. "
+                    'Per-file cleanup is ignored because simulation directories are not kept.',
+                    UserWarning,
+                )
+            else:
+                self._warn_if_sim_file_cleanup_can_remove_csv(
+                    sim_files_extensions=sim_files_extensions_normalized,
+                    sim_files_policy=sim_files_policy_normalized,
+                    context='run_parametric_simulation',
+                )
+        if epws is None:
+            epws = getattr(self, 'epws', [])
+        if not epws:
+            raise ValueError("No EPWs provided and no default EPWs found in class instance.")
+        if df is None:
+            df = getattr(self, 'parameters_values_df', None)
+            if df is None:
+                raise ValueError("Argument 'df' cannot be None if self.parameters_values_df is not populated. Run a sampling method first or provide 'df'.")
+
+        out_dir = self._resolve_results_out_dir(
+            out_dir=out_dir,
+            accim_results_root=accim_results_root,
+        )
         os.makedirs(out_dir, exist_ok=True)
-        import datetime
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        batches_dir = self._default_parametric_batches_dir(out_dir=out_dir)
+        os.makedirs(batches_dir, exist_ok=True)
+
+        checkpoint_path = self._default_parametric_checkpoint_path(out_dir=out_dir)
+        if isinstance(resume_from_checkpoint, str):
+            checkpoint_text = resume_from_checkpoint.strip()
+            if len(checkpoint_text) == 0:
+                raise ValueError("Argument 'resume_from_checkpoint' cannot be an empty string.")
+            checkpoint_path = os.path.abspath(checkpoint_text)
+
         # Update the IDF backup with the exact building state used for this run
         self._save_idf_backup(label='pre_parametric', out_dir=out_dir)
-        # Embed the backup path and epws in attrs so they survive pickle serialisation
-        self.outputs_param_simulation.attrs['idf_backup_path'] = self.idf_backup_path
+
+        checkpoint_completed_signatures = set()
+        checkpoint_batch_pickles = []
+        legacy_checkpoint_seed_df = None
+        checkpoint_input_plan = None
+        resume_requested = bool(resume_from_checkpoint)
+        if resume_requested:
+            if os.path.exists(checkpoint_path):
+                try:
+                    checkpoint_state = self._load_parametric_checkpoint_state(checkpoint_path=checkpoint_path)
+                except Exception as exc:
+                    warnings.warn(
+                        f'Could not read checkpoint at {checkpoint_path}: {exc}. Resume will start from scratch.',
+                        UserWarning,
+                    )
+                    checkpoint_state = {
+                        'completed_signatures': set(),
+                        'batch_pickles': [],
+                        'legacy_results_df': None,
+                        'input_plan': None,
+                    }
+
+                checkpoint_completed_signatures = set(
+                    checkpoint_state.get('completed_signatures', set()) or set()
+                )
+                checkpoint_batch_pickles = []
+                for pickle_path in (checkpoint_state.get('batch_pickles', []) or []):
+                    if os.path.exists(pickle_path):
+                        checkpoint_batch_pickles.append(os.path.abspath(os.fspath(pickle_path)))
+                    else:
+                        warnings.warn(
+                            f'Checkpoint references missing batch pickle: {pickle_path}',
+                            UserWarning,
+                        )
+
+                legacy_checkpoint_seed_df = checkpoint_state.get('legacy_results_df')
+                checkpoint_input_plan = checkpoint_state.get('input_plan')
+            elif isinstance(resume_from_checkpoint, str):
+                raise FileNotFoundError(
+                    f"Checkpoint file not found: {checkpoint_path}"
+                )
+            else:
+                warnings.warn(
+                    f'resume_from_checkpoint=True but no checkpoint was found at {checkpoint_path}. '
+                    'Starting a fresh run.',
+                    UserWarning,
+                )
+
+        # Reconcile the provided 'df' with the sampling plan stored in the
+        # checkpoint (if any). Samplers such as sampling_lhs() are NOT
+        # deterministic: calling them again in a new session produces
+        # different parameter values, so task signatures would never match
+        # the checkpoint and resume_from_checkpoint would silently re-run
+        # everything. 'resume_plan_source' controls which plan wins when
+        # they differ (default 'auto' reuses the checkpoint's original plan
+        # so resume keeps working transparently across sessions).
+        if (
+            resume_requested
+            and isinstance(checkpoint_input_plan, pd.DataFrame)
+            and len(checkpoint_input_plan) > 0
+        ):
+            plans_match = self._parametric_plans_match(df, checkpoint_input_plan)
+            if not plans_match:
+                if resume_plan_source == 'provided':
+                    warnings.warn(
+                        "The provided 'df' does not match the sampling plan stored in the "
+                        f"checkpoint at {checkpoint_path} (e.g. a sampling method such as "
+                        "sampling_lhs() was called again and produced new random values). "
+                        "Because resume_plan_source='provided', the newly provided 'df' will "
+                        "be used, but task signatures likely will NOT match previously "
+                        "completed tasks, so resume may re-run everything. Use "
+                        "resume_plan_source='checkpoint' or 'auto' (default) to reuse the "
+                        "original plan and make resume work reliably.",
+                        UserWarning,
+                    )
+                else:
+                    warnings.warn(
+                        "The provided 'df' does not match the sampling plan stored in the "
+                        f"checkpoint at {checkpoint_path} (e.g. a sampling method such as "
+                        "sampling_lhs() was called again and produced new random values). "
+                        "To make resume_from_checkpoint work correctly, accim is reusing the "
+                        "ORIGINAL sampling plan stored in the checkpoint instead of the newly "
+                        "provided 'df'. Pass resume_plan_source='provided' to force using the "
+                        "new 'df' instead (this will likely make resume re-run everything).",
+                        UserWarning,
+                    )
+                    df = checkpoint_input_plan
+
+        grouped_dfs = self._prepare_dataframe_for_buildings(df=df, epws=epws)
+        
+        problem_names_inputs = self._get_problem_input_names()
+        problem_names_outputs = self.problem.names('outputs') if hasattr(self, 'problem') and hasattr(self.problem, 'names') else getattr(self, 'outputs_names', [])
+        output_specs = self._serialize_problem_outputs()
+        add_output_specs = self._serialize_problem_add_outputs()
+        add_output_names = self._get_problem_add_output_names()
+        if processes > 1:
+            unresolved_funcs = [
+                spec.get('func') for spec in (output_specs + add_output_specs)
+                if spec.get('func') is not None and callable(spec.get('func'))
+            ]
+            if unresolved_funcs:
+                warnings.warn(
+                    "Some output reducer functions are not importable by path. "
+                    "With processes > 1 on Windows this may fail. "
+                    "Define reducers at module top-level and/or pass them as "
+                    "'module.submodule:callable_name'.",
+                    UserWarning,
+                )
+        
+        task_signatures = set()
+        total_tasks = 0
+
+        if isinstance(legacy_checkpoint_seed_df, pd.DataFrame) and len(legacy_checkpoint_seed_df) > 0:
+            seed_pickle = self._save_parametric_batch_chunk(
+                batch_results=legacy_checkpoint_seed_df,
+                batches_dir=batches_dir,
+                batch_idx=0,
+                file_prefix='outputs_param_simulation_resume_seed',
+            )
+            if seed_pickle is not None:
+                checkpoint_batch_pickles.append(seed_pickle)
+
+        for task in self._iter_parametric_task_blueprints(
+            grouped_dfs=grouped_dfs,
+            epws=epws,
+            out_dir=out_dir,
+            problem_names_inputs=problem_names_inputs,
+            problem_names_outputs=problem_names_outputs,
+            output_specs=output_specs,
+            add_output_specs=add_output_specs,
+            add_output_names=add_output_names,
+            keep_dirs=keep_dirs,
+            keep_input=keep_input,
+            sim_files_extensions=sim_files_extensions_normalized,
+            sim_files_policy=sim_files_policy_normalized,
+        ):
+            task_signature = str(task.get('signature'))
+            total_tasks += 1
+            task_signatures.add(task_signature)
+
+        checkpoint_completed_signatures = checkpoint_completed_signatures.intersection(task_signatures)
+
+        pending_tasks_count = 0
+        for task in self._iter_parametric_task_blueprints(
+            grouped_dfs=grouped_dfs,
+            epws=epws,
+            out_dir=out_dir,
+            problem_names_inputs=problem_names_inputs,
+            problem_names_outputs=problem_names_outputs,
+            output_specs=output_specs,
+            add_output_specs=add_output_specs,
+            add_output_names=add_output_names,
+            keep_dirs=keep_dirs,
+            keep_input=keep_input,
+            sim_files_extensions=sim_files_extensions_normalized,
+            sim_files_policy=sim_files_policy_normalized,
+        ):
+            task_signature = str(task.get('signature'))
+            if task_signature not in checkpoint_completed_signatures:
+                pending_tasks_count += 1
+
+        if resume_requested and len(checkpoint_completed_signatures) > 0:
+            print(
+                '[run_parametric_simulation] Resuming from checkpoint: '
+                f'{len(checkpoint_completed_signatures)}/{total_tasks} tasks already completed.'
+            )
+
+        completed_signatures = set(checkpoint_completed_signatures)
+        batch_pickles = list(dict.fromkeys(checkpoint_batch_pickles))
+
+        if pending_tasks_count == 0 and total_tasks > 0:
+            print('[run_parametric_simulation] No pending tasks to execute.')
+        else:
+            effective_batch_size = batch_size or max(1, pending_tasks_count)
+            n_batches = max(1, (pending_tasks_count + effective_batch_size - 1) // effective_batch_size)
+            from tqdm import tqdm
+
+            batch_tasks = []
+            batch_idx = 0
+
+            def _run_parametric_batch(tasks_for_batch: list, current_batch_idx: int):
+                if len(tasks_for_batch) == 0:
+                    return []
+                batch_results = []
+                if processes > 1 and len(tasks_for_batch) > 1:
+                    import concurrent.futures
+                    import time as _time
+
+                    max_retries = 2
+                    remaining_tasks = list(tasks_for_batch)
+                    attempt = 0
+                    while remaining_tasks:
+                        attempt += 1
+                        completed_this_attempt = set()
+                        try:
+                            with concurrent.futures.ProcessPoolExecutor(max_workers=processes) as executor:
+                                futures = {}
+                                for task in remaining_tasks:
+                                    future = executor.submit(_run_single_evaluation_worker, *task['worker_args'])
+                                    futures[future] = str(task.get('signature'))
+                                for future in tqdm(
+                                    concurrent.futures.as_completed(futures),
+                                    total=len(remaining_tasks),
+                                    desc=f"Executing parametric simulations (batch {current_batch_idx}/{n_batches})",
+                                    unit='row',
+                                ):
+                                    task_signature = futures[future]
+                                    result = future.result()
+                                    result['_accim_task_signature'] = task_signature
+                                    batch_results.append(result)
+                                    completed_this_attempt.add(task_signature)
+                            # All tasks in this attempt finished without the pool breaking.
+                            remaining_tasks = []
+                        except concurrent.futures.process.BrokenProcessPool:
+                            remaining_tasks = [
+                                task for task in remaining_tasks
+                                if str(task.get('signature')) not in completed_this_attempt
+                            ]
+                            if attempt > max_retries or not remaining_tasks:
+                                warnings.warn(
+                                    f"A worker process died unexpectedly (BrokenProcessPool) in batch "
+                                    f"{current_batch_idx}/{n_batches} and the retry budget ({max_retries}) "
+                                    "was exhausted. Re-raising so the caller can rely on "
+                                    "checkpoint_every_batch/resume_from_checkpoint to resume later.",
+                                    UserWarning,
+                                )
+                                raise
+                            warnings.warn(
+                                "A worker process died unexpectedly (BrokenProcessPool), likely due to "
+                                "a transient OS/EnergyPlus crash, in batch "
+                                f"{current_batch_idx}/{n_batches} (attempt {attempt}/{max_retries + 1}). "
+                                f"Retrying the {len(remaining_tasks)} pending task(s) in this batch with a "
+                                "fresh process pool...",
+                                UserWarning,
+                            )
+                            _time.sleep(2)
+                else:
+                    for task in tqdm(
+                        tasks_for_batch,
+                        desc=f"Executing parametric simulations (batch {current_batch_idx}/{n_batches})",
+                        unit='row',
+                    ):
+                        result = _run_single_evaluation_worker(*task['worker_args'])
+                        result['_accim_task_signature'] = str(task.get('signature'))
+                        batch_results.append(result)
+
+                return batch_results
+
+            for task in self._iter_parametric_task_blueprints(
+                grouped_dfs=grouped_dfs,
+                epws=epws,
+                out_dir=out_dir,
+                problem_names_inputs=problem_names_inputs,
+                problem_names_outputs=problem_names_outputs,
+                output_specs=output_specs,
+                add_output_specs=add_output_specs,
+                add_output_names=add_output_names,
+                keep_dirs=keep_dirs,
+                keep_input=keep_input,
+                sim_files_extensions=sim_files_extensions_normalized,
+                sim_files_policy=sim_files_policy_normalized,
+            ):
+                task_signature = str(task.get('signature'))
+                if task_signature in checkpoint_completed_signatures:
+                    continue
+                task['signature'] = task_signature
+                batch_tasks.append(task)
+                if len(batch_tasks) < effective_batch_size:
+                    continue
+
+                batch_idx += 1
+                batch_results = _run_parametric_batch(batch_tasks, batch_idx)
+                batch_tasks = []
+
+                completed_signatures.update(
+                    result.get('_accim_task_signature')
+                    for result in batch_results
+                    if result.get('_accim_task_signature') is not None
+                )
+                batch_pickle = self._save_parametric_batch_chunk(
+                    batch_results=batch_results,
+                    batches_dir=batches_dir,
+                    batch_idx=batch_idx,
+                )
+                if batch_pickle is not None:
+                    batch_pickles.append(batch_pickle)
+                del batch_results
+                gc.collect()
+
+                if checkpoint_every_batch:
+                    tracked_rows = self._save_parametric_checkpoint(
+                        all_results=[],
+                        checkpoint_path=checkpoint_path,
+                        total_tasks=total_tasks,
+                        completed_tasks=len(completed_signatures),
+                        completed_signatures=completed_signatures,
+                        batch_pickles=batch_pickles,
+                        input_plan=df,
+                    )
+                    print(
+                        '[run_parametric_simulation] Checkpoint saved '
+                        f'({tracked_rows} tracked tasks, '
+                        f'{len(completed_signatures)}/{total_tasks} tasks).'
+                    )
+
+            if len(batch_tasks) > 0:
+                batch_idx += 1
+                batch_results = _run_parametric_batch(batch_tasks, batch_idx)
+                completed_signatures.update(
+                    result.get('_accim_task_signature')
+                    for result in batch_results
+                    if result.get('_accim_task_signature') is not None
+                )
+                batch_pickle = self._save_parametric_batch_chunk(
+                    batch_results=batch_results,
+                    batches_dir=batches_dir,
+                    batch_idx=batch_idx,
+                )
+                if batch_pickle is not None:
+                    batch_pickles.append(batch_pickle)
+                del batch_results
+                gc.collect()
+
+                if checkpoint_every_batch:
+                    tracked_rows = self._save_parametric_checkpoint(
+                        all_results=[],
+                        checkpoint_path=checkpoint_path,
+                        total_tasks=total_tasks,
+                        completed_tasks=len(completed_signatures),
+                        completed_signatures=completed_signatures,
+                        batch_pickles=batch_pickles,
+                        input_plan=df,
+                    )
+                    print(
+                        '[run_parametric_simulation] Checkpoint saved '
+                        f'({tracked_rows} tracked tasks, '
+                        f'{len(completed_signatures)}/{total_tasks} tasks).'
+                    )
+
+        batch_pickles = list(dict.fromkeys(batch_pickles))
+
+        if (checkpoint_every_batch or resume_requested) and total_tasks > 0:
+            self._save_parametric_checkpoint(
+                all_results=[],
+                checkpoint_path=checkpoint_path,
+                total_tasks=total_tasks,
+                completed_tasks=len(completed_signatures),
+                completed_signatures=completed_signatures,
+                batch_pickles=batch_pickles,
+                input_plan=df,
+            )
+
+        outputs_param_simulation = self._merge_parametric_batch_pickles(
+            batch_pickles=batch_pickles,
+        )
+
+        if '_accim_task_signature' in outputs_param_simulation.columns:
+            outputs_param_simulation = outputs_param_simulation[
+                outputs_param_simulation['_accim_task_signature'].isin(task_signatures)
+            ].copy()
+            outputs_param_simulation = outputs_param_simulation.drop_duplicates(
+                subset=['_accim_task_signature'],
+                keep='last',
+            ).reset_index(drop=True)
+
+        if total_tasks > 0 and len(outputs_param_simulation) == 0:
+            warnings.warn(
+                'No parametric evaluation results were produced. The resulting DataFrame is empty.',
+                UserWarning,
+            )
+
+        if '_accim_task_signature' in outputs_param_simulation.columns:
+            outputs_param_simulation = outputs_param_simulation.drop(
+                columns=['_accim_task_signature']
+            )
+        
+        if len(epws) > 1 or len(self.buildings) > 1:
+            outputs_param_simulation = outputs_param_simulation.reset_index(drop=True)
+
+        if keep_dirs and sim_files_extensions_normalized is not None and 'output_dir' in outputs_param_simulation.columns:
+            cleanup_stats = self._cleanup_simulation_output_directories(
+                sim_dirs=outputs_param_simulation['output_dir'].tolist(),
+                sim_files_extensions=sim_files_extensions_normalized,
+                sim_files_policy=sim_files_policy_normalized,
+            )
+            if cleanup_stats['removed_files'] > 0:
+                print(
+                    '[run_parametric_simulation] Simulation file cleanup applied '
+                    f"(dirs={cleanup_stats['processed_dirs']}, removed_files={cleanup_stats['removed_files']}, "
+                    f"errors={cleanup_stats['remove_errors']})."
+                )
+            
+        outputs_param_simulation.attrs = getattr(outputs_param_simulation, 'attrs', {})
+        if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+            outputs_param_simulation.attrs['parameters_names'] = self._get_all_input_names()
+            outputs_param_simulation.attrs['outputs_names'] = self.problem.names('outputs')
+        elif hasattr(self, 'parameters_names') and hasattr(self, 'outputs_names'):
+            outputs_param_simulation.attrs['parameters_names'] = self.parameters_names + self._get_external_input_names()
+            outputs_param_simulation.attrs['outputs_names'] = self.outputs_names
+            
+        self.outputs_param_simulation = outputs_param_simulation
+        self.evaluators = {} 
+        
+        import datetime
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        self.outputs_param_simulation.attrs['idf_backup_path'] = getattr(self, 'idf_backup_path', [])
         self.outputs_param_simulation.attrs['epws'] = epws
+        if checkpoint_every_batch or resume_requested:
+            self.outputs_param_simulation.attrs['checkpoint_path'] = checkpoint_path
+        
         _base = os.path.join(out_dir, f'outputs_param_simulation_{timestamp}')
         self.outputs_param_simulation.to_csv(f'{_base}.csv', index=False)
+        self.outputs_param_simulation.to_excel(f'{_base}.xlsx', index=False)
         self.outputs_param_simulation.to_pickle(f'{_base}.pkl')
+        
         import json as _json
         _json_payload = {
             'attrs': self.outputs_param_simulation.attrs,
             'data': self.outputs_param_simulation.to_dict(orient='list'),
-            'idf_backup_path': self.idf_backup_path,
+            'idf_backup_path': getattr(self, 'idf_backup_path', []),
         }
         with open(f'{_base}.json', 'w', encoding='utf-8') as _f:
             _json.dump(_json_payload, _f, indent=2, default=str)
+            
         self.outputs_param_simulation_filepath = f'{_base}.csv'
         self.epws = self.outputs_param_simulation.attrs.get('epws', [])
         self.last_run_type = 'parametric'
+        
+        if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
+            self.apply_category_mapping(df_types=['parametric'])
+
+        self._refresh_simulation_summary_after_results_change(
+            df_source='parametric',
+            context='run_parametric_simulation',
+        )
+
+        if export_summary_json:
+            try:
+                self.export_simulation_summary_json(
+                    json_path=summary_json_path,
+                    df_source='parametric',
+                    refresh=False,
+                )
+            except Exception as exc:
+                warnings.warn(
+                    f'Could not export parametric simulation_summary JSON: {exc}',
+                    UserWarning,
+                )
+        
+        return self.outputs_param_simulation
 
     def load_outputs_parametric(self, csv_path: str=None, pickle_path: str=None, json_path: str=None, hourly_csv_path: str=None, hourly_pickle_path: str=None, parameters_names: list=None, outputs_names: list=None) -> pd.DataFrame:
-        """
-        Loads outputs of a previous parametric simulation from a CSV, Pickle, or JSON file.
+        """Loads outputs of a previous parametric simulation from a CSV, Pickle, or JSON file.
         This allows you to resume a parametric session without rerunning the simulations.
+        It also refreshes ``self.simulation_summary`` for quick inspection.
         
         :param csv_path: path to the CSV file containing parametric simulation results.
         :param pickle_path: path to the Pickle file containing parametric simulation results (recommended).
@@ -665,6 +9465,14 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         :param parameters_names: optional list of parameter names to reconstruct the internal problem object.
         :param outputs_names: optional list of output names to reconstruct the internal problem object.
         :return: pandas DataFrame containing the loaded parametric simulation outputs.
+        
+        Usage
+        -----
+        Use `SimulationBase.load_outputs_parametric` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.load_outputs_parametric(csv_path=..., pickle_path=..., json_path=..., ...)
         """
         import pandas as pd
         if not csv_path and (not pickle_path) and (not json_path):
@@ -713,44 +9521,103 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.outputs_names = outputs_names
         self.epws = self.outputs_param_simulation.attrs.get('epws', [])
         self.last_run_type = 'parametric'
+        # Restore category mapping rules saved in .attrs at apply_category_mapping time
+        _epw_rules = self.outputs_param_simulation.attrs.get('epw_mapping_rules')
+        _idf_rules = self.outputs_param_simulation.attrs.get('idf_mapping_rules')
+        if _epw_rules or _idf_rules:
+            self.epw_mapping_rules = _epw_rules or {}
+            self.idf_mapping_rules = _idf_rules or {}
+            print(f'  [info] Category mapping rules restored from pickle.')
+        # Re-apply category mapping if rules are already set on this instance
+        if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
+            self.apply_category_mapping(df_types=['parametric'])
+        # Re-apply epw_suffix_categories stored in attrs at add_epw_suffix_category time
+        _suffix_cats = self.outputs_param_simulation.attrs.get('epw_suffix_categories', {})
+        if _suffix_cats:
+            self.epw_suffix_categories = _suffix_cats
+            if 'epw' in self.outputs_param_simulation.columns:
+                for _col, _rule in _suffix_cats.items():
+                    _smap = _rule['suffix_map']
+                    _fb   = _rule.get('fallback', 'historical')
+                    self.outputs_param_simulation[_col] = (
+                        self.outputs_param_simulation['epw'].apply(
+                            lambda v: _smap.get(str(v).rsplit('_', 1)[-1], _fb)
+                        )
+                    )
+            print(f'  [info] epw_suffix_categories restored: {list(_suffix_cats.keys())}')
+
+        self._refresh_simulation_summary_after_results_change(
+            df_source='parametric',
+            context='load_outputs_parametric',
+        )
         return self.outputs_param_simulation
 
     def estimate_optimisation_sims(self, evaluations: int, population_size: int, epws: list) -> int:
-        """
-        Estimates the maximum number of EnergyPlus simulations that will be run by
+        """Estimates the maximum number of EnergyPlus simulations that will be run by
         :meth:`run_optimisation` **before** launching it.
-
+        
         NSGA-II (and most platypus algorithms) work in discrete generations, each of which
         evaluates exactly ``population_size`` individuals.  The stopping criterion
         ``evaluations`` is checked **between** generations, so the algorithm always
         completes the current generation before stopping.  Therefore:
-
+        
         .. code-block:: text
-
+        
             sims_per_epw = population_size × ⌈evaluations / population_size⌉
             total_sims   = sims_per_epw × len(epws)
-
+        
         Special case: if ``evaluations < population_size`` the initial generation
         already exceeds the budget, but it is always completed in full, so
         ``sims_per_epw`` equals ``population_size``.
-
+        
         :param evaluations: same value you will pass to :meth:`run_optimisation`
         :param population_size: same value you will pass to :meth:`run_optimisation`
         :param epws: same list you will pass to :meth:`run_optimisation`
         :return: estimated total number of EnergyPlus simulations
+        
+        Usage
+        -----
+        Use `SimulationBase.estimate_optimisation_sims` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.estimate_optimisation_sims(evaluations=..., population_size=..., epws=...)
         """
         import math
         sims_per_epw = population_size * math.ceil(evaluations / population_size)
         total = sims_per_epw * len(epws)
         print(f"Estimated simulations\n  evaluations    : {evaluations}\n  population_size: {population_size}\n  EPWs           : {len(epws)} ({', '.join(epws)})\n  sims per EPW   : {sims_per_epw}  ({math.ceil(evaluations / population_size)} generation(s) × {population_size})\n  TOTAL          : {total}")
-        self.epws = self.outputs_param_simulation.attrs.get('epws', [])
-        self.last_run_type = 'parametric'
+        self.epws = epws
+        self.last_run_type = 'optimisation'
         return total
 
-    def run_optimisation(self, epws: list, out_dir: str, evaluations: int, population_size: int, algorithm: str='NSGAII', processes: int=1, keep_sim_files: Literal['all', 'non-dominated', 'none']='all', keep_sim_files_batch_size: int=50, keep_df: Literal['all', 'non-dominated']='all', **kwargs) -> pd.DataFrame:
-        """
-        Runs the optimisation.
-
+    def run_optimisation(
+            self,
+            epws: list = None,
+            out_dir: str = 'optim_results',
+            evaluations: int = 2,
+            population_size: int = 2,
+            algorithm: str = 'NSGAII',
+            processes: int = 1,
+            keep_sim_files: Literal['all', 'non-dominated', 'none'] = 'all',
+            keep_sim_files_batch_size: int = 50,
+            sim_files_extensions: Optional[Union[str, Sequence[str]]] = None,
+            sim_files_policy: Literal['keep', 'delete'] = 'keep',
+            keep_df: Literal['all', 'non-dominated'] = 'all',
+            algorithm_options: dict = None,
+            pareto_separate_by_epw: bool = True,
+            pareto_separate_by_idf: bool = False,
+            checkpoint_every_case: bool = False,
+            resume_from_checkpoint: Union[bool, str] = False,
+            export_summary_json: bool = False,
+            summary_json_path: Optional[str] = None,
+            accim_results_root: Optional[str] = None,
+    ) -> pd.DataFrame:
+        """Runs the optimisation.
+        
+        This method refreshes ``self.simulation_summary`` for ``df_source='optimisation'``
+        once the final outputs DataFrame is generated.
+        
         :param epws: a list of .epw filenames
         :param out_dir: the directory name to save the outputs
         :param evaluations: the algorithm will be stopped once it uses more than this many
@@ -769,94 +9636,331 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             'all' (keeps everything), 'non-dominated' (deletes directories of dominated solutions to save space),
             or 'none' (keeps no simulation files).
         :param keep_sim_files_batch_size: number of evaluations per worker to wait before running the local pareto batch cleanup.
+        :param sim_files_extensions: optional extension selector applied inside each
+            kept simulation subdirectory generated by BESOS (typically inside
+            ``BESOS_Output*``). Accepts one string or a list/tuple of strings.
+            Supported token formats per extension are ``'csv'``, ``'.csv'`` and
+            ``'*.csv'`` (case-insensitive). When ``None`` (default), no per-file
+            cleanup is performed.
+        :param sim_files_policy: cleanup mode used with ``sim_files_extensions``.
+            ``'keep'`` preserves only the listed extensions and removes all others.
+            ``'delete'`` removes only the listed extensions and keeps the rest.
         :param keep_df: specifies which evaluations to keep in the outputs_optimisation DataFrame:
             'all' (keeps dominated and non-dominated) or 'non-dominated'.
+        :param algorithm_options: optional dictionary with BESOS/Platypus algorithm-specific
+            keyword arguments. For example, use ``{'variator': my_variator}`` for algorithms
+            that accept a custom variator.
+        :param pareto_separate_by_epw: when True, Pareto optimality is computed independently
+            inside each EPW subset. When False, EPW is ignored in Pareto grouping.
+        :param pareto_separate_by_idf: when True, Pareto optimality is computed independently
+            inside each IDF subset. When False, IDF is ignored in Pareto grouping.
+        :param checkpoint_every_case: when True, persist an optimisation checkpoint after each
+            IDF/EPW case so already completed cases can be reused after interruptions.
+        :param resume_from_checkpoint: False (default) runs all cases from scratch. Use True
+            to resume from the default checkpoint path, or provide an explicit checkpoint path.
+        :param export_summary_json: when True, exports ``self.simulation_summary``
+            automatically to a JSON file at the end of the run.
+        :param summary_json_path: optional path for the summary JSON export. Ignored
+            unless ``export_summary_json=True``.
+        :param accim_results_root: optional root folder used to resolve ``out_dir``
+            when ``out_dir`` is provided as a relative path.
         :return: a pandas DataFrame
+        
+        Notes::
+        
+            - If ``keep_sim_files='none'``, simulation directories are removed and
+              ``sim_files_extensions``/``sim_files_policy`` are ignored.
+            - If ``keep_sim_files='non-dominated'``, dominated directories may be
+              deleted entirely; extension cleanup is then applied only to remaining
+              directories.
+            - This cleanup only touches files inside each simulation subdirectory;
+              it does **not** remove IDF backups such as ``accim_idf_backup_*``
+              stored in the run root ``out_dir``.
+        
+        Example::
+        
+            sim.run_optimisation(
+                out_dir='optim_results',
+                keep_sim_files='all',
+                sim_files_extensions=['csv', '*.idf'],
+                sim_files_policy='keep',
+            )
+        
+        Usage
+        -----
+        Use `SimulationBase.run_optimisation` within ACCIM parametric and optimisation workflows.
         """
+        algorithm_options = {} if algorithm_options is None else dict(algorithm_options)
+        if epws is None:
+            epws = getattr(self, 'epws', [])
+        if not epws:
+            raise ValueError("No EPWs provided and no default EPWs found in class instance.")
+        if not getattr(self, 'buildings', None):
+            raise ValueError('No buildings were configured in this simulation instance.')
         self.epws = epws
+
+        (sim_files_extensions_normalized, sim_files_policy_normalized) = normalize_sim_file_cleanup_options(
+            sim_files_extensions=sim_files_extensions,
+            sim_files_policy=sim_files_policy,
+        )
+        if sim_files_extensions_normalized is not None:
+            if keep_sim_files == 'none':
+                warnings.warn(
+                    "sim_files_extensions/sim_files_policy were provided but keep_sim_files='none'. "
+                    'Per-file cleanup is ignored because simulation directories are removed entirely.',
+                    UserWarning,
+                )
+            else:
+                self._warn_if_sim_file_cleanup_can_remove_csv(
+                    sim_files_extensions=sim_files_extensions_normalized,
+                    sim_files_policy=sim_files_policy_normalized,
+                    context='run_optimisation',
+                )
+
+        out_dir = self._resolve_results_out_dir(
+            out_dir=out_dir,
+            accim_results_root=accim_results_root,
+        )
+
+        resume_signature_payload = {
+            'algorithm': str(algorithm),
+            'evaluations': int(evaluations),
+            'population_size': int(population_size),
+            'algorithm_options': algorithm_options,
+            'pareto_separate_by_epw': bool(pareto_separate_by_epw),
+            'pareto_separate_by_idf': bool(pareto_separate_by_idf),
+            'keep_df': str(keep_df),
+        }
+        resume_signature = hashlib.sha1(
+            json.dumps(resume_signature_payload, sort_keys=True, ensure_ascii=True, default=str).encode('utf-8')
+        ).hexdigest()
+
+        checkpoint_path = self._default_optimisation_checkpoint_path(out_dir=out_dir)
+        if isinstance(resume_from_checkpoint, str):
+            checkpoint_text = resume_from_checkpoint.strip()
+            if len(checkpoint_text) == 0:
+                raise ValueError("Argument 'resume_from_checkpoint' cannot be an empty string.")
+            checkpoint_path = os.path.abspath(checkpoint_text)
+
+        resume_requested = bool(resume_from_checkpoint)
+        checkpoint_cases = {}
+        if resume_requested:
+            if os.path.exists(checkpoint_path):
+                checkpoint_payload = self._load_optimisation_checkpoint(checkpoint_path=checkpoint_path)
+                checkpoint_cases = checkpoint_payload.get('cases', {}) if isinstance(checkpoint_payload, dict) else {}
+                checkpoint_cases = checkpoint_cases if isinstance(checkpoint_cases, dict) else {}
+                checkpoint_signature = checkpoint_payload.get('resume_signature') if isinstance(checkpoint_payload, dict) else None
+                if checkpoint_signature is None:
+                    warnings.warn(
+                        'Checkpoint found but it does not contain a compatibility signature. '
+                        'For safety, this optimisation run will start from scratch.',
+                        UserWarning,
+                    )
+                    checkpoint_cases = {}
+                elif checkpoint_signature != resume_signature:
+                    warnings.warn(
+                        'Checkpoint found but optimisation settings do not match this run. '
+                        'For safety, this optimisation run will start from scratch.',
+                        UserWarning,
+                    )
+                    checkpoint_cases = {}
+                else:
+                    print(
+                        '[run_optimisation] Resuming from checkpoint: '
+                        f'{len(checkpoint_cases)} completed case(s) detected.'
+                    )
+            elif isinstance(resume_from_checkpoint, str):
+                raise FileNotFoundError(f'Checkpoint file not found: {checkpoint_path}')
+            else:
+                warnings.warn(
+                    f'resume_from_checkpoint=True but no checkpoint was found at {checkpoint_path}. '
+                    'Starting a fresh optimisation run.',
+                    UserWarning,
+                )
+
         available_algorithms = ['GeneticAlgorithm', 'EvolutionaryStrategy', 'NSGAII', 'EpsMOEA', 'GDE3', 'SPEA2', 'MOEAD', 'NSGAIII', 'ParticleSwarm', 'OMOPSO', 'SMPSO', 'CMAES', 'IBEA', 'PAES', 'PESA2', 'EpsNSGAII']
         outputs_dict = {}
         full_outputs_dict = {}
         evaluators = {}
+        pareto_group_by = []
+        if pareto_separate_by_epw:
+            pareto_group_by.append('epw')
+        if pareto_separate_by_idf:
+            pareto_group_by.append('idf')
         os.makedirs(out_dir, exist_ok=True)
+        # Save an IDF backup into the results folder before starting
+        self._save_idf_backup(label='pre_optimisation', out_dir=out_dir)
         from besos.evaluator import AbstractEvaluator
         if not hasattr(AbstractEvaluator, '_original_to_platypus'):
             AbstractEvaluator._original_to_platypus = AbstractEvaluator.to_platypus
         AbstractEvaluator.to_platypus = _patched_to_platypus
+        platypus_evaluator = None
+        original_evaluator = None
+        PlatypusConfig = None
         if processes > 1:
             import platypus
             from platypus.config import PlatypusConfig
             original_evaluator = PlatypusConfig.default_evaluator
             platypus_evaluator = platypus.ProcessPoolEvaluator(processes)
             PlatypusConfig.default_evaluator = platypus_evaluator
+        total_cases = 0
         try:
-            for epw in epws:
-                evaluator = self.set_evaluator(epw=epw, out_dir=out_dir)
-                evaluator._keep_sim_files = keep_sim_files
-                evaluator._keep_sim_files_batch_size = keep_sim_files_batch_size
-                evaluator._keep_dirs = False if keep_sim_files == 'none' else True
-                evaluator._optimisation_eval_records = []
-                epwname = epw.split('.epw')[0]
-                evaluator._optimisation_log_base = os.path.join(out_dir, f'optim_eval_log_{epwname}_{os.getpid()}')
-                for log_file in pyglob.glob(f'{evaluator._optimisation_log_base}_*.jsonl'):
-                    try:
-                        os.remove(log_file)
-                    except OSError:
-                        pass
-                if processes > 1 and hasattr(evaluator, '_building') and hasattr(evaluator._building, 'idfobjects'):
-                    evaluator._building.idfobjects = GlobalAllCapsDict(evaluator._building.idfobjects)
-                if algorithm == 'GeneticAlgorithm':
-                    outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'EvolutionaryStrategy':
-                    outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'NSGAII':
-                    outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'EpsMOEA':
-                    outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'GDE3':
-                    outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'SPEA2':
-                    outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'MOEAD':
-                    outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'NSGAIII':
-                    outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'ParticleSwarm':
-                    outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'OMOPSO':
-                    outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'SMPSO':
-                    outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'CMAES':
-                    outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'IBEA':
-                    outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'PAES':
-                    outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'PESA2':
-                    outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                elif algorithm == 'EpsNSGAII':
-                    outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **kwargs)
-                else:
-                    raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
-                outputs_optimisation['epw'] = epwname
-                outputs_dict.update({epwname: outputs_optimisation})
-                full_outputs_optimisation = self._build_full_optimisation_outputs_df(evaluator=evaluator, epwname=epwname)
-                full_outputs_dict.update({epwname: full_outputs_optimisation})
-                evaluators.update({epwname: evaluator})
+            buildings_by_idf = self._get_buildings_by_idf()
+            total_cases = int(len(buildings_by_idf) * len(epws))
+            planned_case_ids = {
+                f"{idf_basename}::{epw.split('.epw')[0]}"
+                for idf_basename in buildings_by_idf.keys()
+                for epw in epws
+            }
+            if len(checkpoint_cases) > 0:
+                checkpoint_cases = {
+                    case_id: case_payload
+                    for (case_id, case_payload) in checkpoint_cases.items()
+                    if case_id in planned_case_ids
+                }
+            for (idf_basename, b) in buildings_by_idf.items():
+                for epw in epws:
+                    epwname = epw.split('.epw')[0]
+                    key = f"{idf_basename}_{epwname}" if len(self.buildings) > 1 else epwname
+                    case_id = f'{idf_basename}::{epwname}'
+
+                    resumed_case = checkpoint_cases.get(case_id)
+                    if isinstance(resumed_case, dict):
+                        resumed_non_dominated = resumed_case.get('outputs_non_dominated')
+                        resumed_full = resumed_case.get('outputs_full')
+                        if isinstance(resumed_non_dominated, pd.DataFrame) and isinstance(resumed_full, pd.DataFrame):
+                            resumed_non_dominated = resumed_non_dominated.copy()
+                            resumed_full = resumed_full.copy()
+                            if 'epw' not in resumed_non_dominated.columns:
+                                resumed_non_dominated['epw'] = epwname
+                            if 'idf' not in resumed_non_dominated.columns:
+                                resumed_non_dominated['idf'] = idf_basename
+                            if 'epw' not in resumed_full.columns:
+                                resumed_full['epw'] = epwname
+                            if 'idf' not in resumed_full.columns:
+                                resumed_full['idf'] = idf_basename
+                            outputs_dict.update({key: resumed_non_dominated})
+                            full_outputs_dict.update({key: resumed_full})
+                            evaluators.update({key: None})
+                            print(f'[run_optimisation] Reused checkpoint case: {case_id}')
+                            continue
+
+                        warnings.warn(
+                            f'Checkpoint case {case_id} is invalid and will be recomputed.',
+                            UserWarning,
+                        )
+
+                    evaluator = self.set_evaluator(epw=epw, out_dir=out_dir, building=b)
+                    evaluator._keep_sim_files = keep_sim_files
+                    evaluator._keep_sim_files_batch_size = keep_sim_files_batch_size
+                    evaluator._keep_dirs = False if keep_sim_files == 'none' else True
+                    evaluator._sim_files_extensions = sim_files_extensions_normalized
+                    evaluator._sim_files_policy = sim_files_policy_normalized
+                    evaluator._optimisation_eval_records = []
+                    evaluator._store_optimisation_records_in_memory = bool(keep_sim_files == 'non-dominated')
+                    evaluator._optimisation_log_base = os.path.join(out_dir, f'optim_eval_log_{idf_basename}_{epwname}_{os.getpid()}')
+                    for log_file in pyglob.glob(f'{evaluator._optimisation_log_base}_*.jsonl'):
+                        try:
+                            os.remove(log_file)
+                        except OSError:
+                            pass
+                    if processes > 1 and hasattr(evaluator, '_building') and hasattr(evaluator._building, 'idfobjects'):
+                        evaluator._building.idfobjects = GlobalAllCapsDict(evaluator._building.idfobjects)
+                    if algorithm == 'GeneticAlgorithm':
+                        outputs_optimisation = optimizer.GeneticAlgorithm(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'EvolutionaryStrategy':
+                        outputs_optimisation = optimizer.EvolutionaryStrategy(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'NSGAII':
+                        outputs_optimisation = optimizer.NSGAII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'EpsMOEA':
+                        outputs_optimisation = optimizer.EpsMOEA(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'GDE3':
+                        outputs_optimisation = optimizer.GDE3(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'SPEA2':
+                        outputs_optimisation = optimizer.SPEA2(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'MOEAD':
+                        outputs_optimisation = optimizer.MOEAD(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'NSGAIII':
+                        outputs_optimisation = optimizer.NSGAIII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'ParticleSwarm':
+                        outputs_optimisation = optimizer.ParticleSwarm(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'OMOPSO':
+                        outputs_optimisation = optimizer.OMOPSO(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'SMPSO':
+                        outputs_optimisation = optimizer.SMPSO(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'CMAES':
+                        outputs_optimisation = optimizer.CMAES(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'IBEA':
+                        outputs_optimisation = optimizer.IBEA(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'PAES':
+                        outputs_optimisation = optimizer.PAES(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'PESA2':
+                        outputs_optimisation = optimizer.PESA2(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    elif algorithm == 'EpsNSGAII':
+                        outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
+                    else:
+                        raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
+                    outputs_optimisation['epw'] = epwname
+                    outputs_optimisation['idf'] = idf_basename
+                    outputs_dict.update({key: outputs_optimisation})
+                    full_outputs_optimisation = self._build_full_optimisation_outputs_df(evaluator=evaluator, epwname=epwname)
+                    full_outputs_optimisation['idf'] = idf_basename
+                    full_outputs_dict.update({key: full_outputs_optimisation})
+                    evaluators.update({key: evaluator})
+
+                    checkpoint_cases[case_id] = {
+                        'idf': idf_basename,
+                        'epw': epwname,
+                        'key': key,
+                        'outputs_non_dominated': outputs_optimisation.copy(),
+                        'outputs_full': full_outputs_optimisation.copy(),
+                    }
+                    if checkpoint_every_case:
+                        saved_cases = self._save_optimisation_checkpoint(
+                            checkpoint_cases=checkpoint_cases,
+                            checkpoint_path=checkpoint_path,
+                            total_cases=total_cases,
+                            completed_cases=len(checkpoint_cases),
+                            resume_signature=resume_signature,
+                        )
+                        print(
+                            '[run_optimisation] Checkpoint saved '
+                            f'({saved_cases} case(s), {len(checkpoint_cases)}/{total_cases}).'
+                        )
         finally:
-            if processes > 1:
+            if processes > 1 and platypus_evaluator is not None and PlatypusConfig is not None:
                 platypus_evaluator.close()
                 PlatypusConfig.default_evaluator = original_evaluator
-                if hasattr(AbstractEvaluator, '_original_to_platypus'):
-                    AbstractEvaluator.to_platypus = AbstractEvaluator._original_to_platypus
-        outputs_optimisation_non_dominated = pd.concat([df for df in outputs_dict.values()])
-        if len(epws) > 1:
-            outputs_optimisation_non_dominated = outputs_optimisation_non_dominated.reset_index()
-        outputs_optimisation = pd.concat([df for df in full_outputs_dict.values()])
-        if len(epws) > 1:
-            outputs_optimisation = outputs_optimisation.reset_index(drop=True)
-        outputs_optimisation = self._annotate_pareto_status(outputs_optimisation_full=outputs_optimisation, outputs_optimisation=outputs_optimisation_non_dominated)
+            if hasattr(AbstractEvaluator, '_original_to_platypus'):
+                AbstractEvaluator.to_platypus = AbstractEvaluator._original_to_platypus
+        if checkpoint_every_case or resume_requested:
+            self._save_optimisation_checkpoint(
+                checkpoint_cases=checkpoint_cases,
+                checkpoint_path=checkpoint_path,
+                total_cases=total_cases,
+                completed_cases=len(checkpoint_cases),
+                resume_signature=resume_signature,
+            )
+
+        if len(outputs_dict) == 0 or len(full_outputs_dict) == 0:
+            warnings.warn(
+                'No optimisation evaluation results were produced. The resulting DataFrame is empty.',
+                UserWarning,
+            )
+            outputs_optimisation_non_dominated = pd.DataFrame()
+            outputs_optimisation = pd.DataFrame()
+        else:
+            outputs_optimisation_non_dominated = pd.concat([df for df in outputs_dict.values()])
+            if len(epws) > 1 or len(self.buildings) > 1:
+                outputs_optimisation_non_dominated = outputs_optimisation_non_dominated.reset_index(drop=True)
+            outputs_optimisation = pd.concat([df for df in full_outputs_dict.values()])
+            if len(epws) > 1 or len(self.buildings) > 1:
+                outputs_optimisation = outputs_optimisation.reset_index(drop=True)
+        outputs_optimisation = self._annotate_pareto_status(
+            outputs_optimisation_full=outputs_optimisation,
+            outputs_optimisation=outputs_optimisation_non_dominated,
+            group_by=pareto_group_by,
+        )
         if keep_sim_files == 'non-dominated':
             import shutil
             for (idx, row) in outputs_optimisation[~outputs_optimisation['pareto-optimal']].iterrows():
@@ -886,17 +9990,86 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                     pass
             outputs_optimisation['simulation_directory'] = pd.NA
             outputs_optimisation['simulation_output_csv_path'] = pd.NA
+
+        if (
+            keep_sim_files != 'none'
+            and sim_files_extensions_normalized is not None
+            and 'simulation_directory' in outputs_optimisation.columns
+        ):
+            cleanup_stats = self._cleanup_simulation_output_directories(
+                sim_dirs=outputs_optimisation['simulation_directory'].tolist(),
+                sim_files_extensions=sim_files_extensions_normalized,
+                sim_files_policy=sim_files_policy_normalized,
+            )
+            if cleanup_stats['removed_files'] > 0:
+                print(
+                    '[run_optimisation] Simulation file cleanup applied '
+                    f"(dirs={cleanup_stats['processed_dirs']}, removed_files={cleanup_stats['removed_files']}, "
+                    f"errors={cleanup_stats['remove_errors']})."
+                )
+
         if keep_df == 'non-dominated':
             outputs_optimisation = outputs_optimisation[outputs_optimisation['pareto-optimal']].copy()
             if len(epws) > 1:
                 outputs_optimisation = outputs_optimisation.reset_index(drop=True)
         self._set_optimisation_outputs(outputs_optimisation_full=outputs_optimisation, outputs_optimisation_non_dominated=outputs_optimisation_non_dominated)
+        self.outputs_optimisation.attrs['pareto_group_by'] = pareto_group_by
+        self.outputs_optimisation.attrs['pareto_separate_by_epw'] = pareto_separate_by_epw
+        self.outputs_optimisation.attrs['pareto_separate_by_idf'] = pareto_separate_by_idf
+        if checkpoint_every_case or resume_requested:
+            self.outputs_optimisation.attrs['checkpoint_path'] = checkpoint_path
         self._save_outputs_optimisation_full(out_dir=out_dir)
         self.epws = self.outputs_optimisation.attrs.get('epws', [])
         self.last_run_type = 'optimisation'
         self.evaluators = evaluators
+        # Auto-apply category mapping if rules were previously set
+        if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
+            self.apply_category_mapping(df_types=['optimisation'])
+
+        self._refresh_simulation_summary_after_results_change(
+            df_source='optimisation',
+            context='run_optimisation',
+        )
+
+        if export_summary_json:
+            try:
+                self.export_simulation_summary_json(
+                    json_path=summary_json_path,
+                    df_source='optimisation',
+                    refresh=False,
+                )
+            except Exception as exc:
+                warnings.warn(
+                    f'Could not export optimisation simulation_summary JSON: {exc}',
+                    UserWarning,
+                )
+
+        return self.outputs_optimisation
 
     def _build_full_optimisation_outputs_df(self, evaluator: EvaluatorEP, epwname: str) -> pd.DataFrame:
+        """Build full optimisation-history dataframe from evaluator records/logs.
+
+        Parameters
+        ----------
+        evaluator : EvaluatorEP
+            Evaluator containing optimisation evaluation records.
+        epwname : str
+            EPW label assigned to produced rows.
+
+        Returns
+        -------
+        pd.DataFrame
+            Full evaluation-history dataframe including inputs, outputs,
+            constraints, add_outputs, and simulation paths.
+
+        Usage
+        -----
+        Internal helper used by `run_optimisation` to reconstruct full history.
+
+        Examples
+        --------
+        full_df = self._build_full_optimisation_outputs_df(evaluator, epwname='Seville')
+        """
         records = getattr(evaluator, '_optimisation_eval_records', [])
         if len(records) == 0:
             log_base = getattr(evaluator, '_optimisation_log_base', None)
@@ -906,10 +10079,16 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                     with open(log_file, 'r', encoding='utf-8') as logfile:
                         for line in logfile:
                             payload = json.loads(line)
-                            records.append({'inputs': tuple(payload['inputs']), 'results': tuple(payload['results']), 'sim_dir': payload['sim_dir']})
+                            records.append({
+                                'inputs': tuple(payload['inputs']),
+                                'results': tuple(payload['results']),
+                                'sim_dir': payload['sim_dir'],
+                                'add_outputs_values': tuple(payload.get('add_outputs_values', [])),
+                            })
         input_names = evaluator.problem.names('inputs')
         output_names = evaluator.problem.names('outputs')
         constraint_names = evaluator.problem.names('constraints')
+        add_output_names = [obj.name for obj in getattr(evaluator.problem, 'add_outputs', [])]
         rows = []
         for record in records:
             row = {}
@@ -919,6 +10098,9 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 row[output_name] = record['results'][idx]
             for (idx, constraint_name) in enumerate(constraint_names):
                 row[constraint_name] = record['results'][len(output_names) + idx]
+            add_values = list(record.get('add_outputs_values', ()))
+            for (idx, add_output_name) in enumerate(add_output_names):
+                row[add_output_name] = add_values[idx] if idx < len(add_values) else pd.NA
             if record['sim_dir'] is not None:
                 row['simulation_directory'] = record['sim_dir']
                 row['simulation_output_csv_path'] = os.path.join(record['sim_dir'], 'eplusout.csv')
@@ -932,10 +10114,41 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         for col in required_columns:
             if col not in full_df.columns:
                 full_df[col] = pd.Series(dtype=object)
+
+        # Backward-compatible fallback for single-process paths where BESOS has
+        # add_outputs_list available in-memory but eval records do not include them.
+        try:
+            if add_output_names and any(name not in full_df.columns for name in add_output_names) and getattr(evaluator.problem, 'add_outputs_list', None) is not None:
+                full_df = evaluator.problem.overwrite_df(full_df)
+        except Exception:
+            # Never fail optimisation post-processing because add_outputs merge failed.
+            pass
         return full_df
 
     @staticmethod
     def _make_match_key(df: pd.DataFrame, match_columns: list) -> pd.Series:
+        """Build row-wise stable matching keys from selected columns.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe used to derive match keys.
+        match_columns : list
+            Column names used to compose the key.
+
+        Returns
+        -------
+        pd.Series
+            Pipe-joined normalized key for each dataframe row.
+
+        Usage
+        -----
+        Internal helper for matching/merging optimisation result rows.
+
+        Examples
+        --------
+        key = SimulationBase._make_match_key(df, ['epw', 'idf'])
+        """
         key_df = df[match_columns].copy()
         for column in match_columns:
             if pd.api.types.is_numeric_dtype(key_df[column]):
@@ -943,15 +10156,36 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             key_df[column] = key_df[column].astype(str)
         return key_df.apply(lambda row: '|'.join(row.values.tolist()), axis=1)
 
-    def _annotate_pareto_status(self, outputs_optimisation_full: pd.DataFrame, outputs_optimisation: pd.DataFrame) -> pd.DataFrame:
-        """
-        Recomputes the Pareto front from scratch using the objective values
+    def _annotate_pareto_status(
+        self,
+        outputs_optimisation_full: pd.DataFrame,
+        outputs_optimisation: pd.DataFrame,
+        group_by: Optional[list[str]] = None,
+    ) -> pd.DataFrame:
+        """Recomputes the Pareto front from scratch using the objective values
         directly on the full evaluation history, grouped per EPW.
-
+        
         This approach is more reliable than matching against the final NSGA-II
         population (which only contains the last generation), avoiding both
         false negatives caused by points evaluated in earlier generations that
         are genuinely non-dominated, and floating-point matching issues.
+        
+        Parameters
+        ----------
+        outputs_optimisation_full : Any
+            Argument used by `SimulationBase._annotate_pareto_status`.
+        outputs_optimisation : Any
+            Argument used by `SimulationBase._annotate_pareto_status`.
+        group_by : Any
+            Argument used by `SimulationBase._annotate_pareto_status`.
+        
+        Usage
+        -----
+        Use `SimulationBase._annotate_pareto_status` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._annotate_pareto_status(outputs_optimisation_full=..., outputs_optimisation=..., group_by=...)
         """
         if outputs_optimisation_full.empty:
             outputs_optimisation_full['pareto-optimal'] = pd.Series(dtype=bool)
@@ -990,16 +10224,41 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                     objective_data[:, j] = -objective_data[:, j]
             mask = _is_pareto_optimal(objective_data)
             return pd.Series(mask, index=group.index)
+        if group_by is None:
+            group_by = ['epw'] if 'epw' in outputs_optimisation_full.columns and outputs_optimisation_full['epw'].notna().any() else []
+        group_by = [col for col in group_by if col in outputs_optimisation_full.columns]
         pareto_mask = pd.Series(False, index=outputs_optimisation_full.index)
-        if 'epw' in outputs_optimisation_full.columns and outputs_optimisation_full['epw'].notna().any():
-            for (epw, group) in outputs_optimisation_full.groupby('epw'):
-                pareto_mask.loc[group.index] = _pareto_mask_for_group(group)
-        else:
+        if len(group_by) == 0:
             pareto_mask = _pareto_mask_for_group(outputs_optimisation_full)
+        else:
+            for (_, group) in outputs_optimisation_full.groupby(group_by, sort=False, dropna=False):
+                pareto_mask.loc[group.index] = _pareto_mask_for_group(group)
         outputs_optimisation_full['pareto-optimal'] = pareto_mask
         return outputs_optimisation_full
 
     def _set_optimisation_outputs(self, outputs_optimisation_full: pd.DataFrame, outputs_optimisation_non_dominated: pd.DataFrame=None):
+        """Store optimisation outputs and refresh derived path-index attributes.
+
+        Parameters
+        ----------
+        outputs_optimisation_full : pd.DataFrame
+            Full optimisation dataframe (dominated + non-dominated rows).
+        outputs_optimisation_non_dominated : pd.DataFrame, optional
+            Optional non-dominated subset used as fallback metadata source.
+
+        Returns
+        -------
+        None
+            Updates optimisation attributes on the simulation instance.
+
+        Usage
+        -----
+        Internal helper called after optimisation run/load workflows.
+
+        Examples
+        --------
+        self._set_optimisation_outputs(full_df, pareto_df)
+        """
         if 'pareto-optimal' not in outputs_optimisation_full.columns:
             raise KeyError("Column 'pareto-optimal' is required in outputs_optimisation_full.")
         if 'simulation_output_csv_path' not in outputs_optimisation_full.columns:
@@ -1018,11 +10277,11 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 fallback_full['simulation_directory'] = pd.NA
             outputs_optimisation_full = fallback_full
         if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
-            outputs_optimisation_full.attrs['parameters_names'] = self.problem.names('inputs')
+            outputs_optimisation_full.attrs['parameters_names'] = self._get_all_input_names()
             outputs_optimisation_full.attrs['outputs_names'] = self.problem.names('outputs')
             outputs_optimisation_full.attrs['minimize_outputs'] = getattr(self.problem, 'minimize_outputs', [])
         elif hasattr(self, 'parameters_names') and hasattr(self, 'outputs_names'):
-            outputs_optimisation_full.attrs['parameters_names'] = self.parameters_names
+            outputs_optimisation_full.attrs['parameters_names'] = self.parameters_names + self._get_external_input_names()
             outputs_optimisation_full.attrs['outputs_names'] = self.outputs_names
             outputs_optimisation_full.attrs['minimize_outputs'] = getattr(self.problem, 'minimize_outputs', []) if hasattr(self, 'problem') else []
         self.outputs_optimisation = outputs_optimisation_full
@@ -1041,6 +10300,26 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         self.optimisation_csv_paths_dominated = outputs_optimisation_full[~outputs_optimisation_full['pareto-optimal']]['simulation_output_csv_path'].dropna().drop_duplicates().tolist()
 
     def _save_outputs_optimisation_full(self, out_dir: str):
+        """Persist optimisation outputs to CSV/XLSX/PKL/JSON artifacts.
+
+        Parameters
+        ----------
+        out_dir : str
+            Destination directory for exported optimisation artifacts.
+
+        Returns
+        -------
+        None
+            Writes files and updates `self.outputs_optimisation_filepath`.
+
+        Usage
+        -----
+        Internal helper used at the end of optimisation workflows.
+
+        Examples
+        --------
+        self._save_outputs_optimisation_full(out_dir='optim_results')
+        """
         import json
         import datetime
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -1053,6 +10332,7 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         full_results_filename = f'outputs_optimisation_{timestamp}'
         full_results_path = os.path.join(out_dir, f'{full_results_filename}.csv')
         self.outputs_optimisation.to_csv(full_results_path, index=False)
+        self.outputs_optimisation.to_excel(os.path.join(out_dir, f'{full_results_filename}.xlsx'), index=False)
         self.outputs_optimisation.to_pickle(os.path.join(out_dir, f'{full_results_filename}.pkl'))
         json_payload = {
             'attrs': self.outputs_optimisation.attrs,
@@ -1064,11 +10344,11 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         self.outputs_optimisation_filepath = full_results_path
 
     def load_outputs_optimisation(self, csv_path: str=None, pickle_path: str=None, json_path: str=None, hourly_csv_path: str=None, hourly_pickle_path: str=None, parameters_names: list=None, outputs_names: list=None, minimize_outputs: list=None) -> pd.DataFrame:
-        """
-        Loads full optimisation outputs (dominated + non-dominated) from a CSV, Pickle, or JSON file
+        """Loads full optimisation outputs (dominated + non-dominated) from a CSV, Pickle, or JSON file
         previously generated by :meth:`run_optimisation`, and rebuilds the related
         internal attributes without rerunning simulations.
-
+        It also refreshes ``self.simulation_summary`` for quick inspection.
+        
         :param csv_path: path to a CSV file with full optimisation outputs.
         :param pickle_path: path to a Pickle file with full optimisation outputs (recommended).
         :param json_path: path to a JSON file with full optimisation outputs (human-readable).
@@ -1078,6 +10358,14 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         :param outputs_names: optional list of output names to reconstruct the internal problem object.
         :param minimize_outputs: optional list of booleans indicating if outputs should be minimized.
         :return: pandas DataFrame containing full optimisation outputs (dominated + non-dominated)
+        
+        Usage
+        -----
+        Use `SimulationBase.load_outputs_optimisation` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.load_outputs_optimisation(csv_path=..., pickle_path=..., json_path=..., ...)
         """
         target_path = pickle_path or json_path or csv_path or self.outputs_optimisation_filepath
         if target_path is None:
@@ -1132,36 +10420,1055 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             self.outputs_names = outputs_names
         self.epws = self.outputs_optimisation.attrs.get('epws', [])
         self.last_run_type = 'optimisation'
+        # Re-apply category mapping if rules are already set on this instance
+        if getattr(self, 'epw_mapping_rules', {}) or getattr(self, 'idf_mapping_rules', {}):
+            self.apply_category_mapping(df_types=['optimisation'])
+        # Re-apply epw_suffix_categories stored in attrs at add_epw_suffix_category time
+        _suffix_cats = self.outputs_optimisation.attrs.get('epw_suffix_categories', {})
+        if _suffix_cats:
+            self.epw_suffix_categories = _suffix_cats
+            if 'epw' in self.outputs_optimisation.columns:
+                for _col, _rule in _suffix_cats.items():
+                    _smap = _rule['suffix_map']
+                    _fb   = _rule.get('fallback', 'historical')
+                    self.outputs_optimisation[_col] = (
+                        self.outputs_optimisation['epw'].apply(
+                            lambda v: _smap.get(str(v).rsplit('_', 1)[-1], _fb)
+                        )
+                    )
+            print(f'  [info] epw_suffix_categories restored: {list(_suffix_cats.keys())}')
+
+        self._refresh_simulation_summary_after_results_change(
+            df_source='optimisation',
+            context='load_outputs_optimisation',
+        )
         return self.outputs_optimisation
 
-    def get_hourly_df(self, start_date: str='2024-01-01 01'):
+    def compare_with(
+        self,
+        other: Union[Any, pd.DataFrame, str, os.PathLike],
+        input_columns: Optional[list[str]] = None,
+        output_columns: Optional[list[str]] = None,
+        ignore_columns: Optional[list[str]] = None,
+        compare_attrs: bool = True,
+        ignore_attr_keys: Optional[list[str]] = None,
+        inputs_mismatch_strategy: Literal['strict', 'auto', 'nearest', 'row_order'] = 'auto',
+        reference_columns: Optional[list[str]] = None,
+        reference_max_distance: Optional[float] = None,
+        equal_mode: Literal['strict', 'relaxed'] = 'strict',
+        numeric_atol: float = 1e-6,
+        numeric_rtol: float = 1e-5,
+        max_examples: int = 5,
+        prefer_pickle_from_instances: bool = True,
+    ) -> dict:
+        """Convenience wrapper around :func:`compare_simulation_instances`.
+        
+        Useful for comparing this simulation against another simulation instance,
+        a DataFrame, or a persisted outputs file.
+        
+        Parameters
+        ----------
+        other : Any
+            Argument used by `SimulationBase.compare_with`.
+        input_columns : Any
+            Argument used by `SimulationBase.compare_with`.
+        output_columns : Any
+            Argument used by `SimulationBase.compare_with`.
+        ignore_columns : Any
+            Argument used by `SimulationBase.compare_with`.
+        compare_attrs : Any
+            Argument used by `SimulationBase.compare_with`.
+        ignore_attr_keys : Any
+            Argument used by `SimulationBase.compare_with`.
+        inputs_mismatch_strategy : Any
+            Argument used by `SimulationBase.compare_with`.
+        reference_columns : Any
+            Argument used by `SimulationBase.compare_with`.
+        reference_max_distance : Any
+            Argument used by `SimulationBase.compare_with`.
+        equal_mode : Any
+            Argument used by `SimulationBase.compare_with`.
+        numeric_atol : Any
+            Argument used by `SimulationBase.compare_with`.
+        numeric_rtol : Any
+            Argument used by `SimulationBase.compare_with`.
+        max_examples : Any
+            Argument used by `SimulationBase.compare_with`.
+        prefer_pickle_from_instances : Any
+            Argument used by `SimulationBase.compare_with`.
+        
+        Usage
+        -----
+        Use `SimulationBase.compare_with` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.compare_with(other=..., input_columns=..., output_columns=..., ...)
         """
-        Transforms the hourly values of outputs_param_simulation to a new pandas DataFrame, saved in the
-         internal variable named outputs_param_simulation_hourly.
+        return compare_simulation_instances(
+            left=self,
+            right=other,
+            input_columns=input_columns,
+            output_columns=output_columns,
+            ignore_columns=ignore_columns,
+            compare_attrs=compare_attrs,
+            ignore_attr_keys=ignore_attr_keys,
+            inputs_mismatch_strategy=inputs_mismatch_strategy,
+            reference_columns=reference_columns,
+            reference_max_distance=reference_max_distance,
+            equal_mode=equal_mode,
+            numeric_atol=numeric_atol,
+            numeric_rtol=numeric_rtol,
+            max_examples=max_examples,
+            prefer_pickle_from_instances=prefer_pickle_from_instances,
+        )
 
-        :param start_date: the start date for the simulation results, in format 'YYY-MM-DD HH'
+    def merge(
+        self,
+        other: 'Union[SimulationBase, List[SimulationBase]]',
+        inplace: bool = False,
+    ) -> 'SimulationBase':
+        """Merges one or more simulation instances into this one by concatenating
+        their result DataFrames, allowing you to combine multiple separate work
+        sessions and analyse the full dataset together.
+        
+        The resulting instance inherits **all** metadata from ``self``
+        (``building_floor_area``, ``epw_mapping_rules``, ``epw_suffix_categories``,
+        etc.).  Scalar/dict metadata from ``other`` is merged only when
+        ``self`` does not already have a value for that attribute.
+        
+        ``other`` can be a **single instance** or a **list of instances**;
+        in the list case they are merged sequentially into ``self``.
+        
+        For merging from a standalone list (without a pre-existing base instance)
+        see the :meth:`merge_all` classmethod.
+        
+        Examples::
+        
+            # Two instances:
+            sim_total = sim_a.merge(sim_b)
+        
+            # Many instances at once — all appended to sim_a:
+            sim_total = sim_a.merge([sim_b, sim_c, sim_d])
+        
+            # In-place (mutates sim_a):
+            sim_a.merge([sim_b, sim_c], inplace=True)
+        
+        :param other: A single :class:`SimulationBase` instance **or** a list of
+            them whose data will be appended in order.
+        :param inplace: If ``False`` (default), returns a **new** instance leaving
+            all originals unchanged.  If ``True``, modifies ``self`` in-place and
+            returns ``self``.
+        :return: The merged simulation instance.
+        
+        Usage
+        -----
+        Use `SimulationBase.merge` within ACCIM parametric and optimisation workflows.
         """
+        import copy
+        import warnings
+
+        # ── Handle list input — reduce sequentially ────────────────────────────
+        if isinstance(other, list):
+            if not other:
+                return self if inplace else copy.deepcopy(self)
+            for item in other:
+                if not isinstance(item, SimulationBase):
+                    raise TypeError(
+                        f'merge() list elements must be SimulationBase instances, '
+                        f'got {type(item).__name__}.'
+                    )
+            target = self if inplace else copy.deepcopy(self)
+            for item in other:
+                target._merge_one(item)
+            return target
+
+        # ── Single instance ────────────────────────────────────────────────────
+        if not isinstance(other, SimulationBase):
+            raise TypeError(
+                f'merge() expects a SimulationBase instance or list, '
+                f'got {type(other).__name__}.'
+            )
+        target = self if inplace else copy.deepcopy(self)
+        target._merge_one(other)
+        return target
+
+    def _merge_one(self, other: 'SimulationBase') -> None:
+        """Internal helper: merges a single ``other`` instance into ``self`` in-place.
+        
+        Usage
+        -----
+        Use `SimulationBase._merge_one` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self._merge_one(other=...)
+        """
+        import warnings
+
+        # ── DataFrames to concatenate ──────────────────────────────────────────
+        df_attrs = [
+            'outputs_param_simulation',
+            'outputs_param_simulation_hourly',
+            'outputs_param_simulation_monthly',
+            'outputs_optimisation',
+            'outputs_optimisation_hourly',
+            'outputs_optimisation_monthly',
+        ]
+
+        for attr in df_attrs:
+            self_df  = getattr(self,  attr, None)
+            other_df = getattr(other, attr, None)
+
+            # Normalise: treat empty DataFrames the same as None
+            if self_df  is not None and hasattr(self_df,  'empty') and self_df.empty:
+                self_df = None
+            if other_df is not None and hasattr(other_df, 'empty') and other_df.empty:
+                other_df = None
+
+            if self_df is None and other_df is None:
+                continue
+            elif self_df is None:
+                setattr(self, attr, other_df.copy())
+            elif other_df is None:
+                pass  # keep self_df as-is
+            else:
+                merged_df = pd.concat([self_df, other_df], ignore_index=True)
+                merged_df.attrs.update(self_df.attrs)   # self attrs win
+                setattr(self, attr, merged_df)
+
+        # ── Merge scalar / dict metadata ───────────────────────────────────────
+        # epws: ordered union without duplicates
+        self_epws  = list(getattr(self,  'epws', []) or [])
+        other_epws = list(getattr(other, 'epws', []) or [])
+        self.epws  = self_epws + [e for e in other_epws if e not in self_epws]
+
+        # building_floor_area: merge dicts; warn on incompatible scalars
+        self_area  = getattr(self,  'building_floor_area', None)
+        other_area = getattr(other, 'building_floor_area', None)
+        if self_area is None and other_area is not None:
+            self.building_floor_area = other_area
+        elif isinstance(self_area, dict) and isinstance(other_area, dict):
+            self.building_floor_area = {**other_area, **self_area}   # self wins
+        elif self_area is not None and other_area is not None and self_area != other_area:
+            warnings.warn(
+                f'[merge] building_floor_area differs between instances '
+                f'(self={self_area!r}, other={other_area!r}). '
+                f'Keeping self value.',
+                UserWarning,
+                stacklevel=3,
+            )
+
+        # epw_mapping_rules / idf_mapping_rules: self wins; warn if different
+        for rule_attr in ('epw_mapping_rules', 'idf_mapping_rules'):
+            self_rule  = getattr(self,  rule_attr, {})
+            other_rule = getattr(other, rule_attr, {})
+            if not self_rule and other_rule:
+                setattr(self, rule_attr, other_rule)
+            elif self_rule and other_rule and self_rule != other_rule:
+                warnings.warn(
+                    f'[merge] {rule_attr} differs between instances. '
+                    f'Keeping self value.',
+                    UserWarning,
+                    stacklevel=3,
+                )
+
+        # epw_suffix_categories: merge dicts; self keys take priority
+        self_sc  = dict(getattr(self,  'epw_suffix_categories', {}) or {})
+        other_sc = dict(getattr(other, 'epw_suffix_categories', {}) or {})
+        self.epw_suffix_categories = {**other_sc, **self_sc}
+
+        _self_pdf  = getattr(self,  'outputs_param_simulation', None)
+        _other_pdf = getattr(other, 'outputs_param_simulation', None)
+        n_self  = len(_self_pdf)  if _self_pdf  is not None else 0
+        n_other = len(_other_pdf) if _other_pdf is not None else 0
+        print(
+            f'  [info] merge: now {n_self} parametric rows '
+            f'(+{n_other} from other).'
+        )
+
+    @classmethod
+    def merge_all(
+        cls,
+        instances: 'List[SimulationBase]',
+        inplace: bool = False,
+    ) -> 'SimulationBase':
+        """Merges a **list** of simulation instances into a single one by
+        concatenating all result DataFrames in order.
+        
+        The first element of the list is used as the base (its metadata takes
+        priority).  This is equivalent to ``instances[0].merge(instances[1:])``.
+        
+        Example::
+        
+            sims = []
+            for pkl in ['session_a.pkl', 'session_b.pkl', 'session_c.pkl']:
+                s = ParametricSimulation()
+                s.load_outputs_parametric(pickle_path=pkl)
+                sims.append(s)
+        
+            sim_total = ParametricSimulation.merge_all(sims)
+            print(len(sim_total.outputs_param_simulation))
+            # → sum of all rows across all sessions
+        
+        :param instances: Non-empty list of :class:`SimulationBase` instances
+            (or subclasses) to merge in order.
+        :param inplace: If ``True``, modifies ``instances[0]`` in-place instead
+            of creating a deep copy as the base.
+        :return: The merged simulation instance.
+        :raises ValueError: If ``instances`` is empty.
+        :raises TypeError: If any element is not a :class:`SimulationBase`.
+        
+        Usage
+        -----
+        Use `SimulationBase.merge_all` within ACCIM parametric and optimisation workflows.
+        """
+        import copy
+
+        if not instances:
+            raise ValueError('merge_all() requires a non-empty list of instances.')
+        for i, item in enumerate(instances):
+            if not isinstance(item, SimulationBase):
+                raise TypeError(
+                    f'merge_all() element at index {i} must be a SimulationBase '
+                    f'instance, got {type(item).__name__}.'
+                )
+        base = instances[0] if inplace else copy.deepcopy(instances[0])
+        for other in instances[1:]:
+            base._merge_one(other)
+        return base
+
+    def _get_configured_category_columns(self) -> list[str]:
+        """Return effective category-column names from configured mapping rules."""
+        epw_rules = getattr(self, 'epw_mapping_rules', {}) or {}
+        idf_rules = getattr(self, 'idf_mapping_rules', {}) or {}
+        collisions = set(epw_rules.keys()) & set(idf_rules.keys())
+        epw_cols = [f'epw_{cat}' if cat in collisions else cat for cat in epw_rules.keys()]
+        return epw_cols + list(idf_rules.keys())
+
+    def _ensure_grouping_category_column(self, df: pd.DataFrame, split_by: str) -> tuple[pd.DataFrame, str]:
+        """Ensure grouping category exists as a DataFrame column (derive from rules if needed)."""
+        category = str(split_by).strip()
+        if len(category) == 0:
+            raise ValueError("Argument 'split_by' cannot be empty.")
+        if category in df.columns:
+            return df, category
+
+        epw_rules = getattr(self, 'epw_mapping_rules', {}) or {}
+        idf_rules = getattr(self, 'idf_mapping_rules', {}) or {}
+        collisions = set(epw_rules.keys()) & set(idf_rules.keys())
+        safe_epw_name = f'epw_{category}' if category in collisions else category
+        if safe_epw_name in df.columns:
+            return df, safe_epw_name
+
+        df_out = df.copy()
+
+        if category in idf_rules and 'idf' in df_out.columns:
+            rules = idf_rules[category]
+            df_out[category] = df_out['idf'].apply(lambda v: self._resolve_category_for_value(str(v), rules))
+            return df_out, category
+
+        if category in epw_rules and 'epw' in df_out.columns:
+            rules = epw_rules[category]
+            col_name = safe_epw_name
+            df_out[col_name] = df_out['epw'].apply(lambda v: self._resolve_category_for_value(str(v), rules))
+            return df_out, col_name
+
+        if category.startswith('epw_') and len(category) > 4 and 'epw' in df_out.columns:
+            raw_category = category[4:]
+            if raw_category in epw_rules:
+                rules = epw_rules[raw_category]
+                df_out[category] = df_out['epw'].apply(lambda v: self._resolve_category_for_value(str(v), rules))
+                return df_out, category
+
+        configured = self._get_configured_category_columns()
+        raise ValueError(
+            f"Category '{split_by}' was not found in dataframe columns and could not be derived from rules. "
+            f"Available configured category names: {configured}"
+        )
+
+    @staticmethod
+    def _format_split_group_key(value: Any) -> str:
+        try:
+            if pd.isna(value):
+                return 'uncategorized'
+        except (TypeError, ValueError):
+            pass
+        text = str(value).strip()
+        return text if len(text) > 0 else 'uncategorized'
+
+    def _get_identifier_columns_for_aggregation(
+        self,
+        df_hourly: pd.DataFrame,
+        source: Literal['parametric', 'optimisation'] = 'parametric',
+    ) -> list[str]:
+        """Resolve identifier columns to preserve when aggregating/splitting hourly data."""
+        identifier_columns: list[str] = []
+
         if hasattr(self, 'parameters_list'):
-            parameter_columns = [i.name for i in self.parameters_list]
+            for p in getattr(self, 'parameters_list', []):
+                name = getattr(p, 'name', None)
+                if isinstance(name, str) and name in df_hourly.columns and name not in identifier_columns:
+                    identifier_columns.append(name)
         elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
-            parameter_columns = self.problem.names('inputs')
-        elif hasattr(self, 'outputs_param_simulation') and self.outputs_param_simulation.attrs.get('parameters_names'):
-            parameter_columns = list(self.outputs_param_simulation.attrs['parameters_names'])
+            try:
+                for name in (self.problem.names('inputs') or []):
+                    if name in df_hourly.columns and name not in identifier_columns:
+                        identifier_columns.append(name)
+            except Exception:
+                pass
+        else:
+            source_df = getattr(self, 'outputs_param_simulation', None) if source == 'parametric' else getattr(self, 'outputs_optimisation', None)
+            if source_df is not None and hasattr(source_df, 'attrs'):
+                param_names = source_df.attrs.get('parameters_names', [])
+                if isinstance(param_names, list):
+                    for name in param_names:
+                        if name in df_hourly.columns and name not in identifier_columns:
+                            identifier_columns.append(name)
+
+        for extra_col in ['epw', 'idf', 'pareto-optimal']:
+            if extra_col in df_hourly.columns and extra_col not in identifier_columns:
+                identifier_columns.append(extra_col)
+
+        for category_col in self._get_configured_category_columns():
+            if category_col in df_hourly.columns and category_col not in identifier_columns:
+                identifier_columns.append(category_col)
+
+        return identifier_columns
+
+    def _split_dataframe_by_category(
+        self,
+        df: pd.DataFrame,
+        split_by: str,
+        source: Literal['parametric', 'optimisation'] = 'parametric',
+        drop_all_empty_output_columns: bool = True,
+    ) -> tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
+        """Split a dataframe by category and optionally drop all-empty output columns per group."""
+        (df_with_category, category_col) = self._ensure_grouping_category_column(df=df, split_by=split_by)
+        protected_cols = set(self._get_identifier_columns_for_aggregation(df_with_category, source=source))
+        protected_cols.update({'datetime', 'hour', 'day', 'month', category_col})
+
+        grouped: dict[str, pd.DataFrame] = {}
+        for group_value, subset in df_with_category.groupby(category_col, dropna=False, sort=False):
+            subset_df = subset.copy().reset_index(drop=True)
+            if drop_all_empty_output_columns:
+                cols_to_drop = [
+                    c for c in subset_df.columns
+                    if c not in protected_cols and subset_df[c].isna().all()
+                ]
+                if len(cols_to_drop) > 0:
+                    subset_df = subset_df.drop(columns=cols_to_drop)
+            grouped[self._format_split_group_key(group_value)] = subset_df
+
+        return df_with_category, grouped
+
+    @staticmethod
+    def _build_default_aggregation_map(
+        data_columns: list[str],
+        agg_funcs: Optional[dict] = None,
+        warn_on_unclassified: bool = False,
+    ) -> dict:
+        """Build default aggregation functions and apply user overrides."""
+        default_agg = {}
+        mean_keywords = ['temperature', 'pmv', 'ppd', 'rate', 'coefficient']
+        sum_keywords = [
+            'heating',
+            'cooling',
+            'energy',
+            'electricity',
+            'gas',
+            'facility',
+            'district',
+            'consumption',
+            'load',
+        ]
+        unclassified_columns = []
+
+        for col in data_columns:
+            col_lower = str(col).lower()
+            if any((keyword in col_lower) for keyword in mean_keywords):
+                default_agg[col] = 'mean'
+            elif any((keyword in col_lower) for keyword in sum_keywords):
+                default_agg[col] = 'sum'
+            else:
+                default_agg[col] = 'sum'
+                unclassified_columns.append(col)
+
+        if agg_funcs:
+            default_agg.update(agg_funcs)
+            overridden_columns = set(agg_funcs.keys())
+            unclassified_columns = [
+                col for col in unclassified_columns
+                if col not in overridden_columns
+            ]
+
+        if warn_on_unclassified and len(unclassified_columns) > 0:
+            warnings.warn(
+                "Default aggregation assigned 'sum' to unclassified numeric columns. "
+                "Provide agg_funcs to override if these are intensive variables. "
+                f"Columns: {unclassified_columns}",
+                UserWarning,
+            )
+
+        return default_agg
+
+    @staticmethod
+    def _normalize_aggregation_frequency(frequency: str = 'monthly') -> Literal['daily', 'monthly', 'runperiod']:
+        """Normalize user frequency aliases to the internal aggregation tokens."""
+        token = 'monthly' if frequency is None else str(frequency).strip().lower()
+        aliases = {
+            'd': 'daily',
+            'day': 'daily',
+            'daily': 'daily',
+            'm': 'monthly',
+            'month': 'monthly',
+            'monthly': 'monthly',
+            'rp': 'runperiod',
+            'runperiod': 'runperiod',
+            'run_period': 'runperiod',
+            'run-period': 'runperiod',
+            'annual': 'runperiod',
+        }
+        if token not in aliases:
+            raise ValueError(
+                "frequency must be one of: 'daily', 'monthly', 'runperiod' "
+                "(aliases: 'D', 'M', 'RP', 'run_period', 'annual')."
+            )
+        return aliases[token]
+
+    def _aggregate_hourly_dataframe(
+        self,
+        df_hourly: pd.DataFrame,
+        source: Literal['parametric', 'optimisation'] = 'parametric',
+        frequency: str = 'monthly',
+        agg_funcs: Optional[dict] = None,
+    ) -> pd.DataFrame:
+        """Aggregate an hourly dataframe to daily/monthly/runperiod frequency."""
+        if 'datetime' not in df_hourly.columns:
+            raise ValueError("Hourly dataframe must contain a 'datetime' column for aggregation.")
+
+        freq_token = self._normalize_aggregation_frequency(frequency)
+        identifier_columns = self._get_identifier_columns_for_aggregation(df_hourly=df_hourly, source=source)
+        exclude_cols = set(identifier_columns + ['datetime', 'hour', 'day', 'month'])
+        data_columns = [c for c in df_hourly.columns if c not in exclude_cols]
+        aggregation_map = self._build_default_aggregation_map(
+            data_columns=data_columns,
+            agg_funcs=agg_funcs,
+            warn_on_unclassified=True,
+        )
+
+        df_work = df_hourly.copy()
+        groupby_cols = list(identifier_columns)
+
+        if freq_token == 'daily':
+            df_work['day'] = df_work['datetime'].dt.to_period('D')
+            groupby_cols.append('day')
+        elif freq_token == 'monthly':
+            df_work['month'] = df_work['datetime'].dt.to_period('M')
+            groupby_cols.append('month')
+
+        if len(groupby_cols) == 0:
+            return pd.DataFrame([df_work.agg(aggregation_map)])
+        return df_work.groupby(groupby_cols).agg(aggregation_map).reset_index()
+
+
+    def get_hourly_df_parametric(
+            self,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Expands parametric results to hourly frequency and saves the result in
+        ``outputs_param_simulation_hourly``.
+        Default behavior reads hourly values from simulation output files (CSV),
+        which is usually lighter in memory during the simulation run.
+        
+        When ``output_columns`` is provided for CSV sources, each requested item
+        can be an exact name or a partial substring. Partial matches may resolve
+        to one or many CSV columns (for example, multiple zones reporting the
+        same variable).
+        
+        Parameters
+        ----------
+        epw_filter : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        simulation_indices : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        include_summary_columns : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        file_source : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        eplus_install_dir : Any
+            Path-like value used by this routine.
+        only_run_period : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        start_date : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        skip_confirmation : Any
+            Argument used by `SimulationBase.get_hourly_df_parametric`.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        split_by : Any
+            Optional category column name used to return a dict of DataFrames by group.
+        drop_all_empty_output_columns : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_hourly_df_parametric` within ACCIM parametric and optimisation workflows.
+        """
+        if file_source not in {'csv', 'eso', 'auto'}:
+            raise ValueError("file_source must be one of: 'csv', 'eso', 'auto'.")
+        if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
+            raise ValueError('No parametric simulation data available to expand hourly.')
+        _using_defaults = epw_filter is None and output_columns is None and (simulation_indices is None)
+        source_df = self.outputs_param_simulation.copy()
+        if simulation_indices is not None:
+            source_df = source_df.loc[simulation_indices]
+        elif epw_filter is not None:
+            if isinstance(epw_filter, str):
+                epw_filter = [epw_filter]
+            epw_mask = source_df['epw'].astype(str).apply(lambda x: any((f.lower() in x.lower() for f in epw_filter)))
+            source_df = source_df[epw_mask]
+        if source_df.empty:
+            raise ValueError('The applied filters resulted in an empty selection. Relax epw_filter or simulation_indices.')
+        if include_summary_columns:
+            if hasattr(self, 'parameters_list'):
+                parameter_columns = [i.name for i in self.parameters_list if i.name in source_df.columns]
+            elif hasattr(self, 'problem') and hasattr(self.problem, 'names'):
+                parameter_columns = [c for c in self.problem.names('inputs') if c in source_df.columns]
+            elif self.outputs_param_simulation.attrs.get('parameters_names'):
+                parameter_columns = [c for c in self.outputs_param_simulation.attrs['parameters_names'] if c in source_df.columns]
+            else:
+                parameter_columns = []
+            for extra_col in ['epw', 'idf', 'pareto-optimal']:
+                if extra_col in source_df.columns and extra_col not in parameter_columns:
+                    parameter_columns.append(extra_col)
+            for category_col in self._get_configured_category_columns():
+                if category_col in source_df.columns and category_col not in parameter_columns:
+                    parameter_columns.append(category_col)
         else:
             parameter_columns = []
-        if 'epw' not in parameter_columns:
-            parameter_columns.append('epw')
-        parameter_columns = [c for c in parameter_columns if c in self.outputs_param_simulation.columns]
-        self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(df=self.outputs_param_simulation, parameter_columns=parameter_columns, start_date=start_date)
+        effective_file_source = file_source
+        if file_source == 'auto':
+            hourly_cols = identify_hourly_columns(source_df)
+            if len(hourly_cols) > 0 and output_columns is None:
+                expanded_source_df = source_df
+                effective_file_source = 'embedded'
+            else:
+                effective_file_source = 'csv'
+                try:
+                    expanded_source_df = self._attach_hourly_outputs_from_simulation_files(
+                        df=source_df,
+                        file_source='csv',
+                        file_output_columns=output_columns,
+                        eplus_install_dir=eplus_install_dir,
+                        only_run_period=only_run_period,
+                    )
+                except KeyError as e:
+                    raise ValueError(f'Failed to resolve requested output_columns: {e}') from e
+                hourly_cols = identify_hourly_columns(expanded_source_df)
+        else:
+            try:
+                expanded_source_df = self._attach_hourly_outputs_from_simulation_files(
+                    df=source_df,
+                    file_source=file_source,
+                    file_output_columns=output_columns,
+                    eplus_install_dir=eplus_install_dir,
+                    only_run_period=only_run_period,
+                )
+            except KeyError as e:
+                raise ValueError(f'Failed to resolve requested output_columns: {e}') from e
+            hourly_cols = identify_hourly_columns(expanded_source_df)
+        if len(hourly_cols) == 0:
+            raise ValueError(
+                'No hourly columns were detected to expand. '
+                'Check keep_dirs/keep_sim_files settings and output_columns names.'
+            )
+        if start_date is None:
+            try:
+                first_row = source_df.iloc[0]
+                csv_path = self._resolve_simulation_file_path(row=first_row, file_source='csv')
+                if os.path.exists(csv_path):
+                    sample_df = pd.read_csv(csv_path, nrows=1)
+                    date_col = 'Date/Time' if 'Date/Time' in sample_df.columns else ('date/time' if 'date/time' in sample_df.columns else None)
+                    if date_col is not None and len(sample_df) > 0:
+                        _dt_raw = sample_df[date_col].iloc[0]
+                        if isinstance(_dt_raw, str):
+                            _dt_clean = _dt_raw.strip()
+                            (_month_day, _time) = _dt_clean.split()
+                            (_month, _day) = _month_day.split('/')
+                            _hour = int(_time.split(':')[0])
+                            if _hour == 24:
+                                _hour = 0
+                            start_date = f'2024-{int(_month):02d}-{int(_day):02d} {_hour:02d}'
+            except Exception:
+                pass
+            if start_date is None:
+                start_date = '2024-01-01 01'
+        sample = expanded_source_df[hourly_cols[0]].iloc[0]
+        n_steps = 8760
+        if isinstance(sample, (list, tuple, np.ndarray)):
+            n_steps = len(sample)
+        elif isinstance(sample, str):
+            try:
+                import ast
+                parsed = ast.literal_eval(sample.strip())
+                if isinstance(parsed, (list, tuple, np.ndarray)):
+                    n_steps = len(parsed)
+            except Exception:
+                pass
+        n_rows = len(expanded_source_df)
+        n_hourly = len(hourly_cols)
+        total_rows = n_rows * n_steps
+        total_cols = len(parameter_columns) + n_hourly + 2
+        approx_mb = total_rows * total_cols * 8 / 1000000.0
+        size_msg = (
+            f"\n  Simulations selected : {n_rows}"
+            f"\n  Hourly steps per sim : {n_steps}"
+            f"\n  Hourly output columns: {n_hourly}  -> {hourly_cols[:5]}{('...' if n_hourly > 5 else '')}"
+            f"\n  Source              : {effective_file_source}"
+            f"\n  Expanded shape       : ~{total_rows:,} rows x {total_cols} cols"
+            f"\n  Approx. memory       : ~{approx_mb:.1f} MB"
+        )
+        if _using_defaults and (not skip_confirmation):
+            print(f'[get_hourly_df_parametric] Estimated output size:{size_msg}')
+            answer = input('\nProceed with expansion? [y/N]: ').strip().lower()
+            if answer != 'y':
+                print('Expansion cancelled. Use epw_filter, output_columns or simulation_indices to reduce the size.')
+                return None
+        else:
+            print(f'[get_hourly_df_parametric] Expanding...{size_msg}')
+        self._invalidate_normalized_df_types(df_types=['parametric_hourly'])
+        self.outputs_param_simulation_hourly = expand_to_hourly_dataframe(
+            df=expanded_source_df,
+            parameter_columns=parameter_columns,
+            start_date=start_date,
+            hourly_columns=hourly_cols,
+        )
+        self.outputs_param_simulation_hourly_by_category = None
+        if normalize_per_m2:
+            if self._is_df_type_normalized('parametric_hourly'):
+                print('[!] Warning: parametric hourly outputs are already normalized. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
+            else:
+                self.normalize_outputs(df_types=['parametric_hourly'])
+        if split_by is not None:
+            (df_with_category, grouped) = self._split_dataframe_by_category(
+                df=self.outputs_param_simulation_hourly,
+                split_by=split_by,
+                source='parametric',
+                drop_all_empty_output_columns=drop_all_empty_output_columns,
+            )
+            self.outputs_param_simulation_hourly = df_with_category
+            self.outputs_param_simulation_hourly_by_category = grouped
+            return grouped
+        return self.outputs_param_simulation_hourly
+
+    def get_hourly_df(
+            self,
+            start_date: Optional[str] = '2024-01-01 01',
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'auto',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            skip_confirmation: bool = True,
+    ):
+        """Backward-compatible wrapper for parametric hourly expansion.
+        This preserves the previous behavior: use embedded hourly list-columns when
+        available, otherwise fall back to reading simulation CSV outputs.
+        
+        Parameters
+        ----------
+        start_date : Any
+            Argument used by `SimulationBase.get_hourly_df`.
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        split_by : Any
+            Optional category column name used to return a dict of DataFrames by group.
+        drop_all_empty_output_columns : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_hourly_df` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_hourly_df(start_date=..., normalize_per_m2=...)
+        """
+        return self.get_hourly_df_parametric(
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_output_df(
+            self,
+            agg_funcs: dict = None,
+            start_date: Optional[str] = '2024-01-01 01',
+            normalize_per_m2: bool = False,
+            frequency: Literal['daily', 'monthly', 'runperiod'] = 'monthly',
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'auto',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            skip_confirmation: bool = True,
+    ):
+        """Aggregate parametric hourly results by daily, monthly or runperiod frequency."""
+        if getattr(self, 'outputs_param_simulation_hourly', None) is None:
+            self.get_hourly_df(
+                start_date=start_date,
+                normalize_per_m2=False,
+                split_by=None,
+                drop_all_empty_output_columns=drop_all_empty_output_columns,
+                epw_filter=epw_filter,
+                simulation_indices=simulation_indices,
+                output_columns=output_columns,
+                include_summary_columns=include_summary_columns,
+                file_source=file_source,
+                eplus_install_dir=eplus_install_dir,
+                only_run_period=only_run_period,
+                skip_confirmation=skip_confirmation,
+            )
+
+        df_hourly = self.outputs_param_simulation_hourly.copy()
+        freq_token = self._normalize_aggregation_frequency(frequency)
+        aggregated_df = self._aggregate_hourly_dataframe(
+            df_hourly=df_hourly,
+            source='parametric',
+            frequency=freq_token,
+            agg_funcs=agg_funcs,
+        )
+
+        if freq_token == 'monthly':
+            target_df_type = 'parametric_monthly'
+        elif freq_token == 'daily':
+            target_df_type = 'parametric_daily'
+        else:
+            target_df_type = 'parametric_runperiod'
+
+        self._invalidate_normalized_df_types(df_types=[target_df_type])
+
+        if freq_token == 'monthly':
+            self.outputs_param_simulation_monthly = aggregated_df
+        elif freq_token == 'daily':
+            self.outputs_param_simulation_daily = aggregated_df
+        else:
+            self.outputs_param_simulation_runperiod = aggregated_df
+
+        grouped = None
+        if split_by is not None:
+            (aggregated_df, grouped) = self._split_dataframe_by_category(
+                df=aggregated_df,
+                split_by=split_by,
+                source='parametric',
+                drop_all_empty_output_columns=drop_all_empty_output_columns,
+            )
+            if freq_token == 'monthly':
+                self.outputs_param_simulation_monthly = aggregated_df
+            elif freq_token == 'daily':
+                self.outputs_param_simulation_daily = aggregated_df
+            else:
+                self.outputs_param_simulation_runperiod = aggregated_df
+
+        if not hasattr(self, 'outputs_param_simulation_aggregated_by_category') or self.outputs_param_simulation_aggregated_by_category is None:
+            self.outputs_param_simulation_aggregated_by_category = {}
+        self.outputs_param_simulation_aggregated_by_category[freq_token] = grouped
+
+        if normalize_per_m2:
+            if self._is_df_type_normalized(target_df_type):
+                print(f"[!] Warning: {target_df_type} outputs are already normalized. The argument normalize_per_m2=True will have no effect to prevent double normalization.")
+            else:
+                self.normalize_outputs(df_types=[target_df_type])
+                if split_by is not None:
+                    normalized_df = (
+                        self.outputs_param_simulation_monthly if freq_token == 'monthly'
+                        else self.outputs_param_simulation_daily if freq_token == 'daily'
+                        else self.outputs_param_simulation_runperiod
+                    )
+                    (_, grouped) = self._split_dataframe_by_category(
+                        df=normalized_df,
+                        split_by=split_by,
+                        source='parametric',
+                        drop_all_empty_output_columns=drop_all_empty_output_columns,
+                    )
+                    self.outputs_param_simulation_aggregated_by_category[freq_token] = grouped
+
+        return grouped if split_by is not None else aggregated_df
+
+    def get_monthly_df(
+            self,
+            agg_funcs: dict = None,
+            start_date: Optional[str] = '2024-01-01 01',
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'auto',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            skip_confirmation: bool = True,
+    ):
+        """Monthly wrapper kept for backward compatibility.
+
+        For non-monthly aggregation, use `get_output_df(frequency=...)`.
+        """
+        return self.get_output_df(
+            agg_funcs=agg_funcs,
+            start_date=start_date,
+            normalize_per_m2=normalize_per_m2,
+            frequency='monthly',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            skip_confirmation=skip_confirmation,
+        )
+
+    def get_daily_df(
+            self,
+            agg_funcs: dict = None,
+            start_date: Optional[str] = '2024-01-01 01',
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'auto',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            skip_confirmation: bool = True,
+    ):
+        """Convenience wrapper for daily aggregation of parametric hourly results."""
+        return self.get_output_df(
+            agg_funcs=agg_funcs,
+            start_date=start_date,
+            normalize_per_m2=normalize_per_m2,
+            frequency='daily',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            skip_confirmation=skip_confirmation,
+        )
+
+    def get_runperiod_df(
+            self,
+            agg_funcs: dict = None,
+            start_date: Optional[str] = '2024-01-01 01',
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso', 'auto'] = 'auto',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            skip_confirmation: bool = True,
+    ):
+        """Convenience wrapper for runperiod aggregation of parametric hourly results."""
+        return self.get_output_df(
+            agg_funcs=agg_funcs,
+            start_date=start_date,
+            normalize_per_m2=normalize_per_m2,
+            frequency='runperiod',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            skip_confirmation=skip_confirmation,
+        )
 
     @staticmethod
     def _resolve_simulation_file_path(row: pd.Series, file_source: Literal['csv', 'eso']) -> str:
-        error_msg = f"{file_source.upper()} path cannot be resolved for this simulation. If you used keep_sim_files='non-dominated' and this is a dominated simulation, the files were deleted to save space. To analyze this simulation, re-run keeping its files."
+        """Resolve the simulation output file path for one result row.
+
+        Parameters
+        ----------
+        row : pd.Series
+            Row containing simulation path metadata.
+        file_source : Literal['csv', 'eso']
+            Requested output file type.
+
+        Returns
+        -------
+        str
+            Resolved path to the requested simulation output file.
+
+        Usage
+        -----
+        Internal helper used by hourly extraction routines.
+
+        Examples
+        --------
+        path = SimulationBase._resolve_simulation_file_path(row, file_source='csv')
+        """
+        error_msg = (
+            f"{file_source.upper()} path cannot be resolved for this simulation. "
+            "If you used keep_sim_files='non-dominated' and this is a dominated simulation, "
+            "the files were deleted to save space. Also check whether sim_files_extensions/"
+            "sim_files_policy removed this file extension. To analyze this simulation, re-run "
+            'keeping the required files.'
+        )
         if file_source == 'csv':
             if pd.notna(row.get('simulation_output_csv_path', pd.NA)):
                 return str(row['simulation_output_csv_path'])
             if pd.notna(row.get('simulation_directory', pd.NA)):
                 return os.path.join(str(row['simulation_directory']), 'eplusout.csv')
+            # Parametric runs store the BESOS output dir in 'output_dir'
+            if pd.notna(row.get('output_dir', pd.NA)):
+                return os.path.join(str(row['output_dir']), 'eplusout.csv')
             raise ValueError(error_msg)
         if file_source == 'eso':
             if pd.notna(row.get('simulation_directory', pd.NA)):
@@ -1169,15 +11476,66 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             if pd.notna(row.get('simulation_output_csv_path', pd.NA)):
                 csv_path = str(row['simulation_output_csv_path'])
                 return os.path.join(os.path.dirname(csv_path), 'eplusout.eso')
+            # Parametric runs store the BESOS output dir in 'output_dir'
+            if pd.notna(row.get('output_dir', pd.NA)):
+                return os.path.join(str(row['output_dir']), 'eplusout.eso')
             raise ValueError(error_msg)
         raise ValueError(f"Unsupported file_source '{file_source}'. Use 'csv' or 'eso'.")
 
     @staticmethod
     def _flatten_eso_column_name(col: tuple) -> str:
+        """Convert multi-index ESO columns into flat readable labels.
+
+        Parameters
+        ----------
+        col : tuple
+            ESO column tuple `(area, variable, units)`.
+
+        Returns
+        -------
+        str
+            Flattened label used in dataframe columns.
+
+        Usage
+        -----
+        Internal helper used while transforming ESO results.
+
+        Examples
+        --------
+        name = SimulationBase._flatten_eso_column_name(('ZONE1', 'Temp', 'C'))
+        """
         (area, variable, units) = col
         return f'{variable} [{units}] | {area}'
 
     def _extract_hourly_outputs_from_file(self, row: pd.Series, file_source: Literal['csv', 'eso'], file_output_columns: Optional[List[str]]=None, eplus_install_dir: Optional[str]=None, only_run_period: bool=True) -> dict:
+        """Extract hourly output series from one simulation CSV/ESO file.
+
+        Parameters
+        ----------
+        row : pd.Series
+            Result row with file path metadata.
+        file_source : Literal['csv', 'eso']
+            Source file type used for extraction.
+        file_output_columns : Optional[List[str]]
+            Optional requested output columns/patterns.
+        eplus_install_dir : Optional[str]
+            EnergyPlus installation directory (used for ESO parsing).
+        only_run_period : bool
+            Whether ESO parsing should keep only run-period records.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping output names to hourly value lists.
+
+        Usage
+        -----
+        Internal helper used before expanding optimisation outputs to hourly rows.
+
+        Examples
+        --------
+        values = self._extract_hourly_outputs_from_file(row, file_source='csv')
+        """
         path = self._resolve_simulation_file_path(row=row, file_source=file_source)
         if not os.path.exists(path):
             raise FileNotFoundError(f'Simulation output file not found: {path}')
@@ -1200,13 +11558,20 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                         selected_cols.append(lower_exact_map[requested_lower])
                         continue
                     contains_matches = [c for c in df_file.columns if requested_lower in c.lower()]
-                    if len(contains_matches) == 1:
-                        selected_cols.append(contains_matches[0])
-                    else:
+                    if len(contains_matches) == 0:
                         missing.append(requested)
-                if missing:
+                    else:
+                        selected_cols.extend(contains_matches)
+                selected_cols = list(dict.fromkeys(selected_cols))
+                if missing and len(selected_cols) == 0:
                     sample_cols = [c for c in df_file.columns if ':Zone Operative Temperature' in c or 'VRF Heat Pump Cooling Electricity Energy' in c]
                     raise KeyError(f"Requested CSV columns not found in '{path}': {missing}. Example available columns: {sample_cols[:8]}")
+                if missing and len(selected_cols) > 0:
+                    warnings.warn(
+                        f"Some requested CSV columns were not found in '{path}': {missing}. "
+                        f"Continuing with {len(selected_cols)} matched columns.",
+                        UserWarning,
+                    )
             return {c: df_file[c].tolist() for c in selected_cols}
         eso_results = read_eso_using_readvarseso(eso_file_path=path, eplus_install_dir=eplus_install_dir, only_run_period=only_run_period, cleanup=True)
         data_by_freq = eso_results.get('data', {})
@@ -1223,11 +11588,45 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
         if file_output_columns is None:
             return flattened_map
         missing = [c for c in file_output_columns if c not in flattened_map]
-        if missing:
+        if missing and len(flattened_map) == 0:
             raise KeyError(f"Requested ESO columns not found in '{path}': {missing}")
-        return {c: flattened_map[c] for c in file_output_columns}
+        if missing and len(flattened_map) > 0:
+            warnings.warn(
+                f"Some requested ESO columns were not found in '{path}': {missing}. "
+                f"Continuing with available matches.",
+                UserWarning,
+            )
+        return {c: flattened_map[c] for c in file_output_columns if c in flattened_map}
 
     def _attach_hourly_outputs_from_simulation_files(self, df: pd.DataFrame, file_source: Literal['csv', 'eso'], file_output_columns: Optional[List[str]]=None, eplus_install_dir: Optional[str]=None, only_run_period: bool=True) -> pd.DataFrame:
+        """Attach per-row hourly output lists extracted from simulation files.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Base dataframe with simulation metadata rows.
+        file_source : Literal['csv', 'eso']
+            Source file type used for extraction.
+        file_output_columns : Optional[List[str]]
+            Optional output columns/patterns to extract.
+        eplus_install_dir : Optional[str]
+            EnergyPlus installation directory for ESO parsing.
+        only_run_period : bool
+            Whether ESO parsing should keep only run-period records.
+
+        Returns
+        -------
+        pd.DataFrame
+            Copy of input dataframe with appended list-valued hourly columns.
+
+        Usage
+        -----
+        Internal helper for `get_hourly_df_parametric` and `get_hourly_df_optimisation`.
+
+        Examples
+        --------
+        augmented = self._attach_hourly_outputs_from_simulation_files(df, file_source='csv')
+        """
         df_augmented = df.copy()
         per_row_outputs = []
         all_output_cols = set()
@@ -1245,19 +11644,33 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             df_augmented[target_col] = [row_outputs[col] if col in row_outputs else [] for row_outputs in per_row_outputs]
         return df_augmented
 
-    def get_hourly_df_optimisation(self, only_pareto_optimal: bool=True, epw_filter: Union[str, List[str]]=None, simulation_indices: Optional[List[int]]=None, output_columns: Optional[List[str]]=None, include_summary_columns: bool=True, file_source: Literal['csv', 'eso']='csv', eplus_install_dir: Optional[str]=None, only_run_period: bool=True, start_date: Optional[str]=None, skip_confirmation: bool=False):
-        """
-        Expands optimisation results to hourly frequency and saves the result
+    def get_hourly_df_optimisation(
+            self,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Expands optimisation results to hourly frequency and saves the result
         in ``outputs_optimisation_hourly``.
-
+        
         The method reads hourly values directly from the simulation output files
         (CSV or ESO), giving you full control over which simulations and which
         outputs are expanded to avoid memory saturation with large batches.
-
+        
         When ``epw_filter`` and ``output_columns`` are both left as None (defaults),
         an automatic size estimate is printed and you will be asked to confirm before
         the expansion proceeds. Use ``skip_confirmation=True`` to bypass this prompt.
-
+        
         :param only_pareto_optimal: if True (default), only Pareto-optimal (non-dominated)
             solutions are expanded. Set to False to include dominated solutions too.
         :param epw_filter: EPW name or list of EPW names to limit the expansion to
@@ -1268,18 +11681,18 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             ``outputs_optimisation``) to select exactly which simulations to expand.
             This is the most direct way to expand specific runs.
             Overrides ``only_pareto_optimal`` and ``epw_filter`` when provided.
-
+        
             Example – expand only the 3rd and 7th rows::
-
+        
                 parametric.get_hourly_df_optimisation(simulation_indices=[2, 6])
-
+        
             Example – expand only the Pareto-optimal rows with index < 10::
-
+        
                 pareto_idx = parametric.outputs_optimisation[
                     parametric.outputs_optimisation['pareto-optimal']
                 ].index[:10].tolist()
                 parametric.get_hourly_df_optimisation(simulation_indices=pareto_idx)
-
+        
         :param output_columns: list of column names (or partial names) to extract from
             the simulation output file. If None (default), all numeric hourly columns
             are used. Use ``get_hourly_df_columns()`` first to discover available names.
@@ -1300,6 +11713,19 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             prompt that is shown when ``epw_filter`` and ``output_columns`` are both
             left at their defaults. Useful for running in non-interactive environments
             (scripts, notebooks, CI pipelines).
+        
+        Parameters
+        ----------
+        normalize_per_m2 : Any
+            Boolean or mode flag controlling behaviour.
+        split_by : Any
+            Optional category column name used to return a dict of DataFrames by group.
+        drop_all_empty_output_columns : Any
+            Boolean or mode flag controlling behaviour.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_hourly_df_optimisation` within ACCIM parametric and optimisation workflows.
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('This method requires optimisation outputs. Please run run_optimisation() or load_outputs_optimisation() first.')
@@ -1326,11 +11752,12 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 csv_path = self._resolve_simulation_file_path(row=first_row, file_source='csv')
                 if os.path.exists(csv_path):
                     _dt_raw = pd.read_csv(csv_path, usecols=['Date/Time'], nrows=1)['Date/Time'].iloc[0]
-                    _dt_clean = _dt_raw.strip()
-                    (_month_day, _time) = _dt_clean.split()
-                    (_month, _day) = _month_day.split('/')
-                    _hour = int(_time.split(':')[0])
-                    start_date = f'2024-{int(_month):02d}-{int(_day):02d} {_hour:02d}'
+                    if isinstance(_dt_raw, str):
+                        _dt_clean = _dt_raw.strip()
+                        (_month_day, _time) = _dt_clean.split()
+                        (_month, _day) = _month_day.split('/')
+                        _hour = int(_time.split(':')[0])
+                        start_date = f'2024-{int(_month):02d}-{int(_day):02d} {_hour:02d}'
             except Exception:
                 pass
             if start_date is None:
@@ -1347,9 +11774,12 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 if hasattr(self, 'problem') and hasattr(self.problem, 'names'):
                     _known_non_param.update(self.problem.names('outputs') or [])
                 param_cols = [c for c in source_df.columns if c not in _known_non_param and (not source_df[c].apply(lambda x: isinstance(x, (list, tuple))).any())]
-            for extra_col in ['epw', 'pareto-optimal']:
+            for extra_col in ['epw', 'idf', 'pareto-optimal']:
                 if extra_col in source_df.columns and extra_col not in param_cols:
                     param_cols.append(extra_col)
+            for category_col in self._get_configured_category_columns():
+                if category_col in source_df.columns and category_col not in param_cols:
+                    param_cols.append(category_col)
         else:
             param_cols = []
         from accim.parametric_and_optimisation.utils import identify_hourly_columns
@@ -1373,12 +11803,250 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
                 return None
         else:
             print(f'[get_hourly_df_optimisation] Expanding…{size_msg}')
+        self._invalidate_normalized_df_types(df_types=['optimisation_hourly'])
         self.outputs_optimisation_hourly = expand_to_hourly_dataframe(df=source_df, parameter_columns=param_cols, start_date=start_date)
+        self.outputs_optimisation_hourly_by_category = None
+        if normalize_per_m2:
+            if self._is_df_type_normalized('optimisation_hourly'):
+                print('[!] Warning: optimisation hourly outputs are already normalized. The argument normalize_per_m2=True will have no effect to prevent double normalization.')
+            else:
+                self.normalize_outputs(df_types=['optimisation_hourly'])
+        if split_by is not None:
+            (df_with_category, grouped) = self._split_dataframe_by_category(
+                df=self.outputs_optimisation_hourly,
+                split_by=split_by,
+                source='optimisation',
+                drop_all_empty_output_columns=drop_all_empty_output_columns,
+            )
+            self.outputs_optimisation_hourly = df_with_category
+            self.outputs_optimisation_hourly_by_category = grouped
+            return grouped
+        return self.outputs_optimisation_hourly
+
+    def get_output_df_optimisation(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            frequency: Literal['daily', 'monthly', 'runperiod'] = 'monthly',
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Aggregate optimisation hourly results by daily, monthly or runperiod frequency."""
+        if getattr(self, 'outputs_optimisation_hourly', None) is None:
+            self.get_hourly_df_optimisation(
+                only_pareto_optimal=only_pareto_optimal,
+                epw_filter=epw_filter,
+                simulation_indices=simulation_indices,
+                output_columns=output_columns,
+                include_summary_columns=include_summary_columns,
+                file_source=file_source,
+                eplus_install_dir=eplus_install_dir,
+                only_run_period=only_run_period,
+                start_date=start_date,
+                skip_confirmation=skip_confirmation,
+                normalize_per_m2=normalize_per_m2,
+            )
+            
+        if getattr(self, 'outputs_optimisation_hourly', None) is None:
+            raise ValueError('Failed to generate hourly dataframe for optimisation.')
+
+        df_hourly = self.outputs_optimisation_hourly.copy()
+        freq_token = self._normalize_aggregation_frequency(frequency)
+        aggregated_df = self._aggregate_hourly_dataframe(
+            df_hourly=df_hourly,
+            source='optimisation',
+            frequency=freq_token,
+            agg_funcs=agg_funcs,
+        )
+
+        if freq_token == 'monthly':
+            target_df_type = 'optimisation_monthly'
+        elif freq_token == 'daily':
+            target_df_type = 'optimisation_daily'
+        else:
+            target_df_type = 'optimisation_runperiod'
+
+        self._invalidate_normalized_df_types(df_types=[target_df_type])
+
+        if freq_token == 'monthly':
+            self.outputs_optimisation_monthly = aggregated_df
+        elif freq_token == 'daily':
+            self.outputs_optimisation_daily = aggregated_df
+        else:
+            self.outputs_optimisation_runperiod = aggregated_df
+
+        grouped = None
+        if split_by is not None:
+            (aggregated_df, grouped) = self._split_dataframe_by_category(
+                df=aggregated_df,
+                split_by=split_by,
+                source='optimisation',
+                drop_all_empty_output_columns=drop_all_empty_output_columns,
+            )
+            if freq_token == 'monthly':
+                self.outputs_optimisation_monthly = aggregated_df
+            elif freq_token == 'daily':
+                self.outputs_optimisation_daily = aggregated_df
+            else:
+                self.outputs_optimisation_runperiod = aggregated_df
+
+        if not hasattr(self, 'outputs_optimisation_aggregated_by_category') or self.outputs_optimisation_aggregated_by_category is None:
+            self.outputs_optimisation_aggregated_by_category = {}
+        self.outputs_optimisation_aggregated_by_category[freq_token] = grouped
+
+        if normalize_per_m2:
+            if self._is_df_type_normalized(target_df_type):
+                print(f"[!] Warning: {target_df_type} outputs are already normalized. The argument normalize_per_m2=True will have no effect to prevent double normalization.")
+            else:
+                self.normalize_outputs(df_types=[target_df_type])
+                if split_by is not None:
+                    normalized_df = (
+                        self.outputs_optimisation_monthly if freq_token == 'monthly'
+                        else self.outputs_optimisation_daily if freq_token == 'daily'
+                        else self.outputs_optimisation_runperiod
+                    )
+                    (_, grouped) = self._split_dataframe_by_category(
+                        df=normalized_df,
+                        split_by=split_by,
+                        source='optimisation',
+                        drop_all_empty_output_columns=drop_all_empty_output_columns,
+                    )
+                    self.outputs_optimisation_aggregated_by_category[freq_token] = grouped
+
+        return grouped if split_by is not None else aggregated_df
+
+    def get_monthly_df_optimisation(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Monthly wrapper kept for backward compatibility.
+
+        For non-monthly aggregation, use `get_output_df_optimisation(frequency=...)`.
+        """
+        return self.get_output_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            frequency='monthly',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_daily_df_optimisation(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Convenience wrapper for daily aggregation of optimisation hourly results."""
+        return self.get_output_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            frequency='daily',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_runperiod_df_optimisation(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Convenience wrapper for runperiod aggregation of optimisation hourly results."""
+        return self.get_output_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            frequency='runperiod',
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
 
     def get_hourly_df_columns(self):
-        """
-        Identifies the columns which contain hourly values, and save the names in a list, saved in the
+        """Identifies the columns which contain hourly values, and save the names in a list, saved in the
         internal variable named outputs_hourly_columns. Supports both parametric and optimisation runs.
+        
+        Usage
+        -----
+        Use `SimulationBase.get_hourly_df_columns` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.get_hourly_df_columns()
         """
         import os
         import pandas as pd
@@ -1401,12 +12069,585 @@ class OptimParamSimulation(AnalysisMixin, PlottingMixin):
             if getattr(self, 'outputs_param_simulation', None) is None or self.outputs_param_simulation.empty:
                 raise ValueError('Parametric outputs not found. Run or load parametric simulation first.')
             self.outputs_hourly_columns = identify_hourly_columns(self.outputs_param_simulation)
-            return self.outputs_hourly_columns
+            if len(self.outputs_hourly_columns) > 0:
+                return self.outputs_hourly_columns
+            for (_, row) in self.outputs_param_simulation.iterrows():
+                try:
+                    path = self._resolve_simulation_file_path(row=row, file_source='csv')
+                    if os.path.exists(path):
+                        df_file = pd.read_csv(path, nrows=5)
+                        excluded_columns = {'Date/Time', 'date/time'}
+                        numeric_cols = [c for c in df_file.columns if c not in excluded_columns and pd.api.types.is_numeric_dtype(df_file[c])]
+                        self.outputs_hourly_columns = numeric_cols
+                        return self.outputs_hourly_columns
+                except Exception:
+                    continue
+            raise FileNotFoundError('Could not find any valid parametric simulation output CSV files to infer hourly columns.')
         else:
             raise ValueError('No previous simulation run type detected. Please run parametric or optimisation first.')
 
-class AccimPredefModelsParamSim(OptimParamSimulation):
 
-    def __init__(self, building: besos.IDF_class, output_type: str='standard', output_keep_existing: bool=False, output_freqs: list=['hourly'], ScriptType: str='vrf_mm', SupplyAirTempInputMethod: str='temperature difference', debugging: bool=False):
-        super().__init__(building=building, output_type=output_type, output_keep_existing=output_keep_existing, output_freqs=output_freqs, ScriptType=ScriptType, SupplyAirTempInputMethod=SupplyAirTempInputMethod, debugging=debugging)
-        accis.modifyAccis(idf=building, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)
+class ParametricSimulation(SimulationBase):
+    """Specialization of SimulationBase for parametric simulations.
+    
+    This class handles parameter sampling, running multiple simulations with different
+    parameter values, and collecting/analyzing parametric simulation results.
+    
+    Parameters specific to parametric simulations:
+    - outputs_param_simulation: main results DataFrame
+    - outputs_param_simulation_hourly: hourly-level expanded results
+    - outputs_param_simulation_monthly: monthly-level aggregated results
+    - outputs_param_simulation_filepath: path to saved results
+    
+    Methods specific to parametric simulations:
+    - sampling_*(): parameter sampling strategies
+    - run_parametric_simulation(): execute parametric simulation
+    - load_outputs_parametric(): restore previous parametric results
+    
+    .. versionadded:: 0.8.0
+        Introduced as the dedicated class for parametric workflows.
+    
+    Usage
+    -----
+    Use `ParametricSimulation` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    obj = ParametricSimulation()
+    """
+
+    def __init__(
+            self,
+            buildings: Union[Any, List] = None,
+            epws: list = None,
+            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
+            output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
+            output_keep_existing: bool = True,
+            output_freqs: List[allowed_output_freqs] = ['hourly'],
+            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            make_averages: bool = False,
+            debugging: bool = False,
+            verbosemode: bool = True,
+            Output_take_dataframe: pd.DataFrame = None,
+            EnergyPlus_version: str = None,
+            VRFschedule: str = 'On 24/7',
+            eer: float = 2,
+            cop: float = 2.1,
+            hvac_zone_map: dict = None,
+            bypass_addAccis: bool = False,
+            building: Any = None,
+            accim_results_root: Optional[str] = None,
+            remove_output_tables: bool = True,
+    ):
+        """Initialize a parametric simulation.
+        
+        :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
+        :param epws: one EPW filename or a list of EPW filenames.
+        :param parameters_type: parameter workflow to prepare: accim custom model,
+            accim predefined model, apmv setpoints, or None.
+        :param output_type: output selection preset used by addAccis.
+        :param output_keep_existing: keep existing IDF output objects when addAccis runs.
+        :param output_freqs: output frequencies requested from EnergyPlus.
+        :param ScriptType: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
+        :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
+        :param make_averages: create average outputs in addAccis.
+        :param debugging: create EnergyPlus EDD debugging output.
+        :param verbosemode: print addAccis progress messages.
+        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
+        :param building: legacy alias for buildings, accepted for backward compatibility.
+        :param accim_results_root: optional base directory used to resolve
+            relative output directories.
+        :param remove_output_tables: when True, removes Output:Table:Monthly and
+            Output:Table:Annual objects from each IDF during initialization.
+        
+        Usage
+        -----
+        Use `ParametricSimulation.__init__` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        obj = ParametricSimulation(buildings=..., epws=..., parameters_type=..., ...)
+        """
+        super().__init__(
+            buildings=buildings,
+            epws=epws,
+            parameters_type=parameters_type,
+            output_type=output_type,
+            output_keep_existing=output_keep_existing,
+            output_freqs=output_freqs,
+            ScriptType=ScriptType,
+            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+            make_averages=make_averages,
+            debugging=debugging,
+            verbosemode=verbosemode,
+            Output_take_dataframe=Output_take_dataframe,
+            EnergyPlus_version=EnergyPlus_version,
+            VRFschedule=VRFschedule,
+            eer=eer,
+            cop=cop,
+            hvac_zone_map=hvac_zone_map,
+            bypass_addAccis=bypass_addAccis,
+            building=building,
+            accim_results_root=accim_results_root,
+            remove_output_tables=remove_output_tables,
+        )
+        # Parametric-specific attributes
+        self.outputs_param_simulation = None
+        self.outputs_param_simulation_hourly = None
+        self.outputs_param_simulation_hourly_by_category = None
+        self.outputs_param_simulation_monthly = None
+        self.outputs_param_simulation_daily = None
+        self.outputs_param_simulation_runperiod = None
+        self.outputs_param_simulation_aggregated_by_category = {}
+        self.outputs_param_simulation_filepath = None
+
+    @property
+    def outputs_param_sim(self):
+        """Backward-compatible alias for outputs_param_simulation.
+        
+        Usage
+        -----
+        Use `ParametricSimulation.outputs_param_sim` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        result = self.outputs_param_sim()
+        """
+        return self.outputs_param_simulation
+
+    @outputs_param_sim.setter
+    def outputs_param_sim(self, value):
+        """Set the backward-compatible alias `outputs_param_simulation`.
+
+        Parameters
+        ----------
+        value : Any
+            Value assigned to `outputs_param_simulation`.
+
+        Returns
+        -------
+        None
+            Updates the canonical parametric outputs attribute.
+
+        Usage
+        -----
+        Use for legacy code paths expecting the `outputs_param_sim` alias.
+
+        Examples
+        --------
+        sim.outputs_param_sim = df
+        """
+        self.outputs_param_simulation = value
+
+
+class OptimisationSimulation(SimulationBase):
+    """Specialization of SimulationBase for multi-objective optimization.
+    
+    This class handles multi-objective optimization using various genetic/evolutionary
+    algorithms (NSGA-II, EpsNSGAII, etc.), Pareto analysis, and optimization-specific
+    output management.
+    
+    Parameters specific to optimization:
+    - outputs_optimisation: complete evaluation history (dominated + non-dominated)
+    - outputs_optimisation_filepath: path to saved results
+    - optimisation_csv_paths_non_dominated: paths to non-dominated simulation outputs
+    - optimisation_csv_paths_dominated: paths to dominated simulation outputs
+    - optimisation_csv_paths_non_dominated_by_epw: non-dominated paths grouped by EPW
+    - optimisation_csv_paths_dominated_by_epw: dominated paths grouped by EPW
+    - evaluators: tracking of besos evaluators per IDF/EPW combination
+    
+    Methods specific to optimization:
+    - run_optimisation(): execute multi-objective optimization
+    - estimate_optimisation_sims(): preview expected run count
+    - load_outputs_optimisation(): restore previous optimization results
+    - get_hourly_df_optimisation(): retrieve hourly data from optimization
+    - get_monthly_df_optimisation(): retrieve monthly data from optimization
+    
+    .. versionadded:: 0.8.0
+        Introduced as the dedicated class for optimisation workflows.
+    
+    Usage
+    -----
+    Use `OptimisationSimulation` within ACCIM parametric and optimisation workflows.
+    
+    Examples
+    --------
+    obj = OptimisationSimulation()
+    """
+
+    def __init__(
+            self,
+            buildings: Union[Any, List] = None,
+            epws: list = None,
+            parameters_type: Literal['accim custom model', 'accim predefined model', 'apmv setpoints', None] = None,
+            output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
+            output_keep_existing: bool = True,
+            output_freqs: List[allowed_output_freqs] = ['hourly'],
+            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            make_averages: bool = False,
+            debugging: bool = False,
+            verbosemode: bool = True,
+            Output_take_dataframe: pd.DataFrame = None,
+            EnergyPlus_version: str = None,
+            VRFschedule: str = 'On 24/7',
+            eer: float = 2,
+            cop: float = 2.1,
+            hvac_zone_map: dict = None,
+            bypass_addAccis: bool = False,
+            building: Any = None,
+            accim_results_root: Optional[str] = None,
+            remove_output_tables: bool = True,
+    ):
+        """Initialize an optimisation simulation.
+        
+        :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
+        :param epws: one EPW filename or a list of EPW filenames.
+        :param parameters_type: parameter workflow to prepare: accim custom model,
+            accim predefined model, apmv setpoints, or None.
+        :param output_type: output selection preset used by addAccis.
+        :param output_keep_existing: keep existing IDF output objects when addAccis runs.
+        :param output_freqs: output frequencies requested from EnergyPlus.
+        :param ScriptType: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
+        :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
+        :param make_averages: create average outputs in addAccis.
+        :param debugging: create EnergyPlus EDD debugging output.
+        :param verbosemode: print addAccis progress messages.
+        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param bypass_addAccis: skip addAccis/apply_apmv_setpoints preparation.
+        :param building: legacy alias for buildings, accepted for backward compatibility.
+        :param accim_results_root: optional base directory used to resolve
+            relative output directories.
+        :param remove_output_tables: when True, removes Output:Table:Monthly and
+            Output:Table:Annual objects from each IDF during initialization.
+        
+        Usage
+        -----
+        Use `OptimisationSimulation.__init__` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        obj = OptimisationSimulation(buildings=..., epws=..., parameters_type=..., ...)
+        """
+        super().__init__(
+            buildings=buildings,
+            epws=epws,
+            parameters_type=parameters_type,
+            output_type=output_type,
+            output_keep_existing=output_keep_existing,
+            output_freqs=output_freqs,
+            ScriptType=ScriptType,
+            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+            make_averages=make_averages,
+            debugging=debugging,
+            verbosemode=verbosemode,
+            Output_take_dataframe=Output_take_dataframe,
+            EnergyPlus_version=EnergyPlus_version,
+            VRFschedule=VRFschedule,
+            eer=eer,
+            cop=cop,
+            hvac_zone_map=hvac_zone_map,
+            bypass_addAccis=bypass_addAccis,
+            building=building,
+            accim_results_root=accim_results_root,
+            remove_output_tables=remove_output_tables,
+        )
+        # Optimization-specific attributes
+        self.outputs_optimisation = None
+        self.outputs_optimisation_filepath = None
+        self.outputs_optimisation_hourly = None
+        self.outputs_optimisation_hourly_by_category = None
+        self.outputs_optimisation_monthly = None
+        self.outputs_optimisation_daily = None
+        self.outputs_optimisation_runperiod = None
+        self.outputs_optimisation_aggregated_by_category = {}
+        self.optimisation_csv_paths_non_dominated = []
+        self.optimisation_csv_paths_dominated = []
+        self.optimisation_csv_paths_non_dominated_by_epw = {}
+        self.optimisation_csv_paths_dominated_by_epw = {}
+        self.evaluators = {}
+
+    def get_hourly_df(
+            self,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Unified alias for optimisation hourly expansion.
+
+        Keeps API naming consistent with `ParametricSimulation.get_hourly_df`.
+        """
+        return self.get_hourly_df_optimisation(
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_output_df(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            frequency: Literal['daily', 'monthly', 'runperiod'] = 'monthly',
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Unified alias for optimisation aggregation.
+
+        Keeps API naming consistent with `ParametricSimulation.get_output_df`.
+        """
+        return self.get_output_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            frequency=frequency,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_monthly_df(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Unified monthly alias for optimisation aggregation."""
+        return self.get_monthly_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_daily_df(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Unified daily alias for optimisation aggregation."""
+        return self.get_daily_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+    def get_runperiod_df(
+            self,
+            agg_funcs: dict = None,
+            only_pareto_optimal: bool = True,
+            epw_filter: Union[str, List[str]] = None,
+            simulation_indices: Optional[List[int]] = None,
+            output_columns: Optional[List[str]] = None,
+            include_summary_columns: bool = True,
+            file_source: Literal['csv', 'eso'] = 'csv',
+            eplus_install_dir: Optional[str] = None,
+            only_run_period: bool = True,
+            start_date: Optional[str] = None,
+            skip_confirmation: bool = False,
+            normalize_per_m2: bool = False,
+            split_by: Optional[str] = None,
+            drop_all_empty_output_columns: bool = True,
+    ):
+        """Unified runperiod alias for optimisation aggregation."""
+        return self.get_runperiod_df_optimisation(
+            agg_funcs=agg_funcs,
+            only_pareto_optimal=only_pareto_optimal,
+            epw_filter=epw_filter,
+            simulation_indices=simulation_indices,
+            output_columns=output_columns,
+            include_summary_columns=include_summary_columns,
+            file_source=file_source,
+            eplus_install_dir=eplus_install_dir,
+            only_run_period=only_run_period,
+            start_date=start_date,
+            skip_confirmation=skip_confirmation,
+            normalize_per_m2=normalize_per_m2,
+            split_by=split_by,
+            drop_all_empty_output_columns=drop_all_empty_output_columns,
+        )
+
+
+class AccimPredefModelsParamSim(ParametricSimulation):
+    """Compatibility wrapper for predefined-model parametric simulations.
+
+    This class keeps the historical constructor style while delegating to
+    `ParametricSimulation` with `parameters_type='accim predefined model'`.
+
+    Usage
+    -----
+    Instantiate this wrapper when maintaining legacy scripts that still
+    reference the predefined-model class name.
+
+    Examples
+    --------
+    sim = AccimPredefModelsParamSim(buildings=[idf], epws=['Seville.epw'])
+    """
+
+    def __init__(
+            self,
+            buildings: Union[Any, List] = None,
+            epws: list = None,
+            output_type: Literal['standard', 'custom', 'detailed', 'simplified'] = 'standard',
+            output_keep_existing: bool = True,
+            output_freqs: List[allowed_output_freqs] = ['hourly'],
+            ScriptType: Literal['vrf_mm', 'vrf_ac', 'ex_ac'] = 'vrf_mm',
+            SupplyAirTempInputMethod: Literal['temperature difference', 'supply air temperature'] = 'temperature difference',
+            debugging: bool = False,
+            Output_take_dataframe: pd.DataFrame = None,
+            EnergyPlus_version: str = None,
+            VRFschedule: str = 'On 24/7',
+            eer: float = 2,
+            cop: float = 2.1,
+            hvac_zone_map: dict = None,
+            building: Any = None,
+            accim_results_root: Optional[str] = None,
+            remove_output_tables: bool = True,
+    ):
+        """Initialize the predefined-model parametric wrapper.
+        
+        :param buildings: one BESOS/eppy IDF object or a list of IDF objects.
+        :param epws: one EPW filename or a list of EPW filenames.
+        :param output_type: output selection preset used by addAccis.
+        :param output_keep_existing: keep existing IDF output objects when addAccis runs.
+        :param output_freqs: output frequencies requested from EnergyPlus.
+        :param ScriptType: ACCIM script type: vrf_mm, vrf_ac, or ex_ac.
+        :param SupplyAirTempInputMethod: ACCIM supply-air-temperature input mode.
+        :param debugging: create EnergyPlus EDD debugging output.
+        :param Output_take_dataframe: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param EnergyPlus_version: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param VRFschedule: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param eer: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param cop: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param hvac_zone_map: forwarded to ``accis.addAccis``; see addAccis docs.
+        :param building: legacy alias for buildings, accepted for backward compatibility.
+        :param accim_results_root: optional base directory used to resolve
+            relative output directories.
+        :param remove_output_tables: when True, removes Output:Table:Monthly and
+            Output:Table:Annual objects from each IDF during initialization.
+        
+        Usage
+        -----
+        Use `AccimPredefModelsParamSim.__init__` within ACCIM parametric and optimisation workflows.
+        
+        Examples
+        --------
+        obj = AccimPredefModelsParamSim(buildings=..., epws=..., output_type=..., ...)
+        """
+        if buildings is None and building is not None:
+            buildings = building
+        super().__init__(
+            buildings=buildings,
+            epws=epws,
+            parameters_type='accim predefined model',
+            output_type=output_type,
+            output_keep_existing=output_keep_existing,
+            output_freqs=output_freqs,
+            ScriptType=ScriptType,
+            SupplyAirTempInputMethod=SupplyAirTempInputMethod,
+            debugging=debugging,
+            Output_take_dataframe=Output_take_dataframe,
+            EnergyPlus_version=EnergyPlus_version,
+            VRFschedule=VRFschedule,
+            eer=eer,
+            cop=cop,
+            hvac_zone_map=hvac_zone_map,
+            accim_results_root=accim_results_root,
+            remove_output_tables=remove_output_tables,
+        )
+        for b in self.buildings:
+            accis.modifyAccis(idf=b, ComfStand=99, ComfMod=3, CAT=80, HVACmode=2, VentCtrl=0)
+

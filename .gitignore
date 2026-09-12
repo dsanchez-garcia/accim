@@ -1,6 +1,8 @@
 .spyproject/
 .idea/
 .pytest_cache/
+__pycache__/
+*.pyc
 dist/
 *.egg-info/
 tests_sim/
@@ -14,4 +16,5 @@ tests_sim/
 #/sim_test/
 /onedrive_backup/
 onedrive_backup
+ondrive_backup/
 docs/_build
