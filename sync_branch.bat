@@ -16,7 +16,9 @@ echo Sincronizando rama: %BRANCH_NAME% en la raiz
 echo ==========================================================
 
 :: 1. Limpieza de archivos basura
-git clean -fd
+:: Se excluyen Home.md y notes/ (vault de Obsidian) para no borrar
+:: documentacion/contexto de trabajo aun no commiteado.
+git clean -fd -e Home.md -e notes/
 
 :: 2. Actualización de datos
 git fetch --all

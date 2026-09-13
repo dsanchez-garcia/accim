@@ -18,3 +18,9 @@ tests_sim/
 onedrive_backup
 ondrive_backup/
 docs/_build
+
+# Obsidian vault (repo root is used as the vault).
+# Local interface state, workspace layout and device-specific preferences
+# must not be versioned. Vault content (Home.md, notes/) IS versionable
+# and lives outside this folder.
+.obsidian/
