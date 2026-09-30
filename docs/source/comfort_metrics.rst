@@ -1,7 +1,7 @@
 .. _independent-comfort-metrics:
 
 Independent comfort metrics and paper workflows
-==============================================
+============================================================
 
 Why reporting EMS is needed
 ---------------------------
@@ -148,7 +148,7 @@ Scope, collisions and aggregation
   replace globals or attach predictor-time managers to existing programs.
 
 Example: select a single-target EN objective
-------------------------------------------
+--------------------------------------------------
 
 The following assumes ``sim`` is an already prepared, single-building session
 with its parameter domains configured. It deliberately registers exactly one

@@ -13,7 +13,7 @@ contains medium/long-term initiatives. See `README.md <README.md>`_ for the
 complete project overview and legacy usage examples.
 
 Independent comfort reporting and paper workflows (unreleased)
--------------------------------------------------------------
+----------------------------------------------------------------------
 
 The source branch ``feat/comfort-metrics-experiment-api`` adds reporting metrics
 independent of optimised control setpoints, without changing thermostats,
