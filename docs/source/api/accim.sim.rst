@@ -1,6 +1,15 @@
 accim.sim package
 =================
 
+Independent reporting API
+-------------------------
+
+:func:`accim.sim.comfort_metrics.add_comfort_metrics` is also exported as
+``accim.sim.add_comfort_metrics``. It operates on an already prepared IDF,
+returns per-target metadata and supports ``dry_run`` without mutation. It does
+not install HVAC, change control setpoints, select readers or launch EnergyPlus.
+For scoped session integration and examples, see :doc:`../comfort_metrics`.
+
 Submodules
 ----------
 

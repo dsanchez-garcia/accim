@@ -39,6 +39,14 @@ Ya no se necesita `article_objectives.py` ni que un experimento importe 4.4.
 Las métricas nuevas se solicitan explícitamente después de preparar el control;
 no cambian automáticamente las consignas ni objetivos de otras campañas.
 
+Documentación pública de esta rama:
+[guía y contratos](https://github.com/dsanchez-garcia/accim/blob/feat/comfort-metrics-experiment-api/docs/source/comfort_metrics.rst),
+[referencia API](https://github.com/dsanchez-garcia/accim/blob/feat/comfort-metrics-experiment-api/docs/source/api/accim.parametric_and_optimisation.rst) e
+[instalación desde fuente](https://github.com/dsanchez-garcia/accim/blob/feat/comfort-metrics-experiment-api/docs/source/2_installation.md).
+La API general de métricas no impone los 312 m², zona única o presupuestos de
+este wrapper del paper. El método de sesión devuelve una tabla de outputs;
+el constructor de bajo nivel devuelve una lista dentro de su informe.
+
 Crear `inputs/` junto a los scripts y copiar allí, sin modificar los originales:
 
 - `ALJARAFE CENTER_onlyGeometry.idf` (privado; no redistribuir con el paper).
@@ -46,15 +54,17 @@ Crear `inputs/` junto a los scripts y copiar allí, sin modificar los originales
 
 Requisitos: Python ≥3.9 en un entorno compatible con BESOS; `accim` de la
 **rama `feat/comfort-metrics-experiment-api`**, BESOS, eppy, Platypus (`platypus-opt`),
-NumPy, pandas, SciPy, matplotlib, seaborn, unidecode y **openpyxl** para las
-exportaciones Excel de accim (ahora declarado como dependencia). Instalar accim desde una copia de esa rama con
+NumPy, pandas, SciPy, matplotlib, seaborn, unidecode y **openpyxl≥3.1.5** para las
+exportaciones Excel de accim (declarado como dependencia). Instalar accim desde una copia de esa rama con
 sus dependencias; no asumir que cualquier distribución «≥0.8.0» incorpora los
 arreglos recientes. Registrar el entorno instalado antes de la campaña.
 
 EnergyPlus y su IDD deben corresponder a la versión del IDF y estar configurados
 para BESOS. La copia de referencia inspeccionada declara 9.4. Si se necesita
-transición, hacerla sobre otra copia y usar otra campaña. La API real admite
-`EnergyPlus_version=None` para detectar la versión; **no admite `'auto'`**.
+transición, hacerla sobre otra copia y usar otra campaña. El constructor de sesión
+y la implementación **single-IDF** usada aquí admiten `EnergyPlus_version=None`
+para detectar la versión, pero no `'auto'`. No confundirlos con la API histórica
+`accis.addAccis` basada en carpetas, que sí admite `'auto'`.
 
 ## 2. Rutas y operaciones separadas
 
@@ -99,7 +109,8 @@ Para reanudar, sustituir `new` por `resume`, conservando campaña y configuraci�
 4.1 exige además `--count-note '<recuento real y decision>'` si el plan no da 132.
 Por defecto se usan dos workers y lotes de diez; ajustar `--workers` y
 `--batch-size` después de probar Windows multiprocessing en un área de pruebas.
-No hay un preflight que simule implícitamente.
+Este wrapper no llama a un preflight implícito. Esto no cambia los defaults de
+los setters generales de accim: `validate=True` puede solicitar discovery.
 
 En Spyder se puede editar `ARGUMENTS` con una lista explícita; en Jupyter importar
 `EXPERIMENT` y `SETTINGS` del archivo y llamar a
@@ -130,8 +141,9 @@ Cada postproceso escribe en otra carpeta y no sobrescribe el consolidado elegido
   otra configuración, no continuar la población antigua.
 - Los hashes nativos no cubren todo el método científico. `campaign.json` añade
   hashes de inputs/fuentes, parámetros, objetivos, unidades y configuración.
-  Cambiar modelo, outputs o fuente obliga a otra campaña. Los checkpoints
-  históricos sin ese manifiesto son deliberadamente **load-only**.
+  Cambiar modelo, outputs o fuente obliga a otra campaña. Las campañas históricas
+  sin ese manifiesto sólo se admiten para **cargar sus resultados consolidados**:
+  `load` rechaza el checkpoint como archivo de resultados y el wrapper no lo reanuda.
 - Para trasladar una campaña propia, copiar **todo su directorio**, incluidos
   `plan.pkl`, manifiesto, lotes, checkpoints, `active_checkpoint.txt`, `recovery/`
   y carpetas `accim*` (también las que llevan PID). Resume migra rutas en una

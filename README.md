@@ -212,8 +212,8 @@ You can apply aPMV setpoints to a building using the following function:
         other_PMV_related_outputs=bool, # other_PMV_related_outputs: True to include other PMV related outputs (e.g. Fanger PMV, PPD, etc). Default is True.
         adap_coeff_cooling=float or dict, # adap_coeff_cooling: Adaptive coefficient (lambda) for cooling. Can be a single float (applied globally) or a dict {TargetName: Value}. Default is 0.293.
         adap_coeff_heating=float or dict, # adap_coeff_heating: Adaptive coefficient (lambda) for heating. Float or Dict {TargetName: Value}. Default is -0.293.
-        pmv_cooling_sp=float or dict, # pmv_cooling_sp: Target PMV setpoint for cooling (e.g., 0.5). Float or Dict. Default is 0.5.
-        pmv_heating_sp=float or dict, # pmv_heating_sp: Target PMV setpoint for heating (e.g., -0.5). Float or Dict. Default is -0.5.
+        pmv_cooling_sp=float or dict, # pmv_cooling_sp: Target PMV setpoint for cooling. Current function default is -0.5; pass +0.5 explicitly for the paper setup.
+        pmv_heating_sp=float or dict, # pmv_heating_sp: Target PMV setpoint for heating. Current function default is +0.5; pass -0.5 explicitly for the paper setup.
         tolerance_cooling_sp_cooling_season=float or dict, # tolerance_cooling_sp_cooling_season: Tolerance to widen the cooling setpoint band during cooling season. Float or Dict. Default is -0.1.
         tolerance_cooling_sp_heating_season=float or dict, # tolerance_cooling_sp_heating_season: Tolerance to widen the cooling setpoint band during heating season. Float or Dict. Default is -0.1.
         tolerance_heating_sp_cooling_season=float or dict, # tolerance_heating_sp_cooling_season: Tolerance to widen the heating setpoint band during cooling season. Float or Dict. Default is 0.1.
@@ -230,6 +230,12 @@ You can apply aPMV setpoints to a building using the following function:
         dflt_for_tolerance_heating_sp_heating_season=float, # dflt_for_tolerance_heating_sp_heating_season: Default tolerance value if key is missing. Default is 0.1.
         verbose_mode=bool # verbose_mode: True to print detailed progress messages (added objects) and warnings to the console. Default is True.
     )
+
+**Default-value caution:** the current `apply_apmv_setpoints` signature uses
+cooling −0.5 / heating +0.5, unlike the intended paper initialisation. The paper
+workflow explicitly overrides them to cooling +0.5 / heating −0.5. The separate
+`dflt_for_pmv_*` arguments are fallbacks for missing dictionary entries, not the
+top-level defaults. Inspect the installed API and specify the intended signs.
 
 ### 2.2.7 Faster floor-area setup with representative IDFs
 
@@ -258,8 +264,14 @@ You can also provide an explicit map from category value to representative IDF:
 
 After running or loading parametric outputs, ACCIM now updates a compact in-memory
 summary (`sim.simulation_summary`) so you can quickly inspect what was executed.
+The example assumes `sim` is an existing configured session with results; the
+type annotation below documents that prerequisite and does not create a model.
 
 ```python
+from accim.parametric_and_optimisation import SimulationBase
+
+sim: SimulationBase  # Supplied by the preceding simulation or load workflow.
+
 # Build/refresh summary explicitly
 summary = sim.build_simulation_summary(df_source='parametric')
 print(summary['total_rows'])
@@ -294,6 +306,41 @@ sim.run_optimisation(
 
 Category detection is dynamic: if `epw_mapping_rules`/`idf_mapping_rules` exist,
 their keys are used first; otherwise ACCIM infers category columns from the DataFrame.
+
+### 2.2.9 Independent comfort reporting and paper workflows (unreleased)
+
+The source branch `feat/comfort-metrics-experiment-api` adds **reporting metrics
+independent of optimised setpoints**, without changing thermostats, schedules or
+native aPMV counters:
+
+- `accim.sim.add_comfort_metrics(...)`: add reporting EMS to an already prepared
+  IDF; supports a non-mutating `dry_run` and returns per-target output metadata.
+- `SimulationBase.add_comfort_metrics(...)`: inherited by `ParametricSimulation`
+  and `OptimisationSimulation`; appends output requests for selected buildings
+  without running discovery. Readers and objectives remain explicit choices.
+- `objectives.checked_sum_results(...)`: an opt-in, worker-importable scalar
+  reducer that rejects missing/non-finite series and performs no unit conversion.
+
+Use `fixed_en` for occupied Cat II degree-hours with clamped RMOT and fixed
++3/−4 K limits, or `fixed_pmv` for occupied absolute-Fanger-PMV integrals and
+fixed-threshold hours. Apply metrics **after** control preparation and **before**
+discovery/readers/problem creation. Multizone aggregation is a study decision,
+not an automatic sum interpreted as building hours.
+
+Separately, `accim.parametric_and_optimisation.run_paper_experiment(...)` manages
+the five **single-zone paper configurations**. Their scripts contain only
+configuration and package calls. `load` reads a chosen consolidated result, not
+a checkpoint, and never starts simulations. `discover`, `new` and `resume`
+require explicit opt-in; optimisation resume reuses finished IDF×EPW cases,
+not interrupted populations. The wrapper's 312 m² denominator, budgets and
+approval gates are **not defaults of the general simulation classes**.
+
+See the [API and usage guide](docs/source/comfort_metrics.rst),
+[source installation instructions](docs/source/2_installation.md), and
+[five-experiment handoff](llm_project_files/experimentos_preparados/README.md).
+These APIs require the corresponding source revision; a published version
+number alone does not establish their availability. Review and syntax checks
+have been completed, but numerical/EMS and runtime validation remain pending.
 
 # 3. Documentation
 

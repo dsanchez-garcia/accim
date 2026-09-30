@@ -29,6 +29,14 @@ Internal development log for the repository.
 ## Entries
 
 ### 2026-09-30
+#### [done] Align public documentation with the comfort and paper APIs
+- Context: Document the APIs introduced in `a9b9ebd` without changing implementation or unpublished manuscript files.
+- Changes: Expanded the guide's signatures, return shapes, metric roles, strict-reducer example, CLI options and resume/migration limits. Added matching README summaries and API navigation; documented source installation and paper-specific requirements. Corrected generic PMV default descriptions, single-IDF versus folder-based version detection, and the distinction between loading consolidated results and resuming checkpoints.
+- Files: `README.md`, `README.rst`, `docs/source/comfort_metrics.rst`, requirements/installation pages, both relevant API indexes, `docs/modulo_parametric_and_optimisation_articulo.md`, the prepared handoff README, `CHANGELOG.md`, and `notes/work-log.md`.
+- Verification: Documentation-only diff; 20 local links checked, two Python examples parsed with Python 3.9 grammar, and three public signatures compared with source ASTs. `git diff --check` passed. No example execution, tests, Sphinx/autodoc build, project imports, experiments or EnergyPlus runs; rendered documentation and numerical/runtime validation remain pending.
+- Next step: Publish this documentation update on `feat/comfort-metrics-experiment-api`; review rendered docs and perform the separately documented checks on the simulation PC.
+
+### 2026-09-30
 #### [done] Integrate independent comfort reporting and paper orchestration into ACCIM
 - Context: The paper entries must use ACCIM APIs, not local EMS or workflow helpers. Work isolated on `feat/comfort-metrics-experiment-api` at the user's request.
 - Changes: Added reporting-only `accim.sim.add_comfort_metrics` and a scoped `SimulationBase` wrapper, strict scalar reducer and package-owned `run_paper_experiment`; all five entries now contain configuration and public package calls only. Added idempotence/collision checks, in-memory/on-disk discovery invalidation, exact LHS signature checks, legacy path-base mapping, finite-area validation and resolution-independent hourly dates. The native moving-reference objective in 4.5 is unchanged; fixed-Fanger outputs remain diagnostics.

@@ -1,6 +1,21 @@
 accim.parametric\_and\_optimisation package
 ===========================================
 
+Choosing an API
+---------------
+
+Use ``ParametricSimulation`` or ``OptimisationSimulation`` for general studies.
+Their inherited :meth:`~accim.parametric_and_optimisation.main.SimulationBase.add_comfort_metrics`
+method adds independent reporting outputs, not optimisation objectives;
+readers and reducers remain explicit choices. The strict reducer is
+:func:`~accim.parametric_and_optimisation.objectives.checked_sum_results`.
+
+:func:`~accim.parametric_and_optimisation.paper_experiments.run_paper_experiment`
+is a separate, paper-specific convenience API for five single-zone workflows,
+with its own CLI opt-in and campaign-review requirements. Those gates are not
+defaults of the general run methods. See :doc:`../comfort_metrics` for exact
+signatures, return types, metric definitions and load/resume boundaries.
+
 Subpackages
 -----------
 

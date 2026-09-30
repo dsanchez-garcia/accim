@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-09-30 — Update public comfort API documentation
+
+- **Objective**: Align discoverability and usage documentation with the package APIs, then publish the documentation-only update on the current branch.
+- **Affected files**: [[../README.md]], [[../README.rst]], [[../docs/source/comfort_metrics.rst|API guide]], related requirements/installation/API pages, [[../docs/modulo_parametric_and_optimisation_articulo.md|technical description]], [[../llm_project_files/experimentos_preparados/README.md|handoff]], [[../CHANGELOG.md]] and [[../DEVLOG.md]].
+- **Finding or decision**: Generic metric APIs and the paper wrapper have different contracts; their documentation now distinguishes them explicitly. No new architectural decision or changes to source/manuscript artifacts.
+- **Validation**: Local links, Python example syntax, source signatures and whitespace checked statically. No examples, builds, tests or simulations executed.
+- **Next step**: Review rendered documentation and complete the existing simulation-PC checks before using the campaigns scientifically.
+
 ## 2026-09-30 — Promote paper helpers into ACCIM APIs
 
 - **Objective**: Make all five paper entries configuration-only and integrate their independent comfort/reporting capabilities into ACCIM on a new branch.
