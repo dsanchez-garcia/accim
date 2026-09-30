@@ -123,6 +123,7 @@ setuptools.setup(
         'matplotlib',
         'numpy',
         'pandas',
+        'openpyxl>=3.1.5',  # Required by the automatic XLSX campaign exports.
         'datapackage',
         'unidecode',
         'besos',

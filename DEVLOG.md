@@ -28,6 +28,22 @@ Internal development log for the repository.
 
 ## Entries
 
+### 2026-09-30
+#### [done] Integrate independent comfort reporting and paper orchestration into ACCIM
+- Context: The paper entries must use ACCIM APIs, not local EMS or workflow helpers. Work isolated on `feat/comfort-metrics-experiment-api` at the user's request.
+- Changes: Added reporting-only `accim.sim.add_comfort_metrics` and a scoped `SimulationBase` wrapper, strict scalar reducer and package-owned `run_paper_experiment`; all five entries now contain configuration and public package calls only. Added idempotence/collision checks, in-memory/on-disk discovery invalidation, exact LHS signature checks, legacy path-base mapping, finite-area validation and resolution-independent hourly dates. The native moving-reference objective in 4.5 is unchanged; fixed-Fanger outputs remain diagnostics.
+- Files: `accim/sim/comfort_metrics.py`, relevant package exports, `accim/parametric_and_optimisation/{main,objectives,paper_experiments}.py`, `setup.py`, two new hermetic test modules, `docs/source/comfort_metrics.rst` and indexes, the six-file prepared handoff, `CHANGELOG.md`, and targeted vault logs.
+- Verification: Source/API review and AST parse/compile (Python 3.9 grammar), including checks that entries contain no functions/classes/lambdas or sibling-experiment imports. `git diff --check`; dependency advisory lookup found no known CVEs for openpyxl 3.1.5. Tests were written but not run. No project imports, experiments, sampling, discovery, preflight or EnergyPlus execution. The local pandas-stubs environment warning remains unrelated.
+- Next step: Run the hermetic tests in a configured environment and complete numerical/EMS validation on the simulation PC before campaigns; preserve legacy results and reconcile the manuscript count/area/schedule assumptions.
+
+### 2026-09-30
+#### [done] Prepare the five paper experiments without running simulations
+- Context: Produce a portable handoff from the linked paper files, including the later archived 4.2 corrections, while preserving reference scripts, results and checkpoints.
+- Changes: Added five uniquely named scripts and a README under `llm_project_files/experimentos_preparados/`. Experiment 4.4 contains its own occupied fixed-EN metric and import-safe shared utilities; execution, resume, discovery and load are explicit separate operations. Added content-aware checkpoint checks, saved LHS plans, selective energy normalization, per-climate compromise selection and exact hourly CSV/date handling.
+- Files: `llm_project_files/experimentos_preparados/*.py`, `llm_project_files/experimentos_preparados/README.md`; session context in `notes/work-log.md` and pending author checks in `notes/questions.md`. Package source and reference artifacts were not changed.
+- Verification: Read current API/source and relevant tests as text; parse/compile delivery ASTs without imports or execution; inspect EnergyPlus 9.4 IDD fields as text. Static catalogue intersection gives 40 combinations / 120 cases for 4.1, versus the requested forecast of 132. The archived 4.2 sidecar declares 300/300; the inspected hourly CSV header lacks PMOT/setpoints. No experiments, samplers, discovery, preflight or EnergyPlus simulations were executed. The IDE's unrelated pandas-stubs compatibility warning was left unchanged.
+- Next step: Follow the handoff README on the simulation PC; resolve count/area/schedule differences and validate EMS numerics, worker transport, output contracts and resume before new campaigns. Update manuscript claims separately.
+
 ### 2026-06-11
 #### [done] Align README.rst with development workflow documentation
 - Context: The workflow section had been added in `README.md` but not mirrored in `README.rst`.

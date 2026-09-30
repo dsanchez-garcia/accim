@@ -51,6 +51,7 @@ from .main import (
     compare_multiple_pickles_with_reference,
     preflight_report,
 )
+from .paper_experiments import run_paper_experiment
 
 __all__ = [
     'ParametricSimulation',
@@ -62,4 +63,5 @@ __all__ = [
     'compare_latest_pickles_in_folders',
     'compare_multiple_pickles_with_reference',
     'preflight_report',
+    'run_paper_experiment',
 ]

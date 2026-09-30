@@ -81,6 +81,37 @@ def sum_results(result):
     return result.data["Value"].sum()
 
 
+def checked_sum_results(result):
+    """Sum a nonempty finite scalar-valued BESOS series, failing on bad data.
+
+    Unlike the permissive legacy :func:`sum_results`, this opt-in reducer
+    rejects missing ``Value``, empty/non-numeric/multidimensional series,
+    NaN/Inf and overflow instead of allowing pandas to skip missing values.
+    Returns a finite Python ``float``. It is importable by multiprocessing
+    workers as ``accim.parametric_and_optimisation.objectives:checked_sum_results``.
+
+    Use for cumulative energy or timestep-increment discomfort objectives.
+    Do not multiply already integrated hourly degree-hour/hour outputs by
+    duration again. This reducer performs no unit conversion.
+    """
+    import numpy as np
+
+    data = getattr(result, 'data', None)
+    if data is None or 'Value' not in data:
+        raise ValueError('Missing BESOS result / Value series; inspect the EnergyPlus error file.')
+    try:
+        values = np.asarray(data['Value'], dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('Objective values must be numeric scalars.') from exc
+    if values.ndim != 1 or values.size == 0 or not np.isfinite(values).all():
+        raise ValueError('Objective series must be nonempty, one-dimensional and finite.')
+    with np.errstate(over='ignore', invalid='ignore'):
+        total = float(values.sum())
+    if not np.isfinite(total):
+        raise ValueError('Objective sum must be a finite scalar.')
+    return total
+
+
 def return_time_series(result):
     """Convert ``result.data["Value"]`` to a Python list.
 

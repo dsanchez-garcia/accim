@@ -116,6 +116,13 @@ accim.sim.apmv\_setpoints module
    :show-inheritance:
    :undoc-members:
 
+accim.sim.comfort\_metrics module
+---------------------------------
+
+.. automodule:: accim.sim.comfort_metrics
+   :members:
+   :show-inheritance:
+
 accim.sim.chile\_funcs module
 -----------------------------
 

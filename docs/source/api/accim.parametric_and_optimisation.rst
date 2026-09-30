@@ -36,6 +36,12 @@ accim.parametric\_and\_optimisation.objectives module
    :show-inheritance:
    :undoc-members:
 
+accim.parametric\_and\_optimisation.paper\_experiments module
+-------------------------------------------------------------
+
+.. automodule:: accim.parametric_and_optimisation.paper_experiments
+   :members: run_paper_experiment
+
 accim.parametric\_and\_optimisation.parameters module
 -----------------------------------------------------
 

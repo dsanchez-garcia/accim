@@ -24,4 +24,10 @@ it here as answered).
 
 ## Open
 
-_No open questions at the moment._
+## 2026-09-30 — Reconcile paper assumptions before simulation campaigns
+
+- **Context**: [[../llm_project_files/experimentos_preparados/README.md|The prepared handoff]] documents source-level differences affecting the experiment counts, conditioned-area denominator, occupancy schedules and legacy metric equivalence.
+- **Why it matters**: The paper must describe the actual accepted input model and comfort reference, not inherit assumptions from older scripts or label static review as simulation validation.
+- **Options considered**: Review and explicitly accept the current model/catalogue, or create a separate corrected-input campaign; never force invalid combinations or silently merge incompatible checkpoints.
+- **Owner**: Paper author / simulation-PC operator.
+- **Status**: open; complete the handoff's pending checks and update the manuscript before publication.

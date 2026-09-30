@@ -3995,6 +3995,70 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         )
         return self.get_output_meters_df_from_idf(idf_scope=idf_scope)
 
+    def add_comfort_metrics(
+        self,
+        *,
+        metrics=('fixed_en',),
+        name_prefix: str = 'ACCIM_CM',
+        idf_scope: Any = 'all',
+        output_freqs=None,
+    ) -> dict:
+        """Add independent occupied comfort metrics after control preparation.
+
+        Wraps :func:`accim.sim.comfort_metrics.add_comfort_metrics` for the
+        selected buildings. ``fixed_en`` reports Cat II degree-hours with
+        clamped RMOT and +3/-4 K limits; ``fixed_pmv`` reports occupied |PMV|
+        integrals and fixed-threshold hours. See that function for definitions
+        and per-target (not automatically building-aggregated) semantics.
+
+        Output requests are appended at ``output_freqs`` (defaults to this
+        session's frequencies) with ``validate=False``. No discovery, preflight
+        or simulation is run. Cached output availability is invalidated because
+        new EMS variables must be discovered explicitly if validation is wanted.
+        The next explicit RDD/MDD discovery also ignores stale disk dictionaries;
+        adding metrics itself never starts discovery or deletes those files.
+        Call after ACCIS/aPMV and before discovery/readers/problem creation;
+        reapplying control transformations afterwards can invalidate the metrics.
+
+        Returns a ``buildings`` report and an ``outputs`` DataFrame containing
+        idf, metric, variable_name, key_value, units, aggregation and frequency.
+        Use selected rows with ``set_output_readers``; this method does not
+        replace existing readers or silently turn diagnostics into objectives.
+        Repeated identical calls are idempotent; name conflicts raise.
+        """
+        from accim.sim.comfort_metrics import add_comfort_metrics
+
+        buildings = self._resolve_idf_scope(idf_scope)
+        if not buildings:
+            raise ValueError('Comfort metrics require at least one prepared building.')
+        frequencies = self.output_freqs if output_freqs is None else output_freqs
+        if isinstance(frequencies, str):
+            frequencies = [frequencies]
+        frequencies = list(dict.fromkeys(str(f).strip().capitalize() for f in frequencies))
+        allowed = {'Detailed', 'Timestep', 'Hourly', 'Daily', 'Monthly', 'Runperiod', 'Annual'}
+        if not frequencies or not set(frequencies).issubset(allowed):
+            raise ValueError(f'Unsupported comfort output frequencies: {frequencies}.')
+        # Check every selected IDF before mutating any of them.
+        for _, building in buildings:
+            add_comfort_metrics(building, metrics=metrics, name_prefix=name_prefix, dry_run=True)
+        self.available_outputs_ = None
+        self._output_definitions_changed = True
+        reports, rows = {}, []
+        for idx, building in buildings:
+            report = add_comfort_metrics(building, metrics=metrics, name_prefix=name_prefix)
+            identifier = self._get_idf_identifier(building, idx)
+            reports[identifier] = report
+            requests = []
+            for output in report['outputs']:
+                for frequency in frequencies:
+                    rows.append(dict(output, idf=identifier, frequency=frequency))
+                    requests.append(dict(key_value='*', variable_name=output['variable_name'], frequency=frequency))
+            report['requests'] = self.set_output_variables_to_idf(
+                df_output_variable=pd.DataFrame(requests), idf_scope=idx,
+                mode='append', validate=False,
+            )
+        return {'buildings': reports, 'outputs': pd.DataFrame(rows)}
+
     def _get_available_outputs_for_validation(
         self,
         validation_scope: Any,
@@ -5247,6 +5311,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             and `available_outputs/eplusout.mdd` when available, otherwise generates
             them with a reduced test simulation and parses them directly.
         :param refresh: when False, reuse cached results in ``self.available_outputs_``.
+            After ``add_comfort_metrics`` this is forced to True once, so old
+            in-memory or on-disk dictionaries cannot hide newly added outputs.
         :param idf_scope: IDFs to discover. Defaults to 'all'. Use 'first', an index,
             an IDF name, or a list of selectors to run fewer test simulations.
         :param keep_available_outputs: when False (default), removes the temporary
@@ -5267,6 +5333,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             )
         requested_prefer = prefer
         scope_label = self._idf_scope_label(idf_scope)
+        if getattr(self, '_output_definitions_changed', False):
+            refresh = True
         if not refresh and hasattr(self, 'available_outputs_') and isinstance(getattr(self, 'available_outputs_'), dict):
             cached = self.available_outputs_
             if 'df_meters' in cached and 'df_vars' in cached and 'meta' in cached:
@@ -5397,6 +5465,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     df[c] = df[c].astype(str)
 
         self.available_outputs_ = {'df_meters': df_meters.copy(), 'df_vars': df_vars.copy(), 'meta': dict(meta)}
+        self._output_definitions_changed = False
         if cleanup_generated_rdd_mdd_dir:
             import shutil
             shutil.rmtree('available_outputs', ignore_errors=True)

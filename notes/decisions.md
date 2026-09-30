@@ -11,6 +11,13 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-09-30 — Independent comfort metrics belong to an opt-in package API
+
+- **Status**: accepted
+- **Context**: The paper experiments must use ACCIM functions rather than maintain separate EMS/worker/workflow implementations in scripts.
+- **Decision**: Expose reporting-only metrics and the paper convenience workflow from ACCIM; keep experiment entries declarative. Metric selection does not automatically change control setpoints or existing optimisation objectives. See [[../docs/source/comfort_metrics.rst|the API guide]] for the technical contract.
+- **Consequences**: Install the corresponding package revision with the entries. Legacy campaign compatibility is checked explicitly; static preparation does not establish numerical or EnergyPlus validity. See [[questions.md]] for the remaining author/operator checks.
+
 ## 2026-09-13 — Treat `AGENTS_v2.md` as the current `AGENTS.md`
 
 - **Status**: accepted

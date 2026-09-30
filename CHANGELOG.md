@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Independent occupied comfort reporting**: Added `accim.sim.add_comfort_metrics(...)` and `SimulationBase.add_comfort_metrics(...)` for fixed EN Cat II degree-hours and fixed-Fanger diagnostics, separate from optimised control setpoints. Includes target resolution, idempotent insertion, EMS collision checks and scoped append-only output requests; adding metrics never runs discovery or simulations.
+- **Package-owned paper workflows**: Added `run_paper_experiment(...)`; the five prepared entries now contain configuration and ACCIM calls only. Execution, resume, discovery and result-only loading remain separate, with exact-plan/checkpoint checks, selective normalization and portable hourly postprocessing. EnergyPlus/numerical validation remains pending; this change was reviewed statically only.
+- **Strict scalar reducer**: Added opt-in `checked_sum_results(...)`, importable by workers, rejecting missing/empty/non-scalar/non-finite objective series without changing legacy `sum_results` behavior.
+- **Campaign XLSX dependency**: Declared `openpyxl>=3.1.5` for the existing automatic Excel exports.
 - **Template-based Plot Filenames with Category Placeholders**: Added `filename_template` support across plotting helpers in `PlottingMixin` (hourly, parametric, categorical, Pareto/MCDM, pairwise, and radar workflows).
   - Filenames can be customized via `str.format(...)` placeholders, including category labels sourced from `epw_mapping_rules` and `idf_mapping_rules` when those columns are present in the filtered plotting DataFrame.
   - Added method-specific placeholders (for example, `epw_tag`, `x`, `y`, `y_var`, `kind`, `df_source`) and automatic `.png` suffix completion when omitted.
