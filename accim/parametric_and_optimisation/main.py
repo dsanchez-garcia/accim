@@ -3142,6 +3142,49 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         return out_dir_text
 
+    # Windows MAX_PATH limit honoured by EnergyPlus (not long-path aware).
+    _ENERGYPLUS_MAX_PATH = 260
+    # Worst-case suffix BESOS/EnergyPlus append to out_dir:
+    # <sep>BESOS_Output_<pid><sep><20-char run id><sep>eplusout.audit
+    _ENERGYPLUS_OUT_SUFFIX_LEN = len('\\BESOS_Output_123456\\' + 'X' * 20 + '\\eplusout.audit')
+
+    @classmethod
+    def _warn_if_out_dir_too_long_for_energyplus(cls, out_dir: str, context: str) -> None:
+        """Warn when EnergyPlus output file paths would exceed Windows MAX_PATH.
+
+        EnergyPlus (at least up to 9.x) cannot open output files whose full path
+        is 260 characters or longer, even if Windows long paths are enabled. It
+        then aborts with "EnergyPlus Terminated--Error(s) Detected" and no
+        ``eplusout.err`` is written, which is hard to diagnose.
+
+        Parameters
+        ----------
+        out_dir : str
+            Results directory passed to BESOS.
+        context : str
+            Calling method name, used in the message.
+
+        Examples
+        --------
+        self._warn_if_out_dir_too_long_for_energyplus(out_dir, 'run_optimisation')
+        """
+        if os.name != 'nt':
+            return
+        abs_out_dir = os.path.abspath(os.fspath(out_dir))
+        estimated = len(abs_out_dir) + cls._ENERGYPLUS_OUT_SUFFIX_LEN
+        if estimated >= cls._ENERGYPLUS_MAX_PATH:
+            warnings.warn(
+                f'[{context}] The results directory path is {len(abs_out_dir)} characters long; '
+                f'EnergyPlus output files inside it will reach ~{estimated} characters, which exceeds '
+                f'the Windows MAX_PATH limit ({cls._ENERGYPLUS_MAX_PATH}). EnergyPlus is likely to fail '
+                '("EnergyPlus Terminated--Error(s) Detected") without writing eplusout.err. '
+                f'Use a shorter out_dir (at most ~{cls._ENERGYPLUS_MAX_PATH - cls._ENERGYPLUS_OUT_SUFFIX_LEN - 1} '
+                'characters), e.g. closer to the drive root. Note that Path.resolve() expands '
+                f'junctions/symlinks to their (possibly longer) real path. out_dir: {abs_out_dir}',
+                UserWarning,
+                stacklevel=3,
+            )
+
     @staticmethod
     def _warn_if_sim_file_cleanup_can_remove_csv(
         sim_files_extensions: Optional[tuple[str, ...]],
@@ -8988,6 +9031,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             accim_results_root=accim_results_root,
         )
         os.makedirs(out_dir, exist_ok=True)
+        self._warn_if_out_dir_too_long_for_energyplus(out_dir, 'run_parametric_simulation')
         batches_dir = self._default_parametric_batches_dir(out_dir=out_dir)
         os.makedirs(batches_dir, exist_ok=True)
 
@@ -9612,6 +9656,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             export_summary_json: bool = False,
             summary_json_path: Optional[str] = None,
             accim_results_root: Optional[str] = None,
+            show_progress: bool = True,
     ) -> pd.DataFrame:
         """Runs the optimisation.
         
@@ -9664,6 +9709,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             unless ``export_summary_json=True``.
         :param accim_results_root: optional root folder used to resolve ``out_dir``
             when ``out_dir`` is provided as a relative path.
+        :param show_progress: when True (default), prints progress information while
+            simulations run: current IDF/EPW case, generation, completed simulations
+            within the generation, the case and the whole run, elapsed time and ETA.
+            The total number of simulations is an estimate
+            (``population_size × ⌈evaluations / population_size⌉`` per case, see
+            :meth:`estimate_optimisation_sims`), hence it is shown prefixed with ``~``.
         :return: a pandas DataFrame
         
         Notes::
@@ -9788,6 +9839,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if pareto_separate_by_idf:
             pareto_group_by.append('idf')
         os.makedirs(out_dir, exist_ok=True)
+        self._warn_if_out_dir_too_long_for_energyplus(out_dir, 'run_optimisation')
         # Save an IDF backup into the results folder before starting
         self._save_idf_backup(label='pre_optimisation', out_dir=out_dir)
         from besos.evaluator import AbstractEvaluator
@@ -9797,12 +9849,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         platypus_evaluator = None
         original_evaluator = None
         PlatypusConfig = None
-        if processes > 1:
+        progress_reporter = None
+        if processes > 1 or show_progress:
             import platypus
             from platypus.config import PlatypusConfig
             original_evaluator = PlatypusConfig.default_evaluator
-            platypus_evaluator = platypus.ProcessPoolEvaluator(processes)
-            PlatypusConfig.default_evaluator = platypus_evaluator
+            if processes > 1:
+                platypus_evaluator = platypus.ProcessPoolEvaluator(processes)
+                PlatypusConfig.default_evaluator = platypus_evaluator
         total_cases = 0
         try:
             buildings_by_idf = self._get_buildings_by_idf()
@@ -9818,8 +9872,35 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     for (case_id, case_payload) in checkpoint_cases.items()
                     if case_id in planned_case_ids
                 }
+            if show_progress:
+                import math
+                from accim.parametric_and_optimisation.optimisation_progress import (
+                    OptimisationProgressReporter,
+                    ProgressReportingEvaluator,
+                )
+                pop = max(1, int(population_size))
+                sims_per_case = pop * max(1, math.ceil(int(evaluations) / pop))
+                resumed_cases = len(checkpoint_cases)
+                progress_reporter = OptimisationProgressReporter(
+                    total_cases=total_cases,
+                    sims_per_case=sims_per_case,
+                    total_expected_sims=sims_per_case * max(0, total_cases - resumed_cases),
+                    processes=processes,
+                )
+                PlatypusConfig.default_evaluator = ProgressReportingEvaluator(
+                    inner=PlatypusConfig.default_evaluator,
+                    reporter=progress_reporter,
+                )
+                progress_reporter.start_run(
+                    algorithm=str(algorithm),
+                    evaluations=int(evaluations),
+                    population_size=pop,
+                    resumed_cases=resumed_cases,
+                )
+            case_counter = 0
             for (idf_basename, b) in buildings_by_idf.items():
                 for epw in epws:
+                    case_counter += 1
                     epwname = epw.split('.epw')[0]
                     key = f"{idf_basename}_{epwname}" if len(self.buildings) > 1 else epwname
                     case_id = f'{idf_basename}::{epwname}'
@@ -9843,6 +9924,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             full_outputs_dict.update({key: resumed_full})
                             evaluators.update({key: None})
                             print(f'[run_optimisation] Reused checkpoint case: {case_id}')
+                            if progress_reporter is not None:
+                                progress_reporter.skip_case(case_counter, idf_basename, epwname)
                             continue
 
                         warnings.warn(
@@ -9850,6 +9933,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             UserWarning,
                         )
 
+                    if progress_reporter is not None:
+                        progress_reporter.start_case(case_counter, idf_basename, epwname)
                     evaluator = self.set_evaluator(epw=epw, out_dir=out_dir, building=b)
                     evaluator._keep_sim_files = keep_sim_files
                     evaluator._keep_sim_files_batch_size = keep_sim_files_batch_size
@@ -9907,6 +9992,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     full_outputs_optimisation['idf'] = idf_basename
                     full_outputs_dict.update({key: full_outputs_optimisation})
                     evaluators.update({key: evaluator})
+                    if progress_reporter is not None:
+                        progress_reporter.end_case()
 
                     checkpoint_cases[case_id] = {
                         'idf': idf_basename,
@@ -9928,8 +10015,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             f'({saved_cases} case(s), {len(checkpoint_cases)}/{total_cases}).'
                         )
         finally:
-            if processes > 1 and platypus_evaluator is not None and PlatypusConfig is not None:
+            if platypus_evaluator is not None:
                 platypus_evaluator.close()
+            if PlatypusConfig is not None:
                 PlatypusConfig.default_evaluator = original_evaluator
             if hasattr(AbstractEvaluator, '_original_to_platypus'):
                 AbstractEvaluator.to_platypus = AbstractEvaluator._original_to_platypus
