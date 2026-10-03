@@ -12086,6 +12086,488 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         else:
             raise ValueError('No previous simulation run type detected. Please run parametric or optimisation first.')
 
+    # ------------------------------------------------------------------
+    # Filtered copies of per-simulation EnergyPlus CSV outputs
+    # ------------------------------------------------------------------
+
+    _FILTERED_CSV_REPORT_COLUMNS = [
+        'source_path',
+        'destination_path',
+        'status',
+        'rows',
+        'original_columns',
+        'kept_columns',
+        'source_size_bytes',
+        'destination_size_bytes',
+        'reduction_pct',
+        'unmatched_patterns',
+        'detail',
+    ]
+
+    @staticmethod
+    def _is_eplus_time_column(name: Any) -> bool:
+        """Return True when ``name`` is the EnergyPlus ``Date/Time`` column.
+
+        The comparison ignores surrounding whitespace and letter case.
+        """
+        return isinstance(name, str) and name.strip().lower() == 'date/time'
+
+    @staticmethod
+    def _normalise_csv_column_patterns(value: Any, arg_name: str) -> List[str]:
+        """Validate and normalise a column-pattern argument into a list of strings."""
+        if isinstance(value, str):
+            items = [value]
+        else:
+            try:
+                items = list(value)
+            except TypeError as exc:
+                raise TypeError(f'{arg_name} must be a string or a sequence of strings.') from exc
+        if len(items) == 0:
+            raise ValueError(f'{arg_name} must contain at least one column name or pattern.')
+        for item in items:
+            if not isinstance(item, str) or not item.strip():
+                raise ValueError(f'{arg_name} must only contain non-empty strings; got {item!r}.')
+        return list(dict.fromkeys(items))
+
+    @classmethod
+    def _match_csv_column_patterns(cls, columns: List[str], patterns: List[str]) -> tuple:
+        """Match column patterns against CSV header names.
+
+        Follows the matching rules of ``_extract_hourly_outputs_from_file``:
+        exact name first, then case-insensitive exact name, then
+        case-insensitive substring (which may match several columns). The
+        ``Date/Time`` column is never a match target; a pattern naming it is
+        accepted silently because that column is always preserved.
+
+        Returns
+        -------
+        tuple(set, list)
+            Matched column positions and the patterns without any match.
+        """
+        candidates = [(i, c) for (i, c) in enumerate(columns) if not cls._is_eplus_time_column(c)]
+        matched = set()
+        unmatched = []
+        for pattern in patterns:
+            if cls._is_eplus_time_column(pattern):
+                continue
+            exact = [i for (i, c) in candidates if c == pattern]
+            if exact:
+                matched.update(exact)
+                continue
+            pattern_lower = pattern.lower()
+            ci_exact = [i for (i, c) in candidates if str(c).lower() == pattern_lower]
+            if ci_exact:
+                matched.update(ci_exact)
+                continue
+            contains = [i for (i, c) in candidates if pattern_lower in str(c).lower()]
+            if contains:
+                matched.update(contains)
+            else:
+                unmatched.append(pattern)
+        return matched, unmatched
+
+    def _collect_session_output_csv_paths(self) -> List[dict]:
+        """Collect per-simulation CSV paths from the results loaded in the session.
+
+        Uses ``_resolve_simulation_file_path`` for every result row. For
+        optimisation sessions all evaluations are included (dominated and
+        non-dominated), plus the cached ``optimisation_csv_paths_*`` lists.
+
+        Returns
+        -------
+        list of dict
+            Entries with ``source_path`` (or None when unresolved) and ``detail``.
+        """
+        def _has_rows(df: Any) -> bool:
+            return isinstance(df, pd.DataFrame) and not df.empty
+
+        run_type = getattr(self, 'last_run_type', None)
+        param_df = getattr(self, 'outputs_param_simulation', None)
+        optim_df = getattr(self, 'outputs_optimisation', None)
+        if run_type == 'optimisation' and _has_rows(optim_df):
+            source, df = 'optimisation', optim_df
+        elif run_type == 'parametric' and _has_rows(param_df):
+            source, df = 'parametric', param_df
+        elif _has_rows(optim_df):
+            source, df = 'optimisation', optim_df
+        elif _has_rows(param_df):
+            source, df = 'parametric', param_df
+        else:
+            raise ValueError(
+                'No simulation results are loaded in this session. Run or load parametric/optimisation '
+                'outputs first, or pass csv_paths=[...] explicitly.'
+            )
+        entries = []
+        for (idx, row) in df.iterrows():
+            try:
+                path = self._resolve_simulation_file_path(row=row, file_source='csv')
+            except ValueError as exc:
+                entries.append({'source_path': None, 'detail': f'{source} result row {idx!r}: {exc}'})
+                continue
+            entries.append({'source_path': path, 'detail': None})
+        if source == 'optimisation':
+            for attr in ('optimisation_csv_paths_non_dominated', 'optimisation_csv_paths_dominated'):
+                for path in getattr(self, attr, None) or []:
+                    if path is not None and pd.notna(path):
+                        entries.append({'source_path': path, 'detail': None})
+        return entries
+
+    @staticmethod
+    def _detect_csv_line_terminator(path: str) -> str:
+        """Return the line terminator used by the first line of ``path``."""
+        with open(path, 'rb') as fh:
+            head = fh.read(1 << 16)
+        newline_pos = head.find(b'\n')
+        if newline_pos > 0 and head[newline_pos - 1:newline_pos] == b'\r':
+            return '\r\n'
+        return '\n'
+
+    @staticmethod
+    def _plan_filtered_csv_destination(source_abs: str, output_dir_abs: Optional[str], suffix: str, used_keys: set) -> str:
+        """Build a collision-free destination path for one filtered CSV copy."""
+        (stem, ext) = os.path.splitext(os.path.basename(source_abs))
+        ext = ext or '.csv'
+        if output_dir_abs is None:
+            target_dir = os.path.dirname(source_abs)
+            base_name = f'{stem}{suffix}'
+        else:
+            target_dir = output_dir_abs
+            parent_name = os.path.basename(os.path.dirname(source_abs))
+            base_name = f'{parent_name}_{stem}{suffix}' if parent_name else f'{stem}{suffix}'
+        candidate = os.path.join(target_dir, f'{base_name}{ext}')
+        counter = 2
+        while os.path.normcase(candidate) in used_keys:
+            candidate = os.path.join(target_dir, f'{base_name}_{counter}{ext}')
+            counter += 1
+        used_keys.add(os.path.normcase(candidate))
+        return candidate
+
+    def _filter_single_output_csv(
+            self,
+            source_path: str,
+            destination_path: str,
+            mode: Literal['keep', 'drop'],
+            patterns: List[str],
+            chunksize: Optional[int],
+            overwrite: bool,
+            encoding: str,
+    ) -> dict:
+        """Write a filtered copy of one EnergyPlus CSV and return its report record."""
+        import csv as _csv
+        import tempfile as _tempfile
+
+        record = {c: None for c in self._FILTERED_CSV_REPORT_COLUMNS}
+        record.update({'source_path': source_path, 'destination_path': destination_path, 'unmatched_patterns': []})
+        if not os.path.isfile(source_path):
+            record.update({'status': 'missing', 'detail': 'Source CSV file not found.'})
+            return record
+        record['source_size_bytes'] = os.path.getsize(source_path)
+        if os.path.exists(destination_path) and not overwrite:
+            record.update({
+                'status': 'skipped_existing',
+                'detail': 'Destination already exists; pass overwrite=True to replace it.',
+            })
+            return record
+        try:
+            header = pd.read_csv(source_path, nrows=0, encoding=encoding).columns.tolist()
+        except Exception as exc:
+            record.update({'status': 'error', 'detail': f'Could not read CSV header: {type(exc).__name__}: {exc}'})
+            return record
+        record['original_columns'] = len(header)
+        time_idx = [i for (i, c) in enumerate(header) if self._is_eplus_time_column(c)]
+        (matched, unmatched) = self._match_csv_column_patterns(header, patterns)
+        record['unmatched_patterns'] = unmatched
+        if mode == 'keep':
+            output_idx = sorted(matched)
+        else:
+            output_idx = [i for i in range(len(header)) if i not in matched and i not in time_idx]
+        notes = []
+        if unmatched:
+            notes.append(f'Patterns without matches: {unmatched}.')
+        if not time_idx:
+            notes.append('No Date/Time column found in source.')
+        if len(output_idx) == 0:
+            notes.append('Selection keeps no output columns; no file was written.')
+            record.update({'status': 'no_outputs', 'kept_columns': len(time_idx), 'destination_path': None, 'detail': ' '.join(notes)})
+            return record
+        usecols = sorted(set(time_idx) | set(output_idx))
+        record['kept_columns'] = len(usecols)
+
+        tmp_path = None
+        try:
+            line_terminator = self._detect_csv_line_terminator(source_path)
+            destination_dir = os.path.dirname(destination_path)
+            os.makedirs(destination_dir, exist_ok=True)
+            (fd, tmp_path) = _tempfile.mkstemp(
+                prefix=f'.{os.path.basename(destination_path)}.',
+                suffix='.tmp',
+                dir=destination_dir,
+            )
+            os.close(fd)
+            read_kwargs = dict(
+                usecols=usecols,
+                dtype=str,
+                keep_default_na=False,
+                na_filter=False,
+                encoding=encoding,
+            )
+            n_rows = 0
+            with open(tmp_path, 'w', encoding=encoding, newline='') as fh:
+                writer = _csv.writer(fh, lineterminator=line_terminator)
+                writer.writerow([header[i] for i in usecols])
+                if chunksize is None:
+                    chunks = [pd.read_csv(source_path, **read_kwargs)]
+                    for chunk in chunks:
+                        writer.writerows(chunk.itertuples(index=False, name=None))
+                        n_rows += len(chunk)
+                else:
+                    with pd.read_csv(source_path, chunksize=chunksize, **read_kwargs) as reader:
+                        for chunk in reader:
+                            writer.writerows(chunk.itertuples(index=False, name=None))
+                            n_rows += len(chunk)
+            if overwrite:
+                os.replace(tmp_path, destination_path)
+            else:
+                if os.path.exists(destination_path):
+                    raise FileExistsError(f'Destination was created by another process: {destination_path}')
+                os.rename(tmp_path, destination_path)
+            tmp_path = None
+        except Exception as exc:
+            notes.append(f'{type(exc).__name__}: {exc}')
+            record.update({'status': 'error', 'destination_path': None, 'detail': ' '.join(notes)})
+            return record
+        finally:
+            if tmp_path is not None and os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
+
+        dest_size = os.path.getsize(destination_path)
+        src_size = record['source_size_bytes']
+        record.update({
+            'status': 'written',
+            'rows': n_rows,
+            'destination_size_bytes': dest_size,
+            'reduction_pct': round(100.0 * (1.0 - dest_size / src_size), 2) if src_size else None,
+            'detail': ' '.join(notes) if notes else None,
+        })
+        return record
+
+    def filter_simulation_output_csvs(
+            self,
+            keep_columns: Optional[Union[str, Sequence[str]]] = None,
+            drop_columns: Optional[Union[str, Sequence[str]]] = None,
+            csv_paths: Optional[Union[str, os.PathLike, Sequence[Union[str, os.PathLike]]]] = None,
+            output_dir: Optional[Union[str, os.PathLike]] = None,
+            suffix: str = '_filtered',
+            chunksize: Optional[int] = None,
+            overwrite: bool = False,
+            encoding: str = 'utf-8',
+            verbose: bool = True,
+    ) -> pd.DataFrame:
+        """Save a column-filtered copy of each per-simulation EnergyPlus CSV.
+
+        Each source CSV (typically ``eplusout.csv``) is processed independently:
+        only the needed columns are read, optionally in row blocks, and a copy
+        containing the ``Date/Time`` column plus the selected outputs is written.
+        Rows and columns keep their original order and values are copied as
+        text, without normalisation, aggregation or date reconstruction. No
+        joint hourly DataFrame is built (``get_hourly_df*`` is not used).
+
+        Originals are never modified or deleted, and the paths stored in the
+        session results are not updated. Note that writing filtered copies
+        does **not** free disk space while the originals are kept; delete or
+        archive the originals yourself once the copies have been checked.
+
+        Parameters
+        ----------
+        keep_columns : str or sequence of str, optional
+            Output columns to keep. Mutually exclusive with ``drop_columns``.
+        drop_columns : str or sequence of str, optional
+            Output columns to remove. Mutually exclusive with ``keep_columns``.
+            Exactly one of ``keep_columns``/``drop_columns`` is required. Each
+            item may be a full column name or a partial pattern, matched as in
+            ``get_hourly_df_parametric(output_columns=...)``: exact name, then
+            case-insensitive exact name, then case-insensitive substring (which
+            may match several columns). ``Date/Time`` (any case or surrounding
+            spaces) is always kept.
+        csv_paths : str, path-like or sequence, optional
+            Explicit CSV files to process. When None (default), paths are taken
+            from the results loaded in the session (``outputs_param_simulation``
+            or ``outputs_optimisation``, including *all* optimisation
+            evaluations, not only the Pareto front). Relative paths are resolved
+            against the current working directory. Duplicates are processed once.
+        output_dir : str or path-like, optional
+            Destination folder. When None (default) each copy is written next to
+            its source as ``<stem><suffix>.csv`` (e.g. ``eplusout_filtered.csv``).
+            When given, files are named ``<parent folder>_<stem><suffix>.csv`` and
+            a numeric suffix is appended if two sources would still collide.
+        suffix : str, default '_filtered'
+            Text appended to the file stem. Must be non-empty when
+            ``output_dir`` is None.
+        chunksize : int, optional
+            Number of rows read and written per block. None reads each
+            (column-filtered) file at once.
+        overwrite : bool, default False
+            Replace existing destination files. When False they are skipped and
+            reported with status ``'skipped_existing'``.
+        encoding : str, default 'utf-8'
+            Encoding used to read and write the CSV files.
+        verbose : bool, default True
+            Print a short summary when finished.
+
+        Returns
+        -------
+        pd.DataFrame
+            One row per source file with columns ``source_path``,
+            ``destination_path``, ``status`` (``'written'``,
+            ``'skipped_existing'``, ``'missing'``, ``'unresolved'``,
+            ``'no_outputs'`` or ``'error'``), ``rows``, ``original_columns``,
+            ``kept_columns``, ``source_size_bytes``, ``destination_size_bytes``,
+            ``reduction_pct``, ``unmatched_patterns`` and ``detail``.
+
+        Raises
+        ------
+        ValueError, TypeError
+            For invalid global arguments, raised before any file is written.
+            Per-file problems are reported in the returned DataFrame instead.
+
+        Examples
+        --------
+        Parametric session loaded from disk, copies next to each original::
+
+            sim = ParametricSimulation()
+            sim.load_outputs_parametric(pickle_path='results/outputs_param_simulation_20260719_113600.pkl')
+            report = sim.filter_simulation_output_csvs(
+                keep_columns=['Zone Operative Temperature', 'Electricity:HVAC'],
+                chunksize=2000,
+            )
+
+        Optimisation session (all evaluations), copies in a separate folder::
+
+            opt = OptimisationSimulation()
+            opt.load_outputs_optimisation(pickle_path='optim_results/outputs_optimisation_20260720_101500.pkl')
+            report = opt.filter_simulation_output_csvs(
+                drop_columns=['Running Average Outdoor Air Temperature'],
+                output_dir='optim_results/filtered_csvs',
+            )
+        """
+        # ---- global validation (nothing is written before this block ends) ----
+        if (keep_columns is None) == (drop_columns is None):
+            raise ValueError('Provide exactly one of keep_columns or drop_columns.')
+        if keep_columns is not None:
+            mode = 'keep'
+            patterns = self._normalise_csv_column_patterns(keep_columns, 'keep_columns')
+        else:
+            mode = 'drop'
+            patterns = self._normalise_csv_column_patterns(drop_columns, 'drop_columns')
+        if chunksize is not None and (isinstance(chunksize, bool) or not isinstance(chunksize, (int, np.integer)) or chunksize <= 0):
+            raise ValueError('chunksize must be a positive integer or None.')
+        if not isinstance(suffix, str):
+            raise TypeError('suffix must be a string.')
+        if any(sep in suffix for sep in ('/', '\\', os.sep)):
+            raise ValueError('suffix must not contain path separators.')
+        if output_dir is None and suffix == '':
+            raise ValueError('suffix must be non-empty when output_dir is None, otherwise the original would be overwritten.')
+        if not isinstance(overwrite, bool):
+            raise TypeError('overwrite must be a boolean.')
+        import codecs as _codecs
+        try:
+            _codecs.lookup(encoding)
+        except (LookupError, TypeError) as exc:
+            raise ValueError(f'Unknown encoding: {encoding!r}.') from exc
+        output_dir_abs = None
+        if output_dir is not None:
+            if not isinstance(output_dir, (str, os.PathLike)):
+                raise TypeError('output_dir must be a string, a path-like object or None.')
+            output_dir_abs = os.path.abspath(os.fspath(output_dir))
+            if os.path.exists(output_dir_abs) and not os.path.isdir(output_dir_abs):
+                raise ValueError(f'output_dir exists and is not a directory: {output_dir_abs}')
+
+        if csv_paths is None:
+            entries = self._collect_session_output_csv_paths()
+        else:
+            if isinstance(csv_paths, (str, os.PathLike)):
+                raw_paths = [csv_paths]
+            else:
+                try:
+                    raw_paths = list(csv_paths)
+                except TypeError as exc:
+                    raise TypeError('csv_paths must be a path or a sequence of paths.') from exc
+            if len(raw_paths) == 0:
+                raise ValueError('csv_paths must contain at least one path.')
+            for p in raw_paths:
+                if not isinstance(p, (str, os.PathLike)) or not os.fspath(p):
+                    raise TypeError(f'csv_paths must only contain non-empty paths; got {p!r}.')
+            entries = [{'source_path': p, 'detail': None} for p in raw_paths]
+
+        # ---- de-duplicate sources and plan destinations ----
+        planned = []
+        seen_sources = set()
+        n_duplicates = 0
+        for entry in entries:
+            if entry['source_path'] is None:
+                planned.append(entry)
+                continue
+            source_abs = os.path.abspath(os.fspath(entry['source_path']))
+            key = os.path.normcase(source_abs)
+            if key in seen_sources:
+                n_duplicates += 1
+                continue
+            seen_sources.add(key)
+            planned.append({'source_path': source_abs, 'detail': entry['detail']})
+        used_destinations = set(seen_sources)
+        for entry in planned:
+            if entry['source_path'] is not None:
+                entry['destination_path'] = self._plan_filtered_csv_destination(
+                    source_abs=entry['source_path'],
+                    output_dir_abs=output_dir_abs,
+                    suffix=suffix,
+                    used_keys=used_destinations,
+                )
+
+        # ---- process one file at a time ----
+        records = []
+        for entry in planned:
+            if entry['source_path'] is None:
+                record = {c: None for c in self._FILTERED_CSV_REPORT_COLUMNS}
+                record.update({'status': 'unresolved', 'unmatched_patterns': [], 'detail': entry['detail']})
+                records.append(record)
+                continue
+            records.append(self._filter_single_output_csv(
+                source_path=entry['source_path'],
+                destination_path=entry['destination_path'],
+                mode=mode,
+                patterns=patterns,
+                chunksize=chunksize,
+                overwrite=overwrite,
+                encoding=encoding,
+            ))
+        report = pd.DataFrame(records, columns=self._FILTERED_CSV_REPORT_COLUMNS)
+
+        unmatched_counts = {}
+        for unmatched in report['unmatched_patterns']:
+            for pattern in unmatched or []:
+                unmatched_counts[pattern] = unmatched_counts.get(pattern, 0) + 1
+        if unmatched_counts:
+            warnings.warn(
+                'filter_simulation_output_csvs: some patterns had no matches '
+                f'(pattern: number of files): {unmatched_counts}.',
+                UserWarning,
+            )
+        if verbose:
+            written = report[report['status'] == 'written']
+            src_total = int(written['source_size_bytes'].sum()) if not written.empty else 0
+            dst_total = int(written['destination_size_bytes'].sum()) if not written.empty else 0
+            status_counts = report['status'].value_counts().to_dict()
+            print(
+                f'[filter_simulation_output_csvs] {len(report)} source(s) ({n_duplicates} duplicate path(s) skipped); '
+                f'status: {status_counts}. Written copies: {dst_total / 1e6:.2f} MB from {src_total / 1e6:.2f} MB. '
+                'Originals were kept, so no disk space has been freed yet.'
+            )
+        return report
+
 
 class ParametricSimulation(SimulationBase):
     """Specialization of SimulationBase for parametric simulations.

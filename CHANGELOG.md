@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Filtered copies of per-simulation output CSVs**: Added `SimulationBase.filter_simulation_output_csvs(...)` (inherited by `ParametricSimulation` and `OptimisationSimulation`). It writes a copy of each `eplusout.csv` that keeps or drops selected columns, using exact or partial names. `Date/Time`, row/column order and raw values are preserved. Files are processed one at a time with optional `chunksize`, through temporary files and without overwriting existing files. The method returns a per-file report. By default it covers all session results, including every optimisation evaluation, and it also accepts explicit paths. Originals and session paths are left untouched, so no disk space is freed until the originals are removed. See `docs/source/filter_output_csvs.rst`.
 - **Template-based Plot Filenames with Category Placeholders**: Added `filename_template` support across plotting helpers in `PlottingMixin` (hourly, parametric, categorical, Pareto/MCDM, pairwise, and radar workflows).
   - Filenames can be customized via `str.format(...)` placeholders, including category labels sourced from `epw_mapping_rules` and `idf_mapping_rules` when those columns are present in the filtered plotting DataFrame.
   - Added method-specific placeholders (for example, `epw_tag`, `x`, `y`, `y_var`, `kind`, `df_source`) and automatic `.png` suffix completion when omitted.

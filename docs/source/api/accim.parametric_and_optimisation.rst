@@ -1,6 +1,15 @@
 accim.parametric\_and\_optimisation package
 ===========================================
 
+Filtering simulation output CSVs
+--------------------------------
+
+To shrink already-run results, ``ParametricSimulation`` and
+``OptimisationSimulation`` inherit
+:meth:`~accim.parametric_and_optimisation.main.SimulationBase.filter_simulation_output_csvs`.
+It writes column-filtered copies of each simulation CSV. See
+:doc:`../filter_output_csvs`.
+
 Subpackages
 -----------
 

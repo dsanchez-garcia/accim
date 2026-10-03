@@ -23,6 +23,7 @@ Welcome to accim |version|'s documentation!
    :maxdepth: 7
    :caption: How-to Guides:
 
+   filter_output_csvs
    jupyter_notebooks/addAccis/using_addAccis
    jupyter_notebooks/rename_epw_files/using_rename_epw_files
    jupyter_notebooks/runEp/using_runEp
