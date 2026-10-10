@@ -209,6 +209,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `set_output_var_df_to_idf(...)` and `set_output_met_objects_to_idf(...)` remain deprecated wrappers of `set_output_variables_to_idf(...)` / `set_output_meters_to_idf(...)`.
 
 ### Fixed
+- **aPMV setpoints applied on the aPMV scale (`apply_apmv_setpoints`)**: the EMS program `apply_aPMV_<target>` passed `s/(1 + lambda*s)` to the Fanger thermal comfort thermostat, where `s` is `pmv_heating_sp` or `pmv_cooling_sp` and `lambda` is the adaptive coefficient of the current season. That is the aPMV of a PMV equal to `s`, not the PMV whose aPMV equals `s`, so the zone aPMV settled around `s/(1 + 2*lambda*s)` and the effect of `lambda` was inverted.
+  - `pmv_heating_sp` and `pmv_cooling_sp` are now targets on the aPMV scale, and the setpoint tolerances are applied on that scale.
+  - The thermostat receives the PMV given by the inverse aPMV formula, `PMV = aPMV/(1 - lambda*aPMV)`.
+  - `count_aPMV_comfort_hours_<target>` now compares the zone aPMV with these aPMV setpoints, so `Comfortable Hours_<target>` counts the hours within the setpoints that are actually applied.
+  - Behaviour change: simulations with a non-zero adaptive coefficient give different results from earlier versions.
 - **Output-Objects API fixes (`parametric_and_optimisation`)**:
   - `select_outputs(match='exact')` now matches correctly for variables (the needle was previously compared against an upper-cased series, so mixed-case requests never matched); for meters, `'exact'` is now truly exact instead of behaving case-insensitively. `'contains'` no longer interprets the needle as a regex, and missing/suggestion reports preserve the original casing of requested and available names.
   - `set_output_readers(...)` (formerly `set_outputs_for_simulation`) no longer mutates the caller's DataFrames when adding the internal `output_name` column.

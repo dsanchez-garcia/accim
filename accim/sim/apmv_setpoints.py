@@ -349,8 +349,10 @@ def apply_apmv_setpoints(
     :param other_PMV_related_outputs: If True, adds additional comfort-related output variables (e.g., Fanger PMV, PPD).
     :param adap_coeff_cooling: Adaptive coefficient (lambda) for cooling. Can be a single float (applied globally) or a dict {TargetName: Value}.
     :param adap_coeff_heating: Adaptive coefficient (lambda) for heating. Float or Dict {TargetName: Value}.
-    :param pmv_cooling_sp: Target PMV setpoint for cooling (e.g., 0.5). Float or Dict.
-    :param pmv_heating_sp: Target PMV setpoint for heating (e.g., -0.5). Float or Dict.
+    :param pmv_cooling_sp: Target aPMV setpoint for cooling (e.g., 0.5). Float or Dict. The PMV setpoint
+        applied to the thermostat is obtained with the inverse aPMV formula, PMV = aPMV/(1 - lambda*aPMV).
+    :param pmv_heating_sp: Target aPMV setpoint for heating (e.g., -0.5). Float or Dict. Converted to PMV in
+        the same way.
     :param tolerance_cooling_sp_cooling_season: Tolerance to widen the cooling setpoint band during cooling season.
     :param tolerance_cooling_sp_heating_season: Tolerance to widen the cooling setpoint band during heating season.
     :param tolerance_heating_sp_cooling_season: Tolerance to widen the heating setpoint band during cooling season.
@@ -845,26 +847,28 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
                                   Program_Line_8=f'set tolerance_heating_sp_{suffix} = tolerance_heating_sp_heating_season_{suffix}',
                                   Program_Line_9='endif',
 
-                                  # 2. Calculate aPMV Setpoints (Inverse aPMV formula)
-                                  Program_Line_10=f'set aPMV_H_SP_noTol_{suffix} = pmv_heating_sp_{suffix}/(1+adap_coeff_{suffix}*pmv_heating_sp_{suffix})',
-                                  Program_Line_11=f'set aPMV_C_SP_noTol_{suffix} = pmv_cooling_sp_{suffix}/(1+adap_coeff_{suffix}*pmv_cooling_sp_{suffix})',
+                                  # 2. aPMV setpoints: pmv_heating_sp and pmv_cooling_sp are targets on the aPMV scale
+                                  Program_Line_10=f'set aPMV_H_SP_noTol_{suffix} = pmv_heating_sp_{suffix}',
+                                  Program_Line_11=f'set aPMV_C_SP_noTol_{suffix} = pmv_cooling_sp_{suffix}',
 
                                   # 3. Apply Tolerance
                                   Program_Line_12=f'set aPMV_H_SP_{suffix} = aPMV_H_SP_noTol_{suffix}+tolerance_heating_sp_{suffix}',
                                   Program_Line_13=f'set aPMV_C_SP_{suffix} = aPMV_C_SP_noTol_{suffix}+tolerance_cooling_sp_{suffix}',
 
-                                  # 4. Actuate Schedules (Only if occupied)
+                                  # 4. Actuate Schedules (Only if occupied). The Fanger thermostat controls PMV, so each
+                                  # aPMV setpoint is converted with the inverse aPMV formula, PMV = aPMV/(1 - lambda*aPMV),
+                                  # i.e. the PMV whose aPMV = PMV/(1 + lambda*PMV) equals the setpoint.
                                   Program_Line_14=f'if People_Occupant_Count_{suffix} > 0',
                                   # Heating Logic
                                   Program_Line_15=f'if aPMV_H_SP_{suffix} < 0',
-                                  Program_Line_16=f'set {act_h} = aPMV_H_SP_{suffix}',
+                                  Program_Line_16=f'set {act_h} = aPMV_H_SP_{suffix}/(1-adap_coeff_{suffix}*aPMV_H_SP_{suffix})',
                                   Program_Line_17='else',
                                   Program_Line_18=f'set {act_h} = 0',
                                   Program_Line_19='endif',
 
                                   # Cooling Logic
                                   Program_Line_20=f'if aPMV_C_SP_{suffix} > 0',
-                                  Program_Line_21=f'set {act_c} = aPMV_C_SP_{suffix}',
+                                  Program_Line_21=f'set {act_c} = aPMV_C_SP_{suffix}/(1-adap_coeff_{suffix}*aPMV_C_SP_{suffix})',
                                   Program_Line_22='else',
                                   Program_Line_23=f'set {act_c} = 0',
                                   Program_Line_24='endif',
