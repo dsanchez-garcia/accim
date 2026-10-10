@@ -6325,9 +6325,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         Once set:
 
-        - Parametric simulation: ``sampling_full_set``, ``sampling_full_factorial``,
-          ``sampling_lhs`` and ``sampling_custom`` drop the combinations outside the band from
-          ``parameters_values_df`` (they are kept in ``mn_filter_excluded_df``), and
+        - Parametric simulation: ``sampling_lhs`` draws CustAST_m and CustAST_n inside the band,
+          uniformly over its area, so every sample is kept (with ``mn_filter_mode='exclude'``, it
+          draws them within their ranges and drops the pairs outside). ``sampling_full_set``,
+          ``sampling_full_factorial`` and ``sampling_custom`` drop the combinations outside the
+          band from ``parameters_values_df`` (they are kept in ``mn_filter_excluded_df``), and
           ``run_parametric_simulation`` never simulates them. Sobol and Morris samples are not
           filtered, because the sensitivity analysis needs the complete sample.
         - Optimisation: ``run_optimisation`` maps the CustAST_n proposed by the algorithm linearly
@@ -6460,6 +6462,67 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if not isinstance(df, pd.DataFrame) or df.empty:
             return
         self.parameters_values_df = self._filter_plan_by_mn_filter(df, context=context, store_excluded=True)
+
+    def _sample_mn_inside_band(self, df: pd.DataFrame, context: str) -> pd.DataFrame:
+        """Moves the CustAST_m and CustAST_n values of a Latin hypercube sample into the m-n band.
+
+        Each value is turned back into its position in [0, 1] within its range, and the pair of
+        positions is mapped onto the band with ``MNFilter.sample_inside`` (uniformly over the band
+        area). The other parameters are not changed.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Sample drawn within the parameter ranges.
+        context : str
+            Label used in messages.
+
+        Returns
+        -------
+        pd.DataFrame
+            The sample with CustAST_m and CustAST_n inside the band (df unchanged if no filter is set).
+
+        Usage
+        -----
+        Internal helper called by ``sampling_lhs``.
+
+        Examples
+        --------
+        df = self._sample_mn_inside_band(df, context='sampling_lhs')
+        """
+        mn_filter = getattr(self, 'mn_filter', None)
+        if mn_filter is None or not isinstance(df, pd.DataFrame) or df.empty:
+            return df
+        descriptors = {d.name: d for d in self.problem.value_descriptors}
+        ranges = {}
+        for name in ('CustAST_m', 'CustAST_n'):
+            descriptor = descriptors.get(name)
+            if not isinstance(descriptor, RangeParameter) or name not in df.columns:
+                warnings.warn(
+                    f'{context}: CustAST_m and CustAST_n must be ranges (min, max) to be drawn inside the '
+                    'm-n band; the pairs outside the band are dropped instead.',
+                    UserWarning,
+                )
+                return df
+            ranges[name] = (float(descriptor.min), float(descriptor.max))
+
+        def _position(values, low, high):
+            values = values.astype(float).to_numpy()
+            return np.full(len(values), 0.5) if high <= low else (values - low) / (high - low)
+
+        (m_min, m_max), (n_min, n_max) = ranges['CustAST_m'], ranges['CustAST_n']
+        m, n = mn_filter.sample_inside(
+            _position(df['CustAST_m'], m_min, m_max), _position(df['CustAST_n'], n_min, n_max),
+            m_min, m_max, n_min, n_max,
+        )
+        out = df.copy()
+        out['CustAST_m'] = m
+        out['CustAST_n'] = n
+        print(
+            f'[m-n filter] {context}: the {len(out)} (CustAST_m, CustAST_n) pairs are drawn inside the band, '
+            'uniformly over its area.'
+        )
+        return out
 
     def _warn_mn_filter_not_applied(self, context: str) -> None:
         """Warns that the m-n filter is not applied to sensitivity-analysis samples.
@@ -6690,12 +6753,17 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
         self._apply_mn_filter_to_samples('sampling_full_factorial')
 
-    def sampling_lhs(self, num_samples: int):
+    def sampling_lhs(self, num_samples: int, mn_filter_mode: str = 'inside'):
         """Uses Latin Hypercube Sampling to make samples, where the total number is specified in the num_samples argument,
         and saves it into a pandas DataFrame, stored in an internal variable named parameters_values_df.
         For more information, see besos.sampling.dist_sampler and besos.sampling.lhs
         
         :param num_samples: an integer; represents the total number of samples
+        :param mn_filter_mode: only used if an m-n filter is set (``set_mn_filter``). 'inside' (default):
+            CustAST_m and CustAST_n are drawn inside the band, uniformly over its area, so all
+            ``num_samples`` samples are kept; the Latin hypercube is drawn on the unit square and mapped
+            onto the band (``MNFilter.sample_inside``). 'exclude': they are drawn within their ranges, and
+            the pairs outside the band are dropped (kept in ``mn_filter_excluded_df``).
         
         Usage
         -----
@@ -6705,10 +6773,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self.sampling_lhs(num_samples=...)
         """
+        if mn_filter_mode not in ('inside', 'exclude'):
+            raise ValueError("sampling_lhs: mn_filter_mode must be 'inside' or 'exclude'.")
         if self.descriptors_has_range:
             parameters_values_df = sampling.dist_sampler(sampling.lhs, self.problem, num_samples=num_samples)
         else:
             raise KeyError('sampling_lhs method can only be used with range descriptors.')
+        if mn_filter_mode == 'inside':
+            parameters_values_df = self._sample_mn_inside_band(parameters_values_df, context='sampling_lhs')
         self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
         self._apply_mn_filter_to_samples('sampling_lhs')
 

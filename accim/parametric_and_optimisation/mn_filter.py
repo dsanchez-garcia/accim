@@ -478,6 +478,61 @@ class MNFilter:
         mapped = low + fraction * (high - low)
         return float(mapped) if np.ndim(mapped) == 0 else mapped
 
+    def sample_inside(self, u_m, u_n, m_min: float, m_max: float, n_min: float, n_max: float,
+                      grid: int = 4001) -> Tuple[np.ndarray, np.ndarray]:
+        """Map points of the unit square onto the part of the band within the m and n ranges.
+
+        ``u_m`` sets m through the inverse cumulative distribution of m over the area of that part of
+        the band, so m is more likely where the band is wider within [n_min, n_max]; ``u_n`` places n
+        linearly within the interval of n inside the band for that m. Uniform (u_m, u_n) give pairs
+        uniformly distributed over the band, as when drawing in the ranges and discarding the pairs
+        outside, and a Latin hypercube in (u_m, u_n) keeps one pair per stratum of each.
+
+        Parameters
+        ----------
+        u_m, u_n : array-like
+            Values in [0, 1].
+        m_min, m_max, n_min, n_max : float
+            Ranges of CustAST_m and CustAST_n.
+        grid : int
+            Points of the m grid used to invert the cumulative distribution.
+
+        Returns
+        -------
+        tuple of np.ndarray
+            m and n, inside the band and within the ranges.
+
+        Usage
+        -----
+        Called by ``SimulationBase.sampling_lhs`` when an m-n filter is set.
+
+        Examples
+        --------
+        m, n = MNFilter.from_data().sample_inside([0.1, 0.9], [0.5, 0.5], 0.0, 0.7, 5.0, 22.5)
+        """
+        u_m = np.clip(np.asarray(u_m, dtype=float), 0.0, 1.0)
+        u_n = np.clip(np.asarray(u_n, dtype=float), 0.0, 1.0)
+        n_min, n_max = float(n_min), float(n_max)
+        # Values of m with some n of [n_min, n_max] inside the band (the bounds are lines in n).
+        m_lower, _ = self.m_bounds(np.array([n_min, n_max]))
+        _, m_upper = self.m_bounds(np.array([n_min, n_max]))
+        m_low = max(float(m_min), float(np.min(m_lower)))
+        m_high = min(float(m_max), float(np.max(m_upper)))
+        if not m_high > m_low:
+            raise ValueError('The m-n band does not overlap the CustAST_m and CustAST_n ranges.')
+        m_grid = np.linspace(m_low, m_high, int(grid))
+        low, high = self.feasible_n_interval(m_grid, n_min, n_max)
+        width = np.clip(np.nan_to_num(high - low, nan=0.0, posinf=0.0, neginf=0.0), 0.0, None)
+        area = np.concatenate([[0.0], np.cumsum(0.5 * (width[1:] + width[:-1]) * np.diff(m_grid))])
+        if not area[-1] > 0:
+            raise ValueError('The m-n band does not overlap the CustAST_m and CustAST_n ranges.')
+        cdf = area / area[-1]
+        increasing = np.r_[True, np.diff(cdf) > 0]
+        m = np.interp(u_m, cdf[increasing], m_grid[increasing])
+        low, high = self.feasible_n_interval(m, n_min, n_max)
+        n = low + u_n * np.clip(high - low, 0.0, None)
+        return m, n
+
     def equation(self, digits: int = 4) -> str:
         """Regression line as text."""
         sign = '+' if self.intercept >= 0 else '-'

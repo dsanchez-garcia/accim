@@ -16,6 +16,8 @@ from accim.parametric_and_optimisation.mn_filter import (
     MNFilterMapping,
     review_models,
 )
+from besos.parameters import Parameter, RangeParameter
+from besos.problem import Problem
 
 
 def test_review_models_band():
@@ -184,3 +186,53 @@ def test_set_mn_filter_add_and_drop_models(tmp_path):
     assert os.path.isfile(path)
     path_hidden = sim.plot_mn_filter(out_dir=str(tmp_path / 'hidden'), show_removed_models=False)
     assert os.path.isfile(path_hidden)
+
+
+def test_sample_inside_is_uniform_over_the_band():
+    band = MNFilter.from_data()
+    rng = np.random.default_rng(3)
+    u = rng.uniform(size=(20000, 2))
+    m, n = band.sample_inside(u[:, 0], u[:, 1], 0.0, 0.7, 5.0, 22.5)
+    assert band.contains(m, n).all()
+    assert m.min() >= 0.0 and m.max() <= 0.7
+    assert n.min() >= 5.0 - 1e-9 and n.max() <= 22.5 + 1e-9
+    # Same distribution as drawing in the ranges and discarding the pairs outside the band.
+    box = rng.uniform(size=(200000, 2)) * [0.7, 17.5] + [0.0, 5.0]
+    kept = box[band.contains(box[:, 0], box[:, 1])]
+    assert m.mean() == pytest.approx(kept[:, 0].mean(), abs=0.01)
+    assert n.mean() == pytest.approx(kept[:, 1].mean(), abs=0.1)
+    assert np.mean(m < 0.2) == pytest.approx(np.mean(kept[:, 0] < 0.2), abs=0.015)
+    assert np.mean(n > 20.0) == pytest.approx(np.mean(kept[:, 1] > 20.0), abs=0.015)
+    # The corners of the unit square go to the ends of the band within the ranges.
+    m_end, n_end = band.sample_inside([0.0, 1.0], [0.0, 1.0], 0.0, 0.7, 5.0, 22.5)
+    assert band.contains(m_end, n_end).all()
+    with pytest.raises(ValueError):
+        band.sample_inside([0.5], [0.5], 0.0, 0.1, 5.0, 8.0)  # The band does not reach this box.
+
+
+def _custom_model_session(m_range=(0.0, 0.7), n_range=(5.0, 22.5)):
+    sim = ParametricSimulation.__new__(ParametricSimulation)
+    sim.problem = Problem(inputs=[
+        Parameter(value_descriptors=RangeParameter(*m_range, name='CustAST_m')),
+        Parameter(value_descriptors=RangeParameter(*n_range, name='CustAST_n')),
+        Parameter(value_descriptors=RangeParameter(1.0, 5.0, name='CustAST_ASToffset')),
+    ], outputs=['out'])
+    sim.descriptors_has_range = True
+    return sim
+
+
+def test_sampling_lhs_draws_inside_the_band():
+    sim = _custom_model_session()
+    sim.set_mn_filter(verbose=False)
+    sim.sampling_lhs(num_samples=40)
+    df = sim.parameters_values_df
+    assert len(df) == 40 and len(sim.mn_filter_excluded_df) == 0
+    assert sim.mn_filter.contains(df['CustAST_m'], df['CustAST_n']).all()
+    # The other parameters keep the Latin hypercube: one sample per stratum.
+    strata = np.floor((df['CustAST_ASToffset'].to_numpy() - 1.0) / 4.0 * 40).astype(int)
+    assert sorted(strata) == list(range(40))
+    sim.sampling_lhs(num_samples=40, mn_filter_mode='exclude')
+    assert len(sim.parameters_values_df) + len(sim.mn_filter_excluded_df) == 40
+    assert len(sim.mn_filter_excluded_df) > 0
+    with pytest.raises(ValueError):
+        sim.sampling_lhs(num_samples=5, mn_filter_mode='other')
