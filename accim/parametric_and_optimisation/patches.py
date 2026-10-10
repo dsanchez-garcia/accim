@@ -160,6 +160,10 @@ def _patched_eval_func(evaluator, all_outputs):
     --------
     packed = _patched_eval_func(evaluator, all_outputs)
     """
+    mn_filter_map = getattr(evaluator, '_mn_filter_map', None)
+    if mn_filter_map is not None:
+        # m-n filter (set_mn_filter): map CustAST_n into the band of published adaptive models.
+        all_outputs = mn_filter_map.map_inputs(all_outputs)
     _ensure_run_energyplus_copies_in_idf()
     if getattr(evaluator, 'out_dir', None) is not None:
         if not hasattr(evaluator, '_out_dir_patched'):

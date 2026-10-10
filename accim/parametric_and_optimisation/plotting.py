@@ -1959,6 +1959,149 @@ class PlottingMixin:
             plt.close()
             print(f'  Parallel coordinates plot saved: {fname_parallel}')
 
+    def plot_mn_filter(
+            self,
+            df_source: Optional[Literal['parametric', 'optimisation']] = None,
+            out_dir: str = '.',
+            figsize: tuple = (8.5, 6.5),
+            show_removed_models: bool = True,
+            filename_template: str = None,
+    ):
+        """Plot the m-n band of published adaptive models and the simulated (CustAST_m, CustAST_n) pairs.
+
+        The figure shows the published models used to fit the band (see ``set_mn_filter``), the
+        regression line of m on n, the inclusion interval between the two parallel bounds, and the
+        combinations of the parametric plan (included and excluded) or of the optimisation.
+        Models added with ``add_models`` are drawn as purple diamonds and models removed with
+        ``drop_models`` as grey crosses.
+
+        Parameters
+        ----------
+        df_source : {'parametric', 'optimisation'}, optional
+            Combinations to show. By default, those of the last run; without a run, only the band.
+        out_dir : str
+            Directory where the figure is written.
+        figsize : tuple
+            Figure size in inches.
+        show_removed_models : bool
+            Whether to draw the models left out of the fit with ``drop_models``.
+        filename_template : str, optional
+            Optional str.format template for the output filename (placeholders: ``plot``,
+            ``df_source``).
+
+        Returns
+        -------
+        str
+            Path of the saved figure.
+
+        Usage
+        -----
+        Run after ``set_mn_filter`` and, optionally, after sampling or running the simulations.
+
+        Examples
+        --------
+        self.plot_mn_filter(df_source='parametric', out_dir='plots')
+        """
+        mn_filter = getattr(self, 'mn_filter', None)
+        if mn_filter is None:
+            raise ValueError('plot_mn_filter: call set_mn_filter() first.')
+        if df_source is None:
+            df_source = getattr(self, 'last_run_type', None)
+        if df_source not in (None, 'parametric', 'optimisation'):
+            raise ValueError("plot_mn_filter: df_source must be 'parametric', 'optimisation' or None.")
+
+        def _pairs(df):
+            if not isinstance(df, pd.DataFrame) or df.empty or 'CustAST_m' not in df.columns or 'CustAST_n' not in df.columns:
+                return pd.DataFrame({'m': pd.Series(dtype=float), 'n': pd.Series(dtype=float)})
+            pairs = df[['CustAST_m', 'CustAST_n']].dropna().drop_duplicates()
+            return pairs.rename(columns={'CustAST_m': 'm', 'CustAST_n': 'n'}).astype(float)
+
+        included = _pairs(None)
+        excluded = _pairs(None)
+        if df_source == 'parametric':
+            included = _pairs(getattr(self, 'parameters_values_df', None))
+            if included.empty:
+                included = _pairs(getattr(self, 'outputs_param_simulation', None))
+            excluded = _pairs(getattr(self, 'mn_filter_excluded_df', None))
+        elif df_source == 'optimisation':
+            included = _pairs(getattr(self, 'outputs_optimisation', None))
+
+        label_review = 'Models from review'
+        label_data = 'Models'
+        label_added = 'Models added'
+        label_removed = 'Models removed'
+        label_included = 'Simulation instances included'
+        label_excluded = 'Simulation instances excluded'
+        default_origin = 'review' if str(mn_filter.source).startswith('Yao') else 'data'
+        model_labels = {'review': label_review, 'data': label_data, 'added': label_added}
+
+        def _models(df):
+            if not isinstance(df, pd.DataFrame) or df.empty:
+                return _pairs(None).assign(type=pd.Series(dtype=object))
+            origin = df['origin'] if 'origin' in df.columns else pd.Series(default_origin, index=df.index)
+            labels = origin.map(model_labels).fillna(label_data).to_numpy()
+            return df[['m', 'n']].astype(float).assign(type=labels)
+
+        models_used = _models(mn_filter.data)
+        models = models_used[['m', 'n']]
+        removed = _pairs(None).assign(type=pd.Series(dtype=object))
+        if show_removed_models and getattr(mn_filter, 'removed_data', None) is not None:
+            removed = _models(mn_filter.removed_data).assign(type=label_removed)
+        plot_df = pd.concat([
+            excluded.assign(type=label_excluded),
+            included.assign(type=label_included),
+            models_used,
+            removed,
+        ], ignore_index=True)
+        palette = {label_excluded: '#1f77b4', label_included: '#ff7f0e', label_review: '#2ca02c',
+                   label_data: '#2ca02c', label_added: '#9467bd', label_removed: '#7f7f7f'}
+        markers = {label_excluded: 'o', label_included: 'o', label_review: 'o', label_data: 'o',
+                   label_added: 'D', label_removed: 'X'}
+        hue_order = [label for label in palette if label in set(plot_df['type'])]
+
+        os.makedirs(out_dir, exist_ok=True)
+        with sns.axes_style('whitegrid'), sns.plotting_context('paper'):
+            (fig, ax) = plt.subplots(figsize=figsize)
+            sns.scatterplot(data=plot_df, x='n', y='m', hue='type', hue_order=hue_order, palette=palette,
+                            style='type', style_order=hue_order, markers=markers, ax=ax)
+            if len(models) >= 3:
+                # Fixed seed: the bootstrap confidence band is the same in every run.
+                sns.regplot(data=models, x='n', y='m', scatter=False, ax=ax, color='blue', seed=0)
+            slope, intercept = mn_filter.slope, mn_filter.intercept
+            n_models = np.sort(models['n'].to_numpy()) if len(models) > 0 else np.array([])
+            if n_models.size > 0:
+                ax.plot(n_models, slope * n_models + intercept, color='blue',
+                        label=f'Regression line: m = {slope:.2f}n + {intercept:.2f}')
+            n_all = plot_df['n'].astype(float)
+            x_range = np.linspace(n_all.min() - 0.5, n_all.max() + 0.5, 200)
+            (m_lower, m_upper) = mn_filter.m_bounds(x_range)
+            ax.fill_between(x_range, m_lower, m_upper, color='gray', alpha=0.3, label='Inclusion interval')
+            ax.plot(x_range, m_lower, color='black', linestyle='dashed',
+                    label=f'Lower bound: m = {slope:.2f}n + {intercept:.2f} - {mn_filter.offset_lower:.2f}')
+            ax.plot(x_range, m_upper, color='black', linestyle='dashed',
+                    label=f'Upper bound: m = {slope:.2f}n + {intercept:.2f} + {mn_filter.offset_upper:.2f}')
+            ax.set(xlabel='n (y-intercept)', ylabel='m (gradient)')
+            ax.legend(loc='center left', bbox_to_anchor=(1.05, 0.5), title='Legend')
+            ax.grid(True)
+            fig.tight_layout()
+            source_tag = df_source if df_source is not None else 'band'
+            fname = self._resolve_output_filename(
+                out_dir=out_dir,
+                default_filename=f'plot_mn_filter_{source_tag}.png',
+                filename_template=filename_template,
+                template_context={'plot': 'mn_filter', 'df_source': source_tag},
+                context='plot_mn_filter',
+            )
+            os.makedirs(os.path.dirname(fname) or '.', exist_ok=True)
+            fig.savefig(fname, dpi=300, bbox_inches='tight')
+            plt.close(fig)
+        removed_note = f', {len(removed)} removed' if len(removed) > 0 else ''
+        print(
+            f'  m-n filter plot saved: {fname} ({len(included)} included and {len(excluded)} excluded '
+            f'combinations, {len(models)} models{removed_note})'
+        )
+        return fname
+
     def plot_pairwise_scatter_matrix(
             self,
             out_dir: str='.',

@@ -46,6 +46,7 @@ import accim.parametric_and_optimisation.parameters as params
 from accim.parametric_and_optimisation.analysis import AnalysisMixin
 from accim.parametric_and_optimisation.plotting import PlottingMixin
 from accim.parametric_and_optimisation.patches import GlobalAllCapsDict, _patched_eval_func, _patched_to_platypus, _ensure_run_energyplus_copies_in_idf
+from accim.parametric_and_optimisation.mn_filter import MNFilter, MNFilterMapping
 from accim.parametric_and_optimisation.file_cleanup import normalize_sim_file_cleanup_options, sim_file_policy_will_remove_extension, prune_simulation_output_files
 import accim.parametric_and_optimisation.params_dicts as params_dicts
 allowed_output_freqs = Literal['timestep', 'hourly', 'daily', 'monthly', 'runperiod']
@@ -6301,6 +6302,231 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self.descriptors_has_options = descriptors_has_options
         self.descriptors_has_range = descriptors_has_range
 
+    def set_mn_filter(
+            self,
+            data: pd.DataFrame = None,
+            offset: Union[str, float, tuple] = 'farthest',
+            add_models=None,
+            drop_models=None,
+            enabled: bool = True,
+            verbose: bool = True,
+    ):
+        """Restricts the custom adaptive model (CustAST_m, CustAST_n) to the band of published models.
+
+        Independent ranges for the slope m and the intercept n of the comfort temperature
+        (``T_comf = m * T_out + n``) include many combinations that do not correspond to any
+        published adaptive model. This filter regresses the slope m of a set of published linear
+        adaptive models on their intercept n (``m = slope * n + intercept``) and bounds the band of
+        plausible (m, n) pairs with two lines parallel to the regression line. By default, the
+        models are those collected by Yao et al. (2022) (see
+        ``accim.parametric_and_optimisation.mn_filter.review_models``), and the lines pass through
+        the models farthest above and below the regression line. Models can be left out
+        (``drop_models``) or added (``add_models``) without changing the list of the review.
+
+        Once set:
+
+        - Parametric simulation: ``sampling_full_set``, ``sampling_full_factorial``,
+          ``sampling_lhs`` and ``sampling_custom`` drop the combinations outside the band from
+          ``parameters_values_df`` (they are kept in ``mn_filter_excluded_df``), and
+          ``run_parametric_simulation`` never simulates them. Sobol and Morris samples are not
+          filtered, because the sensitivity analysis needs the complete sample.
+        - Optimisation: ``run_optimisation`` maps the CustAST_n proposed by the algorithm linearly
+          from its range onto the interval of n inside the band for the proposed CustAST_m, so
+          every evaluated combination lies inside the band. The results show the simulated n.
+
+        :param data: a pandas DataFrame with the columns m and n of the models that define the band;
+            by default, the linear models collected by Yao et al. (2022).
+        :param offset: 'farthest' (default), to draw the bounds through the models farthest above and
+            below the regression line; a number, for a symmetric distance in m (e.g. 0.17); or a tuple
+            (lower, upper) with the distances below and above the line.
+        :param add_models: models added to ``data``: a DataFrame with the columns m and n (author,
+            year and mode are optional), a dict, or a list of dicts or of tuples, either (m, n) or
+            (author, year, mode, m, n). They get the ids that follow the last id of ``data`` (56,
+            57... for the review).
+        :param drop_models: models of ``data`` left out of the band: row ids (the index of
+            ``review_models()``, 0 to 55) and/or author labels (e.g. 'Li et al. [61]', which leaves
+            out every model with that label). Models are dropped first and added afterwards.
+        :param enabled: if False, removes a previously set filter.
+        :param verbose: if True, prints the band and the models removed and added.
+        :return: the MNFilter instance (None if disabled). ``self.mn_filter.models_table()`` lists
+            the models with their residual from the regression line.
+
+        Usage
+        -----
+        Call after ``set_parameters`` (with CustAST_m and CustAST_n among the parameters) and
+        before sampling or running the optimisation. ``plot_mn_filter`` plots the band.
+
+        Examples
+        --------
+        self.set_mn_filter()
+        self.set_mn_filter(offset=0.17)
+        self.set_mn_filter(drop_models=[17, 'Kumar et al. [84]'],
+                           add_models=[{'author': 'New model', 'year': 2024, 'mode': 'MM', 'm': 0.33, 'n': 18.8}])
+        """
+        if not enabled:
+            self.mn_filter = None
+            self.mn_filter_excluded_df = None
+            return None
+        parameters_list = getattr(self, 'parameters_list', None) or []
+        if len(parameters_list) > 0:
+            names = [p.value_descriptors[0].name for p in parameters_list]
+            missing = [p for p in ('CustAST_m', 'CustAST_n') if p not in names]
+            if missing:
+                raise ValueError(
+                    f'set_mn_filter: CustAST_m and CustAST_n must be among the parameters (missing: {missing}). '
+                    'Call set_parameters with both, using parameters_type="accim custom model".'
+                )
+        self.mn_filter = MNFilter.from_data(data=data, offset=offset, add_models=add_models, drop_models=drop_models)
+        self.mn_filter_excluded_df = None
+        if verbose:
+            print(self.mn_filter.describe())
+        if isinstance(getattr(self, 'parameters_values_df', None), pd.DataFrame) and not self.parameters_values_df.empty:
+            self._apply_mn_filter_to_samples('set_mn_filter')
+        return self.mn_filter
+
+    def _filter_plan_by_mn_filter(self, df: pd.DataFrame, context: str, store_excluded: bool = False) -> pd.DataFrame:
+        """Drops the rows of a simulation plan whose (CustAST_m, CustAST_n) lie outside the m-n band.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Simulation plan.
+        context : str
+            Label used in messages.
+        store_excluded : bool
+            If True, the excluded rows are stored in ``mn_filter_excluded_df``.
+
+        Returns
+        -------
+        pd.DataFrame
+            The rows inside the band (df unchanged if no filter is set).
+
+        Usage
+        -----
+        Internal helper used by the sampling methods and ``run_parametric_simulation``.
+
+        Examples
+        --------
+        df = self._filter_plan_by_mn_filter(df, context='sampling_lhs')
+        """
+        mn_filter = getattr(self, 'mn_filter', None)
+        if mn_filter is None or not isinstance(df, pd.DataFrame) or df.empty:
+            return df
+        if 'CustAST_m' not in df.columns or 'CustAST_n' not in df.columns:
+            warnings.warn(
+                f'{context}: the m-n filter is set, but the plan has no CustAST_m and CustAST_n columns; '
+                'it is not applied.',
+                UserWarning,
+            )
+            return df
+        inside = np.asarray(
+            mn_filter.contains(df['CustAST_m'].astype(float).to_numpy(), df['CustAST_n'].astype(float).to_numpy()),
+            dtype=bool,
+        )
+        kept = df.loc[inside].reset_index(drop=True)
+        excluded = df.loc[~inside].reset_index(drop=True)
+        if store_excluded:
+            self.mn_filter_excluded_df = excluded
+        if len(excluded) > 0 or store_excluded:
+            pairs_total = len(df[['CustAST_m', 'CustAST_n']].drop_duplicates())
+            pairs_excluded = len(excluded[['CustAST_m', 'CustAST_n']].drop_duplicates()) if len(excluded) > 0 else 0
+            print(
+                f'[m-n filter] {context}: {pairs_excluded} of {pairs_total} (CustAST_m, CustAST_n) combinations '
+                f'are outside the band and are not simulated; {len(kept)} rows remain.'
+            )
+        if kept.empty:
+            raise ValueError(f'{context}: all (CustAST_m, CustAST_n) combinations are outside the m-n band.')
+        return kept
+
+    def _apply_mn_filter_to_samples(self, context: str) -> None:
+        """Applies the m-n filter to ``parameters_values_df`` after sampling.
+
+        Parameters
+        ----------
+        context : str
+            Name of the sampling method, used in messages.
+
+        Usage
+        -----
+        Internal helper called at the end of the sampling methods.
+
+        Examples
+        --------
+        self._apply_mn_filter_to_samples('sampling_lhs')
+        """
+        if getattr(self, 'mn_filter', None) is None:
+            return
+        df = getattr(self, 'parameters_values_df', None)
+        if not isinstance(df, pd.DataFrame) or df.empty:
+            return
+        self.parameters_values_df = self._filter_plan_by_mn_filter(df, context=context, store_excluded=True)
+
+    def _warn_mn_filter_not_applied(self, context: str) -> None:
+        """Warns that the m-n filter is not applied to sensitivity-analysis samples.
+
+        Parameters
+        ----------
+        context : str
+            Name of the sampling method.
+
+        Usage
+        -----
+        Internal helper called by ``sampling_sobol`` and ``sampling_morris``.
+
+        Examples
+        --------
+        self._warn_mn_filter_not_applied('sampling_sobol')
+        """
+        if getattr(self, 'mn_filter', None) is not None:
+            warnings.warn(
+                f'{context}: the m-n filter is not applied, because the sensitivity analysis needs the '
+                'complete sample.',
+                UserWarning,
+            )
+
+    def _build_mn_filter_mapping(self):
+        """Builds the mapping of CustAST_n into the m-n band used by ``run_optimisation``.
+
+        Returns
+        -------
+        MNFilterMapping or None
+            None if no m-n filter is set.
+
+        Usage
+        -----
+        Internal helper called by ``run_optimisation``; it checks that CustAST_m and CustAST_n are
+        range parameters and that the band includes some n for every m in the CustAST_m range.
+
+        Examples
+        --------
+        mapping = self._build_mn_filter_mapping()
+        """
+        mn_filter = getattr(self, 'mn_filter', None)
+        if mn_filter is None:
+            return None
+        names = list(self.problem.names('inputs'))
+        missing = [p for p in ('CustAST_m', 'CustAST_n') if p not in names]
+        if missing:
+            raise ValueError(f'The m-n filter needs CustAST_m and CustAST_n among the optimisation parameters (missing: {missing}).')
+        bounds = {}
+        for name in ('CustAST_m', 'CustAST_n'):
+            descriptor = self.problem.inputs[names.index(name)].value_descriptors[0]
+            if not isinstance(descriptor, RangeParameter):
+                raise ValueError(f'The m-n filter in optimisation needs {name} as a range (min, max).')
+            bounds[name] = (float(descriptor.min), float(descriptor.max))
+        mn_filter.check_ranges(*bounds['CustAST_m'], *bounds['CustAST_n'])
+        print(
+            f'[m-n filter] run_optimisation: CustAST_n is mapped onto the band for each CustAST_m '
+            f'({mn_filter.equation()}; {mn_filter.offset_lower:.4f} below, {mn_filter.offset_upper:.4f} above).'
+        )
+        return MNFilterMapping(
+            band=mn_filter.to_dict(),
+            m_index=names.index('CustAST_m'),
+            n_index=names.index('CustAST_n'),
+            n_min=bounds['CustAST_n'][0],
+            n_max=bounds['CustAST_n'][1],
+        )
+
     def set_problem(
             self,
             minimize_outputs: list = None,
@@ -6377,6 +6603,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if self.is_accim_predef_model:
                 parameters_values_df = bf_accim.drop_invalid_param_combinations(parameters_values_df)
         self.parameters_values_df = parameters_values_df
+        self._apply_mn_filter_to_samples('sampling_full_set')
 
     def sampling_custom(self, custom_plan: Union[List[dict], dict, pd.DataFrame]):
         """Sets a custom simulation plan.
@@ -6403,6 +6630,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.parameters_values_df = pd.DataFrame(rows)
         else:
             raise TypeError('custom_plan must be a pandas DataFrame, a list of dicts, or a dict.')
+        self._apply_mn_filter_to_samples('sampling_custom')
 
     def _expand_samples_with_buildings_and_epws(self, df: pd.DataFrame) -> pd.DataFrame:
         """Expands a parameter samples DataFrame with cartesian products for IDFs and EPWs.
@@ -6460,6 +6688,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         else:
             raise KeyError('sampling_full_factorial method can only be used with range descriptors.')
         self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
+        self._apply_mn_filter_to_samples('sampling_full_factorial')
 
     def sampling_lhs(self, num_samples: int):
         """Uses Latin Hypercube Sampling to make samples, where the total number is specified in the num_samples argument,
@@ -6481,6 +6710,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         else:
             raise KeyError('sampling_lhs method can only be used with range descriptors.')
         self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
+        self._apply_mn_filter_to_samples('sampling_lhs')
 
     def _get_salib_problem(self) -> dict:
         """Internal method to build the SALib problem dictionary based on besos parameters.
@@ -6531,6 +6761,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         samples = saltelli.sample(problem, num_samples)
         parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
         self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
+        self._warn_mn_filter_not_applied('sampling_sobol')
 
     def sampling_morris(self, num_samples: int=100, num_levels: int=4):
         """Uses Morris' method to generate samples for Sensitivity Analysis.
@@ -6559,6 +6790,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         samples = morris_sampler.sample(problem, N=num_samples, num_levels=num_levels)
         parameters_values_df = pd.DataFrame(samples, columns=problem['names'])
         self.parameters_values_df = self._expand_samples_with_buildings_and_epws(parameters_values_df)
+        self._warn_mn_filter_not_applied('sampling_morris')
 
     # ------------------------------------------------------------------
     # Category mapping helpers
@@ -9026,6 +9258,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             if df is None:
                 raise ValueError("Argument 'df' cannot be None if self.parameters_values_df is not populated. Run a sampling method first or provide 'df'.")
 
+        df = self._filter_plan_by_mn_filter(df, context='run_parametric_simulation')
+
         out_dir = self._resolve_results_out_dir(
             out_dir=out_dir,
             accim_results_root=accim_results_root,
@@ -9782,6 +10016,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             'pareto_separate_by_idf': bool(pareto_separate_by_idf),
             'keep_df': str(keep_df),
         }
+        if getattr(self, 'mn_filter', None) is not None:
+            resume_signature_payload['mn_filter'] = self.mn_filter.to_dict()
         resume_signature = hashlib.sha1(
             json.dumps(resume_signature_payload, sort_keys=True, ensure_ascii=True, default=str).encode('utf-8')
         ).hexdigest()
@@ -9842,6 +10078,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         self._warn_if_out_dir_too_long_for_energyplus(out_dir, 'run_optimisation')
         # Save an IDF backup into the results folder before starting
         self._save_idf_backup(label='pre_optimisation', out_dir=out_dir)
+        mn_filter_mapping = self._build_mn_filter_mapping()
         from besos.evaluator import AbstractEvaluator
         if not hasattr(AbstractEvaluator, '_original_to_platypus'):
             AbstractEvaluator._original_to_platypus = AbstractEvaluator.to_platypus
@@ -9937,6 +10174,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         progress_reporter.start_case(case_counter, idf_basename, epwname)
                     evaluator = self.set_evaluator(epw=epw, out_dir=out_dir, building=b)
                     evaluator._keep_sim_files = keep_sim_files
+                    evaluator._mn_filter_map = mn_filter_mapping
                     evaluator._keep_sim_files_batch_size = keep_sim_files_batch_size
                     evaluator._keep_dirs = False if keep_sim_files == 'none' else True
                     evaluator._sim_files_extensions = sim_files_extensions_normalized
@@ -9985,6 +10223,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         outputs_optimisation = optimizer.EpsNSGAII(evaluator, evaluations=evaluations, population_size=population_size, **algorithm_options)
                     else:
                         raise KeyError(f'Input algorithm {algorithm} not found. Available algorithms are: {available_algorithms}')
+                    if mn_filter_mapping is not None:
+                        outputs_optimisation = mn_filter_mapping.map_dataframe(outputs_optimisation)
                     outputs_optimisation['epw'] = epwname
                     outputs_optimisation['idf'] = idf_basename
                     outputs_dict.update({key: outputs_optimisation})
