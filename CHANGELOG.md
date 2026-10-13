@@ -215,6 +215,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `set_output_var_df_to_idf(...)` and `set_output_met_objects_to_idf(...)` remain deprecated wrappers of `set_output_variables_to_idf(...)` / `set_output_meters_to_idf(...)`.
 
 ### Fixed
+- **`Date/Time` of simulation CSVs read with `skip_blank_lines=False`**: `Table` (`accim.data.postprocessing`) and `filter_simulation_output_csvs(...)` now read `eplusout.csv` files with `skip_blank_lines=False`. With the pandas default, a line that starts exactly at the end of one of the 256 KiB read blocks lost its leading space (`' 07/23  15:00:00'` was read as `'07/23  15:00:00'`), so that `Date/Time` value differed from all the others.
+- **`Table` plots with recent matplotlib versions**: the plotting methods of `Table` no longer call `GrouperView.join` (removed in matplotlib 3.8) to share the secondary y-axes, or `Legend.legendHandles` (removed in matplotlib 3.9); the helpers `_share_y_axis` and `_legend_handles` work with old and new versions.
 - **aPMV setpoints applied on the aPMV scale (`apply_apmv_setpoints`)**: the EMS program `apply_aPMV_<target>` passed `s/(1 + lambda*s)` to the Fanger thermal comfort thermostat, where `s` is `pmv_heating_sp` or `pmv_cooling_sp` and `lambda` is the adaptive coefficient of the current season. That is the aPMV of a PMV equal to `s`, not the PMV whose aPMV equals `s`, so the zone aPMV settled around `s/(1 + 2*lambda*s)` and the effect of `lambda` was inverted.
   - `pmv_heating_sp` and `pmv_cooling_sp` are now targets on the aPMV scale, and the setpoint tolerances are applied on that scale.
   - The thermostat receives the PMV given by the inverse aPMV formula, `PMV = aPMV/(1 - lambda*aPMV)`.

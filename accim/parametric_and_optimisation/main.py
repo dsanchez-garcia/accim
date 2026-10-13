@@ -12709,6 +12709,9 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 dtype=str,
                 keep_default_na=False,
                 na_filter=False,
+                # with the default skip_blank_lines=True, pandas drops the leading space of a line that
+                # starts exactly at the end of one of its 256 KiB read blocks (' 07/23  15:00:00')
+                skip_blank_lines=False,
                 encoding=encoding,
             )
             n_rows = 0

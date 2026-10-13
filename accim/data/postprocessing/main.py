@@ -17,6 +17,22 @@
 import os
 from typing import Union
 
+
+def _share_y_axis(reference_ax, ax):
+    """Share the y-axis of ax with reference_ax (GrouperView.join was removed in matplotlib 3.8)."""
+    if ax is reference_ax:
+        return
+    if hasattr(ax, 'sharey'):  # matplotlib >= 3.3
+        ax.sharey(reference_ax)
+    else:
+        reference_ax.get_shared_y_axes().join(reference_ax, ax)
+
+
+def _legend_handles(leg):
+    """Legend handles (Legend.legendHandles was renamed legend_handles in matplotlib 3.7 and removed in 3.9)."""
+    handles = getattr(leg, 'legend_handles', None)
+    return handles if handles is not None else leg.legendHandles
+
 class Table:
     """Generates a table or dataframe using the EnergyPlus simulation
     results CSV files available in the current folder.
@@ -339,7 +355,9 @@ class Table:
                 #     csv_reader = csv.reader(csv_file, delimiter=',')
                 #     df = pd.DataFrame([csv_reader], index=True)
 
-                df = pd.DataFrame(pd.read_csv(file))
+                # skip_blank_lines=False: with the default, pandas drops the leading space of a line
+                # that starts exactly at the end of one of its 256 KiB read blocks (' 07/23  15:00:00')
+                df = pd.DataFrame(pd.read_csv(file, skip_blank_lines=False))
 
                 # Step: filtering outputs to only standards
                 if standard_outputs:
@@ -2848,7 +2866,7 @@ class Table:
             for i in range(len(rows)):
                 for j in range(len(cols)):
                     for k in range(len(self.y_list_sec[i][j])):
-                        sec_y_axis[0][0][k].get_shared_y_axes().join(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
+                        _share_y_axis(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
                         if len(self.data_on_y_sec_axis) > 1:
                             if len(self.y_list_sec[i][j]) >= 1:
                                 if j < (len(cols) - 1):
@@ -2985,8 +3003,8 @@ class Table:
             else:
                 bbox_extra_artists_tuple = (leg, supx, supy)
 
-            for i in range(len(leg.legendHandles)):
-                leg.legendHandles[i]._sizes = [30]
+            for handle in _legend_handles(leg):
+                handle._sizes = [30]
 
             # plt.subplots_adjust(bottom=0.2)
             # plt.tight_layout()
@@ -3600,8 +3618,8 @@ class Table:
                 # borderaxespad=0.1,
             )
 
-            for i in range(len(leg.legendHandles)):
-                leg.legendHandles[i]._sizes = [30]
+            for handle in _legend_handles(leg):
+                handle._sizes = [30]
 
             # plt.subplots_adjust(
             #     # bottom=0.2,
@@ -3875,7 +3893,7 @@ class Table:
             for i in range(len(self.rows)):
                 for j in range(len(self.cols)):
                     for k in range(len(self.y_list_sec[i][j])):
-                        sec_y_axis[0][0][k].get_shared_y_axes().join(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
+                        _share_y_axis(sec_y_axis[0][0][k], sec_y_axis[i][j][k])
                         if len(self.data_on_y_sec_axis) > 1:
                             if len(self.y_list_sec[i][j]) >= 1:
                                 if j < (len(self.cols) - 1):
@@ -3997,8 +4015,8 @@ class Table:
             else:
                 bbox_extra_artists_tuple = (leg, supx, supy)
 
-            for i in range(len(leg.legendHandles)):
-                leg.legendHandles[i]._sizes = [30]
+            for handle in _legend_handles(leg):
+                handle._sizes = [30]
 
             # plt.subplots_adjust(bottom=0.2)
             # plt.tight_layout()
