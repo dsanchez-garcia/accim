@@ -24,12 +24,20 @@ from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
 import seaborn as sns
 from accim.parametric_and_optimisation.utils import apply_data_filter, resolve_subplot_orders
+from accim.parametric_and_optimisation.hourly_plotting import HourlyPlottingMixin
 
-class PlottingMixin:
+class PlottingMixin(HourlyPlottingMixin):
     """Shared plotting helpers used by simulation classes.
     
         The mixin centralizes dataframe selection/filtering, filename resolution,
         and subplot-order utilities so higher-level plotting methods stay concise.
+        It inherits the hourly analysis and plotting methods of
+        :class:`accim.parametric_and_optimisation.hourly_plotting.HourlyPlottingMixin`
+        (``compute_hourly_indicators``, ``plot_comfort_screening``,
+        ``plot_hourly_heatmaps``, ``plot_hourly_period``,
+        ``plot_hourly_binned_response``, ``plot_load_duration_curves``,
+        ``plot_adaptive_comfort_chart``, ``plot_hourly_scatter_matrix``,
+        ``plot_results_scatter_matrix`` and ``plot_monthly_distributions``).
     
     Usage
     -----

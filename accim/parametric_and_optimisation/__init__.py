@@ -51,6 +51,13 @@ from .main import (
     compare_multiple_pickles_with_reference,
     preflight_report,
 )
+from .hourly_plotting import (
+    HourlyPlottingMixin,
+    adaptive_comfort_band,
+    comfort_categories,
+    read_epw_dry_bulb,
+    running_mean_outdoor_temperature,
+)
 
 __all__ = [
     'ParametricSimulation',
@@ -62,4 +69,9 @@ __all__ = [
     'compare_latest_pickles_in_folders',
     'compare_multiple_pickles_with_reference',
     'preflight_report',
+    'HourlyPlottingMixin',
+    'adaptive_comfort_band',
+    'comfort_categories',
+    'read_epw_dry_bulb',
+    'running_mean_outdoor_temperature',
 ]

@@ -24,6 +24,7 @@ Welcome to accim |version|'s documentation!
    :caption: How-to Guides:
 
    filter_output_csvs
+   hourly_plotting
    jupyter_notebooks/addAccis/using_addAccis
    jupyter_notebooks/rename_epw_files/using_rename_epw_files
    jupyter_notebooks/runEp/using_runEp
