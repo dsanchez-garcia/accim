@@ -15,6 +15,15 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-15 — Notebooks wf1, wf2, wf4 and the parametric evaluation worker
+
+- **Objective**: Rewrite the notebooks wf1, wf2 and wf4 of `parametric_and_optimisation_examples` after the handoff from the paper chat, with light simulations, and fix the bugs they exposed.
+- **Affected files**: the three notebooks; `accim/parametric_and_optimisation/main.py` (`_run_single_evaluation_worker`); new `tests/parametric_and_optimisation/test_parametric_worker.py`; [[../CHANGELOG.md]]; [[../DEVLOG.md]].
+- **Finding or decision**: Full hourly results only in wf1; wf2 and wf4 run in annual mode and simulate the chosen configurations or solutions again with hourly outputs (see [[decisions.md#2026-10-15 — Hourly results of the parametric notebooks only where they are analysed|the decision]]). The sample IDFs simulate 7 design days, which the annual readers added to the results (+3.3 % HVAC electricity); the notebooks set `Run_Simulation_for_Sizing_Periods = "No"`. The evaluation worker shared one folder with `keep_dirs=False`, could create `BESOS_Output` twice at once and lost the `add_outputs`; fixed. Mixed mode needs AirflowNetwork openings, which the sample model lacks.
+- **Validation**: 6 new worker tests (4 fail on the previous code); parametric unit tests 160 passed, 1 failure that predates the change; the three notebooks executed with reduced runs. Details in [[../DEVLOG.md]].
+- **Next step**: Design days in the sample IDFs; wf3, wf5 and tutorials 00-10.
+
+
 ## 2026-10-15 — Optional sample files: `accim` and `accim[samples]`
 
 - **Objective**: Allow installing accim from pip with or without `accim/sample_files`, since more (heavy) notebooks will be added.
