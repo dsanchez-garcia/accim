@@ -34,6 +34,12 @@ Welcome to accim |version|'s documentation!
    jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints.ipynb
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Parametric simulation and optimisation:
+
+   jupyter_notebooks/parametric_and_optimisation_examples/index
+
+.. toctree::
    :maxdepth: 7
    :caption: API Reference:
 

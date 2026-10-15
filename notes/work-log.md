@@ -15,6 +15,15 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-16 — The parametric notebooks in the documentation
+
+- **Objective**: Show the workflows and tutorials of `parametric_and_optimisation_examples` on Read the Docs, as the author asked.
+- **Affected files**: new `docs/prepare_parametric_notebooks.py` and `docs/source/jupyter_notebooks/parametric_and_optimisation_examples/` (index and 16 executed notebooks); `docs/source/conf.py`, `docs/source/index.rst`, `docs/requirements.txt`; tutorials 05, 08 and 09; [[../CHANGELOG.md]]; [[../DEVLOG.md]].
+- **Finding or decision**: Read the Docs cannot run these notebooks (EnergyPlus), so the documentation shows copies run beforehand, as for the other notebook pages, and `conf.py` never runs notebooks. The copies are exported with relative paths, without progress bars, with shortened logs and smaller figures; a 256-colour palette shrinks most figures but bands heatmaps, so each figure keeps its colours when the palette would change it visibly. The runs used a copy of the committed accim (`git archive`, first in `PYTHONPATH`) because another session was editing the working copy.
+- **Validation**: the 16 notebooks ran without errors; local html, latex and epub builds without errors or warnings from the new pages; pages checked in the browser. Details in [[../DEVLOG.md]].
+- **Next step**: Merge into `master` so that Read the Docs builds the section; export wf4 and wf5 again after the minor fixes are committed.
+
+
 ## 2026-10-15 — Parametric plan, extra parameters, custom baseline and MCDM per front
 
 - **Objective**: Fix the accim bugs that made tutorial 06 simulate the wrong model and ignore its roof insulation, and that forced workarounds in tutorial 05; choose compromise solutions per front. Requested by the author, with tests.

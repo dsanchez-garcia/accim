@@ -6,6 +6,8 @@ sphinx
 sphinx-rtd-theme
 nbsphinx
 myst-parser
+# Pygments lexer 'ipython3' of the code cells of the notebooks
+ipython
 
 # --- Dependencias del paquete accim (de setup.py) ---
 # Sphinx necesita importarlas para leer los docstrings del código
