@@ -28,6 +28,15 @@ Internal development log for the repository.
 
 ## Entries
 
+### 2026-10-15
+#### [done] Split sample files into the optional distribution `accim-samples`
+- Context: More notebooks are going to be added to `accim/sample_files` (already about 125 MB uncompressed, 36 MB wheel). The user wants to install accim with or without them from pip.
+- Changes: pip extras cannot add files to a distribution, only dependencies, so the sample files go into a second distribution. Root `setup.py` now excludes `accim.sample_files*` from `find_packages`, adds `exclude_package_data` as a safety net and declares `extras_require={'samples': ['accim-samples==<accim version>']}`. Root `MANIFEST.in` now uses `prune accim/sample_files`. New `packaging/accim-samples/` (setup.py, MANIFEST.in, README.md for PyPI) and `packaging/build_samples_dist.py`, which stages a copy of `accim/sample_files` (without `__pycache__`, `*.pyc`, `.ipynb_checkpoints`) in `build/samples_stage`, builds a wheel by default (`--sdist` optional) and checks its content. The samples wheel never contains `accim/__init__.py`, so both distributions install into `site-packages/accim` and uninstall independently. `accim-samples` requires `accim==<same version>`. `dist_build_package.bat` builds both; upload scripts upload both from `dist/`. `/build/` added to `.gitignore`.
+- Files: `setup.py`, `MANIFEST.in`, `packaging/accim-samples/*`, `packaging/build_samples_dist.py`, `dist_build_package.bat`, `dist_upload.bat`, `dist_upload_test.bat`, `.gitignore`, `README.md`, `docs/source/1_requirements.md`, `docs/source/2_installation.md`, `docs/source/4_detailed use.md`, `CHANGELOG.md`, `notes/work-log.md`, `notes/decisions.md`.
+- Verification: Built with Python 3.14, setuptools 82.0.1, build 1.5.0. Core wheel, built from the source tree and through the sdist: 0.51 MB, no `sample_files` entries, metadata `Provides-Extra: samples` and `Requires-Dist: accim-samples==0.7.8; extra == "samples"`. Samples wheel: 29.1 MB, 129/129 source files (same set as the filtered source tree), no `accim/__init__.py`, `Requires-Dist: accim==0.7.8`; `--sdist` also works (29.4 MB). In a temporary venv (`--no-deps`): both installed together, `import accim.sample_files` resolved to site-packages; uninstalling `accim-samples` kept accim intact, and uninstalling `accim` kept `sample_files`. Resolution of `accim[samples]` against a real index was not tested (`accim-samples` is not on PyPI yet; the name was free on 2026-10-15). The existing `dist/` (0.7.8.1) was not touched.
+- Next step: First upload of `accim-samples` (needs an account-scoped PyPI token, or a token for the new project); test `pip install "accim[samples]"` from TestPyPI.
+
+
 ### 2026-10-03
 #### [done] Diagnose exp 4.4 failure: EnergyPlus output path exceeds MAX_PATH
 - Context: Exp 4.4 test run failed on this PC: every simulation ended with "EnergyPlus Terminated--Error(s) Detected" and no `eplusout.err` was written. The same script works on another PC.

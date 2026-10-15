@@ -9,4 +9,4 @@ To use accim, the following must be installed:
     *   Disable path length limit.
 *   EnergyPlus (any version between 9.1 and 25.1, inclusive) in the default path (e.g., `C:\EnergyPlusV25-1-0`).
 
-Jupyter Notebook is also recommended to run the example notebooks located in `accim/sample_files/jupyter_notebook`.
+Jupyter Notebook is also recommended to run the example notebooks located in `accim/sample_files/jupyter_notebooks`. These sample files are only installed with `pip install "accim[samples]"` (see the Installation section).

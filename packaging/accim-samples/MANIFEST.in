@@ -1,0 +1,8 @@
+# MANIFEST.in of the 'accim-samples' distribution (used in the staging folder
+# created by packaging/build_samples_dist.py, which already leaves out
+# __pycache__, *.pyc and .ipynb_checkpoints).
+include README.md
+include LICENSE
+include VERSION
+
+recursive-include accim/sample_files *

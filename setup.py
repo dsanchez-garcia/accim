@@ -82,6 +82,16 @@ this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
+# The example files (accim/sample_files: notebooks, IDFs, EPWs, CSVs...) are
+# NOT shipped with the core 'accim' distribution. They are published as a
+# separate distribution, 'accim-samples', built by
+# packaging/build_samples_dist.py, which installs them into
+# site-packages/accim/sample_files. Installation options:
+#   pip install accim            -> library only (lightweight)
+#   pip install "accim[samples]" -> library + sample files (same version)
+SAMPLES_DIST_NAME = 'accim-samples'
+SAMPLES_PACKAGES = ['accim.sample_files', 'accim.sample_files.*']
+
 setuptools.setup(
     name='accim',
     version=accim.__version__,
@@ -99,7 +109,7 @@ setuptools.setup(
         'Operating System :: Microsoft :: Windows',
         'Topic :: Scientific/Engineering'
         ],
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude=SAMPLES_PACKAGES),
     # package_data={
     #    '': [
     #        '*.csv',
@@ -114,6 +124,8 @@ setuptools.setup(
     #         ]
     #    },
     include_package_data=True,
+    # Safety net in addition to 'prune accim/sample_files' in MANIFEST.in.
+    exclude_package_data={'accim': ['sample_files/*']},
     python_requires='>=3.9',
     install_requires=[
         'scikit-learn',
@@ -131,6 +143,9 @@ setuptools.setup(
         # 'shutil',
         # 'glob'
         ],
+    extras_require={
+        'samples': [f'{SAMPLES_DIST_NAME}=={accim.__version__}'],
+        },
     # scripts=['bin/addAccis.py'],
     keywords=[
         'adaptive thermal comfort',

@@ -4,6 +4,7 @@
 __pycache__/
 *.pyc
 dist/
+/build/
 *.egg-info/
 tests_sim/
 #/.spyproject/
@@ -24,3 +25,4 @@ docs/_build
 # must not be versioned. Vault content (Home.md, notes/) IS versionable
 # and lives outside this folder.
 .obsidian/
+/llm_project_files/

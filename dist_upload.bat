@@ -24,6 +24,9 @@ IF NOT EXIST dist (
 
 ECHO.
 ECHO --- [Paso 2 de 2] Subiendo distribuciones a PyPI...
+REM Sube tanto 'accim' como 'accim-samples' (ambos se generan en dist\ con
+REM dist_build_package.bat). Deben subirse juntos: accim[samples] exige
+REM accim-samples con la misma version.
 REM Al no especificar --repository, twine usa la configuración 'pypi' por defecto.
 py -m twine upload dist/*
 IF ERRORLEVEL 1 (

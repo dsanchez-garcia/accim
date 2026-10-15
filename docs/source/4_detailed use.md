@@ -252,7 +252,7 @@ You can see a Jupyter Notebook either in the How-to Guide section of this docume
 
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb
 
-You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
+You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see the Installation section). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
 
 accim/sample_files/jupyter_notebooks/addAccis
 
@@ -552,7 +552,7 @@ You can see a Jupyter Notebook either in the How-to Guide section of this docume
 
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
 
-You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
+You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see the Installation section). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
 
 accim/sample_files/jupyter_notebooks/rename_epw_files
 
@@ -568,7 +568,7 @@ You can see a Jupyter Notebook either in the How-to Guide section of this docume
 
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
 
-You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
+You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see the Installation section). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
 
 accim/sample_files/jupyter_notebooks/runEp
 
@@ -683,7 +683,7 @@ You can see a Jupyter Notebook either in the How-to Guide section of this docume
 
 [`https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb`](https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb)
 
-You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
+You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see the Installation section). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
 
 accim/sample_files/jupyter_notebooks/Table
 

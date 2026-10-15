@@ -46,9 +46,19 @@ To use accim, the following must be installed:
 - EnergyPlus (any version between 9.1 and 25.1 those included)
 
 ## 2.1 Installation
-First of all, you need to install the package:
+First of all, you need to install the package. There are two options:
+
+**Library only** (lightweight). Use this option if you don't need the sample files:
 
     pip install accim
+
+**Library + sample files** (Jupyter notebooks, IDFs, EPWs, CSVs, figures and scripts):
+
+    pip install "accim[samples]"
+
+The sample files are published as the separate package `accim-samples`, with the same version as accim, and are installed into the `accim/sample_files` folder within your site-packages path. You can add them later with `pip install "accim[samples]"` and remove them with `pip uninstall accim-samples`; accim itself is not affected. To print the path of the installed sample files, run:
+
+    python -c "import accim.sample_files, os; print(os.path.dirname(accim.sample_files.__file__))"
 
 ## 2.2 Usage
 
@@ -107,7 +117,7 @@ Once you run this code, you will be asked to enter some information at the termi
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb  
 
-You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
 within your site_packages path, in
 
 accim/sample_files/jupyter_notebooks/addAccis
@@ -123,7 +133,7 @@ Then, you just need to copy the folder to a different path (i.e. Desktop), open 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
 
-You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
 within your site_packages path, in
 
 accim/sample_files/jupyter_notebooks/rename_epw_files
@@ -139,7 +149,7 @@ Then, you just need to copy the folder to a different path (i.e. Desktop), open 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
 
-You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
 within your site_packages path, in
 
 accim/sample_files/jupyter_notebooks/runEp
@@ -155,7 +165,7 @@ Then, you just need to copy the folder to a different path (i.e. Desktop), open 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
 
-You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
 within your site_packages path, in
 
 accim/sample_files/jupyter_notebooks/Table
@@ -175,7 +185,7 @@ This Notebook was used in the IBPSA webinar (although for accim version 0.7.1), 
 https://www.youtube.com/watch?v=PQ34Pl7t4HA&t=3393s
 
 
-You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
 within your site_packages path, in
 
 accim/sample_files/jupyter_notebooks/full_example_IBPSA
@@ -192,7 +202,7 @@ Then, you just need to copy the folder to a different path (i.e. Desktop), open 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints.ipynb
 
-You can also execute it at your computer. You just need to find the folder containing the .ipynb and all other files at the accim package folder
+You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
 within your site_packages path, in
 
 accim/sample_files/jupyter_notebooks/example_apmv_setpoints_paper

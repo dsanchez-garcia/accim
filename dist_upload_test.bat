@@ -34,5 +34,9 @@ IF ERRORLEVEL 1 (
 
 ECHO.
 ECHO --- Proceso completado ---
-ECHO Revisa tu paquete en: https://test.pypi.org/project/accim/
+ECHO Revisa tus paquetes en:
+ECHO   https://test.pypi.org/project/accim/
+ECHO   https://test.pypi.org/project/accim-samples/
+ECHO Para probar la instalacion con los sample files desde TestPyPI:
+ECHO   py -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "accim[samples]"
 PAUSE

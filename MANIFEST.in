@@ -1,14 +1,11 @@
-# MANIFEST.in (versión mejorada)
+# MANIFEST.in del paquete principal 'accim' (ligero)
 
 # 1. Incluir archivos de metadatos en la raíz
 include README.md
 include LICENSE
 
-# 2. Incluir de forma recursiva TODOS los archivos dentro de sample_files
-#    Esto reemplaza la necesidad de 'package_data' en setup.py
-recursive-include accim/sample_files *
-
-# 3. Excluir (podar) directorios específicos que no queremos en la distribución final
-# prune accim/sample_files/jupyter_notebooks/z_SS
-# prune dist
-# prune docs
+# 2. Excluir accim/sample_files (notebooks, IDFs, EPWs, CSVs...).
+#    Esos archivos se publican en la distribución aparte 'accim-samples'
+#    (ver packaging/accim-samples y packaging/build_samples_dist.py), que se
+#    instala con:  pip install "accim[samples]"
+prune accim/sample_files

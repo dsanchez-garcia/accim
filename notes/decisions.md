@@ -11,6 +11,29 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-10-15 — Ship sample files as the separate distribution `accim-samples`
+
+- **Status**: accepted
+- **Context**: `accim/sample_files` (notebooks, IDFs, EPWs, CSVs) made the
+  accim wheel about 36 MB and will grow as more notebooks are added. pip
+  extras cannot add files to a distribution, only extra dependencies. No
+  runtime code of accim reads `sample_files`.
+- **Decision**: The core `accim` distribution excludes `accim/sample_files`
+  (`setup.py` + `prune` in `MANIFEST.in`). The files are published as
+  `accim-samples` (built by `packaging/build_samples_dist.py`), which only
+  contains `accim/sample_files/**` and installs into the same folder. The
+  extra `accim[samples]` requires `accim-samples==<accim version>`, and
+  `accim-samples` requires `accim==<same version>`. Only the wheel is built
+  by default to reduce the size uploaded to PyPI.
+- **Consequences**: Every accim release must upload both distributions with
+  the same version (`dist_build_package.bat` builds both into `dist/`).
+  `accim-samples` must never contain `accim/__init__.py`. PyPI's default
+  per-file limit is 100 MB (the build script warns); a larger limit must be
+  requested if the samples wheel grows beyond it. Installs from git only get
+  the library. See [[../README.md]] and
+  [[../docs/source/2_installation.md]] for user instructions.
+
+
 ## 2026-09-13 — Treat `AGENTS_v2.md` as the current `AGENTS.md`
 
 - **Status**: accepted

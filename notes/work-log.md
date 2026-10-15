@@ -15,6 +15,15 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-15 — Optional sample files: `accim` and `accim[samples]`
+
+- **Objective**: Allow installing accim from pip with or without `accim/sample_files`, since more (heavy) notebooks will be added.
+- **Affected files**: `setup.py`, `MANIFEST.in`, new `packaging/accim-samples/` and `packaging/build_samples_dist.py`, `dist_build_package.bat`, `dist_upload*.bat`, `.gitignore`, [[../README.md]], `docs/source/{1_requirements,2_installation,4_detailed use}.md`, [[../CHANGELOG.md]], [[../DEVLOG.md]].
+- **Finding or decision**: pip extras only add dependencies, so the sample files are a second distribution, `accim-samples`, pulled in by the `samples` extra and installed into the same `accim/sample_files` folder (see [[decisions.md#2026-10-15 — Ship sample files as the separate distribution `accim-samples`|the decision]]). No runtime code uses `sample_files`. Parallel edits to the same file lost changes again (`setup.py`, `dist_build_package.bat`); they were re-applied one at a time.
+- **Validation**: Core wheel 0.51 MB without sample files; samples wheel 29.1 MB with 129/129 files and no `accim/__init__.py`; install/uninstall of each distribution in a temporary venv left the other intact. Details in [[../DEVLOG.md]].
+- **Next step**: First upload of `accim-samples` to TestPyPI/PyPI and test `pip install "accim[samples]"`.
+
+
 ## 2026-10-03 — Exp 4.4 failure: EnergyPlus MAX_PATH
 
 - **Objective**: Find out why exp 4.4 fails on this PC with no `eplusout.err` written.
