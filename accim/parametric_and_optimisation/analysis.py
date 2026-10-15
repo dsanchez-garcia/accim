@@ -1921,14 +1921,29 @@ class AnalysisMixin:
 
         return resolved
 
-    def get_best_compromise_solution(self, method: Literal['knee_point', 'topsis']='topsis', weights: list=None) -> pd.DataFrame:
+    def get_best_compromise_solution(
+            self,
+            method: Literal['knee_point', 'topsis'] = 'topsis',
+            weights: list = None,
+            separate_by_epw: Optional[bool] = None,
+            separate_by_idf: Optional[bool] = None,
+    ) -> pd.DataFrame:
         """
-        Identifies the best compromise solution from the Pareto front.
+        Identifies the best compromise solution of each Pareto front.
+
+        The non-dominated solutions of each EPW (and of each IDF, when the fronts are separated
+        by IDF) form a separate front, so the method is applied to each front, as in
+        ``plot_best_compromise_solutions``, and the result has one row per front.
 
         :param method: The MCDM method to use. 'knee_point' (closest distance to Utopia point) or 'topsis'.
         :param weights: A list of weights for each objective, used only in 'topsis'.
             If None, equal weights are applied. Must match the number of objectives.
-        :return: A pandas DataFrame containing the best compromise solution(s).
+        :param separate_by_epw: whether each EPW has its own front. If None, the value is taken
+            from ``outputs_optimisation.attrs['pareto_separate_by_epw']`` (fallback: True).
+        :param separate_by_idf: whether each IDF has its own front. If None, the value is taken
+            from ``outputs_optimisation.attrs['pareto_separate_by_idf']`` (fallback: False).
+        :return: A pandas DataFrame with the best compromise solution of each front, with the
+            column 'distance_to_utopia' (knee point) or 'topsis_score' (TOPSIS) of that front.
 
         Usage::
 
@@ -1938,6 +1953,7 @@ class AnalysisMixin:
         Example::
 
             best = sim.get_best_compromise_solution(method='topsis', weights=[0.5, 0.5])
+            best_seville = best[best['epw'] == 'Seville']
         """
         if getattr(self, 'last_run_type', None) != 'optimisation':
             raise ValueError('MCDM best compromise solutions can only be evaluated after an optimisation simulation. Please ensure you run run_optimisation() first.')
@@ -1946,6 +1962,8 @@ class AnalysisMixin:
         pareto_df = self.outputs_optimisation[self.outputs_optimisation['pareto-optimal'] == True].copy()
         if pareto_df.empty:
             raise ValueError('No Pareto optimal solutions found in outputs_optimisation.')
+        if method not in ('knee_point', 'topsis'):
+            raise ValueError(f'Unknown MCDM method: {method}')
         output_names = self.problem.names('outputs')
         resolved_output_names = self._resolve_output_columns(output_names, list(pareto_df.columns))
         minimize_outputs = getattr(self.problem, 'minimize_outputs', None)
@@ -1953,51 +1971,114 @@ class AnalysisMixin:
             minimize_flags = [True] * len(resolved_output_names)
         else:
             minimize_flags = [m if m is not None else True for m in minimize_outputs]
-        obj_values = pareto_df[resolved_output_names].values.astype(float)
-        mins = obj_values.min(axis=0)
-        maxs = obj_values.max(axis=0)
-        ranges = maxs - mins
-        ranges[ranges == 0] = 1.0
-        norm_values = (obj_values - mins) / ranges
-        if method == 'knee_point':
-            utopia = np.zeros(len(resolved_output_names))
-            for (i, minimize) in enumerate(minimize_flags):
-                if not minimize:
-                    utopia[i] = 1.0
-            distances = np.sqrt(np.sum((norm_values - utopia) ** 2, axis=1))
-            pareto_df['distance_to_utopia'] = distances
-            best_idx = np.argmin(distances)
-            return pareto_df.iloc[[best_idx]].copy()
-        elif method == 'topsis':
+        if method == 'topsis':
             if weights is None:
                 weights = np.ones(len(resolved_output_names)) / len(resolved_output_names)
             else:
                 if len(weights) != len(resolved_output_names):
                     raise ValueError(f'Length of weights ({len(weights)}) must match number of outputs ({len(resolved_output_names)}).')
                 weights = np.array(weights) / np.sum(weights)
-            sq_sum = np.sqrt(np.sum(obj_values ** 2, axis=0))
-            sq_sum[sq_sum == 0] = 1.0
-            topsis_norm = obj_values / sq_sum
-            weighted_norm = topsis_norm * weights
-            ideal_best = np.zeros(len(resolved_output_names))
-            ideal_worst = np.zeros(len(resolved_output_names))
-            for (i, minimize) in enumerate(minimize_flags):
-                if minimize:
-                    ideal_best[i] = np.min(weighted_norm[:, i])
-                    ideal_worst[i] = np.max(weighted_norm[:, i])
-                else:
-                    ideal_best[i] = np.max(weighted_norm[:, i])
-                    ideal_worst[i] = np.min(weighted_norm[:, i])
-            d_best = np.sqrt(np.sum((weighted_norm - ideal_best) ** 2, axis=1))
-            d_worst = np.sqrt(np.sum((weighted_norm - ideal_worst) ** 2, axis=1))
-            denom = d_best + d_worst
-            denom[denom == 0] = 1.0
-            closeness = d_worst / denom
-            pareto_df['topsis_score'] = closeness
-            best_idx = np.argmax(closeness)
-            return pareto_df.iloc[[best_idx]].copy()
+
+        attrs = getattr(self.outputs_optimisation, 'attrs', None) or {}
+        if separate_by_epw is None:
+            separate_by_epw = attrs.get('pareto_separate_by_epw', True)
+        if separate_by_idf is None:
+            separate_by_idf = attrs.get('pareto_separate_by_idf', False)
+        group_cols = []
+        if separate_by_epw and 'epw' in pareto_df.columns:
+            group_cols.append('epw')
+        if separate_by_idf and 'idf' in pareto_df.columns:
+            group_cols.append('idf')
+        if group_cols:
+            fronts = [front_df for (_, front_df) in pareto_df.groupby(group_cols, sort=False, dropna=False)]
         else:
-            raise ValueError(f'Unknown MCDM method: {method}')
+            fronts = [pareto_df]
+
+        best_rows = [
+            self._best_compromise_in_front(
+                front_df=front_df,
+                method=method,
+                weights=weights,
+                output_columns=resolved_output_names,
+                minimize_flags=minimize_flags,
+            )
+            for front_df in fronts
+        ]
+        return pd.concat(best_rows)
+
+    @staticmethod
+    def _best_compromise_in_front(
+            front_df: pd.DataFrame,
+            method: str,
+            weights,
+            output_columns: list,
+            minimize_flags: list,
+    ) -> pd.DataFrame:
+        """Return the best compromise solution of one Pareto front.
+
+        Parameters
+        ----------
+        front_df : pd.DataFrame
+            Non-dominated solutions of one front.
+        method : str
+            'knee_point' or 'topsis'.
+        weights : Any
+            Normalized TOPSIS weights of the objectives (unused by the knee point).
+        output_columns : list
+            Objective columns.
+        minimize_flags : list
+            Whether each objective is minimized.
+
+        Returns
+        -------
+        pd.DataFrame
+            One row: the chosen solution, with 'distance_to_utopia' or 'topsis_score'.
+
+        Usage
+        -----
+        Internal helper of ``get_best_compromise_solution``.
+
+        Examples
+        --------
+        best = self._best_compromise_in_front(front_df, 'knee_point', None, ['f1', 'f2'], [True, True])
+        """
+        front_df = front_df.copy()
+        obj_values = front_df[output_columns].values.astype(float)
+        if method == 'knee_point':
+            mins = obj_values.min(axis=0)
+            maxs = obj_values.max(axis=0)
+            ranges = maxs - mins
+            ranges[ranges == 0] = 1.0
+            norm_values = (obj_values - mins) / ranges
+            utopia = np.zeros(len(output_columns))
+            for (i, minimize) in enumerate(minimize_flags):
+                if not minimize:
+                    utopia[i] = 1.0
+            distances = np.sqrt(np.sum((norm_values - utopia) ** 2, axis=1))
+            front_df['distance_to_utopia'] = distances
+            best_idx = np.argmin(distances)
+            return front_df.iloc[[best_idx]].copy()
+        sq_sum = np.sqrt(np.sum(obj_values ** 2, axis=0))
+        sq_sum[sq_sum == 0] = 1.0
+        topsis_norm = obj_values / sq_sum
+        weighted_norm = topsis_norm * weights
+        ideal_best = np.zeros(len(output_columns))
+        ideal_worst = np.zeros(len(output_columns))
+        for (i, minimize) in enumerate(minimize_flags):
+            if minimize:
+                ideal_best[i] = np.min(weighted_norm[:, i])
+                ideal_worst[i] = np.max(weighted_norm[:, i])
+            else:
+                ideal_best[i] = np.max(weighted_norm[:, i])
+                ideal_worst[i] = np.min(weighted_norm[:, i])
+        d_best = np.sqrt(np.sum((weighted_norm - ideal_best) ** 2, axis=1))
+        d_worst = np.sqrt(np.sum((weighted_norm - ideal_worst) ** 2, axis=1))
+        denom = d_best + d_worst
+        denom[denom == 0] = 1.0
+        closeness = d_worst / denom
+        front_df['topsis_score'] = closeness
+        best_idx = np.argmax(closeness)
+        return front_df.iloc[[best_idx]].copy()
 
     def run_sensitivity_analysis_by_epw(
             self,

@@ -15,11 +15,19 @@ import accim.parametric_and_optimisation.main as main_module
 ADD_OUTPUT_NAMES = ['Heating:Electricity', 'Cooling:Electricity']
 
 
+WRITTEN_VALUES = []
+
+
+def _write_roof_thickness(building, value):
+    WRITTEN_VALUES.append(('roof thickness', value))
+
+
 class _FakeEvaluatorEP:
     created = []
 
     def __init__(self, problem, building, epw, out_dir=None, **kwargs):
         self.problem = problem
+        self.building = building
         self.out_dir = out_dir
         self.wrapper_existed = None
         if out_dir is not None:
@@ -32,6 +40,9 @@ class _FakeEvaluatorEP:
         _FakeEvaluatorEP.created.append(self)
 
     def __call__(self, values, keep_dirs=False):
+        # Like BESOS, each parameter of the problem writes its value into the building.
+        for parameter, value in zip(self.problem.inputs, values):
+            parameter.selector.set(self.building, value)
         if self.problem.add_outputs_list is not None:
             self.problem.add_outputs_list.append(list(values) + [11.0, 22.0])
         result = (5.0,)
@@ -131,3 +142,42 @@ def test_worker_without_add_outputs_reports_none(fake_besos, tmp_path):
 
     assert not any(name in result for name in ADD_OUTPUT_NAMES)
     assert not pd.isna(result['output_dir'])
+
+
+def test_worker_applies_the_additional_parameters_and_the_accim_ones(fake_besos, tmp_path, monkeypatch):
+    from besos.parameters import GenericSelector, Parameter, RangeParameter
+
+    accim_values = []
+    monkeypatch.setitem(
+        main_module.params_dicts.all_params,
+        'CustAST_m',
+        lambda building, value: accim_values.append(('CustAST_m', value)),
+    )
+    WRITTEN_VALUES.clear()
+    roof = Parameter(
+        selector=GenericSelector(set=_write_roof_thickness),
+        value_descriptors=RangeParameter(min_val=0.02, max_val=0.2, name='roof_thickness'),
+    )
+
+    result = main_module._run_single_evaluation_worker(
+        'model.idf', 'weather.epw', 'weather', 'model', str(tmp_path / 'results'),
+        ['CustAST_m', 'roof_thickness'], ['energy'],
+        [{'kind': 'meter', 'key_name': 'Electricity:HVAC', 'frequency': 'Hourly', 'output_name': 'energy'}],
+        [], [], {'CustAST_m': 0.4, 'roof_thickness': 0.12}, False, True, None, 'keep',
+        additional_params=[roof],
+    )
+
+    assert accim_values == [('CustAST_m', 0.4)]
+    assert WRITTEN_VALUES == [('roof thickness', 0.12)]
+    inputs = fake_besos.created[-1].problem.inputs
+    assert inputs[1] is roof
+    assert not inputs[0].selector
+    assert result['roof_thickness'] == 0.12
+
+
+def test_worker_ignores_parameters_without_selector_as_before(fake_besos, tmp_path):
+    WRITTEN_VALUES.clear()
+    result = _run_worker(tmp_path / 'results', keep_dirs=False)
+
+    assert WRITTEN_VALUES == []
+    assert result['energy'] == 5.0

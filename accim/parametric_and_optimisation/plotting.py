@@ -1583,7 +1583,12 @@ class PlottingMixin(HourlyPlottingMixin):
                     method = cfg['method']
                     weights = cfg.get('weights', None)
                     label = cfg['label']
-                    row_df = self.get_best_compromise_solution(method=method, weights=weights)
+                    row_df = self.get_best_compromise_solution(
+                        method=method,
+                        weights=weights,
+                        separate_by_epw=separate_by_epw,
+                        separate_by_idf=separate_by_idf,
+                    )
                     row_df = row_df.copy()
                     row_df['mcdm_method'] = label
                     row_df['mcdm_group'] = group_label

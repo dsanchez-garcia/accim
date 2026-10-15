@@ -15,6 +15,15 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-15 — Parametric plan, extra parameters, custom baseline and MCDM per front
+
+- **Objective**: Fix the accim bugs that made tutorial 06 simulate the wrong model and ignore its roof insulation, and that forced workarounds in tutorial 05; choose compromise solutions per front. Requested by the author, with tests.
+- **Affected files**: `accim/parametric_and_optimisation/main.py`, `analysis.py`, `plotting.py`; new `tests/parametric_and_optimisation/test_parametric_plan.py`, plus `test_parametric_worker.py` and `test_analysis_output_resolution.py`; tutorials 05, 06 and 10; [[../CHANGELOG.md]]; [[../DEVLOG.md]].
+- **Finding or decision**: Parametric results now follow the task order (by IDF, EPW and plan row), with one row per plan row even when rows repeat, so parallel runs give the same table as sequential ones. The worker gets the non-accim BESOS parameters as a keyword argument, so the existing fake workers of the tests keep working. `get_best_compromise_solution` uses the same grouping as `plot_best_compromise_solutions`.
+- **Validation**: 14 new tests, 11 failing on the previous code; parametric suite 174 passed, 1 old failure. Tutorials 05, 06 and 10 executed and checked (plan order, model of each row, effect of the roof thickness, ComfStand 99 in both IDFs). Details in [[../DEVLOG.md]].
+- **Next step**: Commit, after the author's approval.
+
+
 ## 2026-10-15 — Notebooks wf3, wf5 and tutorials 00-10
 
 - **Objective**: Finish the notebooks of `parametric_and_optimisation_examples`: wf3 and wf5 (aPMV setpoints, Examples 3 and 5 of the paper) and the tutorials 00-10, all runnable with the sample IDF and EPW files.
