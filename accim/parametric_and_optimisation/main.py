@@ -265,6 +265,7 @@ def _run_single_evaluation_worker(
     """
     import warnings
     warnings.filterwarnings('ignore')
+    from besos import config as besos_config
     from besos.evaluator import EvaluatorEP
     from besos.problem import EPProblem
     from besos.parameters import Parameter
@@ -356,25 +357,38 @@ def _run_single_evaluation_worker(
         )
     else:
         prob = EPProblem(inputs=dummy_inputs, outputs=problem_names_outputs)
-    
-    evaluator = EvaluatorEP(problem=prob, building=b, epw=epw, out_dir=out_dir)
+
+    # Without keep_dirs, no output folder is given, so BESOS runs EnergyPlus in a temporary
+    # folder of its own: with out_dir, every simulation would write to the same
+    # <out_dir>/BESOS_Output folder, and parallel simulations would overwrite each other.
+    evaluator_out_dir = out_dir if keep_dirs else None
+    if evaluator_out_dir is not None:
+        # EvaluatorEP creates <out_dir>/BESOS_Output when it does not exist; workers starting
+        # at the same time may try to create it together, so it is created here first.
+        os.makedirs(os.path.join(str(evaluator_out_dir), besos_config.out_wrapper), exist_ok=True)
+    evaluator = EvaluatorEP(problem=prob, building=b, epw=epw, out_dir=evaluator_out_dir)
+    if getattr(prob, 'add_outputs', None):
+        # BESOS only records the add_outputs of an evaluation once this list exists.
+        prob.pre_optimisation()
     row_values = [row_dict[n] for n in problem_names_inputs]
-    
+
     result = evaluator(row_values, keep_dirs=keep_dirs)
     if not isinstance(result, (list, tuple)):
         result = (result,)
-        
+
     result_dict = {
         problem_names_outputs[idx]: result[idx]
         for idx in range(len(problem_names_outputs))
     }
 
-    n_main_outputs = len(problem_names_outputs)
-    n_add_outputs = len(add_output_names)
+    # BESOS returns the objectives (followed by the simulation folder with keep_dirs) and keeps
+    # the add_outputs apart, as [inputs..., add_outputs...] rows of problem.add_outputs_list.
+    add_output_records = getattr(prob, 'add_outputs_list', None) or []
+    add_output_values = list(add_output_records[-1])[len(row_values):] if add_output_records else []
     for idx, add_output_name in enumerate(add_output_names):
-        result_dict[add_output_name] = result[n_main_outputs + idx] if (n_main_outputs + idx) < len(result) else pd.NA
-    
-    if keep_dirs and len(result) > (n_main_outputs + n_add_outputs):
+        result_dict[add_output_name] = add_output_values[idx] if idx < len(add_output_values) else pd.NA
+
+    if keep_dirs and len(result) > len(problem_names_outputs):
         sim_dir = result[-1]
         result_dict['output_dir'] = sim_dir
         if sim_files_extensions is not None and sim_dir not in (None, ''):
