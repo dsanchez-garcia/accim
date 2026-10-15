@@ -15,6 +15,15 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-15 — Notebooks wf3, wf5 and tutorials 00-10
+
+- **Objective**: Finish the notebooks of `parametric_and_optimisation_examples`: wf3 and wf5 (aPMV setpoints, Examples 3 and 5 of the paper) and the tutorials 00-10, all runnable with the sample IDF and EPW files.
+- **Affected files**: `wf2`, `wf3`, `wf5` and `00`-`10` in `accim/sample_files/jupyter_notebooks/parametric_and_optimisation_examples/`; [[../DEVLOG.md]].
+- **Finding or decision**: The sample model has a work efficiency, clothing and air velocity of 1 in its People object, which overheats the zones under aPMV setpoints; wf3, wf5 and tutorial 03 set realistic PMV inputs. The aPMV cooling season is given by dates, so wf3 and wf5 use Seville only, and wf2 gives Sydney the cooling season of the southern hemisphere. Several tutorials ran without errors but gave wrong results; the causes in accim are listed in [[../DEVLOG.md]] (dropped `idf` column with one building, `additional_params` ignored by the parametric worker, custom-model baseline only on the first building, row order and duplicates in Morris/Sobol runs, MCDM over the fronts of all EPWs). None of them affects the campaign of the paper, which uses one building, accim parameters only and no Sobol/Morris.
+- **Validation**: wf3 in full and wf5 reduced, without errors; tutorials 00-10 executed in order without errors. Details in [[../DEVLOG.md]].
+- **Next step**: The author decides whether to fix those issues in accim and whether to commit the notebooks.
+
+
 ## 2026-10-15 — Notebooks wf1, wf2, wf4 and the parametric evaluation worker
 
 - **Objective**: Rewrite the notebooks wf1, wf2 and wf4 of `parametric_and_optimisation_examples` after the handoff from the paper chat, with light simulations, and fix the bugs they exposed.
