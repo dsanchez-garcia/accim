@@ -48,19 +48,9 @@ from `docs/source/`:
 - [[docs/source/3_quick tutorial.md|3. Quick tutorial]]
 - [[docs/source/4_detailed use.md|4. Detailed use]]
 - [[docs/source/5_troubleshooting.md|5. Troubleshooting]]
-- [[docs/source/9_pickle_comparison_tutorial.md|9. Pickle comparison tutorial]]
 - [[docs/source/6_citation.md|6. Citation]]
 - [[docs/source/7_credits.md|7. Credits]]
 - [[docs/source/8_pdfs_for_prev_versions.md|8. PDFs for previous versions]]
-
-## Recent technical reports (existing, not modified)
-
-These pre-existing reports remain in Spanish, at the repository root, as
-canonical documents. They are linked here, not copied:
-
-- [[INFORME_REVISION_PARAMETRIC_2026-07-25.md|Informe de revision — parametric_and_optimisation (2026-07-25)]]
-- [[PLAN_IMPLEMENTACION_PARAMETRIC_2026-07-25.md|Plan de implementacion — parametric_and_optimisation (2026-07-25)]]
-- [[informe_exp_4_3_parametric_apmv_w-figs.md|Informe de ejecucion — exp_4_3_parametric_apmv_w-figs.py]]
 
 ## Vault working notes (English, new for Obsidian)
 

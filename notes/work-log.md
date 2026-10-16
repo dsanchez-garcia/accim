@@ -15,6 +15,15 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-16 — Agent-generated files removed
+
+- **Objective**: Remove the files written by AI agents that do not belong in the repository, and the Spanish page on comparing pickles from Read the Docs, as the author asked.
+- **Affected files**: `docs/source/index.rst`, `CHANGELOG.md`, `.gitignore`, [[../Home.md]], [[references.md]]; removed reports in `docs/` and at the root, run logs `exp_4_*_run.log` and tracked `.ipynb_checkpoints` folders. Full list in [[../DEVLOG.md]].
+- **Finding or decision**: The author keeps this vault, `AGENTS_v2.md`, `.github/copilot-instructions.md`, `DEVLOG.md`, `TODO.md` and `ROADMAP.md`. The review and plan of 2026-07-25 left the repository and stay in the author's project files.
+- **Validation**: no tracked file refers to the removed files; local html build with notebooks never executed.
+- **Next step**: none.
+
+
 ## 2026-10-16 — The parametric notebooks in the documentation
 
 - **Objective**: Show the workflows and tutorials of `parametric_and_optimisation_examples` on Read the Docs, as the author asked.

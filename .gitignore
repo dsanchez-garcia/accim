@@ -6,6 +6,8 @@ __pycache__/
 dist/
 /build/
 *.egg-info/
+.ipynb_checkpoints/
+*.log
 tests_sim/
 #/.spyproject/
 #/tests/SS/
