@@ -468,7 +468,41 @@ class PlottingMixin(HourlyPlottingMixin):
 
         return df.reset_index(drop=True)
 
-    def _normalise_plot_columns(self, df: pd.DataFrame, columns: list, normalize_per_m2: bool = False) -> tuple[pd.DataFrame, dict]:
+    def _is_plot_source_normalized(self, df_source: Optional[str]) -> bool:
+        """Tell whether `normalize_outputs` already converted the plotted table to kWh/m2.
+
+        Parameters
+        ----------
+        df_source : Optional[str]
+            Table being plotted (for example ``'parametric'`` or ``'optimisation_hourly'``).
+
+        Returns
+        -------
+        bool
+            Normalisation state of that table. Without ``df_source``, or for objects that do not
+            keep the state of each table, the global ``outputs_normalized`` flag is used.
+
+        Usage
+        -----
+        Internal helper of the plotting methods. The global flag is False while any loaded table
+        is not normalised, so it cannot tell whether the plotted table is.
+
+        Examples
+        --------
+        already_per_m2 = self._is_plot_source_normalized('parametric')
+        """
+        is_df_type_normalized = getattr(self, '_is_df_type_normalized', None)
+        if df_source is not None and callable(is_df_type_normalized):
+            return bool(is_df_type_normalized(df_source))
+        return bool(getattr(self, 'outputs_normalized', False))
+
+    def _normalise_plot_columns(
+            self,
+            df: pd.DataFrame,
+            columns: list,
+            normalize_per_m2: bool = False,
+            df_source: Optional[str] = None,
+    ) -> tuple[pd.DataFrame, dict]:
         """Normalize selected energy-like columns and report output units.
 
         Parameters
@@ -479,6 +513,9 @@ class PlottingMixin(HourlyPlottingMixin):
             Candidate columns to normalize when energy-like.
         normalize_per_m2 : bool
             Whether values should be converted to per-area basis.
+        df_source : Optional[str]
+            Table the dataframe comes from; its normalisation state decides whether the
+            values are already in kWh/m2.
 
         Returns
         -------
@@ -491,14 +528,14 @@ class PlottingMixin(HourlyPlottingMixin):
 
         Examples
         --------
-        df_n, unit_map = self._normalise_plot_columns(df, [x, y], normalize_per_m2=True)
+        df_n, unit_map = self._normalise_plot_columns(df, [x, y], normalize_per_m2=True, df_source='parametric')
         """
-        outputs_normalized = getattr(self, 'outputs_normalized', False)
+        outputs_normalized = self._is_plot_source_normalized(df_source)
         area_attr = getattr(self, 'building_floor_area', None)
 
         if outputs_normalized:
             if normalize_per_m2:
-                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+                print(f'[!] Warning: the {df_source or "plotted"} outputs are already normalized. The argument normalize_per_m2=True will have no effect.')
             normalize_per_m2 = False
             base_divisor = 1.0
             energy_unit = 'kWh/m2'
@@ -736,6 +773,44 @@ class PlottingMixin(HourlyPlottingMixin):
             return {}
         return resolved_orders
 
+    @staticmethod
+    def _ignore_missing_facet_columns(df: pd.DataFrame, context: str, **dimensions) -> list:
+        """Replace with None the facet and hue columns that are not in the plotted data.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Data about to be plotted.
+        context : str
+            Name of the plotting method, used in the message.
+        **dimensions
+            Column requested for each dimension, for example ``row='ComfMod'``.
+
+        Returns
+        -------
+        list
+            The columns in the order of ``dimensions``, with None for those not in ``df``.
+            A message names the ignored columns.
+
+        Usage
+        -----
+        Internal helper of the hourly plots, which used to drop these columns silently.
+
+        Examples
+        --------
+        (row, col, hue) = self._ignore_missing_facet_columns(df, 'plot_hourly_scatter', row=row, col=col, hue=hue)
+        """
+        resolved = []
+        ignored = []
+        for (dimension, column) in dimensions.items():
+            if column is not None and column not in df.columns:
+                ignored.append(f'{dimension}={column!r}')
+                column = None
+            resolved.append(column)
+        if ignored:
+            print(f"[!] {context}: {', '.join(ignored)} ignored, not found in the plotted data.")
+        return resolved
+
     def prepare_hourly_long_df(
             self,
             df_source: str = 'parametric_hourly',
@@ -754,6 +829,7 @@ class PlottingMixin(HourlyPlottingMixin):
             data_filter_case_sensitive: bool = False,
             data_filter_strict: bool = True,
             data_filter_on_empty: Literal['error', 'warn', 'ignore'] = 'error',
+            extra_id_vars: Optional[list] = None,
     ) -> pd.DataFrame:
         """Prepares an hourly dataframe for plotting by applying filters and a melt
         transformation into long format.
@@ -765,7 +841,12 @@ class PlottingMixin(HourlyPlottingMixin):
         df_source : Any
             Input dataframe used by this routine.
         id_vars : Any
-            Argument used by `PlottingMixin.prepare_hourly_long_df`.
+            Columns kept as identifiers. By default, the datetime column, the parameters
+            of the custom model (``CustAST_m``, ``CustAST_n``), ``epw`` and the running
+            mean outdoor temperature, when they are in the hourly results.
+        extra_id_vars : Optional[list]
+            Columns kept as identifiers in addition to ``id_vars`` (or its default), when
+            they are in the hourly results, for example the facet columns of a plot.
         value_vars : Any
             Argument used by `PlottingMixin.prepare_hourly_long_df`.
         value_tokens : Any
@@ -831,6 +912,11 @@ class PlottingMixin(HourlyPlottingMixin):
             missing_id = [c for c in id_vars if c not in df.columns]
             if missing_id:
                 raise KeyError(f'Missing id_vars columns in hourly dataframe: {missing_id}')
+        extra_id_vars = [
+            c for c in (extra_id_vars or [])
+            if c is not None and c in df.columns and c not in id_vars and c not in (value_vars or [])
+        ]
+        id_vars = list(id_vars) + list(dict.fromkeys(extra_id_vars))
 
         if drop_hour_column and 'hour' in df.columns and 'hour' not in id_vars:
             df = df.drop(columns=['hour'])
@@ -946,11 +1032,14 @@ class PlottingMixin(HourlyPlottingMixin):
         hue : Any
             Argument used by `PlottingMixin.plot_hourly_scatter`.
         row : Any
-            Argument used by `PlottingMixin.plot_hourly_scatter`.
+            Column of the subplot rows (default ``'CustAST_m'``, a parameter of the custom
+            model). A column that is not in the plotted data is ignored with a message.
         col : Any
-            Argument used by `PlottingMixin.plot_hourly_scatter`.
+            Column of the subplot columns (default ``'CustAST_n'``), as ``row``.
         id_vars : Any
-            Argument used by `PlottingMixin.plot_hourly_scatter`.
+            Columns kept as identifiers when the hourly results are stacked (see
+            `PlottingMixin.prepare_hourly_long_df`). The ``row``, ``col`` and ``hue``
+            columns are kept as well when they are in the hourly results.
         value_vars : Any
             Argument used by `PlottingMixin.plot_hourly_scatter`.
         value_tokens : Any
@@ -1013,6 +1102,7 @@ class PlottingMixin(HourlyPlottingMixin):
                 data_filter_case_sensitive=data_filter_case_sensitive,
                 data_filter_strict=data_filter_strict,
                 data_filter_on_empty=data_filter_on_empty,
+                extra_id_vars=[row, col, hue],
             )
         else:
             df_plot = self._filter_epw_rows(df=df_long.copy(), epw_filter=epw_filter)
@@ -1033,12 +1123,9 @@ class PlottingMixin(HourlyPlottingMixin):
             if x is None:
                 raise ValueError('x was not provided and no RMOT-like column was found. Pass x explicitly.')
 
-        if row is not None and row not in df_plot.columns:
-            row = None
-        if col is not None and col not in df_plot.columns:
-            col = None
-        if hue is not None and hue not in df_plot.columns:
-            hue = None
+        (row, col, hue) = self._ignore_missing_facet_columns(
+            df_plot, 'plot_hourly_scatter', row=row, col=col, hue=hue,
+        )
 
         required_cols = [x, y]
         missing = [c for c in required_cols if c not in df_plot.columns]
@@ -1187,11 +1274,14 @@ class PlottingMixin(HourlyPlottingMixin):
         hue : Any
             Argument used by `PlottingMixin.plot_hourly_lines`.
         row : Any
-            Argument used by `PlottingMixin.plot_hourly_lines`.
+            Column of the subplot rows (default ``'CustAST_m'``, a parameter of the custom
+            model). A column that is not in the plotted data is ignored with a message.
         col : Any
-            Argument used by `PlottingMixin.plot_hourly_lines`.
+            Column of the subplot columns (default ``'CustAST_n'``), as ``row``.
         id_vars : Any
-            Argument used by `PlottingMixin.plot_hourly_lines`.
+            Columns kept as identifiers when the hourly results are stacked (see
+            `PlottingMixin.prepare_hourly_long_df`). The ``row``, ``col`` and ``hue``
+            columns are kept as well when they are in the hourly results.
         value_vars : Any
             Argument used by `PlottingMixin.plot_hourly_lines`.
         value_tokens : Any
@@ -1251,6 +1341,7 @@ class PlottingMixin(HourlyPlottingMixin):
                 data_filter_case_sensitive=data_filter_case_sensitive,
                 data_filter_strict=data_filter_strict,
                 data_filter_on_empty=data_filter_on_empty,
+                extra_id_vars=[row, col, hue],
             )
         else:
             df_plot = self._filter_epw_rows(df=df_long.copy(), epw_filter=epw_filter)
@@ -1266,12 +1357,9 @@ class PlottingMixin(HourlyPlottingMixin):
         if df_plot.empty:
             raise ValueError('No rows available for hourly line plotting.')
 
-        if row is not None and row not in df_plot.columns:
-            row = None
-        if col is not None and col not in df_plot.columns:
-            col = None
-        if hue is not None and hue not in df_plot.columns:
-            hue = None
+        (row, col, hue) = self._ignore_missing_facet_columns(
+            df_plot, 'plot_hourly_lines', row=row, col=col, hue=hue,
+        )
 
         required_cols = [x, y]
         missing = [c for c in required_cols if c not in df_plot.columns]
@@ -1451,9 +1539,9 @@ class PlottingMixin(HourlyPlottingMixin):
             raise ValueError('MCDM best compromise solutions can only be evaluated after an optimisation simulation. Please ensure you run run_optimisation() first.')
         import matplotlib.pyplot as plt
         area_attr = getattr(self, 'building_floor_area', None)
-        if getattr(self, 'outputs_normalized', False):
+        if self._is_plot_source_normalized('optimisation'):
             if normalize_per_m2:
-                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+                print('[!] Warning: the optimisation outputs are already normalized. The argument normalize_per_m2=True will have no effect.')
             normalize_per_m2 = False
             unit_str = 'kWh/m2'
             base_divisor = 1.0
@@ -1561,6 +1649,26 @@ class PlottingMixin(HourlyPlottingMixin):
         else:
             cooling_col = heating_col
 
+        # Only energy objectives are converted to kWh (or kWh/m2) and labelled with that unit;
+        # the others, such as temperatures, keep their values and their name.
+        objective_is_energy = {col: self._is_energy_like_column(col) for col in (heating_col, cooling_col)}
+
+        def _plotted_values(df_local: pd.DataFrame, column: str):
+            if objective_is_energy[column]:
+                return df_local[column] / _compute_divisors(df_local)
+            return df_local[column]
+
+        def _plotted_first_value(df_local: pd.DataFrame, column: str) -> float:
+            if objective_is_energy[column]:
+                return df_local[column].iloc[0] / _first_divisor(df_local)
+            return df_local[column].iloc[0]
+
+        def _with_unit(column: str) -> str:
+            return f'{column} ({unit_str})' if objective_is_energy[column] else str(column)
+
+        def _value_text(column: str, value: float) -> str:
+            return f'{column}={value:.1f} {unit_str}' if objective_is_energy[column] else f'{column}={value:.1f}'
+
         group_specs = _build_group_specs(filtered_optim)
         subplot_orders = self._resolve_subplot_dimension_orders(
             dimension_values={'col': [spec['label'] for spec in group_specs]},
@@ -1597,10 +1705,9 @@ class PlottingMixin(HourlyPlottingMixin):
                             row_df[key] = value
                     all_mcdm_rows.append(row_df)
 
-                    div = _first_divisor(row_df)
-                    h_kwh = row_df[heating_col].iloc[0] / div
-                    c_kwh = row_df[cooling_col].iloc[0] / div
-                    print(f'    {label:25s} | {heating_col}={h_kwh:.1f} {unit_str} | {cooling_col}={c_kwh:.1f} {unit_str}')
+                    h_value = _plotted_first_value(row_df, heating_col)
+                    c_value = _plotted_first_value(row_df, cooling_col)
+                    print(f'    {label:25s} | {_value_text(heating_col, h_value)} | {_value_text(cooling_col, c_value)}')
         finally:
             self.outputs_optimisation = original_optim
 
@@ -1615,9 +1722,8 @@ class PlottingMixin(HourlyPlottingMixin):
             group_label = group_spec['label']
             ax_m = axes[0][ax_idx]
             df_epw = group_spec['df'].copy()
-            divs = _compute_divisors(df_epw)
-            df_epw['_h'] = df_epw[heating_col] / divs
-            df_epw['_c'] = df_epw[cooling_col] / divs
+            df_epw['_h'] = _plotted_values(df_epw, heating_col)
+            df_epw['_c'] = _plotted_values(df_epw, cooling_col)
             dom = df_epw[~df_epw['pareto-optimal']]
             par = df_epw[df_epw['pareto-optimal']]
             ax_m.scatter(dom['_h'], dom['_c'], c='#cccccc', alpha=0.3, s=15, zorder=1)
@@ -1627,12 +1733,11 @@ class PlottingMixin(HourlyPlottingMixin):
                 row = mcdm_df[(mcdm_df['mcdm_group'] == group_label) & (mcdm_df['mcdm_method'] == label)]
                 if row.empty:
                     continue
-                div = _first_divisor(row)
-                h = row[heating_col].iloc[0] / div
-                c = row[cooling_col].iloc[0] / div
+                h = _plotted_first_value(row, heating_col)
+                c = _plotted_first_value(row, cooling_col)
                 ax_m.scatter(h, c, marker=_marker_cycle[i % len(_marker_cycle)], c=_colour_cycle[i % len(_colour_cycle)], s=_size_cycle[i % len(_size_cycle)], zorder=5, edgecolors='k', linewidths=0.6, label=label)
-            ax_m.set_xlabel(f'{heating_col} ({unit_str})', fontsize=11)
-            ax_m.set_ylabel(f'{cooling_col} ({unit_str})', fontsize=11)
+            ax_m.set_xlabel(_with_unit(heating_col), fontsize=11)
+            ax_m.set_ylabel(_with_unit(cooling_col), fontsize=11)
             ax_m.set_title(f'Pareto Front + MCDM best solutions\n[{group_label}]', fontsize=11)
             ax_m.legend(fontsize=9)
         plt.tight_layout()
@@ -1718,9 +1823,9 @@ class PlottingMixin(HourlyPlottingMixin):
         from matplotlib.lines import Line2D
         import pandas as pd
         area_attr = getattr(self, 'building_floor_area', None)
-        if getattr(self, 'outputs_normalized', False):
+        if self._is_plot_source_normalized('optimisation'):
             if normalize_per_m2:
-                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+                print('[!] Warning: the optimisation outputs are already normalized. The argument normalize_per_m2=True will have no effect.')
             normalize_per_m2 = False
             unit_str = 'kWh/m2'
             base_divisor = 1.0
@@ -2175,9 +2280,9 @@ class PlottingMixin(HourlyPlottingMixin):
         import matplotlib.cm as cm
         from matplotlib.colors import Normalize
         area_attr = getattr(self, 'building_floor_area', None)
-        if getattr(self, 'outputs_normalized', False):
+        if self._is_plot_source_normalized('optimisation'):
             if normalize_per_m2:
-                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+                print('[!] Warning: the optimisation outputs are already normalized. The argument normalize_per_m2=True will have no effect.')
             normalize_per_m2 = False
             unit_str = 'kWh/m2'
             base_divisor = 1.0
@@ -2402,9 +2507,9 @@ class PlottingMixin(HourlyPlottingMixin):
             context=f'plot_categorical_boxplots[{df_source}]',
         )
         
-        if getattr(self, 'outputs_normalized', False):
+        if self._is_plot_source_normalized(df_source):
             if normalize_per_m2:
-                print('[!] Warning: outputs_normalized is already True. The argument normalize_per_m2=True will have no effect.')
+                print(f'[!] Warning: the {df_source} outputs are already normalized. The argument normalize_per_m2=True will have no effect.')
             normalize_per_m2 = False
             unit_str = 'kWh/m2'
             base_divisor = 1.0
@@ -2488,6 +2593,9 @@ class PlottingMixin(HourlyPlottingMixin):
             'height': height,
             'aspect': aspect,
         }
+        if hue is None:
+            # One colour per energy type, as before: seaborn 0.13 deprecates a palette without hue.
+            catplot_kwargs.update({'hue': 'Energy_Type', 'hue_order': order, 'legend': False, 'dodge': False})
         if 'row' in subplot_orders:
             catplot_kwargs['row_order'] = subplot_orders['row']
         if 'col' in subplot_orders:
@@ -2757,7 +2865,7 @@ class PlottingMixin(HourlyPlottingMixin):
             context=f'plot_parametric_scatter[{df_source}]',
         )
 
-        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y], normalize_per_m2=normalize_per_m2)
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y], normalize_per_m2=normalize_per_m2, df_source=df_source)
 
         subplot_orders = self._resolve_subplot_dimension_orders(
             dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
@@ -2975,7 +3083,7 @@ class PlottingMixin(HourlyPlottingMixin):
             context=f'plot_parametric_lines[{df_source}]',
         )
 
-        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2)
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2, df_source=df_source)
         subplot_orders = self._resolve_subplot_dimension_orders(
             dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
             subplot_order_mode=subplot_order_mode,
@@ -3170,7 +3278,7 @@ class PlottingMixin(HourlyPlottingMixin):
             context=f'plot_parametric_heatmap[{df_source}]',
         )
 
-        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y, z], normalize_per_m2=normalize_per_m2)
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y, z], normalize_per_m2=normalize_per_m2, df_source=df_source)
         os.makedirs(out_dir, exist_ok=True)
 
         row_values = list(pd.unique(df[row].dropna())) if row else [None]
@@ -3368,7 +3476,7 @@ class PlottingMixin(HourlyPlottingMixin):
             context=f'plot_parametric_contour[{df_source}]',
         )
 
-        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y, z], normalize_per_m2=normalize_per_m2)
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y, z], normalize_per_m2=normalize_per_m2, df_source=df_source)
         os.makedirs(out_dir, exist_ok=True)
 
         row_values = list(pd.unique(df[row].dropna())) if row else [None]
@@ -3605,7 +3713,7 @@ class PlottingMixin(HourlyPlottingMixin):
             context=f'plot_parametric_distributions[{df_source}]',
         )
 
-        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2)
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x] + list(y_vars), normalize_per_m2=normalize_per_m2, df_source=df_source)
         subplot_orders = self._resolve_subplot_dimension_orders(
             dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
             subplot_order_mode=subplot_order_mode,
@@ -3789,7 +3897,7 @@ class PlottingMixin(HourlyPlottingMixin):
             context=f'plot_parametric_ecdf[{df_source}]',
         )
 
-        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x], normalize_per_m2=normalize_per_m2)
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x], normalize_per_m2=normalize_per_m2, df_source=df_source)
         subplot_orders = self._resolve_subplot_dimension_orders(
             dimension_values=self._collect_subplot_dimension_values(df=df, row=row, col=col),
             subplot_order_mode=subplot_order_mode,
@@ -3975,7 +4083,7 @@ class PlottingMixin(HourlyPlottingMixin):
             context=f'plot_parametric_density_2d[{df_source}]',
         )
 
-        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y], normalize_per_m2=normalize_per_m2)
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=[x, y], normalize_per_m2=normalize_per_m2, df_source=df_source)
         os.makedirs(out_dir, exist_ok=True)
 
         row_values = list(pd.unique(df[row].dropna())) if row else [None]
@@ -4182,7 +4290,7 @@ class PlottingMixin(HourlyPlottingMixin):
         if len(metrics) < 3:
             raise ValueError('Radar plot requires at least 3 metrics.')
 
-        (df, unit_map) = self._normalise_plot_columns(df=df, columns=list(metrics), normalize_per_m2=normalize_per_m2)
+        (df, unit_map) = self._normalise_plot_columns(df=df, columns=list(metrics), normalize_per_m2=normalize_per_m2, df_source=df_source)
         agg_df = df.groupby(group_by, dropna=False)[metrics].agg(aggfunc).reset_index()
         if agg_df.empty:
             raise ValueError('No aggregated rows available for radar plotting.')

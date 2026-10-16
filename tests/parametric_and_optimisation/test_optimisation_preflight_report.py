@@ -97,3 +97,21 @@ def test_preflight_report_wrapper_auto_selects_optimisation(monkeypatch):
     assert report_auto['estimated_simulations_per_case'] == 12
     assert report_explicit['estimated_simulations_per_case'] == 12
 
+
+def test_preflight_report_optimisation_counts_the_extra_offspring_of_odd_populations(monkeypatch):
+    # NSGA-II creates offspring in pairs: with a population of 3, the second generation evaluates 4.
+    monkeypatch.setattr(
+        OptimisationSimulation,
+        '_get_system_resource_snapshot',
+        staticmethod(lambda: {'logical_cpus': 8, 'total_ram_gb': 32.0, 'available_ram_gb': 12.0}),
+    )
+
+    sim = _make_lightweight_optimisation(epws=['A.epw'])
+
+    report = sim.preflight_report_optimisation(evaluations=6, population_size=3, verbose=False)
+
+    assert report['estimated_cases'] == 2
+    assert report['estimated_generations_per_case'] == 2
+    assert report['estimated_simulations_per_case'] == 7
+    assert report['estimated_total_simulations'] == 14
+

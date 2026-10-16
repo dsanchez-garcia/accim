@@ -1,4 +1,5 @@
 import os
+import warnings
 
 import matplotlib
 import pandas as pd
@@ -343,6 +344,26 @@ def test_plot_categorical_boxplots_filename_template_with_mapping_placeholders(t
     expected_path = tmp_path / 'boxplot_type-residential_city-seville.png'
     assert grid is not None
     assert expected_path.exists()
+
+
+def test_plot_categorical_boxplots_without_hue_passes_no_palette_without_hue(tmp_path):
+    # seaborn 0.13 deprecates a palette without hue (FutureWarning, removed in 0.14).
+    sim = _DummyPlotSession()
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        grid = sim.plot_categorical_boxplots(
+            df_source='parametric',
+            col='city',
+            show_points=True,
+            highlight_dict={'HVACmode': [2]},
+            out_dir=str(tmp_path),
+        )
+
+    assert not [w for w in caught if 'palette' in str(w.message)]
+    # Each energy type keeps its own colour of the palette, as before.
+    box_colours = {tuple(patch.get_facecolor()) for patch in grid.axes.flat[0].patches}
+    assert len(box_colours) == 2
 
 
 def test_plot_methods_resolve_column_renamed_by_normalize_outputs(tmp_path):

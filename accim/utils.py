@@ -191,7 +191,7 @@ def modify_timesteps(idf_object: besos.IDF_class.IDF, timesteps: int) -> besos.I
     timestep_prev = obj_timestep.Number_of_Timesteps_per_Hour
     obj_timestep.Number_of_Timesteps_per_Hour = timesteps
     print(f'Number of Timesteps per Hour was previously set to '
-          f'{timestep_prev} days, and it has been modified to {timesteps} days.')
+          f'{timestep_prev}, and it has been modified to {timesteps}.')
 
 
 def modify_timesteps_path(idfpath: str, timesteps: int):
@@ -302,7 +302,7 @@ def reduce_runtime(
         shadowcalc_maxfigs_prev = obj_shadowcalc.Maximum_Figures_in_Shadow_Overlap_Calculations
         obj_shadowcalc.Maximum_Figures_in_Shadow_Overlap_Calculations = maximum_figures_in_shadow_overlap_calculations
         print(f'Maximum Figures in Shadow Overlap Calculations was previously set to '
-              f'{shadowcalc_maxfigs_prev} days, and it has been modified to {maximum_figures_in_shadow_overlap_calculations} days.')
+              f'{shadowcalc_maxfigs_prev}, and it has been modified to {maximum_figures_in_shadow_overlap_calculations}.')
     except IndexError:
         print('There was no ShadowCalculation object. Therefore it has not been simplified.')
 
@@ -310,7 +310,7 @@ def reduce_runtime(
     timestep_prev = obj_timestep.Number_of_Timesteps_per_Hour
     obj_timestep.Number_of_Timesteps_per_Hour = timesteps
     print(f'Number of Timesteps per Hour was previously set to '
-          f'{timestep_prev} days, and it has been modified to {timesteps} days.')
+          f'{timestep_prev}, and it has been modified to {timesteps}.')
 
 
 def amend_idf_version_from_dsb(file_path: str):
