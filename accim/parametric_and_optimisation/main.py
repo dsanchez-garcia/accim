@@ -213,6 +213,7 @@ def _run_single_evaluation_worker(
     keep_input: bool,
     sim_files_extensions: Optional[tuple[str, ...]],
     sim_files_policy: str,
+    additional_params: Optional[list] = None,
 ) -> dict:
     """Run one evaluation in a worker process and return output values.
 
@@ -248,6 +249,9 @@ def _run_single_evaluation_worker(
         Optional simulation-file extension policy for post-run cleanup.
     sim_files_policy : str
         File cleanup strategy used when pruning worker output folders.
+    additional_params : Optional[list]
+        BESOS ``Parameter`` objects of the problem that are not accim parameters (for
+        example a ``FieldSelector`` on a material); the BESOS evaluator applies them.
 
     Returns
     -------
@@ -265,6 +269,7 @@ def _run_single_evaluation_worker(
     """
     import warnings
     warnings.filterwarnings('ignore')
+    from besos import config as besos_config
     from besos.evaluator import EvaluatorEP
     from besos.problem import EPProblem
     from besos.parameters import Parameter
@@ -290,8 +295,26 @@ def _run_single_evaluation_worker(
         setter = available_setters.get(str(param_name).lower())
         if setter is not None:
             setter(b, param_value)
-        
-    dummy_inputs = [Parameter(name=n) for n in problem_names_inputs]
+
+    # The other BESOS parameters of the problem (for example a FieldSelector on a material) are
+    # applied by the evaluator, as in run_optimisation; the accim ones, written above, get a
+    # placeholder without selector.
+    additional_by_first_name = {}
+    for parameter in (additional_params or []):
+        descriptor_names = [descriptor.name for descriptor in parameter.value_descriptors]
+        if descriptor_names:
+            additional_by_first_name[descriptor_names[0]] = (parameter, descriptor_names[1:])
+    problem_inputs = []
+    covered_names = set()
+    for n in problem_names_inputs:
+        if n in covered_names:
+            continue
+        if n in additional_by_first_name:
+            (parameter, other_names) = additional_by_first_name[n]
+            problem_inputs.append(parameter)
+            covered_names.update(other_names)
+        else:
+            problem_inputs.append(Parameter(name=n))
     if output_specs or add_output_specs:
         outputs_objs = []
         for spec in output_specs:
@@ -350,31 +373,44 @@ def _run_single_evaluation_worker(
                 add_outputs_objs.append(VariableReader(**kwargs))
 
         prob = EPProblem(
-            inputs=dummy_inputs,
+            inputs=problem_inputs,
             outputs=outputs_objs if output_specs else problem_names_outputs,
             add_outputs=add_outputs_objs if len(add_outputs_objs) > 0 else None,
         )
     else:
-        prob = EPProblem(inputs=dummy_inputs, outputs=problem_names_outputs)
-    
-    evaluator = EvaluatorEP(problem=prob, building=b, epw=epw, out_dir=out_dir)
+        prob = EPProblem(inputs=problem_inputs, outputs=problem_names_outputs)
+
+    # Without keep_dirs, no output folder is given, so BESOS runs EnergyPlus in a temporary
+    # folder of its own: with out_dir, every simulation would write to the same
+    # <out_dir>/BESOS_Output folder, and parallel simulations would overwrite each other.
+    evaluator_out_dir = out_dir if keep_dirs else None
+    if evaluator_out_dir is not None:
+        # EvaluatorEP creates <out_dir>/BESOS_Output when it does not exist; workers starting
+        # at the same time may try to create it together, so it is created here first.
+        os.makedirs(os.path.join(str(evaluator_out_dir), besos_config.out_wrapper), exist_ok=True)
+    evaluator = EvaluatorEP(problem=prob, building=b, epw=epw, out_dir=evaluator_out_dir)
+    if getattr(prob, 'add_outputs', None):
+        # BESOS only records the add_outputs of an evaluation once this list exists.
+        prob.pre_optimisation()
     row_values = [row_dict[n] for n in problem_names_inputs]
-    
+
     result = evaluator(row_values, keep_dirs=keep_dirs)
     if not isinstance(result, (list, tuple)):
         result = (result,)
-        
+
     result_dict = {
         problem_names_outputs[idx]: result[idx]
         for idx in range(len(problem_names_outputs))
     }
 
-    n_main_outputs = len(problem_names_outputs)
-    n_add_outputs = len(add_output_names)
+    # BESOS returns the objectives (followed by the simulation folder with keep_dirs) and keeps
+    # the add_outputs apart, as [inputs..., add_outputs...] rows of problem.add_outputs_list.
+    add_output_records = getattr(prob, 'add_outputs_list', None) or []
+    add_output_values = list(add_output_records[-1])[len(row_values):] if add_output_records else []
     for idx, add_output_name in enumerate(add_output_names):
-        result_dict[add_output_name] = result[n_main_outputs + idx] if (n_main_outputs + idx) < len(result) else pd.NA
-    
-    if keep_dirs and len(result) > (n_main_outputs + n_add_outputs):
+        result_dict[add_output_name] = add_output_values[idx] if idx < len(add_output_values) else pd.NA
+
+    if keep_dirs and len(result) > len(problem_names_outputs):
         sim_dir = result[-1]
         result_dict['output_dir'] = sim_dir
         if sim_files_extensions is not None and sim_dir not in (None, ''):
@@ -3770,6 +3806,37 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
 
         return report
 
+    @staticmethod
+    def _normalize_plan_idf_value(value: Any) -> Any:
+        """Return the IDF identifier named by an ``idf`` value of a simulation plan.
+
+        Parameters
+        ----------
+        value : Any
+            IDF identifier, file name or path given in the ``idf`` column of a plan.
+
+        Returns
+        -------
+        Any
+            The file name without folder or ``.idf``, as built by ``_get_idf_identifier``;
+            missing values are returned unchanged.
+
+        Usage
+        -----
+        Internal helper used to match the ``idf`` column of a plan with the loaded IDFs.
+
+        Examples
+        --------
+        self._normalize_plan_idf_value('models/office.idf')  # 'office'
+        """
+        if not isinstance(value, str):
+            try:
+                if pd.isna(value):
+                    return value
+            except (TypeError, ValueError):
+                pass
+        return os.path.basename(str(value).strip().replace('\\', '/')).replace('.idf', '')
+
     def _get_buildings_by_idf(self) -> dict:
         """Map IDF identifiers to loaded building objects.
 
@@ -3828,6 +3895,44 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if hasattr(self, 'parameters_list'):
             return [parameter.name for parameter in self.parameters_list]
         return []
+
+    def _get_additional_problem_parameters(self) -> list:
+        """List the BESOS parameters of the problem that are not accim parameters.
+
+        Parameters
+        ----------
+        None
+            Uses ``self.problem`` (or ``self.parameters_list`` before ``set_problem``).
+
+        Returns
+        -------
+        list
+            ``Parameter`` objects (for example with a ``FieldSelector``) whose names are not
+            in ``params_dicts.all_params``; parametric workers apply them through BESOS.
+
+        Usage
+        -----
+        Internal helper of ``run_parametric_simulation``.
+
+        Examples
+        --------
+        additional = self._get_additional_problem_parameters()
+        """
+        problem = getattr(self, 'problem', None)
+        parameters = getattr(problem, 'inputs', None)
+        if not parameters:
+            parameters = getattr(self, 'parameters_list', None) or []
+        accim_names = {str(name).lower() for name in params_dicts.all_params}
+        additional = []
+        for parameter in parameters:
+            descriptor_names = [
+                getattr(descriptor, 'name', None)
+                for descriptor in (getattr(parameter, 'value_descriptors', None) or [])
+            ]
+            descriptor_names = [str(name) for name in descriptor_names if name]
+            if descriptor_names and not any(name.lower() in accim_names for name in descriptor_names):
+                additional.append(parameter)
+        return additional
 
     def _get_external_input_names(self) -> list:
         """List extra evaluator input columns required by session context.
@@ -3910,13 +4015,19 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if epws is not None:
             allowed_external_columns = allowed_external_columns + ['epw']
 
+        if 'idf' in prepared_df.columns:
+            # The plan may name each IDF by its identifier ('model') or by its file ('model.idf').
+            prepared_df['idf'] = prepared_df['idf'].map(self._normalize_plan_idf_value)
+            unknown_idfs = sorted(set(prepared_df['idf'].dropna().astype(str)) - set(buildings_by_idf.keys()))
+            if unknown_idfs and len(buildings_by_idf) > 0:
+                raise ValueError(
+                    f'The following IDFs in df are not part of this {self.__class__.__name__} instance: '
+                    f'{unknown_idfs}. Loaded IDFs: {list(buildings_by_idf.keys())}. Pass every IDF of the '
+                    'plan in buildings=[...].'
+                )
+
         if len(self.buildings) > 1:
             if 'idf' in prepared_df.columns:
-                unknown_idfs = sorted(set(prepared_df['idf'].dropna().astype(str)) - set(buildings_by_idf.keys()))
-                if unknown_idfs:
-                    raise ValueError(
-                        f'The following IDFs in df are not part of this {self.__class__.__name__} instance: {unknown_idfs}'
-                    )
                 prepared_df['idf'] = prepared_df['idf'].astype(str)
             else:
                 if len(prepared_df) == 0:
@@ -3927,6 +4038,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         ignore_index=True,
                     )
         elif 'idf' in prepared_df.columns:
+            # With one IDF, the column only names that IDF (checked above).
             prepared_df = prepared_df.drop(columns=['idf'])
 
         if 'epw' in prepared_df.columns:
@@ -6159,14 +6271,18 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         if len(not_allowed_parameters) > 0 and self.parameters_type is not None:
             raise ValueError(f'The following parameters are not allowed in parameters_type {self.parameters_type}: {not_allowed_parameters}')
         if self.is_accim_custom_model:
-            bf_accim.modify_ComfStand(self.building, 99)
-            bf_accim.modify_ComfMod(self.building, 3)
-            bf_accim.modify_CAT(self.building, 80)
-            bf_accim.modify_CustAST_m(self.building, 0)
-            bf_accim.modify_CustAST_n(self.building, 0)
-            bf_accim.modify_CustAST_ASToffset(self.building, 0)
-            bf_accim.modify_CustAST_ASTaul(self.building, 0)
-            bf_accim.modify_CustAST_ASTall(self.building, 0)
+            # Every loaded IDF gets the baseline of the custom model: each IDF is simulated from
+            # its own copy, so a value set only in the first one would not reach the others.
+            custom_model_buildings = [b for b in (self.buildings or [self.building]) if b is not None]
+            for building in custom_model_buildings:
+                bf_accim.modify_ComfStand(building, 99)
+                bf_accim.modify_ComfMod(building, 3)
+                bf_accim.modify_CAT(building, 80)
+                bf_accim.modify_CustAST_m(building, 0)
+                bf_accim.modify_CustAST_n(building, 0)
+                bf_accim.modify_CustAST_ASToffset(building, 0)
+                bf_accim.modify_CustAST_ASTaul(building, 0)
+                bf_accim.modify_CustAST_ASTall(building, 0)
             args = accim.utils.get_accim_args(self.building)
             custast_args = args.get('CustAST') if isinstance(args, dict) else None
             if not isinstance(custast_args, dict):
@@ -6227,23 +6343,24 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     warning_text = ', '.join(formatted_items)
                     print(f"\033[93mWARNING: Default values applied -> {warning_text}\033[0m")
 
+                custast_setters = {
+                    'm': bf_accim.modify_CustAST_m,
+                    'n': bf_accim.modify_CustAST_n,
+                    'ACSToffset': bf_accim.modify_CustAST_ACSToffset,
+                    'AHSToffset': bf_accim.modify_CustAST_AHSToffset,
+                    'ACSTaul': bf_accim.modify_CustAST_ACSTaul,
+                    'ACSTall': bf_accim.modify_CustAST_ACSTall,
+                    'AHSTaul': bf_accim.modify_CustAST_AHSTaul,
+                    'AHSTall': bf_accim.modify_CustAST_AHSTall,
+                }
+
+                def _apply_custast_values(values):
+                    for building in custom_model_buildings:
+                        for p in parameters_to_be_defined:
+                            custast_setters[p](building, values[p])
+
                 if use_dflt_values:
-                    if 'm' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_m(self.building, dflt_values['m'])
-                    if 'n' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_n(self.building, dflt_values['n'])
-                    if 'ACSToffset' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_ACSToffset(self.building, dflt_values['ACSToffset'])
-                    if 'AHSToffset' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_AHSToffset(self.building, dflt_values['AHSToffset'])
-                    if 'ACSTaul' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_ACSTaul(self.building, dflt_values['ACSTaul'])
-                    if 'ACSTall' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_ACSTall(self.building, dflt_values['ACSTall'])
-                    if 'AHSTaul' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_AHSTaul(self.building, dflt_values['AHSTaul'])
-                    if 'AHSTall' in parameters_to_be_defined:
-                        bf_accim.modify_CustAST_AHSTall(self.building, dflt_values['AHSTall'])
+                    _apply_custast_values(dflt_values)
                     _emit_defaults_applied_warning(parameters_to_be_defined)
                 else:
                     print('If you want, default values can be set for these parameters. The default values are:')
@@ -6251,44 +6368,14 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         print(f'{p}: {dflt_values[p]}')
                     user_decision = input('Do you want to continue with default values? [y/n]: ')
                     if user_decision.lower() == 'y' or user_decision == '':
-                        if 'm' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_m(self.building, dflt_values['m'])
-                        if 'n' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_n(self.building, dflt_values['n'])
-                        if 'ACSToffset' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_ACSToffset(self.building, dflt_values['ACSToffset'])
-                        if 'AHSToffset' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_AHSToffset(self.building, dflt_values['AHSToffset'])
-                        if 'ACSTaul' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_ACSTaul(self.building, dflt_values['ACSTaul'])
-                        if 'ACSTall' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_ACSTall(self.building, dflt_values['ACSTall'])
-                        if 'AHSTaul' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_AHSTaul(self.building, dflt_values['AHSTaul'])
-                        if 'AHSTall' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_AHSTall(self.building, dflt_values['AHSTall'])
+                        _apply_custast_values(dflt_values)
                         _emit_defaults_applied_warning(parameters_to_be_defined)
                     else:
                         user_values = {}
                         for p in parameters_to_be_defined:
                             value = float(input(f'Enter the value for argument {p}: '))
                             user_values.update({p: value})
-                        if 'm' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_m(self.building, user_values['m'])
-                        if 'n' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_n(self.building, user_values['n'])
-                        if 'ACSToffset' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_ACSToffset(self.building, user_values['ACSToffset'])
-                        if 'AHSToffset' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_AHSToffset(self.building, user_values['AHSToffset'])
-                        if 'ACSTaul' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_ACSTaul(self.building, user_values['ACSTaul'])
-                        if 'ACSTall' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_ACSTall(self.building, user_values['ACSTall'])
-                        if 'AHSTaul' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_AHSTaul(self.building, user_values['AHSTaul'])
-                        if 'AHSTall' in parameters_to_be_defined:
-                            bf_accim.modify_CustAST_AHSTall(self.building, user_values['AHSTall'])
+                        _apply_custast_values(user_values)
         elif self.is_accim_predef_model and len(accis_params_dict) > 0:
             if descriptors_has_range:
                 raise KeyError('Accim predefined models approach is only valid with options descriptors.')
@@ -8640,6 +8727,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         keep_input: bool,
         sim_files_extensions: Optional[tuple[str, ...]] = None,
         sim_files_policy: Literal['keep', 'delete'] = 'keep',
+        additional_params: Optional[list] = None,
     ):
         """Yield parametric tasks lazily to avoid building the full plan in memory.
         
@@ -8669,7 +8757,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             Argument used by `SimulationBase._iter_parametric_task_blueprints`.
         sim_files_policy : Any
             Argument used by `SimulationBase._iter_parametric_task_blueprints`.
-        
+        additional_params : Optional[list]
+            BESOS parameters that are not accim parameters, passed to the worker as
+            ``worker_kwargs``.
+
         Usage
         -----
         Use `SimulationBase._iter_parametric_task_blueprints` within ACCIM parametric and optimisation workflows.
@@ -8729,6 +8820,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             sim_files_extensions,
                             sim_files_policy,
                         ),
+                        'worker_kwargs': {'additional_params': additional_params} if additional_params else {},
                     }
 
     @staticmethod
@@ -9283,6 +9375,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             - This cleanup only touches files inside each simulation subdirectory;
               it does **not** remove IDF backups such as ``accim_idf_backup_*``
               stored in the run root ``out_dir``.
+            - The results have one row per row of ``df`` (per row and EPW when ``df`` has no
+              ``epw`` column), in the order of the tasks, which is the same with one process
+              or several: grouped by IDF and then by EPW, in the order of ``df`` within each
+              group. Repeated rows (same IDF, EPW and parameter values) are simulated once,
+              and each keeps its row.
+            - An ``idf`` column in ``df`` may name each IDF by its identifier or file name; it
+              must only name loaded IDFs (``buildings=[...]``).
+            - Parameters that are not accim parameters (``additional_params`` of
+              ``set_parameters``) are applied by BESOS in each simulation; with
+              ``processes > 1`` they must be picklable.
             - Task signatures used for resume are based on (idf, epw, exact
               parameter values). Because ``resume_plan_source='auto'`` reconciles
               the sampling plan automatically, calling a sampler again (e.g.
@@ -9458,9 +9560,23 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     "'module.submodule:callable_name'.",
                     UserWarning,
                 )
-        
+
+        additional_params = self._get_additional_problem_parameters()
+        if processes > 1 and additional_params:
+            import pickle
+            try:
+                pickle.dumps(additional_params)
+            except Exception as exc:
+                raise ValueError(
+                    'The additional parameters of the problem cannot be sent to parallel processes '
+                    f'({type(exc).__name__}: {exc}). Define the functions of their selectors at module '
+                    'level, or run with processes=1.'
+                ) from exc
+
         task_signatures = set()
-        total_tasks = 0
+        # Signatures of the tasks in the order of the plan, repeated rows included: the results
+        # are returned in this order, whatever the order in which the simulations finish.
+        task_order = []
 
         if isinstance(legacy_checkpoint_seed_df, pd.DataFrame) and len(legacy_checkpoint_seed_df) > 0:
             seed_pickle = self._save_parametric_batch_chunk(
@@ -9487,29 +9603,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             sim_files_policy=sim_files_policy_normalized,
         ):
             task_signature = str(task.get('signature'))
-            total_tasks += 1
+            task_order.append(task_signature)
             task_signatures.add(task_signature)
+        # Repeated rows of the plan (same IDF, EPW and parameter values) are simulated once.
+        total_tasks = len(task_signatures)
 
         checkpoint_completed_signatures = checkpoint_completed_signatures.intersection(task_signatures)
-
-        pending_tasks_count = 0
-        for task in self._iter_parametric_task_blueprints(
-            grouped_dfs=grouped_dfs,
-            epws=epws,
-            out_dir=out_dir,
-            problem_names_inputs=problem_names_inputs,
-            problem_names_outputs=problem_names_outputs,
-            output_specs=output_specs,
-            add_output_specs=add_output_specs,
-            add_output_names=add_output_names,
-            keep_dirs=keep_dirs,
-            keep_input=keep_input,
-            sim_files_extensions=sim_files_extensions_normalized,
-            sim_files_policy=sim_files_policy_normalized,
-        ):
-            task_signature = str(task.get('signature'))
-            if task_signature not in checkpoint_completed_signatures:
-                pending_tasks_count += 1
+        pending_tasks_count = len(task_signatures - checkpoint_completed_signatures)
 
         if resume_requested and len(checkpoint_completed_signatures) > 0:
             print(
@@ -9548,7 +9648,11 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                             with concurrent.futures.ProcessPoolExecutor(max_workers=processes) as executor:
                                 futures = {}
                                 for task in remaining_tasks:
-                                    future = executor.submit(_run_single_evaluation_worker, *task['worker_args'])
+                                    future = executor.submit(
+                                        _run_single_evaluation_worker,
+                                        *task['worker_args'],
+                                        **task.get('worker_kwargs', {}),
+                                    )
                                     futures[future] = str(task.get('signature'))
                                 for future in tqdm(
                                     concurrent.futures.as_completed(futures),
@@ -9592,12 +9696,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                         desc=f"Executing parametric simulations (batch {current_batch_idx}/{n_batches})",
                         unit='row',
                     ):
-                        result = _run_single_evaluation_worker(*task['worker_args'])
+                        result = _run_single_evaluation_worker(
+                            *task['worker_args'],
+                            **task.get('worker_kwargs', {}),
+                        )
                         result['_accim_task_signature'] = str(task.get('signature'))
                         batch_results.append(result)
 
                 return batch_results
 
+            scheduled_signatures = set(checkpoint_completed_signatures)
             for task in self._iter_parametric_task_blueprints(
                 grouped_dfs=grouped_dfs,
                 epws=epws,
@@ -9611,10 +9719,12 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                 keep_input=keep_input,
                 sim_files_extensions=sim_files_extensions_normalized,
                 sim_files_policy=sim_files_policy_normalized,
+                additional_params=additional_params,
             ):
                 task_signature = str(task.get('signature'))
-                if task_signature in checkpoint_completed_signatures:
+                if task_signature in scheduled_signatures:
                     continue
+                scheduled_signatures.add(task_signature)
                 task['signature'] = task_signature
                 batch_tasks.append(task)
                 if len(batch_tasks) < effective_batch_size:
@@ -9713,7 +9823,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             outputs_param_simulation = outputs_param_simulation.drop_duplicates(
                 subset=['_accim_task_signature'],
                 keep='last',
-            ).reset_index(drop=True)
+            )
+            # One row per task, in the order of the plan (as with one process): parallel
+            # simulations finish in any order, and repeated rows of the plan, simulated once,
+            # keep a row each (the sensitivity analyses need one result per row of the sample).
+            results_by_signature = outputs_param_simulation.set_index('_accim_task_signature', drop=False)
+            ordered_signatures = [signature for signature in task_order if signature in results_by_signature.index]
+            outputs_param_simulation = results_by_signature.loc[ordered_signatures].reset_index(drop=True)
 
         if total_tasks > 0 and len(outputs_param_simulation) == 0:
             warnings.warn(

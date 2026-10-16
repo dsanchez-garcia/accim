@@ -11,6 +11,27 @@ Durable architectural/process decisions for this repository and its Obsidian
 vault. Newest first. Use [[templates/decision-record.md|the decision-record
 template]] to add a new entry.
 
+## 2026-10-15 — Hourly results of the parametric notebooks only where they are analysed
+
+- **Status**: accepted
+- **Context**: The notebooks of `parametric_and_optimisation_examples` are
+  run by users on their own computers, and hourly outputs are what makes each
+  simulation heavy (about 1 MB of `eplusout.csv` per annual simulation with
+  the minimal outputs). The author asked for simulations as light as
+  possible, with annual results.
+- **Decision**: wf1 is the only workflow that keeps the hourly results of
+  every evaluation (the ASHRAE 55 screening needs them). wf2 and wf4 run in
+  annual mode, without simulation folders, and then simulate again, with
+  hourly outputs, only the configurations or solutions analysed hourly (wf2:
+  the 4 EN 16798-1 Cat. III configurations; wf4: the non-dominated
+  solutions). All of them use 2 timesteps per hour, the full-year run
+  period, no design-day environments and only the outputs they read.
+- **Consequences**: The screening of wf4 covers the non-dominated solutions,
+  not every evaluation as in the paper. The re-simulations reproduce the
+  annual results exactly, and each one is checked in the notebook. Annual
+  results differ slightly from runs with the 6 timesteps of the model.
+
+
 ## 2026-10-15 — Ship sample files as the separate distribution `accim-samples`
 
 - **Status**: accepted

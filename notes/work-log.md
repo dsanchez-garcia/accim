@@ -15,6 +15,42 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-16 — The parametric notebooks in the documentation
+
+- **Objective**: Show the workflows and tutorials of `parametric_and_optimisation_examples` on Read the Docs, as the author asked.
+- **Affected files**: new `docs/prepare_parametric_notebooks.py` and `docs/source/jupyter_notebooks/parametric_and_optimisation_examples/` (index and 16 executed notebooks); `docs/source/conf.py`, `docs/source/index.rst`, `docs/requirements.txt`; tutorials 05, 08 and 09; [[../CHANGELOG.md]]; [[../DEVLOG.md]].
+- **Finding or decision**: Read the Docs cannot run these notebooks (EnergyPlus), so the documentation shows copies run beforehand, as for the other notebook pages, and `conf.py` never runs notebooks. The copies are exported with relative paths, without progress bars, with shortened logs and smaller figures; a 256-colour palette shrinks most figures but bands heatmaps, so each figure keeps its colours when the palette would change it visibly. The runs used a copy of the committed accim (`git archive`, first in `PYTHONPATH`) because another session was editing the working copy.
+- **Validation**: the 16 notebooks ran without errors; local html, latex and epub builds without errors or warnings from the new pages; pages checked in the browser. Details in [[../DEVLOG.md]].
+- **Next step**: Merge into `master` so that Read the Docs builds the section; export wf4 and wf5 again after the minor fixes are committed.
+
+
+## 2026-10-15 — Parametric plan, extra parameters, custom baseline and MCDM per front
+
+- **Objective**: Fix the accim bugs that made tutorial 06 simulate the wrong model and ignore its roof insulation, and that forced workarounds in tutorial 05; choose compromise solutions per front. Requested by the author, with tests.
+- **Affected files**: `accim/parametric_and_optimisation/main.py`, `analysis.py`, `plotting.py`; new `tests/parametric_and_optimisation/test_parametric_plan.py`, plus `test_parametric_worker.py` and `test_analysis_output_resolution.py`; tutorials 05, 06 and 10; [[../CHANGELOG.md]]; [[../DEVLOG.md]].
+- **Finding or decision**: Parametric results now follow the task order (by IDF, EPW and plan row), with one row per plan row even when rows repeat, so parallel runs give the same table as sequential ones. The worker gets the non-accim BESOS parameters as a keyword argument, so the existing fake workers of the tests keep working. `get_best_compromise_solution` uses the same grouping as `plot_best_compromise_solutions`.
+- **Validation**: 14 new tests, 11 failing on the previous code; parametric suite 174 passed, 1 old failure. Tutorials 05, 06 and 10 executed and checked (plan order, model of each row, effect of the roof thickness, ComfStand 99 in both IDFs). Details in [[../DEVLOG.md]].
+- **Next step**: Commit, after the author's approval.
+
+
+## 2026-10-15 — Notebooks wf3, wf5 and tutorials 00-10
+
+- **Objective**: Finish the notebooks of `parametric_and_optimisation_examples`: wf3 and wf5 (aPMV setpoints, Examples 3 and 5 of the paper) and the tutorials 00-10, all runnable with the sample IDF and EPW files.
+- **Affected files**: `wf2`, `wf3`, `wf5` and `00`-`10` in `accim/sample_files/jupyter_notebooks/parametric_and_optimisation_examples/`; [[../DEVLOG.md]].
+- **Finding or decision**: The sample model has a work efficiency, clothing and air velocity of 1 in its People object, which overheats the zones under aPMV setpoints; wf3, wf5 and tutorial 03 set realistic PMV inputs. The aPMV cooling season is given by dates, so wf3 and wf5 use Seville only, and wf2 gives Sydney the cooling season of the southern hemisphere. Several tutorials ran without errors but gave wrong results; the causes in accim are listed in [[../DEVLOG.md]] (dropped `idf` column with one building, `additional_params` ignored by the parametric worker, custom-model baseline only on the first building, row order and duplicates in Morris/Sobol runs, MCDM over the fronts of all EPWs). None of them affects the campaign of the paper, which uses one building, accim parameters only and no Sobol/Morris.
+- **Validation**: wf3 in full and wf5 reduced, without errors; tutorials 00-10 executed in order without errors. Details in [[../DEVLOG.md]].
+- **Next step**: The author decides whether to fix those issues in accim and whether to commit the notebooks.
+
+
+## 2026-10-15 — Notebooks wf1, wf2, wf4 and the parametric evaluation worker
+
+- **Objective**: Rewrite the notebooks wf1, wf2 and wf4 of `parametric_and_optimisation_examples` after the handoff from the paper chat, with light simulations, and fix the bugs they exposed.
+- **Affected files**: the three notebooks; `accim/parametric_and_optimisation/main.py` (`_run_single_evaluation_worker`); new `tests/parametric_and_optimisation/test_parametric_worker.py`; [[../CHANGELOG.md]]; [[../DEVLOG.md]].
+- **Finding or decision**: Full hourly results only in wf1; wf2 and wf4 run in annual mode and simulate the chosen configurations or solutions again with hourly outputs (see [[decisions.md#2026-10-15 — Hourly results of the parametric notebooks only where they are analysed|the decision]]). The sample IDFs simulate 7 design days, which the annual readers added to the results (+3.3 % HVAC electricity); the notebooks set `Run_Simulation_for_Sizing_Periods = "No"`. The evaluation worker shared one folder with `keep_dirs=False`, could create `BESOS_Output` twice at once and lost the `add_outputs`; fixed. Mixed mode needs AirflowNetwork openings, which the sample model lacks.
+- **Validation**: 6 new worker tests (4 fail on the previous code); parametric unit tests 160 passed, 1 failure that predates the change; the three notebooks executed with reduced runs. Details in [[../DEVLOG.md]].
+- **Next step**: Design days in the sample IDFs; wf3, wf5 and tutorials 00-10.
+
+
 ## 2026-10-15 — Optional sample files: `accim` and `accim[samples]`
 
 - **Objective**: Allow installing accim from pip with or without `accim/sample_files`, since more (heavy) notebooks will be added.

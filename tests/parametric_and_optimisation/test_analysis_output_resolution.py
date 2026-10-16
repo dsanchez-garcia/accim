@@ -50,6 +50,47 @@ def test_get_best_compromise_solution_resolves_normalized_outputs():
     assert 'Cooling:Electricity_kWh/m2' in best.columns
 
 
+def _two_climate_fronts():
+    # The Sydney front is 100 times larger: chosen together, both choices would fall in Seville.
+    return pd.DataFrame(
+        {
+            'Heating:Electricity': [1.0, 4.0, 10.0, 100.0, 400.0, 1000.0],
+            'Cooling:Electricity': [10.0, 4.0, 1.0, 1000.0, 400.0, 100.0],
+            'pareto-optimal': [True] * 6,
+            'epw': ['Seville'] * 3 + ['Sydney'] * 3,
+        }
+    )
+
+
+@pytest.mark.parametrize('method', ['knee_point', 'topsis'])
+def test_best_compromise_solution_is_chosen_in_the_front_of_each_epw(method):
+    sim = _build_dummy_sim(
+        df=_two_climate_fronts(),
+        output_names=['Heating:Electricity', 'Cooling:Electricity'],
+        minimize_outputs=[True, True],
+    )
+
+    best = sim.get_best_compromise_solution(method=method)
+
+    assert best['epw'].tolist() == ['Seville', 'Sydney']
+    assert best['Heating:Electricity'].tolist() == [4.0, 400.0]
+    assert best.index.tolist() == [1, 4]
+
+
+def test_best_compromise_solution_over_one_front_when_epws_are_not_separated():
+    df = _two_climate_fronts()
+    sim = _build_dummy_sim(
+        df=df,
+        output_names=['Heating:Electricity', 'Cooling:Electricity'],
+        minimize_outputs=[True, True],
+    )
+
+    assert len(sim.get_best_compromise_solution(method='knee_point', separate_by_epw=False)) == 1
+
+    df.attrs['pareto_separate_by_epw'] = False
+    assert len(sim.get_best_compromise_solution(method='knee_point')) == 1
+
+
 def test_get_best_compromise_solution_raises_when_output_not_found():
     df = pd.DataFrame(
         {
