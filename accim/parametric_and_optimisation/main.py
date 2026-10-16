@@ -12917,6 +12917,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         session results are not updated. Note that writing filtered copies
         does **not** free disk space while the originals are kept; delete or
         archive the originals yourself once the copies have been checked.
+        See the guide :doc:`/filter_output_csvs`.
 
         Parameters
         ----------

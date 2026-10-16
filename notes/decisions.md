@@ -73,7 +73,7 @@ template]] to add a new entry.
 - **Status**: accepted
 - **Context**: The repository already separates work tracking across
   `CHANGELOG.md`, `DEVLOG.md`, `TODO.md` and `ROADMAP.md` (see
-  [[../README.md#0. Development workflow files|Development workflow files]]).
+  [[../DEVLOG.md#Tracking files|Tracking files]]).
 - **Decision**: `notes/work-log.md` is a lightweight, session-scoped log for
   fast context recovery (by humans or an AI assistant). It must not duplicate
   or replace the existing four tracking files; durable outcomes are still

@@ -1,59 +1,63 @@
 @echo off
-REM build.bat
-REM This script cleans old artifacts and builds the packages for distribution:
-REM   - accim          : the library, WITHOUT accim/sample_files (lightweight).
-REM   - accim-samples  : accim/sample_files only (installed with
-REM                      pip install "accim[samples]").
-REM Both distributions get the same version (accim.__version__).
+REM dist_build_package.bat
+REM Construye en dist\ las dos distribuciones de la version actual de accim
+REM (__version__ en accim\__init__.py):
+REM   - accim         : la libreria SIN accim\sample_files (sdist y wheel).
+REM   - accim-samples : solo accim\sample_files (wheel); se instala con
+REM                     pip install "accim[samples]".
+REM accim[samples] exige accim-samples de la misma version y accim-samples exige
+REM accim de la misma version, asi que hay que subir las dos en cada version.
+REM
+REM Para publicar una version nueva:
+REM   1. Cambia __version__ en accim\__init__.py y haz commit (mejor en master).
+REM   2. Ejecuta este script.
+REM   3. Ejecuta dist_upload_test.bat (TestPyPI, opcional) y dist_upload.bat (PyPI).
+REM
+REM Los archivos se empaquetan tal como estan en la carpeta de trabajo: el paso 5
+REM avisa si hay cambios sin commit.
 
-REM Ensure the script runs from the project root regardless of caller location.
+REM Ejecuta desde la raiz del proyecto, se llame desde donde se llame.
 cd /d "%~dp0"
 
-REM Use Python Launcher on Windows to avoid picking a random python.exe from PATH.
+REM El lanzador 'py' evita usar otro python.exe que este antes en el PATH.
 where py >nul 2>&1
-IF ERRORLEVEL 1 (
-    ECHO ERROR: No se encontro el lanzador de Python ^('py'^) en el sistema.
-    ECHO Instala Python para Windows y vuelve a intentarlo.
-    PAUSE
-    EXIT /B 1
-)
+IF ERRORLEVEL 1 GOTO no_py
 
-ECHO --- [Step 1 of 4] Cleaning previous build artifacts...
-REM Delete the contents of old build folders to ensure a clean build.
-REM The /s flag is for subdirectories, and /q is for quiet mode (no confirmation).
+ECHO --- [Paso 1 de 5] Comprobando las herramientas...
+py packaging\release.py tools build || GOTO failed
+
+ECHO.
+ECHO --- [Paso 2 de 5] Borrando dist\, build\ y *.egg-info...
 IF EXIST dist rmdir /s /q dist
 IF EXIST build rmdir /s /q build
 FOR /d %%d IN (*.egg-info) DO rmdir /s /q "%%d"
 
 ECHO.
-ECHO --- [Step 2 of 4] Building the core package 'accim' (without sample_files) using 'py -m build'...
-py -m build
-IF ERRORLEVEL 1 (
-    ECHO ERROR: Fallo el comando de build.
-    ECHO Si falta la dependencia, ejecuta: py -m pip install --upgrade build
-    PAUSE
-    EXIT /B 1
-)
+ECHO --- [Paso 3 de 5] Construyendo accim (sdist y wheel, sin accim\sample_files)...
+py -m build || GOTO failed
 
 ECHO.
-ECHO --- [Step 3 of 4] Building the 'accim-samples' package (accim/sample_files)...
-py packaging\build_samples_dist.py
-IF ERRORLEVEL 1 (
-    ECHO ERROR: Fallo el build de accim-samples.
-    PAUSE
-    EXIT /B 1
-)
+ECHO --- [Paso 4 de 5] Construyendo accim-samples (wheel con accim\sample_files)...
+py packaging\build_samples_dist.py || GOTO failed
 
 ECHO.
-ECHO --- [Step 4 of 4] Verifying build results...
-IF NOT EXIST dist (
-    ECHO ERROR: The 'dist' directory was not created. The build may have failed.
-    PAUSE
-    EXIT /B 1
-)
+ECHO --- [Paso 5 de 5] Comprobando las distribuciones de dist\...
+py packaging\release.py check || GOTO failed
 
 ECHO.
-ECHO --- Process complete ---
-ECHO The distribution files of 'accim' and 'accim-samples' have been successfully created in the 'dist' directory.
-DIR /B dist
+ECHO --- Proceso completado ---
+ECHO Siguiente paso: dist_upload_test.bat (TestPyPI) o dist_upload.bat (PyPI).
 PAUSE
+EXIT /B 0
+
+:no_py
+ECHO ERROR: No se encontro el lanzador de Python ('py').
+ECHO Instala Python para Windows y vuelve a intentarlo.
+PAUSE
+EXIT /B 1
+
+:failed
+ECHO.
+ECHO ERROR: El proceso se ha detenido; revisa los mensajes de arriba.
+PAUSE
+EXIT /B 1

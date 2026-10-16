@@ -41,7 +41,8 @@ relevant reads, not full context dumps.
 ## 3. Existing technical tracking (do not duplicate)
 
 This repository already separates technical tracking across four files (see
-`README.md`, section "Development workflow files"):
+the section "Tracking files" at the top of `DEVLOG.md`, which also gives the
+recommended flow between them):
 
 - `CHANGELOG.md` — user-facing release notes.
 - `DEVLOG.md` — internal log of completed technical work.
@@ -51,8 +52,7 @@ This repository already separates technical tracking across four files (see
 `notes/work-log.md` is a lighter, session-scoped log for fast context
 recovery; it complements these four files but never replaces them. Continue
 using `TODO.md`/`DEVLOG.md`/`CHANGELOG.md`/`ROADMAP.md` exactly as documented
-in `README.md` and `DEVLOG.md` for durable, user- or maintainer-facing
-outcomes.
+in `DEVLOG.md` for durable, user- or maintainer-facing outcomes.
 
 Do not duplicate or restate content from `README.md`, `docs/source/`, or any
 other existing documentation inside `notes/`. Link to it with a wiki link
