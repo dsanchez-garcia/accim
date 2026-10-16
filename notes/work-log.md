@@ -19,9 +19,9 @@ existing tracking files — it does not replace them (see
 
 - **Objective**: Make the sample files the only source of the How-to notebooks, correct them for accim 0.7.8 and EnergyPlus 25.1, run them and export them to the documentation.
 - **Affected files**: the seven How-to notebooks and their IDFs in `accim/sample_files/jupyter_notebooks/`; new `docs/prepare_howto_notebooks.py`; `docs/source/jupyter_notebooks/` (exported notebooks; data copies removed); [[../CHANGELOG.md]]; [[../DEVLOG.md]].
-- **Finding or decision**: Four notebooks run and are exported. Three need fixes of accim code that this work did not touch: `Table.time_plot` with pandas 3, the `'nan'` checks of `rename_epw_files`, and the `SetAST` program of `addAccis` with several output IDFs (stale lines since `95b695b`). Details in [[../DEVLOG.md]].
-- **Validation**: runs without errors for the four notebooks; local html build without warnings from these pages; `accim-samples` wheel 25.3 MB.
-- **Next step**: run and export `full_example_IBPSA`, `research_paper_case_study` and `using_rename_epw_files` once those fixes are in.
+- **Finding or decision**: Three notebooks needed fixes of accim code, found here and made in PR #6: `Table.time_plot` with pandas 3, the `'nan'` checks of `rename_epw_files`, and the `SetAST` program of `addAccis` with several output IDFs (stale lines since `95b695b`). The executed copies were run against PR #6. Details in [[../DEVLOG.md]].
+- **Validation**: the seven notebooks run without errors with PR #6, EnergyPlus 25.1 and pandas 3; local html build without warnings from these pages; `accim-samples` wheel 25.3 MB.
+- **Next step**: merge after PR #6.
 
 
 ## 2026-10-16 — Release scripts, README and docs for `accim-samples`
