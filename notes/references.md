@@ -30,8 +30,7 @@ projects and their associated research outputs).
 
 ## Sample weather data (repository root)
 
-Used for local experiments and reports (e.g.
-[[../informe_exp_4_3_parametric_apmv_w-figs.md]]):
+Used by the experiment scripts in `to_be_hold/`:
 
 - [[../Seville_Present.epw|Seville_Present.epw]] — present-day Seville TMY.
 - [[../Seville_ssp245_2050.epw|Seville_ssp245_2050.epw]] — Seville, SSP2-4.5 scenario, 2050.

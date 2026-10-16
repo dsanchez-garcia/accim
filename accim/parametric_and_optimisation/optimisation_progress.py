@@ -6,10 +6,11 @@ This module wraps the active Platypus evaluator so that, from the main process,
 ACCIM can report how many simulations have finished, the current generation,
 the expected total and an approximate ETA.
 
-The final number of simulations is not strictly known in advance; for
-generational algorithms it is ``population_size * ceil(evaluations /
-population_size)`` per IDF/EPW case, which is used as an estimate (prefixed
-with ``~``). Steady-state algorithms may evaluate smaller batches.
+The final number of simulations is not strictly known in advance. For NSGA-II,
+the default algorithm, it is the initial population plus whole generations of
+offspring, which are created in pairs (see ``estimate_case_simulations``); this
+count per IDF/EPW case is used as an estimate (prefixed with ``~``). Other
+algorithms may evaluate batches of other sizes.
 
 Usage
 -----
@@ -21,6 +22,7 @@ reporter = OptimisationProgressReporter(total_cases=2, sims_per_case=30, total_e
 evaluator = ProgressReportingEvaluator(inner=platypus.MapEvaluator(), reporter=reporter)
 """
 
+import math
 import time
 import concurrent.futures
 
@@ -74,6 +76,39 @@ def _format_seconds(seconds: float) -> str:
     return f'{hours}:{minutes:02d}:{secs:02d}'
 
 
+def estimate_case_simulations(evaluations: int, population_size: int) -> tuple:
+    """Estimate the simulations of one IDF/EPW case of an NSGA-II optimisation.
+
+    Platypus evaluates the whole initial population, then one generation of
+    offspring at a time until ``evaluations`` is reached, always finishing the
+    current generation. The offspring are created in pairs (a crossover of two
+    parents gives two children), so each generation after the first evaluates
+    ``population_size`` rounded up to an even number.
+
+    Parameters
+    ----------
+    evaluations : int
+        Stopping criterion of the run (``evaluations`` of ``run_optimisation``).
+    population_size : int
+        Size of the population.
+
+    Returns
+    -------
+    tuple
+        ``(simulations, generations, offspring)``: simulations of the case,
+        generations including the initial one, and simulations of each
+        generation after the initial one.
+
+    Examples
+    --------
+    estimate_case_simulations(evaluations=6, population_size=3)  # (7, 2, 4)
+    """
+    population_size = max(1, int(population_size))
+    offspring = population_size + population_size % 2
+    later_generations = max(0, math.ceil((int(evaluations) - population_size) / offspring))
+    return (population_size + later_generations * offspring, 1 + later_generations, offspring)
+
+
 class OptimisationProgressReporter:
     """Keep track of optimisation progress and print status lines.
 
@@ -117,13 +152,13 @@ class OptimisationProgressReporter:
         """Print the run header with the estimated number of simulations."""
         self.run_start = time.time()
         pending_cases = max(0, self.total_cases - int(resumed_cases))
-        gens = self.sims_per_case // population_size if population_size else 0
+        (_, gens, offspring) = estimate_case_simulations(evaluations, population_size)
         self._print(
             f'Starting optimisation ({algorithm}): {self.total_cases} case(s) '
             f'({pending_cases} to run, {resumed_cases} resumed) | '
-            f'~{self.sims_per_case} sims/case ({gens} generation(s) x {population_size}, '
-            f'evaluations={evaluations}) | ~{self.total_expected_sims} sims in total | '
-            f'{self.processes} process(es)'
+            f'~{self.sims_per_case} sims/case ({gens} generation(s): {population_size} initial + '
+            f'{gens - 1} x {offspring} offspring, evaluations={evaluations}) | '
+            f'~{self.total_expected_sims} sims in total | {self.processes} process(es)'
         )
 
     def start_case(self, case_idx: int, idf: str, epw: str):

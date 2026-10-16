@@ -36,6 +36,61 @@ class _DummyHourlyPlotSession(PlottingMixin):
         return pd.DataFrame(rows)
 
 
+class _DummyPredefinedHourlyPlotSession(PlottingMixin):
+    """Hourly results of the predefined models, with ComfMod and HVACmode instead of CustAST_m and CustAST_n."""
+
+    def __init__(self):
+        rows = []
+        base_dt = pd.Timestamp('2024-01-01 00:00:00')
+        for comf_mod in [0, 3]:
+            for hvac_mode in [0, 2]:
+                for hour in range(1, 7):
+                    rows.append(
+                        {
+                            'datetime': base_dt + pd.Timedelta(hours=hour),
+                            'hour': hour,
+                            'epw': 'Seville',
+                            'ComfStand': 1,
+                            'ComfMod': comf_mod,
+                            'HVACmode': hvac_mode,
+                            'LIVING:Running Average Outdoor Air Temperature [C](Hourly)': 16.0 + 0.3 * hour,
+                            'LIVING:Zone Operative Temperature [C](Hourly)': 21.0 + 0.5 * hour + hvac_mode,
+                        }
+                    )
+        self.outputs_param_simulation_hourly = pd.DataFrame(rows)
+
+
+@pytest.mark.parametrize('method', ['plot_hourly_scatter', 'plot_hourly_lines'])
+def test_hourly_plots_facet_by_the_parameters_of_predefined_models(tmp_path, method):
+    sim = _DummyPredefinedHourlyPlotSession()
+
+    grid = getattr(sim, method)(
+        df_source='parametric_hourly',
+        row='ComfMod',
+        col='HVACmode',
+        out_dir=str(tmp_path),
+    )
+
+    assert list(grid.row_names) == [0, 3]
+    assert list(grid.col_names) == [0, 2]
+
+
+@pytest.mark.parametrize('method', ['plot_hourly_scatter', 'plot_hourly_lines'])
+def test_hourly_plots_report_a_facet_column_that_is_not_in_the_data(tmp_path, capsys, method):
+    sim = _DummyPredefinedHourlyPlotSession()
+
+    grid = getattr(sim, method)(
+        df_source='parametric_hourly',
+        row='CAT',
+        col='HVACmode',
+        out_dir=str(tmp_path),
+    )
+
+    assert list(grid.row_names) == []
+    assert list(grid.col_names) == [0, 2]
+    assert "row='CAT'" in capsys.readouterr().out
+
+
 def test_prepare_hourly_long_df_default_tokens():
     sim = _DummyHourlyPlotSession()
 

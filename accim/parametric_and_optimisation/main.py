@@ -9165,7 +9165,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self.preflight_report_optimisation(epws=..., evaluations=..., population_size=..., ...)
         """
-        import math
+        from accim.parametric_and_optimisation.optimisation_progress import estimate_case_simulations
 
         if evaluations <= 0:
             raise ValueError("Argument 'evaluations' must be a positive integer.")
@@ -9189,8 +9189,7 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             idf_identifiers = []
 
         n_cases = int(len(idf_identifiers) * len(epws))
-        generations = int(math.ceil(evaluations / population_size))
-        sims_per_case = int(population_size * generations)
+        (sims_per_case, generations, _) = estimate_case_simulations(evaluations, population_size)
         estimated_total_simulations = int(sims_per_case * n_cases)
 
         system_snapshot = self._get_system_resource_snapshot()
@@ -9867,6 +9866,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             outputs_param_simulation.attrs['outputs_names'] = self.outputs_names
             
         self.outputs_param_simulation = outputs_param_simulation
+        # The new results are in J, even if the previous ones were normalised.
+        self._invalidate_normalized_df_types(df_types=['parametric'])
         self.evaluators = {} 
         
         import datetime
@@ -9967,6 +9968,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.outputs_param_simulation_hourly = pd.read_pickle(hourly_pickle_path)
         elif hourly_csv_path:
             self.outputs_param_simulation_hourly = pd.read_csv(hourly_csv_path)
+        # The loaded tables replace the previous ones, which may have been normalised.
+        self._invalidate_normalized_df_types(
+            df_types=['parametric', 'parametric_hourly'] if (hourly_pickle_path or hourly_csv_path) else ['parametric']
+        )
         parameters_names = parameters_names or self.outputs_param_simulation.attrs.get('parameters_names')
         outputs_names = outputs_names or self.outputs_param_simulation.attrs.get('outputs_names')
         if parameters_names and outputs_names and not (hasattr(self, 'problem') and type(self.problem).__name__ != 'MockProblem'):
@@ -10022,19 +10027,27 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         """Estimates the maximum number of EnergyPlus simulations that will be run by
         :meth:`run_optimisation` **before** launching it.
         
-        NSGA-II (and most platypus algorithms) work in discrete generations, each of which
-        evaluates exactly ``population_size`` individuals.  The stopping criterion
-        ``evaluations`` is checked **between** generations, so the algorithm always
-        completes the current generation before stopping.  Therefore:
+        NSGA-II, the default algorithm, evaluates the whole initial population and then
+        one generation of offspring at a time.  The stopping criterion ``evaluations`` is
+        checked **between** generations, so the algorithm always completes the current
+        generation before stopping.  The offspring are created in pairs (a crossover of
+        two parents gives two children), so each generation after the first evaluates
+        ``population_size`` rounded up to an even number: one simulation more than
+        ``population_size`` when it is odd.  Therefore:
         
         .. code-block:: text
         
-            sims_per_epw = population_size × ⌈evaluations / population_size⌉
+            offspring    = population_size rounded up to an even number
+            sims_per_epw = population_size + offspring × ⌈(evaluations − population_size) / offspring⌉
             total_sims   = sims_per_epw × len(epws)
         
-        Special case: if ``evaluations < population_size`` the initial generation
-        already exceeds the budget, but it is always completed in full, so
-        ``sims_per_epw`` equals ``population_size``.
+        For example, with ``population_size=3`` and ``evaluations=6``, NSGA-II runs
+        3 + 4 = 7 simulations per EPW.
+        
+        Special case: if ``evaluations <= population_size`` the initial generation
+        already reaches the budget, but it is always completed in full, so
+        ``sims_per_epw`` equals ``population_size``.  Other algorithms may evaluate
+        a different number of solutions per generation.
         
         :param evaluations: same value you will pass to :meth:`run_optimisation`
         :param population_size: same value you will pass to :meth:`run_optimisation`
@@ -10049,10 +10062,10 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         --------
         result = self.estimate_optimisation_sims(evaluations=..., population_size=..., epws=...)
         """
-        import math
-        sims_per_epw = population_size * math.ceil(evaluations / population_size)
+        from accim.parametric_and_optimisation.optimisation_progress import estimate_case_simulations
+        (sims_per_epw, generations, offspring) = estimate_case_simulations(evaluations, population_size)
         total = sims_per_epw * len(epws)
-        print(f"Estimated simulations\n  evaluations    : {evaluations}\n  population_size: {population_size}\n  EPWs           : {len(epws)} ({', '.join(epws)})\n  sims per EPW   : {sims_per_epw}  ({math.ceil(evaluations / population_size)} generation(s) × {population_size})\n  TOTAL          : {total}")
+        print(f"Estimated simulations\n  evaluations    : {evaluations}\n  population_size: {population_size}\n  EPWs           : {len(epws)} ({', '.join(epws)})\n  sims per EPW   : {sims_per_epw}  ({generations} generation(s): {population_size} initial + {generations - 1} x {offspring} offspring)\n  TOTAL          : {total}")
         self.epws = epws
         self.last_run_type = 'optimisation'
         return total
@@ -10090,10 +10103,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param evaluations: the algorithm will be stopped once it uses more than this many
             evaluations (i.e. EnergyPlus simulations).  Because the algorithm always completes
             the current generation before stopping, the actual number of simulations per EPW
-            is ``population_size × ⌈evaluations / population_size⌉``.
+            can be larger: with NSGA-II, the initial population plus whole generations of
+            offspring, which are created in pairs (``population_size`` rounded up to an even
+            number per generation).
             Use :meth:`estimate_optimisation_sims` to preview the count before running.
         :param population_size: number of individuals in each generation; each individual
-            corresponds to one EnergyPlus simulation
+            corresponds to one EnergyPlus simulation (with an odd ``population_size``,
+            NSGA-II evaluates one more offspring in each generation after the first)
         :param algorithm: the optimisation algorithm to use; default is 'NSGAII'
         :param processes: number of CPU cores to use for parallel evaluation of individuals
             within each generation.  Uses ``platypus.ProcessPoolEvaluator`` internally.
@@ -10134,9 +10150,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         :param show_progress: when True (default), prints progress information while
             simulations run: current IDF/EPW case, generation, completed simulations
             within the generation, the case and the whole run, elapsed time and ETA.
-            The total number of simulations is an estimate
-            (``population_size × ⌈evaluations / population_size⌉`` per case, see
-            :meth:`estimate_optimisation_sims`), hence it is shown prefixed with ``~``.
+            The total number of simulations is an estimate (the NSGA-II count of
+            :meth:`estimate_optimisation_sims` per case), hence it is shown prefixed with ``~``.
         :return: a pandas DataFrame
         
         Notes::
@@ -10298,13 +10313,13 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
                     if case_id in planned_case_ids
                 }
             if show_progress:
-                import math
                 from accim.parametric_and_optimisation.optimisation_progress import (
                     OptimisationProgressReporter,
                     ProgressReportingEvaluator,
+                    estimate_case_simulations,
                 )
                 pop = max(1, int(population_size))
-                sims_per_case = pop * max(1, math.ceil(int(evaluations) / pop))
+                (sims_per_case, _, _) = estimate_case_simulations(evaluations, pop)
                 resumed_cases = len(checkpoint_cases)
                 progress_reporter = OptimisationProgressReporter(
                     total_cases=total_cases,
@@ -10801,6 +10816,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             outputs_optimisation_full.attrs['outputs_names'] = self.outputs_names
             outputs_optimisation_full.attrs['minimize_outputs'] = getattr(self.problem, 'minimize_outputs', []) if hasattr(self, 'problem') else []
         self.outputs_optimisation = outputs_optimisation_full
+        # New or loaded results are in J, even if the previous ones were normalised.
+        self._invalidate_normalized_df_types(df_types=['optimisation'])
         if 'epw' not in self.outputs_optimisation.columns:
             self.outputs_optimisation['epw'] = pd.NA
         self.optimisation_csv_paths_non_dominated = self.outputs_optimisation[self.outputs_optimisation['pareto-optimal']]['simulation_output_csv_path'].dropna().drop_duplicates().tolist()
@@ -10914,6 +10931,8 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
             self.outputs_optimisation_hourly = pd.read_pickle(hourly_pickle_path)
         elif hourly_csv_path:
             self.outputs_optimisation_hourly = pd.read_csv(hourly_csv_path)
+        if hourly_pickle_path or hourly_csv_path:
+            self._invalidate_normalized_df_types(df_types=['optimisation_hourly'])
         parameters_names = parameters_names or outputs_optimisation.attrs.get('parameters_names')
         outputs_names = outputs_names or outputs_optimisation.attrs.get('outputs_names')
         minimize_outputs = minimize_outputs or outputs_optimisation.attrs.get('minimize_outputs')
