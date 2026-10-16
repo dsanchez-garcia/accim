@@ -15,17 +15,6 @@ The figure below clearly explains the aim of adaptive setpoint temperatures: int
 
 ![Use of adaptive setpoint](https://github.com/dsanchez-garcia/accim/blob/master/docs/source/images/NV_vs_MM.png?raw=true)
 
-# 0. Development workflow files
-
-This repository uses the following Markdown files for project tracking:
-
-- `CHANGELOG.md`: user-facing release notes.
-- `DEVLOG.md`: internal log of completed technical work.
-- `TODO.md`: active short-term tasks and priorities.
-- `ROADMAP.md`: medium- and long-term initiatives.
-
-Recommended flow: track active work in `TODO.md`, move completed outcomes to `DEVLOG.md`, and promote user-facing changes to `CHANGELOG.md` during release preparation.
-
 # 1. Citation
 
 If you use this package, please cite us:
@@ -43,7 +32,7 @@ If you use this package, please cite us:
 ## 2.0 Requirements
 To use accim, the following must be installed:
 - Python 3.9 or newer
-- EnergyPlus (any version between 9.1 and 25.1 those included)
+- EnergyPlus (any version between 9.1 and 25.2 those included)
 
 ## 2.1 Installation
 First of all, you need to install the package. There are two options:
@@ -59,6 +48,41 @@ First of all, you need to install the package. There are two options:
 The sample files are published as the separate package `accim-samples`, with the same version as accim, and are installed into the `accim/sample_files` folder within your site-packages path. You can add them later with `pip install "accim[samples]"` and remove them with `pip uninstall accim-samples`; accim itself is not affected. To print the path of the installed sample files, run:
 
     python -c "import accim.sample_files, os; print(os.path.dirname(accim.sample_files.__file__))"
+
+### 2.1.1 Running the example notebooks
+
+The Jupyter notebooks mentioned in section 2.2 are part of the sample files, in the folder `jupyter_notebooks`. Each example has its own folder, with the notebook and the input files it uses (IDFs, EPWs...):
+
+| Folder | Content |
+| --- | --- |
+| `addAccis` | Adaptive setpoint temperatures with `addAccis()` (section 2.2.1) |
+| `rename_epw_files` | Renaming EPW files (section 2.2.2) |
+| `runEp` | Running simulations (section 2.2.3) |
+| `Table` | Data analysis, figures and tables (section 2.2.4) |
+| `full_example_IBPSA` | Full example, from the input files to the figures (section 2.2.5) |
+| `example_apmv_setpoints_paper` | aPMV setpoints (section 2.2.6) |
+| `research_paper_case_study_v0-7-3` | Case study of a research paper |
+| `parametric_and_optimisation_examples` | Parametric simulation and optimisation: tutorials `00`-`10` and complete workflows `wf1`-`wf5` |
+
+To run them on your computer:
+
+1. Install accim with the sample files, and Jupyter if you do not have it:
+
+       pip install "accim[samples]" notebook
+
+   If accim is already installed, this adds the sample files of the same version. When you upgrade accim, upgrade the sample files with it: `pip install --upgrade "accim[samples]"`.
+
+2. Find the folder of the sample files with the command above:
+
+       python -c "import accim.sample_files, os; print(os.path.dirname(accim.sample_files.__file__))"
+
+3. Copy the folder of the example (for instance, `jupyter_notebooks/addAccis`) to a working folder, such as your Desktop. Run the notebooks there rather than in site-packages: they write their results next to them, and the installed sample files should not be modified.
+
+4. Open a terminal (e.g. cmd) in the copied folder and run `jupyter notebook`. An internet browser will pop up, where you can open the .ipynb file.
+
+The notebooks that run simulations need EnergyPlus. The sample models of `parametric_and_optimisation_examples` are in the format of EnergyPlus 25.2; the documentation explains how to run these notebooks and in which order: https://accim.readthedocs.io/en/master/jupyter_notebooks/parametric_and_optimisation_examples/index.html
+
+You can also read the notebooks, with their outputs, without running them: in the documentation (https://accim.readthedocs.io/en/master/) or on GitHub (https://github.com/dsanchez-garcia/accim/tree/master/accim/sample_files/jupyter_notebooks). GitHub shows the development version, which may be ahead of the version you installed; the installed sample files always match your version of accim.
 
 ## 2.2 Usage
 
@@ -90,7 +114,7 @@ Once you run this code, you will be asked to enter some information at the termi
         Output_freqs=list, # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: Output_freqs=['hourly', 'runperiod'],
         Output_gen_dataframe=bool, # Output_keep_existing: True or False. For instance: Output_keep_existing=False,
         Output_take_dataframe=pandas Dataframe,
-        EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1' or 'auto'. For instance: EnergyPlus_version='25.1',
+        EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1', '25.2' or 'auto'. For instance: EnergyPlus_version='25.1',
         TempCtrl=str, # TempCtrl: 'temperature' or 'temp', or 'pmv'. For instance: TempCtrl='temp',
         ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 22. For instance: ComfStand=[0, 1, 2, 3],
         CAT=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: CAT=[3, 80],
@@ -117,64 +141,28 @@ Once you run this code, you will be asked to enter some information at the termi
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb  
 
-You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
-within your site_packages path, in
-
-accim/sample_files/jupyter_notebooks/addAccis
-
-The path should be something like this, with your username instead of YOUR_USERNAME:
-
-*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\addAccis*
-
-Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+To run it on your computer, copy the folder `jupyter_notebooks/addAccis` of the sample files to a working folder (see section 2.1.1).
 
 ### 2.2.2 Renaming epw files for later data analysis
 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
 
-You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
-within your site_packages path, in
-
-accim/sample_files/jupyter_notebooks/rename_epw_files
-
-The path should be something like this, with your username instead of YOUR_USERNAME:
-
-*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\rename_epw_files*
-
-Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+To run it on your computer, copy the folder `jupyter_notebooks/rename_epw_files` of the sample files to a working folder (see section 2.1.1).
 
 ### 2.2.3 Running simulations
 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
 
-You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
-within your site_packages path, in
-
-accim/sample_files/jupyter_notebooks/runEp
-
-The path should be something like this, with your username instead of YOUR_USERNAME:
-
-*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\runEp*
-
-Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+To run it on your computer, copy the folder `jupyter_notebooks/runEp` of the sample files to a working folder (see section 2.1.1).
 
 ### 2.2.4 Functions and methods for data analysis; making figures and tables
 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
 
-You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
-within your site_packages path, in
-
-accim/sample_files/jupyter_notebooks/Table
-
-The path should be something like this, with your username instead of YOUR_USERNAME:
-
-*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\Table*
-
-Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+To run it on your computer, copy the folder `jupyter_notebooks/Table` of the sample files to a working folder (see section 2.1.1).
 
 ### 2.2.5 Full example: from preparation of the input IDFs and EPWs, to simulation and data analysis and visualization
 
@@ -185,16 +173,7 @@ This Notebook was used in the IBPSA webinar (although for accim version 0.7.1), 
 https://www.youtube.com/watch?v=PQ34Pl7t4HA&t=3393s
 
 
-You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
-within your site_packages path, in
-
-accim/sample_files/jupyter_notebooks/full_example_IBPSA
-
-The path should be something like this, with your username instead of YOUR_USERNAME:
-
-*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\full_example_IBPSA*
-
-Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+To run it on your computer, copy the folder `jupyter_notebooks/full_example_IBPSA` of the sample files to a working folder (see section 2.1.1).
 
 
 ### 2.2.6 Using apmv_setpoints
@@ -202,16 +181,7 @@ Then, you just need to copy the folder to a different path (i.e. Desktop), open 
 You can see a Jupyter Notebook in the link below:  
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints.ipynb
 
-You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see section 2.1). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder
-within your site_packages path, in
-
-accim/sample_files/jupyter_notebooks/example_apmv_setpoints_paper
-
-The path should be something like this, with your username instead of YOUR_USERNAME:
-
-*C:\\Users\\YOUR_USERNAME\\AppData\\Local\\Programs\\Python\\Python39\\Lib\\site-packages\\accim\\sample_files\\jupyter_notebooks\\example_apmv_setpoints_paper*
-
-Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+To run it on your computer, copy the folder `jupyter_notebooks/example_apmv_setpoints_paper` of the sample files to a working folder (see section 2.1.1).
 
 You can apply aPMV setpoints to a building using the following function:
 

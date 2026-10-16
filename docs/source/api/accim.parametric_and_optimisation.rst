@@ -1,15 +1,6 @@
 accim.parametric\_and\_optimisation package
 ===========================================
 
-Filtering simulation output CSVs
---------------------------------
-
-To shrink already-run results, ``ParametricSimulation`` and
-``OptimisationSimulation`` inherit
-:meth:`~accim.parametric_and_optimisation.main.SimulationBase.filter_simulation_output_csvs`.
-It writes column-filtered copies of each simulation CSV. See
-:doc:`../filter_output_csvs`.
-
 Subpackages
 -----------
 
@@ -29,6 +20,22 @@ accim.parametric\_and\_optimisation.analysis module
    :show-inheritance:
    :undoc-members:
 
+accim.parametric\_and\_optimisation.file\_cleanup module
+--------------------------------------------------------
+
+.. automodule:: accim.parametric_and_optimisation.file_cleanup
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+accim.parametric\_and\_optimisation.hourly\_plotting module
+-----------------------------------------------------------
+
+.. automodule:: accim.parametric_and_optimisation.hourly_plotting
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.parametric\_and\_optimisation.main module
 -----------------------------------------------
 
@@ -37,10 +44,26 @@ accim.parametric\_and\_optimisation.main module
    :show-inheritance:
    :undoc-members:
 
+accim.parametric\_and\_optimisation.mn\_filter module
+-----------------------------------------------------
+
+.. automodule:: accim.parametric_and_optimisation.mn_filter
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 accim.parametric\_and\_optimisation.objectives module
 -----------------------------------------------------
 
 .. automodule:: accim.parametric_and_optimisation.objectives
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+accim.parametric\_and\_optimisation.optimisation\_progress module
+-----------------------------------------------------------------
+
+.. automodule:: accim.parametric_and_optimisation.optimisation_progress
    :members:
    :show-inheritance:
    :undoc-members:

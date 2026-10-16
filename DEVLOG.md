@@ -2,9 +2,16 @@
 
 Internal development log for the repository.
 
-> This file complements `CHANGELOG.md`:
-> - `CHANGELOG.md`: user-facing changes per release.
-> - `DEVLOG.md`: day-to-day technical notes (tests, decisions, blockers).
+## Tracking files
+
+The repository tracks its work in four Markdown files:
+
+- `CHANGELOG.md`: user-facing changes per release.
+- `DEVLOG.md` (this file): internal log of completed technical work, with day-to-day notes (tests, decisions, blockers).
+- `TODO.md`: active short-term tasks and priorities.
+- `ROADMAP.md`: medium- and long-term initiatives.
+
+Recommended flow: track active work in `TODO.md`, move completed outcomes to `DEVLOG.md`, and promote user-facing changes to `CHANGELOG.md` during release preparation.
 
 ## Conventions
 
@@ -29,6 +36,20 @@ Internal development log for the repository.
 ## Entries
 
 ### 2026-10-16
+#### [done] README and documentation: running the example notebooks with `accim-samples`; tracking files moved to DEVLOG
+- Context: The author asked to remove the section "0. Development workflow files" from `README.md`, which does not interest users, after checking whether agents need it, and to explain how to run the example notebooks now that they are installed with `accim[samples]`.
+- Changes: That section was the reference of `.github/copilot-instructions.md` (section 3) and of the links in `Home.md`, `notes/README.md` and `notes/decisions.md`. Its content (the four tracking files and the recommended flow) is now the section "Tracking files" at the top of this file, and those files point to it. `README.md`: new section 2.1.1 "Running the example notebooks" (table of the example folders; `pip install "accim[samples]" notebook`; find the installed folder, copy the example to a working folder and run `jupyter notebook`; EnergyPlus 25.2 for the parametric notebooks; links to the documentation and GitHub). The six copies of the old instructions, with Python 3.9 paths, became one line per example that points to 2.1.1. EnergyPlus versions up to 25.2 in the requirements and in the options of `EnergyPlus_version`, as in `fullEPversionsList`. The documentation has the same instructions: new section "Running the example notebooks" in `docs/source/2_installation.md`, with a link to the page of each notebook, to which `docs/source/4_detailed use.md` (sections 4.4 to 4.7, which had the old instructions) and `docs/source/1_requirements.md` point; EnergyPlus up to 25.2 in `1_requirements.md`; the link of section 4.7 pointed to the runEp notebook instead of Table.
+- Files: `README.md`, `docs/source/1_requirements.md`, `docs/source/2_installation.md`, `docs/source/4_detailed use.md`, `DEVLOG.md`, `.github/copilot-instructions.md`, `Home.md`, `notes/README.md`, `notes/decisions.md`, `CHANGELOG.md`.
+- Verification: no file links to the removed heading any more (only an older entry of this log names it); `twine check --strict` passes for the accim distributions built with the new README. Local html build with `dist_build_docs.bat`: the same 45 warnings, none from these pages; the 8 links of the table, the 4 of `4_detailed use.md` and the one of `1_requirements.md` resolve.
+- Next step: none.
+
+#### [done] Release scripts: build, check and upload `accim` and `accim-samples`
+- Context: The author wants to publish accim on PyPI and build the documentation by running the `dist_*.bat` scripts. After the split of `accim-samples`, the upload scripts uploaded every file in `dist/`, which still held `accim-0.7.8.1` (a local build of June, with the sample files, on no index). twine, sphinx-rtd-theme and myst-parser were missing from the Python 3.14 of the author; the docs script recommended `pip install -r docs/requirements.txt`, which pins numpy<2 and matplotlib<=3.7 for Read the Docs; and `sphinx-apidoc --force` overwrote a hand-written paragraph of `docs/source/api/accim.parametric_and_optimisation.rst`, a page that lacked four modules.
+- Changes: New `packaging/release.py`. `tools build|upload|docs` checks the packages of each script (twine >= 6.1, which reads metadata 2.4; pandoc for nbsphinx) and offers to install the missing ones. `check` takes the files of the current version in `dist/` (files of other versions are listed and left out), checks both wheels (core: no `sample_files`, extra `samples` pinned to `accim-samples==<version>`; samples: only `accim/sample_files`, pinned to `accim==<version>`) and runs `twine check --strict`. `upload --repository pypi|testpypi [--dry-run] [--verbose]` runs the same checks, asks the index which distribution of the version is already published (skipped), warns if the version is lower than the latest, asks to type the version to confirm and uploads `accim-samples` before `accim`, with the `.pypirc` section `accim-samples` or `testpypi-accim-samples` for the samples when it is defined. The `dist_*.bat` scripts (Spanish, ASCII) call it: `dist_build_package.bat` checks the tools, cleans, builds both distributions and runs `check`; `dist_upload_test.bat` and `dist_upload.bat` check the tools and run `upload`; `dist_build_docs.bat` checks the tools, regenerates `docs/source/api`, builds the html with the warnings also in `docs/_build/sphinx_warnings.txt` (counted with `findstr`: the `find` of Git can come first in PATH), lists the changed API pages and offers to open the result. The hand-written paragraph of the API page became a link to the guide in the docstring of `filter_simulation_output_csvs`.
+- Files: `packaging/release.py`, `dist_build_package.bat`, `dist_upload.bat`, `dist_upload_test.bat`, `dist_build_docs.bat`, `docs/source/api/accim.parametric_and_optimisation.rst`, `accim/parametric_and_optimisation/main.py`, `CHANGELOG.md`.
+- Verification: twine 7.0.0, sphinx-rtd-theme 3.1.0 and myst-parser 5.1.0 installed through `tools`. `dist_build_package.bat` (40 s): core wheel 0.5 MB without `sample_files`, metadata 2.4 and `Requires-Dist: accim-samples==0.7.8; extra == "samples"`; samples wheel 29.8 MB with the 152 tracked files of `accim/sample_files`; `twine check --strict` passed for the three files. `upload --dry-run` for TestPyPI and PyPI with the 0.7.8.1 files back in `dist/`: they were left out, and `accim-samples` goes first; with a fake `.pypirc`, the section `accim-samples` was used for the samples on PyPI. Typing another version or closing the input cancels with exit code 2, also through `dist_upload_test.bat`. Nothing was uploaded. `dist_build_docs.bat` (1 min 57 s): 45 warnings, all from older docstrings and the environment; the API page documents `file_cleanup`, `hourly_plotting`, `mn_filter` and `optimisation_progress`, and the link to `HourlyPlottingMixin` in `hourly_plotting.rst` now resolves.
+- Next step: first upload of `accim-samples` (TestPyPI, then PyPI), which creates the project and needs a token for the entire account.
+
 #### [done] Remove agent-generated files from the repository
 - Context: The author asked to remove the files written by AI agents that do not belong in the repository, and the Spanish page on comparing pickles, which Read the Docs showed among the tutorials.
 - Changes: Removed three Spanish reports in `docs/` (docstring review of `parametric_and_optimisation`, description of the module for the paper, map of the output retrieval methods), `docs/source/9_pickle_comparison_tutorial.md` with its entry in `docs/source/index.rst` and in the unreleased section of `CHANGELOG.md`, the run logs `exp_4_*_run.log`, `informe_exp_4_3_parametric_apmv_w-figs.md`, the copy of `article_objectives.py` at the root (the same as `to_be_hold/article_objectives.py`) and the 38 tracked files in `.ipynb_checkpoints` folders, which `accim-samples` already left out. The review and plan of 2026-07-25 (`INFORME_REVISION_PARAMETRIC_2026-07-25.md`, `PLAN_IMPLEMENTACION_PARAMETRIC_2026-07-25.md`) left the repository and are kept in the author's project files. `.gitignore` adds `.ipynb_checkpoints/` and `*.log`. `Home.md` and `notes/references.md` no longer link to the removed files.

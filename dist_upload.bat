@@ -1,42 +1,51 @@
 @echo off
 REM dist_upload.bat
-REM Este script sube las distribuciones del paquete al repositorio OFICIAL de PyPI.
-REM Asume que el archivo .pypirc está correctamente configurado.
+REM Sube a PyPI (el repositorio OFICIAL) la version actual de accim: primero
+REM accim-samples y despues accim, desde los archivos que ha dejado
+REM dist_build_package.bat en dist\. Antes conviene probarla con
+REM dist_upload_test.bat (TestPyPI).
+REM
+REM packaging\release.py se encarga de las comprobaciones:
+REM   - solo sube los archivos de la version de accim\__init__.py; los de otras
+REM     versiones que haya en dist\ se ignoran;
+REM   - revisa el contenido y los metadatos de las dos distribuciones (twine check);
+REM   - omite lo que ya este publicado en PyPI;
+REM   - pide escribir la version para confirmar: una version subida no se puede
+REM     volver a subir, ni siquiera borrandola.
+REM
+REM Credenciales: twine las lee del archivo .pypirc de tu carpeta de usuario.
+REM Para accim usa la seccion [pypi]; para accim-samples, la seccion
+REM [accim-samples] si existe (y esta en index-servers), o si no tambien
+REM [pypi]. Un token limitado al proyecto accim no puede subir accim-samples:
+REM la primera subida de accim-samples crea el proyecto y necesita un token de
+REM toda la cuenta.
 
-REM Asegura ejecución desde la raíz del proyecto.
+REM Ejecuta desde la raiz del proyecto, se llame desde donde se llame.
 cd /d "%~dp0"
 
-REM Usa el lanzador de Python para evitar conflictos con otros python.exe en PATH.
+REM El lanzador 'py' evita usar otro python.exe que este antes en el PATH.
 where py >nul 2>&1
-IF ERRORLEVEL 1 (
-    ECHO ERROR: No se encontro el lanzador de Python ^('py'^) en el sistema.
-    PAUSE
-    EXIT /B 1
-)
+IF ERRORLEVEL 1 GOTO no_py
 
-ECHO --- [Paso 1 de 2] Verificando que el directorio 'dist' existe...
-IF NOT EXIST dist (
-    ECHO ERROR: El directorio 'dist' no fue encontrado.
-    ECHO Por favor, construye el paquete primero ejecutando: dist_build_package.bat
-    PAUSE
-    EXIT /B 1
-)
+ECHO --- [Paso 1 de 2] Comprobando las herramientas...
+py packaging\release.py tools upload || GOTO failed
 
 ECHO.
-ECHO --- [Paso 2 de 2] Subiendo distribuciones a PyPI...
-REM Sube tanto 'accim' como 'accim-samples' (ambos se generan en dist\ con
-REM dist_build_package.bat). Deben subirse juntos: accim[samples] exige
-REM accim-samples con la misma version.
-REM Al no especificar --repository, twine usa la configuración 'pypi' por defecto.
-py -m twine upload dist/*
-IF ERRORLEVEL 1 (
-    ECHO ERROR: Fallo la subida a PyPI.
-    ECHO Si falta twine, instala con: py -m pip install --upgrade twine
-    PAUSE
-    EXIT /B 1
-)
-
+ECHO --- [Paso 2 de 2] Comprobando y subiendo las distribuciones a PyPI...
+py packaging\release.py upload --repository pypi
+SET "RC=%ERRORLEVEL%"
 ECHO.
-ECHO --- Proceso completado ---
-ECHO ¡Tu paquete debería estar disponible públicamente en PyPI!
 PAUSE
+EXIT /B %RC%
+
+:no_py
+ECHO ERROR: No se encontro el lanzador de Python ('py').
+ECHO Instala Python para Windows y vuelve a intentarlo.
+PAUSE
+EXIT /B 1
+
+:failed
+ECHO.
+ECHO ERROR: El proceso se ha detenido; revisa los mensajes de arriba.
+PAUSE
+EXIT /B 1

@@ -36,7 +36,7 @@ elsewhere in the repository (see [[../Home.md|Home]] for links to those).
 
 This repository already tracks work through `CHANGELOG.md`, `DEVLOG.md`,
 `TODO.md` and `ROADMAP.md` (see
-[[../README.md#0. Development workflow files|Development workflow files]]).
+[[../DEVLOG.md#Tracking files|Tracking files]]).
 `notes/work-log.md` does **not** replace them: it is a lighter, session-level
 log meant to give an AI assistant (or a returning contributor) fast context
 at the start of a session. Durable outcomes should still be promoted to the

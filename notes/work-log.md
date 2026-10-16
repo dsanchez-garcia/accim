@@ -15,6 +15,15 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-16 — Release scripts, README and docs for `accim-samples`
+
+- **Objective**: Publish accim on PyPI and build the documentation by running the `dist_*.bat` scripts; explain in the README and the documentation how to run the example notebooks with `accim[samples]`, and remove section 0 of the README.
+- **Affected files**: new `packaging/release.py`; `dist_build_package.bat`, `dist_upload.bat`, `dist_upload_test.bat`, `dist_build_docs.bat`; `docs/source/api/accim.parametric_and_optimisation.rst`; `accim/parametric_and_optimisation/main.py` (docstring); [[../README.md]]; `docs/source/{1_requirements,2_installation,4_detailed use}.md`; [[../DEVLOG.md]]; [[../Home.md]]; [[README.md|notes/README]]; [[decisions.md]]; `.github/copilot-instructions.md`; [[../CHANGELOG.md]].
+- **Finding or decision**: The upload scripts uploaded all of `dist/`, which held an old 0.7.8.1 build; now only the current version goes, `accim-samples` before `accim`, after confirmation. The README section 0 was used by agents: its content moved to [[../DEVLOG.md#Tracking files|Tracking files]].
+- **Validation**: both distributions built and checked; dry runs and cancelled uploads (nothing uploaded); docs built with the script. Details in [[../DEVLOG.md]].
+- **Next step**: First upload of `accim-samples` (token for the entire account).
+
+
 ## 2026-10-16 — Agent-generated files removed
 
 - **Objective**: Remove the files written by AI agents that do not belong in the repository, and the Spanish page on comparing pickles from Read the Docs, as the author asked.

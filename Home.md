@@ -24,7 +24,7 @@ the main README for the short version.
 
 - [[README.md|README]] — main project overview, citation list, usage and funding (English).
 - [[README.rst|README.rst]] — short English abstract used for the PyPI project page.
-- [[README.md#0. Development workflow files|Development workflow files]] — how `CHANGELOG.md`, `DEVLOG.md`, `TODO.md` and `ROADMAP.md` relate to each other.
+- [[DEVLOG.md#Tracking files|Tracking files]] — how `CHANGELOG.md`, `DEVLOG.md`, `TODO.md` and `ROADMAP.md` relate to each other.
 - [[CHANGELOG.md|CHANGELOG]] — user-facing release notes (see the "Unreleased" section near the top).
 - [[DEVLOG.md|DEVLOG]] — internal technical log ([[DEVLOG.md#Entries|entries]]).
 - [[TODO.md|TODO]] — active short-term tasks ([[TODO.md#Backlog|backlog]]).

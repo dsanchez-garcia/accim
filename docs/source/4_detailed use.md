@@ -252,15 +252,7 @@ You can see a Jupyter Notebook either in the How-to Guide section of this docume
 
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/addAccis/using_addAccis.ipynb
 
-You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see the Installation section). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
-
-accim/sample_files/jupyter_notebooks/addAccis
-
-The path should be something like this, with your username instead of YOUR_USERNAME:
-
-*C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\addAccis*
-
-Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+To run it on your computer, copy the folder `jupyter_notebooks/addAccis` of the sample files to a working folder (see {ref}`running-example-notebooks`).
 
 You can also see an example below. The input file is included within `accim/sample_files/sample IDFs` folder, and it was originally named `TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2310.idf`, but for clarity purposes in this case has been renamed to “TestModel.idf”.
 
@@ -552,15 +544,7 @@ You can see a Jupyter Notebook either in the How-to Guide section of this docume
 
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/rename_epw_files/using_rename_epw_files.ipynb
 
-You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see the Installation section). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
-
-accim/sample_files/jupyter_notebooks/rename_epw_files
-
-The path should be something like this, with your username instead of YOUR_USERNAME:
-
-*C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\rename_epw_files*
-
-Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+To run it on your computer, copy the folder `jupyter_notebooks/rename_epw_files` of the sample files to a working folder (see {ref}`running-example-notebooks`).
 
 ## 4.6 Running simulations
 
@@ -568,15 +552,7 @@ You can see a Jupyter Notebook either in the How-to Guide section of this docume
 
 https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb
 
-You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see the Installation section). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
-
-accim/sample_files/jupyter_notebooks/runEp
-
-The path should be something like this, with your username instead of YOUR_USERNAME:
-
-*C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\runEp*
-
-Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+To run it on your computer, copy the folder `jupyter_notebooks/runEp` of the sample files to a working folder (see {ref}`running-example-notebooks`).
 
 This script has been created by eppy’s development team (https://eppy.readthedocs.io/en/latest/runningeplus.html, specifically from section ‘Running in parallel processes using Generators’), however I did some changes. Anyway, you probably should check out eppy package, since it’s absolutely awesome.
 
@@ -681,14 +657,6 @@ As you can see, `removefiles()` removes everything except EPW files, IDFs, .py s
 
 You can see a Jupyter Notebook either in the How-to Guide section of this documentation or in the link below:
 
-[`https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb`](https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/runEp/using_runEp.ipynb)
+https://github.com/dsanchez-garcia/accim/blob/master/accim/sample_files/jupyter_notebooks/Table/using_Table.ipynb
 
-You can also execute it at your computer. To do so, install accim with the sample files (`pip install "accim[samples]"`, see the Installation section). Then, you just need to find the folder containing the .ipynb and all other files at the accim package folder within your site_packages path, in
-
-accim/sample_files/jupyter_notebooks/Table
-
-The path should be something like this, with your username instead of YOUR_USERNAME:
-
-*C:\Users\YOUR_USERNAME\AppData\Local\Programs\Python\Python39\Lib\site-packages\accim\sample_files\jupyter_notebooks\Table*
-
-Then, you just need to copy the folder to a different path (i.e. Desktop), open a cmd dialog pointing at it, and run "jupyter notebook". After that, an internet browser will pop up, and you will be able to open the .ipynb file.
+To run it on your computer, copy the folder `jupyter_notebooks/Table` of the sample files to a working folder (see {ref}`running-example-notebooks`).
