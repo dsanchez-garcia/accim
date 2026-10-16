@@ -36,6 +36,13 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-10-16
+#### [done] PDF of the documentation: Unicode characters for pdflatex
+- Context: After merging PR #4, the Read the Docs build of `fb74435` succeeded, but its PDF step reported 191 LaTeX errors (179 before the PR): Unicode characters that pdflatex has no definition for, mostly λ in the notebooks (and now in the aPMV section of "Detailed use"), plus ≤, −, ⌈, ⌉ and some emoji. latexmk runs with `-f`, so the PDF was produced without those characters. The other 9 errors ("Too deeply nested") come from docstrings.
+- Changes: `latex_elements['preamble']` in `docs/source/conf.py` declares those 9 characters.
+- Files: `docs/source/conf.py`.
+- Verification: `python -m sphinx -b latex docs/source docs/_build/latex` writes the declarations in the preamble of `accim.tex`, and no other non-ASCII character outside the fonts of pdflatex appears in it. There is no LaTeX on this computer: the PDF itself is checked in the next Read the Docs build of `master`.
+- Next step: check the error count of the PDF step after merging.
+
 #### [done] Documentation review and overview page of `parametric_and_optimisation`
 - Context: The author asked for a review of `docs/source` for obsolete text, for improvements that make it easier to understand, and for a narrative page on `parametric_and_optimisation`, which only had notebooks.
 - Changes: new page `docs/source/parametric_and_optimisation.rst`; landing page text; corrected Requirements, Quick tutorial, Detailed use (current `addAccis()` prompts captured from a real run, table of arguments, `ex_mm` resolver, `runEp()`, new aPMV section), Troubleshooting and Citation; `conf.py` (`release`, MyST substitutions, `autodoc_mock_imports = ['geopy']`, `custom.css` so that table cells wrap); module docstring of `accim.parametric_and_optimisation` (wrong example and `versionadded`).
