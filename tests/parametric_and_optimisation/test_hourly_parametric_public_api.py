@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from accim.parametric_and_optimisation.main import ParametricSimulation
+from accim.parametric_and_optimisation.main import OptimisationSimulation, ParametricSimulation
 
 
 def _write_hourly_csv(sim_dir, offset):
@@ -116,6 +116,57 @@ def test_get_hourly_df_parametric_csv_with_filters(tmp_path):
     assert any('Zone Operative Temperature' in c for c in hourly.columns)
     assert any('Running Average Outdoor Air Temperature' in c for c in hourly.columns)
     assert len([c for c in hourly.columns if 'Zone Operative Temperature' in c]) >= 2
+
+
+def _csv_hourly_columns(sim_dir):
+    return [c for c in pd.read_csv(sim_dir / 'eplusout.csv', nrows=0).columns if c != 'Date/Time']
+
+
+# The hourly columns used to be collected in a set, so their order followed string hashing,
+# which changes with every Python process: the 8 columns of these files keep their order.
+def test_get_hourly_df_parametric_keeps_csv_column_order(tmp_path):
+    sim = _build_parametric_session_with_csv_outputs(tmp_path)
+    csv_columns = _csv_hourly_columns(tmp_path / 'sim_seville')
+
+    hourly = sim.get_hourly_df_parametric(skip_confirmation=True, start_date='2024-01-01 01')
+
+    assert [c for c in hourly.columns if c in csv_columns] == csv_columns
+
+
+def test_get_hourly_df_parametric_keeps_requested_column_order(tmp_path):
+    sim = _build_parametric_session_with_csv_outputs(tmp_path)
+    csv_columns = _csv_hourly_columns(tmp_path / 'sim_seville')
+
+    hourly = sim.get_hourly_df_parametric(
+        output_columns=['BEDROOM', 'LIVING'],
+        skip_confirmation=True,
+        start_date='2024-01-01 01',
+    )
+
+    expected = [c for c in csv_columns if c.startswith('BEDROOM')] + [c for c in csv_columns if c.startswith('LIVING')]
+    assert [c for c in hourly.columns if c in csv_columns] == expected
+
+
+def test_get_hourly_df_optimisation_keeps_csv_column_order(tmp_path):
+    sim_dir = tmp_path / 'sim_seville'
+    _write_hourly_csv(sim_dir, offset=0.0)
+    sim = OptimisationSimulation(buildings=None, epws=['Seville.epw'], parameters_type=None, bypass_addAccis=True)
+    sim.outputs_optimisation = pd.DataFrame(
+        [
+            {
+                'CustAST_m': 0.01,
+                'epw': 'Seville',
+                'pareto-optimal': True,
+                'simulation_output_csv_path': str(sim_dir / 'eplusout.csv'),
+            },
+        ]
+    )
+    sim.last_run_type = 'optimisation'
+    csv_columns = _csv_hourly_columns(sim_dir)
+
+    hourly = sim.get_hourly_df_optimisation(skip_confirmation=True, start_date='2024-01-01 01')
+
+    assert [c for c in hourly.columns if c in csv_columns] == csv_columns
 
 
 def test_get_hourly_df_parametric_simulation_indices_override_filter(tmp_path):

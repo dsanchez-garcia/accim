@@ -12164,14 +12164,16 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         """
         df_augmented = df.copy()
         per_row_outputs = []
-        all_output_cols = set()
+        # A dict keeps the order of the files (a set follows string hashing, which changes
+        # with every Python process).
+        all_output_cols = {}
         for (_, row) in df_augmented.iterrows():
             try:
                 row_outputs = self._extract_hourly_outputs_from_file(row=row, file_source=file_source, file_output_columns=file_output_columns, eplus_install_dir=eplus_install_dir, only_run_period=only_run_period)
             except (ValueError, FileNotFoundError) as e:
                 row_outputs = {}
             per_row_outputs.append(row_outputs)
-            all_output_cols.update(row_outputs.keys())
+            all_output_cols.update(dict.fromkeys(row_outputs))
         for col in all_output_cols:
             target_col = col
             if target_col in df_augmented.columns:

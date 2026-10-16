@@ -811,6 +811,32 @@ class PlottingMixin(HourlyPlottingMixin):
             print(f"[!] {context}: {', '.join(ignored)} ignored, not found in the plotted data.")
         return resolved
 
+    @staticmethod
+    def _set_grid_suptitle(g, title: str, fontsize: float) -> None:
+        """Add a suptitle to a seaborn grid, with room for it above the facet titles.
+
+        Parameters
+        ----------
+        g : seaborn.FacetGrid
+            Grid that receives the title.
+        title : str
+            Text of the suptitle.
+        fontsize : float
+            Font size of the suptitle.
+
+        Usage
+        -----
+        Internal helper of the faceted plots. A fixed ``subplots_adjust(top=0.9)`` left too little
+        room in short figures, where the suptitle overlapped the facet titles; ``tight_layout``
+        reserves the height that the suptitle needs, and seaborn keeps the room of its legend.
+
+        Examples
+        --------
+        self._set_grid_suptitle(g, 'Scatter Plot (Parametric)', fontsize=13)
+        """
+        g.fig.suptitle(title, fontsize=fontsize)
+        g.tight_layout()
+
     def prepare_hourly_long_df(
             self,
             df_source: str = 'parametric_hourly',
@@ -2631,6 +2657,7 @@ class PlottingMixin(HourlyPlottingMixin):
             g.map_dataframe(plot_all_points)
         
         # Overlay highlights if requested
+        combined_legend = False
         if highlight_dict:
             axes_dict = g.axes_dict
             markers = ['*', 'X', 'D', '^', 'v', 'p']
@@ -2719,19 +2746,20 @@ class PlottingMixin(HourlyPlottingMixin):
                     if text.get_text().startswith('―'):
                         text.set_fontweight('bold')
                 g._legend = new_legend
-                # Reserve room on the right so the combined legend (original hue
-                # handles + highlight markers, which is wider/taller than
-                # seaborn's default legend) doesn't overlap the rightmost facet
-                # column. Both this margin and the legend anchor are caller
-                # -configurable via subplots_right / legend_bbox_to_anchor /
-                # legend_loc so the gap (or lack thereof) between the plots and
-                # the legend can be tuned directly from the call site.
-                if subplots_right is not None:
-                    g.fig.subplots_adjust(right=subplots_right)
+                combined_legend = True
 
         g.set_axis_labels('Energy Type', f'Energy ({unit_str})')
-        g.fig.subplots_adjust(top=0.9)
-        g.fig.suptitle(f"Categorical Energy Boxplots ({df_source.capitalize()})", fontsize=14)
+        self._set_grid_suptitle(g, f"Categorical Energy Boxplots ({df_source.capitalize()})", fontsize=14)
+        # Reserve room on the right so the combined legend (original hue
+        # handles + highlight markers, which is wider/taller than
+        # seaborn's default legend) doesn't overlap the rightmost facet
+        # column. Both this margin and the legend anchor are caller
+        # -configurable via subplots_right / legend_bbox_to_anchor /
+        # legend_loc so the gap (or lack thereof) between the plots and
+        # the legend can be tuned directly from the call site. It goes
+        # after the suptitle, whose tight_layout would undo it.
+        if combined_legend and subplots_right is not None:
+            g.fig.subplots_adjust(right=subplots_right)
 
         fname_suffix = f"col_{col}" if col else ""
         fname_suffix += f"_row_{row}" if row else ""
@@ -2940,8 +2968,7 @@ class PlottingMixin(HourlyPlottingMixin):
         title = f"Scatter Plot ({df_source.capitalize()})"
         if add_trend:
             title += f" | Trend: {add_trend}"
-        g.fig.subplots_adjust(top=0.9)
-        g.fig.suptitle(title, fontsize=13)
+        self._set_grid_suptitle(g, title, fontsize=13)
 
         filename_context = self._build_filename_template_context(
             df=df,
@@ -3141,8 +3168,7 @@ class PlottingMixin(HourlyPlottingMixin):
             x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
             y_label = f"{y_var} ({unit_map[y_var]})" if unit_map.get(y_var) else y_var
             g.set_axis_labels(x_label, y_label)
-            g.fig.subplots_adjust(top=0.9)
-            g.fig.suptitle(f"Parametric Line Plot ({df_source.capitalize()}) - {y_var}", fontsize=13)
+            self._set_grid_suptitle(g, f"Parametric Line Plot ({df_source.capitalize()}) - {y_var}", fontsize=13)
 
             filename_context = self._build_filename_template_context(
                 df=df,
@@ -3767,8 +3793,7 @@ class PlottingMixin(HourlyPlottingMixin):
             x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
             y_label = f"{y_var} ({unit_map[y_var]})" if unit_map.get(y_var) else y_var
             g.set_axis_labels(x_label, y_label)
-            g.fig.subplots_adjust(top=0.9)
-            g.fig.suptitle(f'Parametric {kind.title()} Plot ({df_source.capitalize()}) - {y_var}', fontsize=13)
+            self._set_grid_suptitle(g, f'Parametric {kind.title()} Plot ({df_source.capitalize()}) - {y_var}', fontsize=13)
 
             filename_context = self._build_filename_template_context(
                 df=df,
@@ -3938,8 +3963,7 @@ class PlottingMixin(HourlyPlottingMixin):
         x_label = f"{x} ({unit_map[x]})" if unit_map.get(x) else x
         y_label = '1 - F(x)' if complementary else 'F(x)'
         g.set_axis_labels(x_label, y_label)
-        g.fig.subplots_adjust(top=0.9)
-        g.fig.suptitle(f'Parametric ECDF ({df_source.capitalize()}) - {x_label}', fontsize=13)
+        self._set_grid_suptitle(g, f'Parametric ECDF ({df_source.capitalize()}) - {x_label}', fontsize=13)
 
         filename_context = self._build_filename_template_context(
             df=df,
