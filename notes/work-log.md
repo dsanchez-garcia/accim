@@ -15,6 +15,15 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-16 — Sample notebook `full_example` removed
+
+- **Objective**: Decide what to do with the older full example of the sample files (`jupyter_notebooks/full_example`, EPW files of Japan), which failed after `pip install "accim[samples]"` and was left out of the update of the How-to notebooks.
+- **Affected files**: `accim/sample_files/jupyter_notebooks/full_example/` (removed); [[../CHANGELOG.md]]; [[../DEVLOG.md]].
+- **Finding or decision**: The author chose to remove it rather than update it: it repeated `full_example_IBPSA`, which is in the documentation. Nothing in the repository links to the folder; the link that `addAccis()` prints to its old documentation page (404) changes in PR #6.
+- **Validation**: `accim-samples` wheel 27.6 MB (29.8 MB before). Details in [[../DEVLOG.md]].
+- **Next step**: optional page redirect in Read the Docs for the link printed by accim 0.7.8 and earlier.
+
+
 ## 2026-10-16 — Release scripts, README and docs for `accim-samples`
 
 - **Objective**: Publish accim on PyPI and build the documentation by running the `dist_*.bat` scripts; explain in the README and the documentation how to run the example notebooks with `accim[samples]`, and remove section 0 of the README.

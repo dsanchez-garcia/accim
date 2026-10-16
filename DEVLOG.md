@@ -36,6 +36,13 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 ## Entries
 
 ### 2026-10-16
+#### [done] Sample notebook `full_example` removed
+- Context: `accim/sample_files/jupyter_notebooks/full_example/full_example.ipynb`, the older full example (EPW files of Sapporo and Naha, present and SSP5-8.5 2080; ASHRAE 55 and the Japanese model of Rijal), failed after `pip install "accim[samples]"`: it imported `accim.data.data_preprocessing`, which no longer exists, and its IDF and the calls to `addAccis`/`runEp` were for EnergyPlus 23.1. It was not in the documentation, and the update of the How-to notebooks (PR #10) left it out.
+- Changes: The author chose to remove the folder instead of updating it. It repeated the steps of `full_example_IBPSA` (`addAccis` with `vrf_mm`, `rename_epw_files`, `runEp`, `Table`), which explains more and is in the documentation; it only added the comparison of two comfort models and the SSP5-8.5 EPW files.
+- Files: `accim/sample_files/jupyter_notebooks/full_example/` (removed: the notebook, `TestModel.idf` and 4 EPW files, 7.9 MB), `CHANGELOG.md`, `notes/work-log.md`.
+- Verification: no file of the repository links to the folder: the table of example folders of `README.md`, the How-to Guides of `docs/source/index.rst` and `packaging/` do not name it (`accim-samples` takes the whole of `accim/sample_files`). The link that `addAccis()` prints, `jupyter_notebooks/full_example/full_example.html` (also in two transcripts of `docs/source/4_detailed use.md`), is a page that Read the Docs does not have (404), and PR #6 changes it to `full_example_IBPSA`; the other copies of that link are in saved outputs of notebooks. `accim-samples` wheel built with `packaging/build_samples_dist.py`: 27.6 MB, 144 files (29.8 MB and 152 files with `master`); together with PR #10, 23.2 MB (25.3 MB with PR #10 alone).
+- Next step: accim 0.7.8 and earlier still print the old link; a page redirect in the admin of Read the Docs, from `/jupyter_notebooks/full_example/full_example.html` to `/jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html`, would fix it for them.
+
 #### [done] PDF of the documentation: Unicode characters for pdflatex
 - Context: After merging PR #4, the Read the Docs build of `fb74435` succeeded, but its PDF step reported 191 LaTeX errors (179 before the PR): Unicode characters that pdflatex has no definition for, mostly λ in the notebooks (and now in the aPMV section of "Detailed use"), plus ≤, −, ⌈, ⌉ and some emoji. latexmk runs with `-f`, so the PDF was produced without those characters. The other 9 errors ("Too deeply nested") come from docstrings.
 - Changes: `latex_elements['preamble']` in `docs/source/conf.py` declares those 9 characters.
