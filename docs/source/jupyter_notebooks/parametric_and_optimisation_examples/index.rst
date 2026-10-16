@@ -4,7 +4,8 @@ Parametric simulation and optimisation examples
 These notebooks show how to run parametric studies and optimisations with the module
 ``accim.parametric_and_optimisation``, using the sample building models and weather files
 distributed with accim. The pages show each notebook as it ran with its default settings: the
-tables and figures are its results.
+tables and figures are its results. :doc:`/parametric_and_optimisation` explains the concepts and
+the steps of a study, and says in which notebooks each topic is.
 
 Running the notebooks
 ---------------------

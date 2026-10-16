@@ -5,37 +5,51 @@ This module provides classes for running parametric simulations and multi-object
 optimization on EnergyPlus building energy models with adaptive thermal comfort setpoints.
 
 Main Classes:
+
 - ParametricSimulation: For parameter sampling and multi-run simulations
 - OptimisationSimulation: For multi-objective optimization
 - AccimPredefModelsParamSim: Convenience wrapper for ACCIM predefined models
 
-Usage Examples:
+The page "Overview of parametric simulation and optimisation" of the documentation
+explains each step. Usage Examples::
+
+    from besos import eppy_funcs as ef
+    from accim.parametric_and_optimisation.objectives import sum_results
+
+    building = ef.get_building('my_model.idf')
 
     # Parametric simulation
     from accim.parametric_and_optimisation.main import ParametricSimulation
 
     parametric = ParametricSimulation(
-        building=my_idf,
+        buildings=[building],
         epws=['weather.epw'],
-        parameters_type='accim custom model'
+        parameters_type='accim custom model',
     )
-    parametric.set_parameters(accis_params_dict={'ComfStand': [0, 1, 2]})
+    meters = parametric.select_outputs(meters=['Electricity:HVAC'])['meters']
+    parametric.apply_outputs_preflight(df_meters_sel=meters, clean_mode='all')
+    meters['func'] = [sum_results] * len(meters)
+    parametric.set_output_readers(df_output_meter=meters)
+    parametric.set_parameters(accis_params_dict={'CustAST_m': (0.2, 0.6), 'CustAST_n': (15, 21)})
+    parametric.set_problem()
     parametric.sampling_lhs(num_samples=10)
-    results = parametric.run_parametric_simulation()
+    results = parametric.run_parametric_simulation(out_dir='param_results', processes=2)
 
-    # Multi-objective optimization
+    # Multi-objective optimization (outputs and readers set as above,
+    # one reader per objective)
     from accim.parametric_and_optimisation.main import OptimisationSimulation
 
     optim = OptimisationSimulation(
-        building=my_idf,
+        buildings=[building],
         epws=['weather.epw'],
-        parameters_type='accim custom model'
+        parameters_type='accim custom model',
     )
-    optim.set_parameters(accis_params_dict={'ComfStand': (0, 2), 'HVACmode': (0, 2)})
-    optim.set_problem(minimize_outputs=[True, False])
-    results = optim.run_optimisation(algorithm='NSGAII', evaluations=50)
+    ...
+    optim.set_parameters(accis_params_dict={'CustAST_m': (0.2, 0.6), 'CustAST_ASToffset': (2, 4)})
+    optim.set_problem(minimize_outputs=[True, True])
+    results = optim.run_optimisation(algorithm='NSGAII', population_size=20, evaluations=60)
 
-.. versionadded:: 0.8.0
+.. versionadded:: 0.7.8
     Introduced dedicated ParametricSimulation and OptimisationSimulation
     classes for improved code organization and clarity.
 """

@@ -1,0 +1,6 @@
+/* The theme keeps the text of each table cell on one line: let it wrap, so that
+   tables with long cells (comfort standards, arguments) fit the page. */
+.wy-table-responsive table td,
+.wy-table-responsive table th {
+    white-space: normal;
+}
