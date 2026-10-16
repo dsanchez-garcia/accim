@@ -22,7 +22,7 @@ project = 'accim'
 copyright = '2021, Daniel Sánchez-García'
 author = 'Daniel Sánchez-García'
 version = accim.__version__
-# release = accim.__version__
+release = accim.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -43,13 +43,18 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'accim/sample_files', '*
 # beforehand (see docs/prepare_parametric_notebooks.py), never while building the documentation.
 nbsphinx_execute = 'never'
 
+# The Markdown pages write the version as {{ version }} (|version| only works in reST pages).
+myst_enable_extensions = ['substitution']
+myst_substitutions = {'version': version}
+
+# accim.data.preprocessing imports geopy, which is not a dependency of accim: mock it so that the
+# API reference of the module can be generated.
+autodoc_mock_imports = ['geopy']
 
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
-html_static_path = [
-    '_static',
-    'previous_versions_pdfs',
-]
+html_static_path = ['_static']
+html_css_files = ['custom.css']

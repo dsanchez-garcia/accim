@@ -2,9 +2,9 @@
 
 ## 3.1 Implementing adaptive setpoint temperatures
 
-This is a very brief explanation of the usage. Therefore, if you don’t get the results you expected or get some error, I would recommend reading the ‘Detailed use’ section at the documentation in the link below.
+This is a very brief explanation of the main function of accim, `addAccis()`. If you don't get the results you expected or get some error, please read {doc}`4_detailed use`, which explains every argument.
 
-accim will take as input IDF files those located at the same path as the script. You only need to run the following code:
+By default, accim takes as input the IDF files located in the working folder (the folder where you run Python), except those whose names contain `[` or `_pymod`, which are the files that accim generates. The argument `idfs` takes a list of IDF files instead. accim saves the output IDF files in the working folder; the input IDF files are not modified.
 
 ### 3.1.1 Short version
 
@@ -15,53 +15,43 @@ accis.addAccis()
 
 Once you run this code, you will be asked to enter some information at the terminal or python console to generate the output IDF files.
 
-### 3.1.2 Long version
+### 3.1.2 Longer version
+
+You can also enter the information as arguments, so that accim does not ask for it. Use keyword arguments, as below: the first positional argument of `addAccis()` is `idfs`. For instance, to generate the IDFs of EN 16798-1 (categories I, II and III) and ASHRAE 55 (80 % and 90 % acceptability), with static and adaptive setpoint temperatures, and with a VRF system in mixed-mode operation:
 
 ```python
 from accim.sim import accis
 accis.addAccis(
-     ScriptType=str, # ScriptType: 'vrf_mm', 'vrf_ac', 'ex_mm', 'ex_ac'. For instance: ScriptType='vrf_ac',
-     SupplyAirTempInputMethod=str, # SupplyAirTempInputMethod: 'supply air temperature', 'temperature difference'. For instance: SupplyAirTempInputMethod='supply air temperature',
-     Output_keep_existing=bool, # Output_keep_existing: True or False. For instance: Output_keep_existing=False,
-     Output_type=str, # Output_type: 'simplified', 'standard', 'detailed' or 'custom'. For instance: Output_type='standard',
-     Output_freqs=list, # Output_freqs: ['timestep', 'hourly', 'daily', 'monthly', 'runperiod']. For instance: Output_freqs=['hourly', 'runperiod'],
-     Output_gen_dataframe=bool, # Output_keep_existing: True or False. For instance: Output_keep_existing=False,
-     Output_take_dataframe=pandas Dataframe,
-     EnergyPlus_version=str, # EnergyPlus_version: '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2' or '23.1'. For instance: EnergyPlus_version='23.1',
-     TempCtrl=str, # TempCtrl: 'temperature' or 'temp', or 'pmv'. For instance: TempCtrl='temp',
-     ComfStand=list, # it is the Comfort Standard. Can be any integer from 0 to 22, or 99. For instance: ComfStand=[0, 1, 2, 3],
-     CustAST_ACSTaul=float, # it is the value for the Adaptive Cooling Setpoint Temperature applicability upper limit, only used for ComfStand=[99]
-     CustAST_ACSTall=float, # it is the value for the Adaptive Cooling Setpoint Temperature applicability lower limit, only used for ComfStand=[99]
-     CustAST_AHSTaul=float, # it is the value for the Adaptive Heating Setpoint Temperature applicability upper limit, only used for ComfStand=[99]
-     CustAST_AHSTall=float, # it is the value for the Adaptive Heating Setpoint Temperature applicability lower limit, only used for ComfStand=[99]
-     CustAST_m=float, # it is the value for the slope or gradient of the custom adaptive model, only used for ComfStand=[99]
-     CustAST_n=float, # it is the value for the y-intercept of the custom adaptive model, only used for ComfStand=[99]
-     CustAST_ACSToffset=float, # it is the value for the upper limit offset from neutral, only used for ComfStand=[99]
-     CustAST_AHSToffset=float, # it is the value for the lower limit offset from neutral, only used for ComfStand=[99]
-     CAT=list, # it is the Category. Can be 1, 2, 3, 80, 85 or 90. For instance: CAT=[3, 80],
-     CATcoolOffset=float, #it is an offset override for the CAT argument; the float is summed to the cooling offset,
-     CATcoolOffset=float, #it is an offset override for the CAT argument; the float is summed to the heating offset,
-     ComfMod=list, # it is Comfort Mode. Can be 0, 1, 2 or 3. For instance: ComfMod=[0, 3],
-     SetpointAcc=float, # it is the accuracy of the setpoint temperatures
-     CoolSeasonStart=dd/mm date in string format or integer to represent the day of the year, # it is the start date for the cooling season
-     CoolSeasonEnd=dd/mm date in string format or integer to represent the day of the year, # it is the end date for the cooling season
-     HVACmode=list, # it is the HVAC mode. 0 for Full AC, 1 for NV and 2 for MM. For instance: HVACmode=[0, 2],
-     VentCtrl=list, # it is the Ventilation Control. Can be 0 or 1. For instance: VentCtrl=[0, 1],
-     MaxTempDiffVOF=float, # When the difference of operative and outdoor temperature exceeds MaxTempDiffVOF, windows will be opened the fraction of MultiplierVOF. For instance: MaxTempDiffVOF=20,
-     MinTempDiffVOF=float, # When the difference of operative and outdoor temperature is smaller than MinTempDiffVOF, windows will be fully opened. Between min and max, windows will be linearly opened. For instance: MinTempDiffVOF=1,
-     MultiplierVOF=float, # Fraction of window to be opened when temperature difference exceeds MaxTempDiffVOF. For instance: Multiplier=0.2,
-     VSToffset=list, # it is the offset for the ventilation setpoint. Can be any number, float or int. For instance: VSToffset=[-1.5, -1, 0, 1, 1.5],
-     MinOToffset=list, # it is the offset for the minimum outdoor temperature to ventilate. Can be any positive number, float or int. For instance: MinOToffset=[0.5, 1, 2],
-     MaxWindSpeed=list, # it is the maximum wind speed allowed for ventilation. Can be any positive number, float or int. For instance: MinOToffset=[2.5, 5, 10],
-     ASTtol_start=float, # it is the start of the tolerance sequence. For instance: ASTtol_start=0,
-     ASTtol_end_input=float, # it is the end of the tolerance sequence. For instance: ASTtol_start=2,
-     ASTtol_steps=float, # these are the steps of the tolerance sequence. For instance: ASTtol_steps=0.25,
-     NameSuffix=str # NameSuffix: some text you might want to add at the end of the output IDF file name. For instance: NameSuffix='whatever',
-     verboseMode=bool # verboseMode: True to print all process in screen, False to not to print it. Default is True. For instance: verboseMode=True,
-     confirmGen=bool # True to confirm automatically the generation of IDFs; if False, you'll be asked to confirm in command prompt. Default is False. For instance: confirmGen=False,
+    ScriptType='vrf_mm',                                  # VRF system with mixed-mode operation
+    SupplyAirTempInputMethod='temperature difference',
+    Output_keep_existing=False,                           # remove the outputs of the input IDF
+    Output_type='standard',
+    Output_freqs=['hourly', 'runperiod'],
+    EnergyPlus_version='auto',                            # the EnergyPlus version of each IDF
+    TempCtrl='temperature',                               # setpoints on the operative temperature
+    ComfStand=[1, 2],                                     # EN 16798-1 and ASHRAE 55
+    CAT=[1, 2, 3, 80, 90],                                # categories I-III, 80 % and 90 % acceptability
+    ComfMod=[0, 3],                                       # static, and adaptive setpoints
+    HVACmode=[2],                                         # mixed mode
+    VentCtrl=[0],                                         # ventilate above the neutral temperature
+    confirmGen=True,                                      # generate the IDFs without asking for confirmation
 )
 ```
 
+Each valid combination of values gives an output IDF: categories I, II and III only apply to EN 16798-1, and 80 % and 90 % acceptability to ASHRAE 55, so this call generates 10 IDFs (6 for EN 16798-1 and 4 for ASHRAE 55). Their names give the values used, for instance:
+
+    TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0.0[MT_50.0[MW_50.0[AT_0.1[NS_X.idf
+
+The arguments that are not given take their default values. Section {ref}`setting-up-the-target-idfs` lists all the arguments, with their values and defaults, and explains the names of the output IDFs.
+
 ## 3.2 Other uses
 
-Although the main use of accim is the implementation of adaptive setpoint temperatures, there are some functions, classes and methods that allow to roughly automate the whole process consisting of preparation of the epw and idf files, the simulation runs and the data analysis. For further information, please refer to the How-to Guides section in this documentation, which contains some Jupyter Notebooks that can also be found in accim's installation folder.
+Although the main use of accim is the implementation of adaptive setpoint temperatures, there are some functions, classes and methods that allow to roughly automate the whole process consisting of preparation of the epw and idf files, the simulation runs and the data analysis:
+
+- setpoints based on the adaptive predicted mean vote (`accim.sim.apmv_setpoints`): {doc}`jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints`;
+- renaming EPW files for the data analysis (`accim.data.preprocessing.rename_epw_files`): {doc}`jupyter_notebooks/rename_epw_files/using_rename_epw_files`;
+- running the simulations (`accim.run.run.runEp`): {doc}`jupyter_notebooks/runEp/using_runEp`;
+- tables and figures of the results (`accim.data.postprocessing.main.Table`): {doc}`jupyter_notebooks/Table/using_Table`;
+- parametric simulation and optimisation (`accim.parametric_and_optimisation`): {doc}`parametric_and_optimisation`.
+
+The How-to Guides section of this documentation shows them in Jupyter notebooks, which are part of the sample files (`pip install "accim[samples]"`, see {ref}`running-example-notebooks`).

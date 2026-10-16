@@ -21,7 +21,7 @@ of the installed sample files, run:
 
     python -c "import accim.sample_files, os; print(os.path.dirname(accim.sample_files.__file__))"
 
-In earlier versions, the sample files were always installed together with the
+Up to version 0.7.7, the sample files were always installed together with the
 library.
 
 To install some specific version, execute the same code followed by

@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Overview page of parametric simulation and optimisation** (`docs/source/parametric_and_optimisation.rst`): the documentation explains the module in prose before the notebooks: the questions each class answers, the steps of a study with short code examples (model, simulation object, outputs and readers, parameters, plan or objectives, run, analysis), the kinds of parameters, the sampling methods, where the results are saved, disk space, and where each topic is in the notebooks `00`-`10` and `wf1`-`wf5`. `hourly_plotting` and `filter_output_csvs` move to the same section.
+- **Review of the documentation pages** against accim 0.7.8:
+  - the landing page introduces accim and where to start;
+  - Requirements: Python 3.9 or newer, and the version is shown (MyST did not replace `|version|`);
+  - Quick tutorial: a runnable example instead of the outdated list of arguments;
+  - Detailed use: current prompts, a table with every argument of `addAccis()` and its default, the zone resolver and `hvac_zone_map` of `ex_mm`, fixed links to the full list of setpoint temperatures, the current `runEp()`, and a new section on aPMV setpoints;
+  - Troubleshooting: `geopy`, EnergyPlus 25.2 with `EnergyPlus_version='auto'`, `update_idf_version()` and paths of 260 characters;
+  - Citation: the aPMV article (2026) and the Zenodo DOI.
+  - Sphinx: the API page of `accim.data.preprocessing` is generated again (`geopy` is mocked), table cells wrap, and the page titles include the version.
 - **Documentation pages for the parametric and optimisation notebooks**: the documentation has a new section, "Parametric simulation and optimisation", with the workflows `wf1`-`wf5` and the tutorials `00`-`10` of `parametric_and_optimisation_examples`, as they ran with their default settings, with their tables and figures.
   - Read the Docs cannot run these notebooks (they need EnergyPlus). The new script `docs/prepare_parametric_notebooks.py` runs them in a working folder, and exports copies with their outputs to `docs/source/jupyter_notebooks/parametric_and_optimisation_examples`. On export it makes the paths relative, removes the progress bars, shortens long logs and scales the figures down.
   - `docs/source/conf.py` never runs notebooks (`nbsphinx_execute = 'never'`) and ignores `.ipynb_checkpoints` folders.

@@ -95,10 +95,10 @@ Parametric session loaded from disk, with copies next to the originals:
     import os
     from accim.parametric_and_optimisation.main import ParametricSimulation
 
-    os.chdir('Simulaciones_Plan_A')  # folder the stored output_dir paths are relative to
+    os.chdir('my_study')  # folder the stored output_dir paths are relative to
     sim = ParametricSimulation()
     sim.load_outputs_parametric(
-        pickle_path='results_exp_4_2_parametric_custom/outputs_param_simulation_20260719_144253.pkl'
+        pickle_path='param_results/outputs_param_simulation_20260719_144253.pkl'
     )
     report = sim.filter_simulation_output_csvs(
         keep_columns=['Zone Operative Temperature',

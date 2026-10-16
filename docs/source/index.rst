@@ -6,9 +6,39 @@
 Welcome to accim |version|'s documentation!
 ===========================================
 
+accim (Adaptive-Comfort-Control-Implemented Model) is a Python package for EnergyPlus building
+energy models. It transforms models with fixed setpoint temperatures into models with adaptive
+setpoint temperatures, which follow the outdoor temperature as an adaptive thermal comfort model
+does, by adding the Adaptive-Comfort-Control-Implementation Script (ACCIS) to the IDF files.
+
+The figure below shows the aim of adaptive setpoint temperatures: keeping the hourly indoor
+temperatures within the adaptive comfort zone. It plots the hourly operative temperature (green)
+against the running mean outdoor temperature, with the adaptive cooling (blue) and heating (red)
+setpoints of ASHRAE 55, for two cities in the present and in 2100. On the left, the simulation
+results of a naturally ventilated building; on the right, the same building in mixed-mode
+operation with adaptive setpoint temperatures.
+
+.. image:: images/NV_vs_MM.png
+   :alt: Hourly operative temperatures of a naturally ventilated building and of the same building in mixed-mode operation with adaptive setpoint temperatures
+
+With accim you can:
+
+- apply the adaptive setpoint temperatures of the predefined comfort models (international,
+  regional and local) or of a custom model, with air-conditioning, natural ventilation or
+  mixed-mode operation (:doc:`3_quick tutorial`, :doc:`4_detailed use`);
+- apply setpoints based on the adaptive predicted mean vote (aPMV)
+  (:doc:`jupyter_notebooks/example_apmv_setpoints_paper/using_apmv_setpoints`);
+- rename the weather files, run the simulations and make tables and figures of the results
+  (How-to Guides);
+- run parametric studies, sensitivity analyses and multi-objective optimisations of these controls
+  (:doc:`parametric_and_optimisation`).
+
+If you are new to accim, start with :doc:`1_requirements`, :doc:`2_installation` and
+:doc:`3_quick tutorial`.
+
 .. toctree::
    :maxdepth: 7
-   :caption: Tutorial:
+   :caption: User guide:
 
    1_requirements.md
    2_installation.md
@@ -22,8 +52,6 @@ Welcome to accim |version|'s documentation!
    :maxdepth: 7
    :caption: How-to Guides:
 
-   filter_output_csvs
-   hourly_plotting
    jupyter_notebooks/addAccis/using_addAccis
    jupyter_notebooks/rename_epw_files/using_rename_epw_files
    jupyter_notebooks/runEp/using_runEp
@@ -36,7 +64,10 @@ Welcome to accim |version|'s documentation!
    :maxdepth: 2
    :caption: Parametric simulation and optimisation:
 
+   parametric_and_optimisation
    jupyter_notebooks/parametric_and_optimisation_examples/index
+   hourly_plotting
+   filter_output_csvs
 
 .. toctree::
    :maxdepth: 7
