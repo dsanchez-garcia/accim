@@ -49,7 +49,7 @@ https://accim.readthedocs.io/en/master/jupyter_notebooks/runEp/using_runEp.html
 -    Using the class Table() for data analysis
 https://accim.readthedocs.io/en/master/jupyter_notebooks/Table/using_Table.html
 -    Full example
-https://accim.readthedocs.io/en/master/jupyter_notebooks/full_example/full_example.html
+https://accim.readthedocs.io/en/master/jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html
 
 Starting with the process.
 
@@ -79,12 +79,10 @@ Enter the Output frequencies separated by space (timestep, hourly, daily, monthl
 
 Do you want to generate a dataframe to see all outputs? (true or false): false
 
-Enter the EnergyPlus version (9.1 to 25.1, or auto): auto
+Enter the EnergyPlus version (9.1 to 25.2, or auto): auto
 
 Enter the Temperature Control method (temperature or pmv): temperature
 ```
-
-The link to the full example printed above does not work: the full example is at {doc}`jupyter_notebooks/full_example_IBPSA/full_example_IBPSA`.
 
 where:
 
@@ -94,7 +92,7 @@ where:
 *   Output_type can be ‘standard’, ‘detailed’, ‘simplified’ or ‘custom’ and it refers to the simulation results: ‘standard’ means that results will contain the full selection relevant to accim;‘detailed’ is mainly used for testing the software tool; ‘simplified’ means that results are just going to be the hourly operative temperature and VRF consumption of each zone, mainly used when you need the results not to be heavy files, because you are going to run a lot of simulations and capacity is limited; and finally, ‘custom’ allows the user to specify the outputs to be kept or removed by entering them in the python console.
 *   Output_freqs (Output frequencies) can be timestep, hourly, daily, monthly and/or runperiod, and these must be entered separated by space. It will add the specified output type (standard or simplified) in all entered frequencies.
 *   Also, a pandas DataFrame instance can be created containing all Output:Variable objects. This allows the user to filter the DataFrame as needed, so that it only contains the needed Output:Variable objects, and then it can be entered in the argument `Output_take_dataframe`
-*   EnergyPlus_version can be ‘auto’ or a version from ‘9.1’ to ‘25.1’. With ‘auto’ (the default when the arguments are given in the function call), accim reads the version of each IDF and uses the IDD file of that version of EnergyPlus, which must be installed in its default path (for instance, “C:\EnergyPlusV25-2-0” for an IDF of EnergyPlus 25.2). If you enter a version, for instance ‘9.1’, accim will look for the E+9.1.0 IDD file in path “C:\EnergyPlusV9-1-0”. For IDFs of EnergyPlus 25.2, use ‘auto’.
+*   EnergyPlus_version can be ‘auto’ or a version from ‘9.1’ to ‘25.2’. With ‘auto’ (the default when the arguments are given in the function call), accim reads the version of each IDF and uses the IDD file of that version of EnergyPlus, which must be installed in its default path (for instance, “C:\EnergyPlusV25-2-0” for an IDF of EnergyPlus 25.2). If you enter a version, for instance ‘9.1’, accim will look for the E+9.1.0 IDD file in path “C:\EnergyPlusV9-1-0”.
 *   Temperature Control method can be ‘temperature’ or ‘temp’, or ‘pmv’. If ‘temp’ is used, the setpoint will be the operative temperature, otherwise if ‘pmv’ is used, the setpoint will be the PMV index.
 
 accis will show on the prompt command dialog all the objects it adds, and those that doesn’t need to be added because were already in the IDF, and finally ask you to enter some values to set up the IDFs as you desire. Please refer to the section titled ‘Setting up the target IDFs’.
@@ -110,20 +108,20 @@ If you have run `accis.addAccis()`, you will be asked in the prompt to enter a f
 | :--- | :--- | :--- |
 | `idfs` | list of IDF files | all the IDFs of the working folder |
 | `ScriptType` | `'vrf_ac'`, `'vrf_mm'`, `'ex_ac'` or `'ex_mm'` | asked |
-| `SupplyAirTempInputMethod` | `'supply air temperature'` or `'temperature difference'` (only used by the VRF systems) | asked |
+| `SupplyAirTempInputMethod` | `'supply air temperature'` or `'temperature difference'` (only used by the VRF systems) | asked with `vrf_ac` and `vrf_mm` |
 | `Output_keep_existing` | `True` or `False` | asked |
 | `Output_type` | `'standard'`, `'simplified'`, `'detailed'` or `'custom'` | asked |
 | `Output_freqs` | list of `'timestep'`, `'hourly'`, `'daily'`, `'monthly'` and `'runperiod'` | asked |
 | `Output_gen_dataframe` | `True` or `False` | asked with the prompts; otherwise, no DataFrame |
 | `Output_take_dataframe` | pandas DataFrame | `None` |
-| `EnergyPlus_version` | `'auto'`, or from `'9.1'` to `'25.1'` | `'auto'` |
+| `EnergyPlus_version` | `'auto'`, or from `'9.1'` to `'25.2'` | `'auto'` |
 | `TempCtrl` | `'temperature'` (or `'temp'`) or `'pmv'` | asked |
 | `ComfStand` | list of numbers from 0 to 22, or 99 (custom model) | asked |
 | `CustAST_m`, `CustAST_n`, `CustAST_ACSToffset`, `CustAST_AHSToffset`, `CustAST_ACSTaul`, `CustAST_ACSTall`, `CustAST_AHSTaul`, `CustAST_AHSTall` | numbers (only used with `ComfStand=[99]`) | 0 |
 | `CAT` | list of 1, 2, 3, 80, 85 and 90 | asked |
 | `CATcoolOffset`, `CATheatOffset` | numbers (K) | 0 |
 | `ComfMod` | list of 0, 0.X, 1, 1.X, 2 and 3 | asked |
-| `SetpointAcc` | number greater than 0 | 10000 (100 in the prompt) |
+| `SetpointAcc` | number greater than 0 | 10000 |
 | `CoolSeasonStart`, `CoolSeasonEnd` | date `'dd/mm'` or day of the year | 121 (1 May), 274 (1 October) |
 | `HVACmode` | list of 0, 1 and 2 | asked with `vrf_mm` and `ex_mm` |
 | `VentCtrl` | list of 0, 1, 2 and 3 | asked with `vrf_mm` and `ex_mm` |
@@ -141,7 +139,7 @@ If you have run `accis.addAccis()`, you will be asked in the prompt to enter a f
 | `verboseMode` | `True` or `False` | `True` |
 | `confirmGen` | `True` to generate the IDFs without asking for confirmation | asked |
 
-The prompts work in two stages. If any of `ScriptType`, `SupplyAirTempInputMethod`, `Output_keep_existing`, `Output_type`, `Output_freqs` or `TempCtrl` is missing, accim asks for all the values of the first stage (those of section 4.1), and these values are used instead of those specified in the function call; give `SupplyAirTempInputMethod` also with `ex_ac` and `ex_mm`, where it is not used, to skip the prompts. Likewise, if any of `ComfStand`, `CAT` or `ComfMod` (and, with `vrf_mm` and `ex_mm`, `HVACmode` or `VentCtrl`) is missing, accim asks for all the values of the second stage, from `ComfStand` to `ASTtol_steps` (see section 4.4).
+The prompts work in two stages. If any of `ScriptType`, `Output_keep_existing`, `Output_type`, `Output_freqs` or `TempCtrl` (and, with `vrf_ac` and `vrf_mm`, `SupplyAirTempInputMethod`) is missing, accim asks for all the values of the first stage (those of section 4.1), and these values are used instead of those specified in the function call. Likewise, if any of `ComfStand`, `CAT` or `ComfMod` (and, with `vrf_mm` and `ex_mm`, `HVACmode` or `VentCtrl`) is missing, accim asks for all the values of the second stage, from `ComfStand` to `ASTtol_steps` (see section 4.4).
 
 Some example of the usage could be:
 
@@ -302,7 +300,7 @@ https://accim.readthedocs.io/en/master/jupyter_notebooks/runEp/using_runEp.html
 -    Using the class Table() for data analysis
 https://accim.readthedocs.io/en/master/jupyter_notebooks/Table/using_Table.html
 -    Full example
-https://accim.readthedocs.io/en/master/jupyter_notebooks/full_example/full_example.html
+https://accim.readthedocs.io/en/master/jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html
 
 Starting with the process.
 
@@ -332,7 +330,7 @@ Enter the Output frequencies separated by space (timestep, hourly, daily, monthl
 
 Do you want to generate a dataframe to see all outputs? (true or false): false
 
-Enter the EnergyPlus version (9.1 to 25.1, or auto): auto
+Enter the EnergyPlus version (9.1 to 25.2, or auto): auto
 
 Enter the Temperature Control method (temperature or pmv): temperature
 ```
@@ -457,7 +455,7 @@ Please refer to the full list of setpoint temperatures at https://htmlpreview.gi
 ): 0 3
           Are you sure the numbers are correct? [y or [] / n]:
 
-Enter the setpoint accuracy number (any number greater than 0, if omitted will be 100): 100
+Enter the setpoint accuracy number (any number greater than 0, if omitted will be 10000): 100
           Are you sure the number is correct? [y or [] / n]:
 
 Enter the number for the CAT cooling offset modifier (value will be summed to the ACST, if omitted will be 0):
@@ -577,7 +575,7 @@ You can see a Jupyter Notebook in the How-to Guides section of this documentatio
 
 To run it on your computer, copy the folder `jupyter_notebooks/rename_epw_files` of the sample files to a working folder (see {ref}`running-example-notebooks`).
 
-`rename_epw_files` takes the country and city from the coordinates of each EPW file, which needs the package `geopy` and an internet connection; if `geopy` is not installed, install it with `pip install geopy`.
+`rename_epw_files` takes the country and city from the coordinates of each EPW file, which needs an internet connection (it uses the package `geopy`, installed with accim), unless `rename_city_dict` and `country_to_city_dict` give them.
 
 ## 4.6 Running simulations
 
@@ -599,11 +597,11 @@ run.runEp(
     runOnlyAccim=True,          # True to run only the IDFs generated by accim (with '[' in the name), False to run all IDFs
     confirmRun=True,            # True to run without asking for confirmation
     num_CPUs=2,                 # number of simulations run at the same time
-    EnergyPlus_version='25.1',  # EnergyPlus version of the IDFs
+    EnergyPlus_version='auto',  # EnergyPlus version of the IDFs, or 'auto' to read it from them
 )
 ```
 
-If you omit `runOnlyAccim`, `confirmRun` or `EnergyPlus_version`, `runEp()` asks for them in the prompt. Before running, it lists the IDFs, the EPWs and the simulations, and their number, and asks for your confirmation (unless `confirmRun=True`), because you might start thousands of simulations by mistake. `EnergyPlus_version` is the version of the IDFs, from ‘9.1’ to ‘25.1’, and `num_CPUs` is 2 by default.
+If you omit `runOnlyAccim`, `confirmRun` or `EnergyPlus_version`, `runEp()` asks for them in the prompt. Before running, it lists the IDFs, the EPWs and the simulations, and their number, and asks for your confirmation (unless `confirmRun=True`), because you might start thousands of simulations by mistake. `EnergyPlus_version` is the version of the IDFs, from ‘9.1’ to ‘25.2’, or ‘auto’ to read it from the IDFs, which must then be of the same version; `num_CPUs` is 2 by default.
 
 Afterwards, you’ll see the calculations progress, and you’ll get the usual simulation files of each simulation: `.audit`, `.eio`, `.err`, `.eso`, `.csv`, `Table.csv`, `Table.htm` and so on, all of them named `IDF name[EPW name`. You might need to keep these in order to debug some error, or any other reason, but if you only need the CSV files with the hourly results, you can run the `removefiles()` function:
 
@@ -611,7 +609,7 @@ Afterwards, you’ll see the calculations progress, and you’ll get the usual s
 run.removefiles()
 ```
 
-`removefiles()` deletes every file of the working folder except the `.py`, `.idf`, `.epw`, `.csv` and `.eso` files, and also deletes the `Table.csv`, `Meter.csv` and `Zsz.csv` files. Run it only in a folder that contains just the simulations: any other file, such as a Jupyter notebook, would be deleted.
+`removefiles()` deletes the simulation files of the working folder, that is, the files with ‘[’ in the name, except the `.py`, `.idf`, `.epw`, `.csv` and `.eso` files, and it also deletes the `Table.csv`, `Meter.csv` and `Zsz.csv` files of the simulations. It does not delete subfolders or files without ‘[’ in the name, such as a Jupyter notebook; files of other programs whose names contain ‘[’ would be deleted.
 
 ## 4.7 Functions and methods for data analysis; making figures and tables
 
@@ -645,7 +643,7 @@ set_pmv_input_parameters(building, air_velocity=0.1, work_efficiency=0.0)
 building.saveas('TestModel_aPMV.idf')
 ```
 
-- Give the coefficients, the setpoints and the cooling season explicitly, as above.
+- By default, the setpoints are 0.5 for cooling and −0.5 for heating, λ is 0.293 in the cooling season and −0.293 in the heating season, and the cooling season goes from day 121 (1 May) to day 274 (1 October), which is not included, as in `addAccis()`. Give them explicitly, as above, so that the results do not depend on the defaults: up to accim 0.7.7, the default setpoints were inverted and the cooling season ended on 29 July.
 - The coefficients, setpoints and tolerances take one value for the whole model, or a dictionary with a value for each zone or space: `get_available_target_names(building)` lists the valid names, and `get_input_template_dictionary(building)` returns a template of the dictionary.
 - The tolerances widen or narrow the setpoints: by default, the heating setpoint is raised by 0.1 and the cooling setpoint is lowered by 0.1, in both seasons.
 - The PMV depends on the inputs of the People objects (activity level, clothing insulation, air velocity and work efficiency), which do not affect temperature setpoints but do affect aPMV setpoints. `set_pmv_input_parameters()` sets them for all the People objects, or for each zone with dictionaries.

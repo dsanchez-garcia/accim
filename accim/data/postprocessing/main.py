@@ -79,10 +79,10 @@ class Table:
     :param level_excluded_zones: A list of strings.
         Strings must be the zones excluded from level computations.
         Used to try to match the cities in the EPW file name with actual cities.
-        To be used if sample_EPWs have not been previously renamed with rename_epw_files().
+        To be used if EPWs have not been previously renamed with rename_epw_files().
     :type level_excluded_zones: list
     :param split_epw_names: It splits the EPW name into Country_City_RCPscenario-Year format.
-        To be used if sample_EPWs do have been previously renamed with rename_epw_files().
+        To be used if EPWs do have been previously renamed with rename_epw_files().
     :type split_epw_names: bool
     :param normalised_energy_units: A bool, can be True or False.
         Used to show Wh or Wh/m2 units.
@@ -3765,18 +3765,23 @@ class Table:
         if confirm_graph:
             self.df_for_graph['Date/time'] = self.df_for_graph.index
 
+            # Offset objects instead of the aliases 'H' and 'M', which pandas 3 no longer accepts
             freq_graph_dict = {
                 'timestep': ['X?', "%d/%m %H:%M"],
-                'hourly': ['H', " %d/%m %H:%M:%S"],
+                'hourly': [pd.offsets.Hour(), " %d/%m %H:%M:%S"],
                 # 'daily': ['D', "%d/%m"],
-                'daily': ['D', " %d/%m %H:%M:%S"],
+                'daily': [pd.offsets.Day(), " %d/%m %H:%M:%S"],
                 # 'monthly': ['M', "%m"],
-                'monthly': ['M', " %d/%m %H:%M:%S"],
+                'monthly': [pd.offsets.MonthEnd(), " %d/%m %H:%M:%S"],
                 # todo WIP
                 'runperiod': ['?', "?"]
             }
 
-            start_date = datetime.datetime.strptime(self.df_for_graph['Date/time'][0], freq_graph_dict[self.frequency][1])
+            # The dates have no year: 1900, the default year of strptime, is given explicitly
+            start_date = datetime.datetime.strptime(
+                '1900 ' + self.df_for_graph['Date/time'].iloc[0].strip(),
+                '%Y ' + freq_graph_dict[self.frequency][1].strip()
+            )
             # end_date = datetime.datetime.strptime(df_for_graph['Date/time'][len(self.df_for_graph)-1], "%d/%m %H:%M")
             # (end_date-start_date).days
 

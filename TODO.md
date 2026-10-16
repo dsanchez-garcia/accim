@@ -55,3 +55,7 @@ Active short-term tasks.
   - Definition of done: `wf4` and `wf5` are run with `docs/prepare_parametric_notebooks.py run` on a commit that includes `ea4392d`, exported with `export` and merged into `master`; their MCDM figures and summaries show the temperature objective without kWh/m2.
   - References: [dsanchez-garcia/accim#2](https://github.com/dsanchez-garcia/accim/pull/2) (notes for reviewers), `docs/prepare_parametric_notebooks.py`, `DEVLOG.md` (2026-10-16).
 
+- [ ] [P2][todo] Run tutorial 03 again and export its documentation page
+  - Context: `03_parametric_apmv_setpoints.ipynb` creates `ParametricSimulation(parameters_type="apmv setpoints")` without `bypass_addAccis`, so it applies the defaults of `apply_apmv_setpoints`. Since the fix of those defaults (cooling season from day 121 to 274 instead of 120 to 210; setpoints 0.5/-0.5, which the notebook replaces with its `'PMV setpoint'` values), its results change, and the executed copy in `docs/source/jupyter_notebooks/parametric_and_optimisation_examples/` shows the old ones.
+  - Definition of done: tutorial 03 is run with `docs/prepare_parametric_notebooks.py run` on a commit with the new defaults, exported with `export` and merged into `master`.
+  - References: `CHANGELOG.md` (Default values of `apply_apmv_setpoints`), `DEVLOG.md` (2026-10-16).

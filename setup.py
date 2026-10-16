@@ -131,7 +131,7 @@ setuptools.setup(
         'scikit-learn',
         'eppy>=0.5.63',
         'pycountry',
-        # 'geopy',
+        'geopy',
         'matplotlib',
         'numpy',
         'pandas',

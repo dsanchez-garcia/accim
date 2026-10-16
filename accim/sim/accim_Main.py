@@ -145,7 +145,7 @@ class accimJob():
             # else:
             if iddfile == 'not-supported':
                 raise ValueError("""EnergyPlus version not supported.\n
-                                         Only works for versions between EnergyPlus 9.1 (enter 9.1) and EnergyPlus 25.1 (enter 25.1)""")
+                                         Only works for versions between EnergyPlus 9.1 (enter 9.1) and EnergyPlus 25.2 (enter 25.2)""")
             if verboseMode:
                 print('IDD location is: '+iddfile)
             IDF.setiddname(iddfile)

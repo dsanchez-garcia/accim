@@ -20,14 +20,49 @@ Multiprocessing runs.
 using generators instead of a list
 when you are running 100 files you have to use generators
 original script: https://eppy.readthedocs.io/en/latest/runningeplus.html
-slightly modified so that takes multiple sample_EPWs located in the local folder
+slightly modified so that takes multiple EPWs located in the local folder
 """
 
 import os
+import re
 from eppy.modeleditor import IDF, IDDAlreadySetError
 from eppy.runner.run_functions import runIDFs
 from accim.lists import fullEPversionsList
 from accim.utils import get_idd_path_from_ep_version
+
+
+def get_iddfile_from_idfs(idfnames: list) -> str:
+    """
+    Get the path of the IDD file for the EnergyPlus version of the IDFs.
+
+    eppy uses a single IDD file in each Python session,
+    therefore all IDFs must be of the same EnergyPlus version.
+
+    :param idfnames: A list of the IDF file names.
+    :type idfnames: list
+    :return: The path of the IDD file, for instance 'C:/EnergyPlusV25-2-0/Energy+.idd'.
+    :rtype: str
+    """
+    versions = set()
+    for idfname in idfnames:
+        with open(idfname, 'r', encoding='utf-8', errors='ignore') as f:
+            match = re.search(r'^\s*Version\s*,\s*(\d+)\.(\d+)', f.read(), re.IGNORECASE | re.MULTILINE)
+        if match is None:
+            raise ValueError(f'The EnergyPlus version of {idfname} could not be read.')
+        versions.add(f'{int(match.group(1))}.{int(match.group(2))}')
+    versions = sorted(versions)
+    if len(versions) > 1:
+        raise ValueError(
+            f'The IDFs are of different EnergyPlus versions ({", ".join(versions)}). '
+            f'Please run the IDFs of each version separately, or update them to the same version.'
+        )
+    iddfile = get_idd_path_from_ep_version(EnergyPlus_version=versions[0])
+    if iddfile == 'not-supported':
+        raise ValueError(
+            f'The IDFs are of EnergyPlus {versions[0]}, which is not supported. '
+            f'The supported versions are: {[v for v in fullEPversionsList if v != "auto"]}'
+        )
+    return iddfile
 
 
 def make_eplaunch_options(idf, epw):
@@ -55,7 +90,8 @@ def runEp(
         EnergyPlus_version: str = None
 ):
     """
-    Run simulations in the latest EnergyPlus version installed in the computer.
+    Run the simulations of the IDFs and EPWs in the working folder,
+    with the EnergyPlus version of each IDF.
 
     :param runOnlyAccim: Default is None.
         Enter True to run only ACCIM output IDFs, or False to run all IDFs.
@@ -67,7 +103,8 @@ def runEp(
     :param num_CPUs: An integer. The number of CPUs to be used.
     :type num_CPUs: int
     :param EnergyPlus_version: A string.
-        It should be the EnergyPlus version of the IDFs, from '9.0' to '23.2'.
+        It should be the EnergyPlus version of the IDFs, from '9.1' to '25.2',
+        or 'auto' to read it from the IDFs. Default is None, which asks for it.
     :type EnergyPlus_version: str
     """
 
@@ -88,8 +125,6 @@ def runEp(
         print('You must enter an EnergyPlus version from the following list:')
         print(fullEPversionsList)
         EnergyPlus_version = input('Please enter the desired EnergyPlus version: ')
-
-    iddfile = get_idd_path_from_ep_version(EnergyPlus_version=EnergyPlus_version)
 
     # if EnergyPlus_version.lower() == '9.1':
     #     iddfile = 'C:/EnergyPlusV9-1-0/Energy+.idd'
@@ -112,16 +147,10 @@ def runEp(
     # elif EnergyPlus_version.lower() == '23.2':
     #     iddfile = 'C:\EnergyPlusV23-2-0\Energy+.idd'
     # else:
-    if iddfile == 'not-supported':
-        while EnergyPlus_version.lower() not in fullEPversionsList:
-            print(f'{EnergyPlus_version} is not available. You must enter one of the following list:')
-            print(fullEPversionsList)
-            EnergyPlus_version = input('Please enter the desired EnergyPlus version: ')
-
-    try:
-        IDF.setiddname(iddfile)
-    except IDDAlreadySetError:
-        print('IDD was already set.')
+    while EnergyPlus_version.lower() not in fullEPversionsList:
+        print(f'{EnergyPlus_version} is not available. You must enter one of the following list:')
+        print(fullEPversionsList)
+        EnergyPlus_version = input('Please enter the desired EnergyPlus version: ')
 
     if runOnlyAccim is None:
         runOnlyAccim = input('Do you want to run only ACCIM output IDFs? [y or n]: ')
@@ -133,6 +162,17 @@ def runEp(
         idfnames = [x for x in os.listdir() if x.endswith('.idf') and '[' in x]
     else:
         idfnames = [x for x in os.listdir() if x.endswith('.idf')]
+
+    if EnergyPlus_version.lower() == 'auto':
+        iddfile = get_iddfile_from_idfs(idfnames) if len(idfnames) > 0 else None
+    else:
+        iddfile = get_idd_path_from_ep_version(EnergyPlus_version=EnergyPlus_version)
+
+    if iddfile is not None:
+        try:
+            IDF.setiddname(iddfile)
+        except IDDAlreadySetError:
+            print('IDD was already set.')
 
     epwnames = [x for x in os.listdir() if x.endswith('.epw')]
     epwnames_run = [x.replace('.epw', '') for x in os.listdir() if x.endswith('.epw')]
@@ -154,9 +194,9 @@ def runEp(
     print(f'The IDFs we are going to run are:')
     print(*idfnames, sep="\n")
     print(f' and the No. of IDFs is going to be {len(idfnames)}')
-    print(f'The sample_EPWs we are going to run are:')
+    print(f'The EPWs we are going to run are:')
     print(*epwnames, sep="\n")
-    print(f' and the No. of sample_EPWs is going to be {len(epwnames)}')
+    print(f' and the No. of EPWs is going to be {len(epwnames)}')
 
     print('Therefore, the simulations are going to be:')
     idfs = []
@@ -193,15 +233,19 @@ def runEp(
 
 def removefiles():
     """
-    Delete all files except '.py', '.idf', '.epw', '.csv' and '.eso'.
+    Delete the simulation files written by runEp in the working folder,
+    except '.py', '.idf', '.epw', '.csv' and '.eso'.
 
     'Table.csv', 'Meter.csv', 'Zsz.csv' files are deleted as well.
+    runEp names the simulation files 'IDF name[EPW name', so only the files
+    whose name contains '[' are deleted: other files and subfolders are kept.
     """
     extensions = ('.py', '.idf', '.epw', '.csv', '.eso')
     csvextensions = ('Table.csv', 'Meter.csv', 'Zsz.csv')
-    deletelist = ([file for file in os.listdir() if not file.endswith(extensions)])
+    simulation_files = [file for file in os.listdir() if '[' in file and os.path.isfile(file)]
+    deletelist = ([file for file in simulation_files if not file.endswith(extensions)])
     for file in deletelist:
         os.remove(file)
-    csvlist = ([file for file in os.listdir() if file.endswith(csvextensions)])
+    csvlist = ([file for file in simulation_files if file.endswith(csvextensions)])
     for file in csvlist:
         os.remove(file)

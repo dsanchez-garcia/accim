@@ -47,10 +47,6 @@ nbsphinx_execute = 'never'
 myst_enable_extensions = ['substitution']
 myst_substitutions = {'version': version}
 
-# accim.data.preprocessing imports geopy, which is not a dependency of accim: mock it so that the
-# API reference of the module can be generated.
-autodoc_mock_imports = ['geopy']
-
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
