@@ -58,3 +58,21 @@ autodoc_mock_imports = ['geopy']
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 html_css_files = ['custom.css']
+
+# -- Options for LaTeX output ------------------------------------------------
+
+# The PDF of Read the Docs is built with pdflatex, which stops at each Unicode character it has no
+# definition for (the notebooks use λ, ≤, −, ⌈, ⌉ and a few emoji) and leaves it out of the PDF.
+latex_elements = {
+    'preamble': r'''
+\DeclareUnicodeCharacter{03BB}{\ensuremath{\lambda}}
+\DeclareUnicodeCharacter{2264}{\ensuremath{\leq}}
+\DeclareUnicodeCharacter{2212}{\ensuremath{-}}
+\DeclareUnicodeCharacter{2308}{\ensuremath{\lceil}}
+\DeclareUnicodeCharacter{2309}{\ensuremath{\rceil}}
+\DeclareUnicodeCharacter{2705}{[OK]}
+\DeclareUnicodeCharacter{274C}{[X]}
+\DeclareUnicodeCharacter{26A0}{[!]}
+\DeclareUnicodeCharacter{FE0F}{}
+''',
+}
