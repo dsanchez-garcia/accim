@@ -35,6 +35,14 @@ Recommended flow: track active work in `TODO.md`, move completed outcomes to `DE
 
 ## Entries
 
+### 2026-10-17
+#### [done] Branches merged into `master` and deleted
+- Context: The author asked to merge every branch into `master` and delete it, except `refactor/sim-v1`, which holds the old refactoring towards accim 1.0 and is kept for a later review (new item in `TODO.md`).
+- Changes: PRs #6 to #11 merged in this order: #6 code fixes; #7, #8 and #9 the pages of the parametric notebooks and the order of the hourly columns; #10 the How-to notebooks; #11 the removal of the old `full_example`. The conflicts of #10 and #11 in `DEVLOG.md` and `notes/work-log.md` (entries added in the same place) were resolved by keeping both entries. #10 removed the data files of the How-to pages from `docs/source/jupyter_notebooks`, so two tests of #6 that read them (`tests/core/test_rename_epw_files.py`, `tests/core/test_table_time_plot.py`) now read the same files from `accim/sample_files/jupyter_notebooks`, and skip if the sample files are missing.
+- Files: `TODO.md`, `tests/core/test_rename_epw_files.py`, `tests/core/test_table_time_plot.py`, `DEVLOG.md`.
+- Verification: `pytest tests/core tests/parametric_and_optimisation`: all pass except `test_subplot_ordering.py::test_resolve_subplot_orders_custom_missing_dimension_raises`, which already failed before. Sphinx html build of the merged `master`: no warnings from the pages (47 from docstrings, as before).
+- Next step: `feat/comfort-metrics-experiment-api` and `codex/paper-simple-energy` are not merged, pending the author's decision: they add paper experiment code and documents (the first one brings back the Spanish description of the module for the paper, removed on 2026-10-16; the second adds agent validation reports in Spanish).
+
 ### 2026-10-16
 #### [done] Order of the hourly columns and room for the suptitles of the faceted plots; pages of tutorial 09 and wf1-wf5 run again
 - Context: The entry below (pages of tutorials 00-02, 04-10 and wf1-wf3) found two issues of `accim.parametric_and_optimisation` that show on the documentation pages. `_attach_hourly_outputs_from_simulation_files` (`main.py`) collected the names of the hourly columns in a `set`, so their order changed from one Python process to the next (string hash randomisation): the list printed by `get_hourly_df_parametric` and `get_hourly_df_optimisation` (wf1, wf2, wf4, tutorial 09) and the order and colours of the series of `plot_hourly_scatter` (wf2). The suptitle of `plot_categorical_boxplots` overlapped the facet titles (tutorial 09, wf2): `subplots_adjust(top=0.9)` kept a tenth of the figure height for it, too little for one row of facets 3.6 to 4 inches high. `plot_parametric_scatter`, `plot_parametric_lines`, `plot_parametric_distributions` and `plot_parametric_ecdf` did the same (overlap in the five line plots of wf3, suptitle squeezed between the facet titles in the scatter plots of wf2, wf4 and wf5).

@@ -45,6 +45,11 @@ Active short-term tasks.
   - Definition of done: Tests cover missing file paths and assert actionable error messages in hourly/output retrieval methods.
   - References: `accim/parametric_and_optimisation/main.py`, `tests/parametric_and_optimisation/test_sim_file_cleanup.py`
 
+- [ ] [P2][todo] Review the branch `refactor/sim-v1` and decide what to bring to `master`
+  - Context: `refactor/sim-v1` holds the old refactoring towards accim 1.0 (the "1.0.0 clean-break release": new API, modernised docstrings, documentation and notebooks, more tests, and the code review of 2026-07-19), with 36 commits from 2026-05-27 to 2026-07-19 and about 118 files changed. Development went on with 0.7.x in `master` instead (69 commits since the two split at `c03250f`), so the branch was never merged. It was kept on purpose on 2026-10-17, when the other branches were merged into `master` and deleted.
+  - Definition of done: each change of the branch checked against the current `master` and marked as port, adapt or drop; the useful parts brought in small PRs with their tests; then the branch deleted.
+  - References: `origin/refactor/sim-v1`; `git log c03250f..origin/refactor/sim-v1`; the CHANGELOG of that branch (1.0.0 entry).
+
 - [ ] [P2][todo] Add schema-heterogeneity tests for split-by grouped outputs
   - Context: Contract is to keep realistic per-group schemas when `drop_all_empty_output_columns=True`.
   - Definition of done: Tests assert different output-column sets across groups and downstream handling expectations.

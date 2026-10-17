@@ -3,7 +3,7 @@
 Before, the checks compared the scenario and year cells with the string 'nan', but they are real
 NaN (or the column does not exist when no EPW names a scenario or year), so 'Present' was never
 assigned and rename_epw_files failed with TypeError or KeyError. The test uses the EPW files of the
-documentation page of rename_epw_files; the dictionaries give the city and country of each EPW,
+sample notebook of rename_epw_files; the dictionaries give the city and country of each EPW,
 so nothing is geolocated (no geopy or internet connection needed).
 """
 import builtins
@@ -14,9 +14,11 @@ import pytest
 
 import accim.data.preprocessing as preprocessing
 
-EPW_DIR = Path(__file__).resolve().parents[2] / 'docs' / 'source' / 'jupyter_notebooks' / 'rename_epw_files'
+EPW_DIR = Path(__file__).resolve().parents[2] / 'accim' / 'sample_files' / 'jupyter_notebooks' / 'rename_epw_files'
 RENAME_CITY_DICT = {'aberdeen': 'Aberdeen', 'london': 'London', 'ponta_grossa': 'Ponta Grossa'}
 COUNTRY_TO_CITY_DICT = {'United Kingdom': ['London', 'Aberdeen'], 'Brazil': ['Ponta Grossa']}
+
+pytestmark = pytest.mark.skipif(not EPW_DIR.is_dir(), reason='needs the sample files of the repository')
 
 
 @pytest.fixture

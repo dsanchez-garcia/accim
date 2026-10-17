@@ -2,7 +2,7 @@
 
 Before, time_plot read the first date with Series[0], which pandas 3 takes as a label (KeyError: 0),
 and built the dates with the frequency aliases 'H' and 'M', which pandas 3 no longer accepts.
-The test uses the first 48 hours of two of the CSVs of the documentation page of Table.
+The test uses the first 48 hours of two of the CSVs of the sample notebook of Table.
 """
 import builtins
 import shutil
@@ -15,14 +15,16 @@ import pytest
 
 from accim.data.postprocessing.main import Table
 
-TABLE_DIR = Path(__file__).resolve().parents[2] / 'docs' / 'source' / 'jupyter_notebooks' / 'Table'
+TABLE_DIR = Path(__file__).resolve().parents[2] / 'accim' / 'sample_files' / 'jupyter_notebooks' / 'Table'
 MODEL = 'TestModel[CS_INT EN16798[CA_1[CM_0[HM_2[VC_0[VO_0[MT_50[MW_50[AT_0.1[NS_X'
 HOURS = 48
+
+pytestmark = pytest.mark.skipif(not TABLE_DIR.is_dir(), reason='needs the sample files of the repository')
 
 
 @pytest.fixture
 def hourly_table(tmp_path, monkeypatch):
-    shutil.copy(TABLE_DIR / f'{MODEL}.idf', tmp_path)
+    shutil.copy(TABLE_DIR / 'TestModel.idf', tmp_path)
     for city in ['Aberdeen', 'London']:
         csv_name = f'{MODEL}[United-Kingdom_{city}_Present.csv'
         lines = (TABLE_DIR / csv_name).read_bytes().splitlines(keepends=True)
@@ -37,7 +39,7 @@ def hourly_table(tmp_path, monkeypatch):
         level_agg_func=['mean'],
         level_excluded_zones=[],
         split_epw_names=True,
-        idf_path=f'{MODEL}.idf',
+        idf_path='TestModel.idf',
     )
 
 
