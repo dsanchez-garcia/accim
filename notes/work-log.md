@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-17 — Release 0.8.1 (`pulp<4`)
+
+- **Objective**: Fix the import of `accim.parametric_and_optimisation` in new installations: PuLP 4 renamed the `pulp.apis.*_api` modules that `pyehub` (a dependency of besos) imports.
+- **Affected files**: `setup.py`, `accim/__init__.py`, [[../CHANGELOG.md]], `docs/source/5_troubleshooting.md`, [[../TODO.md]]; [[../DEVLOG.md]].
+- **Finding or decision**: `'pulp<4'` in `install_requires` is enough. A shim for the renamed modules was not needed. The test of a clean installation with all the dependencies has to be done before the upload, from the local wheels (`pip install --find-links dist`).
+- **Validation**: tests; clean venv with the local wheels before the upload; clean install from PyPI after it; GitHub release. Details in [[../DEVLOG.md]].
+- **Next step**: activate `v0.8.0` and `v0.8.1` in Read the Docs.
+
 ## 2026-10-17 — Release 0.8.0
 
 - **Objective**: Publish accim 0.8.0 on PyPI (with `accim-samples`), show 0.8.0 on Read the Docs and make the GitHub release.

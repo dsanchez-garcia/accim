@@ -20,11 +20,6 @@ Active short-term tasks.
 
 ## Backlog
 
-- [ ] [P0][todo] Pin `pulp<4` and release 0.8.1
-  - Context: In a clean environment, `pip install accim` (0.8.0) installs PuLP 4 (4.0.0 of 2026-09-25, 4.0.1 of 2026-10-14). PuLP 4 renamed `pulp.apis.cplex_api`, `glpk_api`, `choco_api`, `gurobi_api` and `coin_api`, which `pyehub` (a dependency of besos) imports in `pyehub/pylp/problem.py`. As a result, `from accim.parametric_and_optimisation import ...` fails with `ModuleNotFoundError: No module named 'pulp.apis.cplex_api'`; with `pulp<4` it works. Until the fix is released, users can run `pip install "pulp<4"`.
-  - Definition of done: `'pulp<4'` in `install_requires` (with a comment on why), the CHANGELOG entry, accim and accim-samples 0.8.1 published on PyPI, and a clean install that imports `accim.parametric_and_optimisation`.
-  - References: `DEVLOG.md`, 2026-10-17, "Release 0.8.0".
-
 - [ ] [P1][todo] Define backlog priority rules
   - Context: Standardize entry criteria for new tasks.
   - Definition of done: A short guideline with approved P0/P1/P2 criteria.
