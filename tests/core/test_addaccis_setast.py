@@ -1,0 +1,73 @@
+"""Tests for the EMS program SetAST of the output IDFs when addAccis generates several of them.
+
+All output IDFs of an input IDF are saved from the same IDF object. Since the base SetAST has 4
+lines (SetpointAcc, m, n and 'run SetAST_Master'), before, genIDF kept 16 lines of the previous
+output IDF (len(obj) > 18) in the branches that append the lines of the comfort model, so the
+second and later output IDFs had lines of the previous one. When the cut fell inside an if block,
+EnergyPlus stopped ("Missing an ENDIF"). Now each output IDF has the 4 base lines followed by the
+lines of its comfort model.
+"""
+import re
+import shutil
+from pathlib import Path
+
+import pytest
+
+from accim.sim import accis
+from accim.sim.setAST_models import get_SetAST_lines
+
+REPO = Path(__file__).resolve().parents[2]
+SAMPLE_IDF = (REPO / 'accim' / 'sample_files' / 'sample IDFs' / 'input_IDFs'
+              / 'TestModel_onlyGeometryForVRFsystem_2zones_CalcVent_V2510.idf')
+IDD_25_1 = Path('C:/EnergyPlusV25-1-0/Energy+.idd')
+COMFSTAND_NAMES = {'INT ASHRAE55': 2, 'IND IMAC C NV': 7}
+
+
+def _setast_lines(idf_path):
+    """Return the program lines of SetAST in an IDF file, without comments."""
+    text = idf_path.read_text(encoding='utf-8', errors='ignore')
+    for block in re.split(r'\n\s*\n', text):
+        lines = block.strip().splitlines()
+        if len(lines) > 1 and lines[0].strip().upper() == 'ENERGYMANAGEMENTSYSTEM:PROGRAM,' \
+                and re.match(r'\s*SetAST,', lines[1]):
+            return [re.sub(r'\s*!-.*$', '', line).strip().rstrip(',;') for line in lines[2:]]
+    raise AssertionError(f'SetAST not found in {idf_path.name}')
+
+
+@pytest.mark.skipif(not (IDD_25_1.exists() and SAMPLE_IDF.exists()),
+                    reason='needs EnergyPlus 25.1 and the sample IDF of the repository')
+@pytest.mark.parametrize('ScriptType, extra_args, n_idfs', [
+    # Fully air-conditioned: the branches that appended the lines of the comfort model
+    ('vrf_ac', dict(ComfStand=[2, 7], CAT=[80], ComfMod=[0, 3], HVACmode=[0]), 4),
+    # Mixed mode: the branches that wrote them from Program_Line_17
+    ('vrf_mm', dict(ComfStand=[2], CAT=[80], ComfMod=[0, 3], HVACmode=[2], VentCtrl=[0]), 2),
+])
+def test_each_output_idf_has_the_setast_lines_of_its_comfort_model(tmp_path, monkeypatch, ScriptType,
+                                                                    extra_args, n_idfs):
+    shutil.copy(SAMPLE_IDF, tmp_path / 'TestModel.idf')
+    monkeypatch.chdir(tmp_path)
+
+    accis.addAccis(
+        ScriptType=ScriptType,
+        SupplyAirTempInputMethod='temperature difference',
+        Output_type='simplified',
+        Output_freqs=['hourly'],
+        Output_keep_existing=False,
+        EnergyPlus_version='auto',
+        TempCtrl='temperature',
+        confirmGen=True,
+        verboseMode=False,
+        **extra_args,
+    )
+
+    output_idfs = sorted(tmp_path.glob('TestModel[[]*.idf'))
+    assert len(output_idfs) == n_idfs
+    for idf_path in output_idfs:
+        comfstand = COMFSTAND_NAMES[re.search(r'\[CS_([^\[]+)', idf_path.name).group(1)]
+        comfmod = float(re.search(r'\[CM_([\d.]+)', idf_path.name).group(1))
+        lines = _setast_lines(idf_path)
+
+        assert lines[3] == 'run SetAST_Master', idf_path.name
+        assert lines[4:] == get_SetAST_lines(comfstand, comfmod), idf_path.name
+        assert sum(re.match(r'if\b', l) is not None for l in lines) == \
+               sum(re.match(r'endif\b', l) is not None for l in lines), idf_path.name

@@ -17,8 +17,27 @@
 """
 Submodule to perform data processing before simulation run.
 """
-import geopy
-from geopy import Nominatim
+
+
+def import_geopy():
+    """
+    Import geopy, which rename_epw_files uses to find the country and city of the EPW files
+    from their coordinates. geopy is imported only when it is needed, so that this module
+    can be imported without it.
+
+    :return: The geopy module and its Nominatim geocoder class.
+    """
+    try:
+        import geopy
+        import geopy.exc
+        from geopy.geocoders import Nominatim
+    except ImportError as err:
+        raise ImportError(
+            "rename_epw_files needs the package 'geopy' to find the country and city "
+            "of the EPW files from their coordinates. Please install it with: pip install geopy"
+        ) from err
+    return geopy, Nominatim
+
 
 def capitalize_words(text):
   """
@@ -152,10 +171,10 @@ class rename_epw_files:
     Renames the EPW files following the name convention 'Country_City_RCPscenario-Year'.
     The Country and City fields are computed based on the coordinates of the EPW,
     and the RCPscenario and Year are taken from the original name.
-    If no reference is found, the sample_EPWs are considered to be  for Present scenario.
+    If no reference is found, the EPWs are considered to be for Present scenario.
 
     :param filelist: A list of the EPW files.
-        If omitted, it will rename all sample_EPWs in that folder.
+        If omitted, it will rename all EPWs in that folder.
     :type filelist: list
     :param rename_city_dict: A dict to set the city field for each EPW file.
         It must follow the pattern
@@ -248,7 +267,8 @@ class rename_epw_files:
         future_scenario_not_found_list = []
 
         for i in range(len(epw_df['EPW_names'])):
-            if epw_df.loc[i, 'EPW_scenario'] == 'nan':
+            # The column does not exist if no EPW names a scenario, and its cells are NaN where none was found
+            if 'EPW_scenario' not in epw_df.columns or pd.isna(epw_df.loc[i, 'EPW_scenario']):
                 epw_df.loc[i, 'EPW_scenario'] = 'Present'
                 future_scenario_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
             # try:
@@ -282,7 +302,8 @@ class rename_epw_files:
 
         year_not_found_list = []
         for i in range(len(epw_df['EPW_names'])):
-            if epw_df.loc[i, 'EPW_year'] == 'nan':
+            # The column does not exist if no EPW names a year, and its cells are NaN where none was found
+            if 'EPW_year' not in epw_df.columns or pd.isna(epw_df.loc[i, 'EPW_year']):
                 epw_df.loc[i, 'EPW_year'] = 'Present'
                 year_not_found_list.append(epw_df.loc[i, 'EPW_file_names'])
             # try:
@@ -331,6 +352,7 @@ class rename_epw_files:
                         if capitalize_words(cities).lower() == epw_df.loc[i, 'EPW_city_or_subcountry'].lower():
                             epw_df.loc[i, 'EPW_country'] = capitalize_words(country)
             if epw_df.loc[i, 'EPW_city_or_subcountry'] == 'UNKNOWN' or epw_df.loc[i, 'EPW_country'] == 'UNKNOWN':
+                geopy, Nominatim = import_geopy()
                 try:
                     geolocator = Nominatim(user_agent="abcd")
                     location = geolocator.reverse(epw_df.loc[i, 'EPW_latitude'] + "," + epw_df.loc[i, 'EPW_longitude'])

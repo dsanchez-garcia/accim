@@ -81,7 +81,7 @@ def addAccis(
         related to the Output:Variable objects that need to be kept in the model.
     :type Output_take_dataframe: bool
     :param EnergyPlus_version: The default is None.
-        Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1' or 'auto'.
+        Can be '9.1', '9.2', '9.3', '9.4', '9.5', '9.6', '22.1', '22.2', '23.1', '23.2', '24.1', '24.2', '25.1', '25.2' or 'auto'.
     :type EnergyPlus_version: str
     :param TempCtrl: The default is None. Can be 'temp' or 'pmv'.
     :type TempCtrl: str
@@ -199,7 +199,7 @@ def addAccis(
             '\n-    Using the class Table() for data analysis'
             '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/Table/using_Table.html'
             '\n-    Full example'
-            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/full_example/full_example.html'
+            '\nhttps://accim.readthedocs.io/en/master/jupyter_notebooks/full_example_IBPSA/full_example_IBPSA.html'
             '\n'
             '\nStarting with the process.'
         )
@@ -238,7 +238,7 @@ def addAccis(
         print(fullOutputsFreqList)
         raise ValueError('Some of the Output frequencies in '+Output_freqs + " is not a valid Output. "
                                    "All Output frequencies must be included in the list above.")
-    if EnergyPlus_version is None:
+    if EnergyPlus_version is None or EnergyPlus_version.lower() == 'auto':
         EnergyPlus_version = f'{idf.idd_version[0]}.{idf.idd_version[1]}'
     if verboseMode:
         print('EnergyPlus version is: '+EnergyPlus_version)
@@ -686,8 +686,9 @@ def modifyAccis(
     SetAST.Program_Line_2 = 'set m = ' + str(CustAST_m)
     SetAST.Program_Line_3 = 'set n = ' + str(CustAST_n)
 
-    # Clear existing dynamic lines (keeping the first 3 lines)
-    while len(SetAST.obj) > 3:
+    # Clear existing dynamic lines (keeping the first 3 lines: SetAST.obj holds the
+    # object type, the name and the program lines)
+    while len(SetAST.obj) > 5:
         SetAST.obj.pop()
 
     # Add call to SetAST_Master program

@@ -8,7 +8,7 @@ Below you can see a few errors you might get when using accim:
 
 `ModuleNotFoundError: No module named 'geopy'`
 
-`rename_epw_files` (module `accim.data.preprocessing`) uses the package `geopy`, which is not installed with accim. To install it, you just need to open cmd and enter:
+`rename_epw_files` (module `accim.data.preprocessing`) uses the package `geopy`, which is installed with accim since version 0.7.8. If you use an earlier version, or `geopy` was removed, open cmd and enter:
 
 `pip install geopy`
 
@@ -82,9 +82,9 @@ update_idf_version(
 
 ---
 
-`ValueError: 25.2 is not a valid EnergyPlus_version.`
+`ValueError: 8.9 is not a valid EnergyPlus_version.`
 
-`addAccis()` accepts `EnergyPlus_version` values from ‘9.1’ to ‘25.1’, or ‘auto’. For IDFs of EnergyPlus 25.2, use `EnergyPlus_version='auto'`, which reads the version of each IDF.
+`addAccis()` accepts `EnergyPlus_version` values from ‘9.1’ to ‘25.2’, or ‘auto’, which reads the version of each IDF. For an IDF of another version, update it as explained above.
 
 ---
 

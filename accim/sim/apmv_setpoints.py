@@ -316,14 +316,14 @@ def apply_apmv_setpoints(
         other_PMV_related_outputs: bool = True,
         adap_coeff_cooling: Union[float, dict] = 0.293,
         adap_coeff_heating: Union[float, dict] = -0.293,
-        pmv_cooling_sp: Union[float, dict] = -0.5,
-        pmv_heating_sp: Union[float, dict] = 0.5,
+        pmv_cooling_sp: Union[float, dict] = 0.5,
+        pmv_heating_sp: Union[float, dict] = -0.5,
         tolerance_cooling_sp_cooling_season: Union[float, dict] = -0.1,
         tolerance_cooling_sp_heating_season: Union[float, dict] = -0.1,
         tolerance_heating_sp_cooling_season: Union[float, dict] = 0.1,
         tolerance_heating_sp_heating_season: Union[float, dict] = 0.1,
-        cooling_season_start: Union[float, str] = 120,
-        cooling_season_end: Union[float, str] = 210,
+        cooling_season_start: Union[float, str] = 121,
+        cooling_season_end: Union[float, str] = 274,
         dflt_for_adap_coeff_cooling: float = 0.4,
         dflt_for_adap_coeff_heating: float = -0.4,
         dflt_for_pmv_cooling_sp: float = 0.5,
@@ -349,16 +349,18 @@ def apply_apmv_setpoints(
     :param other_PMV_related_outputs: If True, adds additional comfort-related output variables (e.g., Fanger PMV, PPD).
     :param adap_coeff_cooling: Adaptive coefficient (lambda) for cooling. Can be a single float (applied globally) or a dict {TargetName: Value}.
     :param adap_coeff_heating: Adaptive coefficient (lambda) for heating. Float or Dict {TargetName: Value}.
-    :param pmv_cooling_sp: Target aPMV setpoint for cooling (e.g., 0.5). Float or Dict. The PMV setpoint
+    :param pmv_cooling_sp: Target aPMV setpoint for cooling. Float or Dict. Default is 0.5. The PMV setpoint
         applied to the thermostat is obtained with the inverse aPMV formula, PMV = aPMV/(1 - lambda*aPMV).
-    :param pmv_heating_sp: Target aPMV setpoint for heating (e.g., -0.5). Float or Dict. Converted to PMV in
+    :param pmv_heating_sp: Target aPMV setpoint for heating. Float or Dict. Default is -0.5. Converted to PMV in
         the same way.
     :param tolerance_cooling_sp_cooling_season: Tolerance to widen the cooling setpoint band during cooling season.
     :param tolerance_cooling_sp_heating_season: Tolerance to widen the cooling setpoint band during heating season.
     :param tolerance_heating_sp_cooling_season: Tolerance to widen the heating setpoint band during cooling season.
     :param tolerance_heating_sp_heating_season: Tolerance to widen the heating setpoint band during heating season.
     :param cooling_season_start: Start day of the cooling season. Can be an integer (Day of Year) or string ('dd/mm').
-    :param cooling_season_end: End day of the cooling season. Can be an integer (Day of Year) or string ('dd/mm').
+        Default is 121 (1 May), as CoolSeasonStart in addAccis.
+    :param cooling_season_end: End day of the cooling season, which is not included in it. Can be an integer
+        (Day of Year) or string ('dd/mm'). Default is 274 (1 October), as CoolSeasonEnd in addAccis.
     :param dflt_for_adap_coeff_cooling: Default value for cooling adaptive coefficient if key is missing in dict input.
     :param dflt_for_adap_coeff_heating: Default value for heating adaptive coefficient if key is missing in dict input.
     :param dflt_for_pmv_cooling_sp: Default value for cooling PMV setpoint if key is missing in dict input.
