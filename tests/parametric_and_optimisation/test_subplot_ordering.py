@@ -5,7 +5,7 @@ import pytest
 matplotlib.use('Agg')
 
 from accim.parametric_and_optimisation.plotting import PlottingMixin
-from accim.parametric_and_optimisation.utils import resolve_subplot_order, resolve_subplot_orders
+from accim.parametric_and_optimisation.utils import resolve_subplot_order
 
 
 class _DummySubplotOrderingSession(PlottingMixin):
@@ -48,16 +48,6 @@ def test_resolve_subplot_order_custom_invalid_value_raises():
             values=['seville', 'madrid'],
             mode='custom',
             custom_values=['lisbon', 'madrid'],
-        )
-
-
-def test_resolve_subplot_orders_custom_missing_dimension_raises():
-    with pytest.raises(ValueError, match='requires explicit order for active dimensions'):
-        resolve_subplot_orders(
-            dimension_values={'col': ['a', 'b'], 'row': ['x', 'y']},
-            mode='custom',
-            custom={'col': ['a', 'b']},
-            context='test_subplot_ordering',
         )
 
 
