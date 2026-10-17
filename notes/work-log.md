@@ -23,6 +23,14 @@ existing tracking files — it does not replace them (see
 - **Validation**: the seven notebooks run without errors with PR #6, EnergyPlus 25.1 and pandas 3; local html build without warnings from these pages; `accim-samples` wheel 25.3 MB.
 - **Next step**: merge after PR #6.
 
+## 2026-10-16 — Sample notebook `full_example` removed
+
+- **Objective**: Decide what to do with the older full example of the sample files (`jupyter_notebooks/full_example`, EPW files of Japan), which failed after `pip install "accim[samples]"` and was left out of the update of the How-to notebooks.
+- **Affected files**: `accim/sample_files/jupyter_notebooks/full_example/` (removed); [[../CHANGELOG.md]]; [[../DEVLOG.md]].
+- **Finding or decision**: The author chose to remove it rather than update it: it repeated `full_example_IBPSA`, which is in the documentation. Nothing in the repository links to the folder; the link that `addAccis()` prints to its old documentation page (404) changes in PR #6.
+- **Validation**: `accim-samples` wheel 27.6 MB (29.8 MB before). Details in [[../DEVLOG.md]].
+- **Next step**: optional page redirect in Read the Docs for the link printed by accim 0.7.8 and earlier.
+
 
 ## 2026-10-16 — Release scripts, README and docs for `accim-samples`
 
