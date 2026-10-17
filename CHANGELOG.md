@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-17
+
 ### Added
 - **Overview page of parametric simulation and optimisation** (`docs/source/parametric_and_optimisation.rst`): the documentation explains the module in prose before the notebooks: the questions each class answers, the steps of a study with short code examples (model, simulation object, outputs and readers, parameters, plan or objectives, run, analysis), the kinds of parameters, the sampling methods, where the results are saved, disk space, and where each topic is in the notebooks `00`-`10` and `wf1`-`wf5`. `hourly_plotting` and `filter_output_csvs` move to the same section.
-- **Review of the documentation pages** against accim 0.7.8:
+- **Review of the documentation pages** against accim 0.8.0:
   - the landing page introduces accim and where to start;
   - Requirements: Python 3.9 or newer, and the version is shown (MyST did not replace `|version|`);
   - Quick tutorial: a runnable example instead of the outdated list of arguments;
@@ -163,7 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added focused tests in `tests/parametric_and_optimisation/test_sim_file_cleanup.py`.
 
 ### Changed
-- **Notebooks of the How-to Guides updated for accim 0.7.8 and EnergyPlus 25.1** (`addAccis`, `rename_epw_files`, `runEp`, `Table`, `full_example_IBPSA`, `research_paper_case_study_v0-7-3` and `example_apmv_setpoints_paper` in `accim/sample_files/jupyter_notebooks`): the copies in the sample files are now the only source, saved without outputs, and the documentation shows them as they ran with the current version.
+- **Notebooks of the How-to Guides updated for accim 0.8.0 and EnergyPlus 25.1** (`addAccis`, `rename_epw_files`, `runEp`, `Table`, `full_example_IBPSA`, `research_paper_case_study_v0-7-3` and `example_apmv_setpoints_paper` in `accim/sample_files/jupyter_notebooks`): the copies in the sample files are now the only source, saved without outputs, and the documentation shows them as they ran with the current version.
   - Current API: `accim.data.preprocessing.rename_epw_files` with `rename_city_dict` and `country_to_city_dict` (the module `accim.data.data_preprocessing` and the argument `rename_dict` no longer exist), and `accim.data.postprocessing.main.Table` with `idf_path`. The IDFs are for EnergyPlus 25.1 (`SmallOffice.idf` was updated with `update_idf_version`), and `addAccis` uses `EnergyPlus_version='auto'`.
   - aPMV notebook: `pmv_cooling_sp` and `pmv_heating_sp` are explained as setpoints on the aPMV scale, both cases use the same PMV inputs, and the final comparison shows the PMV setpoints of each case and season.
   - Corrected texts (axes and variables of the `Table` figures, the effect of `frequency_agg_func`, the questions that accim asks, links), and the notebooks that change their input IDF with `set_occupancy_to_always_path` restore it at the end.
@@ -175,6 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sample files moved to a separate, optional distribution (`accim-samples`)**: `pip install accim` now installs only the library (the wheel goes from about 36 MB to about 0.5 MB). The sample files (`accim/sample_files`: Jupyter notebooks, IDFs, EPWs, CSVs, figures and scripts) are published as the new distribution `accim-samples`, with the same version as accim, and are installed with `pip install "accim[samples]"` into the same `site-packages/accim/sample_files` folder. They can be added later with the same command and removed with `pip uninstall accim-samples` without affecting accim. `.ipynb_checkpoints` and `__pycache__` folders are no longer distributed.
   - Build: `dist_build_package.bat` builds both distributions into `dist/`; `accim-samples` is built by the new `packaging/build_samples_dist.py` from the template in `packaging/accim-samples/`. The script checks that the wheel only contains `accim/sample_files/**` and warns if a file exceeds the default PyPI upload limit (100 MB). `dist_upload_test.bat` and `dist_upload.bat` use the new `packaging/release.py`: they only upload the files of the current version, check both wheels and run `twine check`, skip what is already published, ask to type the version to confirm and upload `accim-samples` before `accim`.
   - Documentation: installation options in `README.md` and `docs/source/2_installation.md`; `README.md` (section 2.1.1) and `docs/source/2_installation.md` explain how to run the example notebooks.
+  - Upgrading from 0.7.7 or earlier, where the sample files were part of accim: `pip install --upgrade accim` removes them, and `pip install --upgrade "accim[samples]"` installs both distributions and keeps them.
 - **Consolidated Output-Objects API (`parametric_and_optimisation`)**: reduced the Output:Variable/Output:Meter method surface to a canonical set (read: `get_output_variables_df_from_idf`/`get_output_meters_df_from_idf`/`scan_output_objects`; discover: `discover_available_outputs`; write: `set_output_variables_to_idf`/`set_output_meters_to_idf`; prune: `keep_only_outputs_in_idfs`/`clear_outputs`/`autocorrect_output_duplicates`; orchestrate: `select_outputs`/`apply_outputs_preflight`/`set_output_readers`).
   - `set_output_variables_to_idf(...)` and `set_output_meters_to_idf(...)` now share the same argument order and defaults, including `validate=True` (behaviour change for variables, which previously defaulted to `False`); the deprecated `set_output_var_df_to_idf(...)` wrapper pins `validate=False` to preserve legacy behaviour.
   - Both setters share unified semantics: rows with empty `frequency` are expanded using `self.output_freqs`; `mode='replace'` always removes existing objects of the type in every scoped IDF (with a warning when nothing remains to add); object access is case-tolerant.
@@ -418,7 +421,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 A detailed changelog for versions prior to 0.7.5 was not formally maintained in this file.
 
 ---
-[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v0.7.7...HEAD
+[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/dsanchez-garcia/accim/compare/v0.7.7...v0.8.0
 [0.7.7]: https://github.com/dsanchez-garcia/accim/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/dsanchez-garcia/accim/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/dsanchez-garcia/accim/releases/tag/v0.7.5

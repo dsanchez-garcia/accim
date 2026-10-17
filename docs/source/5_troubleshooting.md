@@ -8,7 +8,7 @@ Below you can see a few errors you might get when using accim:
 
 `ModuleNotFoundError: No module named 'geopy'`
 
-`rename_epw_files` (module `accim.data.preprocessing`) uses the package `geopy`, which is installed with accim since version 0.7.8. If you use an earlier version, or `geopy` was removed, open cmd and enter:
+`rename_epw_files` (module `accim.data.preprocessing`) uses the package `geopy`, which is installed with accim since version 0.8.0. If you use an earlier version, or `geopy` was removed, open cmd and enter:
 
 `pip install geopy`
 

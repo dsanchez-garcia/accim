@@ -49,7 +49,7 @@ explains each step. Usage Examples::
     optim.set_problem(minimize_outputs=[True, True])
     results = optim.run_optimisation(algorithm='NSGAII', population_size=20, evaluations=60)
 
-.. versionadded:: 0.7.8
+.. versionadded:: 0.8.0
     Introduced dedicated ParametricSimulation and OptimisationSimulation
     classes for improved code organization and clarity.
 """
