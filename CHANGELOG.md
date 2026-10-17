@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-17
+
+### Fixed
+- **PuLP 4**: `pulp<4` is now in `install_requires`. PuLP 4.0 (September 2026) renamed the modules `pulp.apis.cplex_api`, `glpk_api`, `choco_api`, `gurobi_api` and `coin_api`, which `pyehub` imports (`pyehub` is a dependency of besos). In a new installation of accim 0.8.0, pip installed PuLP 4, and `from accim.parametric_and_optimisation import ...` failed with `ModuleNotFoundError: No module named 'pulp.apis.cplex_api'`. With accim 0.8.0, `pip install "pulp<4"` also solves it; the Troubleshooting page explains it.
+
 ## [0.8.0] - 2026-10-17
 
 ### Added
@@ -421,7 +426,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 A detailed changelog for versions prior to 0.7.5 was not formally maintained in this file.
 
 ---
-[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/dsanchez-garcia/accim/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/dsanchez-garcia/accim/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/dsanchez-garcia/accim/compare/v0.7.7...v0.8.0
 [0.7.7]: https://github.com/dsanchez-garcia/accim/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/dsanchez-garcia/accim/compare/v0.7.5...v0.7.6

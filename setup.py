@@ -138,6 +138,9 @@ setuptools.setup(
         'datapackage',
         'unidecode',
         'besos',
+        # besos needs pyehub, which imports pulp.apis.cplex_api and the other
+        # pulp.apis.*_api modules that PuLP 4.0 renamed.
+        'pulp<4',
         'SALib',
         'seaborn'
         # 'shutil',

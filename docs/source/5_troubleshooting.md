@@ -16,6 +16,14 @@ If the missing module is another one, reinstall accim, so that its dependencies 
 
 ---
 
+`ModuleNotFoundError: No module named 'pulp.apis.cplex_api'`
+
+`accim.parametric_and_optimisation` uses `besos`, which needs `pyehub`, and `pyehub` imports modules of PuLP that PuLP 4 renamed. accim requires `pulp<4` since version 0.8.1. If you use accim 0.8.0, or PuLP 4 was installed later, open cmd and enter:
+
+`pip install "pulp<4"`
+
+---
+
 `UnicodeEncodeError: 'latin-1' codec can't encode character '\u0144' in position  123174: ordinal not in range(256)`
 
 This error means that there are some unconventional characters within the model. To amend this problem, try the following:
