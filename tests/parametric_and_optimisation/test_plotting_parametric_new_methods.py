@@ -4,6 +4,7 @@ import warnings
 import matplotlib
 import pandas as pd
 import pytest
+import seaborn as sns
 
 matplotlib.use('Agg')
 
@@ -364,6 +365,68 @@ def test_plot_categorical_boxplots_without_hue_passes_no_palette_without_hue(tmp
     # Each energy type keeps its own colour of the palette, as before.
     box_colours = {tuple(patch.get_facecolor()) for patch in grid.axes.flat[0].patches}
     assert len(box_colours) == 2
+
+
+def _record_saved_grids(monkeypatch):
+    """List of the seaborn grids that the plotting methods save."""
+    saved = []
+    original_savefig = sns.FacetGrid.savefig
+
+    def savefig(self, *args, **kwargs):
+        saved.append(self)
+        return original_savefig(self, *args, **kwargs)
+
+    monkeypatch.setattr(sns.FacetGrid, 'savefig', savefig)
+    return saved
+
+
+def _suptitle_gap(grid):
+    """Pixels between the top of the facet titles and the bottom of the suptitle (< 0: overlap)."""
+    fig = grid.figure
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    facet_titles_top = max(ax.title.get_window_extent(renderer).y1 for ax in grid.axes.flat if ax.get_title())
+    return fig._suptitle.get_window_extent(renderer).y0 - facet_titles_top
+
+
+# A fixed subplots_adjust(top=0.9) left too little room above one short row of facets.
+@pytest.mark.parametrize(
+    ('method', 'kwargs'),
+    [
+        ('plot_categorical_boxplots', {'y_vars': ['Heating:Electricity [J]', 'Cooling:Electricity [J]'], 'hue': 'performance', 'show_points': False}),
+        ('plot_parametric_scatter', {'x': 'ComfStand', 'y': 'Heating:Electricity [J]', 'hue': 'performance'}),
+        ('plot_parametric_lines', {'x': 'ComfStand', 'y_vars': ['Heating:Electricity [J]'], 'hue': 'performance'}),
+        ('plot_parametric_distributions', {'x': 'HVACmode', 'y_vars': ['Heating:Electricity [J]']}),
+        ('plot_parametric_ecdf', {'x': 'Heating:Electricity [J]', 'hue': 'performance'}),
+    ],
+)
+def test_grid_plots_suptitle_does_not_overlap_facet_titles(tmp_path, monkeypatch, method, kwargs):
+    saved = _record_saved_grids(monkeypatch)
+    sim = _DummyPlotSession()
+
+    getattr(sim, method)(df_source='parametric', col='city', height=3, out_dir=str(tmp_path), **kwargs)
+
+    assert len(saved) == 1
+    assert _suptitle_gap(saved[0]) > 0
+
+
+def test_plot_categorical_boxplots_highlight_legend_keeps_subplots_right(tmp_path):
+    sim = _DummyPlotSession()
+
+    grid = sim.plot_categorical_boxplots(
+        df_source='parametric',
+        y_vars=['Heating:Electricity [J]', 'Cooling:Electricity [J]'],
+        col='city',
+        hue='performance',
+        highlight_dict={'HVACmode': [2]},
+        subplots_right=0.75,
+        show_points=False,
+        height=3,
+        out_dir=str(tmp_path),
+    )
+
+    assert grid.figure.subplotpars.right == pytest.approx(0.75)
+    assert _suptitle_gap(grid) > 0
 
 
 def test_plot_methods_resolve_column_renamed_by_normalize_outputs(tmp_path):
