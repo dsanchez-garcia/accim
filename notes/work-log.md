@@ -15,6 +15,15 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-16 — How-to notebooks: one source, run with accim 0.7.8
+
+- **Objective**: Make the sample files the only source of the How-to notebooks, correct them for accim 0.7.8 and EnergyPlus 25.1, run them and export them to the documentation.
+- **Affected files**: the seven How-to notebooks and their IDFs in `accim/sample_files/jupyter_notebooks/`; new `docs/prepare_howto_notebooks.py`; `docs/source/jupyter_notebooks/` (exported notebooks; data copies removed); [[../CHANGELOG.md]]; [[../DEVLOG.md]].
+- **Finding or decision**: Three notebooks needed fixes of accim code, found here and made in PR #6: `Table.time_plot` with pandas 3, the `'nan'` checks of `rename_epw_files`, and the `SetAST` program of `addAccis` with several output IDFs (stale lines since `95b695b`). The executed copies were run against PR #6. Details in [[../DEVLOG.md]].
+- **Validation**: the seven notebooks run without errors with PR #6, EnergyPlus 25.1 and pandas 3; local html build without warnings from these pages; `accim-samples` wheel 25.3 MB.
+- **Next step**: merge after PR #6.
+
+
 ## 2026-10-16 — Release scripts, README and docs for `accim-samples`
 
 - **Objective**: Publish accim on PyPI and build the documentation by running the `dist_*.bat` scripts; explain in the README and the documentation how to run the example notebooks with `accim[samples]`, and remove section 0 of the README.
