@@ -15,6 +15,14 @@ This log is a lightweight, session-scoped complement to the repository's
 existing tracking files — it does not replace them (see
 [[decisions.md#2026-09-13 — `notes/work-log.md` complements, not replaces, existing tracking files|the related decision]]).
 
+## 2026-10-17 — Release 0.8.0
+
+- **Objective**: Publish accim 0.8.0 on PyPI (with `accim-samples`), show 0.8.0 on Read the Docs and make the GitHub release.
+- **Affected files**: `accim/__init__.py`, [[../CHANGELOG.md]], `README.md`, two pages of `docs/source`, a docstring and a stale test; [[../DEVLOG.md]].
+- **Finding or decision**: 0.7.8 was never published, so the version goes from 0.7.7 to 0.8.0 and the texts that said 0.7.8 now say 0.8.0. A test that contradicted `f1e6bdc` (partial custom subplot orders) was removed. Only the tag `v0.8.0` was pushed. Right after an upload, the CDN can serve the old index page for a few minutes.
+- **Validation**: tests; dry run from TestPyPI; clean install from PyPI; GitHub release with the three files of `dist/`. Details in [[../DEVLOG.md]].
+- **Next step**: activate `v0.8.0` in Read the Docs.
+
 ## 2026-10-16 — How-to notebooks: one source, run with accim 0.7.8
 
 - **Objective**: Make the sample files the only source of the How-to notebooks, correct them for accim 0.7.8 and EnergyPlus 25.1, run them and export them to the documentation.
