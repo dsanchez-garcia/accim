@@ -2044,7 +2044,9 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
     #                 print(f'Added - Occ_count_{self.spacenames_for_ems_name[i]} Sensor')
     # else:
 
-    occ_count_keys = self.ems_objs_key
+    # The occupant instance of each target, or the zone if it has several instances (see scan_zones)
+    occ_count_keys = getattr(self, 'ems_occupancy_keys', self.ems_objs_key)
+    occ_count_variables = getattr(self, 'ems_occupancy_variables', ['People Occupant Count'] * len(occ_count_keys))
 
     for i in range(len(self.ems_objs_name)):
         if f'Occ_count_{self.ems_objs_name[i]}' in sensorlist:
@@ -2055,7 +2057,7 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
                 'EnergyManagementSystem:Sensor',
                 Name=f'Occ_count_{self.ems_objs_name[i]}',
                 OutputVariable_or_OutputMeter_Index_Key_Name=occ_count_keys[i],
-                OutputVariable_or_OutputMeter_Name='People Occupant Count'
+                OutputVariable_or_OutputMeter_Name=occ_count_variables[i]
             )
             if verboseMode:
                 print(f'Added - Occ_count_{self.ems_objs_name[i]} Sensor')
@@ -2152,16 +2154,18 @@ def addEMSSensorsBase(self, ScriptType: str = None, verboseMode: bool = True):
                     print('Not added - '+self.windownamelist[i]+'_Occ_count Sensor')
             else:
                 correct_key = 'People '+self.windownamelist_orig_split[i][0]
-                # Try to find the exact key from ems_objs_key
+                correct_variable = 'People Occupant Count'
+                # Try to find the exact key from the occupancy keys of the targets
                 for idx, z_name in enumerate(self.ems_zonenames):
                     if z_name.lower() == self.windownamelist_orig_split[i][0].lower():
-                        correct_key = self.ems_objs_key[idx]
+                        correct_key = occ_count_keys[idx]
+                        correct_variable = occ_count_variables[idx]
                         break
                 self.idf1.newidfobject(
                     'EnergyManagementSystem:Sensor',
                     Name=self.windownamelist[i]+'_Occ_count',
                     OutputVariable_or_OutputMeter_Index_Key_Name=correct_key,
-                    OutputVariable_or_OutputMeter_Name='People Occupant Count'
+                    OutputVariable_or_OutputMeter_Name=correct_variable
                     )
                 if verboseMode:
                     print('Added - '+self.windownamelist[i]+'_Occ_count Sensor')

@@ -727,12 +727,196 @@ def get_people_definition(idf: besos.IDF_class.IDF, people_instance: Any) -> Opt
     return None
 
 
+# Classes of heat transfer surfaces with a 'Space Name' field. In a zone with Space objects, EnergyPlus
+# creates the space '<Zone Name>-Remainder' for the surfaces of these classes without a Space Name.
+# Subsurfaces take the space of their base surface, and InternalMass and shading surfaces do not count.
+SURFACE_OBJECTS_WITH_SPACE_NAME = (
+    'BuildingSurface:Detailed', 'Wall:Detailed', 'RoofCeiling:Detailed', 'Floor:Detailed',
+    'Wall:Exterior', 'Wall:Adiabatic', 'Wall:Underground', 'Wall:Interzone', 'Roof',
+    'Ceiling:Adiabatic', 'Ceiling:Interzone', 'Floor:GroundContact', 'Floor:Adiabatic', 'Floor:Interzone',
+)
+
+
+def _get_objects_if_in_idd(idf: besos.IDF_class.IDF, object_type: str) -> List[Any]:
+    """Returns the objects of a class, or an empty list if the IDD of the model does not have the class."""
+    try:
+        return list(idf.idfobjects[object_type.upper()])
+    except KeyError:
+        return []
+
+
+def _get_field(obj: Any, field_name: str) -> str:
+    """Returns a field of an object as a stripped string, or '' if the object does not have the field."""
+    try:
+        value = obj[field_name]
+    except Exception:
+        value = getattr(obj, field_name, '')
+    return '' if value is None else str(value).strip()
+
+
+def get_energyplus_spaces(idf: besos.IDF_class.IDF) -> Dict[str, Dict[str, Any]]:
+    """
+    Returns the spaces of each zone, as EnergyPlus creates them.
+
+    A zone without Space objects has a default space named like the zone. In a zone with Space
+    objects, EnergyPlus also creates a space named '<Zone Name>-Remainder' when some of its heat
+    transfer surfaces have a Space Name and others do not (see SURFACE_OBJECTS_WITH_SPACE_NAME;
+    subsurfaces, InternalMass and shading surfaces do not count). The IDDs before EnergyPlus
+    9.6 have no Space objects, so each zone has its default space.
+
+    Args:
+        idf (besos.IDF_class.IDF): The IDF model object.
+
+    Returns:
+        Dict[str, Dict[str, Any]]: A dictionary whose keys are the zone names in uppercase, and whose
+                                   values have the keys 'zone' (the name of the zone), 'spaces' (the
+                                   names of its spaces, in the order of the Space objects, with the
+                                   remainder space at the end), 'explicit' (True if the zone has
+                                   Space objects) and 'remainder' (the name of the remainder space,
+                                   or None).
+    """
+    zones: Dict[str, Dict[str, Any]] = {}
+
+    def zone_entry(zone_name: str) -> Dict[str, Any]:
+        key = zone_name.upper()
+        if key not in zones:
+            zones[key] = {'zone': zone_name, 'spaces': [], 'explicit': False, 'remainder': None}
+        return zones[key]
+
+    for zone in _get_objects_if_in_idd(idf, 'Zone'):
+        zone_entry(_get_field(zone, 'Name'))
+    for space in _get_objects_if_in_idd(idf, 'Space'):
+        entry = zone_entry(_get_field(space, 'Zone_Name'))
+        entry['spaces'].append(_get_field(space, 'Name'))
+        entry['explicit'] = True
+
+    # Zones with heat transfer surfaces with a Space Name, and zones with surfaces without one
+    zones_with_space_surfaces = set()
+    zones_without_space_surfaces = set()
+    for object_type in SURFACE_OBJECTS_WITH_SPACE_NAME:
+        for surface in _get_objects_if_in_idd(idf, object_type):
+            zone_key = _get_field(surface, 'Zone_Name').upper()
+            if _get_field(surface, 'Space_Name'):
+                zones_with_space_surfaces.add(zone_key)
+            else:
+                zones_without_space_surfaces.add(zone_key)
+
+    for key, entry in zones.items():
+        if not entry['explicit']:
+            entry['spaces'] = [entry['zone']]
+        elif key in zones_with_space_surfaces and key in zones_without_space_surfaces:
+            entry['remainder'] = f"{entry['zone']}-Remainder"
+            entry['spaces'].append(entry['remainder'])
+    return zones
+
+
+def get_people_instances(idf: besos.IDF_class.IDF) -> List[Dict[str, Any]]:
+    """
+    Returns the instances that EnergyPlus creates for the People objects (and the People:Instance
+    objects of EnergyPlus 26.2), with the names it gives them. These names are the keys of their
+    outputs, such as 'People Occupant Count' or 'Zone Thermal Comfort Fanger Model PMV', so they
+    are the keys that the EMS sensors need.
+
+    EnergyPlus names the instances following the Input Output Reference ('Specifying Applicable
+    Zone(s) or Space(s)'), as checked with EnergyPlus 25.2 and 26.2:
+
+    - assigned to a Space: '<People Name>';
+    - assigned to a Zone: '<People Name>' if the zone has one space, or else
+      '<Space Name> <People Name>' for each space of the zone;
+    - assigned to a SpaceList or a ZoneList: '<Space Name> <People Name>' for each space.
+
+    The spaces of a zone are those of `get_energyplus_spaces`: the default space of a zone without
+    Space objects is named like the zone, and the remainder space is included. A People:Instance
+    object gives its own name to its instances, never the name of its People:Definition.
+
+    Args:
+        idf (besos.IDF_class.IDF): The IDF model object.
+
+    Returns:
+        List[Dict[str, Any]]: One dictionary per instance, in the order EnergyPlus creates them, with the keys:
+            - 'name': the name EnergyPlus gives the instance;
+            - 'people': the name of the People (or People:Instance) object;
+            - 'space': the space of the instance (a Space object, the default space or the remainder space);
+            - 'zone': the zone of the space;
+            - 'space_kind': 'explicit' (a Space object), 'default' or 'remainder';
+            - 'prefixed': True if the name starts with the name of the space;
+            - 'assignment': 'Space', 'SpaceList', 'Zone' or 'ZoneList';
+            - 'container': the name in the Zone or ZoneList or Space or SpaceList Name field;
+            - 'object': the People (or People:Instance) object.
+    """
+    zones = get_energyplus_spaces(idf)
+    space_to_zone = {
+        _get_field(s, 'Name').upper(): _get_field(s, 'Zone_Name') for s in _get_objects_if_in_idd(idf, 'Space')
+    }
+    space_lists = {_get_field(sl, 'Name').upper(): sl for sl in _get_objects_if_in_idd(idf, 'SpaceList')}
+    zone_lists = {_get_field(zl, 'Name').upper(): zl for zl in _get_objects_if_in_idd(idf, 'ZoneList')}
+
+    def list_members(list_obj: Any) -> List[str]:
+        # The members of a ZoneList or SpaceList are its fields after the name
+        return [str(m).strip() for m in list_obj.obj[2:] if str(m).strip()]
+
+    def zone_spaces(zone_name: str) -> List[Tuple[str, str]]:
+        # (space, kind) of each space of a zone. The default space keeps the zone name as written where the
+        # zone is referenced, and a zone unknown to the model is handled as a zone without Space objects.
+        entry = zones.get(zone_name.upper())
+        if entry is None or not entry['explicit']:
+            return [(zone_name, 'default')]
+        return [(s, 'remainder' if s == entry['remainder'] else 'explicit') for s in entry['spaces']]
+
+    instances = []
+    for people in get_people_objects(idf):
+        p_name = _get_field(people, 'Name')
+        # The name of the field depends on the version of EnergyPlus
+        container = ''
+        for field_name in ['Zone_or_ZoneList_or_Space_or_SpaceList_Name', 'Zone_or_ZoneList_Name', 'Zone_Name']:
+            container = _get_field(people, field_name)
+            if container:
+                break
+        if not container:
+            continue
+        c_upper = container.upper()
+
+        # (space, zone, kind) of each instance
+        if c_upper in space_to_zone:
+            assignment = 'Space'
+            resolved = [(container, space_to_zone[c_upper], 'explicit')]
+            prefixed = False
+        elif c_upper in space_lists:
+            assignment = 'SpaceList'
+            resolved = [(s, space_to_zone.get(s.upper(), s), 'explicit') for s in list_members(space_lists[c_upper])]
+            prefixed = True
+        elif c_upper in zone_lists:
+            assignment = 'ZoneList'
+            resolved = [(s, z, kind) for z in list_members(zone_lists[c_upper]) for s, kind in zone_spaces(z)]
+            prefixed = True
+        else:
+            assignment = 'Zone'
+            resolved = [(s, container, kind) for s, kind in zone_spaces(container)]
+            prefixed = len(resolved) > 1
+
+        for space_name, zone_name, kind in resolved:
+            instances.append({
+                'name': f'{space_name} {p_name}' if prefixed else p_name,
+                'people': p_name,
+                'space': space_name,
+                'zone': zone_name,
+                'space_kind': kind,
+                'prefixed': prefixed,
+                'assignment': assignment,
+                'container': container,
+                'object': people,
+            })
+    return instances
+
+
 def get_people_hierarchy(idf: besos.IDF_class.IDF) -> Dict[str, Any]:
     """
     Extracts the relationship between People objects and the physical Spaces they occupy.
 
     Since a 'People' object can reference a Zone, a ZoneList, a Space, or a SpaceList,
-    this function resolves all these references down to a list of specific Space names.
+    this function resolves all these references down to a list of specific Space names,
+    as EnergyPlus does (see `get_people_instances`): the default space of a zone without
+    Space objects is named like the zone, and the remainder space of a zone is included.
     The People:Instance objects of EnergyPlus 26.2 are included in the same way.
 
     Args:
@@ -745,85 +929,24 @@ def get_people_hierarchy(idf: besos.IDF_class.IDF) -> Dict[str, Any]:
                         {
                             "Residential Living Occupants": {
                                 "target_ref": "Residential - Living Space",
-                                "target_type": "SpaceList",  (inferred)
+                                "inferred_type": "SpaceList",
                                 "affected_spaces": ["Floor_1", "Floor_2"]
                             }
                         }
     """
+    # Group the instances by the People object they come from
+    instances_by_people: Dict[int, List[Dict[str, Any]]] = {}
+    for instance in get_people_instances(idf):
+        instances_by_people.setdefault(id(instance['object']), []).append(instance)
 
-    # 1. BUILD A RESOLVER MAP (Key: UpperName -> Value: List of Space Names)
-    # We need a unified dictionary to look up any name (Zone, Space, List)
-    # and immediately get the list of spaces it represents.
-    resolver_map: Dict[str, List[str]] = {}
-
-    # Helper to track what type the name refers to (for info purposes)
-    type_map: Dict[str, str] = {}
-
-    # --- A. Index Single SPACES ---
-    # A Space references itself.
-    spaces = idf.idfobjects['SPACE']
-    for s in spaces:
-        s_upper = s.Name.upper()
-        resolver_map[s_upper] = [s.Name]
-        type_map[s_upper] = "Space"
-
-    # --- B. Index ZONES (Zone -> Spaces) ---
-    # We map Zones to the Spaces they contain.
-    # We iterate through spaces to find their parent Zone.
-    zone_to_spaces_temp: Dict[str, List[str]] = {}
-
-    for s in spaces:
-        z_ref_upper = str(s.Zone_Name).upper()
-        if z_ref_upper not in zone_to_spaces_temp:
-            zone_to_spaces_temp[z_ref_upper] = []
-        zone_to_spaces_temp[z_ref_upper].append(s.Name)
-
-    # Add to main resolver
-    for z_upper, s_list in zone_to_spaces_temp.items():
-        resolver_map[z_upper] = s_list
-        type_map[z_upper] = "Zone"
-
-    # --- C. Index SPACELISTS ---
-    for sl in idf.idfobjects['SPACELIST']:
-        sl_upper = sl.Name.upper()
-        # Get members (fields starting from index 2)
-        members = [m for m in sl.obj[2:]]
-        resolver_map[sl_upper] = members
-        type_map[sl_upper] = "SpaceList"
-
-    # --- D. Index ZONELISTS ---
-    # A ZoneList contains Zones, which contain Spaces. We need to chain this.
-    for zl in idf.idfobjects['ZONELIST']:
-        zl_upper = zl.Name.upper()
-        z_members = [m.upper() for m in zl.obj[2:]]
-
-        # Collect all spaces from all zones in this list
-        all_spaces_in_list = []
-        for z_name in z_members:
-            if z_name in zone_to_spaces_temp:
-                all_spaces_in_list.extend(zone_to_spaces_temp[z_name])
-
-        resolver_map[zl_upper] = all_spaces_in_list
-        type_map[zl_upper] = "ZoneList"
-
-    # 2. PROCESS PEOPLE AND PEOPLE:INSTANCE OBJECTS
     people_hierarchy = {}
-
     for person in get_people_objects(idf):
-        p_name = person.Name
-        # The critical field that links People to Geometry
-        target_name = person.Zone_or_ZoneList_or_Space_or_SpaceList_Name
-        target_upper = str(target_name).upper()
-
-        # Resolve the spaces using our map
-        # Default to empty list if target is invalid/missing
-        affected_spaces = resolver_map.get(target_upper, [])
-        inferred_type = type_map.get(target_upper, "Unknown")
-
-        people_hierarchy[p_name] = {
-            "target_ref": target_name,
-            "inferred_type": inferred_type,
-            "affected_spaces": affected_spaces
+        instances = instances_by_people.get(id(person), [])
+        people_hierarchy[person.Name] = {
+            "target_ref": instances[0]['container'] if instances else _get_field(
+                person, 'Zone_or_ZoneList_or_Space_or_SpaceList_Name'),
+            "inferred_type": instances[0]['assignment'] if instances else "Unknown",
+            "affected_spaces": [i['space'] for i in instances]
         }
 
     return people_hierarchy
@@ -834,47 +957,32 @@ def get_people_names_for_ems(
         output_format: str = 'list'
 ) -> Union[List[str], Dict[str, List[str]]]:
     """
-    Generates unique instance names for People objects (and the People:Instance objects of
-    EnergyPlus 26.2) applied to spaces.
+    Returns the names EnergyPlus gives the instances of the People objects (and the People:Instance
+    objects of EnergyPlus 26.2), which are the keys of their outputs in EMS sensors
+    (see `get_people_instances`).
 
-    Naming Pattern: "{SpaceName} {PeopleName}"
+    Naming Pattern: "{PeopleName}" for People assigned to a Space or to a Zone of one space,
+    and "{SpaceName} {PeopleName}" for each space otherwise.
     Example: "Floor_1 Residential Living Occupants"
 
     Args:
         idf (besos.IDF_class.IDF): The BESOS IDF model object.
         output_format (str): Controls the structure of the return value.
-                             - 'list' (Default): Returns a flat list of all generated names.
-                             - 'dict': Returns a dictionary {PeopleName: [GeneratedNames]}.
+                             - 'list' (Default): Returns a flat list of all instance names.
+                             - 'dict': Returns a dictionary {PeopleName: [InstanceNames]}.
 
     Returns:
         Union[List[str], Dict[str, List[str]]]: A flat list or a dictionary depending on output_format.
     """
+    instances = get_people_instances(idf)
 
-    # 1. Get the raw hierarchy data
-    hierarchy_data = get_people_hierarchy(idf)
-
-    # Initialize containers
-    expanded_names_dict: Dict[str, List[str]] = {}
-    flat_list: List[str] = []
-
-    # 2. Iterate and generate names
-    for people_name, data in hierarchy_data.items():
-        affected_spaces = data.get("affected_spaces", [])
-
-        # Generate names: Space Name + People Name
-        generated_names = [f"{space.strip()} {people_name.strip()}" for space in affected_spaces]
-
-        if output_format == 'dict':
-            expanded_names_dict[people_name] = generated_names
-        else:
-            # If list mode, extend the master list
-            flat_list.extend(generated_names)
-
-    # 3. Return based on requested format
     if output_format == 'dict':
-        return expanded_names_dict
+        names_by_people: Dict[int, List[str]] = {}
+        for instance in instances:
+            names_by_people.setdefault(id(instance['object']), []).append(instance['name'])
+        return {person.Name: names_by_people.get(id(person), []) for person in get_people_objects(idf)}
     else:
-        return flat_list
+        return [instance['name'] for instance in instances]
 
 def get_idf_hierarchy(idf: besos.IDF_class) -> Dict[str, Any]:
     """
@@ -987,9 +1095,12 @@ def get_idf_hierarchy_with_people(idf: besos.IDF_class.IDF) -> Dict[str, Any]:
         - "name": The name of the space (str).
         - "people": The name of the associated People object (str) or None.
 
-    The function resolves the 'People' object assignment regardless of whether
-    it is assigned to a Space, a Zone, a SpaceList, or a ZoneList. The People:Instance
-    objects of EnergyPlus 26.2 are handled as People objects.
+    The spaces are those that EnergyPlus creates (see `get_energyplus_spaces`): the Space
+    objects, the default space of each zone without Space objects, named like the zone, and the
+    remainder spaces. The function resolves the 'People' object assignment regardless of whether
+    it is assigned to a Space, a Zone, a SpaceList, or a ZoneList, as EnergyPlus does
+    (see `get_people_instances`). The People:Instance objects of EnergyPlus 26.2 are handled as
+    People objects.
 
     Args:
         idf (besos.IDF_class.IDF): The BESOS IDF model object.
@@ -1025,11 +1136,8 @@ def get_idf_hierarchy_with_people(idf: besos.IDF_class.IDF) -> Dict[str, Any]:
     # 1. Map UPPERCASE Zone Name -> Original Name
     zone_name_map: Dict[str, str] = {}
 
-    # 2. Map UPPERCASE Zone Name -> List of Space Dictionaries
-    zone_to_space_objs: Dict[str, List[Dict[str, Any]]] = {}
-
-    # 3. Map UPPERCASE Space Name -> The specific Space Dictionary
-    space_obj_map: Dict[str, Dict[str, Any]] = {}
+    # 2. Map (UPPERCASE Zone Name, UPPERCASE Space Name) -> The specific Space Dictionary
+    space_obj_map: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
     # --- STEP 1: PROCESS ZONES ---
     zones = idf.idfobjects['ZONE']
@@ -1038,7 +1146,6 @@ def get_idf_hierarchy_with_people(idf: besos.IDF_class.IDF) -> Dict[str, Any]:
         z_name_upper = str(z_name_original).upper()
 
         zone_name_map[z_name_upper] = z_name_original
-        zone_to_space_objs[z_name_upper] = []
 
         hierarchy["zones"][z_name_original] = {
             "object_type": "Zone",
@@ -1046,88 +1153,40 @@ def get_idf_hierarchy_with_people(idf: besos.IDF_class.IDF) -> Dict[str, Any]:
         }
 
     # --- STEP 2: PROCESS SPACES ---
-    spaces = idf.idfobjects['SPACE']
-    for space in spaces:
-        s_name = space.Name
-        s_name_upper = str(s_name).upper()
+    for z_name_upper, zone_spaces in get_energyplus_spaces(idf).items():
+        if z_name_upper not in zone_name_map:
+            for s_name in zone_spaces['spaces']:
+                print(f"WARNING: Space '{s_name}' references unknown Zone: '{zone_spaces['zone']}'")
+            continue
+        real_zone_name = zone_name_map[z_name_upper]
 
-        # Create the Space Dictionary
-        # 'people' is initialized as None. It will be a string if found later.
-        space_dict = {
-            "name": s_name,
-            "people": None
-        }
+        for s_name in zone_spaces['spaces']:
+            # Create the Space Dictionary
+            # 'people' is initialized as None. It will be a string if found later.
+            space_dict = {
+                "name": s_name,
+                "people": None
+            }
 
-        # Index it for direct access later
-        space_obj_map[s_name_upper] = space_dict
-
-        # Link to Parent Zone
-        parent_ref_upper = str(space.Zone_Name).upper()
-
-        if parent_ref_upper in zone_name_map:
-            real_zone_name = zone_name_map[parent_ref_upper]
-
-            # Add to the main hierarchy
+            # Add to the main hierarchy, and index it for direct access later
             hierarchy["zones"][real_zone_name]["spaces"].append(space_dict)
+            space_obj_map[(z_name_upper, str(s_name).upper())] = space_dict
 
-            # Add to our internal index
-            zone_to_space_objs[parent_ref_upper].append(space_dict)
-        else:
-            print(f"WARNING: Space '{s_name}' references unknown Zone: '{space.Zone_Name}'")
-
-    # --- STEP 3: PROCESS LISTS (For resolving references) ---
-
-    # Map SpaceList Name (Upper) -> List of Space Names (Upper)
-    spacelist_map: Dict[str, List[str]] = {}
-    for sl in idf.idfobjects['SPACELIST']:
-        members = [str(m).upper() for m in sl.obj[2:]]
-        spacelist_map[sl.Name.upper()] = members
+    # --- STEP 3: PROCESS LISTS ---
+    for sl in _get_objects_if_in_idd(idf, 'SpaceList'):
         hierarchy["groups"]["space_lists"][sl.Name] = [m for m in sl.obj[2:]]
 
-    # Map ZoneList Name (Upper) -> List of Zone Names (Upper)
-    zonelist_map: Dict[str, List[str]] = {}
-    for zl in idf.idfobjects['ZONELIST']:
-        members = [str(m).upper() for m in zl.obj[2:]]
-        zonelist_map[zl.Name.upper()] = members
+    for zl in _get_objects_if_in_idd(idf, 'ZoneList'):
         hierarchy["groups"]["zone_lists"][zl.Name] = [m for m in zl.obj[2:]]
 
     # --- STEP 4: PROCESS PEOPLE AND PEOPLE:INSTANCE (Inject into Space Dicts) ---
-    people_objs = get_people_objects(idf)
-
-    for person in people_objs:
-        p_name = person.Name
-        target_name = person.Zone_or_ZoneList_or_Space_or_SpaceList_Name
-        target_upper = str(target_name).upper()
-
-        affected_space_dicts = []
-
-        # LOGIC: Determine what the target is and collect affected space dictionaries
-
-        # Case A: Target is a direct SPACE
-        if target_upper in space_obj_map:
-            affected_space_dicts.append(space_obj_map[target_upper])
-
-        # Case B: Target is a ZONE (Add all spaces in that zone)
-        elif target_upper in zone_to_space_objs:
-            affected_space_dicts.extend(zone_to_space_objs[target_upper])
-
-        # Case C: Target is a SPACELIST
-        elif target_upper in spacelist_map:
-            for member_space_upper in spacelist_map[target_upper]:
-                if member_space_upper in space_obj_map:
-                    affected_space_dicts.append(space_obj_map[member_space_upper])
-
-        # Case D: Target is a ZONELIST
-        elif target_upper in zonelist_map:
-            for member_zone_upper in zonelist_map[target_upper]:
-                if member_zone_upper in zone_to_space_objs:
-                    affected_space_dicts.extend(zone_to_space_objs[member_zone_upper])
-
-        # --- INJECT PEOPLE NAME ---
-        for s_dict in affected_space_dicts:
+    # Each instance that EnergyPlus creates for a People object is in one space
+    for instance in get_people_instances(idf):
+        s_dict = space_obj_map.get((instance['zone'].upper(), instance['space'].upper()))
+        if s_dict is not None:
             # We assign the string directly.
             # If multiple people objects point to the same space, the last one processed wins.
-            s_dict["people"] = p_name
+            s_dict["people"] = instance['people']
 
     return hierarchy
 
@@ -1749,13 +1808,14 @@ def identify_variable_key_pattern(
                     if p_name_clean.upper() == eso_key_clean:
                         return "[People Name]"
 
-                    # 3. Check Composite: Space Name + People Name
-                    if f"{s_name} {p_name_clean}".upper() == eso_key_clean:
-                        return "[Space Name] [People Name]"
-
-                    # 4. Check Composite: Zone Name + People Name
+                    # 3. Check Composite: Zone Name + People Name (before the space: the default
+                    # space of a zone without Space objects is named like the zone)
                     if f"{str(zone_name).strip()} {p_name_clean}".upper() == eso_key_clean:
                         return "[Zone Name] [People Name]"
+
+                    # 4. Check Composite: Space Name + People Name
+                    if f"{s_name} {p_name_clean}".upper() == eso_key_clean:
+                        return "[Space Name] [People Name]"
 
         return f"Pattern not identified automatically for key: '{eso_key_raw}'"
 

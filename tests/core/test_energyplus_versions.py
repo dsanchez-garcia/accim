@@ -17,6 +17,10 @@ InitASTvariables now sets those variables at BeginNewEnvironment.
 accim also reads the People:Definition and People:Instance objects of EnergyPlus 26.2, which it
 rejected before (see test_people_instance.py): the sample model converted to these objects gives the
 same results as with People objects, with addAccis and with aPMV setpoints.
+
+In models with Space objects, the EMS sensors now read the names that EnergyPlus gives the occupant
+instances, and a zone with several instances is one target (see test_space_instance_names.py): the sample
+model with People assigned to a Space, to Zones of one and two spaces and to a SpaceList now simulates.
 """
 import builtins
 import os
@@ -580,3 +584,110 @@ def test_people_instances_simulate_as_people_with_apmv_setpoints_and_26_2(idf_26
     assert sensors == _ems_objects(idfs['people'], 'EnergyManagementSystem:Sensor')
     assert {key for name, key, variable in sensors if variable == 'Zone Thermal Comfort Fanger Model PMV'} == PEOPLE_NAMES
     pd.testing.assert_frame_equal(_hourly_results(tmp_path / 'instances'), _hourly_results(tmp_path / 'people'))
+
+
+# Models with Space objects, built from the sample model in models/: People assigned to a Space and to a
+# Zone of one space, to a Zone of two spaces (the floor of Block1:Zone1 split in two), and to a SpaceList
+# of the three spaces. addAccis and the aPMV setpoints (in the zone of two spaces) are simulated for one
+# day with EnergyPlus 26.2.
+_SPACE_MODELS_SCRIPT = """
+import os, subprocess, sys
+from pathlib import Path
+from besos.eppy_funcs import get_building
+from accim.utils import reduce_runtime
+root = Path(sys.argv[1]).resolve()
+os.chdir(root / 'models')
+
+
+def surfaces(building, zone):
+    return [s for s in building.idfobjects['BUILDINGSURFACE:DETAILED'] if s.Zone_Name == zone]
+
+
+def add_space(building, name, zone, zone_surfaces):
+    building.newidfobject('SPACE', Name=name, Zone_Name=zone)
+    for surface in zone_surfaces:
+        surface.Space_Name = name
+
+
+def people(building, zone):
+    return [p for p in building.idfobjects['PEOPLE'] if p.Name == f'People {zone}'][0]
+
+
+def split_floor_of_zone_1(building):
+    floor = [s for s in surfaces(building, 'Block1:Zone1') if s.Surface_Type.upper() == 'FLOOR'][0]
+    half = building.copyidfobject(floor)
+    half.Name = 'Block1:Zone1_GroundFloor_B'
+    ys = sorted({float(floor[f'Vertex_{n}_Ycoordinate']) for n in range(1, 5)})
+    middle = (ys[0] + ys[-1]) / 2
+    for n in range(1, 5):
+        if float(floor[f'Vertex_{n}_Ycoordinate']) == ys[-1]:
+            floor[f'Vertex_{n}_Ycoordinate'] = middle
+        if float(half[f'Vertex_{n}_Ycoordinate']) == ys[0]:
+            half[f'Vertex_{n}_Ycoordinate'] = middle
+    return half
+
+
+def simulate_1_day(model, name):
+    reduce_runtime(idf_object=model)
+    model.idfobjects['SimulationControl'][0].Run_Simulation_for_Sizing_Periods = 'No'
+    model.saveas(f'{name}_1_day.idf')
+    subprocess.run(['C:/EnergyPlusV26-2-0/energyplus.exe', '-w', str(root / 'Seville.epw'), '-d', f'out_{name}',
+                    f'{name}_1_day.idf'], capture_output=True)
+
+
+building = get_building('TestModel.idf')
+add_space(building, 'Space 1', 'Block1:Zone1', surfaces(building, 'Block1:Zone1'))
+add_space(building, 'Space 2', 'Block1:Zone2', surfaces(building, 'Block1:Zone2'))
+people(building, 'Block1:Zone1').Zone_or_ZoneList_or_Space_or_SpaceList_Name = 'Space 1'
+building.saveas('SpaceAndZoneOfOneSpace.idf')
+
+building = get_building('TestModel.idf')
+half = split_floor_of_zone_1(building)
+add_space(building, 'Space 1a', 'Block1:Zone1', [s for s in surfaces(building, 'Block1:Zone1') if s.Name != half.Name])
+add_space(building, 'Space 1b', 'Block1:Zone1', [half])
+add_space(building, 'Space 2', 'Block1:Zone2', surfaces(building, 'Block1:Zone2'))
+building.saveas('ZoneOfTwoSpaces.idf')
+building.removeidfobject(people(building, 'Block1:Zone2'))
+building.newidfobject('SPACELIST', Name='All spaces', Space_1_Name='Space 1a', Space_2_Name='Space 1b',
+                      Space_3_Name='Space 2')
+people(building, 'Block1:Zone1').Zone_or_ZoneList_or_Space_or_SpaceList_Name = 'All spaces'
+building.saveas('SpaceList.idf')
+os.remove('TestModel.idf')
+
+from accim.sim import accis
+accis.addAccis(
+    ScriptType='vrf_ac', SupplyAirTempInputMethod='supply air temperature', Output_type='standard',
+    Output_freqs=['hourly'], Output_keep_existing=False, EnergyPlus_version='auto', TempCtrl='temperature',
+    ComfStand=[1], CAT=[3], ComfMod=[3], HVACmode=[0], confirmGen=True, verboseMode=False,
+)
+for output_idf in sorted(Path('.').glob('*[[]*.idf')):
+    simulate_1_day(get_building(str(output_idf)), output_idf.name.split('[')[0])
+
+from accim.sim.apmv_setpoints import add_vrf_system, apply_apmv_setpoints
+building = get_building('ZoneOfTwoSpaces.idf')
+add_vrf_system(building, verbose_mode=False)
+apply_apmv_setpoints(building, outputs_freq=['hourly'], verbose_mode=False)
+simulate_1_day(building, 'aPMV_ZoneOfTwoSpaces')
+"""
+
+
+@needs_26_2
+def test_models_with_space_objects_simulate_with_26_2(idf_26_2, tmp_path):
+    # Before, the sensors of the People assigned to a Space or to a Zone of one space read keys that EnergyPlus
+    # does not create ('Space 1 People Block1:Zone1'), and addAccis and add_vrf_system created
+    # 'Block1:Zone1 Dual SP' once per space in the zone of two spaces, so EnergyPlus stopped.
+    (tmp_path / 'models').mkdir()
+    shutil.copy(idf_26_2, tmp_path / 'models' / 'TestModel.idf')
+    shutil.copy(SAMPLE_EPW, tmp_path / 'Seville.epw')
+
+    _run_in_new_process(_SPACE_MODELS_SCRIPT, tmp_path)
+
+    for name in ['SpaceAndZoneOfOneSpace', 'ZoneOfTwoSpaces', 'SpaceList', 'aPMV_ZoneOfTwoSpaces']:
+        err = (tmp_path / 'models' / f'out_{name}' / 'eplusout.err').read_text(encoding='utf-8', errors='ignore')
+        assert 'Index Key Name' not in err and 'Duplicate name found' not in err, (name, err[-3000:])
+        assert 'EnergyPlus Completed Successfully' in err, (name, err[-3000:])
+    sensors = {name: (key, variable) for name, key, variable in _ems_objects(
+        (tmp_path / 'models' / 'ZoneOfTwoSpaces_1_day.idf').read_text(encoding='utf-8', errors='ignore'),
+        'EnergyManagementSystem:Sensor')}
+    assert sensors['Occ_count_Block1_Zone1'] == ('Block1:Zone1', 'Zone People Occupant Count')
+    assert sensors['Occ_count_Space_2_People_Block1_Zone2'] == ('People Block1:Zone2', 'People Occupant Count')

@@ -5274,17 +5274,15 @@ class SimulationBase(AnalysisMixin, PlottingMixin):
         candidates_norm = sorted({_norm_token(c) for c in candidates if c}, key=len, reverse=True)
         candidates_norm_to_original = { _norm_token(c): c for c in candidates if c }
 
-        # Build mapping of People instance key_value -> Space name using IDF hierarchy
+        # Build mapping of People instance key_value -> Space name, with the names EnergyPlus gives the
+        # instances ('<People Name>' for People assigned to a Space or to a Zone of one space)
         try:
-            from accim.utils import get_people_hierarchy, get_people_names_for_ems
+            from accim.utils import get_people_hierarchy, get_people_instances
             people_hierarchy = get_people_hierarchy(building_for_testsim)
-            people_instances = get_people_names_for_ems(building_for_testsim, output_format='dict')
-            instance_to_space: dict[str, str] = {}
-            for (people_name, _instances) in people_instances.items():
-                affected_spaces = people_hierarchy.get(people_name, {}).get('affected_spaces', [])
-                for space in affected_spaces:
-                    generated = f"{str(space).strip()} {str(people_name).strip()}"
-                    instance_to_space[_norm_token(generated)] = str(space)
+            instance_to_space: dict[str, str] = {
+                _norm_token(instance['name']): str(instance['space'])
+                for instance in get_people_instances(building_for_testsim)
+            }
         except Exception:
             people_hierarchy = {}
             instance_to_space = {}

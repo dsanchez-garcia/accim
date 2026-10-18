@@ -19,7 +19,8 @@ import pandas as pd
 from besos.IDF_class import IDF
 import besos.objectives
 import eppy
-from accim.utils import transform_ddmm_to_int, get_people_objects, get_people_definition, is_people_instance
+from accim.utils import (transform_ddmm_to_int, get_people_objects, get_people_definition, is_people_instance,
+                         get_energyplus_spaces, get_people_instances)
 import accim.sim.accim_Main_single_idf as accim_Main
 
 # ==============================================================================
@@ -94,217 +95,96 @@ def _sanitize_ems_name(name: str) -> str:
     return re.sub(r'[^a-zA-Z0-9_]', '_', name)
 
 
-def _resolve_targets(building: IDF) -> List[Dict[str, str]]:
+def _resolve_targets(building: IDF) -> List[Dict[str, Any]]:
     """
-    Analyzes the IDF to find all 'People' objects and resolves their target Zones or Spaces
-    for EMS application. It follows a strict Global Hierarchy to determine the target level.
+    Analyzes the IDF to find all 'People' objects and resolves the targets of the EMS: one per
+    occupied zone, since the Schedules and Thermostats that the EMS controls are Zone-based.
 
-    The 'People:Instance' objects of EnergyPlus 26.2 are resolved in the same way: EnergyPlus
-    names their outputs after the People:Instance object (never after its People:Definition),
-    following the same rules as for People objects.
+    EnergyPlus creates one occupant instance for each space a 'People' object applies to, and
+    names it as described in `accim.utils.get_people_instances`: '<People Name>' for People
+    assigned to a Space or to a Zone of one space, and '<Space Name> <People Name>' for People
+    assigned to a SpaceList, a ZoneList or a Zone of several spaces. The sensor keys are those
+    names, which are the keys of the outputs that the sensors read. The 'People:Instance' objects
+    of EnergyPlus 26.2 are resolved in the same way: EnergyPlus names their instances after the
+    People:Instance object (never after its People:Definition).
 
-    The logic is based on the presence of specific object types in the model to ensure
-    compatibility with both legacy (Zone-based) and modern (Space-based) EnergyPlus versions.
-
-    LOGIC HIERARCHY (3 Levels):
-    1. GLOBAL CHECK: Are there SPACE or SPACELIST objects in the model?
-       - YES: The model is "Modern" (v23.1+ with Spaces).
-         ALL targets resolve to the pattern 'SpaceName PeopleName'.
-         (Even if People are assigned to a ZoneList, we find the spaces inside those zones).
-
-    2. ELSE: Are there ZONELIST objects in the model?
-       - YES: The model uses ZoneLists for grouping.
-         If People assigned to ZoneList -> Expand to 'ZoneName PeopleName'.
-         If People assigned to Zone     -> Use 'ZoneName' (Sensor uses PeopleName).
-
-    3. ELSE:
-       - The model is simple (Zones only).
-         Target resolves to 'ZoneName' (Sensor uses PeopleName).
+    TARGETS:
+    1. A zone with ONE instance (the usual case: People assigned to each zone, or to a SpaceList
+       with one space per zone, as in OpenStudio models):
+       - 'df_key' and 'ems_suffix' are the zone name if the People object is assigned to a zone
+         without Space objects, and '<Space Name> <People Name>' otherwise.
+       - The occupancy is the 'People Occupant Count' of the instance.
+    2. A zone with SEVERAL instances (a zone of several spaces, a SpaceList or ZoneList that covers
+       several spaces of the zone, a remainder space, or several People objects in the zone):
+       - 'df_key' and 'ems_suffix' are the zone name.
+       - The occupancy is the 'Zone People Occupant Count' of the zone, which adds up the
+         occupants of all its instances.
+       - 'instance_keys' lists the instances, whose PMV the aPMV setpoints average.
 
     :param building: The BESOS/eppy IDF object representing the building model.
     :return: A list of dictionaries, where each dictionary represents a target control unit:
              - 'df_key': Unique identifier for user input DataFrames (e.g., "Space1 People1").
              - 'ems_suffix': Sanitized string for EMS variable naming (e.g., "Space1_People1").
-             - 'sensor_key': The exact key E+ expects for the Sensor object (e.g., "Space1 People1").
+             - 'sensor_key': The key of the (first) instance, for the Sensors of People outputs (e.g., "Space1 People1").
              - 'zone_name': The raw name of the Zone (used for Schedules/Thermostats, which are always Zone-based).
+             - 'occupancy_key' and 'occupancy_variable': The key and the output variable of the occupancy Sensor
+               (the instance and 'People Occupant Count', or the zone and 'Zone People Occupant Count').
+             - 'instance_keys': The keys of all the instances of the zone.
+             - 'people_names': The names of the People objects of these instances.
     """
+    instances = get_people_instances(building)
+    zones = get_energyplus_spaces(building)
+
+    # Group the instances by zone, in the order EnergyPlus creates them
+    instances_by_zone: Dict[str, List[Dict[str, Any]]] = {}
+    for instance in instances:
+        instances_by_zone.setdefault(instance['zone'].upper(), []).append(instance)
+
     targets = []
+    for zone_upper, zone_instances in instances_by_zone.items():
+        people_names = list(dict.fromkeys(i['people'] for i in zone_instances))
 
-    # --- 1. BUILD LOOKUP DICTIONARIES ---
-    # We pre-fetch all relevant objects to avoid repeated searches during iteration.
-    # We use try-except blocks to handle different EnergyPlus versions safely.
-
-    # Check for Spaces (Modern versions)
-    has_spaces = False
-    try:
-        if len(building.idfobjects['SPACE']) > 0 or len(building.idfobjects['SPACELIST']) > 0:
-            has_spaces = True
-    except KeyError:
-        # KeyError means the IDD version doesn't support SPACE objects (Legacy versions)
-        pass
-
-    # Check for ZoneLists (All versions)
-    has_zonelists = False
-    try:
-        if len(building.idfobjects['ZONELIST']) > 0:
-            has_zonelists = True
-    except KeyError:
-        pass
-
-    # Initialize lookup dictionaries
-    zone_lists = {}  # Map: ZoneList Name -> ZoneList Object
-    space_lists = {}  # Map: SpaceList Name -> SpaceList Object
-    space_to_zone = {}  # Map: Space Name -> Parent Zone Name
-    zone_to_spaces = {}  # Map: Zone Name -> List of Child Space Names
-
-    # Populate ZoneLists dictionary
-    if has_zonelists:
-        for zl in building.idfobjects['ZONELIST']:
-            # Store keys in UPPERCASE and stripped for robust matching
-            zone_lists[zl.Name.upper().strip()] = zl
-
-    # Populate Space dictionaries (only if spaces exist)
-    if has_spaces:
-        try:
-            # Map SpaceLists
-            for sl in building.idfobjects['SPACELIST']:
-                space_lists[sl.Name.upper().strip()] = sl
-
-            # Map Spaces and their relationships to Zones
-            for s in building.idfobjects['SPACE']:
-                s_name = s.Name.strip()
-                s_key = s_name.upper()
-                z_name = s.Zone_Name.strip()
-
-                # Forward map: Space -> Zone
-                space_to_zone[s_key] = z_name
-
-                # Reverse map: Zone -> [Space1, Space2, ...]
-                z_key = z_name.upper()
-                if z_key not in zone_to_spaces:
-                    zone_to_spaces[z_key] = []
-                zone_to_spaces[z_key].append(s_name)
-        except KeyError:
-            pass
-
-    # Helper function to extract items from extensible lists (ZoneList or SpaceList)
-    # Eppy handles extensible fields (Zone_1_Name, Zone_2_Name...) dynamically.
-    def get_items_from_list(obj, field_prefix):
-        items = []
-        # Arbitrary limit of 500 items per list to prevent infinite loops.
-        for i in range(1, 500):
-            try:
-                # Construct field name: e.g., "Zone_1_Name" or "Space_1_Name"
-                val = obj[f"{field_prefix}_{i}_Name"]
-                if val:
-                    items.append(val)
-                else:
-                    # Stop if we hit an empty field
-                    break
-            except:
-                # Stop if the field doesn't exist in the IDD
-                break
-        return items
-
-    # --- 2. ITERATE PEOPLE AND PEOPLE:INSTANCE OBJECTS ---
-    # We process every 'People' (and 'People:Instance') object in the model to determine what it controls.
-    for people in get_people_objects(building):
-
-        # Robustly find the container name (the field name varies by E+ version)
-        container_name = ""
-        try:
-            container_name = people.Zone_or_ZoneList_Name
-        except:
-            try:
-                container_name = people.Zone_or_ZoneList_or_Space_or_SpaceList_Name
-            except:
-                container_name = people.Zone_Name
-
-        if not container_name:
-            continue  # Skip if unassigned
-
-        p_name = people.Name.strip()
-        c_name_upper = container_name.upper().strip()
-
-        # ======================================================================
-        # LEVEL 1: SPACE or SPACELIST (The "Modern" Path)
-        # ======================================================================
-        # If the model contains Spaces, we MUST resolve everything down to the Space level.
-        if has_spaces:
-            target_spaces = []  # List of tuples: (SpaceName, ParentZoneName)
-
-            # A. Assigned to SPACELIST -> Expand to individual Spaces
-            if c_name_upper in space_lists:
-                sl_obj = space_lists[c_name_upper]
-                s_names = get_items_from_list(sl_obj, "Space")
-                for s in s_names:
-                    # Find the parent zone for this space
-                    z = space_to_zone.get(s.upper().strip(), s)  # Fallback to space name if orphan
-                    target_spaces.append((s, z))
-
-            # B. Assigned to SPACE -> Direct mapping
-            elif c_name_upper in space_to_zone:
-                # container_name is the space name
-                z = space_to_zone[c_name_upper]
-                target_spaces.append((container_name, z))
-
-            # C. Assigned to ZONELIST -> Find all spaces within those zones
-            elif c_name_upper in zone_lists:
-                zl_obj = zone_lists[c_name_upper]
-                z_names = get_items_from_list(zl_obj, "Zone")
-                for z in z_names:
-                    # Look up the spaces belonging to this zone
-                    spaces_in_z = zone_to_spaces.get(z.upper().strip(), [])
-                    for s in spaces_in_z:
-                        target_spaces.append((s, z))
-
-            # D. Assigned to ZONE -> Find all spaces within that zone
+        if len(zone_instances) == 1:
+            instance = zone_instances[0]
+            if not instance['prefixed'] and instance['space_kind'] == 'default':
+                # Assigned directly to a ZONE without spaces: the user identifies it by the zone name
+                df_key = instance['container']
+                ems_suffix = _sanitize_ems_name(df_key)
             else:
-                # Look up the spaces belonging to this zone
-                spaces_in_z = zone_to_spaces.get(c_name_upper, [])
-                for s in spaces_in_z:
-                    target_spaces.append((s, container_name))
-
-            # GENERATE TARGETS FOR RESOLVED SPACES
-            for s_name, z_name in target_spaces:
-                # In modern E+, internal objects are named "SpaceName PeopleName"
-                full_key = f"{s_name} {p_name}"
-                targets.append({
-                    'df_key': full_key,
-                    'ems_suffix': _sanitize_ems_name(f"{s_name}_{p_name}"),
-                    'sensor_key': full_key,
-                    'zone_name': z_name  # Important: Actuators act on the Zone Schedule
-                })
-
-        # ======================================================================
-        # LEVEL 2: ZONELIST (Only if not Space/SpaceList)
-        # ======================================================================
-        elif has_zonelists and c_name_upper in zone_lists:
-            # Assigned to ZONELIST -> Expand to individual Zones
-            # E+ creates internal objects named "ZoneName PeopleName"
-            zl_obj = zone_lists[c_name_upper]
-            z_names = get_items_from_list(zl_obj, "Zone")
-
-            for z in z_names:
-                full_key = f"{z} {p_name}"
-                targets.append({
-                    'df_key': full_key,
-                    'ems_suffix': _sanitize_ems_name(f"{z}_{p_name}"),
-                    'sensor_key': full_key,
-                    'zone_name': z
-                })
-
-        # ======================================================================
-        # LEVEL 3: ZONE (Default/Legacy)
-        # ======================================================================
-        else:
-            # Assigned directly to ZONE (and no spaces involved).
-            # E+ does NOT rename the People object internally.
+                # '<Space Name> <People Name>', also when EnergyPlus names the instance after the People object
+                # (assigned to a Space, or to a Zone of one space)
+                df_key = f"{instance['space']} {instance['people']}"
+                ems_suffix = _sanitize_ems_name(f"{instance['space']}_{instance['people']}")
             targets.append({
-                'df_key': container_name,  # User identifies by Zone Name
-                'ems_suffix': _sanitize_ems_name(container_name),
-                'sensor_key': p_name,  # Sensor must point to the original People Name
-                'zone_name': container_name
+                'df_key': df_key,
+                'ems_suffix': ems_suffix,
+                'sensor_key': instance['name'],
+                'zone_name': instance['zone'],
+                'occupancy_key': instance['name'],
+                'occupancy_variable': 'People Occupant Count',
+                'instance_keys': [instance['name']],
+                'people_names': people_names,
+            })
+        else:
+            zone_name = zones[zone_upper]['zone'] if zone_upper in zones else zone_instances[0]['zone']
+            if any(i['space_kind'] == 'remainder' for i in zone_instances):
+                # Warning is issued regardless of verbose_mode
+                warnings.warn(
+                    f"Some surfaces of zone '{zone_name}' have a Space Name and others do not, so EnergyPlus "
+                    f"creates the space '{zones[zone_upper]['remainder']}' for the latter and splits the "
+                    f"occupants of the zone among its spaces ({', '.join(i['name'] for i in zone_instances)}). "
+                    f"accim takes all of them into account. To avoid the remainder space, assign every "
+                    f"surface of the zone to a Space."
+                )
+            targets.append({
+                'df_key': zone_name,
+                'ems_suffix': _sanitize_ems_name(zone_name),
+                'sensor_key': zone_instances[0]['name'],
+                'zone_name': zone_name,
+                'occupancy_key': zone_name,
+                'occupancy_variable': 'Zone People Occupant Count',
+                'instance_keys': [i['name'] for i in zone_instances],
+                'people_names': people_names,
             })
 
     return targets
@@ -385,13 +265,13 @@ def apply_apmv_setpoints(
 
     # Extract lists for internal processing:
     # - ems_target_suffixes: Sanitized names for EMS variables (e.g., "Space1_People1").
-    # - ems_sensor_keys: The exact keys to read data from EnergyPlus (e.g., "Space1 People1").
     # - df_keys: Keys used to map user input arguments (e.g., "Space1 People1").
     # - target_zones: The raw Zone names associated with each target.
+    # - instance_counts: The number of occupant instances of the zones with several, whose PMV is averaged.
     ems_target_suffixes = [t['ems_suffix'] for t in target_data]
-    ems_sensor_keys = [t['sensor_key'] for t in target_data]
     df_keys = [t['df_key'] for t in target_data]
     target_zones = [t['zone_name'] for t in target_data]
+    instance_counts = {t['ems_suffix']: len(t['instance_keys']) for t in target_data if len(t['instance_keys']) > 1}
 
     # Get a unique list of zones. This is crucial because Schedules and Thermostats
     # are assigned at the Zone level, even if we calculate comfort at the Space level.
@@ -441,17 +321,18 @@ def apply_apmv_setpoints(
     # Now we generate the actual EMS code blocks in the IDF.
 
     # A. Sensors: To read 'Zone Thermal Comfort Fanger Model PMV' and 'People Occupant Count'.
-    _add_apmv_sensors(building, ems_sensor_keys, ems_target_suffixes, verbose_mode)
+    _add_apmv_sensors(building, target_data, verbose_mode)
 
     # B. Global Variables: To store intermediate calculations (aPMV, comfort hours, etc.).
-    _add_apmv_global_variables(building, ems_target_suffixes, verbose_mode)
+    _add_apmv_global_variables(building, ems_target_suffixes, verbose_mode, list(instance_counts))
 
     # C. Actuators: To overwrite the values of the Schedule:Compact objects created in step 3.
     # Note: Actuators link the specific EMS logic (Space/People level) to the Zone Schedule.
     _add_apmv_actuators(building, target_data, verbose_mode)
 
     # D. Programs: The Erl code that performs the logic (If Season -> Calc aPMV -> Set Actuator).
-    _add_apmv_programs(building, ems_target_suffixes, df_arguments, cooling_season_start, cooling_season_end, verbose_mode)
+    _add_apmv_programs(building, ems_target_suffixes, df_arguments, cooling_season_start, cooling_season_end, verbose_mode,
+                       instance_counts)
 
     # E. Program Calling Managers: To tell EnergyPlus WHEN to run these programs (BeginTimestepBeforePredictor).
     _add_apmv_program_calling_managers(building, verbose_mode)
@@ -639,7 +520,7 @@ def _update_fanger_object(building: IDF, obj_name: str, zone: str, verbose_mode:
 # EMS GENERATORS
 # ==============================================================================
 
-def _add_apmv_sensors(building: IDF, sensor_keys: List[str], suffixes: List[str], verbose_mode: bool):
+def _add_apmv_sensors(building: IDF, target_data: List[Dict], verbose_mode: bool):
     """
     Adds EnergyManagementSystem:Sensor objects to the IDF.
     Sensors allow the EMS to read data from EnergyPlus Output:Variables during the simulation.
@@ -648,42 +529,45 @@ def _add_apmv_sensors(building: IDF, sensor_keys: List[str], suffixes: List[str]
     1. PMV: To read the current 'Zone Thermal Comfort Fanger Model PMV'.
     2. Occupant Count: To determine if the space is occupied ('People Occupant Count').
 
+    In a zone with several occupant instances, the Occupant Count sensor reads the
+    'Zone People Occupant Count' of the zone, and each instance gets a PMV sensor and an
+    Occupant Count sensor, numbered after the target suffix (e.g., "PMV_Zone1_2"), from which a
+    program calculates the PMV of the zone (see _add_apmv_programs).
+
     :param building: The BESOS/eppy IDF object.
-    :param sensor_keys: List of exact keys (e.g., "Space1 People") to identify the output variable.
-    :param suffixes: List of sanitized suffixes (e.g., "Space1_People") for unique EMS naming.
+    :param target_data: List of target dictionaries resolved earlier.
     :param verbose_mode: If True, prints success messages. Warnings are always printed.
     """
     # Get existing sensors to avoid duplicates
     sensornamelist = [s.Name for s in building.idfobjects['EnergyManagementSystem:Sensor']]
 
-    for i in range(len(suffixes)):
-        # 1. PMV Sensor
-        pmv_sensor_name = f'PMV_{suffixes[i]}'
-        if pmv_sensor_name not in sensornamelist:
+    def add_sensor(name, key, variable):
+        if name not in sensornamelist:
             building.newidfobject(
                 'EnergyManagementSystem:Sensor',
-                Name=pmv_sensor_name,
-                OutputVariable_or_OutputMeter_Index_Key_Name=sensor_keys[i],
-                OutputVariable_or_OutputMeter_Name='Zone Thermal Comfort Fanger Model PMV'
+                Name=name,
+                OutputVariable_or_OutputMeter_Index_Key_Name=key,
+                OutputVariable_or_OutputMeter_Name=variable
             )
             if verbose_mode:
-                print(f"Added Sensor: {pmv_sensor_name}")
+                print(f"Added Sensor: {name}")
         else:
-            warnings.warn(f"Sensor '{pmv_sensor_name}' already exists. Skipping.")
+            warnings.warn(f"Sensor '{name}' already exists. Skipping.")
+
+    for target in target_data:
+        suffix = target['ems_suffix']
+        instance_keys = target['instance_keys']
+
+        # 1. PMV Sensor (in zones with several instances, one per instance, with its occupant count)
+        if len(instance_keys) == 1:
+            add_sensor(f'PMV_{suffix}', target['sensor_key'], 'Zone Thermal Comfort Fanger Model PMV')
+        else:
+            for n, key in enumerate(instance_keys, start=1):
+                add_sensor(f'PMV_{suffix}_{n}', key, 'Zone Thermal Comfort Fanger Model PMV')
+                add_sensor(f'People_Occupant_Count_{suffix}_{n}', key, 'People Occupant Count')
 
         # 2. Occupant Count Sensor
-        occ_sensor_name = f'People_Occupant_Count_{suffixes[i]}'
-        if occ_sensor_name not in sensornamelist:
-            building.newidfobject(
-                'EnergyManagementSystem:Sensor',
-                Name=occ_sensor_name,
-                OutputVariable_or_OutputMeter_Index_Key_Name=sensor_keys[i],
-                OutputVariable_or_OutputMeter_Name='People Occupant Count'
-            )
-            if verbose_mode:
-                print(f"Added Sensor: {occ_sensor_name}")
-        else:
-            warnings.warn(f"Sensor '{occ_sensor_name}' already exists. Skipping.")
+        add_sensor(f'People_Occupant_Count_{suffix}', target['occupancy_key'], target['occupancy_variable'])
 
 
 def _add_apmv_actuators(building: IDF, target_data: List[Dict], verbose_mode: bool):
@@ -728,7 +612,8 @@ def _add_apmv_actuators(building: IDF, target_data: List[Dict], verbose_mode: bo
                 warnings.warn(f"Actuator '{act_name}' already exists. Skipping creation.")
 
 
-def _add_apmv_global_variables(building: IDF, suffixes: List[str], verbose_mode: bool):
+def _add_apmv_global_variables(building: IDF, suffixes: List[str], verbose_mode: bool,
+                               averaged_suffixes: Optional[List[str]] = None):
     """
     Adds EnergyManagementSystem:GlobalVariable objects.
     These variables store intermediate calculation results (like the calculated aPMV)
@@ -737,6 +622,8 @@ def _add_apmv_global_variables(building: IDF, suffixes: List[str], verbose_mode:
     :param building: The BESOS/eppy IDF object.
     :param suffixes: List of sanitized suffixes for unique naming per target.
     :param verbose_mode: If True, prints success messages. Warnings are always printed.
+    :param averaged_suffixes: Suffixes of the targets of zones with several occupant instances,
+        whose PMV is a global variable calculated from the PMV of the instances.
     """
     # List of variable prefixes needed for the logic
     prefixes = [
@@ -759,19 +646,20 @@ def _add_apmv_global_variables(building: IDF, suffixes: List[str], verbose_mode:
         else:
             warnings.warn(f"Global Variable '{gv}' already exists. Skipping.")
 
-    # 2. Per-Target Variables (Specific to each Zone/Space)
-    for prefix in prefixes:
-        for suffix in suffixes:
-            gv = f'{prefix}_{suffix}'
-            if gv not in existing:
-                building.newidfobject('EnergyManagementSystem:GlobalVariable', Erl_Variable_1_Name=gv)
-                if verbose_mode:
-                    print(f"Added Global Variable: {gv}")
-            else:
-                warnings.warn(f"Global Variable '{gv}' already exists. Skipping.")
+    # 2. Per-Target Variables (Specific to each Zone/Space), and the PMV of the zones with several instances
+    per_target = [f'{prefix}_{suffix}' for prefix in prefixes for suffix in suffixes]
+    per_target += [f'PMV_{suffix}' for suffix in (averaged_suffixes or [])]
+    for gv in per_target:
+        if gv not in existing:
+            building.newidfobject('EnergyManagementSystem:GlobalVariable', Erl_Variable_1_Name=gv)
+            if verbose_mode:
+                print(f"Added Global Variable: {gv}")
+        else:
+            warnings.warn(f"Global Variable '{gv}' already exists. Skipping.")
 
 
-def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.DataFrame, cool_start: int, cool_end: int, verbose_mode: bool):
+def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.DataFrame, cool_start: int, cool_end: int, verbose_mode: bool,
+                       instance_counts: Optional[Dict[str, int]] = None):
     """
     Adds EnergyManagementSystem:Program objects.
     This contains the actual Erl (EnergyPlus Runtime Language) code that executes the control logic.
@@ -782,8 +670,13 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
     :param cool_start: Integer representing the start day of cooling season.
     :param cool_end: Integer representing the end day of cooling season.
     :param verbose_mode: If True, prints success messages. Warnings are always printed.
+    :param instance_counts: Number of occupant instances of the targets of zones with several
+        ({suffix: number}). The PMV of these zones is the average of the PMV of their instances,
+        weighted by their occupants (the simple average while the zone is unoccupied), as the
+        PeopleAverage method of the Fanger thermostats.
     """
     programlist = [p.Name for p in building.idfobjects['EnergyManagementSystem:Program']]
+    instance_counts = instance_counts or {}
 
     # --- PROGRAM 1: Initialize Season Dates ---
     prog_name = 'set_cooling_season_input_data'
@@ -888,6 +781,31 @@ def _add_apmv_programs(building: IDF, suffixes: List[str], df_arguments: pd.Data
             if verbose_mode: print(f"Added Program: {prog_name}")
         else:
             warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
+
+        # --- PROGRAM 5a: PMV of a zone with several occupant instances ---
+        if suffix in instance_counts:
+            prog_name = f'average_PMV_{suffix}'
+            if prog_name not in programlist:
+                n_instances = instance_counts[suffix]
+                lines = [f'set PMV_wsum_{suffix} = 0', f'set Occ_sum_{suffix} = 0', f'set PMV_sum_{suffix} = 0']
+                for n in range(1, n_instances + 1):
+                    lines += [
+                        f'set PMV_wsum_{suffix} = PMV_wsum_{suffix} + PMV_{suffix}_{n}*People_Occupant_Count_{suffix}_{n}',
+                        f'set Occ_sum_{suffix} = Occ_sum_{suffix} + People_Occupant_Count_{suffix}_{n}',
+                        f'set PMV_sum_{suffix} = PMV_sum_{suffix} + PMV_{suffix}_{n}',
+                    ]
+                lines += [
+                    f'if Occ_sum_{suffix} > 0',
+                    f'set PMV_{suffix} = PMV_wsum_{suffix}/Occ_sum_{suffix}',
+                    'else',
+                    f'set PMV_{suffix} = PMV_sum_{suffix}/{n_instances}',
+                    'endif',
+                ]
+                building.newidfobject('EnergyManagementSystem:Program', Name=prog_name,
+                                      **{f'Program_Line_{i}': line for i, line in enumerate(lines, start=1)})
+                if verbose_mode: print(f"Added Program: {prog_name}")
+            else:
+                warnings.warn(f"Program '{prog_name}' already exists. Skipping.")
 
         # --- PROGRAM 5: Monitor aPMV ---
         prog_name = f'monitor_aPMV_{suffix}'
@@ -1374,23 +1292,11 @@ def set_pmv_input_parameters(
     val_map_vel = map_arg_to_lookup(air_velocity, 'vel')
     val_map_eff = map_arg_to_lookup(work_efficiency, 'eff')
 
-    # 2. Prepare Lookups for People -> Key matching
-    # (Re-using logic to identify where the person is located)
-    zone_lists = {zl.Name.upper().strip(): zl for zl in building.idfobjects['ZONELIST']}
-    space_lists = {}
-    space_to_zone = {}
-    try:
-        space_lists = {sl.Name.upper().strip(): sl for sl in building.idfobjects['SPACELIST']}
-        for s in building.idfobjects['SPACE']:
-            space_to_zone[s.Name.upper().strip()] = s.Zone_Name
-    except KeyError:
-        pass
-
-    def get_first_item_from_list(obj, field_prefix):
-        try:
-            return obj[f"{field_prefix}_1_Name"]
-        except:
-            return None
+    # 2. Map each People object to the keys of the targets of its instances
+    people_to_keys: Dict[str, List[str]] = {}
+    for t in target_data:
+        for people_name in t['people_names']:
+            people_to_keys.setdefault(people_name.strip().upper(), []).append(t['df_key'])
 
     sch_comp_objs = [s.Name for s in building.idfobjects['Schedule:Compact']]
 
@@ -1399,41 +1305,19 @@ def set_pmv_input_parameters(
         p_name = people.Name
 
         # --- A. Find the Target Key for this Person ---
-        container_name = ""
-        try:
-            container_name = people.Zone_or_ZoneList_Name
-        except:
-            try:
-                container_name = people.Zone_or_ZoneList_or_Space_or_SpaceList_Name
-            except:
-                container_name = people.Zone_Name
-
-        if not container_name: continue
-        c_name_upper = container_name.upper().strip()
-
-        target_key = None
-
-        # Logic to find ONE valid key to retrieve the value
-        if c_name_upper in space_lists:
-            first_space = get_first_item_from_list(space_lists[c_name_upper], "Space")
-            if first_space: target_key = f"{first_space} {p_name}"
-        elif c_name_upper in space_to_zone:
-            target_key = f"{container_name} {p_name}"
-        elif c_name_upper in zone_lists:
-            first_zone = get_first_item_from_list(zone_lists[c_name_upper], "Zone")
-            if first_zone: target_key = f"{first_zone} {p_name}"
-        else:
-            # Direct Zone: Try both patterns
-            candidate_1 = f"{container_name} {p_name}"
-            candidate_2 = container_name
-            if candidate_1 in df_keys:
-                target_key = candidate_1
-            elif candidate_2 in df_keys:
-                target_key = candidate_2
-
-        if not target_key:
+        people_keys = people_to_keys.get(p_name.strip().upper(), [])
+        if not people_keys:
             # If we can't map the person, we can't apply parameters
             continue
+
+        # A People object has one schedule per parameter, so the value of its first target is used
+        target_key = people_keys[0]
+        for arg_name, val_map in [('activity_level', val_map_activity), ('clothing_insulation', val_map_clo),
+                                  ('air_velocity', val_map_vel), ('work_efficiency', val_map_eff)]:
+            if len({val_map.get(k) for k in people_keys}) > 1:
+                warnings.warn(f"People object '{p_name}' applies to several targets ({people_keys}) with different "
+                              f"values of {arg_name}. It can only have one schedule, so the value of "
+                              f"'{target_key}' is used.")
 
         # --- B. Retrieve Values ---
         # If the user didn't provide the arg, these will be None

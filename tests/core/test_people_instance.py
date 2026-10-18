@@ -133,9 +133,13 @@ def test_resolve_targets_uses_the_names_of_the_people_instances():
 
     assert targets == [
         {'df_key': 'Block1:Zone1', 'ems_suffix': 'Block1_Zone1', 'sensor_key': 'People Block1:Zone1',
-         'zone_name': 'Block1:Zone1'},
+         'zone_name': 'Block1:Zone1', 'occupancy_key': 'People Block1:Zone1',
+         'occupancy_variable': 'People Occupant Count', 'instance_keys': ['People Block1:Zone1'],
+         'people_names': ['People Block1:Zone1']},
         {'df_key': 'Block1:Zone2', 'ems_suffix': 'Block1_Zone2', 'sensor_key': 'People Block1:Zone2',
-         'zone_name': 'Block1:Zone2'},
+         'zone_name': 'Block1:Zone2', 'occupancy_key': 'People Block1:Zone2',
+         'occupancy_variable': 'People Occupant Count', 'instance_keys': ['People Block1:Zone2'],
+         'people_names': ['People Block1:Zone2']},
     ]
 
 

@@ -41,6 +41,9 @@ def scan_zones(self):
     self.ems_objs_name = [t['ems_suffix'] for t in target_data]
     self.ems_objs_key = [t['sensor_key'] for t in target_data]
     self.ems_zonenames = [t['zone_name'] for t in target_data]
+    # The occupancy of a zone with several occupant instances is the 'Zone People Occupant Count' of the zone
+    self.ems_occupancy_keys = [t['occupancy_key'] for t in target_data]
+    self.ems_occupancy_variables = [t['occupancy_variable'] for t in target_data]
     self.ems_zonenames_underscore = [i.replace(' ', '_').replace(':', '_') for i in self.ems_zonenames]
 
     self.spacelist_use = False
